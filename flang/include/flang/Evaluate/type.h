@@ -340,6 +340,9 @@ constexpr bool IsLengthlessIntrinsicType{
 template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
+  static std::string AsFortran() {
+    return "Some"s + common::EnumToString(category);
+  }
 };
 
 using NumericCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
@@ -350,7 +353,9 @@ using AllIntrinsicCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
 
 // Represents a completely generic type (or, for Expr<SomeType>, a typeless
 // value like a BOZ literal or NULL() pointer).
-struct SomeType {};
+struct SomeType {
+  static std::string AsFortran() { return "SomeType"s; }
+};
 
 class StructureConstructor;
 

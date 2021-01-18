@@ -14,7 +14,7 @@ define void @test4(i32* noalias %P) {
 ; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -25,7 +25,7 @@ bb2:
   %x = load i32, i32* %P
   br label %bb3
 bb3:
-  store i32 0, i32* %P
+  store i32 1, i32* %P
   ret void
 }
 

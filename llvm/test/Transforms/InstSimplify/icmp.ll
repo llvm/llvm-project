@@ -36,3 +36,154 @@ define i1 @poison2(i32 %x) {
   %v = icmp slt i32 %x, poison
   ret i1 %v
 }
+
+define i1 @mul_div_cmp_smaller(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_smaller(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 4
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @mul_div_cmp_equal(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_equal(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 3
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: 3>2
+define i1 @mul_div_cmp_greater(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_greater(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+define i1 @mul_div_cmp_ugt(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_ugt(
+; CHECK-NEXT:    ret i1 false
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 4
+  %cmp = icmp ugt i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong predicate
+define i1 @mul_div_cmp_uge(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_uge(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 4
+  %cmp = icmp uge i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong predicate
+define i1 @mul_div_cmp_ult(i8 %x) {
+; CHECK-LABEL: @mul_div_cmp_ult(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 4
+  %cmp = icmp ult i8 %div, %x
+  ret i1 %cmp
+}
+
+; Negative test: Wrong icmp operand
+define i1 @mul_div_cmp_wrong_operand(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_div_cmp_wrong_operand(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 3
+  %div = udiv i8 %mul, 4
+  %cmp = icmp ule i8 %div, %y
+  ret i1 %cmp
+}
+
+define i1 @mul_lshr_cmp_smaller(i8 %x) {
+; CHECK-LABEL: @mul_lshr_cmp_smaller(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul i8 %x, 3
+  %div = lshr i8 %mul, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @mul_lshr_cmp_equal(i8 %x) {
+; CHECK-LABEL: @mul_lshr_cmp_equal(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = mul i8 %x, 4
+  %div = lshr i8 %mul, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @mul_lshr_cmp_greater(i8 %x) {
+; CHECK-LABEL: @mul_lshr_cmp_greater(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i8 [[MUL]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul i8 %x, 5
+  %div = lshr i8 %mul, 2
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @shl_div_cmp_smaller(i8 %x) {
+; CHECK-LABEL: @shl_div_cmp_smaller(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = shl i8 %x, 2
+  %div = udiv i8 %mul, 5
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @shl_div_cmp_equal(i8 %x) {
+; CHECK-LABEL: @shl_div_cmp_equal(
+; CHECK-NEXT:    ret i1 true
+;
+  %mul = shl i8 %x, 2
+  %div = udiv i8 %mul, 4
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}
+
+define i1 @shl_div_cmp_greater(i8 %x) {
+; CHECK-LABEL: @shl_div_cmp_greater(
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = shl i8 %x, 2
+  %div = udiv i8 %mul, 3
+  %cmp = icmp ule i8 %div, %x
+  ret i1 %cmp
+}

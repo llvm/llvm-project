@@ -60,6 +60,8 @@ public:
                            InputGlobal *g);
   Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
                           InputEvent *e);
+  Symbol *addDefinedTable(StringRef name, uint32_t flags, InputFile *file,
+                          InputTable *t);
 
   Symbol *addUndefinedFunction(StringRef name,
                                llvm::Optional<StringRef> importName,
@@ -73,6 +75,11 @@ public:
                              llvm::Optional<StringRef> importModule,
                              uint32_t flags, InputFile *file,
                              const WasmGlobalType *type);
+  Symbol *addUndefinedTable(StringRef name,
+                            llvm::Optional<StringRef> importName,
+                            llvm::Optional<StringRef> importModule,
+                            uint32_t flags, InputFile *file,
+                            const WasmTableType *type);
 
   void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
 

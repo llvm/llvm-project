@@ -19,7 +19,6 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ThreadPool.h"
@@ -29,6 +28,7 @@ namespace orc {
 
 class LLJITBuilderState;
 class LLLazyJITBuilderState;
+class ObjectTransformLayer;
 class TargetProcessControl;
 
 /// A pre-fabricated ORC JIT stack that can serve as an alternative to MCJIT.
@@ -169,7 +169,7 @@ public:
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
   /// Returns a reference to the object transform layer.
-  ObjectTransformLayer &getObjTransformLayer() { return ObjTransformLayer; }
+  ObjectTransformLayer &getObjTransformLayer() { return *ObjTransformLayer; }
 
   /// Returns a reference to the IR transform layer.
   IRTransformLayer &getIRTransformLayer() { return *TransformLayer; }
@@ -186,7 +186,7 @@ public:
   }
 
 protected:
-  static std::unique_ptr<ObjectLayer>
+  static Expected<std::unique_ptr<ObjectLayer>>
   createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
 
   static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
@@ -209,7 +209,7 @@ protected:
   std::unique_ptr<ThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
-  ObjectTransformLayer ObjTransformLayer;
+  std::unique_ptr<ObjectTransformLayer> ObjTransformLayer;
   std::unique_ptr<IRCompileLayer> CompileLayer;
   std::unique_ptr<IRTransformLayer> TransformLayer;
   std::unique_ptr<IRTransformLayer> InitHelperTransformLayer;
@@ -250,8 +250,9 @@ private:
 
 class LLJITBuilderState {
 public:
-  using ObjectLinkingLayerCreator = std::function<std::unique_ptr<ObjectLayer>(
-      ExecutionSession &, const Triple &TT)>;
+  using ObjectLinkingLayerCreator =
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &,
+                                                           const Triple &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(

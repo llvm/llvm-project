@@ -19,13 +19,18 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -81,6 +86,7 @@ public:
     // Tokens with no info.
     colon,
     comma,
+    doc_str,
     equal,
     gt,
     l_brace,
@@ -178,6 +184,9 @@ private:
 
   // Lex an integer.
   Token lexInteger(const char *tokStart);
+
+  // Lex a string.
+  Token lexString(const char *tokStart);
 
   // Skip a comment line, starting with a '//'.
   void skipComment();
@@ -283,6 +292,8 @@ Token Lexer::lexToken() {
       return formToken(Token::Kind::star, tokStart);
     case '?':
       return formToken(Token::Kind::question, tokStart);
+    case '"':
+      return lexString(tokStart);
     case '/':
       if (*curPtr == '/') {
         skipComment();
@@ -329,6 +340,36 @@ Token Lexer::lexInteger(const char *tokStart) {
   return Token(Token::Kind::integer, str);
 }
 
+Token Lexer::lexString(const char *tokStart) {
+  assert(curPtr[-1] == '"');
+
+  if (*curPtr == '"' && *(curPtr + 1) == '"') {
+    curPtr += 2;
+    while (true) {
+      switch (*curPtr++) {
+      case '"':
+        if (*curPtr == '"' && *(curPtr + 1) == '"') {
+          Token token(Token::Kind::doc_str,
+                      StringRef(tokStart + 3, curPtr - tokStart - 4));
+          curPtr += 2;
+          return token;
+        }
+        continue;
+      case 0:
+        // If this is a random nul character in the middle of the doc string,
+        // just include it.  If it is the end of file, then it is an error.
+        if (curPtr - 1 != curBuffer.end())
+          continue;
+        return emitError(curPtr - 1, "expected '\"\"\"' to end doc string");
+      default:
+        continue;
+      }
+    }
+  }
+
+  return emitError(curPtr - 1, "expected '\"\"\"' to start doc string");
+}
+
 /// Skip a comment line, starting with a '//'.
 void Lexer::skipComment() {
   // Advance over the second '/' in a '//' comment.
@@ -365,6 +406,14 @@ public:
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
   //===--------------------------------------------------------------------===//
+
+  LogicalResult parseInteger(uint64_t &value) {
+    if (!curToken.is(Token::Kind::integer))
+      return emitError(curToken.getLoc(), "expected integer");
+    value = curToken.getUInt64IntegerValue().getValue();
+    consumeToken();
+    return success();
+  }
 
   /// Advance the current lexer onto the next token.
   void consumeToken() {
@@ -447,6 +496,30 @@ public:
 };
 } // namespace
 
+/// Encodes an attribute use of the form:
+///
+///   index-list ::= integer-literal (`,` integer-literal)*
+///   attr-use ::= bare-id `[` index-list `]`
+struct AttrUse {
+  // Referenced attribute
+  StringRef attrName;
+  // Indices into the attribute
+  SmallVector<uint64_t, 4> indices;
+  /// Affine symbol for this usage.
+  /// This is represented as an affine symbol because at the time of parsing the
+  /// spec and generating the op's ODS/C++, we don't know the concrete constant
+  /// value. But they should be replaced with constants read from the attribute
+  /// and thus folded away for concrete op instances.
+  AffineExpr symbol;
+
+  std::string getKey() {
+    SmallVector<std::string, 4> indexStrs;
+    for (uint64_t index : indices)
+      indexStrs.push_back(std::to_string(index));
+    return llvm::formatv("{0}[{1}]", attrName, llvm::join(indexStrs, ","));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Affine parsing.
 //===----------------------------------------------------------------------===//
@@ -479,10 +552,21 @@ using AffineSymbolList = SmallVector<std::pair<StringRef, AffineExpr>, 4>;
 /// This is a specialized parser for affine expressions.
 class AffineParser {
 public:
-  explicit AffineParser(Parser &p,
-                        std::function<AffineExpr(StringRef)> bareIdParsingHook,
-                        AffineDimList &dimList, AffineSymbolList &symbolList)
-      : parser(p), bareIdFallback(bareIdParsingHook), dims(dimList),
+  /// Creates an affine parser that parses tokens from `p`.
+  ///
+  /// The affine parser introduces new dimensions and symbols eagerly as new
+  /// `id` are discovered. To additionally support attribute use `id`s, for a
+  /// parsed `id`, the resolution mechanism proceeds as follows:
+  /// 1. Try to parse `id` as an attribute use (using the `attrUseParsingHook`).
+  /// 2. If unsuccessful, try to match `id` to a known dim or symbol.
+  /// 3. If still unsuccessful, eagerly create a new dim or symbol and add it to
+  ///    the known dims or symbols (using the `bareIdParsingHook`).
+  explicit AffineParser(
+      Parser &p, std::function<AffineExpr(StringRef)> bareIdParsingHook,
+      std::function<llvm::Optional<AffineExpr>()> attrUseParsingHook,
+      AffineDimList &dimList, AffineSymbolList &symbolList)
+      : parser(p), bareIdFallback(bareIdParsingHook),
+        attrUseCallback(attrUseParsingHook), dims(dimList),
         symbols(symbolList) {}
 
   /// Parse a comma-separated list of affine exprs.
@@ -502,6 +586,7 @@ private:
   AffineExpr parseParentheticalExpr();
   AffineExpr parseNegateExpression(AffineExpr lhs);
   AffineExpr parseIntegerExpr();
+  AffineExpr parseAttrUseOrBareIdExpr();
   AffineExpr parseBareIdExpr();
 
   AffineExpr getAffineBinaryOpExpr(AffineHighPrecOp op, AffineExpr lhs,
@@ -515,6 +600,7 @@ private:
 
   Parser &parser;
   std::function<AffineExpr(StringRef)> bareIdFallback;
+  std::function<llvm::Optional<AffineExpr>()> attrUseCallback;
   AffineDimList &dims;
   AffineSymbolList &symbols;
 };
@@ -688,6 +774,12 @@ AffineExpr AffineParser::parseNegateExpression(AffineExpr lhs) {
   return (-1) * operand;
 }
 
+AffineExpr AffineParser::parseAttrUseOrBareIdExpr() {
+  if (llvm::Optional<AffineExpr> attrUse = attrUseCallback())
+    return attrUse.getValue();
+  return parseBareIdExpr();
+}
+
 /// Parse a bare id that may appear in an affine expression.
 ///
 ///   affine-expr ::= bare-id
@@ -739,7 +831,7 @@ AffineExpr AffineParser::parseIntegerExpr() {
 AffineExpr AffineParser::parseAffineOperandExpr(AffineExpr lhs) {
   switch (parser.curToken.getKind()) {
   case Token::Kind::id:
-    return parseBareIdExpr();
+    return parseAttrUseOrBareIdExpr();
   case Token::Kind::integer:
     return parseIntegerExpr();
   case Token::Kind::l_paren:
@@ -994,7 +1086,11 @@ public:
   LogicalResult parseTensorUse(TensorUse &result,
                                ComprehensionParsingState &state);
 
+  /// Parses an attribute definition.
   LogicalResult parseAttrDef();
+
+  /// Parses an optional attribute use.
+  LogicalResult parseAttrUse(AttrUse &result);
 
   /// Parses a tensor expression.
   LogicalResult parseExpression(TensorUse currentDefinition,
@@ -1053,6 +1149,10 @@ private:
     SmallVector<uint64_t, 4> vectorDims;
     bool isArray;
     bool isOptional;
+
+    // Returns the function to get values at the given indices from this
+    // attribute.
+    std::string getValueFn(ArrayRef<uint64_t> indices) const;
   };
 
   //===--------------------------------------------------------------------===//
@@ -1061,12 +1161,17 @@ private:
   /// Symbols are per TC def.
   AffineSymbolList symbols;
 
+  /// Attribute usages in all affine expressions.
+  SmallVector<AttrUse, 8> attrUses;
+
   /// Tensors are per TC def.
   llvm::StringMap<RegisteredTensor> registeredTensors;
   unsigned nextRegisteredTensorIndex;
 
   /// Attributes are per TC def.
   std::map<std::string, RegisteredAttr> registeredAttrs;
+
+  StringRef docString;
 
   Parser &parser;
 };
@@ -1147,20 +1252,45 @@ SmallVector<AffineExpr, 4>
 TCParser::parseAffineExprs(EagerDiscoveryMode discoveryMode,
                            AffineDimList &dims, Token::Kind lDelim,
                            Token::Kind rDelim) {
-  AffineParser affineParser(
-      parser,
-      [&](StringRef sRef) {
-        AffineExpr expr;
-        if (discoveryMode == EagerDiscoveryMode::Symbols) {
-          expr = getAffineSymbolExpr(symbols.size(), parser.context);
-          symbols.emplace_back(sRef, expr);
-        } else if (discoveryMode == EagerDiscoveryMode::Dimensions) {
-          expr = getAffineDimExpr(dims.size(), parser.context);
-          dims.emplace_back(sRef, expr);
-        }
-        return expr;
-      },
-      dims, symbols);
+  auto createAffineBareId = [&](StringRef sRef) {
+    AffineExpr expr;
+    if (discoveryMode == EagerDiscoveryMode::Symbols) {
+      expr = getAffineSymbolExpr(symbols.size(), parser.context);
+      symbols.emplace_back(sRef, expr);
+    } else if (discoveryMode == EagerDiscoveryMode::Dimensions) {
+      expr = getAffineDimExpr(dims.size(), parser.context);
+      dims.emplace_back(sRef, expr);
+    }
+    return expr;
+  };
+
+  auto tryToParseAttrUse = [&]() -> llvm::Optional<AffineExpr> {
+    if (!parser.curToken.is(Token::Kind::id))
+      return llvm::None;
+
+    StringRef attrName = parser.curToken.getSpelling();
+    auto it = registeredAttrs.find(attrName.str());
+    if (it == registeredAttrs.end())
+      return llvm::None;
+
+    AttrUse result;
+    if (failed(parseAttrUse(result)))
+      return llvm::None;
+
+    // We create a new symbol for each attribute usage without reuse. This is
+    // fine given these symbols will be replaced with constants and folded away
+    // for concrete op instances.
+    result.symbol = getAffineSymbolExpr(symbols.size(), parser.context);
+    // Merely for taking the index. We don't reuse anyway.
+    symbols.emplace_back("<attr-use>", result.symbol);
+
+    attrUses.push_back(result);
+
+    return result.symbol;
+  };
+
+  AffineParser affineParser(parser, createAffineBareId, tryToParseAttrUse, dims,
+                            symbols);
   return affineParser.parseAffineExprs(lDelim, rDelim);
 }
 
@@ -1241,8 +1371,9 @@ LogicalResult TCParser::parseAttrDef() {
   // Parse potential dimension list
   SmallVector<uint64_t, 4> vectorDims;
   while (parser.curToken.is(Token::Kind::integer)) {
-    vectorDims.push_back(parser.curToken.getUInt64IntegerValue().getValue());
-    parser.consumeToken();
+    uint64_t value;
+    parser.parseInteger(value);
+    vectorDims.push_back(value);
 
     StringRef spelling = parser.curToken.getSpelling();
     if (spelling[0] != 'x')
@@ -1282,6 +1413,44 @@ LogicalResult TCParser::parseAttrDef() {
                           << " " << attrName << " "
                           << "with type: " << elementType
                           << (isArray ? "[]" : "") << "\n");
+
+  return success();
+}
+
+LogicalResult TCParser::parseAttrUse(AttrUse &result) {
+  result.attrName = parser.curToken.getSpelling();
+  if (failed(parser.parseToken(Token::Kind::id, "expected an id")))
+    return failure();
+
+  auto it = registeredAttrs.find(result.attrName.str());
+  assert(it != registeredAttrs.end());
+  const RegisteredAttr &attr = it->second;
+
+  if (!attr.vectorDims.empty() || attr.isArray) {
+    // This is a vector/array attribute. Parse indices for it.
+    auto indexLoc = parser.curToken.getLoc();
+
+    if (failed(parser.parseToken(Token::Kind::l_square, "expected '['")))
+      return failure();
+
+    auto parseIndex = [&]() {
+      uint64_t value;
+      if (failed(parser.parseInteger(value)))
+        return failure();
+      result.indices.push_back(value);
+      return success();
+    };
+    if (failed(parser.parseCommaSeparatedListUntil(
+            Token::Kind::r_square, parseIndex, /*allowEmptyList=*/false)))
+      return failure();
+
+    size_t rank = attr.isArray ? 1 : attr.vectorDims.size();
+    if (result.indices.size() != rank)
+      return parser.emitError(indexLoc,
+                              "number of indices mismatch: expected " +
+                                  std::to_string(rank) + ", but found " +
+                                  std::to_string(result.indices.size()));
+  }
 
   return success();
 }
@@ -1525,6 +1694,14 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
       return failure();
   }
 
+  // Parse optional doc string
+  if (parser.curToken.is(Token::Kind::doc_str)) {
+    docString = parser.curToken.getSpelling();
+    parser.consumeToken();
+    LLVM_DEBUG(llvm::dbgs()
+               << "parsed doc string: '''" << docString << "'''\n");
+  }
+
   // Since we don't declare symbols separately, we discover them eagerly: each
   // newly encountered id in a tensor shape expression is treated as a new
   // symbolic. At this point, all tensors have been parsed and all the symbols
@@ -1591,6 +1768,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     std::string odsType = llvm::StringSwitch<std::string>(elementType)
                               .Case("f32", "F32")
                               .Case("i32", "I32")
+                              .Case("i64", "I64")
                               .Default("");
     if (odsType.empty()) {
       parser.emitError("unimplemented support for attribute element type: " +
@@ -1625,15 +1803,17 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     SingleBlockImplicitTerminator<"YieldOp">]> {
+      {2}
       let arguments = (ins
         Variadic<AnyShaped>:$inputs,
-        Variadic<AnyShaped>:$outputs{4}
+        Variadic<AnyShaped>:$outputs{3}
       );
       let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
 
       let skipDefaultBuilders = 1;
-      let builders = [ OpBuilderDAG<
+      let builders = [
+        OpBuilderDAG<
         (ins "ValueRange":$inputs, "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
@@ -1648,7 +1828,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_state,
             TypeRange(inputs),
             TypeRange(outputs));
-        }]>, OpBuilderDAG<
+        }]>,
+        OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
              "ValueRange":$outputs),
         [{{
@@ -1665,7 +1846,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_state,
             TypeRange(inputs),
             TypeRange(outputs));
-        }]>, OpBuilderDAG<
+        }]>,
+        OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
              CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
         [{{
@@ -1674,6 +1856,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
           $_state.addTypes(resultTensorTypes);
           (void)$_state.addRegion();
         }]>
+        {5}
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
       let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
@@ -1688,23 +1871,69 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         static std::function<void(Block &)> getRegionBuilder() {{ return regionBuilder; }
 
         // Generic methods.
-        static unsigned getNumRegionArgs() {{ return {5}; }
+        static unsigned getNumRegionArgs() {{ return {4}; }
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
       }];
   })FMT";
 
-  unsigned nInputs = 0, nOutputs = 0;
-  for (auto &t : registeredTensors) {
-    if (t.getValue().isOutput)
-      nOutputs++;
-    else
-      nInputs++;
+  // Generate documentation.
+  std::string doc;
+  if (!docString.empty()) {
+    const char *docFmt = R"FMT(
+      let summary = [{ {0} }];
+      let description = [{
+        {1}
+      }];
+    )FMT";
+
+    StringRef summary, description;
+    std::tie(summary, description) = docString.trim().split('\n');
+    doc = llvm::formatv(docFmt, summary.trim(), description.trim());
   }
 
-  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs,
-                      attrList, state.orderedTensorArgs.size());
+  // Generate an additional builder that has parameters for attributes.
+  std::string attrBuilder;
+  if (!registeredAttrs.empty()) {
+    SmallVector<std::string, 4> attrParams, attrStmts;
+    for (const auto &attr : registeredAttrs) {
+      llvm::StringRef name = attr.first;
+      attrParams.push_back(llvm::formatv("\"Attribute\":${0}", name));
+      attrStmts.push_back(
+          llvm::formatv("$_state.addAttribute(\"{0}\", {0});", name));
+    }
+    std::string attrParamsList = llvm::join(attrParams, ", ");
+    std::string attrStmtsList = llvm::join(attrStmts, "\n");
+
+    const char *builderFmt = R"FMT(
+      , OpBuilderDAG<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+           "ValueRange":$outputs, {1}),
+      [{{
+        $_state.addOperands(inputs);
+        $_state.addOperands(outputs);
+        $_state.addTypes(resultTensorTypes);
+        $_state.addAttribute(
+          "operand_segment_sizes",
+          $_builder.getI32VectorAttr({{
+            static_cast<int32_t>(inputs.size()),
+            static_cast<int32_t>(outputs.size())}));
+        buildNamedStructuredOpRegionAndAttributes<{0}>(
+          $_builder,
+          $_state,
+          TypeRange(inputs),
+          TypeRange(outputs));
+        {2}
+      }]>
+    )FMT";
+    attrBuilder =
+        llvm::formatv(builderFmt, cppOpName, attrParamsList, attrStmtsList);
+  }
+
+  // Finally put everything together.
+  os << llvm::formatv(header, cppOpName, linalgOpName, doc, attrList,
+                      state.orderedTensorArgs.size(), attrBuilder);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -1776,7 +2005,8 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
     MLIRContext *context = getContext();
     AffineExpr {1};
     bindDims(context, {1});
-    return Builder(context).getAffineMapArrayAttr({ {2} });
+    {2}
+    return Builder(context).getAffineMapArrayAttr({ {3} });
   })FMT";
 
   // 2. Print a comma-separated list of identifiers for the AffineExpr in
@@ -1790,36 +2020,89 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
       [&](std::pair<StringRef, AffineExpr> p) { ss << p.second; });
   ss.flush();
 
-  // 3. Print a comma-separated list of AffineMap constructors that use the
-  // identifiers from 1. The AffineExpr use the common arithmetic operators on
-  // AffineExpr. These AffineMap constructors will replace the `{2}` placeholder
-  // in return `SmallVector<AffineMap, 8>{{ {2} };`.
+  // 3. Get the list of affine maps for each input/output. The AffineExpr use
+  // the common arithmetic operators on AffineExpr. These affine maps will
+  // replace the `{2}` placeholder.
   std::string mapsStr;
   llvm::raw_string_ostream mapsStringStream(mapsStr);
+
   SmallVector<TensorUse, 4> orderedUses(state.orderedTensorArgs.size());
   for (const auto &it : state.orderedTensorArgs)
     orderedUses[it.second] = it.first;
-  llvm::interleaveComma(orderedUses, mapsStringStream, [&](TensorUse u) {
-    assert(u.indexingMap);
-    const char *mapFmt = "\n\tAffineMap::get({0}, 0, {1}, context)";
-    if (u.indexingMap.isEmpty()) {
-      mapsStringStream << llvm::formatv(mapFmt, state.dims.size(), "context");
+
+  // Create a list of all symbols.
+  SmallVector<std::string, 4> symbolReplacements;
+  symbolReplacements.reserve(symbols.size());
+  for (unsigned i = 0; i < symbols.size(); ++i) {
+    const char *symFmt =
+        "\n\tauto s{0} = getAffineSymbolExpr({0}, context); (void)s{0};";
+    mapsStringStream << llvm::formatv(symFmt, i);
+    symbolReplacements.push_back(llvm::formatv("s{0}", i));
+  }
+
+  // Create the affine constant expressions to replace symbols for attributes.
+  for (auto attrUse : llvm::enumerate(attrUses)) {
+    StringRef attrName = attrUse.value().attrName;
+    auto it = registeredAttrs.find(attrName.str());
+    assert(it != registeredAttrs.end() && "uses should point to valid attr!");
+    std::string getValueFn = it->second.getValueFn(attrUse.value().indices);
+    if (getValueFn.empty()) {
+      parser.emitError("unimplemented getValueFn for attribute: " + attrName);
       return;
     }
+    std::string cstVal = llvm::formatv("{0}().{1}", attrName, getValueFn);
+    const char *cstFmt =
+        "\n\tauto cst{0} = getAffineConstantExpr({1}, context);";
+    mapsStringStream << llvm::formatv(cstFmt, attrUse.index(), cstVal);
+
+    unsigned position =
+        attrUse.value().symbol.cast<AffineSymbolExpr>().getPosition();
+    symbolReplacements[position] = llvm::formatv("cst{0}", attrUse.index());
+  }
+
+  // For each tensor use, construct the affine map, replace symbols by the
+  // corresponding attribute values, and simplify the affine map.
+  for (auto tensorUse : llvm::enumerate(orderedUses)) {
+    auto indexingMap = tensorUse.value().indexingMap;
+    const char *mapFmt =
+        "\n\tauto map{0} = AffineMap::get({1}, {2}, {3}, context);";
 
     std::string exprsStr;
     llvm::raw_string_ostream exprsStringStream(exprsStr);
     exprsStringStream << "{";
-    llvm::interleaveComma(u.indexingMap.getResults(), exprsStringStream);
+    llvm::interleaveComma(indexingMap.getResults(), exprsStringStream);
     exprsStringStream << "}";
     exprsStringStream.flush();
+    mapsStringStream << llvm::formatv(mapFmt, tensorUse.index(),
+                                      state.dims.size(),
+                                      indexingMap.getNumSymbols(), exprsStr);
 
-    mapsStringStream << llvm::formatv(mapFmt, state.dims.size(), exprsStr);
-  });
+    std::string replaceSymbolList =
+        llvm::formatv("{ {0} }", llvm::join(symbolReplacements, ", "));
+
+    // Note that we use `0` as the result affine map's number of symbols. All
+    // symbols representing attribute usages should be folded away. But there
+    // may exist additional symbols for tensor dimension upper bounds. Linalg
+    // does not handle such cases right now. This needs to be fixed once we need
+    // that.
+    const char *replaceFmt =
+        "\n\tmap{0} = map{0}.replaceDimsAndSymbols({{}, {1}, {2}, 0);";
+    mapsStringStream << llvm::formatv(replaceFmt, tensorUse.index(),
+                                      replaceSymbolList, state.dims.size());
+    const char *simplifyFmt = "\n\tmap{0} = simplifyAffineMap(map{0});";
+    mapsStringStream << llvm::formatv(simplifyFmt, tensorUse.index());
+  }
+
   mapsStringStream.flush();
 
+  SmallVector<std::string, 4> mapList;
+  mapList.reserve(orderedUses.size());
+  for (unsigned i = 0; i < orderedUses.size(); ++i)
+    mapList.push_back(llvm::formatv("map{0}", i));
+
   // 4. Apply format to 1. using 2. and 3.
-  os << llvm::formatv(referenceIndexingMapsFmt, cppOpName, dimsStr, mapsStr);
+  os << llvm::formatv(referenceIndexingMapsFmt, cppOpName, dimsStr, mapsStr,
+                      llvm::join(mapList, ", "));
 }
 
 /// Print the C++ StructuredOpsInterface impl of `regionBuilder`.
@@ -1891,6 +2174,33 @@ void TCParser::printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
 
   os << llvm::formatv(regionBuilderFmt, cppOpName, valueHandleStr,
                       expressionsStr, yieldStr);
+}
+
+std::string
+TCParser::RegisteredAttr::getValueFn(ArrayRef<uint64_t> indices) const {
+  if (isArray)
+    return "";
+
+  if (!vectorDims.empty()) {
+    SmallVector<std::string, 4> indexStrs;
+    for (uint64_t index : indices)
+      indexStrs.push_back(std::to_string(index));
+    std::string indexList = llvm::join(indexStrs, ", ");
+    if (elementType == "f32")
+      return llvm::formatv("getValue<float>({ {0} })", indexList);
+    if (elementType == "i32")
+      return llvm::formatv("getValue<int>({ {0} })", indexList);
+    if (elementType == "i64")
+      return llvm::formatv("getValue<int64_t>({ {0} })", indexList);
+
+    return "";
+  }
+
+  if (elementType == "f32")
+    return "getValue().convertToFloat()";
+  if (elementType == "i32" || elementType == "i64")
+    return "getInt()";
+  return "";
 }
 
 /// Iterate over each Tensor Comprehension def.

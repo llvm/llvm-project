@@ -312,9 +312,9 @@ and ~/.lldbinit-Xcode for Xcode. If there is no application specific init
 file, :program:`lldb` will look for an init file in the home directory.
 If launched with a `REPL`_ option, it will first look for a REPL configuration
 file, specific to the REPL language. The init file should be named as follow:
-`.lldbinit-<language>-repl` (i.e. `.lldbinit-swift-repl`). If this file doesn't
+``.lldbinit-<language>-repl`` (i.e. ``.lldbinit-swift-repl``). If this file doesn't
 exist, or :program:`lldb` wasn't launch with `REPL`_, meaning there is neither
-a REPL init file nor an application specific init file, `lldb` will fallback to
+a REPL init file nor an application specific init file, ``lldb`` will fallback to
 the global ~/.lldbinit.
 
 Secondly, it will look for an .lldbinit file in the current working directory.

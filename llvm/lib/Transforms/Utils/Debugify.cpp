@@ -239,9 +239,7 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   NamedMDNode *NMD = M.getModuleFlagsMetadata();
   if (!NMD)
     return Changed;
-  SmallVector<MDNode *, 4> Flags;
-  for (MDNode *Flag : NMD->operands())
-    Flags.push_back(Flag);
+  SmallVector<MDNode *, 4> Flags(NMD->operands());
   NMD->clearOperands();
   for (MDNode *Flag : Flags) {
     MDString *Key = dyn_cast_or_null<MDString>(Flag->getOperand(1));

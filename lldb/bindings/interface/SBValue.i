@@ -13,7 +13,7 @@ namespace lldb {
 
 SBValue supports iteration through its child, which in turn is represented
 as an SBValue.  For example, we can get the general purpose registers of a
-frame as an SBValue, and iterate through all the registers,
+frame as an SBValue, and iterate through all the registers,::
 
     registerSet = frame.registers # Returns an SBValueList.
     for regs in registerSet:
@@ -25,30 +25,30 @@ frame as an SBValue, and iterate through all the registers,
     for reg in GPRs:
         print('Name: ', reg.name, ' Value: ', reg.value)
 
-produces the output:
+produces the output: ::
 
-General Purpose Registers (number of children = 21):
-Name:  rax  Value:  0x0000000100000c5c
-Name:  rbx  Value:  0x0000000000000000
-Name:  rcx  Value:  0x00007fff5fbffec0
-Name:  rdx  Value:  0x00007fff5fbffeb8
-Name:  rdi  Value:  0x0000000000000001
-Name:  rsi  Value:  0x00007fff5fbffea8
-Name:  rbp  Value:  0x00007fff5fbffe80
-Name:  rsp  Value:  0x00007fff5fbffe60
-Name:  r8  Value:  0x0000000008668682
-Name:  r9  Value:  0x0000000000000000
-Name:  r10  Value:  0x0000000000001200
-Name:  r11  Value:  0x0000000000000206
-Name:  r12  Value:  0x0000000000000000
-Name:  r13  Value:  0x0000000000000000
-Name:  r14  Value:  0x0000000000000000
-Name:  r15  Value:  0x0000000000000000
-Name:  rip  Value:  0x0000000100000dae
-Name:  rflags  Value:  0x0000000000000206
-Name:  cs  Value:  0x0000000000000027
-Name:  fs  Value:  0x0000000000000010
-Name:  gs  Value:  0x0000000000000048
+    General Purpose Registers (number of children = 21):
+    Name:  rax  Value:  0x0000000100000c5c
+    Name:  rbx  Value:  0x0000000000000000
+    Name:  rcx  Value:  0x00007fff5fbffec0
+    Name:  rdx  Value:  0x00007fff5fbffeb8
+    Name:  rdi  Value:  0x0000000000000001
+    Name:  rsi  Value:  0x00007fff5fbffea8
+    Name:  rbp  Value:  0x00007fff5fbffe80
+    Name:  rsp  Value:  0x00007fff5fbffe60
+    Name:  r8  Value:  0x0000000008668682
+    Name:  r9  Value:  0x0000000000000000
+    Name:  r10  Value:  0x0000000000001200
+    Name:  r11  Value:  0x0000000000000206
+    Name:  r12  Value:  0x0000000000000000
+    Name:  r13  Value:  0x0000000000000000
+    Name:  r14  Value:  0x0000000000000000
+    Name:  r15  Value:  0x0000000000000000
+    Name:  rip  Value:  0x0000000100000dae
+    Name:  rflags  Value:  0x0000000000000206
+    Name:  cs  Value:  0x0000000000000027
+    Name:  fs  Value:  0x0000000000000010
+    Name:  gs  Value:  0x0000000000000048
 
 See also linked_list_iter() for another perspective on how to iterate through an
 SBValue instance which interprets the value object as representing the head of a
@@ -379,22 +379,18 @@ public:
     Get an SBData wrapping what this SBValue points to.
 
     This method will dereference the current SBValue, if its
-    data type is a T* or T[], and extract item_count elements
-    of type T from it, copying their contents in an SBData.
+    data type is a ``T\*`` or ``T[]``, and extract ``item_count`` elements
+    of type ``T`` from it, copying their contents in an :py:class:`SBData`.
 
-    @param[in] item_idx
-        The index of the first item to retrieve. For an array
+    :param item_idx: The index of the first item to retrieve. For an array
         this is equivalent to array[item_idx], for a pointer
-        to *(pointer + item_idx). In either case, the measurement
-        unit for item_idx is the sizeof(T) rather than the byte
-
-    @param[in] item_count
-        How many items should be copied into the output. By default
+        to ``\*(pointer + item_idx)``. In either case, the measurement
+        unit for item_idx is the ``sizeof(T)`` rather than the byte
+    :param item_count: How many items should be copied into the output. By default
         only one item is copied, but more can be asked for.
-
-    @return
-        An SBData with the contents of the copied items, on success.
-        An empty SBData otherwise.") GetPointeeData;
+    :return: The contents of the copied items on success. An empty :py:class:`SBData` otherwise.
+    :rtype: SBData
+    ") GetPointeeData;
   lldb::SBData
   GetPointeeData (uint32_t item_idx = 0,
           uint32_t item_count = 1);

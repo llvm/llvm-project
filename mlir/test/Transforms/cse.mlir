@@ -81,12 +81,12 @@ func @different_results(%arg0: tensor<*xf32>) -> (tensor<?x?xf32>, tensor<4x?xf3
 // CHECK-LABEL: @different_attributes
 func @different_attributes(index, index) -> (i1, i1, i1) {
 ^bb0(%a : index, %b : index):
-  // CHECK: %0 = cmpi "slt", %arg0, %arg1 : index
-  %0 = cmpi "slt", %a, %b : index
+  // CHECK: %0 = cmpi slt, %arg0, %arg1 : index
+  %0 = cmpi slt, %a, %b : index
 
-  // CHECK-NEXT: %1 = cmpi "ne", %arg0, %arg1 : index
+  // CHECK-NEXT: %1 = cmpi ne, %arg0, %arg1 : index
   /// Predicate 1 means inequality comparison.
-  %1 = cmpi "ne", %a, %b : index
+  %1 = cmpi ne, %a, %b : index
   %2 = "std.cmpi"(%a, %b) {predicate = 1} : (index, index) -> i1
 
   // CHECK-NEXT: return %0, %1, %1 : i1, i1, i1

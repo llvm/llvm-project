@@ -187,8 +187,8 @@ test.format_optional_unit_attribute
 // CHECK: test.format_optional_unit_attribute_no_elide unit
 test.format_optional_unit_attribute_no_elide unit
 
-// CHECK: test.format_optional_enum_attr "case5"
-test.format_optional_enum_attr "case5"
+// CHECK: test.format_optional_enum_attr case5
+test.format_optional_enum_attr case5
 
 // CHECK: test.format_optional_enum_attr
 // CHECK-NOT: "case5"
@@ -308,5 +308,8 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 // CHECK: test.format_types_match_var %[[I64]] : i64
 %ignored_res3 = test.format_types_match_var %i64 : i64
 
+// CHECK: test.format_types_match_variadic %[[I64]], %[[I64]], %[[I64]] : i64, i64, i64
+%ignored_res4:3 = test.format_types_match_variadic %i64, %i64, %i64 : i64, i64, i64
+
 // CHECK: test.format_types_match_attr 1 : i64
-%ignored_res4 = test.format_types_match_attr 1 : i64
+%ignored_res5 = test.format_types_match_attr 1 : i64

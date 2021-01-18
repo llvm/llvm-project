@@ -304,7 +304,7 @@ collectRegionsConstants(OutlinableRegion &Region,
       unsigned GVN = GVNOpt.getValue();
 
       // Check if this global value has been found to not be the same already.
-      if (NotSame.find(GVN) != NotSame.end()) {
+      if (NotSame.contains(GVN)) {
         if (isa<Constant>(V))
           ConstantsTheSame = false;
         continue;
@@ -421,8 +421,7 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = C.getGVN(V).getValue();
       if (isa<Constant>(V))
-        if (NotSame.find(GVN) != NotSame.end() &&
-            Seen.find(GVN) == Seen.end()) {
+        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
           Inputs.push_back(GVN);
           Seen.insert(GVN);
         }
@@ -510,13 +509,16 @@ static void getCodeExtractorArguments(
   // outlined region. PremappedInputs are the arguments found by the
   // CodeExtractor, removing conditions such as sunken allocas, but that
   // may need to be remapped due to the extracted output values replacing
-  // the original values.
-  SetVector<Value *> OverallInputs, PremappedInputs, SinkCands, HoistCands;
+  // the original values. We use DummyOutputs for this first run of finding
+  // inputs and outputs since the outputs could change during findAllocas,
+  // the correct set of extracted outputs will be in the final Outputs ValueSet.
+  SetVector<Value *> OverallInputs, PremappedInputs, SinkCands, HoistCands,
+      DummyOutputs;
 
   // Use the code extractor to get the inputs and outputs, without sunken
   // allocas or removing llvm.assumes.
   CodeExtractor *CE = Region.CE;
-  CE->findInputsOutputs(OverallInputs, Outputs, SinkCands);
+  CE->findInputsOutputs(OverallInputs, DummyOutputs, SinkCands);
   assert(Region.StartBB && "Region must have a start BasicBlock!");
   Function *OrigF = Region.StartBB->getParent();
   CodeExtractorAnalysisCache CEAC(*OrigF);
@@ -552,7 +554,7 @@ static void getCodeExtractorArguments(
 
   // Sort the GVNs, since we now have constants included in the \ref InputGVNs
   // we need to make sure they are in a deterministic order.
-  stable_sort(InputGVNs.begin(), InputGVNs.end());
+  stable_sort(InputGVNs);
 }
 
 /// Look over the inputs and map each input argument to an argument in the
@@ -670,7 +672,7 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
       if (Group.ArgumentTypes[Jdx] != PointerType::getUnqual(Output->getType()))
         continue;
 
-      if (AggArgsUsed.find(Jdx) != AggArgsUsed.end())
+      if (AggArgsUsed.contains(Jdx))
         continue;
 
       TypeFound = true;
@@ -922,7 +924,7 @@ collectRelevantInstructions(Function &F,
   std::vector<Instruction *> RelevantInstructions;
 
   for (BasicBlock &BB : F) {
-    if (ExcludeBlocks.find(&BB) != ExcludeBlocks.end())
+    if (ExcludeBlocks.contains(&BB))
       continue;
 
     for (Instruction &Inst : BB) {
@@ -1125,8 +1127,6 @@ void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
     Term->moveBefore(*EndBB, EndBB->end());
     OutputBlock->eraseFromParent();
   }
-
-  return;
 }
 
 /// Fill the new function that will serve as the replacement function for all of
@@ -1263,6 +1263,16 @@ void IROutliner::pruneIncompatibleRegions(
       continue;
 
     bool BadInst = any_of(IRSC, [this](IRInstructionData &ID) {
+      // We check if there is a discrepancy between the InstructionDataList
+      // and the actual next instruction in the module.  If there is, it means
+      // that an extra instruction was added, likely by the CodeExtractor.
+
+      // Since we do not have any similarity data about this particular
+      // instruction, we cannot confidently outline it, and must discard this
+      // candidate.
+      if (std::next(ID.getIterator())->Inst !=
+          ID.Inst->getNextNonDebugInstruction())
+        return true;
       return !this->InstructionClassifier.visit(ID.Inst);
     });
 

@@ -8,7 +8,6 @@ void vector_literals_invalid()
 {
   int4 a = (int4)(1,2,3); // expected-error{{too few elements}}
   int4 b = (int4)(1,2,3,4,5); // expected-error{{excess elements in vector}}
-  ((float4)(1.0f))++; // expected-error{{cannot increment value of type 'float4'}}
   int8 d = (int8)(a,(float4)(1)); // expected-error{{initializing 'int' with an expression of incompatible type 'float4'}}
   ((int4)(0)).x = 8; // expected-error{{expression is not assignable}}
 }

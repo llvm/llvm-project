@@ -221,9 +221,8 @@ static bool isTiled(AffineMap map, ValueRange tileSizes) {
 
 static SmallVector<Value, 4>
 makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
-                ValueRange operands, AffineMap map, ValueRange ivs,
+                ArrayRef<Value> tiledOperands, AffineMap map, ValueRange ivs,
                 ValueRange tileSizes, ValueRange allShapeSizes) {
-  assert(operands.size() == linalgOp.getShapedOperands().size());
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
                            [](Value v) { return !isZero(v); })) &&
@@ -243,11 +242,9 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
     subShapeSizes.push_back(size - std_constant_index(1));
   }
 
-  auto *op = linalgOp.getOperation();
-
   SmallVector<Value, 4> res;
-  res.reserve(op->getNumOperands());
-  for (auto en : llvm::enumerate(operands)) {
+  res.reserve(tiledOperands.size());
+  for (auto en : llvm::enumerate(tiledOperands)) {
     Value shapedOp = en.value();
     ShapedType shapedType = shapedOp.getType().cast<ShapedType>();
     unsigned rank = shapedType.getRank();
@@ -342,6 +339,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
   std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
+
   SmallVector<Attribute, 4> iteratorTypes;
   for (auto attr :
        enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
@@ -574,10 +572,10 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
 static void insertTilingPatterns(OwningRewritePatternList &patterns,
                                  const LinalgTilingOptions &options,
                                  MLIRContext *ctx) {
-  RewritePatternList<
+  RewritePatternList<GenericOp, IndexedGenericOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-      >::insert(patterns, options, ctx);
+                     >::insert(patterns, options, ctx);
 }
 
 static void applyTilingToLoopPatterns(LinalgTilingLoopType loopType,

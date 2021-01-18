@@ -14,7 +14,7 @@ namespace lldb {
 "Represents a destination for streaming data output to. By default, a string
 stream is created.
 
-For example (from test/source-manager/TestSourceManager.py),
+For example (from test/source-manager/TestSourceManager.py), ::
 
         # Create the filespec for 'main.c'.
         filespec = lldb.SBFileSpec('main.c', False)

@@ -250,6 +250,15 @@ public:
       return false;
     return VisitorBase::TraverseStmt(Node->getBody());
   }
+  bool TraverseCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *Node) {
+    if (!Finder->isTraversalIgnoringImplicitNodes())
+      return VisitorBase::TraverseCXXRewrittenBinaryOperator(Node);
+    if (!Node)
+      return true;
+    ScopedIncrement ScopedDepth(&CurrentDepth);
+
+    return match(*Node->getLHS()) && match(*Node->getRHS());
+  }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
     if (!Finder->isTraversalIgnoringImplicitNodes())
       return VisitorBase::TraverseLambdaExpr(Node);
@@ -486,6 +495,19 @@ public:
         } else {
           ASTNodeNotSpelledInSourceScope RAII(this, true);
           TraverseStmt(SubStmt, Queue);
+        }
+      }
+      return true;
+    } else if (auto *RBO = dyn_cast<CXXRewrittenBinaryOperator>(S)) {
+      {
+        ASTNodeNotAsIsSourceScope RAII(this, true);
+        TraverseStmt(const_cast<Expr *>(RBO->getLHS()));
+        TraverseStmt(const_cast<Expr *>(RBO->getRHS()));
+      }
+      {
+        ASTNodeNotSpelledInSourceScope RAII(this, true);
+        for (auto *SubStmt : RBO->children()) {
+          TraverseStmt(SubStmt);
         }
       }
       return true;

@@ -17,10 +17,12 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -84,7 +86,7 @@ class GBRSimplex;
 ///
 /// The unknowns in row position are represented in terms of the basis unknowns.
 /// If the basis unknowns are u_1, u_2, ... u_m, and a row in the tableau is
-/// d, c, a_1, a_2, ... a_m, this representats the unknown for that row as
+/// d, c, a_1, a_2, ... a_m, this represents the unknown for that row as
 /// (c + a_1*u_1 + a_2*u_2 + ... + a_m*u_m)/d. In our running example, if the
 /// basis is the initial basis of x, y, then the constraint 1 + 2x + 3y >= 0
 /// would be represented by the row [1, 1, 2, 3].
@@ -173,19 +175,24 @@ public:
   void intersectFlatAffineConstraints(const FlatAffineConstraints &fac);
 
   /// Compute the maximum or minimum value of the given row, depending on
-  /// direction. The specified row is never pivoted.
+  /// direction. The specified row is never pivoted. On return, the row may
+  /// have a negative sample value if the direction is down.
   ///
-  /// Returns a (num, den) pair denoting the optimum, or None if no
-  /// optimum exists, i.e., if the expression is unbounded in this direction.
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
   Optional<Fraction> computeRowOptimum(Direction direction, unsigned row);
 
   /// Compute the maximum or minimum value of the given expression, depending on
-  /// direction.
+  /// direction. Should not be called when the Simplex is empty.
   ///
-  /// Returns a (num, den) pair denoting the optimum, or a null value if no
-  /// optimum exists, i.e., if the expression is unbounded in this direction.
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
   Optional<Fraction> computeOptimum(Direction direction,
                                     ArrayRef<int64_t> coeffs);
+
+  /// Returns whether the perpendicular of the specified constraint is a
+  /// is a direction along which the polytope is bounded.
+  bool isBoundedAlongConstraint(unsigned constraintIndex);
 
   /// Returns whether the specified constraint has been marked as redundant.
   /// Constraints are numbered from 0 starting at the first added inequality.
@@ -298,6 +305,15 @@ private:
   /// Returns true if the unknown was successfully restored to a non-negative
   /// sample value, false otherwise.
   LogicalResult restoreRow(Unknown &u);
+
+  /// Compute the maximum or minimum of the specified Unknown, depending on
+  /// direction. The specified unknown may be pivoted. If the unknown is
+  /// restricted, it will have a non-negative sample value on return.
+  /// Should not be called if the Simplex is empty.
+  ///
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
+  Optional<Fraction> computeOptimum(Direction direction, Unknown &u);
 
   /// Mark the specified unknown redundant. This operation is added to the undo
   /// log and will be undone by rollbacks. The specified unknown must be in row

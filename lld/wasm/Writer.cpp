@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "InputTable.h"
 #include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
@@ -284,7 +285,7 @@ void Writer::layoutMemory() {
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
                 memoryPtr, seg->size, seg->alignment));
 
-    if (seg->name == ".tdata") {
+    if (!config->relocatable && seg->name == ".tdata") {
       if (config->sharedMemory) {
         auto *tlsSize = cast<DefinedGlobal>(WasmSym::tlsSize);
         setGlobalPtr(tlsSize, seg->size);
@@ -574,6 +575,8 @@ static bool shouldImport(Symbol *sym) {
     return g->importName.hasValue();
   if (auto *f = dyn_cast<UndefinedFunction>(sym))
     return f->importName.hasValue();
+  if (auto *t = dyn_cast<UndefinedTable>(sym))
+    return t->importName.hasValue();
 
   return false;
 }
@@ -636,10 +639,12 @@ void Writer::calculateExports() {
       export_ = {name, WASM_EXTERNAL_GLOBAL, g->getGlobalIndex()};
     } else if (auto *e = dyn_cast<DefinedEvent>(sym)) {
       export_ = {name, WASM_EXTERNAL_EVENT, e->getEventIndex()};
-    } else {
-      auto *d = cast<DefinedData>(sym);
+    } else if (auto *d = dyn_cast<DefinedData>(sym)) {
       out.globalSec->dataAddressGlobals.push_back(d);
       export_ = {name, WASM_EXTERNAL_GLOBAL, globalIndex++};
+    } else {
+      auto *t = cast<DefinedTable>(sym);
+      export_ = {name, WASM_EXTERNAL_TABLE, t->getTableNumber()};
     }
 
     LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
@@ -779,6 +784,12 @@ void Writer::assignIndexes() {
     LLVM_DEBUG(dbgs() << "Events: " << file->getName() << "\n");
     for (InputEvent *event : file->events)
       out.eventSec->addEvent(event);
+  }
+
+  for (ObjFile *file : symtab->objectFiles) {
+    LLVM_DEBUG(dbgs() << "Tables: " << file->getName() << "\n");
+    for (InputTable *table : file->tables)
+      out.tableSec->addTable(table);
   }
 
   out.globalSec->assignIndexes();
@@ -1385,10 +1396,12 @@ void Writer::run() {
     log("Defined Functions: " + Twine(out.functionSec->inputFunctions.size()));
     log("Defined Globals  : " + Twine(out.globalSec->numGlobals()));
     log("Defined Events   : " + Twine(out.eventSec->inputEvents.size()));
+    log("Defined Tables   : " + Twine(out.tableSec->inputTables.size()));
     log("Function Imports : " +
         Twine(out.importSec->getNumImportedFunctions()));
     log("Global Imports   : " + Twine(out.importSec->getNumImportedGlobals()));
     log("Event Imports    : " + Twine(out.importSec->getNumImportedEvents()));
+    log("Table Imports    : " + Twine(out.importSec->getNumImportedTables()));
     for (ObjFile *file : symtab->objectFiles)
       file->dumpInfo();
   }

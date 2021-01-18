@@ -118,7 +118,7 @@ access to derived objects by providing a virtual interface that must be
 implemented. As an example, many analyses and transformations want to reason
 about the side effects of an operation to improve performance and correctness.
 The side effects of an operation are generally tied to the semantics of a
-specific operation, for example an `affine.load` operation has a `write` effect
+specific operation, for example an `affine.load` operation has a `read` effect
 (as the name may suggest).
 
 These interfaces are defined by overriding the

@@ -868,6 +868,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
     cxxDefaultArgExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
+    cxxRewrittenBinaryOperator;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;
@@ -919,6 +921,9 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
     binaryOperator;
+const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr,
+                                CXXRewrittenBinaryOperator>
+    binaryOperation;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryOperator> unaryOperator;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ConditionalOperator>
     conditionalOperator;

@@ -73,9 +73,10 @@ protected:
 
 %feature("docstring",
 "Represents a list of SBTypeEnumMembers.
+
 SBTypeEnumMemberList supports SBTypeEnumMember iteration.
 It also supports [] access either by index, or by enum
-element name by doing:
+element name by doing: ::
 
   myType = target.FindFirstType('MyEnumWithElementA')
   members = myType.GetEnumMembers()
@@ -116,7 +117,7 @@ public:
         def __len__(self):
             '''Return the number of members in a lldb.SBTypeEnumMemberList object.'''
             return self.GetSize()
-    
+
         def __getitem__(self, key):
           num_elements = self.GetSize()
           if type(key) is int:
@@ -128,7 +129,7 @@ public:
                   if item.name == key:
                       return item
           return None
-    %} 
+    %}
 #endif
 
 private:

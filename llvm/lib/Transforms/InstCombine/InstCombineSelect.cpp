@@ -1113,10 +1113,25 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // replacement cycle.
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
   if (TrueVal != CmpLHS &&
-      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT))
+      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(Sel, Swapped ? 2 : 1, V);
+
+    // Even if TrueVal does not simplify, we can directly replace a use of
+    // CmpLHS with CmpRHS, as long as the instruction is not used anywhere
+    // else. Only do this if CmpRHS is a constant, as profitability is not
+    // clear for other cases.
+    // FIXME: The replacement could be performed recursively.
+    if (isa<Constant>(CmpRHS) && !isa<ConstantExpr>(CmpRHS))
+      if (auto *I = dyn_cast<Instruction>(TrueVal))
+        if (I->hasOneUse())
+          for (Use &U : I->operands())
+            if (U == CmpLHS) {
+              replaceUse(U, CmpRHS);
+              return &Sel;
+            }
+  }
   if (TrueVal != CmpRHS &&
       isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
@@ -2572,11 +2587,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
-    if (EnableUnsafeSelectTransform && match(TrueVal, m_One())) {
+    if (match(TrueVal, m_One()) &&
+        (EnableUnsafeSelectTransform || impliesPoison(FalseVal, CondVal))) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
-    if (EnableUnsafeSelectTransform && match(FalseVal, m_Zero())) {
+    if (match(FalseVal, m_Zero()) &&
+        (EnableUnsafeSelectTransform || impliesPoison(TrueVal, CondVal))) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }

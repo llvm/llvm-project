@@ -704,7 +704,9 @@ Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
 
 :ref:`Scalable vectors <t_vector>` cannot be global variables or members of
-structs or arrays because their size is unknown at compile time.
+arrays because their size is unknown at compile time. They are allowed in
+structs to facilitate intrinsics returning multiple values. Structs containing
+scalable vectors cannot be used in loads, stores, allocas, or GEPs.
 
 Syntax::
 
@@ -5284,6 +5286,33 @@ The current supported opcode vocabulary is limited:
   of the stack. This opcode can be used to calculate bounds of fortran assumed
   rank array which has rank known at run time and current dimension number is
   implicitly first element of the stack.
+- ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
+  be used to represent pointer variables which are optimized out but the value
+  it points to is known. This operator is required as it is different than DWARF
+  operator DW_OP_implicit_pointer in representation and specification (number
+  and types of operands) and later can not be used as multiple level.
+
+.. code-block:: text
+
+    IR for "*ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+
+    IR for "**ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
+    !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
+                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -19576,6 +19605,82 @@ Semantics:
 This function returns the same values as the libm ``trunc`` functions
 would and handles error conditions in the same way.
 
+.. _int_experimental_noalias_scope_decl:
+
+'``llvm.experimental.noalias.scope.decl``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+
+::
+
+      declare void @llvm.experimental.noalias.scope.decl(metadata !id.scope.list)
+
+Overview:
+"""""""""
+
+The ``llvm.experimental.noalias.scope.decl`` intrinsic identifies where a
+noalias scope is declared. When the intrinsic is duplicated, a decision must
+also be made about the scope: depending on the reason of the duplication,
+the scope might need to be duplicated as well.
+
+
+Arguments:
+""""""""""
+
+The ``!id.scope.list`` argument is metadata that is a list of ``noalias``
+metadata references. The format is identical to that required for ``noalias``
+metadata. This list must have exactly one element.
+
+Semantics:
+""""""""""
+
+The ``llvm.experimental.noalias.scope.decl`` intrinsic identifies where a
+noalias scope is declared. When the intrinsic is duplicated, a decision must
+also be made about the scope: depending on the reason of the duplication,
+the scope might need to be duplicated as well.
+
+For example, when the intrinsic is used inside a loop body, and that loop is
+unrolled, the associated noalias scope must also be duplicated. Otherwise, the
+noalias property it signifies would spill across loop iterations, whereas it
+was only valid within a single iteration.
+
+.. code-block:: llvm
+
+  ; This examples shows two possible positions for noalias.decl and how they impact the semantics:
+  ; If it is outside the loop (Version 1), then %a and %b are noalias across *all* iterations.
+  ; If it is inside the loop (Version 2), then %a and %b are noalias only within *one* iteration.
+  declare void @decl_in_loop(i8* %a.base, i8* %b.base) {
+  entry:
+    ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 1: noalias decl outside loop
+    br label %loop
+  
+  loop:
+    %a = phi i8* [ %a.base, %entry ], [ %a.inc, %loop ]
+    %b = phi i8* [ %b.base, %entry ], [ %b.inc, %loop ]
+    ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 2: noalias decl inside loop
+    %val = load i8, i8* %a, !alias.scope !2
+    store i8 %val, i8* %b, !noalias !2
+    %a.inc = getelementptr inbounds i8, i8* %a, i64 1
+    %b.inc = getelementptr inbounds i8, i8* %b, i64 1
+    %cond = call i1 @cond()
+    br i1 %cond, label %loop, label %exit
+  
+  exit:
+    ret void
+  }
+  
+  !0 = !{!0} ; domain
+  !1 = !{!1, !0} ; scope
+  !2 = !{!1} ; scope list
+
+Multiple calls to `@llvm.experimental.noalias.scope.decl` for the same scope
+are possible, but one should never dominate another. Violations are pointed out
+by the verifier as they indicate a problem in either a transformation pass or
+the input.
+
 
 Floating Point Environment Manipulation intrinsics
 --------------------------------------------------
@@ -20063,7 +20168,7 @@ optimizer.
 
 .. _int_ssa_copy:
 
-'``llvm.ssa_copy``' Intrinsic
+'``llvm.ssa.copy``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20071,7 +20176,7 @@ Syntax:
 
 ::
 
-      declare type @llvm.ssa_copy(type %operand) returned(1) readnone
+      declare type @llvm.ssa.copy(type %operand) returned(1) readnone
 
 Arguments:
 """"""""""
@@ -20081,7 +20186,7 @@ The first argument is an operand which is used as the returned value.
 Overview:
 """"""""""
 
-The ``llvm.ssa_copy`` intrinsic can be used to attach information to
+The ``llvm.ssa.copy`` intrinsic can be used to attach information to
 operations by copying them and giving them new names.  For example,
 the PredicateInfo utility uses it to build Extended SSA form, and
 attach various forms of information to operands that dominate specific

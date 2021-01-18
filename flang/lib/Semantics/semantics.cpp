@@ -264,13 +264,12 @@ void SemanticsContext::PopConstruct() {
 
 void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
     const Symbol &variable, parser::MessageFixedText &&message) {
-  if (const Symbol * root{GetAssociationRoot(variable)}) {
-    auto it{activeIndexVars_.find(*root)};
-    if (it != activeIndexVars_.end()) {
-      std::string kind{EnumToString(it->second.kind)};
-      Say(location, std::move(message), kind, root->name())
-          .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
-    }
+  const Symbol &symbol{ResolveAssociations(variable)};
+  auto it{activeIndexVars_.find(symbol)};
+  if (it != activeIndexVars_.end()) {
+    std::string kind{EnumToString(it->second.kind)};
+    Say(location, std::move(message), kind, symbol.name())
+        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
   }
 }
 
@@ -302,19 +301,16 @@ void SemanticsContext::ActivateIndexVar(
     const parser::Name &name, IndexVarKind kind) {
   CheckIndexVarRedefine(name);
   if (const Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      activeIndexVars_.emplace(*root, IndexVarInfo{name.source, kind});
-    }
+    activeIndexVars_.emplace(
+        ResolveAssociations(*indexVar), IndexVarInfo{name.source, kind});
   }
 }
 
 void SemanticsContext::DeactivateIndexVar(const parser::Name &name) {
   if (Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      auto it{activeIndexVars_.find(*root)};
-      if (it != activeIndexVars_.end() && it->second.location == name.source) {
-        activeIndexVars_.erase(it);
-      }
+    auto it{activeIndexVars_.find(ResolveAssociations(*indexVar))};
+    if (it != activeIndexVars_.end() && it->second.location == name.source) {
+      activeIndexVars_.erase(it);
     }
   }
 }
@@ -329,16 +325,20 @@ SymbolVector SemanticsContext::GetIndexVars(IndexVarKind kind) {
   return result;
 }
 
+SourceName SemanticsContext::SaveTempName(std::string &&name) {
+  return {*tempNames_.emplace(std::move(name)).first};
+}
+
 SourceName SemanticsContext::GetTempName(const Scope &scope) {
   for (const auto &str : tempNames_) {
-    SourceName name{str};
-    if (scope.find(name) == scope.end()) {
-      return name;
+    if (str.size() > 5 && str.substr(0, 5) == ".F18.") {
+      SourceName name{str};
+      if (scope.find(name) == scope.end()) {
+        return name;
+      }
     }
   }
-  tempNames_.emplace_back(".F18.");
-  tempNames_.back() += std::to_string(tempNames_.size());
-  return {tempNames_.back()};
+  return SaveTempName(".F18."s + std::to_string(tempNames_.size()));
 }
 
 bool Semantics::Perform() {

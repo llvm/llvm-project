@@ -79,6 +79,19 @@ void Matrix::addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale) {
   return;
 }
 
+void Matrix::addToColumn(unsigned sourceColumn, unsigned targetColumn,
+                         int64_t scale) {
+  if (scale == 0)
+    return;
+  for (unsigned row = 0, e = getNumRows(); row < e; ++row)
+    at(row, targetColumn) += scale * at(row, sourceColumn);
+}
+
+void Matrix::negateColumn(unsigned column) {
+  for (unsigned row = 0, e = getNumRows(); row < e; ++row)
+    at(row, column) = -at(row, column);
+}
+
 void Matrix::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)

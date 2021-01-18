@@ -1,4 +1,7 @@
 // RUN: %libomp-compile-and-run
+// RUN: %libomp-compile && env KMP_BLOCKTIME=infinite %libomp-run
+// RUN: %libomp-compile && env KMP_PLAIN_BARRIER_PATTERN='hierarchical,hierarchical' KMP_FORKJOIN_BARRIER_PATTERN='hierarchical,hierarchical' %libomp-run
+// RUN: %libomp-compile && env KMP_BLOCKTIME=infinite KMP_PLAIN_BARRIER_PATTERN='hierarchical,hierarchical' KMP_FORKJOIN_BARRIER_PATTERN='hierarchical,hierarchical' %libomp-run
 #include <stdio.h>
 #include "omp_testsuite.h"
 #include "omp_my_sleep.h"

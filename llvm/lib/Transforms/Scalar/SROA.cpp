@@ -1076,7 +1076,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 
   // Sort the uses. This arranges for the offsets to be in ascending order,
   // and the sizes to be in descending order.
-  std::stable_sort(Slices.begin(), Slices.end());
+  llvm::stable_sort(Slices);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2113,8 +2113,7 @@ static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
   // that we cover the alloca.
   // FIXME: We shouldn't consider split slices that happen to start in the
   // partition here...
-  bool WholeAllocaOp =
-      P.begin() != P.end() ? false : DL.isLegalInteger(SizeInBits);
+  bool WholeAllocaOp = P.empty() && DL.isLegalInteger(SizeInBits);
 
   for (const Slice &S : P)
     if (!isIntegerWideningViableForSlice(S, P.beginOffset(), AllocaTy, DL,

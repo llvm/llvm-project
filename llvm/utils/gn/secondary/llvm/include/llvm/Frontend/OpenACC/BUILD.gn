@@ -9,7 +9,7 @@ tablegen("ACC") {
 tablegen("ACCcpp") {
   visibility = [ ":acc_gen" ]
   args = [ "-gen-directive-gen" ]
-  output_name = "ACC.cpp.inc"
+  output_name = "ACC.inc"
   td_file = "ACC.td"
 }
 

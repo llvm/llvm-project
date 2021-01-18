@@ -1157,8 +1157,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
           }
         }
 
-        llvm::sort(DefOperandIndexes.begin(), DefOperandIndexes.end(),
-                   [&](uint16_t I0, uint16_t I1) {
+        llvm::sort(DefOperandIndexes, [&](uint16_t I0, uint16_t I1) {
           const MachineOperand &MO0 = MI.getOperand(I0);
           const MachineOperand &MO1 = MI.getOperand(I1);
           Register Reg0 = MO0.getReg();

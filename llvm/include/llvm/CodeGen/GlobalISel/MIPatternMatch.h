@@ -39,6 +39,20 @@ inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
   return SP;
 }
 
+template <typename SubPatternT> struct OneNonDBGUse_match {
+  SubPatternT SubPat;
+  OneNonDBGUse_match(const SubPatternT &SP) : SubPat(SP) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return MRI.hasOneNonDBGUse(Reg) && SubPat.match(MRI, Reg);
+  }
+};
+
+template <typename SubPat>
+inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
+  return SP;
+}
+
 struct ConstantMatch {
   int64_t &CR;
   ConstantMatch(int64_t &C) : CR(C) {}

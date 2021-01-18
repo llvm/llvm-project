@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVASMBACKEND_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVASMBACKEND_H
 
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
-#include "Utils/RISCVBaseInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"

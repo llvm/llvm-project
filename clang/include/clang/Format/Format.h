@@ -1792,29 +1792,6 @@ struct FormatStyle {
   /// \endcode
   bool IndentGotoLabels;
 
-  /// Indent pragmas
-  ///
-  /// When ``false``, pragmas are flushed left or follow IndentPPDirectives.
-  /// When ``true``, pragmas are indented to the current scope level.
-  /// \code
-  ///   false:                                  true:
-  ///   #pragma once                   vs       #pragma once
-  ///   void foo() {                            void foo() {
-  ///   #pragma omp simd                          #pragma omp simd
-  ///     for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///   #pragma omp simd                            #pragma omp simd
-  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///       }                                       }
-  ///   #if 1                                   #if 1
-  ///   #pragma omp simd                            #pragma omp simd
-  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///       }                                       }
-  ///   #endif                                  #endif
-  ///     }                                       }
-  ///   }                                       }
-  /// \endcode
-  bool IndentPragmas;
-
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : unsigned char {
     /// Does not indent any directives.
@@ -2699,6 +2676,22 @@ struct FormatStyle {
   /// \endcode
   LanguageStandard Standard;
 
+  /// Macros which are ignored in front of a statement, as if they were an
+  /// attribute. So that they are not parsed as identifier, for example for Qts
+  /// emit.
+  /// \code
+  ///   AlignConsecutiveDeclarations: true
+  ///   StatementAttributeLikeMacros: []
+  ///   unsigned char data = 'x';
+  ///   emit          signal(data); // This is parsed as variable declaration.
+  ///
+  ///   AlignConsecutiveDeclarations: true
+  ///   StatementAttributeLikeMacros: [emit]
+  ///   unsigned char data = 'x';
+  ///   emit signal(data); // Now it's fine again.
+  /// \endcode
+  std::vector<std::string> StatementAttributeLikeMacros;
+
   /// The number of columns used for tab stops.
   unsigned TabWidth;
 
@@ -2790,7 +2783,6 @@ struct FormatStyle {
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentGotoLabels == R.IndentGotoLabels &&
-           IndentPragmas == R.IndentPragmas &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentRequires == R.IndentRequires && IndentWidth == R.IndentWidth &&
@@ -2849,9 +2841,11 @@ struct FormatStyle {
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
-           Standard == R.Standard && TabWidth == R.TabWidth &&
-           StatementMacros == R.StatementMacros && UseTab == R.UseTab &&
-           UseCRLF == R.UseCRLF && TypenameMacros == R.TypenameMacros;
+           Standard == R.Standard &&
+           StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
+           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
+           UseTab == R.UseTab && UseCRLF == R.UseCRLF &&
+           TypenameMacros == R.TypenameMacros;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

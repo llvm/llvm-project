@@ -6,8 +6,7 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq .LBB0_8
+; CHECK-NEXT:    cbz r2, .LBB0_8
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    cmp r2, #8
 ; CHECK-NEXT:    blo .LBB0_9

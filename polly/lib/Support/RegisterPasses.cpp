@@ -524,7 +524,7 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   PM.addPass(CodePreparationPass());
   PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
   PM.addPass(PB.buildFunctionSimplificationPipeline(
-      Level, PassBuilder::ThinLTOPhase::None)); // Cleanup
+      Level, ThinOrFullLTOPhase::None)); // Cleanup
 
   assert(!DumpAfter && "This option is not implemented");
   assert(DumpAfterFile.empty() && "This option is not implemented");

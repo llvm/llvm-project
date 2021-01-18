@@ -363,6 +363,8 @@ private:
   const Symbol *ResolveGeneric(const Symbol &, const ActualArguments &,
       const AdjustActuals &, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &);
+  const Symbol &AccessSpecific(
+      const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
       ActualArguments &&, bool isSubroutine = false,
       bool mightBeStructureConstructor = false);

@@ -23,7 +23,7 @@
 # RUN: lld-link %t3.obj -out:%t3.exe -debug -pdb:%t3.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=INVALID-PATH -allow-empty
 
 # INVALID-PATH-NOT: warning: Cannot use debug info for '{{.*}}3.obj' [LNK4099]
-# INVALID-PATH-NOT: failed to load reference 'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb': {{[Nn]}}o such file or directory
+# INVALID-PATH-NOT: failed to load reference 'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb': {{.*}}{{[Nn]}}o such file or directory
 
 --- !COFF
 header:

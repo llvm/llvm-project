@@ -50,6 +50,10 @@ FloatType Builder::getF32Type() { return FloatType::getF32(context); }
 
 FloatType Builder::getF64Type() { return FloatType::getF64(context); }
 
+FloatType Builder::getF80Type() { return FloatType::getF80(context); }
+
+FloatType Builder::getF128Type() { return FloatType::getF128(context); }
+
 IndexType Builder::getIndexType() { return IndexType::get(context); }
 
 IntegerType Builder::getI1Type() { return IntegerType::get(context, 1); }

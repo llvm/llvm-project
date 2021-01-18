@@ -13,7 +13,7 @@ namespace lldb {
 basename.  The string values of the paths are put into uniqued string pools
 for fast comparisons and efficient memory usage.
 
-For example, the following code
+For example, the following code ::
 
         lineEntry = context.GetLineEntry()
         self.expect(lineEntry.GetFileSpec().GetDirectory(), 'The line entry should have the correct directory',

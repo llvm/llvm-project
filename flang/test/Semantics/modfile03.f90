@@ -158,3 +158,21 @@ end
 !  end
 ! end interface
 !end
+
+module m7a
+  real :: x
+end
+!Expect: m7a.mod
+!module m7a
+! real(4)::x
+!end
+
+module m7b
+  use m7a
+  private
+end
+!Expect: m7b.mod
+!module m7b
+! use m7a,only:x
+! private::x
+!end

@@ -12,62 +12,30 @@
 #include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
 
+// RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
+// macro is defined before including <inttypes.h>.
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS 1
+#endif
+
 #include <assert.h>
 #include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>
 
-namespace {
 using gwp_asan::AllocationMetadata;
 using gwp_asan::Error;
 using gwp_asan::GuardedPoolAllocator;
-using gwp_asan::crash_handler::PrintBacktrace_t;
-using gwp_asan::crash_handler::Printf_t;
-using gwp_asan::crash_handler::SegvBacktrace_t;
+using gwp_asan::Printf_t;
+using gwp_asan::backtrace::PrintBacktrace_t;
+using gwp_asan::backtrace::SegvBacktrace_t;
 
-struct sigaction PreviousHandler;
-bool SignalHandlerInstalled;
-gwp_asan::GuardedPoolAllocator *GPAForSignalHandler;
-Printf_t PrintfForSignalHandler;
-PrintBacktrace_t PrintBacktraceForSignalHandler;
-SegvBacktrace_t BacktraceForSignalHandler;
-
-static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
-  if (GPAForSignalHandler) {
-    GPAForSignalHandler->stop();
-
-    gwp_asan::crash_handler::dumpReport(
-        reinterpret_cast<uintptr_t>(info->si_addr),
-        GPAForSignalHandler->getAllocatorState(),
-        GPAForSignalHandler->getMetadataRegion(), BacktraceForSignalHandler,
-        PrintfForSignalHandler, PrintBacktraceForSignalHandler, ucontext);
-  }
-
-  // Process any previous handlers.
-  if (PreviousHandler.sa_flags & SA_SIGINFO) {
-    PreviousHandler.sa_sigaction(sig, info, ucontext);
-  } else if (PreviousHandler.sa_handler == SIG_DFL) {
-    // If the previous handler was the default handler, cause a core dump.
-    signal(SIGSEGV, SIG_DFL);
-    raise(SIGSEGV);
-  } else if (PreviousHandler.sa_handler == SIG_IGN) {
-    // If the previous segv handler was SIGIGN, crash iff we were responsible
-    // for the crash.
-    if (__gwp_asan_error_is_mine(GPAForSignalHandler->getAllocatorState(),
-                                 reinterpret_cast<uintptr_t>(info->si_addr))) {
-      signal(SIGSEGV, SIG_DFL);
-      raise(SIGSEGV);
-    }
-  } else {
-    PreviousHandler.sa_handler(sig);
-  }
-}
+namespace {
 
 struct ScopedEndOfReportDecorator {
-  ScopedEndOfReportDecorator(gwp_asan::crash_handler::Printf_t Printf)
-      : Printf(Printf) {}
+  ScopedEndOfReportDecorator(gwp_asan::Printf_t Printf) : Printf(Printf) {}
   ~ScopedEndOfReportDecorator() { Printf("*** End GWP-ASan report ***\n"); }
-  gwp_asan::crash_handler::Printf_t Printf;
+  gwp_asan::Printf_t Printf;
 };
 
 // Prints the provided error and metadata information.
@@ -117,47 +85,6 @@ void printHeader(Error E, uintptr_t AccessPtr,
          AccessPtr, DescriptionBuffer, ThreadBuffer);
 }
 
-void defaultPrintStackTrace(uintptr_t *Trace, size_t TraceLength,
-                            gwp_asan::crash_handler::Printf_t Printf) {
-  if (TraceLength == 0)
-    Printf("  <unknown (does your allocator support backtracing?)>\n");
-
-  for (size_t i = 0; i < TraceLength; ++i) {
-    Printf("  #%zu 0x%zx in <unknown>\n", i, Trace[i]);
-  }
-  Printf("\n");
-}
-
-} // anonymous namespace
-
-namespace gwp_asan {
-namespace crash_handler {
-PrintBacktrace_t getBasicPrintBacktraceFunction() {
-  return defaultPrintStackTrace;
-}
-
-void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
-                           PrintBacktrace_t PrintBacktrace,
-                           SegvBacktrace_t SegvBacktrace) {
-  GPAForSignalHandler = GPA;
-  PrintfForSignalHandler = Printf;
-  PrintBacktraceForSignalHandler = PrintBacktrace;
-  BacktraceForSignalHandler = SegvBacktrace;
-
-  struct sigaction Action = {};
-  Action.sa_sigaction = sigSegvHandler;
-  Action.sa_flags = SA_SIGINFO;
-  sigaction(SIGSEGV, &Action, &PreviousHandler);
-  SignalHandlerInstalled = true;
-}
-
-void uninstallSignalHandlers() {
-  if (SignalHandlerInstalled) {
-    sigaction(SIGSEGV, &PreviousHandler, nullptr);
-    SignalHandlerInstalled = false;
-  }
-}
-
 void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
                 const gwp_asan::AllocationMetadata *Metadata,
                 SegvBacktrace_t SegvBacktrace, Printf_t Printf,
@@ -205,7 +132,7 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
   // Maybe print the deallocation trace.
   if (__gwp_asan_is_deallocated(AllocMeta)) {
     uint64_t ThreadID = __gwp_asan_get_deallocation_thread_id(AllocMeta);
-    if (ThreadID == kInvalidThreadID)
+    if (ThreadID == gwp_asan::kInvalidThreadID)
       Printf("0x%zx was deallocated by thread <unknown> here:\n", ErrorPtr);
     else
       Printf("0x%zx was deallocated by thread %zu here:\n", ErrorPtr, ThreadID);
@@ -216,7 +143,7 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
 
   // Print the allocation trace.
   uint64_t ThreadID = __gwp_asan_get_allocation_thread_id(AllocMeta);
-  if (ThreadID == kInvalidThreadID)
+  if (ThreadID == gwp_asan::kInvalidThreadID)
     Printf("0x%zx was allocated by thread <unknown> here:\n", ErrorPtr);
   else
     Printf("0x%zx was allocated by thread %zu here:\n", ErrorPtr, ThreadID);
@@ -224,5 +151,75 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
       AllocMeta, Trace, kMaximumStackFramesForCrashTrace);
   PrintBacktrace(Trace, TraceLength, Printf);
 }
-} // namespace crash_handler
+
+struct sigaction PreviousHandler;
+bool SignalHandlerInstalled;
+gwp_asan::GuardedPoolAllocator *GPAForSignalHandler;
+Printf_t PrintfForSignalHandler;
+PrintBacktrace_t PrintBacktraceForSignalHandler;
+SegvBacktrace_t BacktraceForSignalHandler;
+
+static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
+  if (GPAForSignalHandler) {
+    GPAForSignalHandler->stop();
+
+    dumpReport(reinterpret_cast<uintptr_t>(info->si_addr),
+               GPAForSignalHandler->getAllocatorState(),
+               GPAForSignalHandler->getMetadataRegion(),
+               BacktraceForSignalHandler, PrintfForSignalHandler,
+               PrintBacktraceForSignalHandler, ucontext);
+  }
+
+  // Process any previous handlers.
+  if (PreviousHandler.sa_flags & SA_SIGINFO) {
+    PreviousHandler.sa_sigaction(sig, info, ucontext);
+  } else if (PreviousHandler.sa_handler == SIG_DFL) {
+    // If the previous handler was the default handler, cause a core dump.
+    signal(SIGSEGV, SIG_DFL);
+    raise(SIGSEGV);
+  } else if (PreviousHandler.sa_handler == SIG_IGN) {
+    // If the previous segv handler was SIGIGN, crash iff we were responsible
+    // for the crash.
+    if (__gwp_asan_error_is_mine(GPAForSignalHandler->getAllocatorState(),
+                                 reinterpret_cast<uintptr_t>(info->si_addr))) {
+      signal(SIGSEGV, SIG_DFL);
+      raise(SIGSEGV);
+    }
+  } else {
+    PreviousHandler.sa_handler(sig);
+  }
+}
+} // anonymous namespace
+
+namespace gwp_asan {
+namespace segv_handler {
+
+void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
+                           PrintBacktrace_t PrintBacktrace,
+                           SegvBacktrace_t SegvBacktrace) {
+  assert(GPA && "GPA wasn't provided to installSignalHandlers.");
+  assert(Printf && "Printf wasn't provided to installSignalHandlers.");
+  assert(PrintBacktrace &&
+         "PrintBacktrace wasn't provided to installSignalHandlers.");
+  assert(SegvBacktrace &&
+         "SegvBacktrace wasn't provided to installSignalHandlers.");
+  GPAForSignalHandler = GPA;
+  PrintfForSignalHandler = Printf;
+  PrintBacktraceForSignalHandler = PrintBacktrace;
+  BacktraceForSignalHandler = SegvBacktrace;
+
+  struct sigaction Action = {};
+  Action.sa_sigaction = sigSegvHandler;
+  Action.sa_flags = SA_SIGINFO;
+  sigaction(SIGSEGV, &Action, &PreviousHandler);
+  SignalHandlerInstalled = true;
+}
+
+void uninstallSignalHandlers() {
+  if (SignalHandlerInstalled) {
+    sigaction(SIGSEGV, &PreviousHandler, nullptr);
+    SignalHandlerInstalled = false;
+  }
+}
+} // namespace segv_handler
 } // namespace gwp_asan

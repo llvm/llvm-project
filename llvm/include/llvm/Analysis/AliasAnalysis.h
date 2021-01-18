@@ -360,6 +360,14 @@ public:
   using IsCapturedCacheT = SmallDenseMap<const Value *, bool, 8>;
   IsCapturedCacheT IsCapturedCache;
 
+  /// How many active NoAlias assumption uses there are.
+  int NumAssumptionUses = 0;
+
+  /// Location pairs for which an assumption based result is currently stored.
+  /// Used to remove all potentially incorrect results from the cache if an
+  /// assumption is disproven.
+  SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
+
   AAQueryInfo() : AliasCache(), IsCapturedCache() {}
 };
 

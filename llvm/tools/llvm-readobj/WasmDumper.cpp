@@ -24,7 +24,7 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_TYPE_##X }
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA),  ENUM_ENTRY(GLOBAL),
-    ENUM_ENTRY(SECTION),  ENUM_ENTRY(EVENT),
+    ENUM_ENTRY(SECTION),  ENUM_ENTRY(EVENT), ENUM_ENTRY(TABLE),
 #undef ENUM_ENTRY
 };
 

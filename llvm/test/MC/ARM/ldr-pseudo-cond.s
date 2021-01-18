@@ -1,5 +1,5 @@
-@RUN: llvm-mc -triple armv7-unknown-linux-gnueabi %s | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK %s
-@RUN: llvm-mc -triple thumbv7-unknown-linux-gnueabi %s | FileCheck --check-prefix=CHECK-THUMB2 --check-prefix=CHECK %s
+@RUN: llvm-mc -triple armv7-unknown-linux-gnueabi %s | FileCheck --check-prefix=CHECK %s
+@RUN: llvm-mc -triple thumbv7-unknown-linux-gnueabi %s | FileCheck --check-prefix=CHECK %s
 
 @
 @ Check that ldr to constant pool correctly transfers the condition codes

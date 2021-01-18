@@ -739,8 +739,7 @@ private:
            << ore::NV("OpenMPParallelMergeFront",
                       MergableCIs.front()->getDebugLoc())
            << " merged with parallel regions at ";
-        for (auto *CI :
-             llvm::make_range(MergableCIs.begin() + 1, MergableCIs.end())) {
+        for (auto *CI : llvm::drop_begin(MergableCIs, 1)) {
           OR << ore::NV("OpenMPParallelMerge", CI->getDebugLoc());
           if (CI != MergableCIs.back())
             OR << ", ";
@@ -1135,7 +1134,6 @@ private:
 
       RFI.foreachUse(SCC, CheckGlobalization);
     }
-    return;
   }
 
   /// Maps the values stored in the offload arrays passed as arguments to

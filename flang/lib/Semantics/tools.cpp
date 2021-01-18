@@ -52,6 +52,11 @@ const Scope *FindModuleContaining(const Scope &start) {
       start, [](const Scope &scope) { return scope.IsModule(); });
 }
 
+const Scope *FindModuleFileContaining(const Scope &start) {
+  return FindScopeContaining(
+      start, [](const Scope &scope) { return scope.IsModuleFile(); });
+}
+
 const Scope &GetProgramUnitContaining(const Scope &start) {
   CHECK(!start.IsGlobal());
   return DEREF(FindScopeContaining(start, [](const Scope &scope) {
@@ -510,14 +515,13 @@ bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
       IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
 }
 
-bool IsOrContainsEventOrLockComponent(const Symbol &symbol) {
-  if (const Symbol * root{GetAssociationRoot(symbol)}) {
-    if (const auto *details{root->detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          return IsEventTypeOrLockType(derived) ||
-              FindEventOrLockPotentialComponent(*derived);
-        }
+bool IsOrContainsEventOrLockComponent(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (const DeclTypeSpec * type{details->type()}) {
+      if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+        return IsEventTypeOrLockType(derived) ||
+            FindEventOrLockPotentialComponent(*derived);
       }
     }
   }
@@ -541,31 +545,35 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
-    const Symbol *derivedTypeSymbol) {
+bool IsStaticallyInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
   if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (object->init()) {
-      return true;
-    } else if (object->isDummy() || IsFunctionResult(symbol)) {
-      return false;
-    } else if (IsAllocatable(symbol)) {
-      return true;
-    } else if (!IsPointer(symbol) && object->type()) {
-      if (const auto *derived{object->type()->AsDerived()}) {
-        if (&derived->typeSymbol() == derivedTypeSymbol) {
-          // error recovery: avoid infinite recursion on invalid
-          // recursive usage of a derived type
-        } else if (derived->HasDefaultInitialization()) {
-          return true;
-        }
-      }
-    }
+    return object->init().has_value();
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     return proc->init().has_value();
+  }
+  return false;
+}
+
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
+    const Symbol *derivedTypeSymbol) {
+  if (IsStaticallyInitialized(symbol, ignoreDATAstatements) ||
+      IsAllocatable(symbol)) {
+    return true;
+  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol) ||
+      IsPointer(symbol)) {
+    return false;
+  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->isDummy() && object->type()) {
+      const auto *derived{object->type()->AsDerived()};
+      // error recovery: avoid infinite recursion on invalid
+      // recursive usage of a derived type
+      return derived && &derived->typeSymbol() != derivedTypeSymbol &&
+          derived->HasDefaultInitialization();
+    }
   }
   return false;
 }
@@ -730,12 +738,7 @@ bool IsModuleProcedure(const Symbol &symbol) {
 const Symbol *IsExternalInPureContext(
     const Symbol &symbol, const Scope &scope) {
   if (const auto *pureProc{FindPureProcedureContaining(scope)}) {
-    if (const Symbol * root{GetAssociationRoot(symbol)}) {
-      if (const Symbol *
-          visible{FindExternallyVisibleObject(*root, *pureProc)}) {
-        return visible;
-      }
-    }
+    return FindExternallyVisibleObject(symbol.GetUltimate(), *pureProc);
   }
   return nullptr;
 }
@@ -753,16 +756,15 @@ PotentialComponentIterator::const_iterator FindPolymorphicPotentialComponent(
       });
 }
 
-bool IsOrContainsPolymorphicComponent(const Symbol &symbol) {
-  if (const Symbol * root{GetAssociationRoot(symbol)}) {
-    if (const auto *details{root->detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (type->IsPolymorphic()) {
-          return true;
-        }
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          return (bool)FindPolymorphicPotentialComponent(*derived);
-        }
+bool IsOrContainsPolymorphicComponent(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (const DeclTypeSpec * type{details->type()}) {
+      if (type->IsPolymorphic()) {
+        return true;
+      }
+      if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+        return (bool)FindPolymorphicPotentialComponent(*derived);
       }
     }
   }
@@ -775,20 +777,20 @@ bool InProtectedContext(const Symbol &symbol, const Scope &currentScope) {
 
 // C1101 and C1158
 std::optional<parser::MessageFixedText> WhyNotModifiable(
-    const Symbol &symbol, const Scope &scope) {
-  const Symbol *root{GetAssociationRoot(symbol)};
-  if (!root) {
+    const Symbol &original, const Scope &scope) {
+  const Symbol &symbol{GetAssociationRoot(original)};
+  if (symbol.has<AssocEntityDetails>()) {
     return "'%s' is construct associated with an expression"_en_US;
-  } else if (InProtectedContext(*root, scope)) {
+  } else if (InProtectedContext(symbol, scope)) {
     return "'%s' is protected in this scope"_en_US;
-  } else if (IsExternalInPureContext(*root, scope)) {
+  } else if (IsExternalInPureContext(symbol, scope)) {
     return "'%s' is externally visible and referenced in a pure"
            " procedure"_en_US;
-  } else if (IsOrContainsEventOrLockComponent(*root)) {
+  } else if (IsOrContainsEventOrLockComponent(symbol)) {
     return "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US;
-  } else if (IsIntentIn(*root)) {
+  } else if (IsIntentIn(symbol)) {
     return "'%s' is an INTENT(IN) dummy argument"_en_US;
-  } else if (!IsVariableName(*root)) {
+  } else if (!IsVariableName(symbol)) {
     return "'%s' is not a variable"_en_US;
   } else {
     return std::nullopt;
@@ -940,10 +942,8 @@ parser::CharBlock GetImageControlStmtLocation(
 bool HasCoarray(const parser::Expr &expression) {
   if (const auto *expr{GetExpr(expression)}) {
     for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
-      if (const Symbol * root{GetAssociationRoot(symbol)}) {
-        if (IsCoarray(*root)) {
-          return true;
-        }
+      if (IsCoarray(GetAssociationRoot(symbol))) {
+        return true;
       }
     }
   }
@@ -965,7 +965,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
     const Scope &scope, const Symbol &symbol) {
   CHECK(symbol.owner().IsDerivedType()); // symbol must be a component
   if (symbol.attrs().test(Attr::PRIVATE)) {
-    if (const Scope * moduleScope{FindModuleContaining(symbol.owner())}) {
+    if (FindModuleFileContaining(scope)) {
+      // Don't enforce component accessibility checks in module files;
+      // there may be forward-substituted named constants of derived type
+      // whose structure constructors reference private components.
+    } else if (const Scope *
+        moduleScope{FindModuleContaining(symbol.owner())}) {
       if (!moduleScope->Contains(scope)) {
         return parser::MessageFormattedText{
             "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,

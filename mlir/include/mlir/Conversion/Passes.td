@@ -89,6 +89,16 @@ def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm", "ModuleOp"> {
+  let summary = "Convert Complex dialect to LLVM dialect";
+  let constructor = "mlir::createConvertComplexToLLVMPass()";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // GPUCommon
 //===----------------------------------------------------------------------===//
 
@@ -414,6 +424,20 @@ def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
   let summary = "Convert Standard dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertStandardToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// TosaToLinalg
+//===----------------------------------------------------------------------===//
+
+def TosaToLinalgOnTensors : FunctionPass<"tosa-to-linalg-on-tensors"> {
+  let summary = "Lower TOSA to LinAlg on tensors";
+  let description = [{
+    Pass that converts TOSA operations to the equivalent operations using the
+    tensor operations in LinAlg.
+  }];
+
+  let constructor = "tosa::createTosaToLinalgOnTensors()";
 }
 
 //===----------------------------------------------------------------------===//

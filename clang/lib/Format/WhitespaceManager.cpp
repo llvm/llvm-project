@@ -655,6 +655,9 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
+        if (C.Tok->Previous &&
+            C.Tok->Previous->is(TT_StatementAttributeLikeMacro))
+          return false;
         // Check if there is a subsequent name that starts the same declaration.
         for (FormatToken *Next = C.Tok->Next; Next; Next = Next->Next) {
           if (Next->is(tok::comment))

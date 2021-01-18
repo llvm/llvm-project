@@ -7494,25 +7494,23 @@ OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
 
   int64_t Sels[8];
 
-  if (!trySkipToken(AsmToken::LBrac))
+  if (!skipToken(AsmToken::LBrac, "expected an opening square bracket"))
     return MatchOperand_ParseFail;
 
-  if (getParser().parseAbsoluteExpression(Sels[0]))
-    return MatchOperand_ParseFail;
-  if (0 > Sels[0] || 7 < Sels[0])
-    return MatchOperand_ParseFail;
-
-  for (size_t i = 1; i < 8; ++i) {
-    if (!trySkipToken(AsmToken::Comma))
+  for (size_t i = 0; i < 8; ++i) {
+    if (i > 0 && !skipToken(AsmToken::Comma, "expected a comma"))
       return MatchOperand_ParseFail;
 
+    SMLoc Loc = getLoc();
     if (getParser().parseAbsoluteExpression(Sels[i]))
       return MatchOperand_ParseFail;
-    if (0 > Sels[i] || 7 < Sels[i])
+    if (0 > Sels[i] || 7 < Sels[i]) {
+      Error(Loc, "expected a 3-bit value");
       return MatchOperand_ParseFail;
+    }
   }
 
-  if (!trySkipToken(AsmToken::RBrac))
+  if (!skipToken(AsmToken::RBrac, "expected a closing square bracket"))
     return MatchOperand_ParseFail;
 
   unsigned DPP8 = 0;

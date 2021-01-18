@@ -194,14 +194,6 @@ opt<CodeCompleteOptions::CodeCompletionRankingModel> RankingModel{
     Hidden,
 };
 
-opt<float> DecisionForestBase{
-    "decision-forest-base",
-    cat(Features),
-    desc("Base for exponentiating the prediction from DecisionForest."),
-    init(CodeCompleteOptions().DecisionForestBase),
-    Hidden,
-};
-
 // FIXME: also support "plain" style where signatures are always omitted.
 enum CompletionStyleFlag { Detailed, Bundled };
 opt<CompletionStyleFlag> CompletionStyle{
@@ -836,12 +828,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.SpeculativeIndexRequest = Opts.StaticIndex;
   Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.AllScopes = AllScopesCompletion;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
-  Opts.CodeComplete.DecisionForestBase = DecisionForestBase;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;

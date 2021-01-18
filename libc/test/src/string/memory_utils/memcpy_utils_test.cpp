@@ -211,13 +211,50 @@ TEST(MemcpyUtilsTest, CopyAlignedBlocks) {
   EXPECT_STREQ(trace.Read(), "011121111111");
 }
 
-TEST(MemcpyUtilsTest, MaxReloads) {
+TEST(MemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
+  auto &trace = GetTrace();
+  // Source is aligned and multiple of alignment.
+  //   "11111111"
+  trace.Clear();
+  CopyAlignedBlocks<8, 4>(I(0), I(0), 8);
+  EXPECT_STREQ(trace.Write(), "22221111");
+  EXPECT_STREQ(trace.Read(), "22221111");
+
+  // Source is aligned and multiple of alignment.
+  //   "111111111"
+  trace.Clear();
+  CopyAlignedBlocks<8, 4>(I(0), I(0), 9);
+  EXPECT_STREQ(trace.Write(), "122211111");
+  EXPECT_STREQ(trace.Read(), "122211111");
+}
+
+TEST(MemcpyUtilsTest, CopyAlignedBlocksMaxReloads) {
   auto &trace = GetTrace();
   for (size_t alignment = 0; alignment < 32; ++alignment) {
     for (size_t count = 64; count < 768; ++count) {
       trace.Clear();
       // We should never reload more than twice when copying from count = 2x32.
       CopyAlignedBlocks<32>(I(alignment), I(0), count);
+      const char *const written = trace.Write();
+      // First bytes are untouched.
+      for (size_t i = 0; i < alignment; ++i)
+        EXPECT_EQ(written[i], '0');
+      // Next bytes are loaded once or twice but no more.
+      for (size_t i = alignment; i < count; ++i) {
+        EXPECT_GE(written[i], '1');
+        EXPECT_LE(written[i], '2');
+      }
+    }
+  }
+}
+
+TEST(MemcpyUtilsTest, CopyAlignedBlocksWithAlignmentMaxReloads) {
+  auto &trace = GetTrace();
+  for (size_t alignment = 0; alignment < 32; ++alignment) {
+    for (size_t count = 64; count < 768; ++count) {
+      trace.Clear();
+      // We should never reload more than twice when copying from count = 2x32.
+      CopyAlignedBlocks<32, 16>(I(alignment), I(0), count);
       const char *const written = trace.Write();
       // First bytes are untouched.
       for (size_t i = 0; i < alignment; ++i)

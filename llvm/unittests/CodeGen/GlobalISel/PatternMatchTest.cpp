@@ -392,13 +392,24 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
 
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
-  // Make multiple uses of this add.
+  Register Reg = MIBAdd.getReg(0);
+
+  // Only one use of Reg.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+
+  // Add multiple debug uses of Reg.
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
+
+  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
+
+  // Multiple non-debug uses of Reg.
   B.buildCast(LLT::pointer(1, 32), MIBAdd);
-  bool match = mi_match(MIBAdd.getReg(0), *MRI, m_GAdd(m_Reg(), m_Reg()));
-  EXPECT_TRUE(match);
-  match = mi_match(MIBAdd.getReg(0), *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg())));
-  EXPECT_FALSE(match);
+  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
+  EXPECT_FALSE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstant) {

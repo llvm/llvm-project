@@ -38,9 +38,6 @@ bool IsImpliedShape(const Symbol &);
 bool IsExplicitShape(const Symbol &);
 
 // Conversions between various representations of shapes.
-Shape AsShape(const Constant<ExtentType> &);
-std::optional<Shape> AsShape(FoldingContext &, ExtentExpr &&);
-
 std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &);
 
 std::optional<Constant<ExtentType>> AsConstantShape(
@@ -53,29 +50,41 @@ std::optional<ConstantSubscripts> AsConstantExtents(
 
 inline int GetRank(const Shape &s) { return static_cast<int>(s.size()); }
 
+Shape Fold(FoldingContext &, Shape &&);
+std::optional<Shape> Fold(FoldingContext &, std::optional<Shape> &&);
+
 template <typename A>
 std::optional<Shape> GetShape(FoldingContext &, const A &);
+template <typename A> std::optional<Shape> GetShape(const A &);
 
 // The dimension argument to these inquiries is zero-based,
 // unlike the DIM= arguments to many intrinsics.
+ExtentExpr GetLowerBound(const NamedEntity &, int dimension);
 ExtentExpr GetLowerBound(FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetUpperBound(const NamedEntity &, int dimension);
 MaybeExtentExpr GetUpperBound(
     FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr ComputeUpperBound(ExtentExpr &&lower, MaybeExtentExpr &&extent);
 MaybeExtentExpr ComputeUpperBound(
     FoldingContext &, ExtentExpr &&lower, MaybeExtentExpr &&extent);
+Shape GetLowerBounds(const NamedEntity &);
 Shape GetLowerBounds(FoldingContext &, const NamedEntity &);
+Shape GetUpperBounds(const NamedEntity &);
 Shape GetUpperBounds(FoldingContext &, const NamedEntity &);
+MaybeExtentExpr GetExtent(const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetExtent(
+    const Subscript &, const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(
     FoldingContext &, const Subscript &, const NamedEntity &, int dimension);
 
 // Compute an element count for a triplet or trip count for a DO.
-ExtentExpr CountTrips(FoldingContext &, ExtentExpr &&lower, ExtentExpr &&upper,
-    ExtentExpr &&stride);
-ExtentExpr CountTrips(FoldingContext &, const ExtentExpr &lower,
-    const ExtentExpr &upper, const ExtentExpr &stride);
-MaybeExtentExpr CountTrips(FoldingContext &, MaybeExtentExpr &&lower,
-    MaybeExtentExpr &&upper, MaybeExtentExpr &&stride);
+ExtentExpr CountTrips(
+    ExtentExpr &&lower, ExtentExpr &&upper, ExtentExpr &&stride);
+ExtentExpr CountTrips(
+    const ExtentExpr &lower, const ExtentExpr &upper, const ExtentExpr &stride);
+MaybeExtentExpr CountTrips(
+    MaybeExtentExpr &&lower, MaybeExtentExpr &&upper, MaybeExtentExpr &&stride);
 
 // Computes SIZE() == PRODUCT(shape)
 MaybeExtentExpr GetSize(Shape &&);
@@ -89,19 +98,22 @@ public:
   using Result = std::optional<Shape>;
   using Base = AnyTraverse<GetShapeHelper, Result>;
   using Base::operator();
-  explicit GetShapeHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  GetShapeHelper() : Base{*this} {}
+  explicit GetShapeHelper(FoldingContext &c) : Base{*this}, context_{&c} {}
 
-  Result operator()(const ImpliedDoIndex &) const { return Scalar(); }
-  Result operator()(const DescriptorInquiry &) const { return Scalar(); }
-  Result operator()(const TypeParamInquiry &) const { return Scalar(); }
-  Result operator()(const BOZLiteralConstant &) const { return Scalar(); }
+  Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
+  Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
+  Result operator()(const TypeParamInquiry &) const { return ScalarShape(); }
+  Result operator()(const BOZLiteralConstant &) const { return ScalarShape(); }
   Result operator()(const StaticDataObject::Pointer &) const {
-    return Scalar();
+    return ScalarShape();
   }
-  Result operator()(const StructureConstructor &) const { return Scalar(); }
+  Result operator()(const StructureConstructor &) const {
+    return ScalarShape();
+  }
 
   template <typename T> Result operator()(const Constant<T> &c) const {
-    return AsShape(c.SHAPE());
+    return ConstantShape(c.SHAPE());
   }
 
   Result operator()(const Symbol &) const;
@@ -125,21 +137,19 @@ public:
   }
 
 private:
-  static Result Scalar() { return Shape{}; }
-  Shape CreateShape(int rank, NamedEntity &base) const {
-    Shape shape;
-    for (int dimension{0}; dimension < rank; ++dimension) {
-      shape.emplace_back(GetExtent(context_, base, dimension));
-    }
-    return shape;
-  }
+  static Result ScalarShape() { return Shape{}; }
+  static Shape ConstantShape(const Constant<ExtentType> &);
+  Result AsShape(ExtentExpr &&) const;
+  static Shape CreateShape(int rank, NamedEntity &);
+
   template <typename T>
   MaybeExtentExpr GetArrayConstructorValueExtent(
       const ArrayConstructorValue<T> &value) const {
     return std::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
-              if (std::optional<Shape> xShape{GetShape(context_, x)}) {
+              if (auto xShape{
+                      context_ ? GetShape(*context_, x) : GetShape(x)}) {
                 // Array values in array constructors get linearized.
                 return GetSize(std::move(*xShape));
               } else {
@@ -154,8 +164,7 @@ private:
                   !ContainsAnyImpliedDoIndex(ido.stride())) {
                 if (auto nValues{GetArrayConstructorExtent(ido.values())}) {
                   return std::move(*nValues) *
-                      CountTrips(
-                          context_, ido.lower(), ido.upper(), ido.stride());
+                      CountTrips(ido.lower(), ido.upper(), ido.stride());
                 }
               }
               return std::nullopt;
@@ -178,12 +187,29 @@ private:
     return result;
   }
 
-  FoldingContext &context_;
+  FoldingContext *context_{nullptr};
 };
 
 template <typename A>
 std::optional<Shape> GetShape(FoldingContext &context, const A &x) {
-  return GetShapeHelper{context}(x);
+  if (auto shape{GetShapeHelper{context}(x)}) {
+    return Fold(context, std::move(shape));
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <typename A> std::optional<Shape> GetShape(const A &x) {
+  return GetShapeHelper{}(x);
+}
+
+template <typename A>
+std::optional<Shape> GetShape(FoldingContext *context, const A &x) {
+  if (context) {
+    return GetShape(*context, x);
+  } else {
+    return GetShapeHelper{}(x);
+  }
 }
 
 template <typename A>

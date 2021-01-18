@@ -425,4 +425,24 @@ TEST(KnownBitsTest, SExtOrTrunc) {
   }
 }
 
+TEST(KnownBitsTest, SExtInReg) {
+  unsigned Bits = 4;
+  for (unsigned FromBits = 1; FromBits <= Bits; ++FromBits) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+      APInt CommonOne = APInt::getAllOnesValue(Bits);
+      APInt CommonZero = APInt::getAllOnesValue(Bits);
+      unsigned ExtBits = Bits - FromBits;
+      ForeachNumInKnownBits(Known, [&](const APInt &N) {
+        APInt Ext = N << ExtBits;
+        Ext.ashrInPlace(ExtBits);
+        CommonOne &= Ext;
+        CommonZero &= ~Ext;
+      });
+      KnownBits KnownSExtInReg = Known.sextInReg(FromBits);
+      EXPECT_EQ(CommonOne, KnownSExtInReg.One);
+      EXPECT_EQ(CommonZero, KnownSExtInReg.Zero);
+    });
+  }
+}
+
 } // end anonymous namespace

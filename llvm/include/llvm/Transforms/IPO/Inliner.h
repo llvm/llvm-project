@@ -96,10 +96,9 @@ protected:
 /// passes be composed to achieve the same end result.
 class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
-  InlinerPass() = default;
+  InlinerPass(bool OnlyMandatory = false) : OnlyMandatory(OnlyMandatory) {}
   ~InlinerPass();
-  InlinerPass(InlinerPass &&Arg)
-      : ImportedFunctionsStats(std::move(Arg.ImportedFunctionsStats)) {}
+  InlinerPass(InlinerPass &&Arg) = default;
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
@@ -108,7 +107,8 @@ private:
   InlineAdvisor &getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                             FunctionAnalysisManager &FAM, Module &M);
   std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
-  Optional<DefaultInlineAdvisor> OwnedDefaultAdvisor;
+  std::unique_ptr<DefaultInlineAdvisor> OwnedDefaultAdvisor;
+  const bool OnlyMandatory;
 };
 
 /// Module pass, wrapping the inliner pass. This works in conjunction with the
@@ -121,6 +121,7 @@ class ModuleInlinerWrapperPass
 public:
   ModuleInlinerWrapperPass(
       InlineParams Params = getInlineParams(), bool Debugging = false,
+      bool MandatoryFirst = true,
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;

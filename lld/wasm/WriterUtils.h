@@ -69,6 +69,7 @@ std::string toString(llvm::wasm::ValType type);
 std::string toString(const llvm::wasm::WasmSignature &sig);
 std::string toString(const llvm::wasm::WasmGlobalType &type);
 std::string toString(const llvm::wasm::WasmEventType &type);
+std::string toString(const llvm::wasm::WasmTableType &type);
 
 } // namespace lld
 

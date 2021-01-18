@@ -272,8 +272,7 @@ unsigned LLVMFixedVectorType::getNumElements() {
 }
 
 bool LLVMFixedVectorType::isValidElementType(Type type) {
-  return type
-      .isa<LLVMPointerType, LLVMX86FP80Type, LLVMFP128Type, LLVMPPCFP128Type>();
+  return type.isa<LLVMPointerType, LLVMPPCFP128Type>();
 }
 
 LogicalResult LLVMFixedVectorType::verifyConstructionInvariants(
@@ -339,8 +338,9 @@ bool mlir::LLVM::isCompatibleType(Type type) {
       Float16Type,
       Float32Type,
       Float64Type,
+      Float80Type,
+      Float128Type,
       LLVMArrayType,
-      LLVMFP128Type,
       LLVMFunctionType,
       LLVMLabelType,
       LLVMMetadataType,
@@ -351,7 +351,6 @@ bool mlir::LLVM::isCompatibleType(Type type) {
       LLVMFixedVectorType,
       LLVMScalableVectorType,
       LLVMVoidType,
-      LLVMX86FP80Type,
       LLVMX86MMXType
   >();
   // clang-format on
@@ -359,7 +358,7 @@ bool mlir::LLVM::isCompatibleType(Type type) {
 
 bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
   return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                  LLVMFP128Type, LLVMPPCFP128Type, LLVMX86FP80Type>();
+                  Float80Type, Float128Type, LLVMPPCFP128Type>();
 }
 
 bool mlir::LLVM::isCompatibleVectorType(Type type) {
@@ -372,8 +371,8 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
     Type elementType = vecType.getElementType();
     if (auto intType = elementType.dyn_cast<IntegerType>())
       return intType.isSignless();
-    return elementType
-        .isa<BFloat16Type, Float16Type, Float32Type, Float64Type>();
+    return elementType.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
+                           Float80Type, Float128Type>();
   }
   return false;
 }
@@ -421,12 +420,12 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<Float32Type>([](Type) { return llvm::TypeSize::Fixed(32); })
       .Case<Float64Type, LLVMX86MMXType>(
           [](Type) { return llvm::TypeSize::Fixed(64); })
+      .Case<Float80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
+      .Case<Float128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
       .Case<IntegerType>([](IntegerType intTy) {
         return llvm::TypeSize::Fixed(intTy.getWidth());
       })
-      .Case<LLVMX86FP80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
-      .Case<LLVMPPCFP128Type, LLVMFP128Type>(
-          [](Type) { return llvm::TypeSize::Fixed(128); })
+      .Case<LLVMPPCFP128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
       .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());

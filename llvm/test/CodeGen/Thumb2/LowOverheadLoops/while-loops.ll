@@ -60,39 +60,39 @@ define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32*
 ; CHECK-NEXT:    ldr r5, [sp, #28]
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    b .LBB1_4
-; CHECK-NEXT:  .LBB1_2: @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:  .LBB1_3: @ %if.end
-; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    str.w r4, [r2, r1, lsl #2]
-; CHECK-NEXT:    adds r1, #1
-; CHECK-NEXT:    cmp r1, r3
-; CHECK-NEXT:    beq .LBB1_8
-; CHECK-NEXT:  .LBB1_4: @ %for.body
-; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB1_6 Depth 2
-; CHECK-NEXT:    adds r7, r5, #3
-; CHECK-NEXT:    cmp.w r12, r7, lsr #2
-; CHECK-NEXT:    beq .LBB1_2
-; CHECK-NEXT:  @ %bb.5: @ %do.body.preheader
-; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    b .LBB1_6
+; CHECK-NEXT:  .LBB1_2: @ %do.body.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
 ; CHECK-NEXT:    bic r9, r7, #3
 ; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    add.w r8, r0, r9, lsl #2
 ; CHECK-NEXT:    dlstp.32 lr, r5
-; CHECK-NEXT:  .LBB1_6: @ %do.body
-; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
+; CHECK-NEXT:  .LBB1_3: @ %do.body
+; CHECK-NEXT:    @ Parent Loop BB1_6 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vaddva.s32 r4, q0
-; CHECK-NEXT:    letp lr, .LBB1_6
-; CHECK-NEXT:  @ %bb.7: @ %if.end.loopexit
-; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    letp lr, .LBB1_3
+; CHECK-NEXT:  @ %bb.4: @ %if.end.loopexit
+; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
 ; CHECK-NEXT:    sub.w r5, r5, r9
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    b .LBB1_3
+; CHECK-NEXT:  .LBB1_5: @ %if.end
+; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
+; CHECK-NEXT:    str.w r4, [r2, r1, lsl #2]
+; CHECK-NEXT:    adds r1, #1
+; CHECK-NEXT:    cmp r1, r3
+; CHECK-NEXT:    beq .LBB1_8
+; CHECK-NEXT:  .LBB1_6: @ %for.body
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB1_3 Depth 2
+; CHECK-NEXT:    adds r7, r5, #3
+; CHECK-NEXT:    cmp.w r12, r7, lsr #2
+; CHECK-NEXT:    bne .LBB1_2
+; CHECK-NEXT:  @ %bb.7: @ in Loop: Header=BB1_6 Depth=1
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    b .LBB1_5
 ; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
