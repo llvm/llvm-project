@@ -160,26 +160,24 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:    vadd.i32 q4, q3, r0
 ; CHECK-NEXT:    vldrw.u32 q3, [r12]
 ; CHECK-NEXT:    vadd.i32 q3, q3, r0
-; CHECK-NEXT:    b .LBB3_4
-; CHECK-NEXT:  .LBB3_2: @ %vector.body
-; CHECK-NEXT:    @ Parent Loop BB3_4 Depth=1
-; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vstrw.32 q0, [q5, #48]!
-; CHECK-NEXT:    vstrw.32 q1, [q6, #48]!
-; CHECK-NEXT:    vstrw.32 q2, [q7, #48]!
-; CHECK-NEXT:    le lr, .LBB3_2
-; CHECK-NEXT:  @ %bb.3: @ %middle.block
-; CHECK-NEXT:    @ in Loop: Header=BB3_4 Depth=1
-; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    beq .LBB3_5
-; CHECK-NEXT:  .LBB3_4: @ %vector.ph
+; CHECK-NEXT:  .LBB3_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB3_2 Depth 2
+; CHECK-NEXT:    @ Child Loop BB3_3 Depth 2
 ; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vmov q6, q4
 ; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    vmov q5, q3
-; CHECK-NEXT:    b .LBB3_2
+; CHECK-NEXT:  .LBB3_3: @ %vector.body
+; CHECK-NEXT:    @ Parent Loop BB3_2 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vstrw.32 q0, [q5, #48]!
+; CHECK-NEXT:    vstrw.32 q1, [q6, #48]!
+; CHECK-NEXT:    vstrw.32 q2, [q7, #48]!
+; CHECK-NEXT:    le lr, .LBB3_3
+; CHECK-NEXT:  @ %bb.4: @ %middle.block
+; CHECK-NEXT:    @ in Loop: Header=BB3_2 Depth=1
+; CHECK-NEXT:    cmp r2, r1
+; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  .LBB3_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
