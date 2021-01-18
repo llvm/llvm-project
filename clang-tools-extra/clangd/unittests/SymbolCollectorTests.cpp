@@ -1838,6 +1838,20 @@ TEST_F(SymbolCollectorTest, UndefOfModuleMacro) {
   EXPECT_THAT(TU.headerSymbols(), Not(Contains(QName("X"))));
 }
 
+TEST_F(SymbolCollectorTest, NoCrashOnObjCMethodCStyleParam) {
+  auto TU = TestTU::withCode(R"objc(
+    @interface Foo
+    - (void)fun:(bool)foo, bool bar;
+    @end
+  )objc");
+  TU.ExtraArgs.push_back("-xobjective-c++");
+
+  TU.build();
+  // We mostly care about not crashing.
+  EXPECT_THAT(TU.headerSymbols(),
+              UnorderedElementsAre(QName("Foo"), QName("Foo::fun:")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
