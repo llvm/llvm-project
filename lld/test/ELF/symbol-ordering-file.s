@@ -43,7 +43,7 @@
 # RUN: not ld.lld --symbol-ordering-file=%t.nonexistent %t.o -o %t3.out 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR -DFILE=%t.nonexistent
 
-# ERR: error: cannot open [[FILE]]: {{[Nn]}}o such file or directory
+# ERR: error: cannot open [[FILE]]: {{.*}}{{[Nn]}}o such file or directory
 
 ## Show that an empty ordering file can be handled (symbols remain in their
 ## normal order).
