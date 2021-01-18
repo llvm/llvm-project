@@ -284,6 +284,9 @@ public:
   /// isSized - Return true if this is a sized type.
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
+  /// Returns true if this struct contains a scalable vector.
+  bool containsScalableVectorType() const;
+
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
 
