@@ -330,6 +330,7 @@ struct RISCVZvlsseg {
   unsigned int IntrinsicID;
   unsigned int SEW;
   unsigned int LMUL;
+  unsigned int IndexLMUL;
   unsigned int Pseudo;
 };
 
