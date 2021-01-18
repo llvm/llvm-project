@@ -510,13 +510,19 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
   return getRegSizeInBits(*RC);
 }
 
-Register
-TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
-                                     const MachineRegisterInfo *MRI) const {
+Register TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
+                                              const MachineRegisterInfo *MRI,
+                                              bool *AllDefHaveOneUser) const {
+  if (AllDefHaveOneUser)
+    *AllDefHaveOneUser = true;
+
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
+    if (!MI->isCopyLike()) {
+      if (AllDefHaveOneUser && !MRI->hasOneNonDBGUse(SrcReg))
+        *AllDefHaveOneUser = false;
       return SrcReg;
+    }
 
     Register CopySrcReg;
     if (MI->isCopy())
@@ -526,8 +532,11 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
       CopySrcReg = MI->getOperand(2).getReg();
     }
 
-    if (!CopySrcReg.isVirtual())
+    if (!CopySrcReg.isVirtual()) {
+      if (AllDefHaveOneUser)
+        *AllDefHaveOneUser = false;
       return CopySrcReg;
+    }
 
     SrcReg = CopySrcReg;
   }
