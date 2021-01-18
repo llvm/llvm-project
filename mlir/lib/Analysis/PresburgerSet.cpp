@@ -290,11 +290,8 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
 /// Therefore, S is equal to T iff S \ T and T \ S are both empty.
 bool PresburgerSet::isEqual(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
-  PresburgerSet thisMinusSet = subtract(set);
-  if (!thisMinusSet.isIntegerEmpty())
-    return false;
-  PresburgerSet setMinusThis = set.subtract(*this);
-  return setMinusThis.isIntegerEmpty();
+  return this->subtract(set).isIntegerEmpty() &&
+         set.subtract(*this).isIntegerEmpty();
 }
 
 /// Return true if all the sets in the union are known to be integer empty,
