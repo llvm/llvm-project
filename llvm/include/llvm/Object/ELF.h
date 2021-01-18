@@ -30,6 +30,43 @@
 namespace llvm {
 namespace object {
 
+struct VerdAux {
+  unsigned Offset;
+  std::string Name;
+};
+
+struct VerDef {
+  unsigned Offset;
+  unsigned Version;
+  unsigned Flags;
+  unsigned Ndx;
+  unsigned Cnt;
+  unsigned Hash;
+  std::string Name;
+  std::vector<VerdAux> AuxV;
+};
+
+struct VernAux {
+  unsigned Hash;
+  unsigned Flags;
+  unsigned Other;
+  unsigned Offset;
+  std::string Name;
+};
+
+struct VerNeed {
+  unsigned Version;
+  unsigned Cnt;
+  unsigned Offset;
+  std::string File;
+  std::vector<VernAux> AuxV;
+};
+
+struct VersionEntry {
+  std::string Name;
+  bool IsVerDef;
+};
+
 StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
 uint32_t getELFRelativeRelocationType(uint32_t Machine);
 StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
@@ -102,6 +139,16 @@ std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
 }
 
 template <class ELFT>
+static std::string describe(const ELFFile<ELFT> &Obj,
+                            const typename ELFT::Shdr &Sec) {
+  unsigned SecNdx = &Sec - &cantFail(Obj.sections()).front();
+  return (object::getELFSectionTypeName(Obj.getHeader().e_machine,
+                                        Sec.sh_type) +
+          " section with index " + Twine(SecNdx))
+      .str();
+}
+
+template <class ELFT>
 std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
                                  const typename ELFT::Phdr &Phdr) {
   auto Headers = Obj.program_headers();
@@ -148,12 +195,22 @@ public:
   template <typename T>
   Expected<const T *> getEntry(const Elf_Shdr &Section, uint32_t Entry) const;
 
+  Expected<std::vector<VerDef>>
+  getVersionDefinitions(const Elf_Shdr &Sec) const;
+  Expected<std::vector<VerNeed>> getVersionDependencies(
+      const Elf_Shdr &Sec,
+      WarningHandler WarnHandler = &defaultWarningHandler) const;
+  Expected<StringRef> getSymbolVersionByIndex(
+      uint32_t SymbolVersionIndex, bool &IsDefault,
+      SmallVector<Optional<VersionEntry>, 0> &VersionMap) const;
+
   Expected<StringRef>
   getStringTable(const Elf_Shdr &Section,
                  WarningHandler WarnHandler = &defaultWarningHandler) const;
   Expected<StringRef> getStringTableForSymtab(const Elf_Shdr &Section) const;
   Expected<StringRef> getStringTableForSymtab(const Elf_Shdr &Section,
                                               Elf_Shdr_Range Sections) const;
+  Expected<StringRef> getLinkAsStrtab(const typename ELFT::Shdr &Sec) const;
 
   Expected<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section) const;
   Expected<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section,
@@ -170,6 +227,9 @@ public:
   /// Get the symbol for a given relocation.
   Expected<const Elf_Sym *> getRelocationSymbol(const Elf_Rel &Rel,
                                                 const Elf_Shdr *SymTab) const;
+
+  Expected<SmallVector<Optional<VersionEntry>, 0>>
+  loadVersionMap(const Elf_Shdr *VerNeedSec, const Elf_Shdr *VerDefSec) const;
 
   static Expected<ELFFile> create(StringRef Object);
 
@@ -519,6 +579,43 @@ uint32_t ELFFile<ELFT>::getRelativeRelocationType() const {
 }
 
 template <class ELFT>
+Expected<SmallVector<Optional<VersionEntry>, 0>>
+ELFFile<ELFT>::loadVersionMap(const Elf_Shdr *VerNeedSec,
+                              const Elf_Shdr *VerDefSec) const {
+  SmallVector<Optional<VersionEntry>, 0> VersionMap;
+
+  // The first two version indexes are reserved.
+  // Index 0 is VER_NDX_LOCAL, index 1 is VER_NDX_GLOBAL.
+  VersionMap.push_back(VersionEntry());
+  VersionMap.push_back(VersionEntry());
+
+  auto InsertEntry = [&](unsigned N, StringRef Version, bool IsVerdef) {
+    if (N >= VersionMap.size())
+      VersionMap.resize(N + 1);
+    VersionMap[N] = {std::string(Version), IsVerdef};
+  };
+
+  if (VerDefSec) {
+    Expected<std::vector<VerDef>> Defs = getVersionDefinitions(*VerDefSec);
+    if (!Defs)
+      return Defs.takeError();
+    for (const VerDef &Def : *Defs)
+      InsertEntry(Def.Ndx & ELF::VERSYM_VERSION, Def.Name, true);
+  }
+
+  if (VerNeedSec) {
+    Expected<std::vector<VerNeed>> Deps = getVersionDependencies(*VerNeedSec);
+    if (!Deps)
+      return Deps.takeError();
+    for (const VerNeed &Dep : *Deps)
+      for (const VernAux &Aux : Dep.AuxV)
+        InsertEntry(Aux.Other & ELF::VERSYM_VERSION, Aux.Name, false);
+  }
+
+  return VersionMap;
+}
+
+template <class ELFT>
 Expected<const typename ELFT::Sym *>
 ELFFile<ELFT>::getRelocationSymbol(const Elf_Rel &Rel,
                                    const Elf_Shdr *SymTab) const {
@@ -641,6 +738,207 @@ Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr &Section,
   return &Arr[Entry];
 }
 
+template <typename ELFT>
+Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
+    uint32_t SymbolVersionIndex, bool &IsDefault,
+    SmallVector<Optional<VersionEntry>, 0> &VersionMap) const {
+  size_t VersionIndex = SymbolVersionIndex & llvm::ELF::VERSYM_VERSION;
+
+  // Special markers for unversioned symbols.
+  if (VersionIndex == llvm::ELF::VER_NDX_LOCAL ||
+      VersionIndex == llvm::ELF::VER_NDX_GLOBAL) {
+    IsDefault = false;
+    return "";
+  }
+
+  // Lookup this symbol in the version table.
+  if (VersionIndex >= VersionMap.size() || !VersionMap[VersionIndex])
+    return createError("SHT_GNU_versym section refers to a version index " +
+                       Twine(VersionIndex) + " which is missing");
+
+  const VersionEntry &Entry = *VersionMap[VersionIndex];
+  if (Entry.IsVerDef)
+    IsDefault = !(SymbolVersionIndex & llvm::ELF::VERSYM_HIDDEN);
+  else
+    IsDefault = false;
+  return Entry.Name.c_str();
+}
+
+template <class ELFT>
+Expected<std::vector<VerDef>>
+ELFFile<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Sec);
+  if (!StrTabOrErr)
+    return StrTabOrErr.takeError();
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return createError("cannot read content of " + describe(*this, Sec) + ": " +
+                       toString(ContentsOrErr.takeError()));
+
+  const uint8_t *Start = ContentsOrErr->data();
+  const uint8_t *End = Start + ContentsOrErr->size();
+
+  auto ExtractNextAux = [&](const uint8_t *&VerdauxBuf,
+                            unsigned VerDefNdx) -> Expected<VerdAux> {
+    if (VerdauxBuf + sizeof(Elf_Verdaux) > End)
+      return createError("invalid " + describe(*this, Sec) +
+                         ": version definition " + Twine(VerDefNdx) +
+                         " refers to an auxiliary entry that goes past the end "
+                         "of the section");
+
+    auto *Verdaux = reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
+    VerdauxBuf += Verdaux->vda_next;
+
+    VerdAux Aux;
+    Aux.Offset = VerdauxBuf - Start;
+    if (Verdaux->vda_name <= StrTabOrErr->size())
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
+    else
+      Aux.Name = ("<invalid vda_name: " + Twine(Verdaux->vda_name) + ">").str();
+    return Aux;
+  };
+
+  std::vector<VerDef> Ret;
+  const uint8_t *VerdefBuf = Start;
+  for (unsigned I = 1; I <= /*VerDefsNum=*/Sec.sh_info; ++I) {
+    if (VerdefBuf + sizeof(Elf_Verdef) > End)
+      return createError("invalid " + describe(*this, Sec) +
+                         ": version definition " + Twine(I) +
+                         " goes past the end of the section");
+
+    if (reinterpret_cast<uintptr_t>(VerdefBuf) % sizeof(uint32_t) != 0)
+      return createError(
+          "invalid " + describe(*this, Sec) +
+          ": found a misaligned version definition entry at offset 0x" +
+          Twine::utohexstr(VerdefBuf - Start));
+
+    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerdefBuf);
+    if (Version != 1)
+      return createError("unable to dump " + describe(*this, Sec) +
+                         ": version " + Twine(Version) +
+                         " is not yet supported");
+
+    const Elf_Verdef *D = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
+    VerDef &VD = *Ret.emplace(Ret.end());
+    VD.Offset = VerdefBuf - Start;
+    VD.Version = D->vd_version;
+    VD.Flags = D->vd_flags;
+    VD.Ndx = D->vd_ndx;
+    VD.Cnt = D->vd_cnt;
+    VD.Hash = D->vd_hash;
+
+    const uint8_t *VerdauxBuf = VerdefBuf + D->vd_aux;
+    for (unsigned J = 0; J < D->vd_cnt; ++J) {
+      if (reinterpret_cast<uintptr_t>(VerdauxBuf) % sizeof(uint32_t) != 0)
+        return createError("invalid " + describe(*this, Sec) +
+                           ": found a misaligned auxiliary entry at offset 0x" +
+                           Twine::utohexstr(VerdauxBuf - Start));
+
+      Expected<VerdAux> AuxOrErr = ExtractNextAux(VerdauxBuf, I);
+      if (!AuxOrErr)
+        return AuxOrErr.takeError();
+
+      if (J == 0)
+        VD.Name = AuxOrErr->Name;
+      else
+        VD.AuxV.push_back(*AuxOrErr);
+    }
+
+    VerdefBuf += D->vd_next;
+  }
+
+  return Ret;
+}
+
+template <class ELFT>
+Expected<std::vector<VerNeed>>
+ELFFile<ELFT>::getVersionDependencies(const Elf_Shdr &Sec,
+                                      WarningHandler WarnHandler) const {
+  StringRef StrTab;
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Sec);
+  if (!StrTabOrErr) {
+    if (Error E = WarnHandler(toString(StrTabOrErr.takeError())))
+      return std::move(E);
+  } else {
+    StrTab = *StrTabOrErr;
+  }
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return createError("cannot read content of " + describe(*this, Sec) + ": " +
+                       toString(ContentsOrErr.takeError()));
+
+  const uint8_t *Start = ContentsOrErr->data();
+  const uint8_t *End = Start + ContentsOrErr->size();
+  const uint8_t *VerneedBuf = Start;
+
+  std::vector<VerNeed> Ret;
+  for (unsigned I = 1; I <= /*VerneedNum=*/Sec.sh_info; ++I) {
+    if (VerneedBuf + sizeof(Elf_Verdef) > End)
+      return createError("invalid " + describe(*this, Sec) +
+                         ": version dependency " + Twine(I) +
+                         " goes past the end of the section");
+
+    if (reinterpret_cast<uintptr_t>(VerneedBuf) % sizeof(uint32_t) != 0)
+      return createError(
+          "invalid " + describe(*this, Sec) +
+          ": found a misaligned version dependency entry at offset 0x" +
+          Twine::utohexstr(VerneedBuf - Start));
+
+    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerneedBuf);
+    if (Version != 1)
+      return createError("unable to dump " + describe(*this, Sec) +
+                         ": version " + Twine(Version) +
+                         " is not yet supported");
+
+    const Elf_Verneed *Verneed =
+        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
+
+    VerNeed &VN = *Ret.emplace(Ret.end());
+    VN.Version = Verneed->vn_version;
+    VN.Cnt = Verneed->vn_cnt;
+    VN.Offset = VerneedBuf - Start;
+
+    if (Verneed->vn_file < StrTab.size())
+      VN.File = std::string(StrTab.drop_front(Verneed->vn_file));
+    else
+      VN.File = ("<corrupt vn_file: " + Twine(Verneed->vn_file) + ">").str();
+
+    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
+    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
+      if (reinterpret_cast<uintptr_t>(VernauxBuf) % sizeof(uint32_t) != 0)
+        return createError("invalid " + describe(*this, Sec) +
+                           ": found a misaligned auxiliary entry at offset 0x" +
+                           Twine::utohexstr(VernauxBuf - Start));
+
+      if (VernauxBuf + sizeof(Elf_Vernaux) > End)
+        return createError(
+            "invalid " + describe(*this, Sec) + ": version dependency " +
+            Twine(I) +
+            " refers to an auxiliary entry that goes past the end "
+            "of the section");
+
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
+
+      VernAux &Aux = *VN.AuxV.emplace(VN.AuxV.end());
+      Aux.Hash = Vernaux->vna_hash;
+      Aux.Flags = Vernaux->vna_flags;
+      Aux.Other = Vernaux->vna_other;
+      Aux.Offset = VernauxBuf - Start;
+      if (StrTab.size() <= Vernaux->vna_name)
+        Aux.Name = "<corrupt>";
+      else
+        Aux.Name = std::string(StrTab.drop_front(Vernaux->vna_name));
+
+      VernauxBuf += Vernaux->vna_next;
+    }
+    VerneedBuf += Verneed->vn_next;
+  }
+  return Ret;
+}
+
 template <class ELFT>
 Expected<const typename ELFT::Shdr *>
 ELFFile<ELFT>::getSection(uint32_t Index) const {
@@ -736,6 +1034,23 @@ ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec,
   if (!SectionOrErr)
     return SectionOrErr.takeError();
   return getStringTable(**SectionOrErr);
+}
+
+template <class ELFT>
+Expected<StringRef>
+ELFFile<ELFT>::getLinkAsStrtab(const typename ELFT::Shdr &Sec) const {
+  Expected<const typename ELFT::Shdr *> StrTabSecOrErr =
+      getSection(Sec.sh_link);
+  if (!StrTabSecOrErr)
+    return createError("invalid section linked to " + describe(*this, Sec) +
+                       ": " + toString(StrTabSecOrErr.takeError()));
+
+  Expected<StringRef> StrTabOrErr = getStringTable(**StrTabSecOrErr);
+  if (!StrTabOrErr)
+    return createError("invalid string table linked to " +
+                       describe(*this, Sec) + ": " +
+                       toString(StrTabOrErr.takeError()));
+  return *StrTabOrErr;
 }
 
 template <class ELFT>

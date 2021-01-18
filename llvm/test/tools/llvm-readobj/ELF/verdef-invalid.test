@@ -265,7 +265,7 @@ DynamicSymbols:
 # INVALID-VERDEF-LLVM:      VersionSymbols [
 # INVALID-VERDEF-LLVM-NEXT:    Symbol {
 # INVALID-VERDEF-LLVM-NEXT:      Version: 0
-# INVALID-VERDEF-LLVM-NEXT:      Name:
+# INVALID-VERDEF-LLVM-NEXT:      Name: {{$}}
 # INVALID-VERDEF-LLVM-NEXT:    }
 # INVALID-VERDEF-LLVM-NEXT:    Symbol {
 # INVALID-VERDEF-LLVM-NEXT:    Version: 2
@@ -274,7 +274,7 @@ DynamicSymbols:
 
 # INVALID-VERDEF-GNU:      Version symbols section '.gnu.version' contains 2 entries:
 # INVALID-VERDEF-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
-# INVALID-VERDEF-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 1 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
+# INVALID-VERDEF-GNU-NEXT: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
 # INVALID-VERDEF-GNU-NEXT:   000: 0 (*local*) 2 (<corrupt>)
 
 --- !ELF

@@ -105,7 +105,7 @@ Active Replay
 ^^^^^^^^^^^^^
 
 No matter how a reproducer was captured, they can always be replayed with the
-command line driver. When a reproducer is passed with the `--replay` flag, the
+command line driver. When a reproducer is passed with the ``--replay`` flag, the
 driver short-circuits and passes off control to the reproducer infrastructure,
 effectively bypassing its normal operation. This works because the driver is
 implemented using the SB API and is therefore nothing more than a sequence of
