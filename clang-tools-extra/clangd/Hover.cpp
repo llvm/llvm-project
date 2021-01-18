@@ -902,7 +902,8 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     std::vector<const Decl *> Result;
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
-      auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
+      auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
+                                            AST.getHeuristicResolver());
       if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), PP, Index);
         // Layout info only shown when hovering on the field/class itself.
