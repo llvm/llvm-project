@@ -282,7 +282,7 @@ public:
     Find variables, register sets, registers, or persistent variables using
     the frame as the scope.
 
-    The version that doesn't supply a `use_dynamic` value will use the
+    The version that doesn't supply a ``use_dynamic`` value will use the
     target's default.") FindValue;
     lldb::SBValue
     FindValue (const char *name, ValueType value_type);
