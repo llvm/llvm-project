@@ -24,6 +24,7 @@ using namespace llvm::jitlink;
 using namespace llvm::jitlink::ELF_x86_64_Edges;
 
 namespace {
+
 class ELF_x86_64_GOTAndStubsBuilder
     : public BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder> {
 public:
@@ -110,6 +111,14 @@ private:
   Section *GOTSection = nullptr;
   Section *StubsSection = nullptr;
 };
+
+const char *const DwarfSectionNames[] = {
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
+  ELF_NAME,
+#include "llvm/BinaryFormat/Dwarf.def"
+#undef HANDLE_DWARF_SECTION
+};
+
 } // namespace
 
 const uint8_t ELF_x86_64_GOTAndStubsBuilder::NullGOTEntryContent[8] = {
@@ -191,6 +200,14 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
 
   return Error::success();
 }
+
+static bool isDwarfSection(StringRef SectionName) {
+  for (auto &DwarfSectionName : DwarfSectionNames)
+    if (SectionName == DwarfSectionName)
+      return true;
+  return false;
+}
+
 namespace llvm {
 namespace jitlink {
 
@@ -305,6 +322,16 @@ private:
       auto Name = Obj.getSectionName(SecRef);
       if (!Name)
         return Name.takeError();
+
+      // Skip Dwarf sections.
+      if (isDwarfSection(*Name)) {
+        LLVM_DEBUG({
+          dbgs() << *Name
+                 << " is a debug section: No graph section will be created.\n";
+        });
+        continue;
+      }
+
       sys::Memory::ProtectionFlags Prot;
       if (SecRef.sh_flags & ELF::SHF_EXECINSTR) {
         Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
@@ -373,6 +400,10 @@ private:
       auto RelSectName = Obj.getSectionName(SecRef);
       if (!RelSectName)
         return RelSectName.takeError();
+
+      LLVM_DEBUG({
+        dbgs() << "Adding relocations from section " << *RelSectName << "\n";
+      });
       // Deal with .eh_frame later
       if (*RelSectName == StringRef(".rela.eh_frame"))
         continue;
@@ -384,6 +415,18 @@ private:
       auto UpdateSectionName = Obj.getSectionName(**UpdateSection);
       if (!UpdateSectionName)
         return UpdateSectionName.takeError();
+
+      // Don't process relocations for debug sections.
+      if (isDwarfSection(*UpdateSectionName)) {
+        LLVM_DEBUG({
+          dbgs() << "  Target is dwarf section " << *UpdateSectionName
+                 << ". Skipping.\n";
+        });
+        continue;
+      } else
+        LLVM_DEBUG({
+          dbgs() << "  For target section " << *UpdateSectionName << "\n";
+        });
 
       auto JITSection = G->findSectionByName(*UpdateSectionName);
       if (!JITSection)
@@ -473,6 +516,9 @@ private:
       auto Name = Obj.getSectionName(SecRef);
       if (!Name)
         return Name.takeError();
+
+      LLVM_DEBUG(dbgs() << "Processing symbol section " << *Name << ":\n");
+
       auto Section = G->findSectionByName(*Name);
       if (!Section)
         return make_error<llvm::StringError>("Could not find a section " +
@@ -530,6 +576,10 @@ private:
           auto sectName = Obj.getSectionName(**DefinedSection);
           if (!sectName)
             return Name.takeError();
+
+          // Skip debug section symbols.
+          if (isDwarfSection(*sectName))
+            continue;
 
           auto JitSection = G->findSectionByName(*sectName);
           if (!JitSection)
