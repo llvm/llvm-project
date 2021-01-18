@@ -3074,6 +3074,20 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**StatementAttributeLikeMacros** (``std::vector<std::string>``)
+  Macros which are ignored in front of a statement, as if they were an
+  attribute. So that they are not parsed as identifier, for example for Qts
+  emit. \code
+    AlignConsecutiveDeclarations: true
+    StatementAttributeLikeMacros: []
+    unsigned char data = 'x';
+    emit          signal(data); // This is parsed as variable declaration.
+
+    AlignConsecutiveDeclarations: true
+    StatementAttributeLikeMacros: [emit]
+    unsigned char data = 'x';
+    emit signal(data); // Now it's fine again.
+
 **StatementMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as complete
   statements.

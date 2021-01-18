@@ -14731,6 +14731,11 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("AttributeMacros: [attr1, attr2]", AttributeMacros,
               std::vector<std::string>({"attr1", "attr2"}));
 
+  Style.StatementAttributeLikeMacros.clear();
+  CHECK_PARSE("StatementAttributeLikeMacros: [emit,Q_EMIT]",
+              StatementAttributeLikeMacros,
+              std::vector<std::string>({"emit", "Q_EMIT"}));
+
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -17802,6 +17807,36 @@ TEST_F(FormatTest, ConceptsAndRequires) {
                "requires (std::invocable<F, std::invoke_result_t<Args>...>) "
                "struct constant;",
                Style);
+}
+
+TEST_F(FormatTest, StatementAttributeLikeMacros) {
+  FormatStyle Style = getLLVMStyle();
+  StringRef Source = "void Foo::slot() {\n"
+                     "  unsigned char MyChar = 'x';\n"
+                     "  emit signal(MyChar);\n"
+                     "  Q_EMIT signal(MyChar);\n"
+                     "}";
+
+  EXPECT_EQ(Source, format(Source, Style));
+
+  Style.AlignConsecutiveDeclarations = true;
+  EXPECT_EQ("void Foo::slot() {\n"
+            "  unsigned char MyChar = 'x';\n"
+            "  emit          signal(MyChar);\n"
+            "  Q_EMIT signal(MyChar);\n"
+            "}",
+            format(Source, Style));
+
+  Style.StatementAttributeLikeMacros.push_back("emit");
+  EXPECT_EQ(Source, format(Source, Style));
+
+  Style.StatementAttributeLikeMacros = {};
+  EXPECT_EQ("void Foo::slot() {\n"
+            "  unsigned char MyChar = 'x';\n"
+            "  emit          signal(MyChar);\n"
+            "  Q_EMIT        signal(MyChar);\n"
+            "}",
+            format(Source, Style));
 }
 } // namespace
 } // namespace format
