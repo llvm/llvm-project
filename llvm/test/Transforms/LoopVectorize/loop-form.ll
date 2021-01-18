@@ -588,6 +588,140 @@ if.end2:
   ret i32 1
 }
 
+; LCSSA, common value each exit
+define i32 @multiple_exit_blocks2(i16* %p, i32 %n) {
+; CHECK-LABEL: @multiple_exit_blocks2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
+; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK:       if.end2:
+; CHECK-NEXT:    [[I_LCSSA1:%.*]] = phi i32 [ [[I]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[I_LCSSA1]]
+;
+; TAILFOLD-LABEL: @multiple_exit_blocks2(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
+; TAILFOLD:       for.cond:
+; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; TAILFOLD:       for.body:
+; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; TAILFOLD-NEXT:    store i16 0, i16* [[B]], align 4
+; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; TAILFOLD-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; TAILFOLD-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; TAILFOLD:       if.end:
+; TAILFOLD-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
+; TAILFOLD-NEXT:    ret i32 [[I_LCSSA]]
+; TAILFOLD:       if.end2:
+; TAILFOLD-NEXT:    [[I_LCSSA1:%.*]] = phi i32 [ [[I]], [[FOR_BODY]] ]
+; TAILFOLD-NEXT:    ret i32 [[I_LCSSA1]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %for.body, label %if.end
+
+for.body:
+  %iprom = sext i32 %i to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  store i16 0, i16* %b, align 4
+  %inc = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 2096
+  br i1 %cmp2, label %for.cond, label %if.end2
+
+if.end:
+  ret i32 %i
+
+if.end2:
+  ret i32 %i
+}
+
+; LCSSA, distinct value each exit
+define i32 @multiple_exit_blocks3(i16* %p, i32 %n) {
+; CHECK-LABEL: @multiple_exit_blocks3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
+; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK:       if.end2:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
+;
+; TAILFOLD-LABEL: @multiple_exit_blocks3(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
+; TAILFOLD:       for.cond:
+; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; TAILFOLD:       for.body:
+; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; TAILFOLD-NEXT:    store i16 0, i16* [[B]], align 4
+; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; TAILFOLD-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; TAILFOLD-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; TAILFOLD:       if.end:
+; TAILFOLD-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
+; TAILFOLD-NEXT:    ret i32 [[I_LCSSA]]
+; TAILFOLD:       if.end2:
+; TAILFOLD-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY]] ]
+; TAILFOLD-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %for.body, label %if.end
+
+for.body:
+  %iprom = sext i32 %i to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  store i16 0, i16* %b, align 4
+  %inc = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 2096
+  br i1 %cmp2, label %for.cond, label %if.end2
+
+if.end:
+  ret i32 %i
+
+if.end2:
+  ret i32 %inc
+}
+
 ; unique exit case but with a switch as two edges between the same pair of
 ; blocks is an often missed edge case
 define i32 @multiple_exit_switch(i16* %p, i32 %n) {
