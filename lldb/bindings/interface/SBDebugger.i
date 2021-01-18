@@ -498,12 +498,12 @@ A tuple with the number of errors encountered by the interpreter, a boolean
 indicating whether quitting the interpreter was requested and another boolean
 set to True in case of a crash.
 
-Example:
+Example: ::
 
-# Start an interactive lldb session from a script (with a valid debugger object
-# created beforehand):
-n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
-    False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
+    # Start an interactive lldb session from a script (with a valid debugger object
+    # created beforehand):
+    n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
+        False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
     %apply int& INOUT { int& num_errors };
     %apply bool& INOUT { bool& quit_requested };
     %apply bool& INOUT { bool& stopped_for_crash };
