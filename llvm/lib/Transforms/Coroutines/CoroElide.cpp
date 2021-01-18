@@ -83,14 +83,8 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
   Function &F = *Frame->getFunction();
   for (Instruction &I : instructions(F))
     if (auto *Call = dyn_cast<CallInst>(&I))
-      if (Call->isTailCall() && operandReferences(Call, Frame, AA)) {
-        // FIXME: If we ever hit this check. Evaluate whether it is more
-        // appropriate to retain musttail and allow the code to compile.
-        if (Call->isMustTailCall())
-          report_fatal_error("Call referring to the coroutine frame cannot be "
-                             "marked as musttail");
+      if (Call->isTailCall() && operandReferences(Call, Frame, AA))
         Call->setTailCall(false);
-      }
 }
 
 // Given a resume function @f.resume(%f.frame* %frame), returns the size
@@ -252,7 +246,20 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // If size of the set is the same as total number of coro.begin, that means we
   // found a coro.free or coro.destroy referencing each coro.begin, so we can
   // perform heap elision.
-  return ReferencedCoroBegins.size() == CoroBegins.size();
+  if (ReferencedCoroBegins.size() != CoroBegins.size())
+    return false;
+
+  // If any call in the function is a musttail call, it usually won't work
+  // because we cannot drop the tailcall attribute, and a tail call will reuse
+  // the entire stack where we are going to put the new frame. In theory a more
+  // precise analysis can be done to check whether the new frame aliases with
+  // the call, however it's challenging to do so before the elision actually
+  // happened.
+  for (BasicBlock &BB : *F)
+    if (BB.getTerminatingMustTailCall())
+      return false;
+
+  return true;
 }
 
 void Lowerer::collectPostSplitCoroIds(Function *F) {
