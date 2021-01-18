@@ -145,7 +145,7 @@ static void addVCallToSet(DevirtCallSite Call, GlobalValue::GUID Guid,
                           SetVector<FunctionSummary::ConstVCall> &ConstVCalls) {
   std::vector<uint64_t> Args;
   // Start from the second argument to skip the "this" pointer.
-  for (auto &Arg : drop_begin(Call.CB.args(), 1)) {
+  for (auto &Arg : drop_begin(Call.CB.args())) {
     auto *CI = dyn_cast<ConstantInt>(Arg);
     if (!CI || CI->getBitWidth() > 64) {
       VCalls.insert({Guid, Call.Offset});
