@@ -704,6 +704,8 @@ def get_for_std(d, std):
       return d[s]
   return None
 
+def get_std_number(std):
+    return std.replace('c++', '')
 
 """
   Functions to produce the <version> header
@@ -732,7 +734,22 @@ def produce_macros_definition_for_std(std):
     result += "\n"
     if 'depends' in tc.keys():
       result += "# endif\n"
-  return result
+  return result.strip()
+
+def produce_macros_definitions():
+  macro_definition_template = """#if _LIBCPP_STD_VER > {previous_std_number}
+{macro_definition}
+#endif"""
+
+  macros_definitions = []
+  previous_std_number = '11'
+  for std in get_std_dialects():
+    macros_definitions.append(
+      macro_definition_template.format(previous_std_number=previous_std_number,
+                                       macro_definition=produce_macros_definition_for_std(std)))
+    previous_std_number = get_std_number(std)
+
+  return '\n\n'.join(macros_definitions)
 
 def chunks(l, n):
   """Yield successive n-sized chunks from l."""
@@ -799,31 +816,14 @@ def produce_version_header():
 #pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 11
-{cxx14_macros}
-#endif
-
-#if _LIBCPP_STD_VER > 14
-{cxx17_macros}
-#endif
-
-#if _LIBCPP_STD_VER > 17
-{cxx20_macros}
-#endif
-
-#if _LIBCPP_STD_VER > 20
-{cxx2b_macros}
-#endif
+{cxx_macros}
 
 #endif // _LIBCPP_VERSIONH
 """
 
   version_str = template.format(
       synopsis=produce_version_synopsis().strip(),
-      cxx14_macros=produce_macros_definition_for_std('c++14').strip(),
-      cxx17_macros=produce_macros_definition_for_std('c++17').strip(),
-      cxx20_macros=produce_macros_definition_for_std('c++20').strip(),
-      cxx2b_macros=produce_macros_definition_for_std('c++2b').strip())
+      cxx_macros=produce_macros_definitions())
   version_header_path = os.path.join(include_path, 'version')
   with open(version_header_path, 'w', newline='\n') as f:
     f.write(version_str)
@@ -894,7 +894,36 @@ def generate_std_test(test_list, std):
       result += test_types["depends"].format(name=tc["name"], value=val, std=std, depends=tc["depends"])
     else:
       result +=  test_types["defined"].format(name=tc["name"], value=val, std=std)
-  return result
+  return result.strip()
+
+def generate_std_tests(test_list):
+  std_tests_template = """#if TEST_STD_VER < {first_std_number}
+
+{pre_std_test}
+
+{other_std_tests}
+
+#elif TEST_STD_VER > {penultimate_std_number}
+
+{last_std_test}
+
+#endif // TEST_STD_VER > {penultimate_std_number}"""
+
+  std_dialects = get_std_dialects()
+  assert not get_std_number(std_dialects[-1]).isnumeric()
+
+  other_std_tests = []
+  for std in std_dialects[:-1]:
+    other_std_tests.append('#elif TEST_STD_VER == ' + get_std_number(std))
+    other_std_tests.append(generate_std_test(test_list, std))
+
+  std_tests = std_tests_template.format(first_std_number=get_std_number(std_dialects[0]),
+                                        pre_std_test=generate_std_test(test_list, 'c++11'),
+                                        other_std_tests='\n\n'.join(other_std_tests),
+                                        penultimate_std_number=get_std_number(std_dialects[-2]),
+                                        last_std_test=generate_std_test(test_list, std_dialects[-1]))
+
+  return std_tests
 
 def generate_synopsis(test_list):
     max_name_len = max([len(tc["name"]) for tc in test_list])
@@ -944,38 +973,14 @@ def produce_tests():
 #include <{header}>
 #include "test_macros.h"
 
-#if TEST_STD_VER < 14
-
-{cxx11_tests}
-
-#elif TEST_STD_VER == 14
-
-{cxx14_tests}
-
-#elif TEST_STD_VER == 17
-
-{cxx17_tests}
-
-#elif TEST_STD_VER == 20
-
-{cxx20_tests}
-
-#elif TEST_STD_VER > 20
-
-{cxx2b_tests}
-
-#endif // TEST_STD_VER > 20
+{cxx_tests}
 
 int main(int, char**) {{ return 0; }}
 """.format(script_name=script_name,
            header=h,
            markup=('\n{}\n'.format(markup) if markup else ''),
            synopsis=generate_synopsis(test_list),
-           cxx11_tests=generate_std_test(test_list, 'c++11').strip(),
-           cxx14_tests=generate_std_test(test_list, 'c++14').strip(),
-           cxx17_tests=generate_std_test(test_list, 'c++17').strip(),
-           cxx20_tests=generate_std_test(test_list, 'c++20').strip(),
-           cxx2b_tests=generate_std_test(test_list, 'c++2b').strip())
+           cxx_tests=generate_std_tests(test_list))
     test_name = "{header}.version.pass.cpp".format(header=h)
     out_path = os.path.join(macro_test_path, test_name)
     with open(out_path, 'w', newline='\n') as f:
