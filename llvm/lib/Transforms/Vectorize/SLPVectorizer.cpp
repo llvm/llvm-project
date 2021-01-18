@@ -6492,8 +6492,8 @@ class HorizontalReduction {
       return IsLeafValue || Kind != RecurKind::None;
     }
 
-    /// Return true if this operation is any kind of minimum or maximum.
-    bool isMinMax() const {
+    /// Return true if this operation is a cmp+select idiom.
+    bool isCmpSel() const {
       assert(Kind != RecurKind::None && "Expected reduction operation.");
       return RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind);
     }
@@ -6504,14 +6504,14 @@ class HorizontalReduction {
       // We allow calling this before 'Kind' is set, so handle that specially.
       if (Kind == RecurKind::None)
         return 0;
-      return isMinMax() ? 1 : 0;
+      return isCmpSel() ? 1 : 0;
     }
 
     /// Total number of operands in the reduction operation.
     unsigned getNumberOfOperands() const {
       assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
-      return isMinMax() ? 3 : 2;
+      return isCmpSel() ? 3 : 2;
     }
 
     /// Checks if the instruction is in basic block \p BB.
@@ -6519,7 +6519,7 @@ class HorizontalReduction {
     bool hasSameParent(Instruction *I, BasicBlock *BB, bool IsRedOp) const {
       assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
-      if (IsRedOp && isMinMax()) {
+      if (IsRedOp && isCmpSel()) {
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
         return I->getParent() == BB && Cmp && Cmp->getParent() == BB;
       }
@@ -6532,7 +6532,7 @@ class HorizontalReduction {
              "Expected reduction operation.");
       // SelectInst must be used twice while the condition op must have single
       // use only.
-      if (isMinMax())
+      if (isCmpSel())
         return I->hasNUses(2) &&
                (!IsReductionOp ||
                 cast<SelectInst>(I)->getCondition()->hasOneUse());
@@ -6545,7 +6545,7 @@ class HorizontalReduction {
     void initReductionOps(ReductionOpsListType &ReductionOps) {
       assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
-      if (isMinMax())
+      if (isCmpSel())
         ReductionOps.assign(2, ReductionOpsType());
       else
         ReductionOps.assign(1, ReductionOpsType());
@@ -6554,7 +6554,7 @@ class HorizontalReduction {
     /// Add all reduction operations for the reduction instruction \p I.
     void addReductionOps(Instruction *I, ReductionOpsListType &ReductionOps) {
       assert(Kind != RecurKind::None && "Expected reduction operation.");
-      if (isMinMax()) {
+      if (isCmpSel()) {
         ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
         ReductionOps[1].emplace_back(I);
       } else {
@@ -6988,10 +6988,10 @@ public:
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
       Value *VectorizedRoot = V.vectorizeTree(ExternallyUsedValues);
 
-      // Emit a reduction. For min/max, the root is a select, but the insertion
+      // Emit a reduction. If the root is a select (min/max idiom), the insert
       // point is the compare condition of that select.
       Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-      if (RdxTreeInst.isMinMax())
+      if (RdxTreeInst.isCmpSel())
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
@@ -7033,7 +7033,7 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (RdxTreeInst.isMinMax()) {
+      if (RdxTreeInst.isCmpSel()) {
         if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
           Instruction *ScalarCmp =
               getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
