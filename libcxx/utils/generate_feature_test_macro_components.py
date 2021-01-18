@@ -646,6 +646,7 @@ assert all(tc["headers"] == sorted(tc["headers"]) for tc in feature_test_macros)
 lit_markup = {
   "atomic": ["UNSUPPORTED: libcpp-has-no-threads"],
   "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
+  "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
   "iomanip": ["UNSUPPORTED: libcpp-has-no-localization"],
   "istream": ["UNSUPPORTED: libcpp-has-no-localization"],
   "latch": ["UNSUPPORTED: libcpp-has-no-threads"],

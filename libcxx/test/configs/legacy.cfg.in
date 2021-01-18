@@ -11,7 +11,6 @@ config.cxx_library_root         = "@LIBCXX_LIBRARY_DIR@"
 config.enable_exceptions        = @LIBCXX_ENABLE_EXCEPTIONS@
 config.enable_debug_tests       = @LIBCXX_ENABLE_DEBUG_MODE_SUPPORT@
 config.enable_experimental      = @LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY@
-config.enable_filesystem        = @LIBCXX_ENABLE_FILESYSTEM@
 config.enable_rtti              = @LIBCXX_ENABLE_RTTI@
 config.enable_shared            = @LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX@
 config.enable_32bit             = @LIBCXX_BUILD_32_BITS@
