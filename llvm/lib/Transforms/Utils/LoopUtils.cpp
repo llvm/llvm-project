@@ -349,7 +349,7 @@ Optional<MDNode *> llvm::makeFollowupLoopID(
 
   bool Changed = false;
   if (InheritAllAttrs || InheritSomeAttrs) {
-    for (const MDOperand &Existing : drop_begin(OrigLoopID->operands(), 1)) {
+    for (const MDOperand &Existing : drop_begin(OrigLoopID->operands())) {
       MDNode *Op = cast<MDNode>(Existing.get());
 
       auto InheritThisAttribute = [InheritSomeAttrs,
@@ -386,7 +386,7 @@ Optional<MDNode *> llvm::makeFollowupLoopID(
       continue;
 
     HasAnyFollowup = true;
-    for (const MDOperand &Option : drop_begin(FollowupNode->operands(), 1)) {
+    for (const MDOperand &Option : drop_begin(FollowupNode->operands())) {
       MDs.push_back(Option.get());
       Changed = true;
     }
