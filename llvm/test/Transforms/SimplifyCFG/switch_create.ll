@@ -33,10 +33,10 @@ F:              ; preds = %0
 
 define void @test1_select(i32 %V) {
 ; CHECK-LABEL: @test1_select(
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[V:%.*]], 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[V]], 17
-; CHECK-NEXT:    [[CN:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
-; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
+; CHECK-NEXT:    i32 17, label [[T:%.*]]
+; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void
@@ -135,10 +135,10 @@ F:              ; preds = %0
 
 define void @test2_select(i32 %V) {
 ; CHECK-LABEL: @test2_select(
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[V:%.*]], 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[V]], 17
-; CHECK-NEXT:    [[CN:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 17, label [[F:%.*]]
+; CHECK-NEXT:    i32 4, label [[F]]
+; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void
@@ -465,13 +465,17 @@ F:
 
 define i32 @test10_select(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 123, [[SWITCH_EARLY_TEST]] ], [ 324, [[F]] ]
+; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -488,13 +492,17 @@ F:
 ; TODO: %Cond doesn't need freeze
 define i32 @test10_select_and(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select_and(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = and i1 [[C]], [[COND:%.*]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 123, [[SWITCH_EARLY_TEST]] ], [ 324, [[F]] ]
+; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -510,13 +518,17 @@ F:
 
 define i32 @test10_select_nofreeze(i32 %mode, i1 noundef %Cond) {
 ; CHECK-LABEL: @test10_select_nofreeze(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 123, [[SWITCH_EARLY_TEST]] ], [ 324, [[F]] ]
+; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -903,11 +915,11 @@ else:
 
 define void @test19_select(i32 %arg) {
 ; CHECK-LABEL: @test19_select(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG:%.*]], -2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND]], 12
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[ARG]], 32
-; CHECK-NEXT:    [[PRED:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    br i1 [[PRED]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:    i32 32, label [[IF:%.*]]
+; CHECK-NEXT:    i32 13, label [[IF]]
+; CHECK-NEXT:    i32 12, label [[IF]]
+; CHECK-NEXT:    ]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void
