@@ -283,3 +283,568 @@ nope:
   call void @foo(i1 %a)
   ret void
 }
+
+define void @test_and_chain(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test_and_chain(
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[AND2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[AND1]])
+; CHECK-NEXT:    call void @foo(i1 [[AND2]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[AND1]])
+; CHECK-NEXT:    call void @foo(i1 [[AND2]])
+; CHECK-NEXT:    ret void
+;
+  %and1 = and i1 %a, %b
+  %and2 = and i1 %and1, %c
+  br i1 %and2, label %if, label %else
+
+if:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %and1)
+  call void @foo(i1 %and2)
+  ret void
+
+else:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %and1)
+  call void @foo(i1 %and2)
+  ret void
+}
+
+define void @test_or_chain(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test_or_chain(
+; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[OR2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[OR1]])
+; CHECK-NEXT:    call void @foo(i1 [[OR2]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[OR1]])
+; CHECK-NEXT:    call void @foo(i1 [[OR2]])
+; CHECK-NEXT:    ret void
+;
+  %or1 = or i1 %a, %b
+  %or2 = or i1 %or1, %c
+  br i1 %or2, label %if, label %else
+
+if:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %or1)
+  call void @foo(i1 %or2)
+  ret void
+
+else:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %or1)
+  call void @foo(i1 %or2)
+  ret void
+}
+
+define void @test_and_or_mixed(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test_and_or_mixed(
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[OR]])
+; CHECK-NEXT:    call void @foo(i1 [[AND]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[OR]])
+; CHECK-NEXT:    call void @foo(i1 [[AND]])
+; CHECK-NEXT:    ret void
+;
+  %or = or i1 %a, %b
+  %and = and i1 %or, %c
+  br i1 %and, label %if, label %else
+
+if:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %or)
+  call void @foo(i1 %and)
+  ret void
+
+else:
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %or)
+  call void @foo(i1 %and)
+  ret void
+}
+
+define void @test_deep_and_chain(i1 %a1) {
+; CHECK-LABEL: @test_deep_and_chain(
+; CHECK-NEXT:    [[A2:%.*]] = and i1 [[A1:%.*]], true
+; CHECK-NEXT:    [[A3:%.*]] = and i1 [[A2]], true
+; CHECK-NEXT:    [[A4:%.*]] = and i1 [[A3]], true
+; CHECK-NEXT:    [[A5:%.*]] = and i1 [[A4]], true
+; CHECK-NEXT:    [[A6:%.*]] = and i1 [[A5]], true
+; CHECK-NEXT:    [[A7:%.*]] = and i1 [[A6]], true
+; CHECK-NEXT:    [[A8:%.*]] = and i1 [[A7]], true
+; CHECK-NEXT:    [[A9:%.*]] = and i1 [[A8]], true
+; CHECK-NEXT:    [[A10:%.*]] = and i1 [[A9]], true
+; CHECK-NEXT:    [[A11:%.*]] = and i1 [[A10]], true
+; CHECK-NEXT:    [[A12:%.*]] = and i1 [[A11]], true
+; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], true
+; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], true
+; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], true
+; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+;
+  %a2 = and i1 %a1, true
+  %a3 = and i1 %a2, true
+  %a4 = and i1 %a3, true
+  %a5 = and i1 %a4, true
+  %a6 = and i1 %a5, true
+  %a7 = and i1 %a6, true
+  %a8 = and i1 %a7, true
+  %a9 = and i1 %a8, true
+  %a10 = and i1 %a9, true
+  %a11 = and i1 %a10, true
+  %a12 = and i1 %a11, true
+  %a13 = and i1 %a12, true
+  %a14 = and i1 %a13, true
+  %a15 = and i1 %a14, true
+  br i1 %a15, label %if, label %else
+
+if:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+
+else:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+}
+
+define void @test_deep_and_tree(i1 %a1) {
+; CHECK-LABEL: @test_deep_and_tree(
+; CHECK-NEXT:    [[A2:%.*]] = and i1 [[A1:%.*]], [[A1]]
+; CHECK-NEXT:    [[A3:%.*]] = and i1 [[A2]], [[A2]]
+; CHECK-NEXT:    [[A4:%.*]] = and i1 [[A3]], [[A3]]
+; CHECK-NEXT:    [[A5:%.*]] = and i1 [[A4]], [[A4]]
+; CHECK-NEXT:    [[A6:%.*]] = and i1 [[A5]], [[A5]]
+; CHECK-NEXT:    [[A7:%.*]] = and i1 [[A6]], [[A6]]
+; CHECK-NEXT:    [[A8:%.*]] = and i1 [[A7]], [[A7]]
+; CHECK-NEXT:    [[A9:%.*]] = and i1 [[A8]], [[A8]]
+; CHECK-NEXT:    [[A10:%.*]] = and i1 [[A9]], [[A9]]
+; CHECK-NEXT:    [[A11:%.*]] = and i1 [[A10]], [[A10]]
+; CHECK-NEXT:    [[A12:%.*]] = and i1 [[A11]], [[A11]]
+; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], [[A12]]
+; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], [[A13]]
+; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], [[A14]]
+; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+;
+  %a2 = and i1 %a1, %a1
+  %a3 = and i1 %a2, %a2
+  %a4 = and i1 %a3, %a3
+  %a5 = and i1 %a4, %a4
+  %a6 = and i1 %a5, %a5
+  %a7 = and i1 %a6, %a6
+  %a8 = and i1 %a7, %a7
+  %a9 = and i1 %a8, %a8
+  %a10 = and i1 %a9, %a9
+  %a11 = and i1 %a10, %a10
+  %a12 = and i1 %a11, %a11
+  %a13 = and i1 %a12, %a12
+  %a14 = and i1 %a13, %a13
+  %a15 = and i1 %a14, %a14
+  br i1 %a15, label %if, label %else
+
+if:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+
+else:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+}
+
+define void @test_deep_or_tree(i1 %a1) {
+; CHECK-LABEL: @test_deep_or_tree(
+; CHECK-NEXT:    [[A2:%.*]] = or i1 [[A1:%.*]], [[A1]]
+; CHECK-NEXT:    [[A3:%.*]] = or i1 [[A2]], [[A2]]
+; CHECK-NEXT:    [[A4:%.*]] = or i1 [[A3]], [[A3]]
+; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A4]], [[A4]]
+; CHECK-NEXT:    [[A6:%.*]] = or i1 [[A5]], [[A5]]
+; CHECK-NEXT:    [[A7:%.*]] = or i1 [[A6]], [[A6]]
+; CHECK-NEXT:    [[A8:%.*]] = or i1 [[A7]], [[A7]]
+; CHECK-NEXT:    [[A9:%.*]] = or i1 [[A8]], [[A8]]
+; CHECK-NEXT:    [[A10:%.*]] = or i1 [[A9]], [[A9]]
+; CHECK-NEXT:    [[A11:%.*]] = or i1 [[A10]], [[A10]]
+; CHECK-NEXT:    [[A12:%.*]] = or i1 [[A11]], [[A11]]
+; CHECK-NEXT:    [[A13:%.*]] = or i1 [[A12]], [[A12]]
+; CHECK-NEXT:    [[A14:%.*]] = or i1 [[A13]], [[A13]]
+; CHECK-NEXT:    [[A15:%.*]] = or i1 [[A14]], [[A14]]
+; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+;
+  %a2 = or i1 %a1, %a1
+  %a3 = or i1 %a2, %a2
+  %a4 = or i1 %a3, %a3
+  %a5 = or i1 %a4, %a4
+  %a6 = or i1 %a5, %a5
+  %a7 = or i1 %a6, %a6
+  %a8 = or i1 %a7, %a7
+  %a9 = or i1 %a8, %a8
+  %a10 = or i1 %a9, %a9
+  %a11 = or i1 %a10, %a10
+  %a12 = or i1 %a11, %a11
+  %a13 = or i1 %a12, %a12
+  %a14 = or i1 %a13, %a13
+  %a15 = or i1 %a14, %a14
+  br i1 %a15, label %if, label %else
+
+if:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+
+else:
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+}
+
+define void @test_assume_and_chain(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test_assume_and_chain(
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[AND1]])
+; CHECK-NEXT:    call void @foo(i1 [[AND2]])
+; CHECK-NEXT:    ret void
+;
+  %and1 = and i1 %a, %b
+  %and2 = and i1 %and1, %c
+  call void @llvm.assume(i1 %and2)
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %and1)
+  call void @foo(i1 %and2)
+  ret void
+}
+
+define void @test_assume_or_chain(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test_assume_or_chain(
+; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[OR2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    call void @foo(i1 [[B]])
+; CHECK-NEXT:    call void @foo(i1 [[C]])
+; CHECK-NEXT:    call void @foo(i1 [[OR1]])
+; CHECK-NEXT:    call void @foo(i1 [[OR2]])
+; CHECK-NEXT:    ret void
+;
+  %or1 = or i1 %a, %b
+  %or2 = or i1 %or1, %c
+  call void @llvm.assume(i1 %or2)
+  call void @foo(i1 %a)
+  call void @foo(i1 %b)
+  call void @foo(i1 %c)
+  call void @foo(i1 %or1)
+  call void @foo(i1 %or2)
+  ret void
+}
+
+define void @test_assume_deep_and_tree(i1 %a1) {
+; CHECK-LABEL: @test_assume_deep_and_tree(
+; CHECK-NEXT:    [[A2:%.*]] = and i1 [[A1:%.*]], [[A1]]
+; CHECK-NEXT:    [[A3:%.*]] = and i1 [[A2]], [[A2]]
+; CHECK-NEXT:    [[A4:%.*]] = and i1 [[A3]], [[A3]]
+; CHECK-NEXT:    [[A5:%.*]] = and i1 [[A4]], [[A4]]
+; CHECK-NEXT:    [[A6:%.*]] = and i1 [[A5]], [[A5]]
+; CHECK-NEXT:    [[A7:%.*]] = and i1 [[A6]], [[A6]]
+; CHECK-NEXT:    [[A8:%.*]] = and i1 [[A7]], [[A7]]
+; CHECK-NEXT:    [[A9:%.*]] = and i1 [[A8]], [[A8]]
+; CHECK-NEXT:    [[A10:%.*]] = and i1 [[A9]], [[A9]]
+; CHECK-NEXT:    [[A11:%.*]] = and i1 [[A10]], [[A10]]
+; CHECK-NEXT:    [[A12:%.*]] = and i1 [[A11]], [[A11]]
+; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], [[A12]]
+; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], [[A13]]
+; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], [[A14]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A15]])
+; CHECK-NEXT:    call void @foo(i1 [[A1]])
+; CHECK-NEXT:    call void @foo(i1 [[A2]])
+; CHECK-NEXT:    call void @foo(i1 [[A3]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A4]])
+; CHECK-NEXT:    call void @foo(i1 [[A5]])
+; CHECK-NEXT:    call void @foo(i1 [[A6]])
+; CHECK-NEXT:    call void @foo(i1 [[A7]])
+; CHECK-NEXT:    call void @foo(i1 [[A8]])
+; CHECK-NEXT:    call void @foo(i1 [[A9]])
+; CHECK-NEXT:    call void @foo(i1 [[A10]])
+; CHECK-NEXT:    call void @foo(i1 [[A11]])
+; CHECK-NEXT:    call void @foo(i1 [[A12]])
+; CHECK-NEXT:    call void @foo(i1 [[A13]])
+; CHECK-NEXT:    call void @foo(i1 [[A14]])
+; CHECK-NEXT:    call void @foo(i1 [[A15]])
+; CHECK-NEXT:    ret void
+;
+  %a2 = and i1 %a1, %a1
+  %a3 = and i1 %a2, %a2
+  %a4 = and i1 %a3, %a3
+  %a5 = and i1 %a4, %a4
+  %a6 = and i1 %a5, %a5
+  %a7 = and i1 %a6, %a6
+  %a8 = and i1 %a7, %a7
+  %a9 = and i1 %a8, %a8
+  %a10 = and i1 %a9, %a9
+  %a11 = and i1 %a10, %a10
+  %a12 = and i1 %a11, %a11
+  %a13 = and i1 %a12, %a12
+  %a14 = and i1 %a13, %a13
+  %a15 = and i1 %a14, %a14
+  call void @llvm.assume(i1 %a15)
+  call void @foo(i1 %a1)
+  call void @foo(i1 %a2)
+  call void @foo(i1 %a3)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a4)
+  call void @foo(i1 %a5)
+  call void @foo(i1 %a6)
+  call void @foo(i1 %a7)
+  call void @foo(i1 %a8)
+  call void @foo(i1 %a9)
+  call void @foo(i1 %a10)
+  call void @foo(i1 %a11)
+  call void @foo(i1 %a12)
+  call void @foo(i1 %a13)
+  call void @foo(i1 %a14)
+  call void @foo(i1 %a15)
+  ret void
+}
