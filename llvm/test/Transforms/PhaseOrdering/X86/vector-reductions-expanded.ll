@@ -330,17 +330,16 @@ for.end:
 define float @fmin_v4i32(float* %p) #0 {
 ; CHECK-LABEL: @fmin_v4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[P:%.*]], align 4, [[TBAA7]]
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, float* [[P]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX_1]], align 4, [[TBAA7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP1]], float [[TMP0]])
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX_2]], align 4, [[TBAA7]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP3]], float [[TMP2]])
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX_3]], align 4, [[TBAA7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP5]], float [[TMP4]])
-; CHECK-NEXT:    ret float [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, [[TBAA7]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <4 x float> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP1]], <4 x float> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP4:%.*]] = fcmp fast olt <4 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF3]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT5:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP4]], <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[RDX_SHUF3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[RDX_MINMAX_SELECT5]], i32 0
+; CHECK-NEXT:    ret float [[TMP2]]
 ;
 entry:
   br label %for.cond

@@ -10964,7 +10964,7 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
   case X86ISD::VBROADCAST_LOAD:
     // TODO: Handle MaskSize != Op.getValueType().getVectorNumElements()?
     return (Op == ExpectedOp &&
-            Op.getValueType().getVectorNumElements() == MaskSize);
+            (int)Op.getValueType().getVectorNumElements() == MaskSize);
   case X86ISD::HADD:
   case X86ISD::HSUB:
   case X86ISD::FHADD:
