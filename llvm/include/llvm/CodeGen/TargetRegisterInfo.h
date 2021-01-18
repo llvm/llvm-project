@@ -410,10 +410,13 @@ public:
 
   /// Returns the original SrcReg unless it is the target of a copy-like
   /// operation, in which case we chain backwards through all such operations
-  /// to the ultimate source register.  If a physical register is encountered,
+  /// to the ultimate source register. If a physical register is encountered,
   /// we stop the search.
+  /// If one definition in the copy chain has multiple uses, set \p
+  /// AllDefHaveOneUser to false, otherwise set it to true.
   virtual Register lookThruCopyLike(Register SrcReg,
-                                    const MachineRegisterInfo *MRI) const;
+                                    const MachineRegisterInfo *MRI,
+                                    bool *AllDefHaveOneUser = nullptr) const;
 
   /// Return a null-terminated list of all of the callee-saved registers on
   /// this target. The register should be in the order of desired callee-save
