@@ -342,7 +342,7 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
   // current def in the stack, which cannot be achieved, even with locals.
-  for (const auto &SubsequentDef : drop_begin(DefI->defs(), 1)) {
+  for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
     for (const auto &PriorUse : UseI->uses()) {
       if (&PriorUse == Use)
         break;
@@ -701,7 +701,7 @@ public:
   MachineOperand &pop() {
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
-    Range = drop_begin(Range, 1);
+    Range = drop_begin(Range);
     if (Range.empty())
       Worklist.pop_back();
     assert((Worklist.empty() || !Worklist.back().empty()) &&

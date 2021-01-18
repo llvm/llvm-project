@@ -290,7 +290,7 @@ bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
 
   assert(VecTys.size() > 1 && "Invalid number of elements.");
   const ElementCount EC = VecTys[0]->getElementCount();
-  return llvm::all_of(llvm::drop_begin(VecTys, 1), [&EC](VectorType *VTy) {
+  return llvm::all_of(llvm::drop_begin(VecTys), [&EC](VectorType *VTy) {
     return (EC == VTy->getElementCount());
   });
 }
