@@ -7370,7 +7370,7 @@ AMDGPUAsmParser::parseDPPCtrlSel(StringRef Ctrl) {
     .Case("row_ror",   {DppCtrl::ROW_ROR0,        1, 15})
     .Case("row_share", {DppCtrl::ROW_SHARE_FIRST, 0, 15})
     .Case("row_xmask", {DppCtrl::ROW_XMASK_FIRST, 0, 15})
-    .Default({-1});
+    .Default({-1, 0, 0});
 
   bool Valid;
   if (Check.Ctrl == -1) {
