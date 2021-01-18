@@ -60,7 +60,7 @@
 # MISSING:     File: {{.*}}1.o
 # MISSING:     Format: elf64-x86-64
 # MISSING-NOT: File: {{.*}}3.o
-# ERR: error: '{{.*}}.a': '{{.*}}2.o': {{[Nn]}}o such file or directory
+# ERR: error: '{{.*}}.a': '{{.*}}2.o': {{.*}}{{[Nn]}}o such file or directory
 
 --- !ELF
 FileHeader:
