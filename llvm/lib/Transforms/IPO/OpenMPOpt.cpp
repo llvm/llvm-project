@@ -739,7 +739,7 @@ private:
            << ore::NV("OpenMPParallelMergeFront",
                       MergableCIs.front()->getDebugLoc())
            << " merged with parallel regions at ";
-        for (auto *CI : llvm::drop_begin(MergableCIs, 1)) {
+        for (auto *CI : llvm::drop_begin(MergableCIs)) {
           OR << ore::NV("OpenMPParallelMerge", CI->getDebugLoc());
           if (CI != MergableCIs.back())
             OR << ", ";
