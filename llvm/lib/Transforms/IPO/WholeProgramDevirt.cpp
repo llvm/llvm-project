@@ -470,7 +470,7 @@ CallSiteInfo &VTableSlotInfo::findCallSiteInfo(CallBase &CB) {
   auto *CBType = dyn_cast<IntegerType>(CB.getType());
   if (!CBType || CBType->getBitWidth() > 64 || CB.arg_empty())
     return CSInfo;
-  for (auto &&Arg : drop_begin(CB.args(), 1)) {
+  for (auto &&Arg : drop_begin(CB.args())) {
     auto *CI = dyn_cast<ConstantInt>(Arg);
     if (!CI || CI->getBitWidth() > 64)
       return CSInfo;

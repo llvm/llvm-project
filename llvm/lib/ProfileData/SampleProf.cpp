@@ -287,8 +287,7 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
 std::error_code ProfileSymbolList::write(raw_ostream &OS) {
   // Sort the symbols before output. If doing compression.
   // It will make the compression much more effective.
-  std::vector<StringRef> SortedList;
-  SortedList.insert(SortedList.begin(), Syms.begin(), Syms.end());
+  std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
   llvm::sort(SortedList);
 
   std::string OutputString;
@@ -303,8 +302,7 @@ std::error_code ProfileSymbolList::write(raw_ostream &OS) {
 
 void ProfileSymbolList::dump(raw_ostream &OS) const {
   OS << "======== Dump profile symbol list ========\n";
-  std::vector<StringRef> SortedList;
-  SortedList.insert(SortedList.begin(), Syms.begin(), Syms.end());
+  std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
   llvm::sort(SortedList);
 
   for (auto &Sym : SortedList)

@@ -460,41 +460,15 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    vldrw.u32 q2, [r7]
 ; CHECK-NEXT:    vldrw.u32 q0, [r6]
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
-; CHECK-NEXT:    b .LBB9_2
-; CHECK-NEXT:  .LBB9_1: @ %for.cond4.for.cond.cleanup6_crit_edge.us
-; CHECK-NEXT:    @ in Loop: Header=BB9_2 Depth=1
-; CHECK-NEXT:    add.w r8, r8, #1
-; CHECK-NEXT:    cmp r8, r3
-; CHECK-NEXT:    beq .LBB9_6
-; CHECK-NEXT:  .LBB9_2: @ %for.cond8.preheader.us.us.preheader
+; CHECK-NEXT:  .LBB9_1: @ %for.cond8.preheader.us.us.preheader
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB9_5 Depth 2
+; CHECK-NEXT:    @ Child Loop BB9_2 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB9_3 Depth 3
 ; CHECK-NEXT:    mul r11, r8, r9
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    mul r7, r8, r12
-; CHECK-NEXT:    b .LBB9_5
-; CHECK-NEXT:  .LBB9_3: @ %vector.body
-; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=1
-; CHECK-NEXT:    @ Parent Loop BB9_5 Depth=2
-; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    vadd.i32 q7, q6, q3
-; CHECK-NEXT:    vldrw.u32 q0, [r1, q6, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q6, [q5, #32]!
-; CHECK-NEXT:    vmul.i32 q0, q0, q6
-; CHECK-NEXT:    vmov q6, q7
-; CHECK-NEXT:    vadd.i32 q4, q0, q4
-; CHECK-NEXT:    le lr, .LBB9_3
-; CHECK-NEXT:  @ %bb.4: @ %middle.block
-; CHECK-NEXT:    @ in Loop: Header=BB9_5 Depth=2
-; CHECK-NEXT:    add.w r4, r5, r11
-; CHECK-NEXT:    adds r5, #1
-; CHECK-NEXT:    vaddv.u32 r6, q4
-; CHECK-NEXT:    cmp r5, r9
-; CHECK-NEXT:    str.w r6, [r2, r4, lsl #2]
-; CHECK-NEXT:    beq .LBB9_1
-; CHECK-NEXT:  .LBB9_5: @ %vector.ph
-; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=1
+; CHECK-NEXT:  .LBB9_2: @ %vector.ph
+; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
 ; CHECK-NEXT:    @ Child Loop BB9_3 Depth 3
 ; CHECK-NEXT:    vdup.32 q5, r7
@@ -506,8 +480,31 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    vmov.i32 q4, #0x0
 ; CHECK-NEXT:    vadd.i32 q5, q5, q0
 ; CHECK-NEXT:    vmlas.u32 q6, q2, r5
-; CHECK-NEXT:    b .LBB9_3
-; CHECK-NEXT:  .LBB9_6: @ %for.end25
+; CHECK-NEXT:  .LBB9_3: @ %vector.body
+; CHECK-NEXT:    @ Parent Loop BB9_1 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB9_2 Depth=2
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
+; CHECK-NEXT:    vadd.i32 q7, q6, q3
+; CHECK-NEXT:    vldrw.u32 q0, [r1, q6, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q6, [q5, #32]!
+; CHECK-NEXT:    vmul.i32 q0, q0, q6
+; CHECK-NEXT:    vmov q6, q7
+; CHECK-NEXT:    vadd.i32 q4, q0, q4
+; CHECK-NEXT:    le lr, .LBB9_3
+; CHECK-NEXT:  @ %bb.4: @ %middle.block
+; CHECK-NEXT:    @ in Loop: Header=BB9_2 Depth=2
+; CHECK-NEXT:    add.w r4, r5, r11
+; CHECK-NEXT:    adds r5, #1
+; CHECK-NEXT:    vaddv.u32 r6, q4
+; CHECK-NEXT:    cmp r5, r9
+; CHECK-NEXT:    str.w r6, [r2, r4, lsl #2]
+; CHECK-NEXT:    bne .LBB9_2
+; CHECK-NEXT:  @ %bb.5: @ %for.cond4.for.cond.cleanup6_crit_edge.us
+; CHECK-NEXT:    @ in Loop: Header=BB9_1 Depth=1
+; CHECK-NEXT:    add.w r8, r8, #1
+; CHECK-NEXT:    cmp r8, r3
+; CHECK-NEXT:    bne .LBB9_1
+; CHECK-NEXT:  @ %bb.6: @ %for.end25
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
@@ -864,43 +861,36 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(i8* nocapture readonly 
 ; CHECK-NEXT:    movs r6, #11
 ; CHECK-NEXT:    vshl.i32 q1, q1, #2
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    b .LBB11_2
-; CHECK-NEXT:  .LBB11_1: @ %for.cond.cleanup20.i
-; CHECK-NEXT:    @ in Loop: Header=BB11_2 Depth=1
-; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    ldr r7, [sp, #148]
-; CHECK-NEXT:    adds r5, #1
-; CHECK-NEXT:    cmp r5, r7
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r5, #0
-; CHECK-NEXT:  .LBB11_2: @ %for.body10.i
+; CHECK-NEXT:  .LBB11_1: @ %for.body10.i
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB11_4 Depth 2
-; CHECK-NEXT:    @ Child Loop BB11_9 Depth 3
-; CHECK-NEXT:    @ Child Loop BB11_5 Depth 4
-; CHECK-NEXT:    @ Child Loop BB11_6 Depth 5
+; CHECK-NEXT:    @ Child Loop BB11_2 Depth 2
+; CHECK-NEXT:    @ Child Loop BB11_3 Depth 3
+; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
+; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
 ; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    str r5, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    b .LBB11_4
-; CHECK-NEXT:  .LBB11_3: @ %for.cond.cleanup26.i
-; CHECK-NEXT:    @ in Loop: Header=BB11_4 Depth=2
-; CHECK-NEXT:    adds r7, #1
-; CHECK-NEXT:    cmp r7, r3
-; CHECK-NEXT:    beq .LBB11_1
-; CHECK-NEXT:  .LBB11_4: @ %for.cond22.preheader.i
-; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=1
+; CHECK-NEXT:  .LBB11_2: @ %for.cond22.preheader.i
+; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
-; CHECK-NEXT:    @ Child Loop BB11_9 Depth 3
-; CHECK-NEXT:    @ Child Loop BB11_5 Depth 4
-; CHECK-NEXT:    @ Child Loop BB11_6 Depth 5
+; CHECK-NEXT:    @ Child Loop BB11_3 Depth 3
+; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
+; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    b .LBB11_9
-; CHECK-NEXT:  .LBB11_5: @ %for.body78.us.i
-; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=1
-; CHECK-NEXT:    @ Parent Loop BB11_4 Depth=2
-; CHECK-NEXT:    @ Parent Loop BB11_9 Depth=3
+; CHECK-NEXT:  .LBB11_3: @ %for.body27.i
+; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=2
+; CHECK-NEXT:    @ => This Loop Header: Depth=3
+; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
+; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
+; CHECK-NEXT:    dls lr, r9
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    mov.w r11, #4
+; CHECK-NEXT:  .LBB11_4: @ %for.body78.us.i
+; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=2
+; CHECK-NEXT:    @ Parent Loop BB11_3 Depth=3
 ; CHECK-NEXT:    @ => This Loop Header: Depth=4
-; CHECK-NEXT:    @ Child Loop BB11_6 Depth 5
+; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
 ; CHECK-NEXT:    mul r4, r11, r6
 ; CHECK-NEXT:    vdup.32 q3, r5
 ; CHECK-NEXT:    vdup.32 q2, r7
@@ -910,11 +900,11 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(i8* nocapture readonly 
 ; CHECK-NEXT:    vadd.i32 q4, q0, r4
 ; CHECK-NEXT:    mov r4, r8
 ; CHECK-NEXT:    vmla.u32 q2, q4, r2
-; CHECK-NEXT:  .LBB11_6: @ %vector.body
-; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=1
-; CHECK-NEXT:    @ Parent Loop BB11_4 Depth=2
-; CHECK-NEXT:    @ Parent Loop BB11_9 Depth=3
-; CHECK-NEXT:    @ Parent Loop BB11_5 Depth=4
+; CHECK-NEXT:  .LBB11_5: @ %vector.body
+; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=2
+; CHECK-NEXT:    @ Parent Loop BB11_3 Depth=3
+; CHECK-NEXT:    @ Parent Loop BB11_4 Depth=4
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=5
 ; CHECK-NEXT:    vldrb.s32 q6, [r0, q2]
 ; CHECK-NEXT:    vadd.i32 q5, q2, q1
@@ -925,27 +915,31 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(i8* nocapture readonly 
 ; CHECK-NEXT:    vmov q3, q4
 ; CHECK-NEXT:    vmlava.u32 r12, q2, q6
 ; CHECK-NEXT:    vmov q2, q5
-; CHECK-NEXT:    bne .LBB11_6
-; CHECK-NEXT:  @ %bb.7: @ %middle.block
-; CHECK-NEXT:    @ in Loop: Header=BB11_5 Depth=4
+; CHECK-NEXT:    bne .LBB11_5
+; CHECK-NEXT:  @ %bb.6: @ %middle.block
+; CHECK-NEXT:    @ in Loop: Header=BB11_4 Depth=4
 ; CHECK-NEXT:    add.w r11, r11, #1
-; CHECK-NEXT:    le lr, .LBB11_5
-; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup77.i
-; CHECK-NEXT:    @ in Loop: Header=BB11_9 Depth=3
+; CHECK-NEXT:    le lr, .LBB11_4
+; CHECK-NEXT:  @ %bb.7: @ %for.cond.cleanup77.i
+; CHECK-NEXT:    @ in Loop: Header=BB11_3 Depth=3
 ; CHECK-NEXT:    adds r5, #1
 ; CHECK-NEXT:    add.w r10, r10, #1
 ; CHECK-NEXT:    cmp r5, r2
-; CHECK-NEXT:    beq .LBB11_3
-; CHECK-NEXT:  .LBB11_9: @ %for.body27.i
-; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=1
-; CHECK-NEXT:    @ Parent Loop BB11_4 Depth=2
-; CHECK-NEXT:    @ => This Loop Header: Depth=3
-; CHECK-NEXT:    @ Child Loop BB11_5 Depth 4
-; CHECK-NEXT:    @ Child Loop BB11_6 Depth 5
-; CHECK-NEXT:    dls lr, r9
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov.w r11, #4
-; CHECK-NEXT:    b .LBB11_5
+; CHECK-NEXT:    bne .LBB11_3
+; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup26.i
+; CHECK-NEXT:    @ in Loop: Header=BB11_2 Depth=2
+; CHECK-NEXT:    adds r7, #1
+; CHECK-NEXT:    cmp r7, r3
+; CHECK-NEXT:    bne .LBB11_2
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup20.i
+; CHECK-NEXT:    @ in Loop: Header=BB11_1 Depth=1
+; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr r7, [sp, #148]
+; CHECK-NEXT:    adds r5, #1
+; CHECK-NEXT:    cmp r5, r7
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    moveq r5, #0
+; CHECK-NEXT:    b .LBB11_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:  .LCPI11_0:

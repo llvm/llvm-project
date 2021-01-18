@@ -367,15 +367,15 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     // Skip over DEBUG values, predicated nonterminators and speculation
     // barrier terminators.
     while (I->isDebugInstr() || !I->isTerminator() ||
-           isSpeculationBarrierEndBBOpcode(I->getOpcode()) ){
+           isSpeculationBarrierEndBBOpcode(I->getOpcode()) ||
+           I->getOpcode() == ARM::t2DoLoopStartTP){
       if (I == MBB.instr_begin())
         return false;
       --I;
     }
 
     if (isIndirectBranchOpcode(I->getOpcode()) ||
-        isJumpTableBranchOpcode(I->getOpcode()) ||
-        isLowOverheadTerminatorOpcode(I->getOpcode())) {
+        isJumpTableBranchOpcode(I->getOpcode())) {
       // Indirect branches and jump tables can't be analyzed, but we still want
       // to clean up any instructions at the tail of the basic block.
       CantAnalyze = true;

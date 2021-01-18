@@ -63,8 +63,7 @@ static Error writeVariableSizedInteger(uint64_t Integer, size_t Size,
 }
 
 static void ZeroFillBytes(raw_ostream &OS, size_t Size) {
-  std::vector<uint8_t> FillData;
-  FillData.insert(FillData.begin(), Size, 0);
+  std::vector<uint8_t> FillData(Size, 0);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
