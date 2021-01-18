@@ -52,6 +52,10 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert(
         {&IdentTable.get(WhitespaceSensitiveMacro), TT_UntouchableMacroFunc});
   }
+  for (const std::string &StatementAttributeLikeMacro :
+       Style.StatementAttributeLikeMacros)
+    Macros.insert({&IdentTable.get(StatementAttributeLikeMacro),
+                   TT_StatementAttributeLikeMacro});
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {

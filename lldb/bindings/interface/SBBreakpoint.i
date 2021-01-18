@@ -313,6 +313,10 @@ public:
 
 class SBBreakpointListImpl;
 
+
+%feature("docstring",
+"Represents a list of :py:class:`SBBreakpoint`."
+) SBBreakpointList;
 class LLDB_API SBBreakpointList
 {
 public:

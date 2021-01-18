@@ -260,9 +260,7 @@ CodeGenTarget::CodeGenTarget(RecordKeeper &records)
 CodeGenTarget::~CodeGenTarget() {
 }
 
-const StringRef CodeGenTarget::getName() const {
-  return TargetRec->getName();
-}
+StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
 /// getInstNamespace - Find and return the target machine's instruction
 /// namespace. The namespace is cached because it is requested multiple times.

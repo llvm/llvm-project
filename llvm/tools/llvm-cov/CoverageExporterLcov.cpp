@@ -127,7 +127,7 @@ void renderBranchExecutionCounts(raw_ostream &OS,
 
   // Sort branches based on line number to ensure branches corresponding to the
   // same source line are counted together.
-  std::sort(Branches.begin(), Branches.end(), sortLine);
+  llvm::sort(Branches, sortLine);
 
   auto NextBranch = Branches.begin();
   auto EndBranch = Branches.end();

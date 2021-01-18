@@ -287,16 +287,15 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
                                                         SourceFiles, Options);
   auto Files = renderFiles(Coverage, SourceFiles, FileReports, Options);
   // Sort files in order of their names.
-  std::sort(Files.begin(), Files.end(),
-    [](const json::Value &A, const json::Value &B) {
-      const json::Object *ObjA = A.getAsObject();
-      const json::Object *ObjB = B.getAsObject();
-      assert(ObjA != nullptr && "Value A was not an Object");
-      assert(ObjB != nullptr && "Value B was not an Object");
-      const StringRef FilenameA = ObjA->getString("filename").getValue();
-      const StringRef FilenameB = ObjB->getString("filename").getValue();
-      return FilenameA.compare(FilenameB) < 0;
-    });
+  llvm::sort(Files, [](const json::Value &A, const json::Value &B) {
+    const json::Object *ObjA = A.getAsObject();
+    const json::Object *ObjB = B.getAsObject();
+    assert(ObjA != nullptr && "Value A was not an Object");
+    assert(ObjB != nullptr && "Value B was not an Object");
+    const StringRef FilenameA = ObjA->getString("filename").getValue();
+    const StringRef FilenameB = ObjB->getString("filename").getValue();
+    return FilenameA.compare(FilenameB) < 0;
+  });
   auto Export = json::Object(
       {{"files", std::move(Files)}, {"totals", renderSummary(Totals)}});
   // Skip functions-level information  if necessary.

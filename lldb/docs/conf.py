@@ -18,7 +18,17 @@ from datetime import date
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+
+# Add the current directory that contains the mock _lldb native module which
+# is imported by the `lldb` module.
+sys.path.insert(0, os.path.abspath("."))
+# Add the build directory that contains the `lldb` module. LLDB_SWIG_MODULE is
+# set by CMake.
+sys.path.insert(0, os.getenv("LLDB_SWIG_MODULE"))
+
+# Put the generated Python API documentation in the 'python_api' folder. This
+# also defines the URL these files will have in the generated website.
+automodapi_toctreedirnm = 'python_api'
 
 # -- General configuration -----------------------------------------------------
 
@@ -27,7 +37,8 @@ from datetime import date
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
+extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx',
+              'sphinx_automodapi.automodapi']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

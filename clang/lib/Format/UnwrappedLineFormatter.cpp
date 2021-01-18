@@ -248,6 +248,11 @@ private:
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
+
+      if (Tok && Tok->is(tok::kw_template) &&
+          Style.BraceWrapping.SplitEmptyRecord && EmptyBlock) {
+        return 0;
+      }
     }
 
     // FIXME: TheLine->Level != 0 might or might not be the right check to do.
@@ -355,6 +360,30 @@ private:
     if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
         I[-1]->First->isOneOf(tok::kw_case, tok::kw_default))
       return 0;
+
+    // Don't merge an empty template class or struct if SplitEmptyRecords
+    // is defined.
+    if (Style.BraceWrapping.SplitEmptyRecord &&
+        TheLine->Last->is(tok::l_brace) && I != AnnotatedLines.begin() &&
+        I[-1]->Last) {
+      const FormatToken *Previous = I[-1]->Last;
+      if (Previous) {
+        if (Previous->is(tok::comment))
+          Previous = Previous->getPreviousNonComment();
+        if (Previous) {
+          if (Previous->is(tok::greater))
+            return 0;
+          if (Previous->is(tok::identifier)) {
+            const FormatToken *PreviousPrevious =
+                Previous->getPreviousNonComment();
+            if (PreviousPrevious &&
+                PreviousPrevious->isOneOf(tok::kw_class, tok::kw_struct))
+              return 0;
+          }
+        }
+      }
+    }
+
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
       return !Style.BraceWrapping.AfterFunction ||
@@ -1237,21 +1266,10 @@ void UnwrappedLineFormatter::formatFirstToken(
   }
 
   // Preprocessor directives get indented before the hash only if specified
-  if (Line.Type == LT_PreprocessorDirective ||
-      Line.Type == LT_ImportStatement) {
-    switch (Style.IndentPPDirectives) {
-    case FormatStyle::PPDIS_AfterHash:
-      Indent = 0;
-      break;
-    case FormatStyle::PPDIS_None:
-    case FormatStyle::PPDIS_BeforeHash: {
-      // If we want to indent pragmas.
-      bool isPragmaLine = RootToken.startsSequence(tok::hash, tok::pp_pragma);
-      if (!Style.IndentPragmas && isPragmaLine)
-        Indent = 0;
-    } break;
-    }
-  }
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      (Line.Type == LT_PreprocessorDirective ||
+       Line.Type == LT_ImportStatement))
+    Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,
                                  /*IsAligned=*/false,
