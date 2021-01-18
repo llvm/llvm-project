@@ -380,7 +380,9 @@ public:
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
       MachineOperand &MO = MI.getOperand(Idx);
-      if (!MO.isReg() || MO.isImplicit())
+      // Leave `undef` operands as is, StackMaps will rewrite them
+      // into a constant.
+      if (!MO.isReg() || MO.isImplicit() || MO.isUndef())
         continue;
       Register Reg = MO.getReg();
       assert(Reg.isPhysical() && "Only physical regs are expected");
