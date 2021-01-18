@@ -17,6 +17,13 @@ Current status: Under development and not enabled by default
 
   Enables building the Python bindings. Defaults to `OFF`.
 
+* **`Python3_EXECUTABLE`**:`STRING`
+
+  Specifies the `python` executable used for the LLVM build, including for
+  determining header/link flags for the Python bindings. On systems with
+  multiple Python implementations, setting this explicitly to the preferred
+  `python3` executable is strongly recommended.
+
 * **`MLIR_PYTHON_BINDINGS_VERSION_LOCKED`**`:BOOL`
 
   Links the native extension against the Python runtime library, which is
@@ -25,12 +32,32 @@ Current status: Under development and not enabled by default
   compile time errors for unresolved symbols on all platforms, which makes for a
   smoother development workflow. Defaults to `ON`.
 
-* **`PYTHON_EXECUTABLE`**:`STRING`
+### Recommended development practices
 
-  Specifies the `python` executable used for the LLVM build, including for
-  determining header/link flags for the Python bindings. On systems with
-  multiple Python implementations, setting this explicitly to the preferred
-  `python3` executable is strongly recommended.
+It is recommended to use a python virtual environment. Many ways exist for this,
+but the following is the simplest:
+
+```shell
+# Make sure your 'python' is what you expect. Note that on multi-python
+# systems, this may have a version suffix, and on many Linuxes and MacOS where
+# python2 and python3 co-exist, you may also want to use `python3`.
+which python
+python -m venv ~/.venv/mlirdev
+source ~/.venv/mlirdev/bin/activate
+
+# Now the `python` command will resolve to your virtual environment and
+# packages will be installed there.
+python -m pip install pybind11 numpy
+
+# Now run `cmake`, `ninja`, et al.
+```
+
+For interactive use, it is sufficient to add the `python` directory in your
+`build/` directory to the `PYTHONPATH`. Typically:
+
+```shell
+export PYTHONPATH=$(cd build && pwd)/python
+```
 
 ## Design
 
@@ -292,57 +319,16 @@ mutually exclusive with a more complete mapping of the backing constructs.
 Tests should be added in the `test/Bindings/Python` directory and should
 typically be `.py` files that have a lit run line.
 
-While lit can run any python module, prefer to lay tests out according to these
-rules:
+We use `lit` and `FileCheck` based tests:
 
-* For tests of the API surface area, prefer
-  [`doctest`](https://docs.python.org/3/library/doctest.html).
 * For generative tests (those that produce IR), define a Python module that
   constructs/prints the IR and pipe it through `FileCheck`.
 * Parsing should be kept self-contained within the module under test by use of
   raw constants and an appropriate `parse_asm` call.
 * Any file I/O code should be staged through a tempfile vs relying on file
   artifacts/paths outside of the test module.
-
-### Sample Doctest
-
-```python
-# RUN: %PYTHON %s
-
-"""
-  >>> m = load_test_module()
-Test basics:
-  >>> m.operation.name
-  "module"
-  >>> m.operation.is_registered
-  True
-  >>> ... etc ...
-
-Verify that repr prints:
-  >>> m.operation
-  <operation 'module'>
-"""
-
-import mlir
-
-TEST_MLIR_ASM = r"""
-func @test_operation_correct_regions() {
-  // ...
-}
-"""
-
-# TODO: Move to a test utility class once any of this actually exists.
-def load_test_module():
-  ctx = mlir.ir.Context()
-  ctx.allow_unregistered_dialects = True
-  module = ctx.parse_asm(TEST_MLIR_ASM)
-  return module
-
-
-if __name__ == "__main__":
-  import doctest
-  doctest.testmod()
-```
+* For convenience, we also test non-generative API interactions with the same
+  mechanisms, printing and `CHECK`ing as needed.
 
 ### Sample FileCheck test
 
