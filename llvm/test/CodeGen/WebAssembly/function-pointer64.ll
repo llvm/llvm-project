@@ -34,14 +34,15 @@ entry:
 ; CHECK-NEXT: i32.const 1
 ; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: i32.wrap_i64
-; CHECK-NEXT: call_indirect (i32) -> ()
+; CHECK-NEXT: call_indirect (i32) -> (), __indirect_function_table
 
 ; CHECK:      .functype test () -> ()
 ; CHECK-NEXT: i64.const bar
 ; CHECK-NEXT: call foo
 
 
-; Check we're emitting a 64-bit reloc for `i64.const bar` and the global.
+; Check we're emitting a 64-bit relocs for the call_indirect, the
+; `i64.const bar` reference in code, and the global.
 
 ; YAML:      Memory:
 ; YAML-NEXT:   Flags:   [ IS_64 ]
@@ -50,7 +51,10 @@ entry:
 ; YAML:      - Type:   CODE
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x16
+; YAML-NEXT:   Offset: 0x1A
+; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
+; YAML-NEXT:   Index:  0
+; YAML-NEXT:   Offset: 0x2D
 
 ; YAML:      - Type:   DATA
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_I64

@@ -472,6 +472,15 @@ public:
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
   }
 
+  void addFunctionTableOperand(OperandVector &Operands, StringRef TableName,
+                               SMLoc StartLoc, SMLoc EndLoc) {
+    MCSymbolWasm *Sym = GetOrCreateFunctionTableSymbol(getContext(), TableName);
+    auto *Val = MCSymbolRefExpr::create(Sym, getContext());
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        WebAssemblyOperand::Symbol, StartLoc, EndLoc,
+        WebAssemblyOperand::SymOp{Val}));
+  }
+
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     // Note: Name does NOT point into the sourcecode, but to a local, so
@@ -508,6 +517,7 @@ public:
     bool ExpectBlockType = false;
     bool ExpectFuncType = false;
     bool ExpectHeapType = false;
+    bool ExpectFunctionTable = false;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -547,15 +557,7 @@ public:
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
       ExpectFuncType = true;
-      // Ensure that the object file has a __indirect_function_table import, as
-      // we call_indirect against it.
-      auto &Ctx = getStreamer().getContext();
-      MCSymbolWasm *Sym =
-          GetOrCreateFunctionTableSymbol(Ctx, "__indirect_function_table");
-      // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
-      // it as NO_STRIP so as to ensure that the indirect function table makes
-      // it to linked output.
-      Sym->setNoStrip();
+      ExpectFunctionTable = true;
     } else if (Name == "ref.null") {
       ExpectHeapType = true;
     }
@@ -571,7 +573,7 @@ public:
         return true;
       // Got signature as block type, don't need more
       ExpectBlockType = false;
-      auto &Ctx = getStreamer().getContext();
+      auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
@@ -583,6 +585,16 @@ public:
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Symbol, Loc.getLoc(), Loc.getEndLoc(),
           WebAssemblyOperand::SymOp{Expr}));
+
+      // Allow additional operands after the signature, notably for
+      // call_indirect against a named table.
+      if (Lexer.isNot(AsmToken::EndOfStatement)) {
+        if (expect(AsmToken::Comma, ","))
+          return true;
+        if (Lexer.is(AsmToken::EndOfStatement)) {
+          return error("Unexpected trailing comma");
+        }
+      }
     }
 
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
@@ -608,8 +620,11 @@ public:
               WebAssemblyOperand::Integer, Id.getLoc(), Id.getEndLoc(),
               WebAssemblyOperand::IntOp{static_cast<int64_t>(HeapType)}));
           Parser.Lex();
+        } else if (ExpectFunctionTable) {
+          addFunctionTableOperand(Operands, Id.getString(), Id.getLoc(),
+                                  Id.getEndLoc());
+          Parser.Lex();
         } else {
-          // Assume this identifier is a label.
           const MCExpr *Val;
           SMLoc End;
           if (Parser.parseExpression(Val, End))
@@ -673,6 +688,11 @@ public:
     if (ExpectBlockType && Operands.size() == 1) {
       // Support blocks with no operands as default to void.
       addBlockTypeOperand(Operands, NameLoc, WebAssembly::BlockType::Void);
+    }
+    if (ExpectFunctionTable && Operands.size() == 2) {
+      // If call_indirect doesn't specify a target table, supply one.
+      addFunctionTableOperand(Operands, "__indirect_function_table", NameLoc,
+                              SMLoc::getFromPointer(Name.end()));
     }
     Parser.Lex();
     return false;

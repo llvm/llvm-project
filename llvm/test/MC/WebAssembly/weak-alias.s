@@ -78,7 +78,7 @@ alias_address:
 # CHECK:        - Type:            TYPE
 # CHECK-NEXT:     Signatures:
 # CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:         ParamTypes:      []
 # CHECK-NEXT:         ReturnTypes:
 # CHECK-NEXT:           - I32
 # CHECK-NEXT:   - Type:            IMPORT
@@ -120,28 +120,34 @@ alias_address:
 # CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # CHECK-NEXT:         Index:           0
 # CHECK-NEXT:         Offset:          0x24
+# CHECK-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
+# CHECK-NEXT:         Index:           6
+# CHECK-NEXT:         Offset:          0x29
 # CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
-# CHECK-NEXT:         Index:           7
-# CHECK-NEXT:         Offset:          0x31
+# CHECK-NEXT:         Index:           8
+# CHECK-NEXT:         Offset:          0x35
 # CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # CHECK-NEXT:         Index:           0
-# CHECK-NEXT:         Offset:          0x37
+# CHECK-NEXT:         Offset:          0x3B
+# CHECK-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
+# CHECK-NEXT:         Index:           6
+# CHECK-NEXT:         Offset:          0x40
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            41000B
 # CHECK-NEXT:       - Index:           1
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            1080808080000B
 # CHECK-NEXT:       - Index:           2
-# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            1080808080000B
 # CHECK-NEXT:       - Index:           3
-# CHECK-NEXT:         Locals:
-# CHECK-NEXT:         Body:            410028028880808000118080808000000B
+# CHECK-NEXT:         Locals:          []
+# CHECK-NEXT:         Body:            41002802888080800011808080800080808080000B
 # CHECK-NEXT:       - Index:           4
-# CHECK-NEXT:         Locals:
-# CHECK-NEXT:         Body:            410028029080808000118080808000000B
+# CHECK-NEXT:         Locals:          []
+# CHECK-NEXT:         Body:            41002802908080800011808080800080808080000B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
@@ -205,46 +211,46 @@ alias_address:
 # CHECK-NEXT:         Segment:         1
 # CHECK-NEXT:         Size:            4
 # CHECK-NEXT:       - Index:           6
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Name:            __indirect_function_table
+# CHECK-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
+# CHECK-NEXT:         Table:           0
+# CHECK-NEXT:       - Index:           7
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Name:            call_alias_ptr
 # CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 # CHECK-NEXT:         Function:        4
-# CHECK-NEXT:       - Index:           7
+# CHECK-NEXT:       - Index:           8
 # CHECK-NEXT:         Kind:            DATA
 # CHECK-NEXT:         Name:            alias_address
 # CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:         Segment:         2
 # CHECK-NEXT:         Size:            4
-# CHECK-NEXT:       - Index:           8
+# CHECK-NEXT:       - Index:           9
 # CHECK-NEXT:         Kind:            DATA
 # CHECK-NEXT:         Name:            bar
 # CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:         Segment:         0
 # CHECK-NEXT:         Size:            4
-# CHECK-NEXT:       - Index:           9
+# CHECK-NEXT:       - Index:           10
 # CHECK-NEXT:         Kind:            DATA
 # CHECK-NEXT:         Name:            bar_alias
 # CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, NO_STRIP ]
 # CHECK-NEXT:         Segment:         0
 # CHECK-NEXT:         Size:            4
-# CHECK-NEXT:       - Index:           10
-# CHECK-NEXT:         Kind:            TABLE
-# CHECK-NEXT:         Name:            __indirect_function_table
-# CHECK-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
-# CHECK-NEXT:         Table:           0
 # CHECK-NEXT:     SegmentInfo:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Name:            .data.bar
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Name:            .data.direct_address
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Name:            .data.alias_address
 # CHECK-NEXT:         Alignment:       3
-# CHECK-NEXT:         Flags:           [ ]
+# CHECK-NEXT:         Flags:           [  ]
 # CHECK-NEXT: ...
 
 # CHECK-SYMS: SYMBOL TABLE:
