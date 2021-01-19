@@ -2868,6 +2868,13 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
                                                VPTransformState &State) {
   assert(!Instr->getType()->isAggregateType() && "Can't handle vectors");
 
+  // llvm.experimental.noalias.scope.decl intrinsics must only be duplicated for
+  // the first lane and part.
+  if (auto *II = dyn_cast<IntrinsicInst>(Instr))
+    if (Instance.Lane != 0 || Instance.Part != 0)
+      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
+        return;
+
   setDebugLocFromInst(Builder, Instr);
 
   // Does this instruction return a value ?
@@ -8225,7 +8232,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI, VFRange &Range,
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
   if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
              ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect ||
-             ID == Intrinsic::pseudoprobe))
+             ID == Intrinsic::pseudoprobe ||
+             ID == Intrinsic::experimental_noalias_scope_decl))
     return nullptr;
 
   auto willWiden = [&](ElementCount VF) -> bool {
