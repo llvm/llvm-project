@@ -36,9 +36,8 @@ struct VectorBroadcastConvert final
     vector::BroadcastOp::Adaptor adaptor(operands);
     SmallVector<Value, 4> source(broadcastOp.getVectorType().getNumElements(),
                                  adaptor.source());
-    Value construct = rewriter.create<spirv::CompositeConstructOp>(
-        broadcastOp.getLoc(), broadcastOp.getVectorType(), source);
-    rewriter.replaceOp(broadcastOp, construct);
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        broadcastOp, broadcastOp.getVectorType(), source);
     return success();
   }
 };
@@ -55,9 +54,23 @@ struct VectorExtractOpConvert final
       return failure();
     vector::ExtractOp::Adaptor adaptor(operands);
     int32_t id = extractOp.position().begin()->cast<IntegerAttr>().getInt();
-    Value newExtract = rewriter.create<spirv::CompositeExtractOp>(
-        extractOp.getLoc(), adaptor.vector(), id);
-    rewriter.replaceOp(extractOp, newExtract);
+    rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
+        extractOp, adaptor.vector(), id);
+    return success();
+  }
+};
+
+struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::FMAOp fmaOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!spirv::CompositeType::isValid(fmaOp.getVectorType()))
+      return failure();
+    vector::FMAOp::Adaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<spirv::GLSLFmaOp>(
+        fmaOp, fmaOp.getType(), adaptor.lhs(), adaptor.rhs(), adaptor.acc());
     return success();
   }
 };
@@ -74,9 +87,8 @@ struct VectorInsertOpConvert final
       return failure();
     vector::InsertOp::Adaptor adaptor(operands);
     int32_t id = insertOp.position().begin()->cast<IntegerAttr>().getInt();
-    Value newInsert = rewriter.create<spirv::CompositeInsertOp>(
-        insertOp.getLoc(), adaptor.source(), adaptor.dest(), id);
-    rewriter.replaceOp(insertOp, newInsert);
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
+        insertOp, adaptor.source(), adaptor.dest(), id);
     return success();
   }
 };
@@ -92,10 +104,9 @@ struct VectorExtractElementOpConvert final
     if (!spirv::CompositeType::isValid(extractElementOp.getVectorType()))
       return failure();
     vector::ExtractElementOp::Adaptor adaptor(operands);
-    Value newExtractElement = rewriter.create<spirv::VectorExtractDynamicOp>(
-        extractElementOp.getLoc(), extractElementOp.getType(), adaptor.vector(),
+    rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
+        extractElementOp, extractElementOp.getType(), adaptor.vector(),
         extractElementOp.position());
-    rewriter.replaceOp(extractElementOp, newExtractElement);
     return success();
   }
 };
@@ -111,10 +122,9 @@ struct VectorInsertElementOpConvert final
     if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
       return failure();
     vector::InsertElementOp::Adaptor adaptor(operands);
-    Value newInsertElement = rewriter.create<spirv::VectorInsertDynamicOp>(
-        insertElementOp.getLoc(), insertElementOp.getType(),
-        insertElementOp.dest(), adaptor.source(), insertElementOp.position());
-    rewriter.replaceOp(insertElementOp, newInsertElement);
+    rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
+        insertElementOp, insertElementOp.getType(), insertElementOp.dest(),
+        adaptor.source(), insertElementOp.position());
     return success();
   }
 };
@@ -124,7 +134,8 @@ struct VectorInsertElementOpConvert final
 void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
                                          SPIRVTypeConverter &typeConverter,
                                          OwningRewritePatternList &patterns) {
-  patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
-                  VectorInsertOpConvert, VectorExtractElementOpConvert,
-                  VectorInsertElementOpConvert>(typeConverter, context);
+  patterns.insert<VectorBroadcastConvert, VectorExtractElementOpConvert,
+                  VectorExtractOpConvert, VectorFmaOpConvert,
+                  VectorInsertOpConvert, VectorInsertElementOpConvert>(
+      typeConverter, context);
 }
