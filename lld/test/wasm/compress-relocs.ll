@@ -22,5 +22,5 @@ entry:
 
 ; ERROR: wasm-ld: error: --compress-relocations is incompatible with output debug information. Please pass --strip-debug or --strip-all
 
-; CHECK:    Body:            28028088808000118080808000001A28028488808000118180808000001A0B
+; CHECK:    Body:            2802808880800011808080800080808080001A2802848880800011818080800080808080001A0B
 ; COMPRESS: Body:            280280081100001A280284081101001A0B
