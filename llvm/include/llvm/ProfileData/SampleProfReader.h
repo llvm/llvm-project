@@ -363,7 +363,11 @@ public:
   /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
 
-  virtual void collectFuncsFrom(const Module &M) {}
+  /// Collect functions with definitions in Module M. For reader which
+  /// support loading function profiles on demand, return true when the
+  /// reader has been given a module. Always return false for reader
+  /// which doesn't support loading function profiles on demand.
+  virtual bool collectFuncsFromModule() { return false; }
 
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
@@ -454,8 +458,12 @@ public:
   /// Don't read profile without context if the flag is set. This is only meaningful
   /// for ExtBinary format.
   virtual void setSkipFlatProf(bool Skip) {}
+  /// Return whether any name in the profile contains ".__uniq." suffix.
+  virtual bool hasUniqSuffix() { return false; }
 
   SampleProfileReaderItaniumRemapper *getRemapper() { return Remapper.get(); }
+
+  void setModule(const Module *Mod) { M = Mod; }
 
 protected:
   /// Map every function to its associated profile.
@@ -496,6 +504,11 @@ protected:
 
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
+
+  /// \brief The current module being compiled if SampleProfileReader
+  /// is used by compiler. If SampleProfileReader is used by other
+  /// tools which are not compiler, M is usually nullptr.
+  const Module *M = nullptr;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -656,8 +669,6 @@ protected:
   DenseMap<StringRef, uint64_t> FuncOffsetTable;
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
-  /// Use all functions from the input profile.
-  bool UseAllFuncs = true;
 
   /// Use fixed length MD5 instead of ULEB128 encoding so NameTable doesn't
   /// need to be read in up front and can be directly accessed using index.
@@ -692,8 +703,9 @@ public:
   uint64_t getFileSize();
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
 
-  /// Collect functions with definitions in Module \p M.
-  void collectFuncsFrom(const Module &M) override;
+  /// Collect functions with definitions in Module M. Return true if
+  /// the reader has been given a module.
+  bool collectFuncsFromModule() override;
 
   /// Return whether names in the profile are all MD5 numbers.
   virtual bool useMD5() override { return MD5StringBuf.get(); }
@@ -731,8 +743,6 @@ private:
   DenseMap<StringRef, uint64_t> FuncOffsetTable;
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
-  /// Use all functions from the input profile.
-  bool UseAllFuncs = true;
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readNameTable() override;
   /// Read a string indirectly via the name table.
@@ -751,8 +761,9 @@ public:
   /// Read samples only for functions to use.
   std::error_code readImpl() override;
 
-  /// Collect functions to be used when compiling Module \p M.
-  void collectFuncsFrom(const Module &M) override;
+  /// Collect functions with definitions in Module M. Return true if
+  /// the reader has been given a module.
+  bool collectFuncsFromModule() override;
 
   /// Return whether names in the profile are all MD5 numbers.
   virtual bool useMD5() override { return true; }
