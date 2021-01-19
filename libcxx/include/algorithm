@@ -3029,9 +3029,17 @@ private:
 
 public:
     // constructors and reset functions
-    explicit uniform_int_distribution(result_type __a = 0,
-                                      result_type __b = numeric_limits<result_type>::max())
+#ifndef _LIBCPP_CXX03_LANG
+    uniform_int_distribution() : uniform_int_distribution(0) {}
+    explicit uniform_int_distribution(
+        result_type __a, result_type __b = numeric_limits<result_type>::max())
         : __p_(param_type(__a, __b)) {}
+#else
+    explicit uniform_int_distribution(
+        result_type __a = 0,
+        result_type __b = numeric_limits<result_type>::max())
+        : __p_(param_type(__a, __b)) {}
+#endif
     explicit uniform_int_distribution(const param_type& __p) : __p_(__p) {}
     void reset() {}
 
