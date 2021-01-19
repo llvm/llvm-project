@@ -275,6 +275,18 @@ multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
   defm : VPatFPSetCCSDNode_FV<cc, swapped_op_inst_name>;
 }
 
+multiclass VPatExtendSDNode_V<list<SDNode> ops, string inst_name, string suffix,
+                              list <VTypeInfoToFraction> fraction_list> {
+  foreach vtiTofti = fraction_list in {
+    defvar vti = vtiTofti.Vti;
+    defvar fti = vtiTofti.Fti;
+    foreach op = ops in
+      def : Pat<(vti.Vector (op (fti.Vector fti.RegClass:$rs2))),
+                (!cast<Instruction>(inst_name#"_"#suffix#"_"#vti.LMul.MX)
+                    fti.RegClass:$rs2, VLMax, vti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -300,6 +312,20 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs1, simm5:$rs2, VLMax, vti.SEW)>;
 }
+
+// 12.3. Vector Integer Extension
+defm "" : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF2",
+                             AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V<[sext],         "PseudoVSEXT", "VF2",
+                             AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF4",
+                             AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V<[sext],         "PseudoVSEXT", "VF4",
+                             AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF8",
+                             AllFractionableVF8IntVectors>;
+defm "" : VPatExtendSDNode_V<[sext],         "PseudoVSEXT", "VF8",
+                             AllFractionableVF8IntVectors>;
 
 // 12.5. Vector Bitwise Logical Instructions
 defm "" : VPatBinarySDNode_VV_VX_VI<and, "PseudoVAND">;
