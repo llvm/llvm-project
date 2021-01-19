@@ -1637,14 +1637,28 @@ TEST(FindImplementations, Inheritance) {
     template<typename T>
     struct $5^TemplateBase {};
     struct $5[[Child3]] : public TemplateBase<Child3> {};
+
+    // Local classes.
+    void LocationFunction() {
+      struct $0[[LocalClass1]] : Base {
+        void $1[[Foo]]() override;
+      };
+      struct $6^LocalBase {
+        virtual void $7^Bar();
+      };
+      struct $6[[LocalClass2]]: LocalBase {
+        void $7[[Bar]]() override;
+      };
+    }
   )cpp";
 
   Annotations Code(Test);
   auto TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
-  for (StringRef Label : {"0", "1", "2", "3", "4", "5"}) {
+  auto Index = TU.index();
+  for (StringRef Label : {"0", "1", "2", "3", "4", "5", "6", "7"}) {
     for (const auto &Point : Code.points(Label)) {
-      EXPECT_THAT(findImplementations(AST, Point, TU.index().get()),
+      EXPECT_THAT(findImplementations(AST, Point, Index.get()),
                   UnorderedPointwise(DeclRange(), Code.ranges(Label)))
           << Code.code() << " at " << Point << " for Label " << Label;
     }

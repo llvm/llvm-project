@@ -75,8 +75,9 @@ public:
     /// collect macros. For example, `indexTopLevelDecls` will not index any
     /// macro even if this is true.
     bool CollectMacro = false;
-    /// Collect symbols local to main-files, such as static functions
-    /// and symbols inside an anonymous namespace.
+    /// Collect symbols local to main-files, such as static functions, symbols
+    /// inside an anonymous namespace, function-local classes and its member
+    /// functions.
     bool CollectMainFileSymbols = true;
     /// Collect references to main-file symbols.
     bool CollectMainFileRefs = false;

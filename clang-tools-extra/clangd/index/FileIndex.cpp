@@ -61,7 +61,8 @@ SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   // We only need declarations, because we don't count references.
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
-  IndexOpts.IndexFunctionLocals = false;
+  // We index function-local classes and its member functions only.
+  IndexOpts.IndexFunctionLocals = true;
   if (IsIndexMainAST) {
     // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
