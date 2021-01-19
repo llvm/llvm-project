@@ -11,12 +11,28 @@
 // template<class IntType = int>
 // class poisson_distribution
 
-// explicit poisson_distribution(RealType lambda = 1.0);
+// explicit poisson_distribution(double mean = 1.0);     // before C++20
+// poisson_distribution() : poisson_distribution(1.0) {} // C++20
+// explicit poisson_distribution(double mean);           // C++20
 
 #include <random>
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 11
+#include "make_implicit.h"
+#include "test_convertible.h"
+#endif
+
+template <class T>
+void test_implicit() {
+#if TEST_STD_VER >= 11
+  typedef std::poisson_distribution<T> D;
+  static_assert(test_convertible<D>(), "");
+  assert(D(1) == make_implicit<D>());
+  static_assert(!test_convertible<D, double>(), "");
+#endif
+}
 
 int main(int, char**)
 {
@@ -31,5 +47,8 @@ int main(int, char**)
         assert(d.mean() == 3.5);
     }
 
-  return 0;
+    test_implicit<int>();
+    test_implicit<long>();
+
+    return 0;
 }
