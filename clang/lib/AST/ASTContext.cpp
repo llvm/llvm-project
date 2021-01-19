@@ -5383,10 +5383,10 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
   DecltypeType *dt;
 
   // C++11 [temp.type]p2:
-  //   If an expression e involves a template parameter, decltype(e) denotes a
-  //   unique dependent type. Two such decltype-specifiers refer to the same
-  //   type only if their expressions are equivalent (14.5.6.1).
-  if (e->isInstantiationDependent()) {
+  //   If an expression e is type-dependent, decltype(e) denotes a unique
+  //   dependent type. Two such decltype-specifiers refer to the same type only
+  //   if their expressions are equivalent (14.5.6.1).
+  if (e->isTypeDependent()) {
     llvm::FoldingSetNodeID ID;
     DependentDecltypeType::Profile(ID, *this, e);
 
@@ -5940,6 +5940,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
 
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
+
+    case TemplateArgument::UncommonValue:
+      return TemplateArgument(*this,
+                              getCanonicalType(Arg.getUncommonValueType()),
+                              Arg.getAsUncommonValue());
 
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()));

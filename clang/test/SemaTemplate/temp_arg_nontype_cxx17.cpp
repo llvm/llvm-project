@@ -2,7 +2,7 @@
 
 template<typename T, T val> struct A {};
 
-template<typename T, typename U> constexpr bool is_same = false; // expected-note +{{here}}
+template<typename T, typename U> constexpr bool is_same = false;
 template<typename T> constexpr bool is_same<T, T> = true;
 
 namespace String {
@@ -84,34 +84,32 @@ namespace PtrMem {
   constexpr int B::*b = &B::b;
   constexpr int C::*cb = b;
   constexpr int D::*db = b;
-  constexpr int E::*ecb = cb; // expected-note +{{here}}
-  constexpr int E::*edb = db; // expected-note +{{here}}
+  constexpr int E::*ecb = cb;
+  constexpr int E::*edb = db;
 
   constexpr int E::*e = &E::e;
   constexpr int D::*de = (int D::*)e;
   constexpr int C::*ce = (int C::*)e;
-  constexpr int B::*bde = (int B::*)de; // expected-note +{{here}}
-  constexpr int B::*bce = (int B::*)ce; // expected-note +{{here}}
+  constexpr int B::*bde = (int B::*)de;
+  constexpr int B::*bce = (int B::*)ce;
 
-  // FIXME: This should all be accepted, but we don't yet have a representation
-  // nor mangling for this form of template argument.
   using Ab = A<int B::*, b>;
   using Ab = A<int B::*, &B::b>;
-  using Abce = A<int B::*, bce>; // expected-error {{not supported}}
-  using Abde = A<int B::*, bde>; // expected-error {{not supported}}
-  static_assert(!is_same<Ab, Abce>, ""); // expected-error {{undeclared}} expected-error {{must be a type}}
-  static_assert(!is_same<Ab, Abde>, ""); // expected-error {{undeclared}} expected-error {{must be a type}}
-  static_assert(!is_same<Abce, Abde>, ""); // expected-error 2{{undeclared}} expected-error {{must be a type}}
-  static_assert(is_same<Abce, A<int B::*, (int B::*)(int C::*)&E::e>>, ""); // expected-error {{undeclared}} expected-error {{not supported}}
+  using Abce = A<int B::*, bce>;
+  using Abde = A<int B::*, bde>;
+  static_assert(!is_same<Ab, Abce>, "");
+  static_assert(!is_same<Ab, Abde>, "");
+  static_assert(!is_same<Abce, Abde>, "");
+  static_assert(is_same<Abce, A<int B::*, (int B::*)(int C::*)&E::e>>, "");
 
   using Ae = A<int E::*, e>;
   using Ae = A<int E::*, &E::e>;
-  using Aecb = A<int E::*, ecb>; // expected-error {{not supported}}
-  using Aedb = A<int E::*, edb>; // expected-error {{not supported}}
-  static_assert(!is_same<Ae, Aecb>, ""); // expected-error {{undeclared}} expected-error {{must be a type}}
-  static_assert(!is_same<Ae, Aedb>, ""); // expected-error {{undeclared}} expected-error {{must be a type}}
-  static_assert(!is_same<Aecb, Aedb>, ""); // expected-error 2{{undeclared}} expected-error {{must be a type}}
-  static_assert(is_same<Aecb, A<int E::*, (int E::*)(int C::*)&B::b>>, ""); // expected-error {{undeclared}} expected-error {{not supported}}
+  using Aecb = A<int E::*, ecb>;
+  using Aedb = A<int E::*, edb>;
+  static_assert(!is_same<Ae, Aecb>, "");
+  static_assert(!is_same<Ae, Aedb>, "");
+  static_assert(!is_same<Aecb, Aedb>, "");
+  static_assert(is_same<Aecb, A<int E::*, (int E::*)(int C::*)&B::b>>, "");
 
   using An = A<int E::*, nullptr>;
   using A0 = A<int E::*, (int E::*)0>;
@@ -205,9 +203,9 @@ namespace Auto {
 
     struct Y : X {};
     void type_affects_identity(B<&X::n>) {}
-    void type_affects_identity(B<(int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
+    void type_affects_identity(B<(int Y::*)&X::n>) {}
     void type_affects_identity(B<(const int X::*)&X::n>) {}
-    void type_affects_identity(B<(const int Y::*)&X::n>) {} // FIXME: expected-error {{sorry}}
+    void type_affects_identity(B<(const int Y::*)&X::n>) {}
 
     // A case where we need to do auto-deduction, and check whether the
     // resulting dependent types match during partial ordering. These
@@ -502,4 +500,14 @@ namespace PR48517 {
   };
   template<> struct Q<&R<int>::n> { static constexpr int X = 1; };
   static_assert(R<int>().f() == 1);
+}
+
+namespace dependent_reference {
+  template<int &r> struct S { int *q = &r; };
+  template<int> auto f() { static int n; return S<n>(); }
+  auto v = f<0>();
+  auto w = f<1>();
+  static_assert(!is_same<decltype(v), decltype(w)>);
+  // Ensure that we can instantiate the definition of S<...>.
+  int n = *v.q + *w.q;
 }

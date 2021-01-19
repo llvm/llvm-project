@@ -51,6 +51,7 @@ template <> struct PointerLikeTypeTraits<clang::Expr *> {
 
 namespace clang {
 
+class APValue;
 class ASTContext;
 class DiagnosticBuilder;
 class Expr;
@@ -81,6 +82,12 @@ public:
     /// The template argument is an integral value stored in an llvm::APSInt
     /// that was provided for an integral non-type template parameter.
     Integral,
+
+    /// The template argument is a non-type template argument that can't be
+    /// represented by the special-case Declaration, NullPtr, or Integral
+    /// forms. These values are only ever produced by constant evaluation,
+    /// so cannot be dependent.
+    UncommonValue,
 
     /// The template argument is a template name that was provided for a
     /// template template parameter.
@@ -125,6 +132,11 @@ private:
     };
     void *Type;
   };
+  struct V {
+    unsigned Kind;
+    const APValue *Value;
+    void *Type;
+  };
   struct A {
     unsigned Kind;
     unsigned NumArgs;
@@ -142,6 +154,7 @@ private:
   union {
     struct DA DeclArg;
     struct I Integer;
+    struct V Value;
     struct A Args;
     struct TA TemplateArg;
     struct TV TypeOrValue;
@@ -157,9 +170,8 @@ public:
     TypeOrValue.V = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
   }
 
-  /// Construct a template argument that refers to a
-  /// declaration, which is either an external declaration or a
-  /// template declaration.
+  /// Construct a template argument that refers to a (non-dependent)
+  /// declaration.
   TemplateArgument(ValueDecl *D, QualType QT) {
     assert(D && "Expected decl");
     DeclArg.Kind = Declaration;
@@ -169,7 +181,11 @@ public:
 
   /// Construct an integral constant template argument. The memory to
   /// store the value is allocated with Ctx.
-  TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value, QualType Type);
+  TemplateArgument(const ASTContext &Ctx, const llvm::APSInt &Value,
+                   QualType Type);
+
+  /// Construct a template argument from an arbitrary constant value.
+  TemplateArgument(const ASTContext &Ctx, QualType Type, const APValue &Value);
 
   /// Construct an integral constant template argument with the same
   /// value as Other but a different type.
@@ -252,6 +268,12 @@ public:
   /// Whether this template argument is dependent on a template
   /// parameter such that its result can change from one instantiation to
   /// another.
+  ///
+  /// It's not always meaningful to ask whether a template argument is
+  /// dependent before it's been converted to match a template parameter;
+  /// whether a non-type template argument is dependent depends on the
+  /// corresponding parameter. For an unconverted template argument, this
+  /// returns true if the argument *might* be dependent.
   bool isDependent() const;
 
   /// Whether this template argument is dependent on a template
@@ -332,6 +354,16 @@ public:
   void setIntegralType(QualType T) {
     assert(getKind() == Integral && "Unexpected kind");
     Integer.Type = T.getAsOpaquePtr();
+  }
+
+  /// Get the value of an UncommonValue.
+  const APValue &getAsUncommonValue() const {
+    return *Value.Value;
+  }
+
+  /// Get the type of an UncommonValue.
+  QualType getUncommonValueType() const {
+    return QualType::getFromOpaquePtr(Value.Type);
   }
 
   /// If this is a non-type template argument, get its type. Otherwise,
@@ -478,6 +510,7 @@ public:
     assert(Argument.getKind() == TemplateArgument::NullPtr ||
            Argument.getKind() == TemplateArgument::Integral ||
            Argument.getKind() == TemplateArgument::Declaration ||
+           Argument.getKind() == TemplateArgument::UncommonValue ||
            Argument.getKind() == TemplateArgument::Expression);
   }
 
@@ -533,6 +566,11 @@ public:
 
   Expr *getSourceIntegralExpression() const {
     assert(Argument.getKind() == TemplateArgument::Integral);
+    return LocInfo.getAsExpr();
+  }
+
+  Expr *getSourceUncommonValueExpression() const {
+    assert(Argument.getKind() == TemplateArgument::UncommonValue);
     return LocInfo.getAsExpr();
   }
 
@@ -674,13 +712,6 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
                       TemplateArgumentLoc *OutArgArray);
-  // FIXME: The parameter Deps is the result populated by this method, the
-  // caller doesn't need it since it is populated by computeDependence. remove
-  // it.
-  void initializeFrom(SourceLocation TemplateKWLoc,
-                      const TemplateArgumentListInfo &List,
-                      TemplateArgumentLoc *OutArgArray,
-                      TemplateArgumentDependence &Deps);
   void initializeFrom(SourceLocation TemplateKWLoc);
 
   void copyInto(const TemplateArgumentLoc *ArgArray,

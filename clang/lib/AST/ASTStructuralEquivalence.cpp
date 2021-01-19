@@ -565,6 +565,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, Arg1.getAsExpr(),
                                     Arg2.getAsExpr());
 
+  case TemplateArgument::UncommonValue:
+    // FIXME: Do we need to customize the comparison?
+    return Arg1.structurallyEquals(Arg2);
+
   case TemplateArgument::Pack:
     if (Arg1.pack_size() != Arg2.pack_size())
       return false;

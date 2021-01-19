@@ -84,8 +84,8 @@ static void printIntegral(const TemplateArgument &TemplArg,
 // TemplateArgument Implementation
 //===----------------------------------------------------------------------===//
 
-TemplateArgument::TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value,
-                                   QualType Type) {
+TemplateArgument::TemplateArgument(const ASTContext &Ctx,
+                                   const llvm::APSInt &Value, QualType Type) {
   Integer.Kind = Integral;
   // Copy the APSInt value into our decomposed form.
   Integer.BitWidth = Value.getBitWidth();
@@ -101,6 +101,45 @@ TemplateArgument::TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value,
   }
 
   Integer.Type = Type.getAsOpaquePtr();
+}
+
+static const ValueDecl *getAsSimpleValueDeclRef(const ASTContext &Ctx,
+                                                QualType T, const APValue &V) {
+  // Pointers to members are relatively easy.
+  if (V.isMemberPointer() && V.getMemberPointerPath().empty())
+    return V.getMemberPointerDecl();
+
+  // We model class non-type template parameters as their template parameter
+  // object declaration.
+  if (V.isStruct() || V.isUnion())
+    return Ctx.getTemplateParamObjectDecl(T, V);
+
+  // Pointers and references with an empty path use the special 'Declaration'
+  // representation.
+  if (V.isLValue() && V.hasLValuePath() &&
+      V.getLValuePath().empty() && !V.isLValueOnePastTheEnd())
+    return V.getLValueBase().dyn_cast<const ValueDecl *>();
+
+  // Everything else uses the 'uncommon' representation.
+  return nullptr;
+}
+
+TemplateArgument::TemplateArgument(const ASTContext &Ctx, QualType Type,
+                                   const APValue &V) {
+  if (Type->isIntegralOrEnumerationType() && V.isInt())
+    *this = TemplateArgument(Ctx, V.getInt(), Type);
+  else if ((V.isLValue() && V.isNullPointer()) ||
+           (V.isMemberPointer() && !V.getMemberPointerDecl()))
+    *this = TemplateArgument(Type, /*isNullPtr=*/true);
+  else if (const ValueDecl *VD = getAsSimpleValueDeclRef(Ctx, Type, V))
+    // FIXME: The Declaration form should expose a const ValueDecl*.
+    *this = TemplateArgument(const_cast<ValueDecl*>(VD), Type);
+  else {
+    Value.Kind = UncommonValue;
+    Value.Value = new (Ctx) APValue(V);
+    Ctx.addDestruction(Value.Value);
+    Value.Type = Type.getAsOpaquePtr();
+  }
 }
 
 TemplateArgument
@@ -131,25 +170,18 @@ TemplateArgumentDependence TemplateArgument::getDependence() const {
     return TemplateArgumentDependence::Dependent |
            TemplateArgumentDependence::Instantiation;
 
-  case Declaration: {
-    auto *DC = dyn_cast<DeclContext>(getAsDecl());
-    if (!DC)
-      DC = getAsDecl()->getDeclContext();
-    if (DC->isDependentContext())
-      Deps = TemplateArgumentDependence::Dependent |
-             TemplateArgumentDependence::Instantiation;
-    return Deps;
-  }
-
   case NullPtr:
   case Integral:
+  case Declaration:
+  case UncommonValue:
     return TemplateArgumentDependence::None;
 
   case Expression:
     Deps = toTemplateArgumentDependence(getAsExpr()->getDependence());
-    if (isa<PackExpansionExpr>(getAsExpr()))
-      Deps |= TemplateArgumentDependence::Dependent |
-              TemplateArgumentDependence::Instantiation;
+    // Instantiation-dependent expression arguments are considered dependent
+    // until they're resolved to another form.
+    if (Deps & TemplateArgumentDependence::Instantiation)
+      Deps |= TemplateArgumentDependence::Dependent;
     return Deps;
 
   case Pack:
@@ -173,6 +205,7 @@ bool TemplateArgument::isPackExpansion() const {
   case Null:
   case Declaration:
   case Integral:
+  case UncommonValue:
   case Pack:
   case Template:
   case NullPtr:
@@ -223,6 +256,9 @@ QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
 
   case TemplateArgument::NullPtr:
     return getNullPtrType();
+
+  case TemplateArgument::UncommonValue:
+    return getUncommonValueType();
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
@@ -267,8 +303,13 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
   }
 
   case Integral:
-    getAsIntegral().Profile(ID);
     getIntegralType().Profile(ID);
+    getAsIntegral().Profile(ID);
+    break;
+
+  case UncommonValue:
+    getUncommonValueType().Profile(ID);
+    getAsUncommonValue().Profile(ID);
     break;
 
   case Expression:
@@ -304,6 +345,16 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
     return getIntegralType() == Other.getIntegralType() &&
            getAsIntegral() == Other.getAsIntegral();
 
+  case UncommonValue: {
+    if (getUncommonValueType() != Other.getUncommonValueType())
+      return false;
+
+    llvm::FoldingSetNodeID A, B;
+    getAsUncommonValue().Profile(A);
+    Other.getAsUncommonValue().Profile(B);
+    return A == B;
+  }
+
   case Pack:
     if (Args.NumArgs != Other.Args.NumArgs) return false;
     for (unsigned I = 0, E = Args.NumArgs; I != E; ++I)
@@ -330,6 +381,7 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
 
   case Declaration:
   case Integral:
+  case UncommonValue:
   case Pack:
   case Null:
   case Template:
@@ -368,6 +420,10 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
     ND->printQualifiedName(Out);
     break;
   }
+
+  case UncommonValue:
+    getAsUncommonValue().printPretty(Out, Policy, getUncommonValueType());
+    break;
 
   case NullPtr:
     Out << "nullptr";
@@ -451,6 +507,9 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
   case TemplateArgument::Integral:
     return getSourceIntegralExpression()->getSourceRange();
 
+  case TemplateArgument::UncommonValue:
+    return getSourceUncommonValueExpression()->getSourceRange();
+
   case TemplateArgument::Pack:
   case TemplateArgument::Null:
     return SourceRange();
@@ -478,6 +537,18 @@ static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
 
   case TemplateArgument::Integral:
     return DB << Arg.getAsIntegral().toString(10);
+
+  case TemplateArgument::UncommonValue: {
+    // FIXME: We're guessing at LangOptions!
+    SmallString<32> Str;
+    llvm::raw_svector_ostream OS(Str);
+    LangOptions LangOpts;
+    LangOpts.CPlusPlus = true;
+    PrintingPolicy Policy(LangOpts);
+    Arg.getAsUncommonValue().printPretty(OS, Policy,
+                                         Arg.getUncommonValueType());
+    return DB << OS.str();
+  }
 
   case TemplateArgument::Template:
     return DB << Arg.getAsTemplate();
@@ -544,8 +615,8 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   NumTemplateArgs = Info.size();
 
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
+  std::uninitialized_copy(Info.arguments().begin(), Info.arguments().end(),
+                          ArgBuffer);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(
@@ -555,9 +626,8 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(
   LAngleLoc = Info.getLAngleLoc();
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
-
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
+  std::uninitialized_copy(Info.arguments().begin(), Info.arguments().end(),
+                          OutArgArray);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
@@ -566,21 +636,6 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
   RAngleLoc = SourceLocation();
   this->TemplateKWLoc = TemplateKWLoc;
   NumTemplateArgs = 0;
-}
-
-void ASTTemplateKWAndArgsInfo::initializeFrom(
-    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
-    TemplateArgumentLoc *OutArgArray, TemplateArgumentDependence &Deps) {
-  this->TemplateKWLoc = TemplateKWLoc;
-  LAngleLoc = Info.getLAngleLoc();
-  RAngleLoc = Info.getRAngleLoc();
-  NumTemplateArgs = Info.size();
-
-  for (unsigned i = 0; i != NumTemplateArgs; ++i) {
-    Deps |= Info[i].getArgument().getDependence();
-
-    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
-  }
 }
 
 void ASTTemplateKWAndArgsInfo::copyInto(const TemplateArgumentLoc *ArgArray,
