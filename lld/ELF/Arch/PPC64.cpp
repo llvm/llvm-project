@@ -948,6 +948,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_ADDR16_DS:
   case R_PPC64_ADDR16_HA:
   case R_PPC64_ADDR16_HI:
+  case R_PPC64_ADDR16_HIGH:
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_ADDR16_HIGHEST:
@@ -1228,6 +1229,9 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
     checkInt(loc, val, 32, rel);
+    write16(loc, hi(val));
+    break;
+  case R_PPC64_ADDR16_HIGH:
     write16(loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGHER:
