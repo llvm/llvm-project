@@ -68,7 +68,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     for (auto I = Start, E = MI->getNumOperands(); I < E; ++I) {
       if (MI->getOpcode() == WebAssembly::CALL_INDIRECT &&
           I - Start == NumVariadicDefs) {
-        // Skip type and table arguments when printing for tests.
+        // Skip type and flags arguments when printing for tests
         ++I;
         continue;
       }
