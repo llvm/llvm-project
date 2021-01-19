@@ -278,6 +278,12 @@ public:
     return {};
   }
 
+  llvm::Optional<unsigned> GetNumFields(CompilerType type,
+                                        ExecutionContext *exe_ctx) {
+    STUB_LOG();
+    return {};
+  }
+
   bool GetObjectDescription(Stream &str, ValueObject &object) {
     STUB_LOG();
     return false;
@@ -2183,6 +2189,12 @@ CompilerType SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
           child_bitfield_bit_size, child_bitfield_bit_offset,
           child_is_base_class, child_is_deref_of_parent, valobj,
           language_flags);
+}
+
+llvm::Optional<unsigned>
+SwiftLanguageRuntime::GetNumFields(CompilerType type,
+                                   ExecutionContext *exe_ctx) {
+  FORWARD(GetNumFields, type, exe_ctx);
 }
 
 bool SwiftLanguageRuntime::GetObjectDescription(Stream &str,

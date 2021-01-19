@@ -1093,6 +1093,70 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   return {};
 }
 
+llvm::Optional<unsigned>
+SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
+                                       ExecutionContext *exe_ctx) {
+  auto *ts =
+      llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(type.GetTypeSystem());
+  if (!ts)
+    return {};
+
+  using namespace swift::reflection;
+  // Try the static type metadata.
+  const TypeRef *tr = nullptr;
+  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  // Structs and Tuples.
+  switch (ti->getKind()) {
+  case TypeInfoKind::Record: {
+    // Structs and Tuples.
+    auto *rti = llvm::cast<RecordTypeInfo>(ti);
+    switch (rti->getRecordKind()) {
+    case RecordKind::ExistentialMetatype:
+    case RecordKind::ThickFunction:
+      // There are two fields, `function` and `context`, but they're not exposed
+      // by lldb.
+      return 0;
+    case RecordKind::OpaqueExistential:
+      // `OpaqueExistential` is documented as:
+      //     An existential is a three-word buffer followed by value metadata...
+      // The buffer is exposed as fields named `payload_data_{0,1,2}`, and
+      // the number of fields are increased to match.
+      return rti->getNumFields() + 3;
+    default:
+      return rti->getNumFields();
+    }
+  }
+  case TypeInfoKind::Enum: {
+    auto *eti = llvm::cast<EnumTypeInfo>(ti);
+    return eti->getNumPayloadCases();
+  }
+  case TypeInfoKind::Reference: {
+    // Objects.
+    auto *rti = llvm::cast<ReferenceTypeInfo>(ti);
+    switch (rti->getReferenceKind()) {
+    case ReferenceKind::Weak:
+    case ReferenceKind::Unowned:
+    case ReferenceKind::Unmanaged:
+      if (auto referent = GetWeakReferent(*ts, type))
+        return referent.GetNumFields(exe_ctx);
+      return 0;
+    case ReferenceKind::Strong:
+      TypeConverter tc(GetReflectionContext()->getBuilder());
+      LLDBTypeInfoProvider tip(*this, *ts);
+      auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
+      if (auto *rti = llvm::dyn_cast_or_null<RecordTypeInfo>(cti)) {
+        return rti->getNumFields();
+      }
+
+      return {};
+    }
+  }
+  default:
+    // FIXME: Implement more cases.
+    return {};
+  }
+}
+
 /// Return the base name of the topmost nominal type.
 static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node) {
   if (!node)

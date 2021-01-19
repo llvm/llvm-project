@@ -538,10 +538,10 @@ void CompilerType::ForEachEnumerator(
     return m_type_system->ForEachEnumerator(m_type, callback);
 }
 
-uint32_t CompilerType::GetNumFields() const {
+uint32_t CompilerType::GetNumFields(ExecutionContext *exe_ctx) const {
   if (!IsValid())
     return 0;
-  return m_type_system->GetNumFields(m_type);
+  return m_type_system->GetNumFields(m_type, exe_ctx);
 }
 
 CompilerType CompilerType::GetFieldAtIndex(size_t idx, std::string &name,
