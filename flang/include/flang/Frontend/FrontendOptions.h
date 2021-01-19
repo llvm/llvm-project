@@ -35,6 +35,14 @@ enum ActionKind {
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };
 
+/// \param suffix The file extension
+/// \return True if the file extension should be processed as fixed form
+bool isFixedFormSuffix(llvm::StringRef suffix);
+
+/// \param suffix The file extension
+/// \return True if the file extension should be processed as free form
+bool isFreeFormSuffix(llvm::StringRef suffix);
+
 inline const char *GetActionKindName(const ActionKind ak) {
   switch (ak) {
   case InputOutputTest:
