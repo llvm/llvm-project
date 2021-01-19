@@ -58,25 +58,25 @@
 // CK0: [[TEAMNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 33]
 // CK0-64: [[EDSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[EDSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[EDTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK0: [[EDTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 // CK0-64: [[EDNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[EDNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[EDNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK0: [[EDNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 // CK0-64: [[EXDSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[EXDSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[EXDTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK0: [[EXDTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 // CK0-64: [[EXDNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[EXDNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[EXDNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK0: [[EXDNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 // CK0-64: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK0: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 // CK0-64: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[FTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK0: [[FTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 // CK0-64: [[FNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK0-32: [[FNWSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// CK0: [[FNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK0: [[FNWTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 class C {
 public:
@@ -141,10 +141,10 @@ public:
 // CK0-DAG: [[MEMBER]]
 // CK0-DAG: br i1 true, label %[[LTYPE:[^,]+]], label %[[MEMBERCOM:[^,]+]]
 // CK0-DAG: [[MEMBERCOM]]
-// CK0-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 32, [[SHIPRESIZE]]
+// CK0-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
 // CK0-DAG: br label %[[LTYPE]]
 // CK0-DAG: [[LTYPE]]
-// CK0-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 32, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
+// CK0-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 0, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
 // CK0-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK0-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
@@ -964,13 +964,13 @@ void foo(int a){
 
 // CK4-64: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK4-32: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
-// CK4: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+// PRESENT=0x1000 | TO=0x1 = 0x1001
+// CK4: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1001]]]
 
 // CK4-64: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // CK4-32: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
-// PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 = 0x1022
-// CK4: [[FTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1022]]]
+// PRESENT=0x1000 | FROM=0x2 = 0x1002
+// CK4: [[FTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1002]]]
 
 class C {
 public:
@@ -1035,10 +1035,10 @@ public:
 // CK4-DAG: [[MEMBER]]
 // CK4-DAG: br i1 true, label %[[LTYPE:[^,]+]], label %[[MEMBERCOM:[^,]+]]
 // CK4-DAG: [[MEMBERCOM]]
-// CK4-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 32, [[SHIPRESIZE]]
+// CK4-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
 // CK4-DAG: br label %[[LTYPE]]
 // CK4-DAG: [[LTYPE]]
-// CK4-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 32, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
+// CK4-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 0, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
 // CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
 // CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]

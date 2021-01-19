@@ -5,11 +5,11 @@
 #ifndef HEADER
 #define HEADER
 
-// 32 = 0x20 = OMP_MAP_TARGET_PARAM
+// 0 = OMP_MAP_NONE
 // 281474976710656 = 0x1000000000000 = OMP_MAP_MEMBER_OF of 1-st element
-// CHECK: [[MAP_ENTER:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 281474976710656]
+// CHECK: [[MAP_ENTER:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710656]
 // 281474976710664 = 0x1000000000008 = OMP_MAP_MEMBER_OF of 1-st element | OMP_MAP_DELETE
-// CHECK: [[MAP_EXIT:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 281474976710664]
+// CHECK: [[MAP_EXIT:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 281474976710664]
 template <typename T>
 struct S {
   constexpr static int size = 6;
