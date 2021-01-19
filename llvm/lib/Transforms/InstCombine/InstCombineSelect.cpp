@@ -1113,25 +1113,10 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // replacement cycle.
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
   if (TrueVal != CmpLHS &&
-      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
+      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT))
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(Sel, Swapped ? 2 : 1, V);
-
-    // Even if TrueVal does not simplify, we can directly replace a use of
-    // CmpLHS with CmpRHS, as long as the instruction is not used anywhere
-    // else. Only do this if CmpRHS is a constant, as profitability is not
-    // clear for other cases.
-    // FIXME: The replacement could be performed recursively.
-    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()))
-      if (auto *I = dyn_cast<Instruction>(TrueVal))
-        if (I->hasOneUse())
-          for (Use &U : I->operands())
-            if (U == CmpLHS) {
-              replaceUse(U, CmpRHS);
-              return &Sel;
-            }
-  }
   if (TrueVal != CmpRHS &&
       isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
