@@ -44,7 +44,7 @@
 "`P0887R1 <https://wg21.link/P0887R1>`__","LWG","The identity metafunction","Rapperswil","|Complete|","8.0"
 "`P0892R2 <https://wg21.link/P0892R2>`__","CWG","explicit(bool)","Rapperswil","",""
 "`P0898R3 <https://wg21.link/P0898R3>`__","LWG","Standard Library Concepts","Rapperswil","",""
-"`P0935R0 <https://wg21.link/P0935R0>`__","LWG","Eradicating unnecessarily explicit default constructors from the standard library","Rapperswil","",""
+"`P0935R0 <https://wg21.link/P0935R0>`__","LWG","Eradicating unnecessarily explicit default constructors from the standard library","Rapperswil","|Complete|","12.0"
 "`P0941R2 <https://wg21.link/P0941R2>`__","CWG","Integrating feature-test macros into the C++ WD","Rapperswil","|In Progress|",""
 "`P1023R0 <https://wg21.link/P1023R0>`__","LWG","constexpr comparison operators for std::array","Rapperswil","|Complete|","8.0"
 "`P1025R1 <https://wg21.link/P1025R1>`__","CWG","Update The Reference To The Unicode Standard","Rapperswil","",""

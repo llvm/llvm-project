@@ -401,6 +401,16 @@ inline bool isCallIndirect(unsigned Opc) {
   }
 }
 
+inline bool isRetCallIndirect(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::RET_CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isBrTable(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::BR_TABLE_I32:

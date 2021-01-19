@@ -405,13 +405,6 @@ void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
 
 void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                 const MCAsmLayout &Layout) {
-  // As a stopgap measure until call_indirect instructions start explicitly
-  // referencing the indirect function table via TABLE_NUMBER relocs, ensure
-  // that the indirect function table import makes it to the output if anything
-  // in the compilation unit has caused it to be present.
-  if (auto *Sym = Asm.getContext().lookupSymbol("__indirect_function_table"))
-    Asm.registerSymbol(*Sym);
-
   // Build a map of sections to the function that defines them, for use
   // in recordRelocation.
   for (const MCSymbol &S : Asm.symbols()) {
@@ -979,9 +972,9 @@ uint32_t WasmObjectWriter::writeDataSection(const MCAsmLayout &Layout) {
 
   for (const WasmDataSegment &Segment : DataSegments) {
     encodeULEB128(Segment.InitFlags, W->OS); // flags
-    if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
+    if (Segment.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX)
       encodeULEB128(0, W->OS); // memory index
-    if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
+    if ((Segment.InitFlags & wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       W->OS << char(Segment.Offset > INT32_MAX ? wasm::WASM_OPCODE_I64_CONST
                                                : wasm::WASM_OPCODE_I32_CONST);
       encodeSLEB128(Segment.Offset, W->OS); // offset
@@ -1400,8 +1393,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       DataSegments.emplace_back();
       WasmDataSegment &Segment = DataSegments.back();
       Segment.Name = SectionName;
-      Segment.InitFlags =
-          Section.getPassive() ? (uint32_t)wasm::WASM_SEGMENT_IS_PASSIVE : 0;
+      Segment.InitFlags = Section.getPassive()
+                              ? (uint32_t)wasm::WASM_DATA_SEGMENT_IS_PASSIVE
+                              : 0;
       Segment.Offset = DataSize;
       Segment.Section = &Section;
       addData(Segment.Data, Section);

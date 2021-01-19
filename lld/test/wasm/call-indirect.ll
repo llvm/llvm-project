@@ -122,16 +122,16 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            28028088808000118080808000001A28028488808000118180808000001A0B
+; CHECK-NEXT:         Body:            2802808880800011808080800080808080001A2802848880800011818080800080808080001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            410028028888808000118180808000001A0B
+; CHECK-NEXT:         Body:            41002802888880800011818080800080808080001A0B
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            42012000118280808000001A0B
+; CHECK-NEXT:         Body:            4201200011828080800080808080001A0B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:    7

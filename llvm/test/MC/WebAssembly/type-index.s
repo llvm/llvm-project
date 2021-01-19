@@ -53,10 +53,13 @@ test0:
 # BIN-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # BIN-NEXT:         Index:           1
 # BIN-NEXT:         Offset:          0x4
+# BIN-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:         Index:           1
+# BIN-NEXT:         Offset:          0x9
 # BIN-NEXT:     Functions:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Locals:          []
-# BIN-NEXT:         Body:            118180808000000B
+# BIN-NEXT:         Body:            11818080800080808080000B
 # BIN-NEXT:   - Type:            CUSTOM
 # BIN-NEXT:     Name:            linking
 # BIN-NEXT:     Version:         2
@@ -69,6 +72,6 @@ test0:
 # BIN-NEXT:       - Index:           1
 # BIN-NEXT:         Kind:            TABLE
 # BIN-NEXT:         Name:            __indirect_function_table
-# BIN-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
+# BIN-NEXT:         Flags:           [ UNDEFINED ]
 # BIN-NEXT:         Table:           0
 # BIN-NEXT: ...

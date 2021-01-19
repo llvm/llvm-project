@@ -45,10 +45,6 @@
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/YAMLParser.h"
 
-#ifdef LLVM_ON_UNIX
-#include <unistd.h> // For getuid().
-#endif
-
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;
