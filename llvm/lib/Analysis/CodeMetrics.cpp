@@ -112,9 +112,9 @@ void CodeMetrics::collectEphemeralValues(
 
 /// Fill in the current structure with information gleaned from the specified
 /// block.
-void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
-                                    const TargetTransformInfo &TTI,
-                                    const SmallPtrSetImpl<const Value*> &EphValues) {
+void CodeMetrics::analyzeBasicBlock(
+    const BasicBlock *BB, const TargetTransformInfo &TTI,
+    const SmallPtrSetImpl<const Value *> &EphValues, bool PrepareForLTO) {
   ++NumBlocks;
   unsigned NumInstsBeforeThisBB = NumInsts;
   for (const Instruction &I : *BB) {
@@ -128,8 +128,12 @@ void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
         // If a function is both internal and has a single use, then it is
         // extremely likely to get inlined in the future (it was probably
         // exposed by an interleaved devirtualization pass).
-        if (!Call->isNoInline() && F->hasInternalLinkage() && F->hasOneUse())
+        // When preparing for LTO, liberally consider calls as inline
+        // candidates.
+        if (!Call->isNoInline() &&
+            ((F->hasInternalLinkage() && F->hasOneUse()) || PrepareForLTO)) {
           ++NumInlineCandidates;
+        }
 
         // If this call is to function itself, then the function is recursive.
         // Inlining it into other functions is a bad idea, because this is
