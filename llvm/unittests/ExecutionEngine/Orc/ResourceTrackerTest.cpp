@@ -11,7 +11,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
