@@ -130,8 +130,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <fenv.h>
 TEST_MACROS();
-#include <filesystem>
+#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#    include <filesystem>
 TEST_MACROS();
+#endif
 #include <float.h>
 TEST_MACROS();
 #include <forward_list>
@@ -313,8 +315,10 @@ TEST_MACROS();
 #    endif
 #    include <experimental/deque>
 TEST_MACROS();
-#    include <experimental/filesystem>
+#    ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#        include <experimental/filesystem>
 TEST_MACROS();
+#    endif
 #    include <experimental/forward_list>
 TEST_MACROS();
 #    include <experimental/functional>
