@@ -1123,7 +1123,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // else. Only do this if CmpRHS is a constant, as profitability is not
     // clear for other cases.
     // FIXME: The replacement could be performed recursively.
-    if (isa<Constant>(CmpRHS) && !isa<ConstantExpr>(CmpRHS))
+    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()))
       if (auto *I = dyn_cast<Instruction>(TrueVal))
         if (I->hasOneUse())
           for (Use &U : I->operands())
