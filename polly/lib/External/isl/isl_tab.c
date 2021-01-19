@@ -1787,17 +1787,6 @@ int isl_tab_insert_var(struct isl_tab *tab, int r)
 	return r;
 }
 
-/* Add a variable to the tableau and allocate a column for it.
- * Return the index into the variable array "var".
- */
-int isl_tab_allocate_var(struct isl_tab *tab)
-{
-	if (!tab)
-		return -1;
-
-	return isl_tab_insert_var(tab, tab->n_var);
-}
-
 /* Add a row to the tableau.  The row is given as an affine combination
  * of the original variables and needs to be expressed in terms of the
  * column variables.
@@ -3884,7 +3873,8 @@ static isl_stat drop_bmap_div(struct isl_tab *tab, int pos)
 	if (n_div < 0)
 		return isl_stat_error;
 	off = tab->n_var - n_div;
-	if (isl_basic_map_drop_div(tab->bmap, pos - off) < 0)
+	tab->bmap = isl_basic_map_drop_div(tab->bmap, pos - off);
+	if (!tab->bmap)
 		return isl_stat_error;
 	if (tab->samples) {
 		tab->samples = isl_mat_drop_cols(tab->samples, 1 + pos, 1);
