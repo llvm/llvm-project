@@ -136,11 +136,6 @@ static Error fromJson(const json::Value &V, std::vector<T> &Out) {
   return vectorFromJsonTemplate(V, Out);
 }
 
-template <typename T>
-static Error fromJson(const json::Value &V, SmallVectorImpl<T> &Out) {
-  return vectorFromJsonTemplate(V, Out);
-}
-
 // Same as llvm::json::ObjectMapper but adds a finer error reporting mechanism.
 class JsonObjectMapper {
   const json::Object *O;
