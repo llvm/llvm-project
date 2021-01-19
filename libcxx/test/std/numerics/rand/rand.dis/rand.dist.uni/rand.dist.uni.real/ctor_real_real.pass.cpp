@@ -9,11 +9,12 @@
 // <random>
 
 // template<class RealType = double>
-// class exponential_distribution
+// class uniform_real_distribution
 
-// explicit exponential_distribution(RealType lambda = 1.0);     // before C++20
-// exponential_distribution() : exponential_distribution(1.0) {} // C++20
-// explicit exponential_distribution(RealType lambda);           // C++20
+// explicit uniform_real_distribution(RealType a = 0.0,
+//                                    RealType b = 1.0);             // before C++20
+// uniform_real_distribution() : uniform_real_distribution(0.0) {}   // C++20
+// explicit uniform_real_distribution(RealType a, RealType b = 1.0); // C++20
 
 #include <random>
 #include <cassert>
@@ -27,24 +28,33 @@
 template <class T>
 void test_implicit() {
 #if TEST_STD_VER >= 11
-  typedef std::exponential_distribution<T> D;
+  typedef std::uniform_real_distribution<T> D;
   static_assert(test_convertible<D>(), "");
-  assert(D(1) == make_implicit<D>());
+  assert(D(0) == make_implicit<D>());
   static_assert(!test_convertible<D, T>(), "");
+  static_assert(!test_convertible<D, T, T>(), "");
 #endif
 }
 
 int main(int, char**)
 {
     {
-        typedef std::exponential_distribution<> D;
+        typedef std::uniform_real_distribution<> D;
         D d;
-        assert(d.lambda() == 1);
+        assert(d.a() == 0.0);
+        assert(d.b() == 1.0);
     }
     {
-        typedef std::exponential_distribution<> D;
-        D d(3.5);
-        assert(d.lambda() == 3.5);
+        typedef std::uniform_real_distribution<> D;
+        D d(-6.5);
+        assert(d.a() == -6.5);
+        assert(d.b() == 1.0);
+    }
+    {
+        typedef std::uniform_real_distribution<> D;
+        D d(-6.9, 106.1);
+        assert(d.a() == -6.9);
+        assert(d.b() == 106.1);
     }
 
     test_implicit<float>();

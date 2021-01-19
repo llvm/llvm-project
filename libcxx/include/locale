@@ -92,7 +92,11 @@ public:
     typedef typename Codecvt::state_type                      state_type;
     typedef typename wide_string::traits_type::int_type       int_type;
 
-    explicit wstring_convert(Codecvt* pcvt = new Codecvt);          // explicit in C++14
+    wstring_convert(Codecvt* pcvt = new Codecvt);          // before C++14
+    explicit wstring_convert(Codecvt* pcvt = new Codecvt); // before C++20
+    wstring_convert() : wstring_convert(new Codecvt) {}    // C++20
+    explicit wstring_convert(Codecvt* pcvt);               // C++20
+
     wstring_convert(Codecvt* pcvt, state_type state);
     explicit wstring_convert(const byte_string& byte_err,           // explicit in C++14
                     const wide_string& wide_err = wide_string());
@@ -121,8 +125,14 @@ class wbuffer_convert
 public:
     typedef typename Tr::state_type state_type;
 
-    explicit wbuffer_convert(streambuf* bytebuf = 0, Codecvt* pcvt = new Codecvt,
-                    state_type state = state_type());       // explicit in C++14
+    wbuffer_convert(streambuf* bytebuf = 0, Codecvt* pcvt = new Codecvt,
+                    state_type state = state_type());          // before C++14
+    explicit wbuffer_convert(streambuf* bytebuf = nullptr, Codecvt* pcvt = new Codecvt,
+                            state_type state = state_type()); // before C++20
+    wbuffer_convert() : wbuffer_convert(nullptr) {} // C++20
+    explicit wbuffer_convert(streambuf* bytebuf, Codecvt* pcvt = new Codecvt,
+                            state_type state = state_type()); // C++20
+
     wbuffer_convert(const wbuffer_convert&) = delete;               // C++14
     wbuffer_convert & operator=(const wbuffer_convert &) = delete;  // C++14
     ~wbuffer_convert();                                             // C++14
@@ -3650,8 +3660,17 @@ private:
     wstring_convert(const wstring_convert& __wc);
     wstring_convert& operator=(const wstring_convert& __wc);
 public:
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_EXPLICIT_AFTER_CXX11 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
+    wstring_convert() : wstring_convert(new _Codecvt) {}
+    _LIBCPP_INLINE_VISIBILITY
+    explicit wstring_convert(_Codecvt* __pcvt);
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_EXPLICIT_AFTER_CXX11
+    wstring_convert(_Codecvt* __pcvt = new _Codecvt);
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     wstring_convert(_Codecvt* __pcvt, state_type __state);
     _LIBCPP_EXPLICIT_AFTER_CXX11 wstring_convert(const byte_string& __byte_err,
@@ -3918,9 +3937,20 @@ private:
 
     wbuffer_convert(const wbuffer_convert&);
     wbuffer_convert& operator=(const wbuffer_convert&);
+
 public:
-    _LIBCPP_EXPLICIT_AFTER_CXX11 wbuffer_convert(streambuf* __bytebuf = nullptr,
-            _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
+#ifndef _LIBCPP_CXX03_LANG
+    wbuffer_convert() : wbuffer_convert(nullptr) {}
+    explicit wbuffer_convert(streambuf* __bytebuf,
+                             _Codecvt* __pcvt = new _Codecvt,
+                             state_type __state = state_type());
+#else
+    _LIBCPP_EXPLICIT_AFTER_CXX11
+    wbuffer_convert(streambuf* __bytebuf = nullptr,
+                    _Codecvt* __pcvt = new _Codecvt,
+                    state_type __state = state_type());
+#endif
+
     ~wbuffer_convert();
 
     _LIBCPP_INLINE_VISIBILITY
