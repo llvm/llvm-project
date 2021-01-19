@@ -39,7 +39,7 @@
 ; f2() in f3().
 
 ; RUN: %python %S/opt-bisect-helper.py --start=0 --end=256 --optcmd=opt \
-; RUN:         --filecheckcmd=FileCheck --test=%s \
+; RUN:         --filecheckcmd=%FileCheckRaw% --test=%s \
 ; RUN:         --prefix=CHECK-BISECT-INLINE-HELPER \
 ; RUN:         | FileCheck %s --check-prefix=CHECK-BISECT-INLINE-RESULT
 ; The helper script uses this to find the optimization that inlines the call.
