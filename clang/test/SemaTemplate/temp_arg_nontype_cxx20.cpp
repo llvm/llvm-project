@@ -292,3 +292,47 @@ namespace Predefined {
     Y<B{__func__[0]}>(); // expected-error {{reference to subobject of predefined '__func__' variable}}
   }
 }
+
+namespace dependent {
+  template<auto &V> struct R { static inline auto &v = V; };
+  template<auto &V, auto &W> constexpr bool operator==(R<V>, R<W>) { return &V == &W; }
+  template<auto *V> struct S { static inline auto *v = V; };
+  template<auto *V, auto *W> constexpr bool operator==(S<V>, S<W>) { return V == W; }
+  template<auto V> struct T { static inline const auto &v = V; };
+  template<auto V, auto W> constexpr bool operator==(T<V>, T<W>) { return &V == &W; }
+  template<typename T> struct V { T v; };
+  template<int N> auto f() {
+    static int n;
+    static V<int> vn;
+    if constexpr (N < 10)
+      return R<n>();
+    else if constexpr (N < 20)
+      return R<vn.v>(); // FIXME: expected-error 2{{refers to subobject}}
+    else if constexpr (N < 30)
+      return S<&n>();
+    else if constexpr (N < 40)
+      return S<&vn.v>(); // FIXME: expected-error 2{{refers to subobject}}
+    else if constexpr (N < 50)
+      return T<V<int&>{n}>();
+    else if constexpr (N < 60)
+      return T<V<int*>{&n}>();
+    else if constexpr (N < 70)
+      return T<V<int&>{vn.v}>();
+    else if constexpr (N < 80)
+      return T<V<int*>{&vn.v}>();
+  }
+  template<int Base> void check() {
+    auto v = f<Base + 0>(); // FIXME: expected-note 2{{instantiation of}}
+    auto w = f<Base + 1>(); // FIXME: expected-note 2{{instantiation of}}
+    static_assert(!__is_same(decltype(v), decltype(w)));
+    static_assert(v != w);
+  }
+  template void check<0>();
+  template void check<10>(); // FIXME: expected-note 2{{instantiation of}}
+  template void check<20>();
+  template void check<30>(); // FIXME: expected-note 2{{instantiation of}}
+  template void check<40>();
+  template void check<50>();
+  template void check<60>();
+  template void check<70>();
+}
