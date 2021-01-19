@@ -2536,8 +2536,11 @@ ATOMIC_CRITICAL_CPT_MIX(float10, long double, div_cpt, /, fp, _Quad, 10r,
                                                                                \
   if (flag) {                                                                  \
     new_value OP rhs;                                                          \
-  } else                                                                       \
+    (*lhs) = new_value;                                                        \
+  } else {                                                                     \
     new_value = (*lhs);                                                        \
+    (*lhs) OP rhs;                                                             \
+  }                                                                            \
                                                                                \
   __kmp_release_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);
 
