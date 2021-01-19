@@ -559,7 +559,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_string_contains",
     "values": { "c++2b": 202011 },
     "headers": ["string", "string_view"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_string_udls",
     "values": { "c++14": 201304 },
