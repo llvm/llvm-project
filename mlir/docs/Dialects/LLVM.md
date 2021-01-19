@@ -224,6 +224,11 @@ compatible. For example, signed and unsigned integers are not compatible. LLVM
 provides a function, `bool LLVM::isCompatibleType(Type)`, that can be used as a
 compatibility check.
 
+Each LLVM IR type corresponds to *exactly one* MLIR type, either built-in or
+LLVM dialect type. For example, because `i32` is LLVM-compatible, there is no
+`!llvm.i32` type. However, `!llvm.ptr<T>` is defined in the LLVM dialect as
+there is no corresponding built-in type.
+
 ### Additional Simple Types
 
 The following non-parametric types derived from the LLVM IR are available in the
