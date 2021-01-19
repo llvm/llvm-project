@@ -1171,6 +1171,232 @@ using HasDeclarationSupportedTypes =
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
              UnresolvedUsingType, ObjCIvarRefExpr>;
 
+/// A Matcher that allows binding the node it matches to an id.
+///
+/// BindableMatcher provides a \a bind() method that allows binding the
+/// matched node to an id if the match was successful.
+template <typename T> class BindableMatcher : public Matcher<T> {
+public:
+  explicit BindableMatcher(const Matcher<T> &M) : Matcher<T>(M) {}
+  explicit BindableMatcher(MatcherInterface<T> *Implementation)
+      : Matcher<T>(Implementation) {}
+
+  /// Returns a matcher that will bind the matched node on a match.
+  ///
+  /// The returned matcher is equivalent to this matcher, but will
+  /// bind the matched node on a match.
+  Matcher<T> bind(StringRef ID) const {
+    return DynTypedMatcher(*this)
+        .tryBind(ID)
+        ->template unconditionalConvertTo<T>();
+  }
+
+  /// Same as Matcher<T>'s conversion operator, but enables binding on
+  /// the returned matcher.
+  operator DynTypedMatcher() const {
+    DynTypedMatcher Result = static_cast<const Matcher<T> &>(*this);
+    Result.setAllowBind(true);
+    return Result;
+  }
+};
+
+/// Matches any instance of the given NodeType.
+///
+/// This is useful when a matcher syntactically requires a child matcher,
+/// but the context doesn't care. See for example: anything().
+class TrueMatcher {
+public:
+  using ReturnTypes = AllNodeBaseTypes;
+
+  template <typename T> operator Matcher<T>() const {
+    return DynTypedMatcher::trueMatcher(ASTNodeKind::getFromNodeKind<T>())
+        .template unconditionalConvertTo<T>();
+  }
+};
+
+/// Creates a Matcher<T> that matches if all inner matchers match.
+template <typename T>
+BindableMatcher<T>
+makeAllOfComposite(ArrayRef<const Matcher<T> *> InnerMatchers) {
+  // For the size() == 0 case, we return a "true" matcher.
+  if (InnerMatchers.empty()) {
+    return BindableMatcher<T>(TrueMatcher());
+  }
+  // For the size() == 1 case, we simply return that one matcher.
+  // No need to wrap it in a variadic operation.
+  if (InnerMatchers.size() == 1) {
+    return BindableMatcher<T>(*InnerMatchers[0]);
+  }
+
+  using PI = llvm::pointee_iterator<const Matcher<T> *const *>;
+
+  std::vector<DynTypedMatcher> DynMatchers(PI(InnerMatchers.begin()),
+                                           PI(InnerMatchers.end()));
+  return BindableMatcher<T>(
+      DynTypedMatcher::constructVariadic(DynTypedMatcher::VO_AllOf,
+                                         ASTNodeKind::getFromNodeKind<T>(),
+                                         std::move(DynMatchers))
+          .template unconditionalConvertTo<T>());
+}
+
+/// Creates a Matcher<T> that matches if
+/// T is dyn_cast'able into InnerT and all inner matchers match.
+///
+/// Returns BindableMatcher, as matchers that use dyn_cast have
+/// the same object both to match on and to run submatchers on,
+/// so there is no ambiguity with what gets bound.
+template <typename T, typename InnerT>
+BindableMatcher<T>
+makeDynCastAllOfComposite(ArrayRef<const Matcher<InnerT> *> InnerMatchers) {
+  return BindableMatcher<T>(
+      makeAllOfComposite(InnerMatchers).template dynCastTo<T>());
+}
+
+/// A VariadicDynCastAllOfMatcher<SourceT, TargetT> object is a
+/// variadic functor that takes a number of Matcher<TargetT> and returns a
+/// Matcher<SourceT> that matches TargetT nodes that are matched by all of the
+/// given matchers, if SourceT can be dynamically casted into TargetT.
+///
+/// For example:
+///   const VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> record;
+/// Creates a functor record(...) that creates a Matcher<Decl> given
+/// a variable number of arguments of type Matcher<CXXRecordDecl>.
+/// The returned matcher matches if the given Decl can by dynamically
+/// casted to CXXRecordDecl and all given matchers match.
+template <typename SourceT, typename TargetT>
+class VariadicDynCastAllOfMatcher
+    : public VariadicFunction<BindableMatcher<SourceT>, Matcher<TargetT>,
+                              makeDynCastAllOfComposite<SourceT, TargetT>> {
+public:
+  VariadicDynCastAllOfMatcher() {}
+};
+
+/// A \c VariadicAllOfMatcher<T> object is a variadic functor that takes
+/// a number of \c Matcher<T> and returns a \c Matcher<T> that matches \c T
+/// nodes that are matched by all of the given matchers.
+///
+/// For example:
+///   const VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
+/// Creates a functor nestedNameSpecifier(...) that creates a
+/// \c Matcher<NestedNameSpecifier> given a variable number of arguments of type
+/// \c Matcher<NestedNameSpecifier>.
+/// The returned matcher matches if all given matchers match.
+template <typename T>
+class VariadicAllOfMatcher
+    : public VariadicFunction<BindableMatcher<T>, Matcher<T>,
+                              makeAllOfComposite<T>> {
+public:
+  VariadicAllOfMatcher() {}
+};
+
+/// VariadicOperatorMatcher related types.
+/// @{
+
+/// Polymorphic matcher object that uses a \c
+/// DynTypedMatcher::VariadicOperator operator.
+///
+/// Input matchers can have any type (including other polymorphic matcher
+/// types), and the actual Matcher<T> is generated on demand with an implicit
+/// conversion operator.
+template <typename... Ps> class VariadicOperatorMatcher {
+public:
+  VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op, Ps &&... Params)
+      : Op(Op), Params(std::forward<Ps>(Params)...) {}
+
+  template <typename T> operator Matcher<T>() const {
+    return DynTypedMatcher::constructVariadic(
+               Op, ASTNodeKind::getFromNodeKind<T>(),
+               getMatchers<T>(std::index_sequence_for<Ps...>()))
+        .template unconditionalConvertTo<T>();
+  }
+
+private:
+  // Helper method to unpack the tuple into a vector.
+  template <typename T, std::size_t... Is>
+  std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) const {
+    return {Matcher<T>(std::get<Is>(Params))...};
+  }
+
+  const DynTypedMatcher::VariadicOperator Op;
+  std::tuple<Ps...> Params;
+};
+
+/// Overloaded function object to generate VariadicOperatorMatcher
+///   objects from arbitrary matchers.
+template <unsigned MinCount, unsigned MaxCount>
+struct VariadicOperatorMatcherFunc {
+  DynTypedMatcher::VariadicOperator Op;
+
+  template <typename... Ms>
+  VariadicOperatorMatcher<Ms...> operator()(Ms &&... Ps) const {
+    static_assert(MinCount <= sizeof...(Ms) && sizeof...(Ms) <= MaxCount,
+                  "invalid number of parameters for variadic matcher");
+    return VariadicOperatorMatcher<Ms...>(Op, std::forward<Ms>(Ps)...);
+  }
+};
+
+template <typename F, typename Tuple, std::size_t... I>
+constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
+                                std::index_sequence<I...>) {
+  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
+}
+
+template <typename F, typename Tuple>
+constexpr auto applyMatcher(F &&f, Tuple &&args) {
+  return applyMatcherImpl(
+      std::forward<F>(f), std::forward<Tuple>(args),
+      std::make_index_sequence<
+          std::tuple_size<typename std::decay<Tuple>::type>::value>());
+}
+
+template <typename T, bool IsBaseOf, typename Head, typename Tail>
+struct GetCladeImpl {
+  using Type = Head;
+};
+template <typename T, typename Head, typename Tail>
+struct GetCladeImpl<T, false, Head, Tail>
+    : GetCladeImpl<T, std::is_base_of<typename Tail::head, T>::value,
+                   typename Tail::head, typename Tail::tail> {};
+
+template <typename T, typename... U>
+struct GetClade : GetCladeImpl<T, false, T, AllNodeBaseTypes> {};
+
+template <typename CladeType, typename... MatcherTypes>
+struct MapAnyOfMatcherImpl {
+
+  template <typename... InnerMatchers>
+  BindableMatcher<CladeType>
+  operator()(InnerMatchers &&... InnerMatcher) const {
+    // TODO: Use std::apply from c++17
+    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
+        internal::VariadicOperatorMatcherFunc<
+            0, std::numeric_limits<unsigned>::max()>{
+            internal::DynTypedMatcher::VO_AnyOf},
+        applyMatcher(
+            [&](auto... Matcher) {
+              return std::make_tuple(Matcher(
+                  std::forward<decltype(InnerMatcher)>(InnerMatcher)...)...);
+            },
+            std::tuple<
+                VariadicDynCastAllOfMatcher<CladeType, MatcherTypes>...>())));
+  }
+};
+
+template <typename... MatcherTypes>
+using MapAnyOfMatcher =
+    MapAnyOfMatcherImpl<typename GetClade<MatcherTypes...>::Type,
+                        MatcherTypes...>;
+
+template <typename... MatcherTypes> struct MapAnyOfHelper {
+  using CladeType = typename GetClade<MatcherTypes...>::Type;
+
+  MapAnyOfMatcher<MatcherTypes...> with;
+
+  operator BindableMatcher<CladeType>() const { return with(); }
+
+  Matcher<CladeType> bind(StringRef ID) const { return with().bind(ID); }
+};
+
 template <template <typename ToArg, typename FromArg> class ArgumentAdapterT,
           typename T, typename ToTypes>
 class ArgumentAdaptingMatcherFuncAdaptor {
@@ -1327,51 +1553,6 @@ private:
   const P2 Param2;
 };
 
-/// Matches any instance of the given NodeType.
-///
-/// This is useful when a matcher syntactically requires a child matcher,
-/// but the context doesn't care. See for example: anything().
-class TrueMatcher {
-public:
-  using ReturnTypes = AllNodeBaseTypes;
-
-  template <typename T>
-  operator Matcher<T>() const {
-    return DynTypedMatcher::trueMatcher(ASTNodeKind::getFromNodeKind<T>())
-        .template unconditionalConvertTo<T>();
-  }
-};
-
-/// A Matcher that allows binding the node it matches to an id.
-///
-/// BindableMatcher provides a \a bind() method that allows binding the
-/// matched node to an id if the match was successful.
-template <typename T>
-class BindableMatcher : public Matcher<T> {
-public:
-  explicit BindableMatcher(const Matcher<T> &M) : Matcher<T>(M) {}
-  explicit BindableMatcher(MatcherInterface<T> *Implementation)
-    : Matcher<T>(Implementation) {}
-
-  /// Returns a matcher that will bind the matched node on a match.
-  ///
-  /// The returned matcher is equivalent to this matcher, but will
-  /// bind the matched node on a match.
-  Matcher<T> bind(StringRef ID) const {
-    return DynTypedMatcher(*this)
-        .tryBind(ID)
-        ->template unconditionalConvertTo<T>();
-  }
-
-  /// Same as Matcher<T>'s conversion operator, but enables binding on
-  /// the returned matcher.
-  operator DynTypedMatcher() const {
-    DynTypedMatcher Result = static_cast<const Matcher<T>&>(*this);
-    Result.setAllowBind(true);
-    return Result;
-  }
-};
-
 /// Matches nodes of type T that have child nodes of type ChildT for
 /// which a specified child matcher matches.
 ///
@@ -1415,95 +1596,11 @@ public:
   }
 };
 
-/// VariadicOperatorMatcher related types.
-/// @{
-
-/// Polymorphic matcher object that uses a \c
-/// DynTypedMatcher::VariadicOperator operator.
-///
-/// Input matchers can have any type (including other polymorphic matcher
-/// types), and the actual Matcher<T> is generated on demand with an implicit
-/// conversion operator.
-template <typename... Ps> class VariadicOperatorMatcher {
-public:
-  VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op, Ps &&... Params)
-      : Op(Op), Params(std::forward<Ps>(Params)...) {}
-
-  template <typename T> operator Matcher<T>() const {
-    return DynTypedMatcher::constructVariadic(
-               Op, ASTNodeKind::getFromNodeKind<T>(),
-               getMatchers<T>(std::index_sequence_for<Ps...>()))
-        .template unconditionalConvertTo<T>();
-  }
-
-private:
-  // Helper method to unpack the tuple into a vector.
-  template <typename T, std::size_t... Is>
-  std::vector<DynTypedMatcher> getMatchers(std::index_sequence<Is...>) const {
-    return {Matcher<T>(std::get<Is>(Params))...};
-  }
-
-  const DynTypedMatcher::VariadicOperator Op;
-  std::tuple<Ps...> Params;
-};
-
-/// Overloaded function object to generate VariadicOperatorMatcher
-///   objects from arbitrary matchers.
-template <unsigned MinCount, unsigned MaxCount>
-struct VariadicOperatorMatcherFunc {
-  DynTypedMatcher::VariadicOperator Op;
-
-  template <typename... Ms>
-  VariadicOperatorMatcher<Ms...> operator()(Ms &&... Ps) const {
-    static_assert(MinCount <= sizeof...(Ms) && sizeof...(Ms) <= MaxCount,
-                  "invalid number of parameters for variadic matcher");
-    return VariadicOperatorMatcher<Ms...>(Op, std::forward<Ms>(Ps)...);
-  }
-};
-
 /// @}
 
 template <typename T>
 inline Matcher<T> DynTypedMatcher::unconditionalConvertTo() const {
   return Matcher<T>(*this);
-}
-
-/// Creates a Matcher<T> that matches if all inner matchers match.
-template<typename T>
-BindableMatcher<T> makeAllOfComposite(
-    ArrayRef<const Matcher<T> *> InnerMatchers) {
-  // For the size() == 0 case, we return a "true" matcher.
-  if (InnerMatchers.empty()) {
-    return BindableMatcher<T>(TrueMatcher());
-  }
-  // For the size() == 1 case, we simply return that one matcher.
-  // No need to wrap it in a variadic operation.
-  if (InnerMatchers.size() == 1) {
-    return BindableMatcher<T>(*InnerMatchers[0]);
-  }
-
-  using PI = llvm::pointee_iterator<const Matcher<T> *const *>;
-
-  std::vector<DynTypedMatcher> DynMatchers(PI(InnerMatchers.begin()),
-                                           PI(InnerMatchers.end()));
-  return BindableMatcher<T>(
-      DynTypedMatcher::constructVariadic(DynTypedMatcher::VO_AllOf,
-                                         ASTNodeKind::getFromNodeKind<T>(),
-                                         std::move(DynMatchers))
-          .template unconditionalConvertTo<T>());
-}
-
-/// Creates a Matcher<T> that matches if
-/// T is dyn_cast'able into InnerT and all inner matchers match.
-///
-/// Returns BindableMatcher, as matchers that use dyn_cast have
-/// the same object both to match on and to run submatchers on,
-/// so there is no ambiguity with what gets bound.
-template<typename T, typename InnerT>
-BindableMatcher<T> makeDynCastAllOfComposite(
-    ArrayRef<const Matcher<InnerT> *> InnerMatchers) {
-  return BindableMatcher<T>(
-      makeAllOfComposite(InnerMatchers).template dynCastTo<T>());
 }
 
 /// Matches nodes of type T that have at least one descendant node of
@@ -1644,43 +1741,6 @@ inline bool ValueEqualsMatcher<FloatingLiteral, llvm::APFloat>::matchesNode(
     const FloatingLiteral &Node) const {
   return ExpectedValue.compare(Node.getValue()) == llvm::APFloat::cmpEqual;
 }
-
-/// A VariadicDynCastAllOfMatcher<SourceT, TargetT> object is a
-/// variadic functor that takes a number of Matcher<TargetT> and returns a
-/// Matcher<SourceT> that matches TargetT nodes that are matched by all of the
-/// given matchers, if SourceT can be dynamically casted into TargetT.
-///
-/// For example:
-///   const VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> record;
-/// Creates a functor record(...) that creates a Matcher<Decl> given
-/// a variable number of arguments of type Matcher<CXXRecordDecl>.
-/// The returned matcher matches if the given Decl can by dynamically
-/// casted to CXXRecordDecl and all given matchers match.
-template <typename SourceT, typename TargetT>
-class VariadicDynCastAllOfMatcher
-    : public VariadicFunction<BindableMatcher<SourceT>, Matcher<TargetT>,
-                              makeDynCastAllOfComposite<SourceT, TargetT>> {
-public:
-  VariadicDynCastAllOfMatcher() {}
-};
-
-/// A \c VariadicAllOfMatcher<T> object is a variadic functor that takes
-/// a number of \c Matcher<T> and returns a \c Matcher<T> that matches \c T
-/// nodes that are matched by all of the given matchers.
-///
-/// For example:
-///   const VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
-/// Creates a functor nestedNameSpecifier(...) that creates a
-/// \c Matcher<NestedNameSpecifier> given a variable number of arguments of type
-/// \c Matcher<NestedNameSpecifier>.
-/// The returned matcher matches if all given matchers match.
-template <typename T>
-class VariadicAllOfMatcher
-    : public VariadicFunction<BindableMatcher<T>, Matcher<T>,
-                              makeAllOfComposite<T>> {
-public:
-  VariadicAllOfMatcher() {}
-};
 
 /// Matches nodes of type \c TLoc for which the inner
 /// \c Matcher<T> matches.
@@ -2179,68 +2239,6 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
-
-template <typename F, typename Tuple, std::size_t... I>
-constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
-                                std::index_sequence<I...>) {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
-}
-
-template <typename F, typename Tuple>
-constexpr auto applyMatcher(F &&f, Tuple &&args) {
-  return applyMatcherImpl(
-      std::forward<F>(f), std::forward<Tuple>(args),
-      std::make_index_sequence<
-          std::tuple_size<typename std::decay<Tuple>::type>::value>());
-}
-
-template <typename T, bool IsBaseOf, typename Head, typename Tail>
-struct GetCladeImpl {
-  using Type = Head;
-};
-template <typename T, typename Head, typename Tail>
-struct GetCladeImpl<T, false, Head, Tail>
-    : GetCladeImpl<T, std::is_base_of<typename Tail::head, T>::value,
-                   typename Tail::head, typename Tail::tail> {};
-
-template <typename T, typename... U>
-struct GetClade : GetCladeImpl<T, false, T, AllNodeBaseTypes> {};
-
-template <typename CladeType, typename... MatcherTypes>
-struct MapAnyOfMatcherImpl {
-
-  template <typename... InnerMatchers>
-  BindableMatcher<CladeType>
-  operator()(InnerMatchers &&... InnerMatcher) const {
-    // TODO: Use std::apply from c++17
-    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
-        internal::VariadicOperatorMatcherFunc<
-            0, std::numeric_limits<unsigned>::max()>{
-            internal::DynTypedMatcher::VO_AnyOf},
-        applyMatcher(
-            [&](auto... Matcher) {
-              return std::make_tuple(Matcher(
-                  std::forward<decltype(InnerMatcher)>(InnerMatcher)...)...);
-            },
-            std::tuple<
-                VariadicDynCastAllOfMatcher<CladeType, MatcherTypes>...>())));
-  }
-};
-
-template <typename... MatcherTypes>
-using MapAnyOfMatcher =
-    MapAnyOfMatcherImpl<typename GetClade<MatcherTypes...>::Type,
-                        MatcherTypes...>;
-
-template <typename... MatcherTypes> struct MapAnyOfHelper {
-  using CladeType = typename GetClade<MatcherTypes...>::Type;
-
-  MapAnyOfMatcher<MatcherTypes...> with;
-
-  operator BindableMatcher<CladeType>() const { return with(); }
-
-  Matcher<CladeType> bind(StringRef ID) const { return with().bind(ID); }
-};
 
 } // namespace internal
 
