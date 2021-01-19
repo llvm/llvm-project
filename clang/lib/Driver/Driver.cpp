@@ -773,33 +773,27 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             Diag(clang::diag::err_drv_invalid_omp_target) << Val;
           else {
             const ToolChain *TC;
-            // CUDA toolchains have to be selected differently. They pair host
+            // Device toolchains have to be selected differently. They pair host
             // and device in their implementation.
-            if (TT.isNVPTX()) {
+            if (TT.isNVPTX() || TT.isAMDGCN()) {
               const ToolChain *HostTC =
                   C.getSingleOffloadToolChain<Action::OFK_Host>();
               assert(HostTC && "Host toolchain should be always defined.");
-              auto &CudaTC =
+              auto &DeviceTC =
                   ToolChains[TT.str() + "/" + HostTC->getTriple().normalize()];
-              if (!CudaTC)
-                CudaTC = std::make_unique<toolchains::CudaToolChain>(
-                    *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
-              TC = CudaTC.get();
-            } else if (TT.isAMDGCN()) {
-              const ToolChain *HostTC =
-                  C.getSingleOffloadToolChain<Action::OFK_Host>();
-              const llvm::Triple &HostTriple = HostTC->getTriple();
-              StringRef DeviceTripleStr;
-              DeviceTripleStr = "amdgcn-amd-amdhsa";
-              llvm::Triple HIPTriple(DeviceTripleStr);
-              auto &HIPTC =
-                  ToolChains[HIPTriple.str() + "/" + HostTriple.str()];
-              if (!HIPTC) {
-                HIPTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
-                    *this, HIPTriple, *HostTC, C.getInputArgs(),
-                    Action::OFK_OpenMP);
+              if (!DeviceTC) {
+                if (TT.isNVPTX())
+                  DeviceTC = std::make_unique<toolchains::CudaToolChain>(
+                      *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
+                else if (TT.isAMDGCN())
+                  DeviceTC =
+                      std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
+                          *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
+                else
+                  assert(DeviceTC && "Device toolchain not defined.");
               }
-              TC = HIPTC.get();
+
+              TC = DeviceTC.get();
             } else {
               TC = &getToolChain(C.getInputArgs(), TT);
             }
