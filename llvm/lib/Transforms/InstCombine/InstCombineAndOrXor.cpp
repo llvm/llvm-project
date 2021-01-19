@@ -3444,19 +3444,32 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       }
     }
 
-    // Pull 'not' into operands of select if both operands are one-use compares.
+    // Pull 'not' into operands of select if both operands are one-use compares
+    // or one is one-use compare and the other one is a constant.
     // Inverting the predicates eliminates the 'not' operation.
     // Example:
-    //     not (select ?, (cmp TPred, ?, ?), (cmp FPred, ?, ?) -->
+    //   not (select ?, (cmp TPred, ?, ?), (cmp FPred, ?, ?) -->
     //     select ?, (cmp InvTPred, ?, ?), (cmp InvFPred, ?, ?)
-    // TODO: Canonicalize by hoisting 'not' into an arm of the select if only
-    //       1 select operand is a cmp?
+    //   not (select ?, (cmp TPred, ?, ?), true -->
+    //     select ?, (cmp InvTPred, ?, ?), false
     if (auto *Sel = dyn_cast<SelectInst>(Op0)) {
-      auto *CmpT = dyn_cast<CmpInst>(Sel->getTrueValue());
-      auto *CmpF = dyn_cast<CmpInst>(Sel->getFalseValue());
-      if (CmpT && CmpF && CmpT->hasOneUse() && CmpF->hasOneUse()) {
-        CmpT->setPredicate(CmpT->getInversePredicate());
-        CmpF->setPredicate(CmpF->getInversePredicate());
+      Value *TV = Sel->getTrueValue();
+      Value *FV = Sel->getFalseValue();
+      auto *CmpT = dyn_cast<CmpInst>(TV);
+      auto *CmpF = dyn_cast<CmpInst>(FV);
+      bool InvertibleT = (CmpT && CmpT->hasOneUse()) || isa<Constant>(TV);
+      bool InvertibleF = (CmpF && CmpF->hasOneUse()) || isa<Constant>(FV);
+      if (InvertibleT && InvertibleF) {
+        Constant *One = cast<Constant>(Op1);
+
+        if (CmpT)
+          CmpT->setPredicate(CmpT->getInversePredicate());
+        else
+          Sel->setTrueValue(ConstantExpr::getNot(cast<Constant>(TV)));
+        if (CmpF)
+          CmpF->setPredicate(CmpF->getInversePredicate());
+        else
+          Sel->setFalseValue(ConstantExpr::getNot(cast<Constant>(FV)));
         return replaceInstUsesWith(I, Sel);
       }
     }
