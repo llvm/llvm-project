@@ -3460,8 +3460,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       bool InvertibleT = (CmpT && CmpT->hasOneUse()) || isa<Constant>(TV);
       bool InvertibleF = (CmpF && CmpF->hasOneUse()) || isa<Constant>(FV);
       if (InvertibleT && InvertibleF) {
-        Constant *One = cast<Constant>(Op1);
-
         if (CmpT)
           CmpT->setPredicate(CmpT->getInversePredicate());
         else
