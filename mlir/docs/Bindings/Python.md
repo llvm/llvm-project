@@ -365,7 +365,7 @@ for the canonical way to use this facility.
 
 Each dialect with a mapping to python requires that an appropriate
 `{DIALECT_NAMESPACE}.py` wrapper module is created. This is done by invoking
-`mlir-tablegen` on a python-bindings specific tablegen wrapper that includes
+`mlir-tblgen` on a python-bindings specific tablegen wrapper that includes
 the boilerplate and actual dialect specific `td` file. An example, for the
 `StandardOps` (which is assigned the namespace `std` as a special case):
 
@@ -383,7 +383,7 @@ In the main repository, building the wrapper is done via the CMake function
 `add_mlir_dialect_python_bindings`, which invokes:
 
 ```
-mlir-tablegen -gen-python-op-bindings -bind-dialect={DIALECT_NAMESPACE} \
+mlir-tblgen -gen-python-op-bindings -bind-dialect={DIALECT_NAMESPACE} \
     {PYTHON_BINDING_TD_FILE}
 ```
 
@@ -411,7 +411,8 @@ The wrapper module tablegen emitter outputs:
 Note: In order to avoid naming conflicts, all internal names used by the wrapper
 module are prefixed by `_ods_`.
 
-Each concrete `OpView` subclass further defines several attributes:
+Each concrete `OpView` subclass further defines several public-intended
+attributes:
 
 * `OPERATION_NAME` attribute with the `str` fully qualified operation name
   (i.e. `std.absf`).
@@ -420,6 +421,20 @@ Each concrete `OpView` subclass further defines several attributes:
 * `@property` getter for each operand or result (using an auto-generated name
   for unnamed of each).
 * `@property` getter, setter and deleter for each declared attribute.
+
+It further emits additional private-intended attributes meant for subclassing
+and customization (default cases omit these attributes in favor of the
+defaults on `OpView`):
+
+* `_ODS_REGIONS`: A specification on the number and types of regions.
+  Currently a tuple of (min_region_count, has_no_variadic_regions). Note that
+  the API does some light validation on this but the primary purpose is to
+  capture sufficient information to perform other default building and region
+  accessor generation.
+* `_ODS_OPERAND_SEGMENTS` and `_ODS_RESULT_SEGMENTS`: Black-box value which
+  indicates the structure of either the operand or results with respect to
+  variadics. Used by `OpView._ods_build_default` to decode operand and result
+  lists that contain lists.
 
 #### Builders
 
