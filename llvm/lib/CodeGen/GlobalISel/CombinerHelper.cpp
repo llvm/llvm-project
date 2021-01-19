@@ -625,13 +625,10 @@ bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
   if (&DefMI == &UseMI)
     return false;
   const MachineBasicBlock &MBB = *DefMI.getParent();
-  auto NonDbgInsts =
-      instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
-  auto DefOrUse =
-      find_if(NonDbgInsts, [&DefMI, &UseMI](const MachineInstr &MI) {
-        return &MI == &DefMI || &MI == &UseMI;
-      });
-  if (DefOrUse == NonDbgInsts.end())
+  auto DefOrUse = find_if(MBB, [&DefMI, &UseMI](const MachineInstr &MI) {
+    return &MI == &DefMI || &MI == &UseMI;
+  });
+  if (DefOrUse == MBB.end())
     llvm_unreachable("Block must contain both DefMI and UseMI!");
   return &*DefOrUse == &DefMI;
 }
