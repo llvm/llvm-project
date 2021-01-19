@@ -134,7 +134,8 @@ class Reduce(object):
                r"UNREACHABLE executed at .+?!",
                r"LLVM IR generation of declaration '.+'",
                r"Generating code for declaration '.+'",
-               r"\*\*\* Bad machine code: .+ \*\*\*"]
+               r"\*\*\* Bad machine code: .+ \*\*\*",
+               r"ERROR: .*Sanitizer: [^ ]+ "]
     for msg_re in regexes:
       match = re.search(msg_re, crash_output)
       if match:
