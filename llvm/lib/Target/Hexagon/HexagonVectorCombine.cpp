@@ -198,7 +198,7 @@ private:
 
     int extent() const;
     ByteSpan section(int Start, int Length) const;
-    ByteSpan &normalize();
+    ByteSpan &shift(int Offset);
 
     int size() const { return Blocks.size(); }
     Block &operator[](int i) { return Blocks[i]; }
@@ -348,16 +348,9 @@ auto AlignVectors::ByteSpan::section(int Start, int Length) const -> ByteSpan {
   return Section;
 }
 
-auto AlignVectors::ByteSpan::normalize() -> ByteSpan & {
-  if (size() == 0)
-    return *this;
-  int Min = Blocks[0].Pos;
-  for (int i = 1, e = size(); i != e; ++i)
-    Min = std::min(Min, Blocks[i].Pos);
-  if (Min != 0) {
-    for (Block &B : Blocks)
-      B.Pos -= Min;
-  }
+auto AlignVectors::ByteSpan::shift(int Offset) -> ByteSpan & {
+  for (Block &B : Blocks)
+    B.Pos += Offset;
   return *this;
 }
 
@@ -794,7 +787,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     }
 
     for (ByteSpan::Block &B : VSpan) {
-      ByteSpan Section = ASpan.section(B.Pos, B.Seg.Size).normalize();
+      ByteSpan Section = ASpan.section(B.Pos, B.Seg.Size).shift(-B.Pos);
       Value *Accum = UndefValue::get(HVC.getByteTy(B.Seg.Size));
       for (ByteSpan::Block &S : Section) {
         Value *Pay = HVC.vbytes(Builder, getPayload(S.Seg.Val));
@@ -830,7 +823,9 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // Create an extra "undef" sector at the beginning and at the end.
     // They will be used as the left/right filler in the vlalign step.
     for (int i = -1; i != NumSectors + 1; ++i) {
-      ByteSpan Section = VSpan.section(i * ScLen, ScLen).normalize();
+      // For stores, the size of each section is an aligned vector length.
+      // Adjust the store offsets relative to the section start offset.
+      ByteSpan Section = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
       Value *AccumV = UndefValue::get(SecTy);
       Value *AccumM = HVC.getNullValue(SecTy);
       for (ByteSpan::Block &S : Section) {
