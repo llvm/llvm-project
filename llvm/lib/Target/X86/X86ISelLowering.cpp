@@ -46071,8 +46071,22 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   if (SVT == MVT::i32 && NumSignBits != InSVT.getSizeInBits())
     return SDValue();
 
-  if (NumSignBits > (InSVT.getSizeInBits() - NumPackedSignBits))
+  unsigned MinSignBits = InSVT.getSizeInBits() - NumPackedSignBits;
+  if (NumSignBits > MinSignBits)
     return truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget);
+
+  // If we have a srl that only generates signbits that we will discard in
+  // the truncation then we can use PACKSS by converting the srl to a sra.
+  // SimplifyDemandedBits often relaxes sra to srl so we need to reverse it.
+  if (In.getOpcode() == ISD::SRL && N->isOnlyUserOf(In.getNode()))
+    if (const APInt *ShAmt = DAG.getValidShiftAmountConstant(
+            In, APInt::getAllOnesValue(VT.getVectorNumElements()))) {
+      if (*ShAmt == MinSignBits) {
+        SDValue NewIn = DAG.getNode(ISD::SRA, DL, InVT, In->ops());
+        return truncateVectorWithPACK(X86ISD::PACKSS, VT, NewIn, DL, DAG,
+                                      Subtarget);
+      }
+    }
 
   return SDValue();
 }
