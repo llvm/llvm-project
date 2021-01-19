@@ -37,6 +37,53 @@ namespace Fortran::semantics {
     CheckAllowed(llvm::omp::Y); \
   }
 
+// 'OmpWorkshareBlockChecker' is used to check the validity of the assignment
+// statements and the expressions enclosed in an OpenMP Workshare construct
+class OmpWorkshareBlockChecker {
+public:
+  OmpWorkshareBlockChecker(SemanticsContext &context, parser::CharBlock source)
+      : context_{context}, source_{source} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::AssignmentStmt &assignment) {
+    const auto &var{std::get<parser::Variable>(assignment.t)};
+    const auto &expr{std::get<parser::Expr>(assignment.t)};
+    const auto *lhs{GetExpr(var)};
+    const auto *rhs{GetExpr(expr)};
+    Tristate isDefined{semantics::IsDefinedAssignment(
+        lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
+    if (isDefined == Tristate::Yes) {
+      context_.Say(expr.source,
+          "Defined assignment statement is not "
+          "allowed in a WORKSHARE construct"_err_en_US);
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Expr &expr) {
+    if (const auto *e{GetExpr(expr)}) {
+      for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
+        const Symbol &root{GetAssociationRoot(symbol)};
+        if (IsFunction(root) &&
+            !(root.attrs().test(Attr::ELEMENTAL) ||
+                root.attrs().test(Attr::INTRINSIC))) {
+          context_.Say(expr.source,
+              "User defined non-ELEMENTAL function "
+              "'%s' is not allowed in a WORKSHARE construct"_err_en_US,
+              root.name());
+        }
+      }
+    }
+    return false;
+  }
+
+private:
+  SemanticsContext &context_;
+  parser::CharBlock source_;
+};
+
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
     const parser::CharBlock &source, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
@@ -149,6 +196,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   CheckNoBranching(block, beginDir.v, beginDir.source);
+
+  switch (beginDir.v) {
+  case llvm::omp::OMPD_workshare:
+  case llvm::omp::OMPD_parallel_workshare:
+    CheckWorkshareBlockStmts(block, beginDir.source);
+    break;
+  default:
+    break;
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
@@ -831,6 +887,84 @@ void OmpStructureChecker::GetSymbolsInObjectList(
           symbols.emplace_back(&symbol->GetUltimate());
         }
       }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckWorkshareBlockStmts(
+    const parser::Block &block, parser::CharBlock source) {
+  OmpWorkshareBlockChecker ompWorkshareBlockChecker{context_, source};
+
+  for (auto it{block.begin()}; it != block.end(); ++it) {
+    if (parser::Unwrap<parser::AssignmentStmt>(*it) ||
+        parser::Unwrap<parser::ForallStmt>(*it) ||
+        parser::Unwrap<parser::ForallConstruct>(*it) ||
+        parser::Unwrap<parser::WhereStmt>(*it) ||
+        parser::Unwrap<parser::WhereConstruct>(*it)) {
+      parser::Walk(*it, ompWorkshareBlockChecker);
+    } else if (const auto *ompConstruct{
+                   parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
+      if (const auto *ompAtomicConstruct{
+              std::get_if<parser::OpenMPAtomicConstruct>(&ompConstruct->u)}) {
+        // Check if assignment statements in the enclosing OpenMP Atomic
+        // construct are allowed in the Workshare construct
+        parser::Walk(*ompAtomicConstruct, ompWorkshareBlockChecker);
+      } else if (const auto *ompCriticalConstruct{
+                     std::get_if<parser::OpenMPCriticalConstruct>(
+                         &ompConstruct->u)}) {
+        // All the restrictions on the Workshare construct apply to the
+        // statements in the enclosing critical constructs
+        const auto &criticalBlock{
+            std::get<parser::Block>(ompCriticalConstruct->t)};
+        CheckWorkshareBlockStmts(criticalBlock, source);
+      } else {
+        // Check if OpenMP constructs enclosed in the Workshare construct are
+        // 'Parallel' constructs
+        auto currentDir{llvm::omp::Directive::OMPD_unknown};
+        const OmpDirectiveSet parallelDirSet{
+            llvm::omp::Directive::OMPD_parallel,
+            llvm::omp::Directive::OMPD_parallel_do,
+            llvm::omp::Directive::OMPD_parallel_sections,
+            llvm::omp::Directive::OMPD_parallel_workshare,
+            llvm::omp::Directive::OMPD_parallel_do_simd};
+
+        if (const auto *ompBlockConstruct{
+                std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+          const auto &beginBlockDir{
+              std::get<parser::OmpBeginBlockDirective>(ompBlockConstruct->t)};
+          const auto &beginDir{
+              std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+          currentDir = beginDir.v;
+        } else if (const auto *ompLoopConstruct{
+                       std::get_if<parser::OpenMPLoopConstruct>(
+                           &ompConstruct->u)}) {
+          const auto &beginLoopDir{
+              std::get<parser::OmpBeginLoopDirective>(ompLoopConstruct->t)};
+          const auto &beginDir{
+              std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+          currentDir = beginDir.v;
+        } else if (const auto *ompSectionsConstruct{
+                       std::get_if<parser::OpenMPSectionsConstruct>(
+                           &ompConstruct->u)}) {
+          const auto &beginSectionsDir{
+              std::get<parser::OmpBeginSectionsDirective>(
+                  ompSectionsConstruct->t)};
+          const auto &beginDir{
+              std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
+          currentDir = beginDir.v;
+        }
+
+        if (!parallelDirSet.test(currentDir)) {
+          context_.Say(source,
+              "OpenMP constructs enclosed in WORKSHARE construct may consist "
+              "of ATOMIC, CRITICAL or PARALLEL constructs only"_err_en_US);
+        }
+      }
+    } else {
+      context_.Say(source,
+          "The structured block in a WORKSHARE construct may consist of only "
+          "SCALAR or ARRAY assignments, FORALL or WHERE statements, "
+          "FORALL, WHERE, ATOMIC, CRITICAL or PARALLEL constructs"_err_en_US);
     }
   }
 }
