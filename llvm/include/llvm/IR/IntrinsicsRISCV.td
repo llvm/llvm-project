@@ -885,6 +885,7 @@ let TargetPrefix = "riscv" in {
   defm vfslide1down : RISCVBinaryAAX;
 
   defm vrgather : RISCVBinaryAAX;
+  defm vrgatherei16 : RISCVBinaryAAX;
 
   def "int_riscv_vcompress" : RISCVBinaryAAAMask;
 

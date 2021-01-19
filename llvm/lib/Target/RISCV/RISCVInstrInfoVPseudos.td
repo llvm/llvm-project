@@ -1266,9 +1266,38 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
+multiclass VPseudoBinaryEmul<VReg RetClass,
+                             VReg Op1Class,
+                             DAGOperand Op2Class,
+                             LMULInfo lmul,
+                             LMULInfo emul,
+                             string Constraint = ""> {
+  let VLMul = lmul.value in {
+    def "_" # lmul.MX # "_" # emul.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                                            Constraint>;
+    def "_" # lmul.MX # "_" # emul.MX # "_MASK" : VPseudoBinaryMask<RetClass, Op1Class, Op2Class,
+                                                                    Constraint>;
+  }
+}
+
 multiclass VPseudoBinaryV_VV<string Constraint = ""> {
   foreach m = MxList.m in
     defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
+}
+
+multiclass VPseudoBinaryV_VV_EEW<int eew, string Constraint = ""> {
+  foreach m = MxList.m in {
+    foreach sew = EEWList in {
+      defvar octuple_lmul = octuple_from_str<m.MX>.ret;
+      // emul = lmul * eew / sew
+      defvar octuple_emul = !srl(!mul(octuple_lmul, eew), shift_amount<sew>.val);
+      if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+        defvar emulMX = octuple_to_str<octuple_emul>.ret;
+        defvar emul = !cast<LMULInfo>("V_" # emulMX);
+        defm _VV : VPseudoBinaryEmul<m.vrclass, m.vrclass, emul.vrclass, m, emul, Constraint>;
+      }
+    }
+  }
 }
 
 multiclass VPseudoBinaryV_VX<bit IsFloat, string Constraint = ""> {
@@ -2233,6 +2262,25 @@ multiclass VPatBinaryV_VV_INT<string intrinsic, string instruction,
                       vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
                       vti.SEW, vti.RegClass,
                       vti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
+                                  int eew, list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    // emul = lmul * eew / sew
+    defvar vlmul = vti.LMul;
+    defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+    defvar octuple_emul = !srl(!mul(octuple_lmul, eew), shift_amount<vti.SEW>.val);
+    if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+      defvar emul_str = octuple_to_str<octuple_emul>.ret;
+      defvar ivti = !cast<VTypeInfo>("VI" # eew # emul_str);
+      defvar inst = instruction # "_VV_" # vti.LMul.MX # "_" # emul_str;
+      defm : VPatBinary<intrinsic, inst,
+                        vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
+                        vti.SEW, vti.RegClass,
+                        vti.RegClass, ivti.RegClass>;
+    }
   }
 }
 
@@ -3403,6 +3451,7 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 // 17.4. Vector Register Gather Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVRGATHER    : VPseudoBinaryV_VV_VX_VI<uimm5, "@earlyclobber $rd">;
+defm PseudoVRGATHEREI16 : VPseudoBinaryV_VV_EEW</* eew */ 16, "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
 // 17.5. Vector Compress Instruction
@@ -4081,11 +4130,15 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 let Predicates = [HasStdExtV] in {
   defm "" : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                      AllIntegerVectors, uimm5>;
+  defm "" : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16", "PseudoVRGATHEREI16",
+                                   /* eew */ 16, AllIntegerVectors>;
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
   defm "" : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                      AllFloatVectors, uimm5>;
+  defm "" : VPatBinaryV_VV_INT_EEW<"int_riscv_vrgatherei16", "PseudoVRGATHEREI16",
+                                   /* eew */ 16, AllFloatVectors>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
