@@ -5556,7 +5556,9 @@ class ElaboratedType final
   ElaboratedType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
                  QualType NamedType, QualType CanonType, TagDecl *OwnedTagDecl)
       : TypeWithKeyword(Keyword, Elaborated, CanonType,
-                        NamedType->getDependence()),
+                        NamedType->getDependence() |
+                            (NNS ? toTypeDependence(NNS->getDependence())
+                                 : TypeDependence::None)),
         NNS(NNS), NamedType(NamedType) {
     ElaboratedTypeBits.HasOwnedTagDecl = false;
     if (OwnedTagDecl) {
