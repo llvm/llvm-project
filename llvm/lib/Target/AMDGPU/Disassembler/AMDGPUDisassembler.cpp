@@ -997,8 +997,8 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   using namespace AMDGPU::EncValues;
 
-  unsigned TTmpMin = isGFX9Plus() ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
-  unsigned TTmpMax = isGFX9Plus() ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
+  unsigned TTmpMin = isGFX9Plus() ? TTMP_GFX9PLUS_MIN : TTMP_VI_MIN;
+  unsigned TTmpMax = isGFX9Plus() ? TTMP_GFX9PLUS_MAX : TTMP_VI_MAX;
 
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
