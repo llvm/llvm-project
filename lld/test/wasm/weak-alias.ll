@@ -149,16 +149,16 @@ entry:
 ; RELOC-NEXT:         Kind:            GLOBAL
 ; RELOC-NEXT:         GlobalType:      I32
 ; RELOC-NEXT:         GlobalMutable:   true
+; RELOC-NEXT:       - Module:          env
+; RELOC-NEXT:         Field:           __indirect_function_table
+; RELOC-NEXT:         Kind:            TABLE
+; RELOC-NEXT:         Table:
+; RELOC-NEXT:           Index:           0
+; RELOC-NEXT:           ElemType:        FUNCREF
+; RELOC-NEXT:           Limits:
+; RELOC-NEXT:             Initial:         0x1
 ; RELOC-NEXT:   - Type:            FUNCTION
 ; RELOC-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 1 ]
-; RELOC-NEXT:   - Type:            TABLE
-; RELOC-NEXT:     Tables:
-; RELOC-NEXT:       - Index:           0
-; RELOC-NEXT:         ElemType:        FUNCREF
-; RELOC-NEXT:         Limits:
-; RELOC-NEXT:           Flags:           [ HAS_MAX ]
-; RELOC-NEXT:           Initial:         0x2
-; RELOC-NEXT:           Maximum:         0x2
 ; RELOC-NEXT:   - Type:            MEMORY
 ; RELOC-NEXT:     Memories:
 ; RELOC-NEXT:       - Initial:         0x0
@@ -279,7 +279,7 @@ entry:
 ; RELOC-NEXT:       - Index:           8
 ; RELOC-NEXT:         Kind:            TABLE
 ; RELOC-NEXT:         Name:            __indirect_function_table
-; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
 ; RELOC-NEXT:         Table:           0
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            name
