@@ -4,6 +4,20 @@
 // RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -std=c++20 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix CXX20-X64 %s
 
+// Check that array-to-pointer decay is mangled as the underlying declaration.
+extern const char arr[4] = "foo";
+template<const char*> struct Decay1 {};
+// CHECK: "?decay1@@3U?$Decay1@$1?arr@@3QBDB@@A"
+Decay1<arr> decay1;
+#if __cplusplus >= 201702L
+// Note that this mangling approach can lead to collisions.
+template<const void*> struct Decay2 {};
+// CXX20-X64: "?decay2a@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)arr> decay2a;
+// CXX20-X64: "?decay2b@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)&arr> decay2b;
+#endif
+
 template<typename T>
 class Class {
  public:
