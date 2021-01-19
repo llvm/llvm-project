@@ -854,6 +854,38 @@ def ProcAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                      HasV8_4aOps
                                      ]>;
 
+def ProcAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
+                                     "Apple A14", [
+                                     FeatureAggressiveFMA,
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureAltFPCmp,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFPARMv8,
+                                     FeatureFRInt3264,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureFuseLiterals,
+                                     FeatureNEON,
+                                     FeaturePerfMon,
+                                     FeatureSpecRestrict,
+                                     FeatureSSBS,
+                                     FeatureSB,
+                                     FeaturePredRes,
+                                     FeatureCacheDeepPersist,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing,
+                                     FeatureFullFP16,
+                                     FeatureFP16FML,
+                                     FeatureSHA3,
+                                     HasV8_4aOps
+                                     ]>;
+
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureCRC,
@@ -1149,6 +1181,7 @@ def : ProcessorModel<"apple-a10", CycloneModel, [ProcAppleA10]>;
 def : ProcessorModel<"apple-a11", CycloneModel, [ProcAppleA11]>;
 def : ProcessorModel<"apple-a12", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-a13", CycloneModel, [ProcAppleA13]>;
+def : ProcessorModel<"apple-a14", CycloneModel, [ProcAppleA14]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, [ProcAppleA12]>;
