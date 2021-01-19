@@ -21,7 +21,7 @@ using namespace llvm::opt;
 
 void Flang::AddPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U});
+  Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U, options::OPT_I});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

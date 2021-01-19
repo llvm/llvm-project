@@ -176,6 +176,10 @@ static void parsePreprocessorArgs(
       opts.addMacroUndef(currentArg->getValue());
     }
   }
+
+  // Add the ordered list of -I's.
+  for (const auto *currentArg : args.filtered(clang::driver::options::OPT_I))
+    opts.searchDirectoriesFromDashI.emplace_back(currentArg->getValue());
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
@@ -261,4 +265,9 @@ void CompilerInvocation::setFortranOpts() {
   const auto &preprocessorOptions = preprocessorOpts();
 
   collectMacroDefinitions(preprocessorOptions, fortranOptions);
+
+  fortranOptions.searchDirectories.insert(
+      fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromDashI.begin(),
+      preprocessorOptions.searchDirectoriesFromDashI.end());
 }
