@@ -244,7 +244,7 @@ static bool isPythonKeyword(StringRef str) {
        "is",    "lambda", "nonlocal", "not",   "or",     "pass",
        "raise", "return", "try",      "while", "with",   "yield"});
   return keywords.contains(str);
-};
+}
 
 /// Checks whether `str` would shadow a generated variable or attribute
 /// part of the OpView API.

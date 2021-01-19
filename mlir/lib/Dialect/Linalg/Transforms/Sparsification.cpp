@@ -500,6 +500,7 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
   case Kind::kAddI:
     return merger.takeDisj(kind, s0, s1);
   }
+  llvm_unreachable("unexpected expression kind");
 }
 
 /// Maps sparse integer option to actual integral storage type.
@@ -512,6 +513,7 @@ static Type genIntType(PatternRewriter &rewriter, linalg::SparseIntType tp) {
   case linalg::SparseIntType::kI32:
     return rewriter.getIntegerType(32);
   }
+  llvm_unreachable("unexpected SparseIntType");
 }
 
 /// Local bufferization of all dense and sparse data structures.
@@ -735,6 +737,7 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   case Kind::kAddI:
     return rewriter.create<AddIOp>(op.getLoc(), v0, v1);
   }
+  llvm_unreachable("unexpected expression kind");
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
@@ -825,6 +828,7 @@ static bool isVectorFor(CodeGen &codegen, bool isInner, bool isSparse) {
   case linalg::SparseVectorizationStrategy::kAnyStorageInnerLoop:
     return isInner;
   }
+  llvm_unreachable("unexpected vectorization strategy");
 }
 
 /// Returns parallelization strategy. Any implicit loop in the Linalg operation
@@ -844,6 +848,7 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   case linalg::SparseParallelizationStrategy::kAnyStorageAnyLoop:
     return !isReduction && !isVector;
   }
+  llvm_unreachable("unexpected parallelization strategy");
 }
 
 /// Generates a for-loop on a single index.
