@@ -100,8 +100,7 @@ class VariantMatcher {
 
     /// Convert \p Matcher the destination type and return it as a new
     /// DynTypedMatcher.
-    virtual DynTypedMatcher
-    convertMatcher(const DynTypedMatcher &Matcher) const = 0;
+    DynTypedMatcher convertMatcher(const DynTypedMatcher &Matcher) const;
 
     /// Constructs a variadic typed matcher from \p InnerMatchers.
     /// Will try to convert each inner matcher to the destination type and
@@ -109,9 +108,6 @@ class VariantMatcher {
     llvm::Optional<DynTypedMatcher>
     constructVariadicOperator(DynTypedMatcher::VariadicOperator Op,
                               ArrayRef<VariantMatcher> InnerMatchers) const;
-
-  protected:
-    ~MatcherOps() = default;
 
   private:
     ASTNodeKind NodeKind;
@@ -174,8 +170,12 @@ public:
   /// that can, the result would be ambiguous and false is returned.
   template <class T>
   bool hasTypedMatcher() const {
+    return hasTypedMatcher(ASTNodeKind::getFromNodeKind<T>());
+  }
+
+  bool hasTypedMatcher(ASTNodeKind NK) const {
     if (!Value) return false;
-    return Value->getTypedMatcher(TypedMatcherOps<T>()).hasValue();
+    return Value->getTypedMatcher(MatcherOps(NK)).hasValue();
   }
 
   /// Determines if the contained matcher can be converted to \p Kind.
@@ -197,8 +197,13 @@ public:
   template <class T>
   ast_matchers::internal::Matcher<T> getTypedMatcher() const {
     assert(hasTypedMatcher<T>() && "hasTypedMatcher<T>() == false");
-    return Value->getTypedMatcher(TypedMatcherOps<T>())
+    return Value->getTypedMatcher(MatcherOps(ASTNodeKind::getFromNodeKind<T>()))
         ->template convertTo<T>();
+  }
+
+  DynTypedMatcher getTypedMatcher(ASTNodeKind NK) const {
+    assert(hasTypedMatcher(NK) && "hasTypedMatcher(NK) == false");
+    return *Value->getTypedMatcher(MatcherOps(NK));
   }
 
   /// String representation of the type of the value.
@@ -211,24 +216,12 @@ private:
   explicit VariantMatcher(std::shared_ptr<Payload> Value)
       : Value(std::move(Value)) {}
 
-  template <typename T> struct TypedMatcherOps;
 
   class SinglePayload;
   class PolymorphicPayload;
   class VariadicOpPayload;
 
   std::shared_ptr<const Payload> Value;
-};
-
-template <typename T>
-struct VariantMatcher::TypedMatcherOps final : VariantMatcher::MatcherOps {
-  TypedMatcherOps() : MatcherOps(ASTNodeKind::getFromNodeKind<T>()) {}
-  typedef ast_matchers::internal::Matcher<T> MatcherT;
-
-  DynTypedMatcher
-  convertMatcher(const DynTypedMatcher &Matcher) const override {
-    return DynTypedMatcher(Matcher.convertTo<T>());
-  }
 };
 
 /// Variant value class.
