@@ -215,13 +215,6 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
   simplifyAffineMap(res).print(outs << "\nComposed map: ");
 }
 
-static bool affineApplyOp(Operation &op) { return isa<AffineApplyOp>(op); }
-
-static bool singleResultAffineApplyOpWithoutUses(Operation &op) {
-  auto app = dyn_cast<AffineApplyOp>(op);
-  return app && app.use_empty();
-}
-
 /// Test for 'vectorizeAffineLoopNest' utility.
 void VectorizerTestPass::testVecAffineLoopNest() {
   std::vector<SmallVector<AffineForOp, 2>> loops;
