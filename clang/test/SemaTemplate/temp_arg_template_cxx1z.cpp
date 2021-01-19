@@ -115,12 +115,6 @@ namespace Auto {
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;
-  TInt<SubstFailure> isf; // expected-error {{template template argument has different template parameters than its corresponding template template parameter}}
+  TInt<SubstFailure> isf; // FIXME: this should be ill-formed
   TIntPtr<SubstFailure> ipsf;
-
-  template<template<auto A, auto B, decltype(A)> typename C> struct TAutoAutoFirst {};
-  template<auto A, auto B, decltype(A)> struct AutoAutoFirst;
-  template<auto A, auto B, decltype(B)> struct AutoAutoSecond;
-  TAutoAutoFirst<AutoAutoFirst> aaf;
-  TAutoAutoFirst<AutoAutoSecond> aas; // FIXME: this should be rejected due to parameter mismatch
 }
