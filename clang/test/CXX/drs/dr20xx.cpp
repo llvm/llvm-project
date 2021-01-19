@@ -49,6 +49,18 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
+namespace dr2064 { // dr2064: 12
+#if __cplusplus >= 201103L
+  template<typename T> struct X {
+    template<typename U> struct Y {};
+  };
+  template<typename T> void f() {
+    X<decltype(sizeof(T))>::Y<int> y; // ok
+    return X<decltype(sizeof(T))>::f(); // expected-error {{no member named 'f' in 'dr2064::X<unsigned}}
+  }
+#endif
+}
+
 namespace dr2082 { // dr2082: 11
   void test1(int x, int = sizeof(x)); // ok
 #if __cplusplus >= 201103L
