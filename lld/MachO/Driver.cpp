@@ -310,11 +310,10 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-  case file_magic::tapi_file: {
+  case file_magic::tapi_file:
     if (Optional<DylibFile *> dylibFile = loadDylib(mbref))
       newFile = *dylibFile;
     break;
-  }
   case file_magic::bitcode:
     newFile = make<BitcodeFile>(mbref);
     break;
@@ -786,13 +785,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_INPUT:
       addFile(arg->getValue(), false);
       break;
-    case OPT_weak_library: {
-      auto *dylibFile =
-          dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false));
-      if (dylibFile)
+    case OPT_weak_library:
+      if (auto *dylibFile =
+              dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
         dylibFile->forceWeakImport = true;
       break;
-    }
     case OPT_filelist:
       addFileList(arg->getValue());
       break;

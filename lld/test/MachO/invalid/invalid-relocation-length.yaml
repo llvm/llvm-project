@@ -2,7 +2,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not %lld -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
 #
-# CHECK: error: invalid relocation at offset 1 of __TEXT,__text in [[FILE]]: relocations of type 0 must have r_length of 2 or 3
+# CHECK: error: UNSIGNED relocation has width 2 bytes, but must be 4 or 8 bytes at offset 1 of __TEXT,__text in [[FILE]]
 
 !mach-o
 FileHeader:
