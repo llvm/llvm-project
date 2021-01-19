@@ -3983,11 +3983,11 @@
 #   endif
 # endif
 
-#ifndef __cpp_lib_is_scoped_enum
-#error "__cpp_lib_is_scoped_enum should be defined in c++2b"
-#endif
-#if __cpp_lib_is_scoped_enum != 202011L
-#error "__cpp_lib_is_scoped_enum should have the value 202011L in c++2b"
+# ifndef __cpp_lib_is_scoped_enum
+#   error "__cpp_lib_is_scoped_enum should be defined in c++2b"
+# endif
+# if __cpp_lib_is_scoped_enum != 202011L
+#   error "__cpp_lib_is_scoped_enum should have the value 202011L in c++2b"
 # endif
 
 # ifndef __cpp_lib_is_swappable
