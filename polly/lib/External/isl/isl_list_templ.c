@@ -265,7 +265,7 @@ isl_size FN(FN(LIST(EL),n),EL_BASE)(__isl_keep LIST(EL) *list)
 
 /* Return the element at position "index" in "list".
  */
-static __isl_keep EL *FN(LIST(EL),peek)(__isl_keep LIST(EL) *list, int index)
+__isl_keep EL *FN(LIST(EL),peek)(__isl_keep LIST(EL) *list, int index)
 {
 	if (FN(LIST(EL),check_index)(list, index) < 0)
 		return NULL;

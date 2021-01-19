@@ -141,6 +141,7 @@ libisl_la_SOURCES = \
 	isl_ilp_private.h \
 	isl_input.c \
 	isl_int.h \
+	isl_list_private.h \
 	isl_local_private.h \
 	isl_local.h \
 	isl_local.c \
@@ -465,7 +466,9 @@ EXTRA_DIST = \
 	isl_check_named_params_templ.c \
 	check_reparse_templ.c \
 	check_reparse_test_templ.c \
+	check_single_reference_templ.c \
 	check_type_range_templ.c \
+	isl_copy_tuple_id_templ.c \
 	isl_domain_factor_templ.c \
 	extract_key.c \
 	isl_ilp_opt_multi_val_templ.c \
@@ -558,6 +561,7 @@ EXTRA_DIST = \
 	isl_type_check_equal_space_templ.c \
 	isl_type_has_equal_space_bin_templ.c \
 	isl_type_has_equal_space_templ.c \
+	isl_type_has_space_templ.c \
 	isl_unbind_params_templ.c \
 	uset_to_umap.c \
 	uset_from_umap.c \
@@ -567,6 +571,7 @@ EXTRA_DIST = \
 	isl_union_multi.c \
 	isl_union_eval.c \
 	isl_union_locals_templ.c \
+	isl_union_map_lex_templ.c \
 	isl_union_neg.c \
 	isl_union_pw_templ.c \
 	libisl-gdb.py \

@@ -511,3 +511,18 @@ namespace dependent_reference {
   // Ensure that we can instantiate the definition of S<...>.
   int n = *v.q + *w.q;
 }
+
+namespace decay {
+  template<typename T, typename C, const char *const A[(int)T::count]> struct X {
+    template<typename CC> void f(const X<T, CC, A> &v) {}
+  };
+  struct A {
+    static constexpr const char *arr[] = {"hello", "world"};
+    static constexpr int count = 2;
+  };
+  void f() {
+    X<A, int, A::arr> x1;
+    X<A, float, A::arr> x2;
+    x1.f(x2);
+  }
+}

@@ -5383,10 +5383,10 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
   DecltypeType *dt;
 
   // C++11 [temp.type]p2:
-  //   If an expression e is type-dependent, decltype(e) denotes a unique
-  //   dependent type. Two such decltype-specifiers refer to the same type only
-  //   if their expressions are equivalent (14.5.6.1).
-  if (e->isTypeDependent()) {
+  //   If an expression e involves a template parameter, decltype(e) denotes a
+  //   unique dependent type. Two such decltype-specifiers refer to the same
+  //   type only if their expressions are equivalent (14.5.6.1).
+  if (e->isInstantiationDependent()) {
     llvm::FoldingSetNodeID ID;
     DependentDecltypeType::Profile(ID, *this, e);
 

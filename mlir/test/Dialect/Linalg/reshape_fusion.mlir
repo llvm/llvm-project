@@ -254,7 +254,7 @@ func @indexed_generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 
 // The generic op version of the test check for the op structure. Only
 // checking the op body here.
-//       CHECK: #[[MAP:.+]] =  affine_map<(d0, d1) -> (d0 * 4 + d1)>
+//       CHECK: #[[MAP:.+]] =  affine_map<(d0, d1) -> (d0 + d1 * 4)>
 //       CHECK: func @indexed_generic_op_reshape_producer_fusion
 //       CHECK:   linalg.indexed_generic
 //       CHECK:   ^{{.*}}(
@@ -262,7 +262,7 @@ func @indexed_generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 //  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index, %[[ARG5:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: i32, %[[ARG7:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
-//       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG2]], %[[ARG3]])
+//       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG3]], %[[ARG2]])
 //       CHECK:     %[[T4:.+]] = muli %[[ARG6]], %[[ARG7]]
 //       CHECK:     %[[T5:.+]] = index_cast %[[T3]]
 //       CHECK:     %[[T6:.+]] = addi %[[T4]], %[[T5]]
@@ -299,7 +299,7 @@ func @indexed_generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 }
 // The generic op version of the test check for the op structure. Only
 // checking the op body here.
-//       CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 * 20 + d1 * 5 + d2)>
+//       CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 5 + d2 * 20)>
 //       CHECK: func @indexed_generic_op_reshape_consumer_fusion
 //       CHECK:   linalg.indexed_generic
 //       CHECK:   ^{{.*}}(
@@ -307,7 +307,7 @@ func @indexed_generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 //  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index, %[[ARG5:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: i32, %[[ARG7:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
-//       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG3]], %[[ARG4]], %[[ARG5]])
+//       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG5]], %[[ARG4]], %[[ARG3]])
 //       CHECK:     %[[T4:.+]] = muli %[[ARG6]], %[[ARG7]]
 //       CHECK:     %[[T5:.+]] = index_cast %[[ARG2]]
 //       CHECK:     %[[T6:.+]] = addi %[[T4]], %[[T5]]
@@ -336,7 +336,7 @@ func @reshape_as_consumer_permutation
          %5 = addi %3, %4 : i32
          %6 = index_cast %arg2 : index to i32
          %7 = addi %5, %6 : i32
-	 linalg.yield %7 : i32
+  linalg.yield %7 : i32
        } -> tensor<6x4x210xi32>
   %d = linalg.tensor_reshape %c
          [affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1)>,
@@ -358,8 +358,8 @@ func @reshape_as_consumer_permutation
 //   CHECK-DAG: #[[MAP8:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d3, d4, d0, d1, d5)>
 //   CHECK-DAG: #[[MAP9:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d3, d4, d5)>
 //   CHECK-DAG: #[[MAP10:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d5, d2, d3, d4)>
-//   CHECK-DAG: #[[MAP11:.+]] = affine_map<(d0, d1) -> (d0 * 3 + d1)>
-//   CHECK-DAG: #[[MAP12:.+]] = affine_map<(d0, d1, d2) -> (d0 * 42 + d1 * 7 + d2)>
+//   CHECK-DAG: #[[MAP11:.+]] = affine_map<(d0, d1) -> (d0 + d1 * 3)>
+//   CHECK-DAG: #[[MAP12:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 7 + d2 * 42)>
 //       CHECK: func @reshape_as_consumer_permutation
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<210x6x4xi32>
 //  CHECK-SAME:   %[[ARG1:.+]]: tensor<210x4xi32>
@@ -380,8 +380,8 @@ func @reshape_as_consumer_permutation
 //  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: index, %[[ARG7:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32, %[[ARG9:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9]+]]: i32)
-//   CHECK-DAG:       %[[T5:.+]] = affine.apply #[[MAP11]](%[[ARG2]], %[[ARG3]])
-//   CHECK-DAG:       %[[T6:.+]] = affine.apply #[[MAP12]](%[[ARG4]], %[[ARG5]], %[[ARG6]])
+//   CHECK-DAG:       %[[T5:.+]] = affine.apply #[[MAP11]](%[[ARG3]], %[[ARG2]])
+//   CHECK-DAG:       %[[T6:.+]] = affine.apply #[[MAP12]](%[[ARG6]], %[[ARG5]], %[[ARG4]])
 //   CHECK-DAG:       %[[T7:.+]] = addi %[[ARG8]], %[[ARG9]]
 //       CHECK:       %[[T8:.+]] = index_cast %[[T5]]
 //       CHECK:       %[[T9:.+]] = addi %[[T7]], %[[T8]]
@@ -418,7 +418,7 @@ func @reshape_as_producer_projected_permutation(
 
 //   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0 * 8 + d1)>
+//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0 + d1 * 8)>
 //   CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 //   CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1, d2, d3) -> (d2)>
 //   CHECK-DAG: #[[MAP5:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
@@ -434,7 +434,7 @@ func @reshape_as_producer_projected_permutation(
 //  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG7:[a-zA-Z0-9]+]]: i32)
-//       CHECK:       %[[T0:.+]] = affine.apply #[[MAP2]](%[[ARG1]], %[[ARG2]])
+//       CHECK:       %[[T0:.+]] = affine.apply #[[MAP2]](%[[ARG2]], %[[ARG1]])
 //       CHECK:       %[[T1:.+]] = index_cast %[[T0]] : index to i32
 //       CHECK:       %[[T2:.+]] = addi %[[ARG5]], %[[T1]] : i32
 //       CHECK:       %[[T3:.+]] = index_cast %[[ARG3]] : index to i32

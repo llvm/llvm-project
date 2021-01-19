@@ -712,7 +712,7 @@ bool PPCMIPeephole::simplifyCode(void) {
               Simplified = true;
               Register ConvReg1 = RoundInstr->getOperand(1).getReg();
               Register FRSPDefines = RoundInstr->getOperand(0).getReg();
-              MachineInstr &Use = *(MRI->use_instr_begin(FRSPDefines));
+              MachineInstr &Use = *(MRI->use_instr_nodbg_begin(FRSPDefines));
               for (int i = 0, e = Use.getNumOperands(); i < e; ++i)
                 if (Use.getOperand(i).isReg() &&
                     Use.getOperand(i).getReg() == FRSPDefines)

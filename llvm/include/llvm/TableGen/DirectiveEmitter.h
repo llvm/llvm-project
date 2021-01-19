@@ -138,11 +138,6 @@ public:
     return Def->getValueAsString("flangClass");
   }
 
-  // Optional field.
-  StringRef getFlangClassValue() const {
-    return Def->getValueAsString("flangClassValue");
-  }
-
   // Get the formatted name for Flang parser class. The generic formatted class
   // name is constructed from the name were the first letter of each word is
   // captitalized and the underscores are removed.

@@ -559,7 +559,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_string_contains",
     "values": { "c++2b": 202011 },
     "headers": ["string", "string_view"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_string_udls",
     "values": { "c++14": 201304 },
@@ -646,6 +645,7 @@ assert all(tc["headers"] == sorted(tc["headers"]) for tc in feature_test_macros)
 lit_markup = {
   "atomic": ["UNSUPPORTED: libcpp-has-no-threads"],
   "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
+  "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
   "iomanip": ["UNSUPPORTED: libcpp-has-no-localization"],
   "istream": ["UNSUPPORTED: libcpp-has-no-localization"],
   "latch": ["UNSUPPORTED: libcpp-has-no-threads"],

@@ -137,6 +137,9 @@ class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
   LMULInfo LMul = M;
   ValueType Scalar = Scal;
   RegisterClass ScalarRegClass = ScalarReg;
+  // The pattern fragment which produces the AVL operand, representing the
+  // "natural" vector length for this type. For scalable vectors this is VLMax.
+  OutPatFrag AVL = VLMax;
 }
 
 class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas, int Sew,
@@ -234,6 +237,10 @@ class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
   int SEW = 8;
   LMULInfo LMul = M;
   string BX = Bx; // Appendix of mask operations.
+  // The pattern fragment which produces the AVL operand, representing the
+  // "natural" vector length for this mask type. For scalable masks this is
+  // VLMax.
+  OutPatFrag AVL = VLMax;
 }
 
 defset list<MTypeInfo> AllMasks = {

@@ -8,6 +8,7 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/PreprocessorOptions.h"
+#include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -258,6 +259,18 @@ void CompilerInvocation::SetDefaultFortranOpts() {
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
   fortranOptions.isFixedForm = false;
+
+  // Populate the macro list with version numbers and other predefinitions.
+  // TODO: When expanding this list of standard predefinitions, consider
+  // creating a dedicated API for this. Also at some point we will need to
+  // differentiate between different targets.
+  fortranOptions.predefinitions.emplace_back("__flang__", "1");
+  fortranOptions.predefinitions.emplace_back(
+      "__flang_major__", FLANG_VERSION_MAJOR_STRING);
+  fortranOptions.predefinitions.emplace_back(
+      "__flang_minor__", FLANG_VERSION_MINOR_STRING);
+  fortranOptions.predefinitions.emplace_back(
+      "__flang_patchlevel__", FLANG_VERSION_PATCHLEVEL_STRING);
 }
 
 void CompilerInvocation::setFortranOpts() {
