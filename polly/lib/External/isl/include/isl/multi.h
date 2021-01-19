@@ -144,6 +144,7 @@ __isl_give isl_multi_##BASE *isl_multi_##BASE##_zero(			\
 	__isl_take isl_space *space);
 
 #define ISL_DECLARE_MULTI_NAN(BASE)					\
+__isl_export								\
 isl_bool isl_multi_##BASE##_involves_nan(				\
 	__isl_keep isl_multi_##BASE *multi);
 
