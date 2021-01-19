@@ -62,13 +62,6 @@ static llvm::cl::opt<bool> clTestComposeMaps(
         "AffineMap in the composition is specified as the affine_map attribute "
         "in a constant op."),
     llvm::cl::cat(clOptionsCategory));
-static llvm::cl::opt<bool> clTestNormalizeMaps(
-    "normalize-maps",
-    llvm::cl::desc(
-        "Enable testing the normalization of AffineAffineApplyOp "
-        "where each AffineAffineApplyOp in the composition is a single output "
-        "operation."),
-    llvm::cl::cat(clOptionsCategory));
 static llvm::cl::opt<bool> clTestVecAffineLoopNest(
     "vectorize-affine-loop-nest",
     llvm::cl::desc(
@@ -91,7 +84,6 @@ struct VectorizerTestPass
   void testBackwardSlicing(llvm::raw_ostream &outs);
   void testSlicing(llvm::raw_ostream &outs);
   void testComposeMaps(llvm::raw_ostream &outs);
-  void testNormalizeMaps();
 
   /// Test for 'vectorizeAffineLoopNest' utility.
   void testVecAffineLoopNest();
@@ -230,33 +222,6 @@ static bool singleResultAffineApplyOpWithoutUses(Operation &op) {
   return app && app.use_empty();
 }
 
-void VectorizerTestPass::testNormalizeMaps() {
-  using matcher::Op;
-
-  auto f = getFunction();
-
-  // Save matched AffineApplyOp that all need to be erased in the end.
-  auto pattern = Op(affineApplyOp);
-  SmallVector<NestedMatch, 8> toErase;
-  pattern.match(f, &toErase);
-  {
-    // Compose maps.
-    auto pattern = Op(singleResultAffineApplyOpWithoutUses);
-    SmallVector<NestedMatch, 8> matches;
-    pattern.match(f, &matches);
-    for (auto m : matches) {
-      auto app = cast<AffineApplyOp>(m.getMatchedOperation());
-      OpBuilder b(m.getMatchedOperation());
-      SmallVector<Value, 8> operands(app.getOperands());
-      makeComposedAffineApply(b, app.getLoc(), app.getAffineMap(), operands);
-    }
-  }
-  // We should now be able to erase everything in reverse order in this test.
-  for (auto m : llvm::reverse(toErase)) {
-    m.getMatchedOperation()->erase();
-  }
-}
-
 /// Test for 'vectorizeAffineLoopNest' utility.
 void VectorizerTestPass::testVecAffineLoopNest() {
   std::vector<SmallVector<AffineForOp, 2>> loops;
@@ -302,9 +267,6 @@ void VectorizerTestPass::runOnFunction() {
 
     if (clTestComposeMaps)
       testComposeMaps(outs);
-
-    if (clTestNormalizeMaps)
-      testNormalizeMaps();
   }
 
   if (clTestVecAffineLoopNest)
