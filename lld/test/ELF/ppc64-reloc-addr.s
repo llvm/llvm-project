@@ -25,6 +25,11 @@
 .section .R_PPC64_ADDR16_HA,"ax",@progbits
   lis 4, b@ha
 
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGH>:
+# CHECK-NEXT:    lis 4, -30293
+.section .R_PPC64_ADDR16_HIGH,"ax",@progbits
+  lis 4, a@high
+
 # CHECK-LABEL: <.R_PPC64_ADDR16_HIGHER>:
 # CHECK-NEXT:    li 3, 17767
 .section .R_PPC64_ADDR16_HIGHER,"ax",@progbits

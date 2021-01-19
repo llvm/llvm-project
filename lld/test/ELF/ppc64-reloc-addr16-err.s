@@ -18,3 +18,5 @@ lis 4, a@h  # R_PPC64_ADDR16_HI
 .ifdef HA
 lis 4, a@ha  # R_PPC64_ADDR16_HA
 .endif
+
+lis 4, a@high  # R_PPC64_ADDR16_HIGH
