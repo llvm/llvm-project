@@ -12,11 +12,11 @@
 #define HEADER
 
 // CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [5 x i64] zeroinitializer
-// 96 = 0x60 = OMP_MAP_TARGET_PARAM | OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [5 x i64] [i64 96, i64 96, i64 96, i64 96, i64 96]
-// 32 = 0x20 = OMP_MAP_TARGET_PARAM
+// 64 = 0x40 = OMP_MAP_RETURN_PARAM
+// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [5 x i64] [i64 64, i64 64, i64 64, i64 64, i64 64]
+// 0 = OMP_MAP_NONE
 // 281474976710720 = 0x1000000000040 = OMP_MAP_MEMBER_OF | OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES2:@.+]] = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710720, i64 281474976710720, i64 281474976710720, i64 281474976710720]
+// CHECK-DAG: [[MAPTYPES2:@.+]] = private unnamed_addr constant [5 x i64] [i64 0, i64 281474976710720, i64 281474976710720, i64 281474976710720, i64 281474976710720]
 struct S {
   int a = 0;
   int *ptr = &a;
