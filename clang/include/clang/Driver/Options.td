@@ -685,7 +685,7 @@ def I_ : Flag<["-"], "I-">, Group<I_Group>,
     HelpText<"Restrict all prior -I flags to double-quoted inclusion and "
              "remove current directory from include path">;
 def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
-    Flags<[CC1Option,CC1AsOption]>, MetaVarName<"<dir>">,
+    Flags<[CC1Option,CC1AsOption,FlangOption,FC1Option]>, MetaVarName<"<dir>">,
     HelpText<"Add directory to the end of the list of include search paths">,
     DocBrief<[{Add directory to include search path. For C++ inputs, if
 there are multiple -I options, these directories are searched
