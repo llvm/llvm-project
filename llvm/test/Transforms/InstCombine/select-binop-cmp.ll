@@ -1125,19 +1125,6 @@ define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
-define i32 @select_replace_multiple_ops(i32 %x, i32 %y) {
-; CHECK-LABEL: @select_replace_multiple_ops(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy_call(i32 [[X]], i32 [[X]], i32 [[X]])
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
-;
-  %c = icmp eq i32 %x, 0
-  %call = call i32 @dummy_call(i32 %x, i32 %x, i32 %x)
-  %s = select i1 %c, i32 %call, i32 %y
-  ret i32 %s
-}
-
 define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -1179,9 +1166,113 @@ define <2 x i32> @select_replace_undef(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %s
 }
 
+define i32 @select_replace_call_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_speculatable(i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @call_speculatable(i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_call_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_non_speculatable(i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @call_non_speculatable(i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_sdiv_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_sdiv_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 2
+  %div = sdiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_sdiv_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_sdiv_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, -1
+  %div = sdiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_udiv_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_udiv_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 2
+  %div = udiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_udiv_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_udiv_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 poison, i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %div = udiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+define void @select_replace_phi(i32 %x) {
+; CHECK-LABEL: @select_replace_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_PREV:%.*]] = phi i32 [ -1, [[ENTRY]] ], [ [[I]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[I_PREV]], i32 2
+; CHECK-NEXT:    call void @use_i32(i32 [[S]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %i.prev = phi i32 [ -1, %entry], [ %i, %loop ]
+  %i.next = add i32 %i, 1
+  %c = icmp eq i32 %i, 0
+  %s = select i1 %c, i32 %i.prev, i32 2
+  call void @use_i32(i32 %s)
+  br label %loop
+}
+
 @g = global i32 0
 declare i32 @llvm.fshr.i32(i32, i32, i32)
-declare i32 @dummy_call(i32, i32, i32)
+declare i32 @call_speculatable(i32, i32) speculatable
+declare i32 @call_non_speculatable(i32, i32)
 declare void @use_i32(i32)
 
 !0 = !{!"branch_weights", i32 2, i32 10}
