@@ -1595,6 +1595,13 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Ignore the SGPRs the default implementation found.
   SavedVGPRs.clearBitsNotInMask(TRI->getAllVGPRRegMask());
 
+  if (TRI->isCFISavedRegsSpillEnabled()) {
+    allocateCFISave(MF, MFI->ReturnAddressSaveIndex,
+                    TRI->getReturnAddressReg(MF));
+    allocateCFISave(MF, MFI->EXECSaveIndex,
+                    ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
+  }
+
   // hasFP only knows about stack objects that already exist. We're now
   // determining the stack slots that will be created, so we have to predict
   // them. Stack objects force FP usage with calls.
@@ -1610,13 +1617,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // so don't allow the default insertion to handle them.
   for (auto SSpill : MFI->getSGPRSpillVGPRs())
     SavedVGPRs.reset(SSpill.VGPR);
-
-  if (TRI->isCFISavedRegsSpillEnabled()) {
-    allocateCFISave(MF, MFI->ReturnAddressSaveIndex,
-                    TRI->getReturnAddressReg(MF));
-    allocateCFISave(MF, MFI->EXECSaveIndex,
-                    ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
-  }
 
   LivePhysRegs LiveRegs;
   LiveRegs.init(*TRI);
