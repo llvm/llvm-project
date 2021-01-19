@@ -389,15 +389,15 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   if (llvm::omp::doSet.test(GetContext().directive)) {
     if (auto *clause{FindClause(llvm::omp::Clause::OMPC_schedule)}) {
       // only one schedule clause is allowed
-      const auto &schedClause{std::get<parser::OmpScheduleClause>(clause->u)};
-      if (ScheduleModifierHasType(schedClause,
+      const auto &schedClause{std::get<parser::OmpClause::Schedule>(clause->u)};
+      if (ScheduleModifierHasType(schedClause.v,
               parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
         if (FindClause(llvm::omp::Clause::OMPC_ordered)) {
           context_.Say(clause->source,
               "The NONMONOTONIC modifier cannot be specified "
               "if an ORDERED clause is specified"_err_en_US);
         }
-        if (ScheduleModifierHasType(schedClause,
+        if (ScheduleModifierHasType(schedClause.v,
                 parser::OmpScheduleModifierType::ModType::Monotonic)) {
           context_.Say(clause->source,
               "The MONOTONIC and NONMONOTONIC modifiers "
