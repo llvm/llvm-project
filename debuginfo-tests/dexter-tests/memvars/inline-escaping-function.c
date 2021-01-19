@@ -35,7 +35,7 @@ int fun(int param) {
   if (param)
     param = inlineme(&param);
   fluff();           // DexLabel('s0')
-  return 0;
+  return param;
 }
 
 int main() {
