@@ -1,4 +1,4 @@
-; RUN: opt -enable-new-pm=0 -mtriple=x86_64-- -std-link-opts -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck --check-prefixes=CHECK,%llvmcheckext %s
+; RUN: opt -enable-new-pm=0 -mtriple=x86_64-- -std-link-opts -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK %s
 
 ; REQUIRES: asserts
 
