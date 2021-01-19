@@ -125,12 +125,13 @@ void CodeMetrics::analyzeBasicBlock(
     // Special handling for calls.
     if (const auto *Call = dyn_cast<CallBase>(&I)) {
       if (const Function *F = Call->getCalledFunction()) {
+        bool IsLoweredToCall = TTI.isLoweredToCall(F);
         // If a function is both internal and has a single use, then it is
         // extremely likely to get inlined in the future (it was probably
         // exposed by an interleaved devirtualization pass).
         // When preparing for LTO, liberally consider calls as inline
         // candidates.
-        if (!Call->isNoInline() &&
+        if (!Call->isNoInline() && IsLoweredToCall &&
             ((F->hasInternalLinkage() && F->hasOneUse()) || PrepareForLTO)) {
           ++NumInlineCandidates;
         }
@@ -142,7 +143,7 @@ void CodeMetrics::analyzeBasicBlock(
         if (F == BB->getParent())
           isRecursive = true;
 
-        if (TTI.isLoweredToCall(F))
+        if (IsLoweredToCall)
           ++NumCalls;
       } else {
         // We don't want inline asm to count as a call - that would prevent loop
