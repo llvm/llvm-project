@@ -801,6 +801,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
+    Expanded.BraceWrapping.BeforeLambdaBody = true;
     break;
   case FormatStyle::BS_Whitesmiths:
     Expanded.BraceWrapping.AfterCaseLabel = true;
