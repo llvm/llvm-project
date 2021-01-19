@@ -97,7 +97,6 @@ protected:
 class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
   InlinerPass(bool OnlyMandatory = false) : OnlyMandatory(OnlyMandatory) {}
-  ~InlinerPass();
   InlinerPass(InlinerPass &&Arg) = default;
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -106,7 +105,6 @@ public:
 private:
   InlineAdvisor &getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                             FunctionAnalysisManager &FAM, Module &M);
-  std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
   std::unique_ptr<DefaultInlineAdvisor> OwnedDefaultAdvisor;
   const bool OnlyMandatory;
 };
