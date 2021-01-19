@@ -5187,6 +5187,32 @@ static __isl_give isl_ast_graft_list *build_ast_from_leaf(
 	return list;
 }
 
+/* Check that the band partial schedule "partial" does not filter out
+ * any statement instances, as specified by the range of "executed".
+ */
+static isl_stat check_band_schedule_total_on_instances(
+	__isl_keep isl_multi_union_pw_aff *partial,
+	__isl_keep isl_union_map *executed)
+{
+	isl_bool subset;
+	isl_union_set *domain, *instances;
+
+	instances = isl_union_map_range(isl_union_map_copy(executed));
+	partial = isl_multi_union_pw_aff_copy(partial);
+	domain = isl_multi_union_pw_aff_domain(partial);
+	subset = isl_union_set_is_subset(instances, domain);
+	isl_union_set_free(domain);
+	isl_union_set_free(instances);
+
+	if (subset < 0)
+		return isl_stat_error;
+	if (!subset)
+		isl_die(isl_union_map_get_ctx(executed), isl_error_invalid,
+			"band node is not allowed to drop statement instances",
+			return isl_stat_error);
+	return isl_stat_ok;
+}
+
 /* Generate an AST that visits the elements in the domain of "executed"
  * in the relative order specified by the band node "node" and its descendants.
  *
@@ -5223,6 +5249,9 @@ static __isl_give isl_ast_graft_list *build_ast_from_band(
 	extra = isl_multi_union_pw_aff_align_params(extra,
 				isl_ast_build_get_space(build, 1));
 	space = isl_multi_union_pw_aff_get_space(extra);
+
+	if (check_band_schedule_total_on_instances(extra, executed) < 0)
+		executed = isl_union_map_free(executed);
 
 	extra_umap = isl_union_map_from_multi_union_pw_aff(extra);
 	extra_umap = isl_union_map_reverse(extra_umap);

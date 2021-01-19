@@ -1434,14 +1434,29 @@ static __isl_keep isl_set *FN(PW,peek_domain_at)(__isl_keep PW *pw, int pos)
 	return pw->p[pos].set;
 }
 
+/* Return a copy of the cell at position "pos" in "pw".
+ */
+__isl_give isl_set *FN(PW,get_domain_at)(__isl_keep PW *pw, int pos)
+{
+	return isl_set_copy(FN(PW,peek_domain_at)(pw, pos));
+}
+
+/* Return the base expression associated to
+ * the cell at position "pos" in "pw".
+ */
+static __isl_keep EL *FN(PW,peek_base_at)(__isl_keep PW *pw, int pos)
+{
+	if (FN(PW,check_pos)(pw, pos) < 0)
+		return NULL;
+	return pw->p[pos].FIELD;
+}
+
 /* Return a copy of the base expression associated to
  * the cell at position "pos" in "pw".
  */
 __isl_give EL *FN(PW,get_base_at)(__isl_keep PW *pw, int pos)
 {
-	if (FN(PW,check_pos)(pw, pos) < 0)
-		return NULL;
-	return FN(EL,copy)(pw->p[pos].FIELD);
+	return FN(EL,copy)(FN(PW,peek_base_at)(pw, pos));
 }
 
 /* Return the base expression associated to
