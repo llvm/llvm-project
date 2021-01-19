@@ -10,6 +10,7 @@ set(PY_SRC_FILES
   mlir/_dlloader.py
   mlir/ir.py
   mlir/dialects/__init__.py
+  mlir/dialects/_linalg.py
   mlir/ir.py
   mlir/passmanager.py
   mlir/transforms/__init__.py
