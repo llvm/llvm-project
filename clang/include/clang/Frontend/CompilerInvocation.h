@@ -264,9 +264,9 @@ private:
   /// Parse command line options that map to CodeGenOptions.
   static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
                                InputKind IK, DiagnosticsEngine &Diags,
-                               const LangOptions &LangOpts,
                                const llvm::Triple &T,
-                               const std::string &OutputFile);
+                               const std::string &OutputFile,
+                               const LangOptions &LangOptsRef);
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
