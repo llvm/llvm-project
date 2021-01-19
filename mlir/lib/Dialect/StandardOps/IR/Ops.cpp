@@ -1484,6 +1484,15 @@ void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 }
 
 // ---------------------------------------------------------------------------
+// DivFOp
+// ---------------------------------------------------------------------------
+
+OpFoldResult DivFOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldBinaryOp<FloatAttr>(
+      operands, [](APFloat a, APFloat b) { return a / b; });
+}
+
+// ---------------------------------------------------------------------------
 // DmaStartOp
 // ---------------------------------------------------------------------------
 

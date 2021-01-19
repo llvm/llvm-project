@@ -1589,6 +1589,7 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
 
 def DivFOp : FloatArithmeticOp<"divf"> {
   let summary = "floating point division operation";
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
