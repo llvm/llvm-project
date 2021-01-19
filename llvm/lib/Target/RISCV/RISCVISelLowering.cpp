@@ -447,6 +447,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // We can use any register for comparisons
   setHasMultipleConditionRegisters();
 
+  setTargetDAGCombine(ISD::SETCC);
   if (Subtarget.hasStdExtZbp()) {
     setTargetDAGCombine(ISD::OR);
   }
@@ -1961,7 +1962,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue RHS = N->getOperand(1);
     auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
-    if ((CCVal == ISD::SETNE || CCVal == ISD::SETEQ) && isNullConstant(RHS) &&
+    if (ISD::isIntEqualitySetCC(CCVal) && isNullConstant(RHS) &&
         LHS.getOpcode() == ISD::XOR && isOneConstant(LHS.getOperand(1)) &&
         DAG.MaskedValueIsZero(LHS.getOperand(0), Mask)) {
       SDLoc DL(N);
@@ -1970,6 +1971,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS.getOperand(0), RHS, TargetCC, N->getOperand(3),
                           N->getOperand(4)});
+    }
+    break;
+  }
+  case ISD::SETCC: {
+    // (setcc X, 1, setne) -> (setcc X, 0, seteq) if we can prove X is 0/1.
+    // Comparing with 0 may allow us to fold into bnez/beqz.
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    auto CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+    APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
+    if (isOneConstant(RHS) && ISD::isIntEqualitySetCC(CC) &&
+        DAG.MaskedValueIsZero(LHS, Mask)) {
+      SDLoc DL(N);
+      SDValue Zero = DAG.getConstant(0, DL, LHS.getValueType());
+      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
+      return DAG.getSetCC(DL, N->getValueType(0), LHS, Zero, CC);
     }
     break;
   }
