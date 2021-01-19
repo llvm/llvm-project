@@ -1756,6 +1756,14 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                             MMO.getFlags(), Fast);
 }
 
+bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
+                                            const DataLayout &DL, LLT Ty,
+                                            const MachineMemOperand &MMO,
+                                            bool *Fast) const {
+  return allowsMemoryAccess(Context, DL, getMVTForLLT(Ty), MMO.getAddrSpace(),
+                            MMO.getAlign(), MMO.getFlags(), Fast);
+}
+
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
   return BranchProbability(MinPercentageForPredictableBranch, 100);
 }
