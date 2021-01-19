@@ -14,6 +14,8 @@
 #ifndef LLVM_FLANG_FRONTENDTOOL_UTILS_H
 #define LLVM_FLANG_FRONTENDTOOL_UTILS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace Fortran::frontend {
 
 class CompilerInstance;
@@ -30,6 +32,14 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci);
 ///
 /// \return - True on success.
 bool ExecuteCompilerInvocation(CompilerInstance *flang);
+
+/// \param suffix The file extension
+/// \return True if the file extension should be processed as fixed form
+bool isFixedFormSuffix(llvm::StringRef suffix);
+
+/// \param suffix The file extension
+/// \return True if the file extension should be processed as free form
+bool isFreeFormSuffix(llvm::StringRef suffix);
 
 } // end namespace Fortran::frontend
 
