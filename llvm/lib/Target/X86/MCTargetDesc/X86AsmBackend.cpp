@@ -1425,6 +1425,7 @@ public:
     unsigned StackAdjust = 0;
     unsigned StackSize = 0;
     unsigned NumDefCFAOffsets = 0;
+    int MinAbsOffset = std::numeric_limits<int>::max();
 
     for (unsigned i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
@@ -1453,6 +1454,7 @@ public:
         memset(SavedRegs, 0, sizeof(SavedRegs));
         StackAdjust = 0;
         SavedRegIdx = 0;
+        MinAbsOffset = std::numeric_limits<int>::max();
         InstrOffset += MoveInstrSize;
         break;
       }
@@ -1496,6 +1498,7 @@ public:
         unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
+        MinAbsOffset = std::min(MinAbsOffset, abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);
         break;
       }
@@ -1507,6 +1510,11 @@ public:
     if (HasFP) {
       if ((StackAdjust & 0xFF) != StackAdjust)
         // Offset was too big for a compact unwind encoding.
+        return CU::UNWIND_MODE_DWARF;
+
+      // We don't attempt to track a real StackAdjust, so if the saved registers
+      // aren't adjacent to rbp we can't cope.
+      if (SavedRegIdx != 0 && MinAbsOffset != 3 * (int)OffsetSize)
         return CU::UNWIND_MODE_DWARF;
 
       // Get the encoding of the saved registers when we have a frame pointer.
