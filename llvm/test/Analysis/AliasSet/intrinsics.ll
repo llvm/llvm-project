@@ -61,5 +61,25 @@ entry:
   ret void
 }
 
+; CHECK: Alias sets for function 'test5':
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, LocationSize::precise(1))
+; CHECK-NOT: 1 Unknown instruction
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %b, LocationSize::precise(1))
+define void @test5() {
+entry:
+  %a = alloca i8, align 1
+  %b = alloca i8, align 1
+  store i8 1, i8* %a, align 1
+  call void @llvm.experimental.noalias.scope.decl(metadata !0)
+  store i8 1, i8* %b, align 1
+  ret void
+}
+
 declare void @llvm.assume(i1)
 declare void @llvm.experimental.guard(i1, ...)
+declare void @llvm.experimental.noalias.scope.decl(metadata)
+
+!0 = !{ !1 }
+!1 = distinct !{ !1, !2, !"test5: var" }
+!2 = distinct !{ !2, !"test5" }
