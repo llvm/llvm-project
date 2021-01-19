@@ -66,6 +66,9 @@ public:
 
   bool IsReconfigurable();
 
+  const lldb_private::RegisterInfo *
+  GetRegisterInfo(llvm::StringRef reg_name) const;
+
 protected:
   // Classes that inherit from DynamicRegisterInfo can see and modify these
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
@@ -76,9 +79,6 @@ protected:
   typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;
   typedef std::vector<uint8_t> dwarf_opcode;
   typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
-
-  const lldb_private::RegisterInfo *
-  GetRegisterInfo(llvm::StringRef reg_name) const;
 
   void MoveFrom(DynamicRegisterInfo &&info);
 
