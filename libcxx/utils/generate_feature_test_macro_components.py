@@ -111,14 +111,14 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_atomic_wait",
     "values": { "c++20": 201907 },
     "headers": ["atomic"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)",
   }, {
     "name": "__cpp_lib_barrier",
     "values": { "c++20": 201907 },
     "headers": ["barrier"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier)",
   }, {
     "name": "__cpp_lib_bind_front",
     "values": { "c++20": 201907 },
@@ -270,6 +270,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_filesystem",
     "values": { "c++17": 201703 },
     "headers": ["filesystem"],
+    "depends": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)",
+    "internal_depends": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)"
   }, {
     "name": "__cpp_lib_gcd_lcm",
     "values": { "c++17": 201606 },
@@ -383,8 +385,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_latch",
     "values": { "c++20": 201907 },
     "headers": ["latch"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch)",
   }, {
     "name": "__cpp_lib_launder",
     "values": { "c++17": 201606 },
@@ -496,14 +498,14 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_semaphore",
     "values": { "c++20": 201907 },
     "headers": ["semaphore"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore)",
   }, {
     "name": "__cpp_lib_shared_mutex",
     "values": { "c++17": 201505 },
     "headers": ["shared_mutex"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_mutex)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_mutex)",
   }, {
     "name": "__cpp_lib_shared_ptr_arrays",
     "values": { "c++17": 201611 },
@@ -516,8 +518,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_shared_timed_mutex",
     "values": { "c++14": 201402 },
     "headers": ["shared_mutex"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_timed_mutex)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_timed_mutex)",
   }, {
     "name": "__cpp_lib_shift",
     "values": { "c++20": 201806 },
