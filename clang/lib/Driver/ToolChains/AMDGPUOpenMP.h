@@ -1,4 +1,4 @@
-//===--- HIP.h - HIP ToolChain Implementations ------------------*- C++ -*-===//
+//===- AMDGPUOpenMP.h - AMDGPUOpenMP ToolChain Implementation -*- C++ -*---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_HIP_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_HIP_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPUOPENMP_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPUOPENMP_H
 
-#include "clang/Driver/ToolChain.h"
-#include "clang/Driver/Tool.h"
 #include "AMDGPU.h"
+#include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 
 namespace clang {
 namespace driver {
@@ -19,16 +19,12 @@ namespace driver {
 namespace tools {
 
 namespace AMDGCN {
-  // Construct command for creating HIP fatbin.
-  void constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
-                  StringRef OutputFileName, const InputInfoList &Inputs,
-                  const llvm::opt::ArgList &TCArgs, const Tool& T);
-
 // Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
 // device library, then compiles it to ISA in a shared object.
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("AMDGCN::Linker", "amdgcn-link", TC) {}
+  OpenMPLinker(const ToolChain &TC)
+      : Tool("AMDGCN::OpenMPLinker", "amdgcn-link", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -38,17 +34,26 @@ public:
                     const char *LinkingOutput) const override;
 
 private:
+  /// \return llvm-link output file name.
+  const char *constructLLVMLinkCommand(Compilation &C, const JobAction &JA,
+                                       const InputInfoList &Inputs,
+                                       const llvm::opt::ArgList &Args,
+                                       llvm::StringRef SubArchName,
+                                       llvm::StringRef OutputFilePrefix) const;
+
+  /// \return llc output file name.
+  const char *constructLlcCommand(Compilation &C, const JobAction &JA,
+                                  const InputInfoList &Inputs,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::StringRef SubArchName,
+                                  llvm::StringRef OutputFilePrefix,
+                                  const char *InputFileName,
+                                  bool OutputIsAsm = false) const;
 
   void constructLldCommand(Compilation &C, const JobAction &JA,
                            const InputInfoList &Inputs, const InputInfo &Output,
-                           const llvm::opt::ArgList &Args) const;
-
-  // Construct command for creating Object from HIP fatbin.
-  void constructGenerateObjFileFromHIPFatBinary(Compilation &C,
-                                                const InputInfo &Output,
-                                                const InputInfoList &Inputs,
-                                                const llvm::opt::ArgList &Args,
-                                                const JobAction &JA) const;
+                           const llvm::opt::ArgList &Args,
+                           const char *InputFileName) const;
 };
 
 } // end namespace AMDGCN
@@ -56,10 +61,12 @@ private:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY HIPToolChain final : public ROCMToolChain {
+class LLVM_LIBRARY_VISIBILITY AMDGPUOpenMPToolChain final
+    : public ROCMToolChain {
 public:
-  HIPToolChain(const Driver &D, const llvm::Triple &Triple,
-                const ToolChain &HostTC, const llvm::opt::ArgList &Args);
+  AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple &Triple,
+                        const ToolChain &HostTC,
+                        const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();
@@ -68,29 +75,23 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void AddClangCXXStdlibIncludeArgs(
-      const llvm::opt::ArgList &Args,
-      llvm::opt::ArgStringList &CC1Args) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
-  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CC1Args) const override;
 
   SanitizerMask getSupportedSanitizers() const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
-
-  unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   const ToolChain &HostTC;
 
@@ -102,4 +103,4 @@ protected:
 } // end namespace driver
 } // end namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_HIP_H
+#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPUOPENMP_H
