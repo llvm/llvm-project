@@ -9,4 +9,4 @@
 // CHECK-NEXT: note: -verify prefixes must start with a letter and contain only alphanumeric characters, hyphens, and underscores
 // CHECK-NEXT: error: invalid value 'bogus' in '-std=bogus'
 // CHECK-NEXT: note: use {{.*}} for {{.*}} standard
-// CHECK:      warning: optimization level '-O999' is not supported
+// CHECK: warning: optimization level '-O999' is not supported
