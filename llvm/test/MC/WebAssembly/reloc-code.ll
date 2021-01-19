@@ -43,28 +43,18 @@ entry:
 ; CHECK-NEXT:       Index: 0x1
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WASM_TABLE_NUMBER_LEB (20)
-; CHECK-NEXT:       Offset: 0x1F
-; CHECK-NEXT:       Symbol: __indirect_function_table
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
-; CHECK-NEXT:       Offset: 0x28
+; CHECK-NEXT:       Offset: 0x24
 ; CHECK-NEXT:       Index: 0x0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WASM_TABLE_NUMBER_LEB (20)
-; CHECK-NEXT:       Offset: 0x2D
-; CHECK-NEXT:       Symbol: __indirect_function_table
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
-; CHECK-NEXT:       Offset: 0x35
+; CHECK-NEXT:       Offset: 0x2D
 ; CHECK-NEXT:       Symbol: c
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
-; CHECK-NEXT:       Offset: 0x3C
+; CHECK-NEXT:       Offset: 0x34
 ; CHECK-NEXT:       Symbol: d
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }

@@ -869,11 +869,18 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (IsDirect) {
     MIB.addGlobalAddress(Func);
   } else {
-    // Placehoder for the type index.
+    // Add placeholders for the type index and immediate flags
     MIB.addImm(0);
-    // The table into which this call_indirect indexes.
-    MIB.addSym(WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getMMI().getContext(), "__indirect_function_table"));
+    MIB.addImm(0);
+
+    // Ensure that the object file has a __indirect_function_table import, as we
+    // call_indirect against it.
+    MCSymbolWasm *Sym = WebAssembly::getOrCreateFunctionTableSymbol(
+        MF->getMMI().getContext(), "__indirect_function_table");
+    // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
+    // it as NO_STRIP so as to ensure that the indirect function table makes it
+    // to linked output.
+    Sym->setNoStrip();
   }
 
   for (unsigned ArgReg : Args)
