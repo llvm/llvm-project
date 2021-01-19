@@ -541,24 +541,6 @@ func @cmpf_canonical_type_mismatch(%a : f32, %b : f64) { // expected-note {{prio
 
 // -----
 
-func @tensor_from_elements_wrong_result_type() {
-  // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
-  %c0 = constant 0 : i32
-  %0 = tensor_from_elements %c0 : tensor<*xi32>
-  return
-}
-
-// -----
-
-func @tensor_from_elements_wrong_elements_count() {
-  // expected-error@+2 {{1 operands present, but expected 2}}
-  %c0 = constant 0 : index
-  %0 = tensor_from_elements %c0 : tensor<2xindex>
-  return
-}
-
-// -----
-
 func @index_cast_index_to_index(%arg0: index) {
   // expected-error@+1 {{are cast incompatible}}
   %0 = index_cast %arg0: index to index
