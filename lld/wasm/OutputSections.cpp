@@ -138,7 +138,7 @@ void DataSection::finalizeContents() {
 #ifndef NDEBUG
   unsigned activeCount = std::count_if(
       segments.begin(), segments.end(), [](OutputSegment *segment) {
-        return (segment->initFlags & WASM_SEGMENT_IS_PASSIVE) == 0;
+        return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
       });
 #endif
 
@@ -154,9 +154,9 @@ void DataSection::finalizeContents() {
       continue;
     raw_string_ostream os(segment->header);
     writeUleb128(os, segment->initFlags, "init flags");
-    if (segment->initFlags & WASM_SEGMENT_HAS_MEMINDEX)
+    if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
-    if ((segment->initFlags & WASM_SEGMENT_IS_PASSIVE) == 0) {
+    if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       WasmInitExpr initExpr;
       if (config->isPic) {
         initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;

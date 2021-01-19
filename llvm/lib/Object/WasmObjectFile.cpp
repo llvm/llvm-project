@@ -1366,9 +1366,11 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   while (Count--) {
     WasmSegment Segment;
     Segment.Data.InitFlags = readVaruint32(Ctx);
-    Segment.Data.MemoryIndex = (Segment.Data.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
-                               ? readVaruint32(Ctx) : 0;
-    if ((Segment.Data.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
+    Segment.Data.MemoryIndex =
+        (Segment.Data.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX)
+            ? readVaruint32(Ctx)
+            : 0;
+    if ((Segment.Data.InitFlags & wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
         return Err;
     } else {
