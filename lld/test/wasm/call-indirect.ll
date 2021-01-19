@@ -122,7 +122,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            2802808880800011808080800080808080001A2802848880800011818080800080808080001A0B
+; CHECK-NEXT:         Body:            41002802808880800011808080800080808080001A41002802848880800011818080800080808080001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
