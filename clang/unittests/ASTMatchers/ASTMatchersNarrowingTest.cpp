@@ -491,6 +491,17 @@ void F() {
       Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      mapAnyOf(ifStmt, forStmt).with(hasCondition(falseExpr)))));
 
+  EXPECT_TRUE(
+      matches(Code, cxxBoolLiteral(equals(true),
+                                   hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
+  EXPECT_TRUE(
+      matches(Code, cxxBoolLiteral(equals(false),
+                                   hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
+  EXPECT_TRUE(
+      notMatches(Code, floatLiteral(hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
   Code = R"cpp(
 void func(bool b) {}
 struct S {

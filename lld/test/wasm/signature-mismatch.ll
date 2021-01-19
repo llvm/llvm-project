@@ -82,7 +82,7 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; RELOC-NEXT:       - Index:           3
 ; RELOC-NEXT:         Kind:            TABLE
 ; RELOC-NEXT:         Name:            __indirect_function_table
-; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
 ; RELOC-NEXT:         Table:           0
 ; RELOC-NEXT:       - Index:           4
 ; RELOC-NEXT:         Kind:            FUNCTION

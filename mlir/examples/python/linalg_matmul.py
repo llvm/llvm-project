@@ -15,59 +15,69 @@ from mlir.dialects import std
 
 # TODO: This should be in the core API.
 def FuncOp(name: str, func_type: Type) -> Tuple[Operation, Block]:
-    """Creates a |func| op.
+  """Creates a |func| op.
     TODO: This should really be in the MLIR API.
     Returns:
       (operation, entry_block)
     """
-    attrs = {
-        "type": TypeAttr.get(func_type),
-        "sym_name": StringAttr.get(name),
-    }
-    op = Operation.create("func", regions=1, attributes=attrs)
-    body_region = op.regions[0]
-    entry_block = body_region.blocks.append(*func_type.inputs)
-    return op, entry_block
+  attrs = {
+      "type": TypeAttr.get(func_type),
+      "sym_name": StringAttr.get(name),
+  }
+  op = Operation.create("func", regions=1, attributes=attrs)
+  body_region = op.regions[0]
+  entry_block = body_region.blocks.append(*func_type.inputs)
+  return op, entry_block
 
 
-# TODO: Generate customs builder vs patching one in.
-def PatchMatmulOpInit(self, lhs, rhs, result, loc=None, ip=None):
-    super(linalg.MatmulOp, self).__init__(
-        self._ods_build_default(operands=[[lhs, rhs], [result]],
-                                results=[],
-                                loc=loc,
-                                ip=ip))
+def build_matmul_buffers_func(func_name, m, k, n, dtype):
+  lhs_type = MemRefType.get(dtype, [m, k])
+  rhs_type = MemRefType.get(dtype, [k, n])
+  result_type = MemRefType.get(dtype, [m, n])
+  # TODO: There should be a one-liner for this.
+  func_type = FunctionType.get([lhs_type, rhs_type, result_type], [])
+  _, entry = FuncOp(func_name, func_type)
+  lhs, rhs, result = entry.arguments
+  with InsertionPoint(entry):
+    op = linalg.MatmulOp([lhs, rhs], [result])
     # TODO: Implement support for SingleBlockImplicitTerminator
-    block = self.regions[0].blocks.append()
+    block = op.regions[0].blocks.append()
     with InsertionPoint(block):
         linalg.YieldOp(values=[])
 
-linalg.MatmulOp.__init__ = PatchMatmulOpInit
+    std.ReturnOp([])
 
 
-def build_matmul_func(func_name, m, k, n, dtype):
-    lhs_type = MemRefType.get(dtype, [m, k])
-    rhs_type = MemRefType.get(dtype, [k, n])
-    result_type = MemRefType.get(dtype, [m, n])
-    # TODO: There should be a one-liner for this.
-    func_type = FunctionType.get([lhs_type, rhs_type, result_type], [])
-    _, entry = FuncOp(func_name, func_type)
-    lhs, rhs, result = entry.arguments
-    with InsertionPoint(entry):
-        linalg.MatmulOp(lhs, rhs, result)
-        std.ReturnOp([])
+def build_matmul_tensors_func(func_name, m, k, n, dtype):
+  # TODO: MemRefType and TensorTypes should not have inverted dtype/shapes
+  # from each other.
+  lhs_type = RankedTensorType.get([m, k], dtype)
+  rhs_type = RankedTensorType.get([k, n], dtype)
+  result_type = RankedTensorType.get([m, n], dtype)
+  # TODO: There should be a one-liner for this.
+  func_type = FunctionType.get([lhs_type, rhs_type], [result_type])
+  _, entry = FuncOp(func_name, func_type)
+  lhs, rhs = entry.arguments
+  with InsertionPoint(entry):
+    op = linalg.MatmulOp([lhs, rhs], results=[result_type])
+    # TODO: Implement support for SingleBlockImplicitTerminator
+    block = op.regions[0].blocks.append()
+    with InsertionPoint(block):
+        linalg.YieldOp(values=[])
+    std.ReturnOp([op.result])
 
 
 def run():
-    with Context() as c, Location.unknown():
-        module = Module.create()
-        # TODO: This at_block_terminator vs default construct distinction feels
-        # wrong and is error-prone.
-        with InsertionPoint.at_block_terminator(module.body):
-            build_matmul_func('main', 18, 32, 96, F32Type.get())
+  with Context() as c, Location.unknown():
+    module = Module.create()
+    # TODO: This at_block_terminator vs default construct distinction feels
+    # wrong and is error-prone.
+    with InsertionPoint.at_block_terminator(module.body):
+      build_matmul_buffers_func('main_buffers', 18, 32, 96, F32Type.get())
+      build_matmul_tensors_func('main_tensors', 18, 32, 96, F32Type.get())
 
-        print(module)
-        print(module.operation.get_asm(print_generic_op_form=True))
+    print(module)
 
 
-if __name__ == '__main__': run()
+if __name__ == '__main__':
+  run()
