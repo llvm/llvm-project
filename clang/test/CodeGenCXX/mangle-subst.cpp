@@ -96,14 +96,3 @@ typename X<T>::template Y<T>::type f(typename X<T>::template Y<T>::type2) { retu
 // CHECK: @_ZN12ManglePrefix1fIiEENS_1XIT_E1YIS2_E4typeENS5_5type2E
 template int f<int>(int);
 }
-
-namespace InstantiationDependentDecltype {
-  struct a { a(char); };
-  struct b { a c(); };
-  // FIXME: This mangling is incorrect; the second decltype type should be a
-  // substitution for the first.
-  // CHECK: @_ZN30InstantiationDependentDecltype1fINS_1bEEEvDTcvNS_1aEcldtcvT__E1cEEDTcvS2_cldtcvS3__E1cEES3_S3_S2_S2_
-  // FIXME: @_ZN30InstantiationDependentDecltype1fINS_1bEEEvDTcvNS_1aEcldtcvT__E1cEES4_S3_S3_S2_S2_
-  template<typename d> void f(decltype(a(d().c())), decltype(a(d().c())), d, d, a, a);
-  void g(a a, b b) { f(a, a, b, b, a, a); }
-}
