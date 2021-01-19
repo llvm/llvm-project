@@ -1336,6 +1336,12 @@ inline bool isUnsignedIntSetCC(CondCode Code) {
   return Code == SETUGT || Code == SETUGE || Code == SETULT || Code == SETULE;
 }
 
+/// Return true if this is a setcc instruction that performs an equality
+/// comparison when used with integer operands.
+inline bool isIntEqualitySetCC(CondCode Code) {
+  return Code == SETEQ || Code == SETNE;
+}
+
 /// Return true if the specified condition returns true if the two operands to
 /// the condition are equal. Note that if one of the two operands is a NaN,
 /// this value is meaningless.
