@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/Shared/Serialization.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
