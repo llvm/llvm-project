@@ -299,13 +299,30 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status("SVE disabled or not supported");
     else {
-      if (GetRegisterInfo().IsSVERegVG(reg))
-        return Status("SVE state change operation not supported");
-
       // Target has SVE enabled, we will read and cache SVE ptrace data
       error = ReadAllSVE();
       if (error.Fail())
         return error;
+
+      if (GetRegisterInfo().IsSVERegVG(reg)) {
+        uint64_t vg_value = reg_value.GetAsUInt64();
+
+        if (sve_vl_valid(vg_value * 8)) {
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
+            return error;
+
+          SetSVERegVG(vg_value);
+
+          error = WriteSVEHeader();
+          if (error.Success())
+            ConfigureRegisterContext();
+
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
+            return error;
+        }
+
+        return Status("SVE vector length update failed.");
+      }
 
       // If target supports SVE but currently in FPSIMD mode.
       if (m_sve_state == SVEState::FPSIMD) {
