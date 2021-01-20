@@ -118,14 +118,6 @@ public:
     /// checks will be disabled.
     TidyProviderRef ClangTidyProvider;
 
-    /// If true, force -frecovery-ast flag.
-    /// If false, respect the value in clang.
-    bool BuildRecoveryAST = false;
-
-    /// If true, force -frecovery-ast-type flag.
-    /// If false, respect the value in clang.
-    bool PreserveRecoveryASTType = false;
-
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -387,11 +379,6 @@ private:
   // If this is true, suggest include insertion fixes for diagnostic errors that
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
-
-  // If true, preserve expressions in AST for broken code.
-  bool BuildRecoveryAST = true;
-  // If true, preserve the type for recovery AST.
-  bool PreserveRecoveryASTType = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
