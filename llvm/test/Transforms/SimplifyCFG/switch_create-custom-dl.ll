@@ -208,7 +208,7 @@ define i1 @test6({ i32, i32 }* %I) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_1_I:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[I:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP_2_I:%.*]] = load i32, i32* [[TMP_1_I]]
+; CHECK-NEXT:    [[TMP_2_I:%.*]] = load i32, i32* [[TMP_1_I]], align 4
 ; CHECK-NEXT:    [[TMP_2_I_OFF:%.*]] = add i32 [[TMP_2_I]], -14
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[TMP_2_I_OFF]], 6
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i1 true, i1 false
@@ -253,7 +253,7 @@ define void @test7(i8 zeroext %c, i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i8 97, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo1() #2
+; CHECK-NEXT:    tail call void @foo1() [[ATTR2:#.*]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -289,7 +289,7 @@ define i32 @test8(i8 zeroext %c, i32 %x, i1 %C) nounwind ssp noredzone {
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 42, [[SWITCH_EARLY_TEST]] ], [ 42, [[N]] ], [ 42, [[SWITCH_EARLY_TEST]] ]
-; CHECK-NEXT:    tail call void @foo1() #2
+; CHECK-NEXT:    tail call void @foo1() [[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
@@ -465,8 +465,8 @@ return:                                           ; preds = %if.end, %if.then
 define void @test12() nounwind {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_OLD:%.*]] = icmp eq i32 undef, undef
-; CHECK-NEXT:    br i1 [[A_OLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
+; CHECK-NEXT:    [[DOTOLD:%.*]] = icmp eq i32 undef, undef
+; CHECK-NEXT:    br i1 [[DOTOLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
 ; CHECK:       bb55.us.us:
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i32 undef, undef
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 undef, undef
@@ -506,7 +506,7 @@ define void @test13(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() #3
+; CHECK-NEXT:    call void @foo1() [[ATTR3:#.*]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -548,7 +548,7 @@ define void @test14(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() #3
+; CHECK-NEXT:    call void @foo1() [[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
