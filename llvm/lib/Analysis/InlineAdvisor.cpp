@@ -48,8 +48,6 @@ static cl::opt<int>
                         cl::desc("Scale to limit the cost of inline deferral"),
                         cl::init(2), cl::Hidden);
 
-extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
-
 void DefaultInlineAdvice::recordUnsuccessfulInliningImpl(
     const InlineResult &Result) {
   using namespace ore;
@@ -132,20 +130,8 @@ void InlineAdvisor::freeDeletedFunctions() {
   DeletedFunctions.clear();
 }
 
-void InlineAdvice::recordInlineStatsIfNeeded() {
-  if (Advisor->ImportedFunctionsStats)
-    Advisor->ImportedFunctionsStats->recordInline(*Caller, *Callee);
-}
-
-void InlineAdvice::recordInlining() {
-  markRecorded();
-  recordInlineStatsIfNeeded();
-  recordInliningImpl();
-}
-
 void InlineAdvice::recordInliningWithCalleeDeleted() {
   markRecorded();
-  recordInlineStatsIfNeeded();
   Advisor->markFunctionAsDeleted(Callee);
   recordInliningWithCalleeDeletedImpl();
 }
@@ -157,7 +143,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   switch (Mode) {
   case InliningAdvisorMode::Default:
-    Advisor.reset(new DefaultInlineAdvisor(M, FAM, Params));
+    Advisor.reset(new DefaultInlineAdvisor(FAM, Params));
     break;
   case InliningAdvisorMode::Development:
 #ifdef LLVM_HAVE_TF_API
@@ -440,25 +426,6 @@ void llvm::emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
     addLocationToRemarks(Remark, DLoc);
     return Remark;
   });
-}
-
-InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM)
-    : M(M), FAM(FAM) {
-  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
-    ImportedFunctionsStats =
-        std::make_unique<ImportedFunctionsInliningStatistics>();
-    ImportedFunctionsStats->setModuleInfo(M);
-  }
-}
-
-InlineAdvisor::~InlineAdvisor() {
-  if (ImportedFunctionsStats) {
-    assert(InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No);
-    ImportedFunctionsStats->dump(InlinerFunctionImportStats ==
-                                 InlinerFunctionImportStatsOpts::Verbose);
-  }
-
-  freeDeletedFunctions();
 }
 
 std::unique_ptr<InlineAdvice> InlineAdvisor::getMandatoryAdvice(CallBase &CB,
