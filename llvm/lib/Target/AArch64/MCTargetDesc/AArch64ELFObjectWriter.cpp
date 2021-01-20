@@ -43,7 +43,7 @@ protected:
 } // end anonymous namespace
 
 AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
-    : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_AARCH64,
+    : MCELFObjectTargetWriter(/*Is64Bit*/ !IsILP32, OSABI, ELF::EM_AARCH64,
                               /*HasRelocationAddend*/ true),
       IsILP32(IsILP32) {}
 
