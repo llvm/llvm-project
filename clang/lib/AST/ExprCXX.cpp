@@ -433,8 +433,9 @@ OverloadExpr::OverloadExpr(StmtClass SC, const ASTContext &Context,
   }
 
   if (TemplateArgs) {
+    auto Deps = TemplateArgumentDependence::None;
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc());
+        TemplateKWLoc, *TemplateArgs, getTrailingTemplateArgumentLoc(), Deps);
   } else if (TemplateKWLoc.isValid()) {
     getTrailingASTTemplateKWAndArgsInfo()->initializeFrom(TemplateKWLoc);
   }
@@ -463,8 +464,9 @@ DependentScopeDeclRefExpr::DependentScopeDeclRefExpr(
   DependentScopeDeclRefExprBits.HasTemplateKWAndArgsInfo =
       (Args != nullptr) || TemplateKWLoc.isValid();
   if (Args) {
+    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>());
+        TemplateKWLoc, *Args, getTrailingObjects<TemplateArgumentLoc>(), Deps);
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1374,9 +1376,10 @@ CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
   CXXDependentScopeMemberExprBits.OperatorLoc = OperatorLoc;
 
   if (TemplateArgs) {
+    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs,
-        getTrailingObjects<TemplateArgumentLoc>());
+        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
+        Deps);
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);

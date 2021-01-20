@@ -1179,8 +1179,8 @@ struct TestType {
   static CoroMemberTag test_static_template(const char *volatile &, unsigned) {
     auto TC = co_yield 0;
     using TCT = decltype(TC);
-    static_assert(TCT::template MatchesArgs<const char *volatile &, unsigned>, "");
-    static_assert(!TCT::template MatchesArgs<TestType &, const char *volatile &, unsigned>, "");
+    static_assert(TCT::MatchesArgs<const char *volatile &, unsigned>, "");
+    static_assert(!TCT::MatchesArgs<TestType &, const char *volatile &, unsigned>, "");
   }
 
   BadCoroMemberTag test_diagnostics() {
@@ -1263,31 +1263,31 @@ struct DepTestType {
   static CoroMemberTag test_static() {
     auto TC = co_yield 0;
     using TCT = decltype(TC);
-    static_assert(TCT::template MatchesArgs<>, "");
-    static_assert(!TCT::template MatchesArgs<DepTestType>, "");
-    static_assert(!TCT::template MatchesArgs<DepTestType &>, "");
-    static_assert(!TCT::template MatchesArgs<DepTestType *>, "");
+    static_assert(TCT::MatchesArgs<>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType &>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType *>, "");
 
     // Ensure diagnostics are actually being generated here
-    static_assert(TCT::template MatchesArgs<int>, ""); // expected-error {{static_assert failed}}
+    static_assert(TCT::MatchesArgs<int>, ""); // expected-error {{static_assert failed}}
   }
 
   static CoroMemberTag test_static(volatile void *const, char &&) {
     auto TC = co_yield 0;
     using TCT = decltype(TC);
-    static_assert(TCT::template MatchesArgs<volatile void *const, char &&>, "");
+    static_assert(TCT::MatchesArgs<volatile void *const, char &&>, "");
   }
 
   template <class Dummy>
   static CoroMemberTag test_static_template(const char *volatile &, unsigned) {
     auto TC = co_yield 0;
     using TCT = decltype(TC);
-    static_assert(TCT::template MatchesArgs<const char *volatile &, unsigned>, "");
-    static_assert(!TCT::template MatchesArgs<DepTestType &, const char *volatile &, unsigned>, "");
+    static_assert(TCT::MatchesArgs<const char *volatile &, unsigned>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType &, const char *volatile &, unsigned>, "");
   }
 };
 
-template struct DepTestType<int>; // expected-note 2{{requested here}}
+template struct DepTestType<int>; // expected-note {{requested here}}
 template CoroMemberTag DepTestType<int>::test_member_template(long, const char *) const &&;
 
 template CoroMemberTag DepTestType<int>::test_static_template<void>(const char *volatile &, unsigned);

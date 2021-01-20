@@ -4077,28 +4077,10 @@ recurse:
     mangleExpression(cast<CXXStdInitializerListExpr>(E)->getSubExpr(), Arity);
     break;
 
-  case Expr::SubstNonTypeTemplateParmExprClass: {
-    // Mangle a substituted parameter the same way we mangle the template
-    // argument.
-    // As proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/111.
-    auto *SNTTPE = cast<SubstNonTypeTemplateParmExpr>(E);
-    if (auto *CE = dyn_cast<ConstantExpr>(SNTTPE->getReplacement())) {
-      // Pull out the constant value and mangle it as a template argument.
-      QualType ParamType = SNTTPE->getParameterType(Context.getASTContext());
-      if (CE->hasAPValueResult())
-        mangleValueInTemplateArg(ParamType, CE->getResultAsAPValue(), false,
-                                 /*NeedExactType=*/true);
-      else
-        mangleValueInTemplateArg(ParamType, CE->getAPValueResult(), false,
-                                 /*NeedExactType=*/true);
-    } else {
-      // The remaining cases all happen to be substituted with expressions that
-      // mangle the same as a corresponding template argument anyway.
-      mangleExpression(cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement(),
-                       Arity);
-    }
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    mangleExpression(cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement(),
+                     Arity);
     break;
-  }
 
   case Expr::UserDefinedLiteralClass:
     // We follow g++'s approach of mangling a UDL as a call to the literal
@@ -5063,10 +5045,6 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
     mangleNullPointer(A.getNullPtrType());
     break;
   }
-  case TemplateArgument::UncommonValue:
-    mangleValueInTemplateArg(A.getUncommonValueType(), A.getAsUncommonValue(),
-                             /*TopLevel=*/true, NeedExactType);
-    break;
   case TemplateArgument::Pack: {
     //  <template-arg> ::= J <template-arg>* E
     Out << 'J';
@@ -5401,20 +5379,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       Out << "plcvPcad";
       Kind = Offset;
     } else {
-      // Clang 11 and before mangled an array subject to array-to-pointer decay
-      // as if it were the declaration itself.
-      bool IsArrayToPointerDecayMangledAsDecl = false;
-      if (TopLevel && Ctx.getLangOpts().getClangABICompat() <=
-                          LangOptions::ClangABI::Ver11) {
-        QualType BType = B.getType();
-        IsArrayToPointerDecayMangledAsDecl =
-            BType->isArrayType() && V.getLValuePath().size() == 1 &&
-            V.getLValuePath()[0].getAsArrayIndex() == 0 &&
-            Ctx.hasSimilarType(T, Ctx.getDecayedType(BType));
-      }
-
-      if ((!V.getLValuePath().empty() || V.isLValueOnePastTheEnd()) &&
-          !IsArrayToPointerDecayMangledAsDecl) {
+      if (!V.getLValuePath().empty() || V.isLValueOnePastTheEnd()) {
         NotPrimaryExpr();
         // A final conversion to the template parameter's type is usually
         // folded into the 'so' mangling, but we can't do that for 'void*'
