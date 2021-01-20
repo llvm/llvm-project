@@ -22,11 +22,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "inline-replay"
 
-ReplayInlineAdvisor::ReplayInlineAdvisor(FunctionAnalysisManager &FAM,
+ReplayInlineAdvisor::ReplayInlineAdvisor(Module &M,
+                                         FunctionAnalysisManager &FAM,
                                          LLVMContext &Context,
                                          StringRef RemarksFile,
                                          bool EmitRemarks)
-    : InlineAdvisor(FAM), HasReplayRemarks(false), EmitRemarks(EmitRemarks) {
+    : InlineAdvisor(M, FAM), HasReplayRemarks(false), EmitRemarks(EmitRemarks) {
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(RemarksFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC) {
