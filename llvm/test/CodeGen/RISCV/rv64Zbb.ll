@@ -1057,6 +1057,40 @@ define i64 @slliuw(i64 %a) nounwind {
   ret i64 %shl
 }
 
+define i128 @slliuw_2(i32 signext %0, i128* %1) {
+; RV64I-LABEL: slliuw_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a1, a1, a0
+; RV64I-NEXT:    ld a0, 0(a1)
+; RV64I-NEXT:    ld a1, 8(a1)
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: slliuw_2:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.w a0, a0
+; RV64IB-NEXT:    slli a0, a0, 4
+; RV64IB-NEXT:    add a1, a1, a0
+; RV64IB-NEXT:    ld a0, 0(a1)
+; RV64IB-NEXT:    ld a1, 8(a1)
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: slliuw_2:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.w a0, a0
+; RV64IBB-NEXT:    slli a0, a0, 4
+; RV64IBB-NEXT:    add a1, a1, a0
+; RV64IBB-NEXT:    ld a0, 0(a1)
+; RV64IBB-NEXT:    ld a1, 8(a1)
+; RV64IBB-NEXT:    ret
+  %3 = zext i32 %0 to i64
+  %4 = getelementptr inbounds i128, i128* %1, i64 %3
+  %5 = load i128, i128* %4
+  ret i128 %5
+}
+
 ; We select a i32 add that zero-extends the result on RV64 as addwu
 
 define zeroext i32 @zext_add_to_addwu(i32 signext %a, i32 signext %b) nounwind {
@@ -1167,6 +1201,32 @@ define i64 @adduw(i64 %a, i64 %b) nounwind {
   %and = and i64 %b, 4294967295
   %add = add i64 %and, %a
   ret i64 %add
+}
+
+define signext i8 @adduw_2(i32 signext %0, i8* %1) {
+; RV64I-LABEL: adduw_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: adduw_2:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addu.w a0, a1, a0
+; RV64IB-NEXT:    lb a0, 0(a0)
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: adduw_2:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    addu.w a0, a1, a0
+; RV64IBB-NEXT:    lb a0, 0(a0)
+; RV64IBB-NEXT:    ret
+  %3 = zext i32 %0 to i64
+  %4 = getelementptr inbounds i8, i8* %1, i64 %3
+  %5 = load i8, i8* %4
+  ret i8 %5
 }
 
 define i64 @subuw(i64 %a, i64 %b) nounwind {
