@@ -50,6 +50,7 @@ protected:
   virtual std::unique_ptr<MLInlineAdvice>
   getAdviceFromModel(CallBase &CB, OptimizationRemarkEmitter &ORE);
 
+  Module &M;
   std::unique_ptr<MLModelRunner> ModelRunner;
 
 private:

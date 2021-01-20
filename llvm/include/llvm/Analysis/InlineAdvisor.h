@@ -12,7 +12,6 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 #include <memory>
 #include <unordered_set>
 
@@ -66,7 +65,10 @@ public:
   /// behavior by implementing the corresponding record*Impl.
   ///
   /// Call after inlining succeeded, and did not result in deleting the callee.
-  void recordInlining();
+  void recordInlining() {
+    markRecorded();
+    recordInliningImpl();
+  }
 
   /// Call after inlining succeeded, and resulted in deleting the callee.
   void recordInliningWithCalleeDeleted();
@@ -112,7 +114,6 @@ private:
     assert(!Recorded && "Recording should happen exactly once");
     Recorded = true;
   }
-  void recordInlineStatsIfNeeded();
 
   bool Recorded = false;
 };
@@ -140,7 +141,7 @@ private:
 class InlineAdvisor {
 public:
   InlineAdvisor(InlineAdvisor &&) = delete;
-  virtual ~InlineAdvisor();
+  virtual ~InlineAdvisor() { freeDeletedFunctions(); }
 
   /// Get an InlineAdvice containing a recommendation on whether to
   /// inline or not. \p CB is assumed to be a direct call. \p FAM is assumed to
@@ -162,14 +163,12 @@ public:
   virtual void onPassExit() {}
 
 protected:
-  InlineAdvisor(Module &M, FunctionAnalysisManager &FAM);
+  InlineAdvisor(FunctionAnalysisManager &FAM) : FAM(FAM) {}
   virtual std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) = 0;
   virtual std::unique_ptr<InlineAdvice> getMandatoryAdvice(CallBase &CB,
                                                            bool Advice);
 
-  Module &M;
   FunctionAnalysisManager &FAM;
-  std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
 
   /// We may want to defer deleting functions to after the inlining for a whole
   /// module has finished. This allows us to reliably use function pointers as
@@ -203,9 +202,8 @@ private:
 /// reusable as-is for inliner pass test scenarios, as well as for regular use.
 class DefaultInlineAdvisor : public InlineAdvisor {
 public:
-  DefaultInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                       InlineParams Params)
-      : InlineAdvisor(M, FAM), Params(Params) {}
+  DefaultInlineAdvisor(FunctionAnalysisManager &FAM, InlineParams Params)
+      : InlineAdvisor(FAM), Params(Params) {}
 
 private:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
