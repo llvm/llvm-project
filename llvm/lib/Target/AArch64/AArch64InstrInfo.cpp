@@ -135,6 +135,9 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
+  case AArch64::StoreSwiftAsyncContext:
+    NumBytes = 20;
+    break;
   case TargetOpcode::BUNDLE:
     NumBytes = getInstBundleLength(MI);
     break;
@@ -2636,6 +2639,13 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRXui:
   case AArch64::STRDui:
     Scale = TypeSize::Fixed(8);
+    Width = 8;
+    MinOffset = 0;
+    MaxOffset = 4095;
+    break;
+  case AArch64::StoreSwiftAsyncContext:
+    // Store is an STRXui, but there might be an ADDXri in the expansion too.
+    Scale = TypeSize::Fixed(1);
     Width = 8;
     MinOffset = 0;
     MaxOffset = 4095;

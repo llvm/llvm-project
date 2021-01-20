@@ -51,6 +51,11 @@ class CCIfPreallocated<CCAction A> : CCIf<"ArgFlags.isPreallocated()", A> {
 class CCIfSwiftSelf<CCAction A> : CCIf<"ArgFlags.isSwiftSelf()", A> {
 }
 
+/// CCIfSwiftAsync - If the current argument has swiftasync parameter attribute,
+/// apply Action A.
+class CCIfSwiftAsync<CCAction A> : CCIf<"ArgFlags.isSwiftAsync()", A> {
+}
+
 /// CCIfSwiftError - If the current argument has swifterror parameter attribute,
 /// apply Action A.
 class CCIfSwiftError<CCAction A> : CCIf<"ArgFlags.isSwiftError()", A> {

@@ -552,6 +552,12 @@ declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
 ; CHECK: declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
 declare void @f.param.stack_align([2 x double] alignstack(16))
 ; CHECK: declare void @f.param.stack_align([2 x double] alignstack(16))
+declare void @f.param.swiftself(i8* swiftself)
+; CHECK: declare void @f.param.swiftself(i8* swiftself)
+declare void @f.param.swiftasync(i8* swiftasync)
+; CHECK: declare void @f.param.swiftasync(i8* swiftasync)
+declare void @f.param.swifterror(i8** swifterror)
+; CHECK: declare void @f.param.swifterror(i8** swifterror)
 
 ; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr
