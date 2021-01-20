@@ -1147,7 +1147,14 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 106: return createRegOperand(VCC);
   case 108: return createRegOperand(TBA);
   case 110: return createRegOperand(TMA);
-  case 125: return createRegOperand(SGPR_NULL);
+  case 124:
+    if (isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  case 125:
+    if (!isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
   case 126: return createRegOperand(EXEC);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
