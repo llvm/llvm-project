@@ -1942,9 +1942,38 @@ def LogOp : FloatUnaryOp<"log"> {
   let summary = "base-e logarithm of the specified value";
 }
 
+//===----------------------------------------------------------------------===//
+// Log10Op
+//===----------------------------------------------------------------------===//
+
 def Log10Op : FloatUnaryOp<"log10"> {
   let summary = "base-10 logarithm of the specified value";
 }
+
+//===----------------------------------------------------------------------===//
+// Log1pOp
+//===----------------------------------------------------------------------===//
+
+def Log1pOp : FloatUnaryOp<"log1p"> {
+  let summary = "Computes the natural logarithm of one plus the given value";
+
+  let description = [{
+    Computes the base-e logarithm of one plus the given value. It takes one
+    operand and returns one result of the same type.
+
+    log1p(x) := log(1 + x)
+
+    Example:
+
+    ```mlir
+    %y = log1p %x : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Log2Op
+//===----------------------------------------------------------------------===//
 
 def Log2Op : FloatUnaryOp<"log2"> {
   let summary = "base-2 logarithm of the specified value";
