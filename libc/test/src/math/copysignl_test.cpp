@@ -16,7 +16,7 @@ using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
 DECLARE_SPECIAL_CONSTANTS(long double)
 
-TEST(CopySinlTest, SpecialNumbers) {
+TEST(LlvmLibcCopySinlTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::copysignl(aNaN, -1.0));
   EXPECT_FP_EQ(aNaN, __llvm_libc::copysignl(aNaN, 1.0));
 
@@ -27,7 +27,7 @@ TEST(CopySinlTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::copysignl(negZero, 1.0));
 }
 
-TEST(CopySinlTest, InLongDoubleRange) {
+TEST(LlvmLibcCopySinlTest, InLongDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;

@@ -9,7 +9,7 @@
 #include "src/string/strtok.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrTokTest, NoTokenFound) {
+TEST(LlvmLibcStrTokTest, NoTokenFound) {
   char empty[] = "";
   ASSERT_STREQ(__llvm_libc::strtok(empty, ""), nullptr);
   ASSERT_STREQ(__llvm_libc::strtok(empty, "_"), nullptr);
@@ -21,22 +21,22 @@ TEST(StrTokTest, NoTokenFound) {
   ASSERT_STREQ(__llvm_libc::strtok(multiple, ":"), "1,2");
 }
 
-TEST(StrTokTest, DelimiterAsFirstCharacterShouldBeIgnored) {
+TEST(LlvmLibcStrTokTest, DelimiterAsFirstCharacterShouldBeIgnored) {
   char src[] = ".123";
   ASSERT_STREQ(__llvm_libc::strtok(src, "."), "123");
 }
 
-TEST(StrTokTest, DelimiterIsMiddleCharacter) {
+TEST(LlvmLibcStrTokTest, DelimiterIsMiddleCharacter) {
   char src[] = "12,34";
   ASSERT_STREQ(__llvm_libc::strtok(src, ","), "12");
 }
 
-TEST(StrTokTest, DelimiterAsLastCharacterShouldBeIgnored) {
+TEST(LlvmLibcStrTokTest, DelimiterAsLastCharacterShouldBeIgnored) {
   char src[] = "1234:";
   ASSERT_STREQ(__llvm_libc::strtok(src, ":"), "1234");
 }
 
-TEST(StrTokTest, MultipleDelimiters) {
+TEST(LlvmLibcStrTokTest, MultipleDelimiters) {
   char src[] = "12,.34";
   ASSERT_STREQ(__llvm_libc::strtok(src, "."), "12,");
   ASSERT_STREQ(__llvm_libc::strtok(src, ".,"), "12");
@@ -44,12 +44,12 @@ TEST(StrTokTest, MultipleDelimiters) {
   ASSERT_STREQ(__llvm_libc::strtok(src, ":,."), "12");
 }
 
-TEST(StrTokTest, ShouldNotGoPastNullTerminator) {
+TEST(LlvmLibcStrTokTest, ShouldNotGoPastNullTerminator) {
   char src[] = {'1', '2', '\0', ',', '3'};
   ASSERT_STREQ(__llvm_libc::strtok(src, ","), "12");
 }
 
-TEST(StrTokTest, SubsequentCallsShouldFindFollowingDelimiters) {
+TEST(LlvmLibcStrTokTest, SubsequentCallsShouldFindFollowingDelimiters) {
   char src[] = "12,34.56";
   char *token = __llvm_libc::strtok(src, ",.");
   ASSERT_STREQ(token, "12");
@@ -65,7 +65,7 @@ TEST(StrTokTest, SubsequentCallsShouldFindFollowingDelimiters) {
   ASSERT_STREQ(token, nullptr);
 }
 
-TEST(StrTokTest, DelimitersShouldNotBeIncludedInToken) {
+TEST(LlvmLibcStrTokTest, DelimitersShouldNotBeIncludedInToken) {
   char src[] = "__ab__:_cd__:__ef__:__";
   char *token = __llvm_libc::strtok(src, "_:");
   ASSERT_STREQ(token, "ab");

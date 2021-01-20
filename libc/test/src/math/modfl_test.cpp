@@ -15,7 +15,7 @@
 
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
-TEST(modflTest, SpecialNumbers) {
+TEST(LlvmLibcmodflTest, SpecialNumbers) {
   long double integral;
 
   EXPECT_TRUE(FPBits::zero() == __llvm_libc::modfl(FPBits::inf(), &integral));
@@ -36,7 +36,7 @@ TEST(modflTest, SpecialNumbers) {
       FPBits(__llvm_libc::modfl(FPBits::buildNaN(1), &integral)).isNaN());
 }
 
-TEST(modflTest, Integers) {
+TEST(LlvmLibcmodflTest, Integers) {
   long double integral;
 
   EXPECT_TRUE(FPBits::zero() == __llvm_libc::modfl(1.0l, &integral));
@@ -58,7 +58,7 @@ TEST(modflTest, Integers) {
   EXPECT_TRUE(integral == -12345.0l);
 }
 
-TEST(ModfTest, Fractions) {
+TEST(LlvmLibcModfTest, Fractions) {
   long double integral;
 
   EXPECT_TRUE(0.5l == __llvm_libc::modfl(1.5l, &integral));
@@ -80,7 +80,7 @@ TEST(ModfTest, Fractions) {
   EXPECT_TRUE(integral == -100.0l);
 }
 
-TEST(ModflTest, LongDoubleRange) {
+TEST(LlvmLibcModflTest, LongDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;

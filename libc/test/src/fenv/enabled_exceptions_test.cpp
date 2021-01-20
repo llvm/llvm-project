@@ -18,7 +18,7 @@
 
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
-TEST(ExceptionStatusTest, RaiseAndCrash) {
+TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from
   // that exception handler, so such a testing can be done after we have

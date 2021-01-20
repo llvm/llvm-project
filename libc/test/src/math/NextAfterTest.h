@@ -186,8 +186,8 @@ public:
 };
 
 #define LIST_NEXTAFTER_TESTS(T, func)                                          \
-  using NextAfterTest = NextAfterTestTemplate<T>;                              \
-  TEST_F(NextAfterTest, TestNaN) { testNaN(&func); }                           \
-  TEST_F(NextAfterTest, TestBoundaries) { testBoundaries(&func); }
+  using LlvmLibcNextAfterTest = NextAfterTestTemplate<T>;                      \
+  TEST_F(LlvmLibcNextAfterTest, TestNaN) { testNaN(&func); }                   \
+  TEST_F(LlvmLibcNextAfterTest, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H

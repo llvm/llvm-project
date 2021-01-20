@@ -21,7 +21,7 @@ using __llvm_libc::fputil::valueFromBits;
 using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
 using Properties = __llvm_libc::fputil::FloatProperties<float>;
 
-TEST(ModffTest, SpecialNumbers) {
+TEST(LlvmLibcModffTest, SpecialNumbers) {
   float integral;
 
   EXPECT_EQ(BitPatterns::aQuietNaN,
@@ -60,7 +60,7 @@ TEST(ModffTest, SpecialNumbers) {
   EXPECT_EQ(valueAsBits(integral), BitPatterns::negZero);
 }
 
-TEST(ModffTest, Integers) {
+TEST(LlvmLibcModffTest, Integers) {
   float integral;
 
   EXPECT_EQ(BitPatterns::zero,
@@ -88,7 +88,7 @@ TEST(ModffTest, Integers) {
   EXPECT_EQ(valueAsBits(integral), valueAsBits(-12345.0f));
 }
 
-TEST(ModffTest, Fractions) {
+TEST(LlvmLibcModffTest, Fractions) {
   float integral;
 
   EXPECT_EQ(valueAsBits(0.5f),
@@ -116,7 +116,7 @@ TEST(ModffTest, Fractions) {
   EXPECT_EQ(valueAsBits(integral), valueAsBits(-100.0f));
 }
 
-TEST(ModffTest, InDoubleRange) {
+TEST(LlvmLibcModffTest, InDoubleRange) {
   using BitsType = Properties::BitsType;
   constexpr BitsType count = 10000000;
   constexpr BitsType step = UINT32_MAX / count;

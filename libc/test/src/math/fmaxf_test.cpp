@@ -16,7 +16,7 @@ using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
-TEST(FmaxfTest, NaNArg) {
+TEST(LlvmLibcFmaxfTest, NaNArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(aNaN, inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::fmaxf(negInf, aNaN));
   EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(aNaN, 0.0f));
@@ -26,7 +26,7 @@ TEST(FmaxfTest, NaNArg) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::fmaxf(aNaN, aNaN));
 }
 
-TEST(FmaxfTest, InfArg) {
+TEST(LlvmLibcFmaxfTest, InfArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(negInf, inf));
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(inf, 0.0f));
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(-0.0f, inf));
@@ -34,7 +34,7 @@ TEST(FmaxfTest, InfArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(-1.2345f, inf));
 }
 
-TEST(FmaxfTest, NegInfArg) {
+TEST(LlvmLibcFmaxfTest, NegInfArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(inf, negInf));
   EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(negInf, 0.0f));
   EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, negInf));
@@ -42,14 +42,14 @@ TEST(FmaxfTest, NegInfArg) {
   EXPECT_FP_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, negInf));
 }
 
-TEST(FmaxfTest, BothZero) {
+TEST(LlvmLibcFmaxfTest, BothZero) {
   EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(0.0f, 0.0f));
   EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(-0.0f, 0.0f));
   EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(0.0f, -0.0f));
   EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, -0.0f));
 }
 
-TEST(FmaxfTest, InFloatRange) {
+TEST(LlvmLibcFmaxfTest, InFloatRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000001;
   constexpr UIntType step = UIntType(-1) / count;
