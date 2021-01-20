@@ -344,6 +344,7 @@ public:
     case CC_C:
     case CC_PreserveMost:
     case CC_Swift:
+    case CC_SwiftAsync:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
     case CC_OpenCLKernel:
@@ -704,6 +705,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
+    case CC_SwiftAsync:
     case CC_X86VectorCall:
     case CC_IntelOclBicc:
     case CC_Win64:
@@ -785,6 +787,7 @@ public:
     case CC_PreserveAll:
     case CC_X86_64SysV:
     case CC_Swift:
+    case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
