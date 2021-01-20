@@ -31,7 +31,7 @@
 # CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
 ## __wrap_bar is undefined.
-# RUN: ld.lld -shared %t.o --wrap=bar -o %t3.so
+# RUN: ld.lld -shared %t/main.o --wrap=bar -o %t3.so
 # RUN: llvm-readelf -r --dyn-syms %t3.so | FileCheck %s --check-prefix=CHECK3
 # CHECK3:      R_X86_64_JUMP_SLOT 0000000000000000 __wrap_bar + 0
 # CHECK3:      Symbol table '.dynsym' contains 4 entries:
@@ -41,7 +41,7 @@
 # CHECK3-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
 ## __wrap_bar is defined in %t/wrap.so.
-# RUN: ld.lld -shared %t.o %t/wrap.so --wrap=bar -o %t4.so
+# RUN: ld.lld -shared %t/main.o %t/wrap.so --wrap=bar -o %t4.so
 # RUN: llvm-readelf -r --dyn-syms %t4.so | FileCheck %s --check-prefix=CHECK4
 # CHECK4:      R_X86_64_JUMP_SLOT {{.*}} __wrap_bar + 0
 # CHECK4:      Symbol table '.dynsym' contains 4 entries:
@@ -50,7 +50,7 @@
 # CHECK4-NEXT: NOTYPE  GLOBAL DEFAULT    6 _start
 # CHECK4-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
-# RUN: ld.lld %t.o %t/wrap.so --wrap bar -o %t1
+# RUN: ld.lld %t/main.o %t/wrap.so --wrap bar -o %t1
 # RUN: llvm-readelf --dyn-syms %t1 | FileCheck %s --check-prefix=DYNSYM
 # RUN: llvm-objdump -d %t1 | FileCheck %s --check-prefix=ASM
 
