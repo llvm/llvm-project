@@ -283,7 +283,7 @@ Optional<int64_t> llvm::getConstantVRegSExtVal(Register VReg,
 
 Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
-    bool HandleFConstant) {
+    bool HandleFConstant, bool LookThroughAnyExt) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
   auto IsConstantOpcode = [HandleFConstant](unsigned Opcode) {
@@ -310,6 +310,10 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI->getOpcode()) &&
          LookThroughInstrs) {
     switch (MI->getOpcode()) {
+    case TargetOpcode::G_ANYEXT:
+      if (!LookThroughAnyExt)
+        return None;
+      LLVM_FALLTHROUGH;
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_ZEXT:
@@ -343,6 +347,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     case TargetOpcode::G_TRUNC:
       Val = Val.trunc(OpcodeAndSize.second);
       break;
+    case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
       Val = Val.sext(OpcodeAndSize.second);
       break;

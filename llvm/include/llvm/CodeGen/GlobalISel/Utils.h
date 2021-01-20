@@ -146,10 +146,13 @@ struct ValueAndVReg {
 /// When \p LookThroughInstrs == false this function behaves like
 /// getConstantVRegVal.
 /// When \p HandleFConstants == false the function bails on G_FCONSTANTs.
+/// When \p LookThroughAnyExt == true the function treats G_ANYEXT same as
+/// G_SEXT.
 Optional<ValueAndVReg>
 getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
                                   bool LookThroughInstrs = true,
-                                  bool HandleFConstants = true);
+                                  bool HandleFConstants = true,
+                                  bool LookThroughAnyExt = false);
 const ConstantFP* getConstantFPVRegVal(Register VReg,
                                        const MachineRegisterInfo &MRI);
 
