@@ -714,6 +714,7 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     DISPATCH(CmpFPredicate::OLT, spirv::FOrdLessThanOp);
     DISPATCH(CmpFPredicate::OLE, spirv::FOrdLessThanEqualOp);
     DISPATCH(CmpFPredicate::ONE, spirv::FOrdNotEqualOp);
+    DISPATCH(CmpFPredicate::ORD, spirv::OrderedOp);
     // Unordered.
     DISPATCH(CmpFPredicate::UEQ, spirv::FUnordEqualOp);
     DISPATCH(CmpFPredicate::UGT, spirv::FUnordGreaterThanOp);
@@ -721,6 +722,7 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     DISPATCH(CmpFPredicate::ULT, spirv::FUnordLessThanOp);
     DISPATCH(CmpFPredicate::ULE, spirv::FUnordLessThanEqualOp);
     DISPATCH(CmpFPredicate::UNE, spirv::FUnordNotEqualOp);
+    DISPATCH(CmpFPredicate::UNO, spirv::UnorderedOp);
 
 #undef DISPATCH
 
