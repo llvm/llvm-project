@@ -13,6 +13,7 @@
 #include "llvm/Config/config.h"
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Mutex.h"
 #include <os/signpost.h>
 #endif // if LLVM_SUPPORT_XCODE_SIGNPOSTS
 
@@ -38,9 +39,11 @@ class SignpostEmitterImpl {
 
   LogPtrTy SignpostLog;
   DenseMap<const void *, os_signpost_id_t> Signposts;
+  sys::SmartMutex<true> Mutex;
 
   LogTy &getLogger() const { return *SignpostLog; }
   os_signpost_id_t getSignpostForObject(const void *O) {
+    sys::SmartScopedLock<true> Lock(Mutex);
     const auto &I = Signposts.find(O);
     if (I != Signposts.end())
       return I->second;
