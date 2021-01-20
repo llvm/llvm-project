@@ -83,10 +83,25 @@ struct ComputationSliceState {
   // Clears all bounds and operands in slice state.
   void clearBounds();
 
-  /// Return true if the computation slice is empty.
+  /// Returns true if the computation slice is empty.
   bool isEmpty() const { return ivs.empty(); }
 
+  /// Returns true if the computation slice encloses all the iterations of the
+  /// sliced loop nest. Returns false if it does not. Returns llvm::None if it
+  /// cannot determine if the slice is maximal or not.
+  // TODO: Cache 'isMaximal' so that we don't recompute it when the slice
+  // information hasn't changed.
+  Optional<bool> isMaximal() const;
+
   void dump() const;
+
+private:
+  /// Fast check to determine if the computation slice is maximal. Returns true
+  /// if each slice dimension maps to an existing dst dimension and both the src
+  /// and the dst loops for those dimensions have the same bounds. Returns false
+  /// if both the src and the dst loops don't have the same bounds. Returns
+  /// llvm::None if none of the above can be proven.
+  Optional<bool> isSliceMaximalFastCheck() const;
 };
 
 /// Computes the computation slice loop bounds for one loop nest as affine maps

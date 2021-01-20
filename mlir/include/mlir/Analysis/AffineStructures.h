@@ -234,6 +234,21 @@ public:
   //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
 
+  /// Adds constraints (lower and upper bounds) for each loop in the loop nest
+  /// described by the bound maps 'lbMaps' and 'ubMaps' of a computation slice.
+  /// Every pair ('lbMaps[i]', 'ubMaps[i]') describes the bounds of a loop in
+  /// the nest, sorted outer-to-inner. 'operands' contains the bound operands
+  /// for a single bound map. All the bound maps will use the same bound
+  /// operands. Note that some loops described by a computation slice might not
+  /// exist yet in the IR so the Value attached to those dimension identifiers
+  /// might be empty. For that reason, this method doesn't perform Value
+  /// look-ups to retrieve the dimension identifier positions. Instead, it
+  /// assumes the position of the dim identifiers in the constraint system is
+  /// the same as the position of the loop in the loop nest.
+  LogicalResult addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
+                                       ArrayRef<AffineMap> ubMaps,
+                                       ArrayRef<Value> operands);
+
   /// Adds constraints imposed by the `affine.if` operation. These constraints
   /// are collected from the IntegerSet attached to the given `affine.if`
   /// instance argument (`ifOp`). It is asserted that:
