@@ -1,5 +1,5 @@
 // RUN: mlir-rocm-runner %s \
-// RUN:   --shared-libs=%rocm_wrapper_library_dir/librocm-runtime-wrappers%shlibext
+// RUN:   --shared-libs=%rocm_wrapper_library_dir/librocm-runtime-wrappers%shlibext \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
