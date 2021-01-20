@@ -347,9 +347,8 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
     const auto &GuardsInCurBB = GuardsInBlock.find(CurBB)->second;
 
     auto I = GuardsInCurBB.begin();
-    auto E = Instr->getParent() == CurBB
-                 ? std::find(GuardsInCurBB.begin(), GuardsInCurBB.end(), Instr)
-                 : GuardsInCurBB.end();
+    auto E = Instr->getParent() == CurBB ? find(GuardsInCurBB, Instr)
+                                         : GuardsInCurBB.end();
 
 #ifndef NDEBUG
     {

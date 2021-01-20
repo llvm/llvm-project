@@ -413,14 +413,14 @@ class VPBlockBase {
 
   /// Remove \p Predecessor from the predecessors of this block.
   void removePredecessor(VPBlockBase *Predecessor) {
-    auto Pos = std::find(Predecessors.begin(), Predecessors.end(), Predecessor);
+    auto Pos = find(Predecessors, Predecessor);
     assert(Pos && "Predecessor does not exist");
     Predecessors.erase(Pos);
   }
 
   /// Remove \p Successor from the successors of this block.
   void removeSuccessor(VPBlockBase *Successor) {
-    auto Pos = std::find(Successors.begin(), Successors.end(), Successor);
+    auto Pos = find(Successors, Successor);
     assert(Pos && "Successor does not exist");
     Successors.erase(Pos);
   }

@@ -121,8 +121,7 @@ void GIMatchTreeBuilderLeafInfo::declareInstr(const GIMatchDagInstr *Instr, unsi
     Info.bindOperandVariable(VarBinding.second, ID, VarBinding.first);
 
   // Clear the bit indicating we haven't visited this instr.
-  const auto &NodeI = std::find(MatchDag.instr_nodes_begin(),
-                            MatchDag.instr_nodes_end(), Instr);
+  const auto &NodeI = find(MatchDag.instr_nodes(), Instr);
   assert(NodeI != MatchDag.instr_nodes_end() && "Instr isn't in this DAG");
   unsigned InstrIdx = MatchDag.getInstrNodeIdx(NodeI);
   RemainingInstrNodes.reset(InstrIdx);
