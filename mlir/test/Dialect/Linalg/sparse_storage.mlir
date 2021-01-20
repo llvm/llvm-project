@@ -6,6 +6,10 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE2
 // RUN: mlir-opt %s -test-sparsification="ptr-type=2 ind-type=2" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE3
+// RUN: mlir-opt %s -test-sparsification="ptr-type=3 ind-type=3" | \
+// RUN:   FileCheck %s --check-prefix=CHECK-TYPE4
+// RUN: mlir-opt %s -test-sparsification="ptr-type=4 ind-type=4" | \
+// RUN:   FileCheck %s --check-prefix=CHECK-TYPE5
 
 #trait_mul_1d = {
   indexing_maps = [
@@ -85,6 +89,38 @@
 // CHECK-TYPE3:   %[[MUL:.*]] = mulf %[[VAL0]], %[[VAL1]] : f64
 // CHECK-TYPE3:   store %[[MUL]], %{{.*}}[%[[INDC]]] : memref<32xf64>
 // CHECK-TYPE3: }
+
+// CHECK-TYPE4-LABEL: func @mul_dd(
+// CHECK-TYPE4: %[[C0:.*]] = constant 0 : index
+// CHECK-TYPE4: %[[C1:.*]] = constant 1 : index
+// CHECK-TYPE4: %[[P0:.*]] = load %{{.*}}[%[[C0]]] : memref<?xi16>
+// CHECK-TYPE4: %[[B0:.*]] = index_cast %[[P0]] : i16 to index
+// CHECK-TYPE4: %[[P1:.*]] = load %{{.*}}[%[[C1]]] : memref<?xi16>
+// CHECK-TYPE4: %[[B1:.*]] = index_cast %[[P1]] : i16 to index
+// CHECK-TYPE4: scf.for %[[I:.*]] = %[[B0]] to %[[B1]] step %[[C1]] {
+// CHECK-TYPE4:   %[[IND0:.*]] = load %{{.*}}[%[[I]]] : memref<?xi16>
+// CHECK-TYPE4:   %[[INDC:.*]] = index_cast %[[IND0]] : i16 to index
+// CHECK-TYPE4:   %[[VAL0:.*]] = load %{{.*}}[%[[I]]] : memref<?xf64>
+// CHECK-TYPE4:   %[[VAL1:.*]] = load %{{.*}}[%[[INDC]]] : memref<32xf64>
+// CHECK-TYPE4:   %[[MUL:.*]] = mulf %[[VAL0]], %[[VAL1]] : f64
+// CHECK-TYPE4:   store %[[MUL]], %{{.*}}[%[[INDC]]] : memref<32xf64>
+// CHECK-TYPE4: }
+
+// CHECK-TYPE5-LABEL: func @mul_dd(
+// CHECK-TYPE5: %[[C0:.*]] = constant 0 : index
+// CHECK-TYPE5: %[[C1:.*]] = constant 1 : index
+// CHECK-TYPE5: %[[P0:.*]] = load %{{.*}}[%[[C0]]] : memref<?xi8>
+// CHECK-TYPE5: %[[B0:.*]] = index_cast %[[P0]] : i8 to index
+// CHECK-TYPE5: %[[P1:.*]] = load %{{.*}}[%[[C1]]] : memref<?xi8>
+// CHECK-TYPE5: %[[B1:.*]] = index_cast %[[P1]] : i8 to index
+// CHECK-TYPE5: scf.for %[[I:.*]] = %[[B0]] to %[[B1]] step %[[C1]] {
+// CHECK-TYPE5:   %[[IND0:.*]] = load %{{.*}}[%[[I]]] : memref<?xi8>
+// CHECK-TYPE5:   %[[INDC:.*]] = index_cast %[[IND0]] : i8 to index
+// CHECK-TYPE5:   %[[VAL0:.*]] = load %{{.*}}[%[[I]]] : memref<?xf64>
+// CHECK-TYPE5:   %[[VAL1:.*]] = load %{{.*}}[%[[INDC]]] : memref<32xf64>
+// CHECK-TYPE5:   %[[MUL:.*]] = mulf %[[VAL0]], %[[VAL1]] : f64
+// CHECK-TYPE5:   store %[[MUL]], %{{.*}}[%[[INDC]]] : memref<32xf64>
+// CHECK-TYPE5: }
 
 func @mul_dd(%arga: tensor<32xf64>, %argb: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_mul_1d
