@@ -842,6 +842,8 @@ def : Pat<(and (add GPR:$rs, simm12:$simm12), (i64 0xFFFFFFFF)),
           (ADDIWU GPR:$rs, simm12:$simm12)>;
 def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
+def : Pat<(shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt),
+          (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(and (add GPR:$rs1, GPR:$rs2), (i64 0xFFFFFFFF)),
           (ADDWU GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (sub GPR:$rs1, GPR:$rs2), (i64 0xFFFFFFFF)),
