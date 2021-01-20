@@ -2919,6 +2919,7 @@ static const struct Extension {
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
+    {"pauth", {AArch64::FeaturePAuth}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
