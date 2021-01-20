@@ -41,6 +41,8 @@ class SymbolIndex;
 class ClangdLSPServer : private ClangdServer::Callbacks {
 public:
   struct Options : ClangdServer::Options {
+    /// Supplies configuration (overrides ClangdServer::ContextProvider).
+    config::Provider *ConfigProvider = nullptr;
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
