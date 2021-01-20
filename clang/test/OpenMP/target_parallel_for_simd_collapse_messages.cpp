@@ -46,7 +46,7 @@ T tmain(T argc, S **argv) {
   #pragma omp target parallel for simd collapse (S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
-  // expected-error@+1 1+{{integral constant expression}} expected-note@+1 0+{{constant expression}}
+  // expected-error@+1 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
   #pragma omp target parallel for simd collapse (j=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp target parallel for simd collapse (1)
