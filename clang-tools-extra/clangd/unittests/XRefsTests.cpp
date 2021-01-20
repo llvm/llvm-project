@@ -1845,6 +1845,31 @@ TEST(FindReferences, WithinAST) {
   }
 }
 
+TEST(FindReferences, IncludeOverrides) {
+  llvm::StringRef Test =
+      R"cpp(
+        class Base {
+        public:
+          virtual void [[f^unc]]() = 0;
+        };
+        class Derived : public Base {
+        public:
+          void [[func]]() override;
+        };
+        void test(Derived* D) {
+          D->[[func]]();
+        })cpp";
+  Annotations T(Test);
+  auto TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  std::vector<Matcher<Location>> ExpectedLocations;
+  for (const auto &R : T.ranges())
+    ExpectedLocations.push_back(RangeIs(R));
+  EXPECT_THAT(findReferences(AST, T.point(), 0, TU.index().get()).References,
+              ElementsAreArray(ExpectedLocations))
+      << Test;
+}
+
 TEST(FindReferences, MainFileReferencesOnly) {
   llvm::StringRef Test =
       R"cpp(
