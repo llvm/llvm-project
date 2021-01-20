@@ -12,7 +12,6 @@
 #pragma omp declare target
 
 #include "common/omptarget.h"
-#include "common/target_atomic.h"
 #include "target_impl.h"
 
 EXTERN
