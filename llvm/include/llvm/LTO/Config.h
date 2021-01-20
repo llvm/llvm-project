@@ -19,6 +19,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
@@ -43,6 +44,8 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> PassPlugins;
+  /// For adding passes that run right before codegen.
+  std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   Optional<CodeModel::Model> CodeModel = None;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
