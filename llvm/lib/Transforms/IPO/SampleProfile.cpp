@@ -416,20 +416,18 @@ protected:
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
   mutable DenseMap<const DILocation *, const FunctionSamples *> DILocation2SampleMap;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
-  CallBase *tryPromoteIndirectCall(Function &F, StringRef CalleeName,
-                                   uint64_t &Sum, uint64_t Count, CallBase *I,
-                                   const char *&Reason);
-  bool inlineCallInstruction(CallBase &CB,
-                             const FunctionSamples *CalleeSamples);
+  // Attempt to promote indirect call and also inline the promoted call
+  bool tryPromoteAndInlineCandidate(
+      Function &F, InlineCandidate &Candidate, uint64_t &Sum,
+      DenseSet<Instruction *> &PromotedInsns,
+      SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
-  // Helper functions call-site prioritized BFS inliner
-  // Will change the main FDO inliner to be work list based directly in
-  // upstream, then merge this change with that and remove the duplication.
   InlineCost shouldInlineCandidate(InlineCandidate &Candidate);
   bool getInlineCandidate(InlineCandidate *NewCandidate, CallBase *CB);
-  bool tryInlineCandidate(InlineCandidate &Candidate,
-                          SmallVector<CallBase *, 8> &InlinedCallSites);
+  bool
+  tryInlineCandidate(InlineCandidate &Candidate,
+                     SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
   bool
   inlineHotFunctionsWithPriority(Function &F,
                                  DenseSet<GlobalValue::GUID> &InlinedGUIDs);
@@ -1077,70 +1075,45 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
-CallBase *
-SampleProfileLoader::tryPromoteIndirectCall(Function &F, StringRef CalleeName,
-                                            uint64_t &Sum, uint64_t Count,
-                                            CallBase *I, const char *&Reason) {
-  Reason = "Callee function not available";
+/// Attempt to promote indirect call and also inline the promoted call.
+///
+/// \param F  Caller function.
+/// \param Candidate  ICP and inline candidate.
+/// \param Sum  Sum of target counts for indirect call.
+/// \param PromotedInsns  Map to keep track of indirect call already processed.
+/// \param Candidate  ICP and inline candidate.
+/// \param InlinedCallSite  Output vector for new call sites exposed after
+/// inlining.
+bool SampleProfileLoader::tryPromoteAndInlineCandidate(
+    Function &F, InlineCandidate &Candidate, uint64_t &Sum,
+    DenseSet<Instruction *> &PromotedInsns,
+    SmallVector<CallBase *, 8> *InlinedCallSite) {
+  const char *Reason = "Callee function not available";
   // R->getValue() != &F is to prevent promoting a recursive call.
   // If it is a recursive call, we do not inline it as it could bloat
   // the code exponentially. There is way to better handle this, e.g.
   // clone the caller first, and inline the cloned caller if it is
   // recursive. As llvm does not inline recursive calls, we will
   // simply ignore it instead of handling it explicitly.
-  auto R = SymbolMap.find(CalleeName);
+  auto R = SymbolMap.find(Candidate.CalleeSamples->getFuncName());
   if (R != SymbolMap.end() && R->getValue() &&
       !R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
       R->getValue()->hasFnAttribute("use-sample-profile") &&
-      R->getValue() != &F && isLegalToPromote(*I, R->getValue(), &Reason)) {
+      R->getValue() != &F &&
+      isLegalToPromote(*Candidate.CallInstr, R->getValue(), &Reason)) {
     auto *DI =
-        &pgo::promoteIndirectCall(*I, R->getValue(), Count, Sum, false, ORE);
-    Sum -= Count;
-    return DI;
-  }
-  return nullptr;
-}
-
-bool SampleProfileLoader::inlineCallInstruction(
-    CallBase &CB, const FunctionSamples *CalleeSamples) {
-  if (ExternalInlineAdvisor) {
-    auto Advice = ExternalInlineAdvisor->getAdvice(CB);
-    if (!Advice->isInliningRecommended()) {
-      Advice->recordUnattemptedInlining();
-      return false;
+        &pgo::promoteIndirectCall(*Candidate.CallInstr, R->getValue(),
+                                  Candidate.CallsiteCount, Sum, false, ORE);
+    if (DI) {
+      Sum -= Candidate.CallsiteCount;
+      PromotedInsns.insert(Candidate.CallInstr);
+      Candidate.CallInstr = DI;
+      if (isa<CallInst>(DI) || isa<InvokeInst>(DI))
+        return tryInlineCandidate(Candidate, InlinedCallSite);
     }
-    // Dummy record, we don't use it for replay.
-    Advice->recordInlining();
-  }
-
-  Function *CalledFunction = CB.getCalledFunction();
-  assert(CalledFunction);
-  DebugLoc DLoc = CB.getDebugLoc();
-  BasicBlock *BB = CB.getParent();
-  InlineParams Params = getInlineParams();
-  Params.ComputeFullInlineCost = true;
-  // Checks if there is anything in the reachable portion of the callee at
-  // this callsite that makes this inlining potentially illegal. Need to
-  // set ComputeFullInlineCost, otherwise getInlineCost may return early
-  // when cost exceeds threshold without checking all IRs in the callee.
-  // The acutal cost does not matter because we only checks isNever() to
-  // see if it is legal to inline the callsite.
-  InlineCost Cost =
-      getInlineCost(CB, Params, GetTTI(*CalledFunction), GetAC, GetTLI);
-  if (Cost.isNever()) {
-    ORE->emit(OptimizationRemarkAnalysis(CSINLINE_DEBUG, "InlineFail", DLoc, BB)
-              << "incompatible inlining");
-    return false;
-  }
-  InlineFunctionInfo IFI(nullptr, GetAC);
-  if (InlineFunction(CB, IFI).isSuccess()) {
-    // The call to InlineFunction erases I, so we can't pass it here.
-    emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,
-                    true, CSINLINE_DEBUG);
-    if (ProfileIsCS)
-      ContextTracker->markContextSamplesInlined(CalleeSamples);
-    ++NumCSInlined;
-    return true;
+  } else {
+    LLVM_DEBUG(dbgs() << "\nFailed to promote indirect call to "
+                      << CalleeFunctionName << " because " << Reason << "\n");
   }
   return false;
 }
@@ -1206,10 +1179,11 @@ bool SampleProfileLoader::inlineHotFunctions(
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
 
-  DenseMap<CallBase *, const FunctionSamples *> localNotInlinedCallSites;
+  DenseMap<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
   bool Changed = false;
-  while (true) {
-    bool LocalChanged = false;
+  bool LocalChanged = true;
+  while (LocalChanged) {
+    LocalChanged = false;
     SmallVector<CallBase *, 10> CIS;
     for (auto &BB : F) {
       bool Hot = false;
@@ -1223,7 +1197,7 @@ bool SampleProfileLoader::inlineHotFunctions(
                    "GUIDToFuncNameMap has to be populated");
             AllCandidates.push_back(CB);
             if (FS->getEntrySamples() > 0 || ProfileIsCS)
-              localNotInlinedCallSites.try_emplace(CB, FS);
+              LocalNotInlinedCallSites.try_emplace(CB, FS);
             if (callsiteIsHot(FS, PSI))
               Hot = true;
             else if (shouldInlineColdCallee(*CB))
@@ -1241,6 +1215,11 @@ bool SampleProfileLoader::inlineHotFunctions(
     }
     for (CallBase *I : CIS) {
       Function *CalledFunction = I->getCalledFunction();
+      InlineCandidate Candidate = {I,
+                                   LocalNotInlinedCallSites.count(I)
+                                       ? LocalNotInlinedCallSites[I]
+                                       : nullptr,
+                                   0 /* dummy count */};
       // Do not inline recursive calls.
       if (CalledFunction == &F)
         continue;
@@ -1257,30 +1236,16 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (!callsiteIsHot(FS, PSI))
             continue;
 
-          const char *Reason = nullptr;
-          auto CalleeFunctionName = FS->getFuncName();
-          if (CallBase *DI =
-                  tryPromoteIndirectCall(F, CalleeFunctionName, Sum,
-                                         FS->getEntrySamples(), I, Reason)) {
-            PromotedInsns.insert(I);
-            // If profile mismatches, we should not attempt to inline DI.
-            if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
-                inlineCallInstruction(cast<CallBase>(*DI), FS)) {
-              localNotInlinedCallSites.erase(I);
-              LocalChanged = true;
-            }
-          } else {
-            LLVM_DEBUG(dbgs()
-                       << "\nFailed to promote indirect call to "
-                       << CalleeFunctionName << " because " << Reason << "\n");
+          Candidate = {I, FS, FS->getEntrySamples()};
+          if (tryPromoteAndInlineCandidate(F, Candidate, Sum, PromotedInsns)) {
+            LocalNotInlinedCallSites.erase(I);
+            LocalChanged = true;
           }
         }
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
-        if (inlineCallInstruction(*I, localNotInlinedCallSites.count(I)
-                                          ? localNotInlinedCallSites[I]
-                                          : nullptr)) {
-          localNotInlinedCallSites.erase(I);
+        if (tryInlineCandidate(Candidate)) {
+          LocalNotInlinedCallSites.erase(I);
           LocalChanged = true;
         }
       } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
@@ -1288,11 +1253,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
       }
     }
-    if (LocalChanged) {
-      Changed = true;
-    } else {
-      break;
-    }
+    Changed |= LocalChanged;
   }
 
   // For CS profile, profile for not inlined context will be merged when
@@ -1301,7 +1262,7 @@ bool SampleProfileLoader::inlineHotFunctions(
     return Changed;
 
   // Accumulate not inlined callsite information into notInlinedSamples
-  for (const auto &Pair : localNotInlinedCallSites) {
+  for (const auto &Pair : LocalNotInlinedCallSites) {
     CallBase *I = Pair.getFirst();
     Function *Callee = I->getCalledFunction();
     if (!Callee || Callee->isDeclaration())
@@ -1347,7 +1308,7 @@ bool SampleProfileLoader::inlineHotFunctions(
 }
 
 bool SampleProfileLoader::tryInlineCandidate(
-    InlineCandidate &Candidate, SmallVector<CallBase *, 8> &InlinedCallSites) {
+    InlineCandidate &Candidate, SmallVector<CallBase *, 8> *InlinedCallSites) {
 
   CallBase &CB = *Candidate.CallInstr;
   Function *CalledFunction = CB.getCalledFunction();
@@ -1372,9 +1333,11 @@ bool SampleProfileLoader::tryInlineCandidate(
                     true, CSINLINE_DEBUG);
 
     // Now populate the list of newly exposed call sites.
-    InlinedCallSites.clear();
-    for (auto &I : IFI.InlinedCallSites)
-      InlinedCallSites.push_back(I);
+    if (InlinedCallSites) {
+      InlinedCallSites->clear();
+      for (auto &I : IFI.InlinedCallSites)
+        InlinedCallSites->push_back(I);
+    }
 
     if (ProfileIsCS)
       ContextTracker->markContextSamplesInlined(Candidate.CalleeSamples);
@@ -1446,17 +1409,15 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   InlineCost Cost = getInlineCost(*Candidate.CallInstr, Callee, Params,
                                   GetTTI(*Callee), GetAC, GetTLI);
 
-  // For old FDO inliner, we inline the call site as long as cost is not
-  // "Never". The cost-benefit check is done earlier.
-  if (!CallsitePrioritizedInline) {
-    if (Cost.isNever())
-      return Cost;
-    return InlineCost::getAlways("hot callsite previously inlined");
-  }
-
   // Honor always inline and never inline from call analyzer
   if (Cost.isNever() || Cost.isAlways())
     return Cost;
+
+  // For old FDO inliner, we inline the call site as long as cost is not
+  // "Never". The cost-benefit check is done earlier.
+  if (!CallsitePrioritizedInline) {
+    return InlineCost::get(Cost.getCost(), INT_MAX);
+  }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
   // Sample PGO threshold.
@@ -1542,34 +1503,23 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // fixed, but we generate different types).
         if (!PSI->isHotCount(EntryCountDistributed))
           break;
-        const char *Reason = nullptr;
-        auto CalleeFunctionName = FS->getFuncName();
-        if (CallBase *DI = tryPromoteIndirectCall(
-                F, CalleeFunctionName, Sum, EntryCountDistributed, I, Reason)) {
-          // Attach function profile for promoted indirect callee, and update
-          // call site count for the promoted inline candidate too.
-          Candidate = {DI, FS, EntryCountDistributed};
-          PromotedInsns.insert(I);
-          SmallVector<CallBase *, 8> InlinedCallSites;
-          // If profile mismatches, we should not attempt to inline DI.
-          if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
-              tryInlineCandidate(Candidate, InlinedCallSites)) {
-            for (auto *CB : InlinedCallSites) {
-              if (getInlineCandidate(&NewCandidate, CB))
-                CQueue.emplace(NewCandidate);
-            }
-            Changed = true;
+        SmallVector<CallBase *, 8> InlinedCallSites;
+        // Attach function profile for promoted indirect callee, and update
+        // call site count for the promoted inline candidate too.
+        Candidate = {I, FS, EntryCountDistributed};
+        if (tryPromoteAndInlineCandidate(F, Candidate, Sum, PromotedInsns,
+                                         &InlinedCallSites)) {
+          for (auto *CB : InlinedCallSites) {
+            if (getInlineCandidate(&NewCandidate, CB))
+              CQueue.emplace(NewCandidate);
           }
-        } else {
-          LLVM_DEBUG(dbgs()
-                     << "\nFailed to promote indirect call to "
-                     << CalleeFunctionName << " because " << Reason << "\n");
+          Changed = true;
         }
       }
     } else if (CalledFunction && CalledFunction->getSubprogram() &&
                !CalledFunction->isDeclaration()) {
       SmallVector<CallBase *, 8> InlinedCallSites;
-      if (tryInlineCandidate(Candidate, InlinedCallSites)) {
+      if (tryInlineCandidate(Candidate, &InlinedCallSites)) {
         for (auto *CB : InlinedCallSites) {
           if (getInlineCandidate(&NewCandidate, CB))
             CQueue.emplace(NewCandidate);
