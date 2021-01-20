@@ -362,6 +362,7 @@ private:
   Context createProcessingContext(PathRef) const;
   config::Provider *ConfigProvider = nullptr;
 
+  const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
   Callbacks *ServerCallbacks = nullptr;
   mutable std::mutex ConfigDiagnosticsMu;
