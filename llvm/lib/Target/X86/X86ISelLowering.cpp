@@ -37324,6 +37324,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     SDValue Ins1 = peekThroughBitcasts(N.getOperand(1));
     unsigned Imm = N.getConstantOperandVal(2);
 
+    // Handle subvector splat by tweaking values to match binary concat.
+    // vperm2x128 (ins ?, X, C1), undef, 0x11 ->
+    // vperm2x128 (ins ?, X, C1), (ins ?, X, C1), 0x31 -> concat X, X
+    if (Imm == 0x11 && Ins1.isUndef()) {
+      Imm = 0x31;
+      Ins1 = Ins0;
+    }
+
     if (!(Imm == 0x31 &&
           Ins0.getOpcode() == ISD::INSERT_SUBVECTOR &&
           Ins1.getOpcode() == ISD::INSERT_SUBVECTOR &&
