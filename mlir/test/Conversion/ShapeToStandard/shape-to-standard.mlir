@@ -87,14 +87,14 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
 
 // -----
 
-// Lower `const_shape` to `tensor_from_elements`.
+// Lower `const_shape` to `tensor.from_elements`.
 // CHECK-LABEL: @const_shape
 // CHECK-SAME: () -> tensor<?xindex>
 func @const_shape() -> tensor<?xindex> {
   // CHECK: %[[C1:.*]] = constant 1 : index
   // CHECK: %[[C2:.*]] = constant 2 : index
   // CHECK: %[[C3:.*]] = constant 3 : index
-  // CHECK: %[[TENSOR3:.*]] = tensor_from_elements %[[C1]], %[[C2]], %[[C3]]
+  // CHECK: %[[TENSOR3:.*]] = tensor.from_elements %[[C1]], %[[C2]], %[[C3]]
   // CHECK: %[[RESULT:.*]] = tensor.cast %[[TENSOR3]] : tensor<3xindex> to tensor<?xindex>
   // CHECK: return %[[RESULT]] : tensor<?xindex>
   %shape = shape.const_shape [1, 2, 3] : tensor<?xindex>
@@ -107,7 +107,7 @@ func @const_shape() -> tensor<?xindex> {
 // CHECK-LABEL: func @const_shape_zero_elements
 // CHECK-SAME: () -> tensor<?xindex>
 func @const_shape_zero_elements() -> tensor<?xindex> {
-  // CHECK: %[[TENSOR:.*]] = tensor_from_elements : tensor<0xindex>
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements : tensor<0xindex>
   // CHECK: %[[RESULT:.*]] = tensor.cast %[[TENSOR]] : tensor<0xindex> to tensor<?xindex>
   // CHECK: return %[[RESULT]] : tensor<?xindex>
   %shape = shape.const_shape [] : tensor<?xindex>
@@ -204,7 +204,7 @@ func @shape_of(%arg : tensor<*xf32>) {
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>)
 func @shape_of_unranked(%arg : tensor<*xf32>) {
   // CHECK: %[[RANK:.*]] = rank %[[ARG]] : tensor<*xf32>
-  // CHECK: %[[SHAPE:.*]] = dynamic_tensor_from_elements %[[RANK]] {
+  // CHECK: %[[SHAPE:.*]] = tensor.generate %[[RANK]] {
   // CHECK: ^bb0(%[[I:.*]]: index):
   // CHECK:   %[[EXTENT:.*]] = dim %[[ARG]], %[[I]] : tensor<*xf32>
   // CHECK:   yield %[[EXTENT]] : index
@@ -233,7 +233,7 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
   // CHECK-DAG: %[[C1:.*]] = constant 1 : index
   // CHECK-DAG: %[[C2:.*]] = constant 2 : index
   // CHECK-DAG: %[[C3:.*]] = constant 3 : index
-  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements %[[C1]], %[[C2]], %[[C3]] : tensor<3xindex>
+  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor.from_elements %[[C1]], %[[C2]], %[[C3]] : tensor<3xindex>
   %shape = shape.shape_of %arg : tensor<1x2x3xf32> -> tensor<?xindex>
   return
 }
@@ -244,7 +244,7 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
 // CHECK-LABEL: @shape_of_zero_d
 // CHECK-SAME: (%[[ARG:.*]]: tensor<f32>)
 func @shape_of_zero_d(%arg : tensor<f32>) {
-  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements : tensor<0xindex>
+  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor.from_elements : tensor<0xindex>
   %shape = shape.shape_of %arg : tensor<f32> -> tensor<?xindex>
   return
 }
@@ -259,7 +259,7 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   // CHECK-DAG: %[[C5:.*]] = constant 5 : index
   // CHECK-DAG: %[[C2:.*]] = constant 2 : index
   // CHECK-DAG: %[[DYN_DIM:.*]] = dim %[[ARG]], %[[C2]] : tensor<1x5x?xf32>
-  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements %[[C1]], %[[C5]], %[[DYN_DIM]] : tensor<3xindex>
+  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor.from_elements %[[C1]], %[[C5]], %[[DYN_DIM]] : tensor<3xindex>
   %shape = shape.shape_of %arg : tensor<1x5x?xf32> -> tensor<?xindex>
   return
 }
@@ -321,7 +321,7 @@ func @broadcast_unknown_extents(%a : tensor<?xindex>, %b : tensor<?xindex>) {
   // CHECK:           %[[LESSER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_LHS]], %[[ERASED_RHS]] : tensor<?xindex>
   // CHECK:           %[[GREATER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_RHS]], %[[ERASED_LHS]] : tensor<?xindex>
   // CHECK:           %[[RANK_DIFF:.*]] = subi %[[GREATER_RANK]], %[[LESSER_RANK]] : index
-  // CHECK:           %[[RESULT:.*]] = dynamic_tensor_from_elements %[[GREATER_RANK]] {
+  // CHECK:           %[[RESULT:.*]] = tensor.generate %[[GREATER_RANK]] {
   // CHECK:           ^bb0(%[[OUTPUT_DIMENSION:.*]]: index):
   // CHECK:             %[[IS_UNCHALLENGED_DIMENSION:.*]] = cmpi ult, %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
   // CHECK:             %[[GREATER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[GREATER_RANK_OPERAND]][%[[OUTPUT_DIMENSION]]] : tensor<?xindex>
@@ -361,7 +361,7 @@ func @broadcast_known_different_extents(%a : tensor<2xindex>, %b : tensor<3xinde
   // CHECK:           %[[LESSER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_LHS]], %[[ERASED_RHS]] : tensor<?xindex>
   // CHECK:           %[[GREATER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_RHS]], %[[ERASED_LHS]] : tensor<?xindex>
   // CHECK:           %[[RANK_DIFF:.*]] = subi %[[GREATER_RANK]], %[[LESSER_RANK]] : index
-  // CHECK:           %[[RESULT:.*]] = dynamic_tensor_from_elements %[[GREATER_RANK]] {
+  // CHECK:           %[[RESULT:.*]] = tensor.generate %[[GREATER_RANK]] {
   // CHECK:           ^bb0(%[[OUTPUT_DIMENSION:.*]]: index):
   // CHECK:             %[[IS_UNCHALLENGED_DIMENSION:.*]] = cmpi ult, %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
   // CHECK:             %[[GREATER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[GREATER_RANK_OPERAND]][%[[OUTPUT_DIMENSION]]] : tensor<?xindex>

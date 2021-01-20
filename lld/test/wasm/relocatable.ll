@@ -1,7 +1,10 @@
 ; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld -r -o %t.wasm %t.hello.o %t.o
-; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: wasm-ld -r -o %t2.o %t.hello.o %t.o
+; RUN: obj2yaml %t2.o | FileCheck %s
+
+; Verify the resulting object can be used as linker input
+; RUN: wasm-ld --allow-undefined -o %t.wasm %t2.o --export-table
 
 target triple = "wasm32-unknown-unknown"
 
@@ -31,6 +34,11 @@ entry:
 
 ; Test that __attribute__(used) (i.e NO_STRIP) is preserved in the relocated symbol table
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @my_func to i8*)], section "llvm.metadata"
+
+define void @_start() {
+  ret void
+}
+
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
@@ -63,16 +71,16 @@ entry:
 ; CHECK-NEXT:         Field:           bar_import
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           __indirect_function_table
+; CHECK-NEXT:         Kind:            TABLE
+; CHECK-NEXT:         Table:
+; CHECK-NEXT:           Index:           0
+; CHECK-NEXT:           ElemType:        FUNCREF
+; CHECK-NEXT:           Limits:
+; CHECK-NEXT:             Initial:         0x3
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 2, 1, 1 ]
-; CHECK-NEXT:   - Type:            TABLE
-; CHECK-NEXT:     Tables:
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ElemType:        FUNCREF
-; CHECK-NEXT:         Limits:
-; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x4
-; CHECK-NEXT:           Maximum:         0x4
+; CHECK-NEXT:     FunctionTypes:   [ 2, 1, 1, 2 ]
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:      - Initial:         0x1

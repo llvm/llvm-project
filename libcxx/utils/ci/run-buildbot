@@ -225,6 +225,13 @@ generic-nodebug)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake"
     check-cxx-cxxabi
 ;;
+generic-no-filesystem)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-filesystem.cmake"
+    check-cxx-cxxabi
+;;
 generic-no-random_device)
     export CC=clang
     export CXX=clang++
@@ -271,10 +278,6 @@ x86_64-apple-system-backdeployment-*)
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_library_path=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
-    # Filesystem is supported on Apple platforms starting with macosx10.15.
-    if [[ ${DEPLOYMENT_TARGET} =~ ^10.9|10.10|10.11|10.12|10.13|10.14$ ]]; then
-        PARAMS+=";enable_filesystem=False"
-    fi
 
     export CC=clang
     export CXX=clang++

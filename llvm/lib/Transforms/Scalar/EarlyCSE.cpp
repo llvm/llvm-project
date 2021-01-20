@@ -1232,6 +1232,14 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    // Likewise, noalias intrinsics don't actually write.
+    if (match(&Inst,
+              m_Intrinsic<Intrinsic::experimental_noalias_scope_decl>())) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping noalias intrinsic: " << Inst
+                        << '\n');
+      continue;
+    }
+
     // Skip sideeffect intrinsics, for the same reason as assume intrinsics.
     if (match(&Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
       LLVM_DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << Inst << '\n');

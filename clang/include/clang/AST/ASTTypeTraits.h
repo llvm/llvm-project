@@ -100,6 +100,8 @@ public:
   static ASTNodeKind getMostDerivedCommonAncestor(ASTNodeKind Kind1,
                                                   ASTNodeKind Kind2);
 
+  ASTNodeKind getCladeKind() const;
+
   /// Hooks for using ASTNodeKind as a key in a DenseMap.
   struct DenseMapInfo {
     // ASTNodeKind() is a good empty key because it is represented as a 0.

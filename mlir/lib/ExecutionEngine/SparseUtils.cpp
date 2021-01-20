@@ -233,7 +233,7 @@ extern "C" void *openTensorC(char *filename, uint64_t *idata) {
   double value;
   for (uint64_t k = 0; k < nnz; k++) {
     for (uint64_t r = 0; r < rank; r++) {
-      if (fscanf(file, "%" PRIu64, &indices[r]) != 1) {
+      if (fscanf(file, "%" PRId64, &indices[r]) != 1) {
         fprintf(stderr, "Cannot find next index in %s\n", filename);
         exit(1);
       }

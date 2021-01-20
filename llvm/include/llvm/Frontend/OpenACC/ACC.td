@@ -34,7 +34,7 @@ def OpenACC : DirectiveLanguage {
 
 // 2.16.1
 def ACCC_Async : Clause<"async"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
   let isValueOptional = true;
 }
 
@@ -43,12 +43,12 @@ def ACCC_Auto : Clause<"auto"> {}
 
 // 2.7.12
 def ACCC_Attach : Clause<"attach"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.15.1
 def ACCC_Bind : Clause<"bind"> {
-  let flangClassValue = "AccBindClause";
+  let flangClass = "AccBindClause";
 }
 
 // 2.12
@@ -57,26 +57,26 @@ def ACCC_Capture : Clause<"capture"> {
 
 // 2.9.1
 def ACCC_Collapse : Clause<"collapse"> {
-  let flangClassValue = "ScalarIntConstantExpr";
+  let flangClass = "ScalarIntConstantExpr";
 }
 
 // 2.7.6
 def ACCC_Copy : Clause<"copy"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 // 2.7.7
 def ACCC_Copyin : Clause<"copyin"> {
-  let flangClassValue = "AccObjectListWithModifier";
+  let flangClass = "AccObjectListWithModifier";
 }
 
 // 2.7.8
 def ACCC_Copyout : Clause<"copyout"> {
-  let flangClassValue = "AccObjectListWithModifier";
+  let flangClass = "AccObjectListWithModifier";
 }
 
 // 2.7.9
 def ACCC_Create : Clause<"create"> {
-  let flangClassValue = "AccObjectListWithModifier";
+  let flangClass = "AccObjectListWithModifier";
 }
 
 // 2.5.15
@@ -84,7 +84,7 @@ def ACC_Default_none : ClauseVal<"none", 1, 1> { let isDefault = 1; }
 def ACC_Default_present : ClauseVal<"present", 0, 1> {}
 
 def ACCC_Default : Clause<"default"> {
-  let flangClassValue = "AccDefaultClause";
+  let flangClass = "AccDefaultClause";
   let enumClauseValue = "DefaultValue";
   let allowedClauseValues = [
     ACC_Default_present,
@@ -94,42 +94,42 @@ def ACCC_Default : Clause<"default"> {
 
 // 2.14.3
 def ACCC_DefaultAsync : Clause<"default_async"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
 }
 
 // 2.7.11
 def ACCC_Delete : Clause<"delete"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.7.13
 def ACCC_Detach : Clause<"detach"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.14.4
 def ACCC_Device : Clause<"device"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.14.1 - 2.14.2
 def ACCC_DeviceNum : Clause<"device_num">  {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
 }
 
 // 2.7.4
 def ACCC_DevicePtr : Clause<"deviceptr"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.13.1
 def ACCC_DeviceResident : Clause<"device_resident"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.4
 def ACCC_DeviceType : Clause<"device_type"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
   let defaultValue = "*";
   let isValueOptional = true;
   let isValueList = true;
@@ -140,23 +140,23 @@ def ACCC_Finalize : Clause<"finalize"> {}
 
 // 2.5.13
 def ACCC_FirstPrivate : Clause<"firstprivate"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.9.2
 def ACCC_Gang : Clause<"gang"> {
-  let flangClassValue = "AccGangArgument";
+  let flangClass = "AccGangArgument";
   let isValueOptional = true;
 }
 
 // 2.14.4
 def ACCC_Host : Clause<"host"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.5.5
 def ACCC_If : Clause <"if"> {
-  let flangClassValue = "ScalarLogicalExpr";
+  let flangClass = "ScalarLogicalExpr";
 }
 
 // 2.14.4
@@ -167,12 +167,12 @@ def ACCC_Independent : Clause<"independent"> {}
 
 // 2.13.3
 def ACCC_Link : Clause<"link"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.7.10
 def ACCC_NoCreate : Clause<"no_create"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.15.1
@@ -180,32 +180,32 @@ def ACCC_NoHost : Clause<"nohost"> {}
 
 // 2.5.9
 def ACCC_NumGangs : Clause<"num_gangs"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
 }
 
 // 2.5.10
 def ACCC_NumWorkers : Clause<"num_workers"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
 }
 
 // 2.7.5
 def ACCC_Present : Clause<"present"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.5.12
 def ACCC_Private : Clause<"private"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.9.8
 def ACCC_Tile : Clause <"tile"> {
-  let flangClassValue = "AccTileExprList";
+  let flangClass = "AccTileExprList";
 }
 
 // 2.8.1
 def ACCC_UseDevice : Clause <"use_device"> {
-  let flangClassValue = "AccObjectList";
+  let flangClass = "AccObjectList";
 }
 
 // 2.12
@@ -213,12 +213,12 @@ def ACCC_Read : Clause<"read"> {}
 
 // 2.5.14
 def ACCC_Reduction : Clause<"reduction"> {
-  let flangClassValue = "AccObjectListWithReduction";
+  let flangClass = "AccObjectListWithReduction";
 }
 
 // 2.5.6
 def ACCC_Self : Clause<"self"> {
-  let flangClassValue = "AccSelfClause";
+  let flangClass = "AccSelfClause";
 }
 
 // 2.9.5
@@ -226,24 +226,24 @@ def ACCC_Seq : Clause<"seq"> {}
 
 // 2.9.4
 def ACCC_Vector : Clause<"vector"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
   let isValueOptional = true;
 }
 
 // 2.5.11
 def ACCC_VectorLength : Clause<"vector_length"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
 }
 
 // 2.16.2
 def ACCC_Wait : Clause<"wait"> {
-  let flangClassValue = "AccWaitArgument";
+  let flangClass = "AccWaitArgument";
   let isValueOptional = true;
 }
 
 // 2.9.3
 def ACCC_Worker: Clause<"worker"> {
-  let flangClassValue = "ScalarIntExpr";
+  let flangClass = "ScalarIntExpr";
   let isValueOptional = true;
 }
 

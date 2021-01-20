@@ -25,6 +25,9 @@ static isl_stat FN(check_map_equal_tuples_multi,BASE)(__isl_keep isl_map *map,
 
 /* Apply "map_bound" to "map" with the corresponding value in "bound"
  * for each output dimension.
+ * If "bound" has an explicit domain (which implies that "bound"
+ * is zero-dimensional), then intersect the domain of "map"
+ * with this explicit domain instead.
  */
 static __isl_give isl_map *FN(map_bound_multi,BASE)(__isl_take isl_map *map,
 	__isl_take MULTI(BASE) *bound,
@@ -44,6 +47,7 @@ static __isl_give isl_map *FN(map_bound_multi,BASE)(__isl_take isl_map *map,
 		el = FN(MULTI(BASE),get_at)(bound, i);
 		map = map_bound(map, i, el);
 	}
+	map = FN(FN(isl_map_intersect_multi,BASE),explicit_domain)(map, bound);
 	FN(MULTI(BASE),free)(bound);
 	return map;
 error:

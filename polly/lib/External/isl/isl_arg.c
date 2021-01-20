@@ -17,6 +17,7 @@
 
 static struct isl_arg help_arg[] = {
 ISL_ARG_PHANTOM_BOOL('h', "help", NULL, "print this help, then exit")
+{ isl_arg_end }
 };
 
 static void set_default_choice(struct isl_arg *arg, void *opt)

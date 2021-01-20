@@ -13,5 +13,6 @@ add_mlir_dialect_library(MLIRTensor
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRSideEffectInterfaces
   MLIRSupport
   )

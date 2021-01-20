@@ -530,11 +530,12 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
     // Pseudo probe intrinsics do not block tail call optimization either.
     if (isa<PseudoProbeInst>(BBI))
       continue;
-    // A lifetime end or assume intrinsic should not stop tail call
-    // optimization.
+    // A lifetime end, assume or noalias.decl intrinsic should not stop tail
+    // call optimization.
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
       if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
-          II->getIntrinsicID() == Intrinsic::assume)
+          II->getIntrinsicID() == Intrinsic::assume ||
+          II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
         continue;
     if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
         !isSafeToSpeculativelyExecute(&*BBI))

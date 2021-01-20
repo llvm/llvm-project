@@ -37,7 +37,7 @@ uint32_t isl_local_space_get_hash(__isl_keep isl_local_space *ls)
 		return 0;
 
 	hash = isl_hash_init();
-	space_hash = isl_space_get_hash(ls->dim);
+	space_hash = isl_space_get_full_hash(isl_local_space_peek_space(ls));
 	isl_hash_hash(hash, space_hash);
 	div_hash = isl_mat_get_hash(ls->div);
 	isl_hash_hash(hash, div_hash);
@@ -163,14 +163,7 @@ isl_bool isl_local_space_is_set(__isl_keep isl_local_space *ls)
 #define TYPE	isl_local_space
 
 #include "isl_type_has_equal_space_bin_templ.c"
-
-/* Is the space of "ls" equal to "space"?
- */
-isl_bool isl_local_space_has_space(__isl_keep isl_local_space *ls,
-	__isl_keep isl_space *space)
-{
-	return isl_space_is_equal(isl_local_space_peek_space(ls), space);
-}
+#include "isl_type_has_space_templ.c"
 
 /* Check that the space of "ls" is equal to "space".
  */

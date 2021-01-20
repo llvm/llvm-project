@@ -73,7 +73,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   // targeting ELF.
   AssemblerDialect = AsmWriterVariant == Default ? Generic : AsmWriterVariant;
 
-  CodePointerSize = 8;
+  CodePointerSize = T.getEnvironment() == Triple::GNUILP32 ? 4 : 8;
 
   // ".comm align is in bytes but .align is pow-2."
   AlignmentIsInBytes = false;

@@ -36,15 +36,15 @@ double gc[100];
 // CK1-64: [[KMP_PRIVATES_T]] = type { [1 x i8*], [1 x i8*], [1 x i64] }
 
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 800]
-// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -205,7 +205,7 @@ struct ST {
   }
 };
 
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710674]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710674]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -342,7 +342,7 @@ void device_side_scan(int arg) {
 #ifdef CK5
 
 // CK5: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 4]
-// CK5: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK5: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 // CK5-LABEL: lvalue
 void lvalue(int *B, int l, int e) {
@@ -384,7 +384,7 @@ void lvalue(int *B, int l, int e) {
 #ifdef CK6
 
 // CK6: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 4]
-// CK6: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK6: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 // CK6-LABEL: lvalue
 void lvalue(int *B, int l, int e) {
@@ -431,7 +431,7 @@ void lvalue(int *B, int l, int e) {
 #ifdef CK7
 
 // CK7: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 4]
-// CK7: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK7: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 // CK7-LABEL: lvalue
 void lvalue(int *B, int l, int e) {
@@ -481,7 +481,7 @@ void lvalue(int *B, int l, int e) {
 
 #ifdef CK8
 // CK8: [[SIZE00:@.+]] = {{.+}}constant [2 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}, i{{64|32}} 4]
-// CK8: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 33, i64 17]
+// CK8: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 1, i64 17]
 
 // CK8-LABEL: lvalue
 void lvalue(int **B, int l, int e) {
@@ -535,7 +535,7 @@ struct S {
   double *p;
 };
 
-// CK9: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK9: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK9-LABEL: lvalue
 void lvalue(struct S *s, int l, int e) {
@@ -585,7 +585,7 @@ struct S {
   double *p;
 };
 
-// CK10: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK10: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK10-LABEL: lvalue
 void lvalue(struct S *s, int l, int e) {
@@ -635,7 +635,7 @@ void lvalue(struct S *s, int l, int e) {
 struct S {
   double *p;
 };
-// CK11: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK11: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK11-LABEL: lvalue
 void lvalue(struct S *s, int l, int e) {
@@ -687,7 +687,7 @@ struct S {
   double *p;
   struct S *sp;
 };
-// CK12: [[MTYPE00:@.+]] = {{.+}}constant [3 x i64] [i64 32, i64 281474976710672, i64 17]
+// CK12: [[MTYPE00:@.+]] = {{.+}}constant [3 x i64] [i64 0, i64 281474976710672, i64 17]
 
 // CK12-LABEL: lvalue
 void lvalue(struct S *s, int l, int e) {
@@ -749,7 +749,7 @@ void lvalue(struct S *s, int l, int e) {
 #ifdef CK13
 
 // CK13: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK13: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK13: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 // CK13-LABEL: lvalue
 void lvalue(int **BB, int a, int b) {
@@ -796,7 +796,7 @@ void lvalue(int **BB, int a, int b) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK14
 
-// CK14: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK14: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 struct SSA {
   double *p;
@@ -869,7 +869,7 @@ void lvalue_member(SSA *sap) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK15
 
-// CK15: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK15: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 struct SSA {
   double *p;
@@ -935,7 +935,7 @@ void lvalue_member(SSA *sap) {
 #ifdef CK16
 
 // CK16: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK16: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK16: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 //CK16-LABEL: lvalue_find_base
 void lvalue_find_base(float *f, int *i) {
@@ -980,7 +980,7 @@ void lvalue_find_base(float *f, int *i) {
 #ifdef CK17
 
 // CK17: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK17: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK17: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
 struct SSA {
   int i;
@@ -1038,8 +1038,8 @@ void lvalue_find_base(float **f, SSA *sa) {
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK18
 
-// CK18-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [1 x i64] [i64 33]
-// CK18-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK18-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [1 x i64] [i64 1]
+// CK18-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 //CK18-LABEL: array_shaping
 void array_shaping(float *f, int sa) {
@@ -1113,11 +1113,11 @@ void array_shaping(float *f, int sa) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK19
 
-// PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
-// CK19: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+// PRESENT=0x1000 | TO=0x1 = 0x1021
+// CK19: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1001]]]
 
-// PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 = 0x1022
-// CK19: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1022]]]
+// PRESENT=0x1000 | FROM=0x2 = 0x1002
+// CK19: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1002]]]
 
 // CK19-LABEL: _Z13check_presenti
 void check_present(int arg) {
@@ -1186,7 +1186,7 @@ struct ST {
 // CK20: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
 // CK20: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 3]
-// CK20: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+// CK20: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044417]
 
 // CK20-LABEL: _Z3foo
 void foo(int arg) {
@@ -1254,7 +1254,7 @@ void foo(int arg) {
 // CK21: [[STRUCT_ST:%.+]] = type { [10 x [10 x [10 x double*]]] }
 // CK21: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
-// CK21: [[MTYPE:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 299067162755073]
+// CK21: [[MTYPE:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 299067162755073]
 
 struct ST {
   double *dptr[10][10][10];
@@ -1333,7 +1333,7 @@ void bar() {
 // CK22: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
 // CK22: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK22: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+// CK22: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044417]
 
 struct ST {
   // CK22: _ZN2ST3fooEPA10_Pi
@@ -1409,7 +1409,7 @@ void bar() {
 // CK23: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
 // CK23: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK23: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+// CK23: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044417]
 
 // CK23: foo
 void foo(int arg) {
@@ -1486,7 +1486,7 @@ void foo(int arg) {
 // CK24: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
 // CK24: [[MSIZE:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK24: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044449]
+// CK24: [[MTYPE:@.+]] = {{.+}}constant [1 x i64] [i64 17592186044417]
 
 // CK24: foo
 void foo(int arg) {
@@ -1563,7 +1563,7 @@ void foo(int arg) {
 // CK25: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
 // CK25: [[MSIZE:@.+]] = {{.+}}constant [3 x i64] [i64 4, i64 4, i64 3]
-// CK25: [[MTYPE:@.+]] = {{.+}}constant [3 x i64] [i64 17592186044449, i64 33, i64 17592186044449]
+// CK25: [[MTYPE:@.+]] = {{.+}}constant [3 x i64] [i64 17592186044417, i64 1, i64 17592186044417]
 
 // CK25-LABEL: _Z3foo
 void foo(int arg) {

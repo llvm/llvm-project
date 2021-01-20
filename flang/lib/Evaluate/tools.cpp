@@ -896,6 +896,31 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   return msg;
 }
 
+// GetLastPointerSymbol()
+static const Symbol *GetLastPointerSymbol(const Symbol &symbol) {
+  return IsPointer(GetAssociationRoot(symbol)) ? &symbol : nullptr;
+}
+static const Symbol *GetLastPointerSymbol(const SymbolRef &symbol) {
+  return GetLastPointerSymbol(*symbol);
+}
+static const Symbol *GetLastPointerSymbol(const Component &x) {
+  const Symbol &c{x.GetLastSymbol()};
+  return IsPointer(c) ? &c : GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const NamedEntity &x) {
+  const auto *c{x.UnwrapComponent()};
+  return c ? GetLastPointerSymbol(*c) : GetLastPointerSymbol(x.GetLastSymbol());
+}
+static const Symbol *GetLastPointerSymbol(const ArrayRef &x) {
+  return GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const CoarrayRef &x) {
+  return nullptr;
+}
+const Symbol *GetLastPointerSymbol(const DataRef &x) {
+  return std::visit([](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

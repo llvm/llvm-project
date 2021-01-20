@@ -251,6 +251,10 @@
 
 #include <__debug>
 
+#if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+# error "The Filesystem library is not supported by this configuration of libc++"
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif

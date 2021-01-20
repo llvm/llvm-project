@@ -404,6 +404,16 @@ private:
   /// after the LR is was restored from a register.
   void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator It) const;
+  /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
+  /// so that they will be valid post-outlining.
+  ///
+  /// \param MBB A \p MachineBasicBlock in an outlined function.
+  void fixupPostOutline(MachineBasicBlock &MBB) const;
+
+  /// Returns true if the machine instruction offset can handle the stack fixup
+  /// and updates it if requested.
+  bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
+                                 bool Updt) const;
 
   unsigned getInstBundleLength(const MachineInstr &MI) const;
 

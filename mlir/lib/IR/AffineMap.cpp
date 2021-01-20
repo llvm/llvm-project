@@ -305,8 +305,33 @@ AffineMap AffineMap::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
   for (auto expr : getResults())
     results.push_back(
         expr.replaceDimsAndSymbols(dimReplacements, symReplacements));
-
   return get(numResultDims, numResultSyms, results, getContext());
+}
+
+/// Sparse replace method. Apply AffineExpr::replace(`expr`, `replacement`) to
+/// each of the results and return a new AffineMap with the new results and
+/// with the specified number of dims and symbols.
+AffineMap AffineMap::replace(AffineExpr expr, AffineExpr replacement,
+                             unsigned numResultDims,
+                             unsigned numResultSyms) const {
+  SmallVector<AffineExpr, 4> newResults;
+  newResults.reserve(getNumResults());
+  for (AffineExpr e : getResults())
+    newResults.push_back(e.replace(expr, replacement));
+  return AffineMap::get(numResultDims, numResultSyms, newResults, getContext());
+}
+
+/// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
+/// results and return a new AffineMap with the new results and with the
+/// specified number of dims and symbols.
+AffineMap AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map,
+                             unsigned numResultDims,
+                             unsigned numResultSyms) const {
+  SmallVector<AffineExpr, 4> newResults;
+  newResults.reserve(getNumResults());
+  for (AffineExpr e : getResults())
+    newResults.push_back(e.replace(map));
+  return AffineMap::get(numResultDims, numResultSyms, newResults, getContext());
 }
 
 AffineMap AffineMap::compose(AffineMap map) {

@@ -11,6 +11,8 @@
 
 #ifdef __x86_64__
 #include "x86_64/FEnv.h"
+#elif defined(__aarch64__)
+#include "aarch64/FEnv.h"
 #else
 #include "DummyFEnv.h"
 #endif

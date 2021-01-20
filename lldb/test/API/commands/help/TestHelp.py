@@ -57,6 +57,11 @@ class HelpCommandTestCase(TestBase):
         self.runCmd("help unsigned-integer")
 
     @no_debug_info_test
+    def test_help_memory_read_should_not_crash_lldb(self):
+        """Command 'help memory read' should not crash lldb."""
+        self.runCmd("help memory read", check=False)
+
+    @no_debug_info_test
     def test_help_should_not_hang_emacsshell(self):
         """Command 'settings set term-width 0' should not hang the help command."""
         self.expect(

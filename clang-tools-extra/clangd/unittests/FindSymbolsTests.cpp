@@ -72,7 +72,7 @@ TEST(WorkspaceSymbols, NoLocals) {
         struct LocalClass {};
         int local_var;
       })cpp";
-  EXPECT_THAT(getSymbols(TU, "l"), IsEmpty());
+  EXPECT_THAT(getSymbols(TU, "l"), ElementsAre(QName("LocalClass")));
   EXPECT_THAT(getSymbols(TU, "p"), IsEmpty());
 }
 

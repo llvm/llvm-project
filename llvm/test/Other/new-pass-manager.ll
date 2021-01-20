@@ -366,6 +366,9 @@
 ; CHECK-EXT-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-EXT-NEXT: Running pass: {{.*}}Bye
 ; CHECK-EXT-NEXT: Finished llvm::Function pass manager run.
+; We don't have checks for CHECK-NOEXT here, but this simplifies the test, while
+; avoiding FileCheck complaining about the unused prefix.
+; CHECK-NOEXT: {{.*}}
 ; CHECK-O0-NEXT: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \

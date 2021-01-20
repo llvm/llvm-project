@@ -7,15 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendOptions.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace Fortran::frontend;
 
+bool Fortran::frontend::isFixedFormSuffix(llvm::StringRef suffix) {
+  // Note: Keep this list in-sync with flang/test/lit.cfg.py
+  return suffix == "f" || suffix == "F" || suffix == "ff" || suffix == "for" ||
+      suffix == "FOR" || suffix == "fpp" || suffix == "FPP";
+}
+
+bool Fortran::frontend::isFreeFormSuffix(llvm::StringRef suffix) {
+  // Note: Keep this list in-sync with flang/test/lit.cfg.py
+  // TODO: Add Cuda Fortan files (i.e. `*.cuf` and `*.CUF`).
+  return suffix == "f77" || suffix == "f90" || suffix == "F90" ||
+      suffix == "ff90" || suffix == "f95" || suffix == "F95" ||
+      suffix == "ff95" || suffix == "f03" || suffix == "F03" ||
+      suffix == "f08" || suffix == "F08" || suffix == "f18" || suffix == "F18";
+}
+
 InputKind FrontendOptions::GetInputKindForExtension(llvm::StringRef extension) {
-  return llvm::StringSwitch<InputKind>(extension)
-      // TODO: Should match the list in flang/test/lit.cfg.py
-      // FIXME: Currently this API allows at most 9 items per case.
-      .Cases("f", "F", "f77", "f90", "F90", "f95", "F95", "ff95", "f18", "F18",
-          Language::Fortran)
-      .Default(Language::Unknown);
+  if (isFixedFormSuffix(extension) || isFreeFormSuffix(extension)) {
+    return Language::Fortran;
+  }
+  return Language::Unknown;
 }

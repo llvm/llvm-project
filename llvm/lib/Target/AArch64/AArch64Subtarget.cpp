@@ -122,6 +122,7 @@ void AArch64Subtarget::initializeProperties() {
   case AppleA11:
   case AppleA12:
   case AppleA13:
+  case AppleA14:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;

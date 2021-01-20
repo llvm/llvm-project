@@ -545,6 +545,14 @@ def combine_insert_vec_elts_build_vector : GICombineRule<
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
 
+def load_or_combine_matchdata :
+GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
+def load_or_combine : GICombineRule<
+  (defs root:$root, load_or_combine_matchdata:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyLoadOrCombine(*${root}, ${info}); }])>;
+
 // Currently only the one combine above.
 def insert_vec_elt_combines : GICombineGroup<
                             [combine_insert_vec_elts_build_vector]>;
@@ -587,4 +595,4 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
-    shift_immed_chain, shift_of_shifted_logic_chain]>;
+    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine]>;

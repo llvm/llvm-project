@@ -13481,6 +13481,58 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                "#endif",
                AllmanBraceStyle);
 
+  EXPECT_EQ(AllmanBraceStyle.AllowShortLambdasOnASingleLine,
+            FormatStyle::SLS_All);
+
+  verifyFormat("[](int i) { return i + 2; };\n"
+               "[](int i, int j)\n"
+               "{\n"
+               "  auto x = i + j;\n"
+               "  auto y = i * j;\n"
+               "  return x ^ y;\n"
+               "};\n"
+               "void foo()\n"
+               "{\n"
+               "  auto shortLambda = [](int i) { return i + 2; };\n"
+               "  auto longLambda = [](int i, int j)\n"
+               "  {\n"
+               "    auto x = i + j;\n"
+               "    auto y = i * j;\n"
+               "    return x ^ y;\n"
+               "  };\n"
+               "}",
+               AllmanBraceStyle);
+
+  AllmanBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+
+  verifyFormat("[](int i)\n"
+               "{\n"
+               "  return i + 2;\n"
+               "};\n"
+               "[](int i, int j)\n"
+               "{\n"
+               "  auto x = i + j;\n"
+               "  auto y = i * j;\n"
+               "  return x ^ y;\n"
+               "};\n"
+               "void foo()\n"
+               "{\n"
+               "  auto shortLambda = [](int i)\n"
+               "  {\n"
+               "    return i + 2;\n"
+               "  };\n"
+               "  auto longLambda = [](int i, int j)\n"
+               "  {\n"
+               "    auto x = i + j;\n"
+               "    auto y = i * j;\n"
+               "    return x ^ y;\n"
+               "  };\n"
+               "}",
+               AllmanBraceStyle);
+
+  // Reset
+  AllmanBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
+
   // This shouldn't affect ObjC blocks..
   verifyFormat("[self doSomeThingWithACompletionHandler:^{\n"
                "  // ...\n"

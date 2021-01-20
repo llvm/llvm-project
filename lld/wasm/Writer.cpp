@@ -841,7 +841,7 @@ void Writer::createOutputSegments() {
         LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
         s = make<OutputSegment>(name);
         if (config->sharedMemory)
-          s->initFlags = WASM_SEGMENT_IS_PASSIVE;
+          s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
         // Exported memories are guaranteed to be zero-initialized, so no need
         // to emit data segments for bss sections.
         // TODO: consider initializing bss sections with memory.fill
@@ -886,7 +886,7 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
 }
 
 bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
-  return segment->initFlags & WASM_SEGMENT_IS_PASSIVE &&
+  return segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE &&
          segment->name != ".tdata" && !segment->isBss;
 }
 

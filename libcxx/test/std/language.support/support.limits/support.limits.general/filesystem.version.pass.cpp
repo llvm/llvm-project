@@ -11,6 +11,8 @@
 //
 // clang-format off
 
+// UNSUPPORTED: libcpp-has-no-filesystem-library
+
 // <filesystem>
 
 // Test the feature test macros defined by <filesystem>

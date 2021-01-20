@@ -148,8 +148,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
     for (const auto &clause : parallelOpClauseList.v) {
       if (const auto &ifClause =
-              std::get_if<Fortran::parser::OmpIfClause>(&clause.u)) {
-        auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->t);
+              std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
+        auto &expr =
+            std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
         ifClauseOperand = fir::getBase(
             converter.genExprValue(*Fortran::semantics::GetExpr(expr)));
       } else if (const auto &numThreadsClause =

@@ -56,8 +56,7 @@ define i1 @cond_eq_or_const(i8 %X, i8 %Y) {
 define i1 @merge_and(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @merge_and(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[C]], [[X]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %X, i1 %Y, i1 false
   %res = and i1 %X, %c
@@ -67,8 +66,7 @@ define i1 @merge_and(i1 %X, i1 %Y) {
 define i1 @merge_or(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @merge_or(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[C]], [[X]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %X, i1 true, i1 %Y
   %res = or i1 %X, %c
@@ -77,10 +75,10 @@ define i1 @merge_or(i1 %X, i1 %Y) {
 
 define i1 @xor_and(i1 %c, i32 %X, i32 %Y) {
 ; CHECK-LABEL: @xor_and(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i1 [[COMP]], i1 false
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[SEL]], true
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[COMP]]
+; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
   %sel = select i1 %c, i1 %comp, i1 false
@@ -90,10 +88,9 @@ define i1 @xor_and(i1 %c, i32 %X, i32 %Y) {
 
 define <2 x i1> @xor_and2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_and2(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 true, i1 false>
-; CHECK-NEXT:    [[RES:%.*]] = xor <2 x i1> [[SEL]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 false, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
   %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 true, i1 false>
@@ -105,10 +102,9 @@ define <2 x i1> @xor_and2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 
 define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_and3(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 icmp eq (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 false>
-; CHECK-NEXT:    [[RES:%.*]] = xor <2 x i1> [[SEL]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 icmp ne (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
   %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 icmp eq (i8* @glb, i8* inttoptr (i64 1234 to i8*)), i1 false>
@@ -118,10 +114,10 @@ define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 
 define i1 @xor_or(i1 %c, i32 %X, i32 %Y) {
 ; CHECK-LABEL: @xor_or(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[COMP]]
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[SEL]], true
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 [[COMP]], i1 false
+; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
   %sel = select i1 %c, i1 true, i1 %comp
@@ -131,10 +127,9 @@ define i1 @xor_or(i1 %c, i32 %X, i32 %Y) {
 
 define <2 x i1> @xor_or2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_or2(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 true, i1 false>, <2 x i1> [[COMP]]
-; CHECK-NEXT:    [[RES:%.*]] = xor <2 x i1> [[SEL]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 false, i1 true>, <2 x i1> [[COMP]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
   %sel = select <2 x i1> %c, <2 x i1> <i1 true, i1 false>, <2 x i1> %comp
@@ -144,10 +139,9 @@ define <2 x i1> @xor_or2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 
 define <2 x i1> @xor_or3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_or3(
-; CHECK-NEXT:    [[COMP:%.*]] = icmp ult <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 icmp eq (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 false>, <2 x i1> [[COMP]]
-; CHECK-NEXT:    [[RES:%.*]] = xor <2 x i1> [[SEL]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 icmp ne (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 true>, <2 x i1> [[COMP]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
   %sel = select <2 x i1> %c, <2 x i1> <i1 icmp eq (i8* @glb, i8* inttoptr (i64 1234 to i8*)), i1 false>, <2 x i1> %comp

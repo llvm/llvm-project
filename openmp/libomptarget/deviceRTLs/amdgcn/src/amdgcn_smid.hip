@@ -60,4 +60,5 @@ DEVICE uint32_t __kmpc_impl_smid() {
       ENCODE_HWREG(HW_ID_SE_ID_SIZE, HW_ID_SE_ID_OFFSET, HW_ID));
   return (se_id << HW_ID_CU_ID_SIZE) + cu_id;
 }
+
 #pragma omp end declare target

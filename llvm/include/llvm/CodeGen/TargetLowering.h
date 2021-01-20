@@ -1658,6 +1658,11 @@ public:
                           const MachineMemOperand &MMO,
                           bool *Fast = nullptr) const;
 
+  /// LLT handling variant.
+  bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, LLT Ty,
+                          const MachineMemOperand &MMO,
+                          bool *Fast = nullptr) const;
+
   /// Returns the target specific optimal type for load and store operations as
   /// a result of memset, memcpy, and memmove lowering.
   /// It returns EVT::Other if the type should be determined using generic

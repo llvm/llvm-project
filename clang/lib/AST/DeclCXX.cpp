@@ -81,7 +81,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
       HasOnlyCMembers(true), HasInClassInitializer(false),
       HasUninitializedReferenceMember(false), HasUninitializedFields(false),
-      HasInheritedConstructor(false), HasInheritedAssignment(false),
+      HasInheritedConstructor(false),
+      HasInheritedDefaultConstructor(false),
+      HasInheritedAssignment(false),
       NeedOverloadResolutionForCopyConstructor(false),
       NeedOverloadResolutionForMoveConstructor(false),
       NeedOverloadResolutionForCopyAssignment(false),
@@ -814,6 +816,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   constructor [...]
     if (Constructor->isConstexpr() && !Constructor->isCopyOrMoveConstructor())
       data().HasConstexprNonCopyMoveConstructor = true;
+    if (!isa<CXXConstructorDecl>(D) && Constructor->isDefaultConstructor())
+      data().HasInheritedDefaultConstructor = true;
   }
 
   // Handle destructors.

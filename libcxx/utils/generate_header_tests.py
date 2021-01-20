@@ -30,6 +30,9 @@ header_markup = {
     "semaphore": ["ifndef _LIBCPP_HAS_NO_THREADS"],
     "thread": ["ifndef _LIBCPP_HAS_NO_THREADS"],
 
+    "filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
+    "experimental/filesystem": ["ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY"],
+
     "clocale": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "codecvt": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],
     "fstream": ["ifndef _LIBCPP_HAS_NO_LOCALIZATION"],

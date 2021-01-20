@@ -28,7 +28,11 @@ Some of the important classes are described here:
 * :py:class:`SBFunction`: Represents a generic function, which can be inlined or not.
 * :py:class:`SBBlock`: Represents a lexical block. :py:class:`SBFunction` contains SBBlocks.
 * :py:class:`SBLineEntry`: Specifies an association with a contiguous range of instructions
-  and a source file location. :py:class:`SBCompileUnit` contains SBLineEntry."
+  and a source file location. :py:class:`SBCompileUnit` contains SBLineEntry.
+
+The different enums in the `lldb` module are described in :doc:`python_api_enums`.
+
+"
 %enddef
 
 /*

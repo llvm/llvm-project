@@ -18,7 +18,7 @@
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 #ifdef CK1
 
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 67]
 // CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 // CK1: [[MTYPE02:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 

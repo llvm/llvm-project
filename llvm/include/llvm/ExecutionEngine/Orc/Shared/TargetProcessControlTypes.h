@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
 
 #include <vector>
 
@@ -59,14 +58,6 @@ struct BufferWrite {
 
 /// A handle used to represent a loaded dylib in the target process.
 using DylibHandle = JITTargetAddress;
-
-/// A pair of a dylib and a set of symbols to be looked up.
-struct LookupRequest {
-  LookupRequest(DylibHandle Handle, const SymbolLookupSet &Symbols)
-      : Handle(Handle), Symbols(Symbols) {}
-  DylibHandle Handle;
-  const SymbolLookupSet &Symbols;
-};
 
 using LookupResult = std::vector<JITTargetAddress>;
 

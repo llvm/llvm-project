@@ -45,6 +45,9 @@ __isl_give isl_morph *isl_morph_copy(__isl_keep isl_morph *morph);
 __isl_give isl_morph *isl_morph_identity(__isl_keep isl_basic_set *bset);
 __isl_null isl_morph *isl_morph_free(__isl_take isl_morph *morph);
 
+isl_stat isl_morph_check_applies(__isl_keep isl_morph *morph,
+	__isl_keep isl_space *space);
+
 __isl_give isl_space *isl_morph_get_dom_space(__isl_keep isl_morph *morph);
 __isl_give isl_space *isl_morph_get_ran_space(__isl_keep isl_morph *morph);
 __isl_give isl_multi_aff *isl_morph_get_var_multi_aff(

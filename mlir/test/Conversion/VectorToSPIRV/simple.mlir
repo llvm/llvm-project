@@ -57,3 +57,13 @@ func @insert_element_negative(%val: f32, %arg0 : vector<5xf32>, %id : i32) {
   %0 = vector.insertelement %val, %arg0[%id : i32] : vector<5xf32>
   spv.Return
 }
+
+// -----
+
+// CHECK-LABEL: func @fma
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[C:.*]]: vector<4xf32>
+//       CHECK:   spv.GLSL.Fma %[[A]], %[[B]], %[[C]] : vector<4xf32>
+func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) {
+  %0 = vector.fma %a, %b, %c: vector<4xf32>
+  spv.Return
+}

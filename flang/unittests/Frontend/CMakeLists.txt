@@ -1,6 +1,5 @@
 add_flang_unittest(FlangFrontendTests
   CompilerInstanceTest.cpp
-  InputOutputTest.cpp
   FrontendActionTest.cpp
 )
 

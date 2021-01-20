@@ -72,8 +72,13 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
 
 char ScalarizeMaskedMemIntrinLegacyPass::ID = 0;
 
-INITIALIZE_PASS(ScalarizeMaskedMemIntrinLegacyPass, DEBUG_TYPE,
-                "Scalarize unsupported masked memory intrinsics", false, false)
+INITIALIZE_PASS_BEGIN(ScalarizeMaskedMemIntrinLegacyPass, DEBUG_TYPE,
+                      "Scalarize unsupported masked memory intrinsics", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(ScalarizeMaskedMemIntrinLegacyPass, DEBUG_TYPE,
+                    "Scalarize unsupported masked memory intrinsics", false,
+                    false)
 
 FunctionPass *llvm::createScalarizeMaskedMemIntrinLegacyPass() {
   return new ScalarizeMaskedMemIntrinLegacyPass();

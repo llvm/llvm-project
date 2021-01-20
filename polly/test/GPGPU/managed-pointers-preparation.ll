@@ -17,7 +17,7 @@
 ; CHECK-NOT: @polly_launchKernel
 
 
-; CODE:  if (p_0_loaded_from___data_runcontrol_MOD_lmulti_layer == 0) {
+; CODE:  if (p_0_loaded_from___data_runcontrol_MOD_lmulti_layer == 1) {
 ; CODE-NEXT:    {
 ; CODE-NEXT:      dim3 k0_dimBlock;
 ; CODE-NEXT:      dim3 k0_dimGrid;

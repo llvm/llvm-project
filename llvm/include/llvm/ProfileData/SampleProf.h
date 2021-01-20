@@ -164,7 +164,9 @@ struct SecHdrTableEntry {
 // will be saved in the higher 32 bits.
 enum class SecCommonFlags : uint32_t {
   SecFlagInValid = 0,
-  SecFlagCompress = (1 << 0)
+  SecFlagCompress = (1 << 0),
+  // Indicate the section contains only profile without context.
+  SecFlagFlat = (1 << 1)
 };
 
 // Section specific flags are defined here.

@@ -12,6 +12,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-types.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/MathExtras.h"
+#include <climits>
 #include <cstdint>
 
 namespace lldb_private {
@@ -47,7 +49,8 @@ struct OptionDefinition {
   /// Whether this has a short option character.
   bool HasShortOption() const {
     // See the short_option documentation for more.
-    return llvm::isPrint(short_option);
+    return llvm::isUInt<CHAR_BIT>(short_option) &&
+           llvm::isPrint(short_option);
   }
 };
 } // namespace lldb_private

@@ -33,7 +33,8 @@ class TargetTransformInfo;
 bool LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                   AssumptionCache *AC, DominatorTree *DT, ScalarEvolution *SE,
                   MemorySSAUpdater *MSSAU, const SimplifyQuery &SQ,
-                  bool RotationOnly, unsigned Threshold, bool IsUtilMode);
+                  bool RotationOnly, unsigned Threshold, bool IsUtilMode,
+                  bool PrepareForLTO = false);
 
 } // namespace llvm
 

@@ -503,3 +503,28 @@ namespace PR48517 {
   template<> struct Q<&R<int>::n> { static constexpr int X = 1; };
   static_assert(R<int>().f() == 1);
 }
+
+namespace dependent_reference {
+  template<int &r> struct S { int *q = &r; };
+  template<int> auto f() { static int n; return S<n>(); }
+  auto v = f<0>();
+  auto w = f<1>();
+  static_assert(!is_same<decltype(v), decltype(w)>);
+  // Ensure that we can instantiate the definition of S<...>.
+  int n = *v.q + *w.q;
+}
+
+namespace decay {
+  template<typename T, typename C, const char *const A[(int)T::count]> struct X {
+    template<typename CC> void f(const X<T, CC, A> &v) {}
+  };
+  struct A {
+    static constexpr const char *arr[] = {"hello", "world"};
+    static constexpr int count = 2;
+  };
+  void f() {
+    X<A, int, A::arr> x1;
+    X<A, float, A::arr> x2;
+    x1.f(x2);
+  }
+}

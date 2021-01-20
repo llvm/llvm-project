@@ -148,10 +148,9 @@ define i1 @logical_or_noundef_a(i1 noundef %a, i1 %b) {
 }
 
 ; Noundef on false value allows conversion to or.
-; TODO: impliesPoison doesn't handle this yet.
 define i1 @logical_or_noundef_b(i1 %a, i1 noundef %b) {
 ; CHECK-LABEL: @logical_or_noundef_b(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = select i1 %a, i1 true, i1 %b
@@ -169,10 +168,9 @@ define i1 @logical_and_noundef_a(i1 noundef %a, i1 %b) {
 }
 
 ; Noundef on false value allows conversion to and.
-; TODO: impliesPoison doesn't handle this yet.
 define i1 @logical_and_noundef_b(i1 %a, i1 noundef %b) {
 ; CHECK-LABEL: @logical_and_noundef_b(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = select i1 %a, i1 %b, i1 false

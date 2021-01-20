@@ -8604,14 +8604,41 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // If it is a splat of a double, check if we can shrink it to a 32 bit
   // non-denormal float which when converted back to double gives us the same
-  // double. This is to exploit the XXSPLTIDP instruction.
-  if (BVNIsConstantSplat && Subtarget.hasPrefixInstrs() &&
-      (SplatBitSize == 64) && (Op->getValueType(0) == MVT::v2f64) &&
-      convertToNonDenormSingle(APSplatBits)) {
-    SDValue SplatNode = DAG.getNode(
-        PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
-        DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
-    return DAG.getBitcast(Op.getValueType(), SplatNode);
+  // double. This is to exploit the XXSPLTIDP instruction.+  // If we lose precision, we use XXSPLTI32DX.
+  if (BVNIsConstantSplat && (SplatBitSize == 64) &&
+      Subtarget.hasPrefixInstrs()) {
+    if (convertToNonDenormSingle(APSplatBits) &&
+        (Op->getValueType(0) == MVT::v2f64)) {
+      SDValue SplatNode = DAG.getNode(
+          PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
+          DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
+      return DAG.getBitcast(Op.getValueType(), SplatNode);
+    } else { // We may lose precision, so we have to use XXSPLTI32DX.
+
+      uint32_t Hi =
+          (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
+      uint32_t Lo =
+          (uint32_t)(APSplatBits.getZExtValue() & 0xFFFFFFFF);
+      SDValue SplatNode = DAG.getUNDEF(MVT::v2i64);
+
+      if (!Hi || !Lo)
+        // If either load is 0, then we should generate XXLXOR to set to 0.
+        SplatNode = DAG.getTargetConstant(0, dl, MVT::v2i64);
+
+      if (Hi)
+        SplatNode = DAG.getNode(
+            PPCISD::XXSPLTI32DX, dl, MVT::v2i64, SplatNode,
+            DAG.getTargetConstant(0, dl, MVT::i32),
+            DAG.getTargetConstant(Hi, dl, MVT::i32));
+
+      if (Lo)
+        SplatNode =
+            DAG.getNode(PPCISD::XXSPLTI32DX, dl, MVT::v2i64, SplatNode,
+                        DAG.getTargetConstant(1, dl, MVT::i32),
+                        DAG.getTargetConstant(Lo, dl, MVT::i32));
+
+      return DAG.getBitcast(Op.getValueType(), SplatNode);
+    }
   }
 
   if (!BVNIsConstantSplat || SplatBitSize > 32) {
@@ -10593,17 +10620,88 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
+  switch(MI.getOpcode()) {
+  default:
+    return false;
+  case PPC::COPY:
+    return TII->isSignExtended(MI);
+  case PPC::LHA:
+  case PPC::LHA8:
+  case PPC::LHAU:
+  case PPC::LHAU8:
+  case PPC::LHAUX:
+  case PPC::LHAUX8:
+  case PPC::LHAX:
+  case PPC::LHAX8:
+  case PPC::LWA:
+  case PPC::LWAUX:
+  case PPC::LWAX:
+  case PPC::LWAX_32:
+  case PPC::LWA_32:
+  case PPC::PLHA:
+  case PPC::PLHA8:
+  case PPC::PLHA8pc:
+  case PPC::PLHApc:
+  case PPC::PLWA:
+  case PPC::PLWA8:
+  case PPC::PLWA8pc:
+  case PPC::PLWApc:
+  case PPC::EXTSB:
+  case PPC::EXTSB8:
+  case PPC::EXTSB8_32_64:
+  case PPC::EXTSB8_rec:
+  case PPC::EXTSB_rec:
+  case PPC::EXTSH:
+  case PPC::EXTSH8:
+  case PPC::EXTSH8_32_64:
+  case PPC::EXTSH8_rec:
+  case PPC::EXTSH_rec:
+  case PPC::EXTSW:
+  case PPC::EXTSWSLI:
+  case PPC::EXTSWSLI_32_64:
+  case PPC::EXTSWSLI_32_64_rec:
+  case PPC::EXTSWSLI_rec:
+  case PPC::EXTSW_32:
+  case PPC::EXTSW_32_64:
+  case PPC::EXTSW_32_64_rec:
+  case PPC::EXTSW_rec:
+  case PPC::SRAW:
+  case PPC::SRAWI:
+  case PPC::SRAWI_rec:
+  case PPC::SRAW_rec:
+    return true;
+  }
+  return false;
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
     MachineInstr &MI, MachineBasicBlock *BB,
     bool is8bit, // operation
     unsigned BinOpcode, unsigned CmpOpcode, unsigned CmpPred) const {
+  // This also handles ATOMIC_SWAP, indicated by BinOpcode==0.
+  const PPCInstrInfo *TII = Subtarget.getInstrInfo();
+
+  // If this is a signed comparison and the value being compared is not known
+  // to be sign extended, sign extend it here.
+  DebugLoc dl = MI.getDebugLoc();
+  MachineFunction *F = BB->getParent();
+  MachineRegisterInfo &RegInfo = F->getRegInfo();
+  Register incr = MI.getOperand(3).getReg();
+  bool IsSignExtended = Register::isVirtualRegister(incr) &&
+    isSignExtended(*RegInfo.getVRegDef(incr), TII);
+
+  if (CmpOpcode == PPC::CMPW && !IsSignExtended) {
+    Register ValueReg = RegInfo.createVirtualRegister(&PPC::GPRCRegClass);
+    BuildMI(*BB, MI, dl, TII->get(is8bit ? PPC::EXTSB : PPC::EXTSH), ValueReg)
+        .addReg(MI.getOperand(3).getReg());
+    MI.getOperand(3).setReg(ValueReg);
+  }
   // If we support part-word atomic mnemonics, just use them
   if (Subtarget.hasPartwordAtomics())
     return EmitAtomicBinary(MI, BB, is8bit ? 1 : 2, BinOpcode, CmpOpcode,
                             CmpPred);
 
-  // This also handles ATOMIC_SWAP, indicated by BinOpcode==0.
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   // In 64 bit mode we have to use 64 bits for addresses, even though the
   // lwarx/stwcx are 32 bits.  With the 32-bit atomics we can use address
   // registers without caring whether they're 32 or 64, but here we're
@@ -10613,14 +10711,11 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
   unsigned ZeroReg = is64bit ? PPC::ZERO8 : PPC::ZERO;
 
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction *F = BB->getParent();
   MachineFunction::iterator It = ++BB->getIterator();
 
   Register dest = MI.getOperand(0).getReg();
   Register ptrA = MI.getOperand(1).getReg();
   Register ptrB = MI.getOperand(2).getReg();
-  Register incr = MI.getOperand(3).getReg();
-  DebugLoc dl = MI.getDebugLoc();
 
   MachineBasicBlock *loopMBB = F->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *loop2MBB =
@@ -10634,7 +10729,6 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
   exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
-  MachineRegisterInfo &RegInfo = F->getRegInfo();
   const TargetRegisterClass *RC =
       is64bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;

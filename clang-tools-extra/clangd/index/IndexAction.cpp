@@ -212,6 +212,8 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
+  // We index function-local classes and its member functions only.
+  IndexOpts.IndexFunctionLocals = true;
   Opts.CollectIncludePath = true;
   if (Opts.Origin == SymbolOrigin::Unknown)
     Opts.Origin = SymbolOrigin::Static;

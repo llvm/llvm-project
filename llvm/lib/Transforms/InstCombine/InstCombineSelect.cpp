@@ -1120,12 +1120,14 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
     // Even if TrueVal does not simplify, we can directly replace a use of
     // CmpLHS with CmpRHS, as long as the instruction is not used anywhere
-    // else. Only do this if CmpRHS is a constant, as profitability is not
-    // clear for other cases.
+    // else and is safe to speculatively execute (we may end up executing it
+    // with different operands, which should not cause side-effects or trigger
+    // undefined behavior). Only do this if CmpRHS is a constant, as
+    // profitability is not clear for other cases.
     // FIXME: The replacement could be performed recursively.
-    if (isa<Constant>(CmpRHS) && !isa<ConstantExpr>(CmpRHS))
+    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()))
       if (auto *I = dyn_cast<Instruction>(TrueVal))
-        if (I->hasOneUse())
+        if (I->hasOneUse() && isSafeToSpeculativelyExecute(I))
           for (Use &U : I->operands())
             if (U == CmpLHS) {
               replaceUse(U, CmpRHS);

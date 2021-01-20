@@ -138,12 +138,13 @@ struct Section {
       Group->clear();
   }
 
-  Section(const char *N, XCOFF::SectionTypeFlags Flags, bool IsVirtual,
+  Section(StringRef N, XCOFF::SectionTypeFlags Flags, bool IsVirtual,
           CsectGroups Groups)
-      : Address(0), Size(0), FileOffsetToData(0), FileOffsetToRelocations(0),
-        RelocationCount(0), Flags(Flags), Index(UninitializedIndex),
-        IsVirtual(IsVirtual), Groups(Groups) {
-    strncpy(Name, N, XCOFF::NameSize);
+      : Name(), Address(0), Size(0), FileOffsetToData(0),
+        FileOffsetToRelocations(0), RelocationCount(0), Flags(Flags),
+        Index(UninitializedIndex), IsVirtual(IsVirtual), Groups(Groups) {
+    assert(N.size() <= XCOFF::NameSize && "section name too long");
+    memcpy(Name, N.data(), N.size());
   }
 };
 

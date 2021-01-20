@@ -12,6 +12,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -48,10 +49,97 @@ public:
 };
 } // namespace
 
+namespace {
+class BufferizeFromElementsOp
+    : public OpConversionPattern<tensor::FromElementsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::FromElementsOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    int numberOfElements = op.elements().size();
+    auto resultType = MemRefType::get(
+        {numberOfElements}, op.getType().cast<TensorType>().getElementType());
+    Value result = rewriter.create<AllocOp>(op.getLoc(), resultType);
+    for (auto element : llvm::enumerate(op.elements())) {
+      Value index =
+          rewriter.create<ConstantIndexOp>(op.getLoc(), element.index());
+      rewriter.create<StoreOp>(op.getLoc(), element.value(), result, index);
+    }
+    rewriter.replaceOp(op, {result});
+    return success();
+  }
+};
+} // namespace
+
+namespace {
+class BufferizeGenerateOp : public OpConversionPattern<tensor::GenerateOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tensor::GenerateOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Allocate memory.
+    Location loc = op.getLoc();
+    tensor::GenerateOp::Adaptor transformed(operands);
+    RankedTensorType tensorType = op.getType().cast<RankedTensorType>();
+    MemRefType memrefType =
+        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+    Value result =
+        rewriter.create<AllocOp>(loc, memrefType, transformed.dynamicExtents());
+
+    // Collect loop bounds.
+    int64_t rank = tensorType.getRank();
+    Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
+    Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+    SmallVector<Value, 4> lowerBounds(rank, zero);
+    SmallVector<Value, 4> steps(rank, one);
+    SmallVector<Value, 4> upperBounds;
+    int nextDynamicIndex = 0;
+    for (int i = 0; i < rank; i++) {
+      Value upperBound =
+          tensorType.isDynamicDim(i)
+              ? transformed.dynamicExtents()[nextDynamicIndex++]
+              : rewriter.create<ConstantIndexOp>(loc, memrefType.getDimSize(i));
+      upperBounds.push_back(upperBound);
+    }
+
+    // Generate tensor elements with a parallel loop that stores into
+    // each element of the resulting memref.
+    //
+    // This is a bit tricky. We cannot simply clone the ops because when an op
+    // is cloned, it must be legalized. However, we want to allow arbitrary ops
+    // in the body that we don't necessarily have legalization patterns for as
+    // part of this dialect conversion invocation.
+    //
+    // To accomplish this, we use mergeBlockBefore to "move" this op's body
+    // into the scf.parallel's body.
+    auto parallel =
+        rewriter.create<scf::ParallelOp>(loc, lowerBounds, upperBounds, steps);
+    Block *parallelBody = parallel.getBody();
+    rewriter.mergeBlockBefore(op.getBody(), parallelBody->getTerminator(),
+                              parallelBody->getArguments());
+    // Replace the inlined yield op with a store op. The scf.parallel's builder
+    // already populated an scf.yield at the end, so we don't need to worry
+    // about creating that.
+    Operation *elementYield = parallelBody->getTerminator()->getPrevNode();
+    rewriter.setInsertionPointAfter(elementYield);
+    rewriter.replaceOpWithNewOp<StoreOp>(elementYield,
+                                         elementYield->getOperands()[0], result,
+                                         parallelBody->getArguments());
+
+    rewriter.replaceOp(op, {result});
+    return success();
+  }
+};
+} // namespace
+
 void mlir::populateTensorBufferizePatterns(
     MLIRContext *context, BufferizeTypeConverter &typeConverter,
     OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeCastOp, BufferizeExtractOp>(typeConverter, context);
+  patterns.insert<BufferizeCastOp, BufferizeExtractOp, BufferizeFromElementsOp,
+                  BufferizeGenerateOp>(typeConverter, context);
 }
 
 namespace {
@@ -62,9 +150,13 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     OwningRewritePatternList patterns;
     ConversionTarget target(*context);
 
+    populateBufferizeMaterializationLegality(target);
+
     populateTensorBufferizePatterns(context, typeConverter, patterns);
-    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
+    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
+                        tensor::FromElementsOp, tensor::GenerateOp>();
     target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<scf::SCFDialect>();
 
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))

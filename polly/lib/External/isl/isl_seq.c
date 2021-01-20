@@ -125,9 +125,12 @@ void isl_seq_combine(isl_int *dst, isl_int m1, isl_int *src1,
 	isl_int_clear(tmp);
 }
 
-/*
- * Let d = dst[pos] and s = src[pos]
- * dst is replaced by |s| dst - sgn(s)d src
+/* Eliminate element "pos" from "dst" using "src".
+ * In particular, let d = dst[pos] and s = src[pos], then
+ * dst is replaced by (|s| dst - sgn(s)d src)/gcd(s,d),
+ * such that dst[pos] is zero after the elimination.
+ * If "m" is not NULL, then *m is multiplied by |s|/gcd(s,d).
+ * That is, it is multiplied by the same factor as "dst".
  */
 void isl_seq_elim(isl_int *dst, isl_int *src, unsigned pos, unsigned len,
 		  isl_int *m)

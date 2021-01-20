@@ -690,7 +690,7 @@ def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
 
 def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
                                              SPV_Integer,
-                                             [UsableInSpecConstantOp]> {
+                                             [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than  Operand 2.
   }];
@@ -725,7 +725,8 @@ def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
 
 def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
                                                   SPV_Integer,
-                                                  [UsableInSpecConstantOp]> {
+                                                  [UsableInSpecConstantOp,
+                                                   SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than or equal to
     Operand 2.
@@ -761,7 +762,7 @@ def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
 
 def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
                                           SPV_Integer,
-                                          [UsableInSpecConstantOp]> {
+                                          [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than Operand 2.
   }];
@@ -796,7 +797,8 @@ def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
 
 def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual",
                                                SPV_Integer,
-                                               [UsableInSpecConstantOp]> {
+                                               [UsableInSpecConstantOp,
+                                                SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than or equal to Operand
     2.

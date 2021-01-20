@@ -39,6 +39,18 @@ TEST(ASTNodeKind, Bases) {
   EXPECT_TRUE(DNT<Decl>().isSame(DNT<Decl>()));
 }
 
+TEST(DynTypedNode, Clades) {
+  EXPECT_TRUE(DNT<Stmt>().getCladeKind().isSame(DNT<Stmt>()));
+  EXPECT_TRUE(DNT<Decl>().getCladeKind().isSame(DNT<Decl>()));
+
+  EXPECT_TRUE(DNT<CXXMethodDecl>().getCladeKind().isSame(DNT<Decl>()));
+  EXPECT_TRUE(DNT<CXXMemberCallExpr>().getCladeKind().isSame(DNT<Stmt>()));
+
+  EXPECT_FALSE(DNT<CXXMemberCallExpr>().getCladeKind().isSame(DNT<Decl>()));
+
+  EXPECT_TRUE(ASTNodeKind().getCladeKind().isNone());
+}
+
 TEST(ASTNodeKind, BaseDistances) {
   unsigned Distance = 1;
   EXPECT_TRUE(DNT<Expr>().isBaseOf(DNT<Expr>(), &Distance));

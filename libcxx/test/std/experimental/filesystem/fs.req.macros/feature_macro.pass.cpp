@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-filesystem-library
+
 // <experimental/filesystem>
 
 // #define __cpp_lib_experimental_filesystem 201406L

@@ -497,6 +497,14 @@ public:
 
   pybind11::object getOperationObject() { return operationObject; }
 
+  static pybind11::object
+  odsBuildDefault(pybind11::object cls, pybind11::list operandList,
+                  pybind11::list resultTypeList,
+                  llvm::Optional<pybind11::dict> attributes,
+                  llvm::Optional<std::vector<PyBlock *>> successors,
+                  llvm::Optional<int> regions, DefaultingPyLocation location,
+                  pybind11::object maybeIp);
+
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
   pybind11::object operationObject; // Holds the reference.

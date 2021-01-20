@@ -120,7 +120,6 @@ template <typename Benchmark> struct Harness : Benchmark {
           std::function<unsigned()> SizeSampler,
           std::function<unsigned()> OffsetSampler)
       : Benchmark(BufferSize), BufferSize(BufferSize),
-        BatchParameterCount(BatchParameterCount),
         Parameters(BatchParameterCount), SizeSampler(SizeSampler),
         OffsetSampler(OffsetSampler) {}
 
@@ -136,7 +135,6 @@ template <typename Benchmark> struct Harness : Benchmark {
 
 private:
   const size_t BufferSize;
-  const size_t BatchParameterCount;
   std::vector<ParameterType> Parameters;
   std::function<unsigned()> SizeSampler;
   std::function<unsigned()> OffsetSampler;

@@ -19,12 +19,12 @@ def TDLC_ClauseA : Clause<"clausea"> {
 }
 def TDLC_ClauseB : Clause<"clauseb"> {
   let isDefault = 1;
-  let flangClassValue = "IntExpr";
+  let flangClass = "IntExpr";
   let isValueList = 1;
 }
 def TDLC_ClauseC : Clause<"clausec"> {
   let clangClass = "ClauseC";
-  let flangClassValue = "Name";
+  let flangClass = "Name";
   let defaultValue = "*";
   let isValueOptional = 1;
 }

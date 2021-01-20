@@ -885,16 +885,28 @@ typedef unsigned int   char32_t;
 #endif
 
 // _LIBCPP_DEBUG_LEVEL is always defined to one of [0, 1, 2] at this point
-#if _LIBCPP_DEBUG_LEVEL >= 1
-# define _LIBCPP_DISABLE_EXTERN_TEMPLATE
+#if _LIBCPP_DEBUG_LEVEL >= 1 && !defined(_LIBCPP_DISABLE_EXTERN_TEMPLATE)
+# define _LIBCPP_EXTERN_TEMPLATE(...)
 #endif
 
 #ifdef _LIBCPP_DISABLE_EXTERN_TEMPLATE
-#define _LIBCPP_EXTERN_TEMPLATE(...)
+# define _LIBCPP_EXTERN_TEMPLATE(...)
+# define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...)
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE
 #define _LIBCPP_EXTERN_TEMPLATE(...) extern template __VA_ARGS__;
+#endif
+
+// When the Debug mode is enabled, we disable extern declarations because we
+// don't want to use the functions compiled in the library, which might not
+// have had the debug mode enabled when built. However, some extern declarations
+// need to be used, because code correctness depends on it (several instances
+// in the <locale>). Those special declarations are declared with
+// _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE, which is enabled even
+// when the debug mode is enabled.
+#ifndef _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE
+# define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) extern template __VA_ARGS__;
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE_DEFINE

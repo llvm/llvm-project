@@ -258,7 +258,8 @@ private:
   static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
                                InputKind IK, DiagnosticsEngine &Diags,
                                const llvm::Triple &T,
-                               const std::string &OutputFile);
+                               const std::string &OutputFile,
+                               const LangOptions &LangOptsRef);
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

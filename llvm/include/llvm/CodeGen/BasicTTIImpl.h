@@ -1288,15 +1288,11 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
-      if (isa<ScalableVectorType>(RetTy))
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
-      if (isa<ScalableVectorType>(RetTy))
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(
           IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);

@@ -776,20 +776,15 @@ bool InProtectedContext(const Symbol &symbol, const Scope &currentScope) {
 }
 
 // C1101 and C1158
-std::optional<parser::MessageFixedText> WhyNotModifiable(
-    const Symbol &original, const Scope &scope) {
-  const Symbol &symbol{GetAssociationRoot(original)};
+// Modifiability checks on the leftmost symbol ("base object")
+// of a data-ref
+std::optional<parser::MessageFixedText> WhyNotModifiableFirst(
+    const Symbol &symbol, const Scope &scope) {
   if (symbol.has<AssocEntityDetails>()) {
     return "'%s' is construct associated with an expression"_en_US;
-  } else if (InProtectedContext(symbol, scope)) {
-    return "'%s' is protected in this scope"_en_US;
   } else if (IsExternalInPureContext(symbol, scope)) {
     return "'%s' is externally visible and referenced in a pure"
            " procedure"_en_US;
-  } else if (IsOrContainsEventOrLockComponent(symbol)) {
-    return "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US;
-  } else if (IsIntentIn(symbol)) {
-    return "'%s' is an INTENT(IN) dummy argument"_en_US;
   } else if (!IsVariableName(symbol)) {
     return "'%s' is not a variable"_en_US;
   } else {
@@ -797,6 +792,46 @@ std::optional<parser::MessageFixedText> WhyNotModifiable(
   }
 }
 
+// Modifiability checks on the rightmost symbol of a data-ref
+std::optional<parser::MessageFixedText> WhyNotModifiableLast(
+    const Symbol &symbol, const Scope &scope) {
+  if (IsOrContainsEventOrLockComponent(symbol)) {
+    return "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Modifiability checks on the leftmost (base) symbol of a data-ref
+// that apply only when there are no pointer components or a base
+// that is a pointer.
+std::optional<parser::MessageFixedText> WhyNotModifiableIfNoPtr(
+    const Symbol &symbol, const Scope &scope) {
+  if (InProtectedContext(symbol, scope)) {
+    return "'%s' is protected in this scope"_en_US;
+  } else if (IsIntentIn(symbol)) {
+    return "'%s' is an INTENT(IN) dummy argument"_en_US;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Apply all modifiability checks to a single symbol
+std::optional<parser::MessageFixedText> WhyNotModifiable(
+    const Symbol &original, const Scope &scope) {
+  const Symbol &symbol{GetAssociationRoot(original)};
+  if (auto first{WhyNotModifiableFirst(symbol, scope)}) {
+    return first;
+  } else if (auto last{WhyNotModifiableLast(symbol, scope)}) {
+    return last;
+  } else if (!IsPointer(symbol)) {
+    return WhyNotModifiableIfNoPtr(symbol, scope);
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Modifiability checks for a data-ref
 std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
     const SomeExpr &expr, const Scope &scope, bool vectorSubscriptIsOk) {
   if (!evaluate::IsVariable(expr)) {
@@ -805,10 +840,23 @@ std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
     if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
       return parser::Message{at, "Variable has a vector subscript"_en_US};
     }
-    const Symbol &symbol{dataRef->GetFirstSymbol()};
-    if (auto maybeWhy{WhyNotModifiable(symbol, scope)}) {
-      return parser::Message{symbol.name(),
-          parser::MessageFormattedText{std::move(*maybeWhy), symbol.name()}};
+    const Symbol &first{GetAssociationRoot(dataRef->GetFirstSymbol())};
+    if (auto maybeWhyFirst{WhyNotModifiableFirst(first, scope)}) {
+      return parser::Message{first.name(),
+          parser::MessageFormattedText{
+              std::move(*maybeWhyFirst), first.name()}};
+    }
+    const Symbol &last{dataRef->GetLastSymbol()};
+    if (auto maybeWhyLast{WhyNotModifiableLast(last, scope)}) {
+      return parser::Message{last.name(),
+          parser::MessageFormattedText{std::move(*maybeWhyLast), last.name()}};
+    }
+    if (!GetLastPointerSymbol(*dataRef)) {
+      if (auto maybeWhyFirst{WhyNotModifiableIfNoPtr(first, scope)}) {
+        return parser::Message{first.name(),
+            parser::MessageFormattedText{
+                std::move(*maybeWhyFirst), first.name()}};
+      }
     }
   } else {
     // reference to function returning POINTER

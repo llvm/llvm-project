@@ -299,7 +299,6 @@ struct isl_tab *isl_tab_product(struct isl_tab *tab1, struct isl_tab *tab2);
 int isl_tab_extend_cons(struct isl_tab *tab, unsigned n_new) WARN_UNUSED;
 int isl_tab_allocate_con(struct isl_tab *tab) WARN_UNUSED;
 int isl_tab_extend_vars(struct isl_tab *tab, unsigned n_new) WARN_UNUSED;
-int isl_tab_allocate_var(struct isl_tab *tab) WARN_UNUSED;
 int isl_tab_insert_var(struct isl_tab *tab, int pos) WARN_UNUSED;
 int isl_tab_pivot(struct isl_tab *tab, int row, int col) WARN_UNUSED;
 int isl_tab_add_row(struct isl_tab *tab, isl_int *line) WARN_UNUSED;

@@ -86,12 +86,6 @@ DEFAULT_PARAMETERS = [
             ]),
 
   # Parameters to enable or disable parts of the test suite
-  Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
-            help="Whether to enable tests for the C++ <filesystem> library.",
-            actions=lambda filesystem: [] if filesystem else [
-              AddFeature('c++filesystem-disabled')
-            ]),
-
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
             actions=lambda experimental: [] if not experimental else [

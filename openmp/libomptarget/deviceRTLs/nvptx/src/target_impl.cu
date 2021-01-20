@@ -9,6 +9,7 @@
 // Definitions of target specific functions
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "target_impl.h"
 #include "common/debug.h"
@@ -114,10 +115,12 @@ DEVICE void __kmpc_impl_threadfence_block() { __threadfence_block(); }
 DEVICE void __kmpc_impl_threadfence_system() { __threadfence_system(); }
 
 // Calls to the NVPTX layer (assuming 1D layout)
-DEVICE int GetThreadIdInBlock() { return threadIdx.x; }
-DEVICE int GetBlockIdInKernel() { return blockIdx.x; }
-DEVICE int GetNumberOfBlocksInKernel() { return gridDim.x; }
-DEVICE int GetNumberOfThreadsInBlock() { return blockDim.x; }
+DEVICE int GetThreadIdInBlock() { return __nvvm_read_ptx_sreg_tid_x(); }
+DEVICE int GetBlockIdInKernel() { return __nvvm_read_ptx_sreg_ctaid_x(); }
+DEVICE int GetNumberOfBlocksInKernel() {
+  return __nvvm_read_ptx_sreg_nctaid_x();
+}
+DEVICE int GetNumberOfThreadsInBlock() { return __nvvm_read_ptx_sreg_ntid_x(); }
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
@@ -158,3 +161,5 @@ DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock) {
 
 DEVICE void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
 DEVICE void __kmpc_impl_free(void *x) { free(x); }
+
+#pragma omp end declare target

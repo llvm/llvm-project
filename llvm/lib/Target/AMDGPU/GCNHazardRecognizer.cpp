@@ -11,7 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNHazardRecognizer.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/Support/TargetParser.h"

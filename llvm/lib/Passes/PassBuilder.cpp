@@ -1230,7 +1230,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // First rotate loops that may have been un-rotated by prior passes.
   // Disable header duplication at -Oz.
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(Level != OptimizationLevel::Oz), EnableMSSALoopDependency,
+      LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink),
+      EnableMSSALoopDependency,
       /*UseBlockFrequencyInfo=*/false, DebugLogging));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences

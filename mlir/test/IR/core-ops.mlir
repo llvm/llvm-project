@@ -596,6 +596,9 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_4, %cst_4 : tensor<42xi32>
   %174 = ceildivi_signed %tci32, %tci32 : tensor<42 x i32>
 
+  // CHECK: %{{[0-9]+}} = log1p %arg1 : f32
+  %175 = log1p %f : f32
+
   return
 }
 
@@ -671,27 +674,6 @@ func @calls(%arg0: i32) {
 
   // CHECK: %4 = call_indirect %f_0(%arg0) : (i32) -> i32
   %3 = "std.call_indirect"(%f_0, %arg0) : ((i32) -> i32, i32) -> i32
-
-  return
-}
-
-// CHECK-LABEL: func @tensor_from_elements() {
-func @tensor_from_elements() {
-  %c0 = "std.constant"() {value = 0: index} : () -> index
-  // CHECK: %0 = tensor_from_elements %c0 : tensor<1xindex>
-  %0 = tensor_from_elements %c0 : tensor<1xindex>
-
-  %c1 = "std.constant"() {value = 1: index} : () -> index
-  // CHECK: %1 = tensor_from_elements %c0, %c1 : tensor<2xindex>
-  %1 = tensor_from_elements %c0, %c1 : tensor<2xindex>
-
-  %c0_f32 = "std.constant"() {value = 0.0: f32} : () -> f32
-  // CHECK: [[C0_F32:%.*]] = constant
-  // CHECK: %2 = tensor_from_elements [[C0_F32]] : tensor<1xf32>
-  %2 = tensor_from_elements %c0_f32 : tensor<1xf32>
-
-  // CHECK: tensor_from_elements : tensor<0xindex>
-  %3 = tensor_from_elements : tensor<0xindex>
 
   return
 }

@@ -19,14 +19,18 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class GCNSubtarget;
 class InstCombiner;
 class Loop;
+class R600Subtarget;
 class ScalarEvolution;
+class SITargetLowering;
 class Type;
 class Value;
 
@@ -38,7 +42,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   Triple TargetTriple;
 
-  const GCNSubtarget *ST;
+  const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
 
   const TargetSubtargetInfo *getST() const { return ST; }
@@ -68,34 +72,10 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool HasFP64FP16Denormals;
   unsigned MaxVGPRs;
 
-  const FeatureBitset InlineFeatureIgnoreList = {
-    // Codegen control options which don't matter.
-    AMDGPU::FeatureEnableLoadStoreOpt,
-    AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
-    AMDGPU::FeatureFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca,
-    AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
-
-    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
-
-    // Property of the kernel/environment which can't actually differ.
-    AMDGPU::FeatureSGPRInitBug,
-    AMDGPU::FeatureXNACK,
-    AMDGPU::FeatureTrapHandler,
-
-    // The default assumption needs to be ecc is enabled, but no directly
-    // exposed operations depend on it, so it can be safely inlined.
-    AMDGPU::FeatureSRAMECC,
-
-    // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32,
-    AMDGPU::HalfRate64Ops
-  };
+  static const FeatureBitset InlineFeatureIgnoreList;
 
   const GCNSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+  const SITargetLowering *getTLI() const { return TLI; }
 
   static inline int getFullRateInstrCost() {
     return TargetTransformInfo::TCC_Basic;
@@ -117,11 +97,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
-  inline int get64BitInstrCost(
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const {
-    return ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
-                                  : getQuarterRateInstrCost(CostKind);
-  }
+  int get64BitInstrCost(
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);

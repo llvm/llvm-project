@@ -175,6 +175,17 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "No Filesystem"
+    command: "libcxx/utils/ci/run-buildbot generic-no-filesystem"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "No random device"
     command: "libcxx/utils/ci/run-buildbot generic-no-random_device"
     artifact_paths:

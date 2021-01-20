@@ -4,9 +4,9 @@
 // for the wording that used to be there.
 
 struct A {
-  A(...); // expected-note {{candidate constructor}} expected-note {{candidate inherited constructor}}
-  A(int = 0, int = 0, int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 3{{candidate inherited constructor}}
-  A(int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 3{{candidate inherited constructor}}
+  A(...); // expected-note {{candidate constructor}}
+  A(int = 0, int = 0, int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 2{{candidate inherited constructor}}
+  A(int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 2{{candidate inherited constructor}}
 
   template<typename T> A(T, int = 0, ...);
 
@@ -14,15 +14,15 @@ struct A {
   template<typename T, int N> A(const T (&)[N], int = 0); // expected-note {{candidate constructor}} expected-note {{candidate inherited constructor}}
 };
 
-struct B : A {
-  using A::A; // expected-note 9{{inherited here}}
+struct B : A { // expected-note {{because base class 'A' has multiple default constructors}}
+  using A::A; // expected-note 6{{inherited here}}
   B(void*);
 };
 
 struct C {} c;
 
 A a0{}; // expected-error {{ambiguous}}
-B b0{}; // expected-error {{ambiguous}}
+B b0{}; // expected-error {{deleted}}
 
 A a1{1}; // expected-error {{ambiguous}}
 B b1{1}; // expected-error {{ambiguous}}

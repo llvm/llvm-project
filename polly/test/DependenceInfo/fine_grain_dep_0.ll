@@ -3,7 +3,7 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-function-dependences -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -analyze < %s | FileCheck %s --check-prefix=ACC
 ;
 ; REF:      RAW dependences:
-; REF-NEXT:     [N] -> { Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N }
+; REF-NEXT:     [N] -> { [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N }
 ; REF-NEXT: WAR dependences:
 ; REF-NEXT:     {  }
 ; REF-NEXT: WAW dependences:
@@ -12,7 +12,7 @@
 ; REF-NEXT:     {  }
 
 ; ACC:      RAW dependences:
-; ACC-NEXT:   [N] -> { Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> Stmt_for_body_Write1[]] -> [Stmt_for_body[4 + i0] -> Stmt_for_body_Read0[]] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> Stmt_for_body_Write3[]] -> [Stmt_for_body[6 + i0] -> Stmt_for_body_Read2[]] : 0 <= i0 <= -13 + N }
+; ACC-NEXT:   [N] -> { [Stmt_for_body[i0] -> Stmt_for_body_Write1[]] -> [Stmt_for_body[4 + i0] -> Stmt_for_body_Read0[]] : 0 <= i0 <= -11 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> Stmt_for_body_Write3[]] -> [Stmt_for_body[6 + i0] -> Stmt_for_body_Read2[]] : 0 <= i0 <= -13 + N }
 
 ; ACC-NEXT: WAR dependences:
 ; ACC-NEXT:   [N] -> {  }

@@ -1974,43 +1974,33 @@ public:
   }
   void Unparse(const OmpMapType::Always &) { Word("ALWAYS,"); }
   void Unparse(const OmpMapClause &x) {
-    Word("MAP(");
     Walk(std::get<std::optional<OmpMapType>>(x.t), ":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpScheduleModifier &x) {
     Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
     Walk(",", std::get<std::optional<OmpScheduleModifier::Modifier2>>(x.t));
   }
   void Unparse(const OmpScheduleClause &x) {
-    Word("SCHEDULE(");
     Walk(std::get<std::optional<OmpScheduleModifier>>(x.t), ":");
     Walk(std::get<OmpScheduleClause::ScheduleType>(x.t));
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
-    Put(")");
   }
   void Unparse(const OmpAlignedClause &x) {
-    Word("ALIGNED("), Walk(std::get<std::list<Name>>(x.t), ",");
+    Walk(std::get<std::list<Name>>(x.t), ",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpIfClause &x) {
-    Word("IF("),
-        Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t),
-            ":");
+    Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpLinearClause::WithoutModifier &x) {
-    Word("LINEAR("), Walk(x.names, ", ");
+    Walk(x.names, ", ");
     Walk(":", x.step);
-    Put(")");
   }
   void Unparse(const OmpLinearClause::WithModifier &x) {
-    Word("LINEAR("), Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
+    Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
     Walk(":", x.step);
-    Put(")");
   }
   void Unparse(const OmpReductionClause &x) {
     Walk(std::get<OmpReductionOperator>(x.t));
@@ -2040,28 +2030,23 @@ public:
   bool Pre(const OmpDependClause &x) {
     return std::visit(common::visitors{
                           [&](const OmpDependClause::Source &) {
-                            Word("DEPEND(SOURCE)");
+                            Word("SOURCE");
                             return false;
                           },
                           [&](const OmpDependClause::Sink &y) {
-                            Word("DEPEND(SINK:");
+                            Word("SINK:");
                             Walk(y.v);
                             Put(")");
                             return false;
                           },
-                          [&](const OmpDependClause::InOut &) {
-                            Word("DEPEND");
-                            return true;
-                          },
+                          [&](const OmpDependClause::InOut &) { return true; },
                       },
         x.u);
   }
   void Unparse(const OmpDefaultmapClause &x) {
-    Word("DEFAULTMAP(");
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
-    Word(")");
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"

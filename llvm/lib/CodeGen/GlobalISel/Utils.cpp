@@ -48,7 +48,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt,
-    const TargetRegisterClass &RegClass, const MachineOperand &RegMO) {
+    const TargetRegisterClass &RegClass, MachineOperand &RegMO) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -69,6 +69,13 @@ Register llvm::constrainOperandRegClass(
               TII.get(TargetOpcode::COPY), Reg)
           .addReg(ConstrainedReg);
     }
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changingInstr(*RegMO.getParent());
+    }
+    RegMO.setReg(ConstrainedReg);
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changedInstr(*RegMO.getParent());
+    }
   } else {
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       if (!RegMO.isDef()) {
@@ -86,7 +93,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt, const MCInstrDesc &II,
-    const MachineOperand &RegMO, unsigned OpIdx) {
+    MachineOperand &RegMO, unsigned OpIdx) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -156,8 +163,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
     // If the operand is a vreg, we should constrain its regclass, and only
     // insert COPYs if that's impossible.
     // constrainOperandRegClass does that for us.
-    MO.setReg(constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(),
-                                       MO, OpI));
+    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(), MO, OpI);
 
     // Tie uses to defs as indicated in MCInstrDesc if this hasn't already been
     // done.
@@ -277,7 +283,7 @@ Optional<int64_t> llvm::getConstantVRegSExtVal(Register VReg,
 
 Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
-    bool HandleFConstant) {
+    bool HandleFConstant, bool LookThroughAnyExt) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
   auto IsConstantOpcode = [HandleFConstant](unsigned Opcode) {
@@ -304,6 +310,10 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI->getOpcode()) &&
          LookThroughInstrs) {
     switch (MI->getOpcode()) {
+    case TargetOpcode::G_ANYEXT:
+      if (!LookThroughAnyExt)
+        return None;
+      LLVM_FALLTHROUGH;
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_ZEXT:
@@ -337,6 +347,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     case TargetOpcode::G_TRUNC:
       Val = Val.trunc(OpcodeAndSize.second);
       break;
+    case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
       Val = Val.sext(OpcodeAndSize.second);
       break;

@@ -165,5 +165,5 @@ EXTERN int global_free(void*);
 // Memory
 DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
-#pragma omp end declare target
 
+#pragma omp end declare target

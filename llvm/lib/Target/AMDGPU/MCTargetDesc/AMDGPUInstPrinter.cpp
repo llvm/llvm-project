@@ -958,10 +958,9 @@ void AMDGPUInstPrinter::printSDWADstUnused(const MCInst *MI, unsigned OpNo,
   }
 }
 
-template <unsigned N>
 void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI,
-                                     raw_ostream &O) {
+                                     const MCSubtargetInfo &STI, raw_ostream &O,
+                                     unsigned N) {
   unsigned Opc = MI->getOpcode();
   int EnIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::en);
   unsigned En = MI->getOperand(EnIdx).getImm();
@@ -969,12 +968,8 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
   int ComprIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::compr);
 
   // If compr is set, print as src0, src0, src1, src1
-  if (MI->getOperand(ComprIdx).getImm()) {
-    if (N == 1 || N == 2)
-      --OpNo;
-    else if (N == 3)
-      OpNo -= 2;
-  }
+  if (MI->getOperand(ComprIdx).getImm())
+    OpNo = OpNo - N + N / 2;
 
   if (En & (1 << N))
     printRegOperand(MI->getOperand(OpNo).getReg(), O, MRI);
@@ -985,25 +980,25 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printExpSrc0(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  printExpSrcN<0>(MI, OpNo, STI, O);
+  printExpSrcN(MI, OpNo, STI, O, 0);
 }
 
 void AMDGPUInstPrinter::printExpSrc1(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  printExpSrcN<1>(MI, OpNo, STI, O);
+  printExpSrcN(MI, OpNo, STI, O, 1);
 }
 
 void AMDGPUInstPrinter::printExpSrc2(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  printExpSrcN<2>(MI, OpNo, STI, O);
+  printExpSrcN(MI, OpNo, STI, O, 2);
 }
 
 void AMDGPUInstPrinter::printExpSrc3(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  printExpSrcN<3>(MI, OpNo, STI, O);
+  printExpSrcN(MI, OpNo, STI, O, 3);
 }
 
 void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,

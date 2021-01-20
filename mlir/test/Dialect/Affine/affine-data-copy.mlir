@@ -55,7 +55,7 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:     affine.for %[[II:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:       affine.for %[[JJ:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:         affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
-// CHECK:         affine.store %{{.*}}, [[BUFC]][-%[[I]] + %[[II]], -%[[J]] + %[[JJ]]] : memref<128x128xf32>
+// CHECK:         affine.store %{{.*}}, [[BUFC]][%[[II]] - %[[I]], %[[JJ]] - %[[J]]] : memref<128x128xf32>
 // CHECK:       }
 // CHECK:     }
 
@@ -65,7 +65,7 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:       affine.for %[[II:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:         affine.for %[[KK:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:           affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
-// CHECK:           affine.store %{{.*}}, [[BUFA]][-%[[I]] + %[[II]], -%[[K]] + %[[KK]]] : memref<128x128xf32>
+// CHECK:           affine.store %{{.*}}, [[BUFA]][%[[II]] - %[[I]], %[[KK]] - %[[K]]] : memref<128x128xf32>
 // CHECK:         }
 // CHECK:       }
 
@@ -74,7 +74,7 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK:       affine.for %[[KK:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:         affine.for %[[JJ:.*]] = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:           affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
-// CHECK:           affine.store %{{.*}}, [[BUFB]][-%[[K]] + %[[KK]], -%[[J]] + %[[JJ]]] : memref<128x128xf32>
+// CHECK:           affine.store %{{.*}}, [[BUFB]][%[[KK]] - %[[K]], %[[JJ]] - %[[J]]] : memref<128x128xf32>
 // CHECK:         }
 // CHECK:       }
 
@@ -98,7 +98,7 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // Result matrix copy out.
 // CHECK:     affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
 // CHECK:       affine.for %{{.*}} = #[[$MAP_IDENTITY]](%{{.*}}) to #[[$MAP_PLUS_128]](%{{.*}}) {
-// CHECK:         affine.load [[BUFC]][-%{{.*}} + %{{.*}}, -%{{.*}} + %{{.*}}] : memref<128x128xf32>
+// CHECK:         affine.load [[BUFC]][%{{.*}} - %{{.*}}, %{{.*}} - %{{.*}}] : memref<128x128xf32>
 // CHECK:         store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<4096x4096xf32>
 // CHECK:       }
 // CHECK:     }
@@ -219,7 +219,7 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 // CHECK:        %[[BUF:.*]] = alloc() : memref<100xf32>
 // CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB1]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %{{.*}}[%[[IV2]]] : memref<4096xf32>
-// CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
+// CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][%[[IV2]] - %[[IV1]]] : memref<100xf32>
 // CHECK-NEXT:   }
 // CHECK-NEXT:   affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB2]](%[[IV1]]) {
 // CHECK-NEXT:     affine.load %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
@@ -227,7 +227,7 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 // CHECK-NEXT:     affine.store %{{.*}}, %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
 // CHECK-NEXT:   }
 // CHECK:        affine.for %[[IV2:.*]] = #[[$MAP_IDENTITY]](%[[IV1]]) to min #[[$MAP_MIN_UB1]](%[[IV1]]) {
-// CHECK-NEXT:     affine.load %[[BUF]][-%[[IV1]] + %[[IV2]]] : memref<100xf32>
+// CHECK-NEXT:     affine.load %[[BUF]][%[[IV2]] - %[[IV1]]] : memref<100xf32>
 // CHECK-NEXT:     affine.store %{{.*}}, %{{.*}}[%[[IV2]]] : memref<4096xf32>
 // CHECK-NEXT:   }
 // CHECK-NEXT:   dealloc %[[BUF]] : memref<100xf32>

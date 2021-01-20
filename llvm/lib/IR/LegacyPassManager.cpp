@@ -1110,12 +1110,6 @@ void PMDataManager::collectRequiredAndUsedAnalyses(
       UP.push_back(AnalysisPass);
     else
       RP_NotAvail.push_back(RequiredID);
-
-  for (const auto &RequiredID : AnUsage->getRequiredTransitiveSet())
-    if (Pass *AnalysisPass = findAnalysisPass(RequiredID, true))
-      UP.push_back(AnalysisPass);
-    else
-      RP_NotAvail.push_back(RequiredID);
 }
 
 // All Required analyses should be available to the pass as it runs!  Here

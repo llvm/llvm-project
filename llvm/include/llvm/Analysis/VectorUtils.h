@@ -304,7 +304,7 @@ typedef unsigned ID;
 /// the incoming type is void, we return void. If the EC represents a
 /// scalar, we return the scalar type.
 inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || EC.isScalar())
+  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
     return Scalar;
   return VectorType::get(Scalar, EC);
 }

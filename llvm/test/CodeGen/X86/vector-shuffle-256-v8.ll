@@ -3098,14 +3098,13 @@ entry:
 define <8 x i32> @add_v8i32_02468ACE_13579BDF(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: add_v8i32_02468ACE_13579BDF:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vphaddd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[3],ymm0[3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[3],ymm2[3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: add_v8i32_02468ACE_13579BDF:
@@ -3123,14 +3122,13 @@ entry:
 define <8 x i32> @add_v8i32_8ACE0246_9BDF1357(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: add_v8i32_8ACE0246_9BDF1357:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vphaddd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm2[1],ymm0[1],ymm2[2],ymm0[2]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm2[1],ymm0[2],ymm2[2]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: add_v8i32_8ACE0246_9BDF1357:

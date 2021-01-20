@@ -382,7 +382,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoNewPassManager =
-      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+      args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
                    LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
@@ -817,22 +817,31 @@ static TableSymbol *createUndefinedIndirectFunctionTable(StringRef name) {
 }
 
 static TableSymbol *resolveIndirectFunctionTable() {
-  // Even though we may not need a table, if the user explicitly specified
-  // --import-table or --export-table, ensure a table is residualized.
-  if (config->importTable)
-    return createUndefinedIndirectFunctionTable(functionTableName);
-  if (config->exportTable)
-    return createDefinedIndirectFunctionTable(functionTableName);
-
-  // Otherwise, check to the symtab to find the indirect function table.
-  if (Symbol *sym = symtab->find(functionTableName)) {
-    if (sym->isLive()) {
-      if (auto *t = dyn_cast<TableSymbol>(sym)) {
-        return t->isDefined()
-                   ? t
-                   : createDefinedIndirectFunctionTable(functionTableName);
-      }
+  Symbol *existingTable = symtab->find(functionTableName);
+  if (existingTable) {
+    if (!isa<TableSymbol>(existingTable)) {
+      error(Twine("reserved symbol must be of type table: `") +
+            functionTableName + "`");
+      return nullptr;
     }
+    if (existingTable->isDefined()) {
+      error(Twine("reserved symbol must not be defined in input files: `") +
+            functionTableName + "`");
+      return nullptr;
+    }
+  }
+
+  if (config->importTable) {
+    if (existingTable)
+      return cast<TableSymbol>(existingTable);
+    else
+      return createUndefinedIndirectFunctionTable(functionTableName);
+  } else if ((existingTable && existingTable->isLive()) ||
+             config->exportTable) {
+    // A defined table is required.  Either because the user request an exported
+    // table or because the table symbol is already live.  The existing table is
+    // guaranteed to be undefined due to the check above.
+    return createDefinedIndirectFunctionTable(functionTableName);
   }
 
   // An indirect function table will only be present in the symbol table if
@@ -1029,11 +1038,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do size optimizations: garbage collection
   markLive();
 
-  // Provide the indirect funciton table if needed.
-  WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
+  if (!config->relocatable) {
+    // Provide the indirect funciton table if needed.
+    WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
 
-  if (errorCount())
-    return;
+    if (errorCount())
+      return;
+  }
 
   // Write the result to the file.
   writeResult();

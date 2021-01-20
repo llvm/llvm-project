@@ -3,25 +3,16 @@
 
 %struct.__tile_str = type <{ i16, i16, [60 x i8], <256 x i32> }>
 
-@buf = dso_local global [3072 x i8] zeroinitializer, align 16
+@buf = dso_local global [3072 x i8] zeroinitializer, align 64
 
-define dso_local void @test_api(i16 signext %0, i16 signext %1) local_unnamed_addr {
+define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test_api:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    subq $4056, %rsp # imm = 0xFD8
-; CHECK-NEXT:    .cfi_def_cfa_offset 4096
-; CHECK-NEXT:    .cfi_offset %rbx, -40
-; CHECK-NEXT:    .cfi_offset %r14, -32
-; CHECK-NEXT:    .cfi_offset %r15, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
@@ -58,15 +49,10 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) local_unnamed_ad
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rax,%r14)
 ; CHECK-NEXT:    addq $4056, %rsp # imm = 0xFD8
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    retq
   %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
@@ -78,7 +64,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) local_unnamed_ad
   ret void
 }
 
-declare dso_local void @foo(...) local_unnamed_addr
+declare dso_local void @foo(...)
 
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)

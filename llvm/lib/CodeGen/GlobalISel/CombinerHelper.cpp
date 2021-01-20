@@ -48,6 +48,66 @@ const TargetLowering &CombinerHelper::getTargetLowering() const {
   return *Builder.getMF().getSubtarget().getTargetLowering();
 }
 
+/// \returns The little endian in-memory byte position of byte \p I in a
+/// \p ByteWidth bytes wide type.
+///
+/// E.g. Given a 4-byte type x, x[0] -> byte 0
+static unsigned littleEndianByteAt(const unsigned ByteWidth, const unsigned I) {
+  assert(I < ByteWidth && "I must be in [0, ByteWidth)");
+  return I;
+}
+
+/// \returns The big endian in-memory byte position of byte \p I in a
+/// \p ByteWidth bytes wide type.
+///
+/// E.g. Given a 4-byte type x, x[0] -> byte 3
+static unsigned bigEndianByteAt(const unsigned ByteWidth, const unsigned I) {
+  assert(I < ByteWidth && "I must be in [0, ByteWidth)");
+  return ByteWidth - I - 1;
+}
+
+/// Given a map from byte offsets in memory to indices in a load/store,
+/// determine if that map corresponds to a little or big endian byte pattern.
+///
+/// \param MemOffset2Idx maps memory offsets to address offsets.
+/// \param LowestIdx is the lowest index in \p MemOffset2Idx.
+///
+/// \returns true if the map corresponds to a big endian byte pattern, false
+/// if it corresponds to a little endian byte pattern, and None otherwise.
+///
+/// E.g. given a 32-bit type x, and x[AddrOffset], the in-memory byte patterns
+/// are as follows:
+///
+/// AddrOffset   Little endian    Big endian
+/// 0            0                3
+/// 1            1                2
+/// 2            2                1
+/// 3            3                0
+static Optional<bool>
+isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
+            int64_t LowestIdx) {
+  // Need at least two byte positions to decide on endianness.
+  unsigned Width = MemOffset2Idx.size();
+  if (Width < 2)
+    return None;
+  bool BigEndian = true, LittleEndian = true;
+  for (unsigned MemOffset = 0; MemOffset < Width; ++ MemOffset) {
+    auto MemOffsetAndIdx = MemOffset2Idx.find(MemOffset);
+    if (MemOffsetAndIdx == MemOffset2Idx.end())
+      return None;
+    const int64_t Idx = MemOffsetAndIdx->second - LowestIdx;
+    assert(Idx >= 0 && "Expected non-negative byte offset?");
+    LittleEndian &= Idx == littleEndianByteAt(Width, MemOffset);
+    BigEndian &= Idx == bigEndianByteAt(Width, MemOffset);
+    if (!BigEndian && !LittleEndian)
+      return None;
+  }
+
+  assert((BigEndian != LittleEndian) &&
+         "Pattern cannot be both big and little endian!");
+  return BigEndian;
+}
+
 bool CombinerHelper::isLegalOrBeforeLegalizer(
     const LegalityQuery &Query) const {
   return !LI || LI->getAction(Query).Action == LegalizeActions::Legal;
@@ -564,13 +624,13 @@ bool CombinerHelper::isPredecessor(const MachineInstr &DefMI,
   assert(DefMI.getParent() == UseMI.getParent());
   if (&DefMI == &UseMI)
     return false;
-
-  // Loop through the basic block until we find one of the instructions.
-  MachineBasicBlock::const_iterator I = DefMI.getParent()->begin();
-  for (; &*I != &DefMI && &*I != &UseMI; ++I)
-    return &*I == &DefMI;
-
-  llvm_unreachable("Block must contain instructions");
+  const MachineBasicBlock &MBB = *DefMI.getParent();
+  auto DefOrUse = find_if(MBB, [&DefMI, &UseMI](const MachineInstr &MI) {
+    return &MI == &DefMI || &MI == &UseMI;
+  });
+  if (DefOrUse == MBB.end())
+    llvm_unreachable("Block must contain both DefMI and UseMI!");
+  return &*DefOrUse == &DefMI;
 }
 
 bool CombinerHelper::dominates(const MachineInstr &DefMI,
@@ -3148,6 +3208,361 @@ bool CombinerHelper::applySimplifyURemByPow2(MachineInstr &MI) {
   auto NegOne = Builder.buildConstant(Ty, -1);
   auto Add = Builder.buildAdd(Ty, Pow2Src1, NegOne);
   Builder.buildAnd(DstReg, Src0, Add);
+  MI.eraseFromParent();
+  return true;
+}
+
+Optional<SmallVector<Register, 8>>
+CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
+  assert(Root->getOpcode() == TargetOpcode::G_OR && "Expected G_OR only!");
+  // We want to detect if Root is part of a tree which represents a bunch
+  // of loads being merged into a larger load. We'll try to recognize patterns
+  // like, for example:
+  //
+  //  Reg   Reg
+  //   \    /
+  //    OR_1   Reg
+  //     \    /
+  //      OR_2
+  //        \     Reg
+  //         .. /
+  //        Root
+  //
+  //  Reg   Reg   Reg   Reg
+  //     \ /       \   /
+  //     OR_1      OR_2
+  //       \       /
+  //        \    /
+  //         ...
+  //         Root
+  //
+  // Each "Reg" may have been produced by a load + some arithmetic. This
+  // function will save each of them.
+  SmallVector<Register, 8> RegsToVisit;
+  SmallVector<const MachineInstr *, 7> Ors = {Root};
+
+  // In the "worst" case, we're dealing with a load for each byte. So, there
+  // are at most #bytes - 1 ORs.
+  const unsigned MaxIter =
+      MRI.getType(Root->getOperand(0).getReg()).getSizeInBytes() - 1;
+  for (unsigned Iter = 0; Iter < MaxIter; ++Iter) {
+    if (Ors.empty())
+      break;
+    const MachineInstr *Curr = Ors.pop_back_val();
+    Register OrLHS = Curr->getOperand(1).getReg();
+    Register OrRHS = Curr->getOperand(2).getReg();
+
+    // In the combine, we want to elimate the entire tree.
+    if (!MRI.hasOneNonDBGUse(OrLHS) || !MRI.hasOneNonDBGUse(OrRHS))
+      return None;
+
+    // If it's a G_OR, save it and continue to walk. If it's not, then it's
+    // something that may be a load + arithmetic.
+    if (const MachineInstr *Or = getOpcodeDef(TargetOpcode::G_OR, OrLHS, MRI))
+      Ors.push_back(Or);
+    else
+      RegsToVisit.push_back(OrLHS);
+    if (const MachineInstr *Or = getOpcodeDef(TargetOpcode::G_OR, OrRHS, MRI))
+      Ors.push_back(Or);
+    else
+      RegsToVisit.push_back(OrRHS);
+  }
+
+  // We're going to try and merge each register into a wider power-of-2 type,
+  // so we ought to have an even number of registers.
+  if (RegsToVisit.empty() || RegsToVisit.size() % 2 != 0)
+    return None;
+  return RegsToVisit;
+}
+
+/// Helper function for findLoadOffsetsForLoadOrCombine.
+///
+/// Check if \p Reg is the result of loading a \p MemSizeInBits wide value,
+/// and then moving that value into a specific byte offset.
+///
+/// e.g. x[i] << 24
+///
+/// \returns The load instruction and the byte offset it is moved into.
+static Optional<std::pair<MachineInstr *, int64_t>>
+matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
+                         const MachineRegisterInfo &MRI) {
+  assert(MRI.hasOneNonDBGUse(Reg) &&
+         "Expected Reg to only have one non-debug use?");
+  Register MaybeLoad;
+  int64_t Shift;
+  if (!mi_match(Reg, MRI,
+                m_OneNonDBGUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
+    Shift = 0;
+    MaybeLoad = Reg;
+  }
+
+  if (Shift % MemSizeInBits != 0)
+    return None;
+
+  // TODO: Handle other types of loads.
+  auto *Load = getOpcodeDef(TargetOpcode::G_ZEXTLOAD, MaybeLoad, MRI);
+  if (!Load)
+    return None;
+
+  const auto &MMO = **Load->memoperands_begin();
+  if (!MMO.isUnordered() || MMO.getSizeInBits() != MemSizeInBits)
+    return None;
+
+  return std::make_pair(Load, Shift / MemSizeInBits);
+}
+
+Optional<std::pair<MachineInstr *, int64_t>>
+CombinerHelper::findLoadOffsetsForLoadOrCombine(
+    SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
+    const SmallVector<Register, 8> &RegsToVisit, const unsigned MemSizeInBits) {
+
+  // Each load found for the pattern. There should be one for each RegsToVisit.
+  SmallSetVector<const MachineInstr *, 8> Loads;
+
+  // The lowest index used in any load. (The lowest "i" for each x[i].)
+  int64_t LowestIdx = INT64_MAX;
+
+  // The load which uses the lowest index.
+  MachineInstr *LowestIdxLoad = nullptr;
+
+  // Keeps track of the load indices we see. We shouldn't see any indices twice.
+  SmallSet<int64_t, 8> SeenIdx;
+
+  // Ensure each load is in the same MBB.
+  // TODO: Support multiple MachineBasicBlocks.
+  MachineBasicBlock *MBB = nullptr;
+  const MachineMemOperand *MMO = nullptr;
+
+  // Earliest instruction-order load in the pattern.
+  MachineInstr *EarliestLoad = nullptr;
+
+  // Latest instruction-order load in the pattern.
+  MachineInstr *LatestLoad = nullptr;
+
+  // Base pointer which every load should share.
+  Register BasePtr;
+
+  // We want to find a load for each register. Each load should have some
+  // appropriate bit twiddling arithmetic. During this loop, we will also keep
+  // track of the load which uses the lowest index. Later, we will check if we
+  // can use its pointer in the final, combined load.
+  for (auto Reg : RegsToVisit) {
+    // Find the load, and find the position that it will end up in (e.g. a
+    // shifted) value.
+    auto LoadAndPos = matchLoadAndBytePosition(Reg, MemSizeInBits, MRI);
+    if (!LoadAndPos)
+      return None;
+    MachineInstr *Load;
+    int64_t DstPos;
+    std::tie(Load, DstPos) = *LoadAndPos;
+
+    // TODO: Handle multiple MachineBasicBlocks. Currently not handled because
+    // it is difficult to check for stores/calls/etc between loads.
+    MachineBasicBlock *LoadMBB = Load->getParent();
+    if (!MBB)
+      MBB = LoadMBB;
+    if (LoadMBB != MBB)
+      return None;
+
+    // Make sure that the MachineMemOperands of every seen load are compatible.
+    const MachineMemOperand *LoadMMO = *Load->memoperands_begin();
+    if (!MMO)
+      MMO = LoadMMO;
+    if (MMO->getAddrSpace() != LoadMMO->getAddrSpace())
+      return None;
+
+    // Find out what the base pointer and index for the load is.
+    Register LoadPtr;
+    int64_t Idx;
+    if (!mi_match(Load->getOperand(1).getReg(), MRI,
+                  m_GPtrAdd(m_Reg(LoadPtr), m_ICst(Idx)))) {
+      LoadPtr = Load->getOperand(1).getReg();
+      Idx = 0;
+    }
+
+    // Don't combine things like a[i], a[i] -> a bigger load.
+    if (!SeenIdx.insert(Idx).second)
+      return None;
+
+    // Every load must share the same base pointer; don't combine things like:
+    //
+    // a[i], b[i + 1] -> a bigger load.
+    if (!BasePtr.isValid())
+      BasePtr = LoadPtr;
+    if (BasePtr != LoadPtr)
+      return None;
+
+    if (Idx < LowestIdx) {
+      LowestIdx = Idx;
+      LowestIdxLoad = Load;
+    }
+
+    // Keep track of the byte offset that this load ends up at. If we have seen
+    // the byte offset, then stop here. We do not want to combine:
+    //
+    // a[i] << 16, a[i + k] << 16 -> a bigger load.
+    if (!MemOffset2Idx.try_emplace(DstPos, Idx).second)
+      return None;
+    Loads.insert(Load);
+
+    // Keep track of the position of the earliest/latest loads in the pattern.
+    // We will check that there are no load fold barriers between them later
+    // on.
+    //
+    // FIXME: Is there a better way to check for load fold barriers?
+    if (!EarliestLoad || dominates(*Load, *EarliestLoad))
+      EarliestLoad = Load;
+    if (!LatestLoad || dominates(*LatestLoad, *Load))
+      LatestLoad = Load;
+  }
+
+  // We found a load for each register. Let's check if each load satisfies the
+  // pattern.
+  assert(Loads.size() == RegsToVisit.size() &&
+         "Expected to find a load for each register?");
+  assert(EarliestLoad != LatestLoad && EarliestLoad &&
+         LatestLoad && "Expected at least two loads?");
+
+  // Check if there are any stores, calls, etc. between any of the loads. If
+  // there are, then we can't safely perform the combine.
+  //
+  // MaxIter is chosen based off the (worst case) number of iterations it
+  // typically takes to succeed in the LLVM test suite plus some padding.
+  //
+  // FIXME: Is there a better way to check for load fold barriers?
+  const unsigned MaxIter = 20;
+  unsigned Iter = 0;
+  for (const auto &MI : instructionsWithoutDebug(EarliestLoad->getIterator(),
+                                                 LatestLoad->getIterator())) {
+    if (Loads.count(&MI))
+      continue;
+    if (MI.isLoadFoldBarrier())
+      return None;
+    if (Iter++ == MaxIter)
+      return None;
+  }
+
+  return std::make_pair(LowestIdxLoad, LowestIdx);
+}
+
+bool CombinerHelper::matchLoadOrCombine(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_OR);
+  MachineFunction &MF = *MI.getMF();
+  // Assuming a little-endian target, transform:
+  //  s8 *a = ...
+  //  s32 val = a[0] | (a[1] << 8) | (a[2] << 16) | (a[3] << 24)
+  // =>
+  //  s32 val = *((i32)a)
+  //
+  //  s8 *a = ...
+  //  s32 val = (a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3]
+  // =>
+  //  s32 val = BSWAP(*((s32)a))
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (Ty.isVector())
+    return false;
+
+  // We need to combine at least two loads into this type. Since the smallest
+  // possible load is into a byte, we need at least a 16-bit wide type.
+  const unsigned WideMemSizeInBits = Ty.getSizeInBits();
+  if (WideMemSizeInBits < 16 || WideMemSizeInBits % 8 != 0)
+    return false;
+
+  // Match a collection of non-OR instructions in the pattern.
+  auto RegsToVisit = findCandidatesForLoadOrCombine(&MI);
+  if (!RegsToVisit)
+    return false;
+
+  // We have a collection of non-OR instructions. Figure out how wide each of
+  // the small loads should be based off of the number of potential loads we
+  // found.
+  const unsigned NarrowMemSizeInBits = WideMemSizeInBits / RegsToVisit->size();
+  if (NarrowMemSizeInBits % 8 != 0)
+    return false;
+
+  // Check if each register feeding into each OR is a load from the same
+  // base pointer + some arithmetic.
+  //
+  // e.g. a[0], a[1] << 8, a[2] << 16, etc.
+  //
+  // Also verify that each of these ends up putting a[i] into the same memory
+  // offset as a load into a wide type would.
+  SmallDenseMap<int64_t, int64_t, 8> MemOffset2Idx;
+  MachineInstr *LowestIdxLoad;
+  int64_t LowestIdx;
+  auto MaybeLoadInfo = findLoadOffsetsForLoadOrCombine(
+      MemOffset2Idx, *RegsToVisit, NarrowMemSizeInBits);
+  if (!MaybeLoadInfo)
+    return false;
+  std::tie(LowestIdxLoad, LowestIdx) = *MaybeLoadInfo;
+
+  // We have a bunch of loads being OR'd together. Using the addresses + offsets
+  // we found before, check if this corresponds to a big or little endian byte
+  // pattern. If it does, then we can represent it using a load + possibly a
+  // BSWAP.
+  bool IsBigEndianTarget = MF.getDataLayout().isBigEndian();
+  Optional<bool> IsBigEndian = isBigEndian(MemOffset2Idx, LowestIdx);
+  if (!IsBigEndian.hasValue())
+    return false;
+  bool NeedsBSwap = IsBigEndianTarget != *IsBigEndian;
+  if (NeedsBSwap && !isLegalOrBeforeLegalizer({TargetOpcode::G_BSWAP, {Ty}}))
+    return false;
+
+  // Make sure that the load from the lowest index produces offset 0 in the
+  // final value.
+  //
+  // This ensures that we won't combine something like this:
+  //
+  // load x[i] -> byte 2
+  // load x[i+1] -> byte 0 ---> wide_load x[i]
+  // load x[i+2] -> byte 1
+  const unsigned NumLoadsInTy = WideMemSizeInBits / NarrowMemSizeInBits;
+  const unsigned ZeroByteOffset =
+      *IsBigEndian
+          ? bigEndianByteAt(NumLoadsInTy, 0)
+          : littleEndianByteAt(NumLoadsInTy, 0);
+  auto ZeroOffsetIdx = MemOffset2Idx.find(ZeroByteOffset);
+  if (ZeroOffsetIdx == MemOffset2Idx.end() ||
+      ZeroOffsetIdx->second != LowestIdx)
+    return false;
+
+  // We wil reuse the pointer from the load which ends up at byte offset 0. It
+  // may not use index 0.
+  Register Ptr = LowestIdxLoad->getOperand(1).getReg();
+  const MachineMemOperand &MMO = **LowestIdxLoad->memoperands_begin();
+  LegalityQuery::MemDesc MMDesc;
+  MMDesc.SizeInBits = WideMemSizeInBits;
+  MMDesc.AlignInBits = MMO.getAlign().value() * 8;
+  MMDesc.Ordering = MMO.getOrdering();
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_LOAD, {Ty, MRI.getType(Ptr)}, {MMDesc}}))
+    return false;
+  auto PtrInfo = MMO.getPointerInfo();
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, WideMemSizeInBits / 8);
+
+  // Load must be allowed and fast on the target.
+  LLVMContext &C = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+  bool Fast = false;
+  if (!getTargetLowering().allowsMemoryAccess(C, DL, Ty, *NewMMO, &Fast) ||
+      !Fast)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &MIB) {
+    Register LoadDst = NeedsBSwap ? MRI.cloneVirtualRegister(Dst) : Dst;
+    MIB.buildLoad(LoadDst, Ptr, *NewMMO);
+    if (NeedsBSwap)
+      MIB.buildBSwap(Dst, LoadDst);
+  };
+  return true;
+}
+
+bool CombinerHelper::applyLoadOrCombine(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  Builder.setInstrAndDebugLoc(MI);
+  MatchInfo(Builder);
   MI.eraseFromParent();
   return true;
 }

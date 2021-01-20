@@ -163,7 +163,10 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
 
 // -----
 
-def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF", SPV_Float, SPV_Integer, []> {
+def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
+                                   SPV_Float,
+                                   SPV_Integer,
+                                   [SignedOp]> {
   let summary = [{
     Convert value numerically from signed integer to floating point.
   }];
@@ -270,7 +273,10 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert",
 
 // -----
 
-def SPV_SConvertOp : SPV_CastOp<"SConvert", SPV_Integer, SPV_Integer, [UsableInSpecConstantOp]> {
+def SPV_SConvertOp : SPV_CastOp<"SConvert",
+                                SPV_Integer,
+                                SPV_Integer,
+                                [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Convert signed width.  This is either a truncate or a sign extend.
   }];

@@ -65,15 +65,17 @@ class LoopRotate {
   const SimplifyQuery &SQ;
   bool RotationOnly;
   bool IsUtilMode;
+  bool PrepareForLTO;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-             const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode)
+             const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
+             bool PrepareForLTO)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
-        IsUtilMode(IsUtilMode) {}
+        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO) {}
   bool processLoop(Loop *L);
 
 private:
@@ -301,7 +303,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
       CodeMetrics Metrics;
-      Metrics.analyzeBasicBlock(OrigHeader, *TTI, EphValues);
+      Metrics.analyzeBasicBlock(OrigHeader, *TTI, EphValues, PrepareForLTO);
       if (Metrics.notDuplicatable) {
         LLVM_DEBUG(
                    dbgs() << "LoopRotation: NOT rotating - contains non-duplicatable"
@@ -324,6 +326,11 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         ++NumNotRotatedDueToHeaderSize;
         return Rotated;
       }
+
+      // When preparing for LTO, avoid rotating loops with calls that could be
+      // inlined during the LTO stage.
+      if (PrepareForLTO && Metrics.NumInlineCandidates > 0)
+        return Rotated;
     }
 
     // Now, this loop is suitable for rotation.
@@ -745,8 +752,8 @@ bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                         ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
                         const SimplifyQuery &SQ, bool RotationOnly = true,
                         unsigned Threshold = unsigned(-1),
-                        bool IsUtilMode = true) {
+                        bool IsUtilMode = true, bool PrepareForLTO) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode);
+                IsUtilMode, PrepareForLTO);
   return LR.processLoop(L);
 }

@@ -113,7 +113,7 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
 
   Value rankDiff =
       rewriter.create<SubIOp>(loc, indexTy, greaterRank, lesserRank);
-  rewriter.replaceOpWithNewOp<DynamicTensorFromElementsOp>(
+  rewriter.replaceOpWithNewOp<tensor::GenerateOp>(
       op, getExtentTensorType(op.getContext()), ValueRange{greaterRank},
       [&](OpBuilder &b, Location loc, ValueRange args) {
         Value outputDimension = args[0];
@@ -151,7 +151,7 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
                   greaterRankOperandExtent);
               b.create<scf::YieldOp>(loc, broadcastedExtent);
             });
-        b.create<mlir::YieldOp>(loc, ifOp.getResult(0));
+        b.create<tensor::YieldOp>(loc, ifOp.getResult(0));
       });
   return success();
 }
@@ -184,7 +184,7 @@ LogicalResult ConstShapeOpConverter::matchAndRewrite(
   }
   Type indexTy = rewriter.getIndexType();
   Value tensor =
-      rewriter.create<TensorFromElementsOp>(loc, indexTy, extentOperands);
+      rewriter.create<tensor::FromElementsOp>(loc, indexTy, extentOperands);
   Type resultTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
   rewriter.replaceOpWithNewOp<tensor::CastOp>(op, resultTy, tensor);
   return success();
@@ -503,7 +503,7 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
   if (op.getType().isa<ShapeType>())
     return failure();
 
-  // For ranked tensor arguments, lower to `tensor_from_elements`.
+  // For ranked tensor arguments, lower to `tensor.from_elements`.
   auto loc = op.getLoc();
   ShapeOfOp::Adaptor transformed(operands);
   Value tensor = transformed.arg();
@@ -526,22 +526,22 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
     }
 
     // Materialize extent tensor.
-    Value staticExtentTensor = rewriter.create<TensorFromElementsOp>(
+    Value staticExtentTensor = rewriter.create<tensor::FromElementsOp>(
         loc, rewriter.getIndexType(), extentValues);
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(),
                                                 staticExtentTensor);
     return success();
   }
 
-  // Lower to `dynamic_tensor_from_elements` otherwise.
+  // Lower to `tensor.generate` otherwise.
   auto *ctx = rewriter.getContext();
   Value rank = rewriter.create<mlir::RankOp>(loc, tensor);
-  rewriter.replaceOpWithNewOp<DynamicTensorFromElementsOp>(
+  rewriter.replaceOpWithNewOp<tensor::GenerateOp>(
       op, getExtentTensorType(ctx), ValueRange{rank},
       [&](OpBuilder &b, Location loc, ValueRange args) {
         Value dim = args.front();
         Value extent = b.create<DimOp>(loc, tensor, dim);
-        b.create<mlir::YieldOp>(loc, extent);
+        b.create<tensor::YieldOp>(loc, extent);
       });
 
   return success();

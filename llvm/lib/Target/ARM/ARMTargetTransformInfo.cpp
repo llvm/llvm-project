@@ -1513,15 +1513,39 @@ int ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
-  // Currently we make a somewhat optimistic assumption that active_lane_mask's
-  // are always free. In reality it may be freely folded into a tail predicated
-  // loop, expanded into a VCPT or expanded into a lot of add/icmp code. We
-  // may need to improve this in the future, but being able to detect if it
-  // is free or not involves looking at a lot of other code. We currently assume
-  // that the vectorizer inserted these, and knew what it was doing in adding
-  // one.
-  if (ST->hasMVEIntegerOps() && ICA.getID() == Intrinsic::get_active_lane_mask)
-    return 0;
+  switch (ICA.getID()) {
+  case Intrinsic::get_active_lane_mask:
+    // Currently we make a somewhat optimistic assumption that
+    // active_lane_mask's are always free. In reality it may be freely folded
+    // into a tail predicated loop, expanded into a VCPT or expanded into a lot
+    // of add/icmp code. We may need to improve this in the future, but being
+    // able to detect if it is free or not involves looking at a lot of other
+    // code. We currently assume that the vectorizer inserted these, and knew
+    // what it was doing in adding one.
+    if (ST->hasMVEIntegerOps())
+      return 0;
+    break;
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat: {
+    if (!ST->hasMVEIntegerOps())
+      break;
+    std::pair<int, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ICA.getReturnType());
+    if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
+        LT.second == MVT::v16i8) {
+      // This is a base cost of 1 for the vadd, plus 3 extract shifts if we
+      // need to extend the type, as it uses shr(qadd(shl, shl)).
+      unsigned Instrs = LT.second.getScalarSizeInBits() ==
+                                ICA.getReturnType()->getScalarSizeInBits()
+                            ? 1
+                            : 4;
+      return LT.first * ST->getMVEVectorCostFactor() * Instrs;
+    }
+    break;
+  }
+  }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }

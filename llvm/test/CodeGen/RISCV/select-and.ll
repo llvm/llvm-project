@@ -65,8 +65,7 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    addi a1, zero, 1
-; RV32I-NEXT:    bne a0, a1, .LBB1_2
+; RV32I-NEXT:    beqz a0, .LBB1_2
 ; RV32I-NEXT:  # %bb.1: # %if.then
 ; RV32I-NEXT:    call both@plt
 ; RV32I-NEXT:    j .LBB1_3
@@ -82,8 +81,7 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32IBT-NEXT:    addi sp, sp, -16
 ; RV32IBT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IBT-NEXT:    and a0, a0, a1
-; RV32IBT-NEXT:    addi a1, zero, 1
-; RV32IBT-NEXT:    bne a0, a1, .LBB1_2
+; RV32IBT-NEXT:    beqz a0, .LBB1_2
 ; RV32IBT-NEXT:  # %bb.1: # %if.then
 ; RV32IBT-NEXT:    call both@plt
 ; RV32IBT-NEXT:    j .LBB1_3
@@ -99,8 +97,7 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    addi a1, zero, 1
-; RV64I-NEXT:    bne a0, a1, .LBB1_2
+; RV64I-NEXT:    beqz a0, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %if.then
 ; RV64I-NEXT:    call both@plt
 ; RV64I-NEXT:    j .LBB1_3
@@ -116,8 +113,7 @@ define signext i32 @if_of_and(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64IBT-NEXT:    addi sp, sp, -16
 ; RV64IBT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IBT-NEXT:    and a0, a0, a1
-; RV64IBT-NEXT:    addi a1, zero, 1
-; RV64IBT-NEXT:    bne a0, a1, .LBB1_2
+; RV64IBT-NEXT:    beqz a0, .LBB1_2
 ; RV64IBT-NEXT:  # %bb.1: # %if.then
 ; RV64IBT-NEXT:    call both@plt
 ; RV64IBT-NEXT:    j .LBB1_3

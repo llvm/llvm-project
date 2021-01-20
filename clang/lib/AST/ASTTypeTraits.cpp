@@ -63,6 +63,17 @@ bool ASTNodeKind::isBaseOf(NodeKindId Base, NodeKindId Derived,
   return Derived == Base;
 }
 
+ASTNodeKind ASTNodeKind::getCladeKind() const {
+  NodeKindId LastId = KindId;
+  while (LastId) {
+    NodeKindId ParentId = AllKindInfo[LastId].ParentId;
+    if (ParentId == NKI_None)
+      return LastId;
+    LastId = ParentId;
+  }
+  return NKI_None;
+}
+
 StringRef ASTNodeKind::asStringRef() const { return AllKindInfo[KindId].Name; }
 
 ASTNodeKind ASTNodeKind::getMostDerivedType(ASTNodeKind Kind1,

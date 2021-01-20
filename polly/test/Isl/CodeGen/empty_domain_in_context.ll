@@ -81,6 +81,6 @@ for.cond3.for.end_crit_edge:                      ; preds = %lor.end, %lor.end.p
 ; It is not important since this code will never be executed.
 
 ; CHECK:      polly.stmt.lor.end.us.peel:
-; CHECK-NEXT:   %tmp_p_scalar_1 = load i8, i8* @b
-; CHECK-NEXT:   store i8 %tmp_p_scalar_1, i8* %tmp3.phiops
+; CHECK-NEXT:   %tmp_p_scalar_2 = load i8, i8* @b
+; CHECK-NEXT:   store i8 %tmp_p_scalar_2, i8* %tmp3.phiops
 ; CHECK-NEXT:   br label %polly.merge

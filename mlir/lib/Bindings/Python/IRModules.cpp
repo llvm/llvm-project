@@ -130,6 +130,13 @@ equivalent to printing the operation that produced it.
 // Utilities.
 //------------------------------------------------------------------------------
 
+// Helper for creating an @classmethod.
+template <class Func, typename... Args>
+py::object classmethod(Func f, Args... args) {
+  py::object cf = py::cpp_function(f, args...);
+  return py::reinterpret_borrow<py::object>((PyClassMethod_New(cf.ptr())));
+}
+
 /// Checks whether the given type is an integer or float type.
 static int mlirTypeIsAIntegerOrFloat(MlirType type) {
   return mlirTypeIsAInteger(type) || mlirTypeIsABF16(type) ||
@@ -1025,6 +1032,267 @@ py::object PyOperation::createOpView() {
   if (opViewClass)
     return (*opViewClass)(getRef().getObject());
   return py::cast(PyOpView(getRef().getObject()));
+}
+
+//------------------------------------------------------------------------------
+// PyOpView
+//------------------------------------------------------------------------------
+
+py::object
+PyOpView::odsBuildDefault(py::object cls, py::list operandList,
+                          py::list resultTypeList,
+                          llvm::Optional<py::dict> attributes,
+                          llvm::Optional<std::vector<PyBlock *>> successors,
+                          llvm::Optional<int> regions,
+                          DefaultingPyLocation location, py::object maybeIp) {
+  PyMlirContextRef context = location->getContext();
+  // Class level operation construction metadata.
+  std::string name = py::cast<std::string>(cls.attr("OPERATION_NAME"));
+  // Operand and result segment specs are either none, which does no
+  // variadic unpacking, or a list of ints with segment sizes, where each
+  // element is either a positive number (typically 1 for a scalar) or -1 to
+  // indicate that it is derived from the length of the same-indexed operand
+  // or result (implying that it is a list at that position).
+  py::object operandSegmentSpecObj = cls.attr("_ODS_OPERAND_SEGMENTS");
+  py::object resultSegmentSpecObj = cls.attr("_ODS_RESULT_SEGMENTS");
+
+  std::vector<uint64_t> operandSegmentLengths;
+  std::vector<uint64_t> resultSegmentLengths;
+
+  // Validate/determine region count.
+  auto opRegionSpec = py::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
+  int opMinRegionCount = std::get<0>(opRegionSpec);
+  bool opHasNoVariadicRegions = std::get<1>(opRegionSpec);
+  if (!regions) {
+    regions = opMinRegionCount;
+  }
+  if (*regions < opMinRegionCount) {
+    throw py::value_error(
+        (llvm::Twine("Operation \"") + name + "\" requires a minimum of " +
+         llvm::Twine(opMinRegionCount) +
+         " regions but was built with regions=" + llvm::Twine(*regions))
+            .str());
+  }
+  if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
+    throw py::value_error(
+        (llvm::Twine("Operation \"") + name + "\" requires a maximum of " +
+         llvm::Twine(opMinRegionCount) +
+         " regions but was built with regions=" + llvm::Twine(*regions))
+            .str());
+  }
+
+  // Unpack results.
+  std::vector<PyType *> resultTypes;
+  resultTypes.reserve(resultTypeList.size());
+  if (resultSegmentSpecObj.is_none()) {
+    // Non-variadic result unpacking.
+    for (auto it : llvm::enumerate(resultTypeList)) {
+      try {
+        resultTypes.push_back(py::cast<PyType *>(it.value()));
+        if (!resultTypes.back())
+          throw py::cast_error();
+      } catch (py::cast_error &err) {
+        throw py::value_error((llvm::Twine("Result ") +
+                               llvm::Twine(it.index()) + " of operation \"" +
+                               name + "\" must be a Type (" + err.what() + ")")
+                                  .str());
+      }
+    }
+  } else {
+    // Sized result unpacking.
+    auto resultSegmentSpec = py::cast<std::vector<int>>(resultSegmentSpecObj);
+    if (resultSegmentSpec.size() != resultTypeList.size()) {
+      throw py::value_error((llvm::Twine("Operation \"") + name +
+                             "\" requires " +
+                             llvm::Twine(resultSegmentSpec.size()) +
+                             "result segments but was provided " +
+                             llvm::Twine(resultTypeList.size()))
+                                .str());
+    }
+    resultSegmentLengths.reserve(resultTypeList.size());
+    for (auto it :
+         llvm::enumerate(llvm::zip(resultTypeList, resultSegmentSpec))) {
+      int segmentSpec = std::get<1>(it.value());
+      if (segmentSpec == 1 || segmentSpec == 0) {
+        // Unpack unary element.
+        try {
+          auto resultType = py::cast<PyType *>(std::get<0>(it.value()));
+          if (resultType) {
+            resultTypes.push_back(resultType);
+            resultSegmentLengths.push_back(1);
+          } else if (segmentSpec == 0) {
+            // Allowed to be optional.
+            resultSegmentLengths.push_back(0);
+          } else {
+            throw py::cast_error("was None and result is not optional");
+          }
+        } catch (py::cast_error &err) {
+          throw py::value_error((llvm::Twine("Result ") +
+                                 llvm::Twine(it.index()) + " of operation \"" +
+                                 name + "\" must be a Type (" + err.what() +
+                                 ")")
+                                    .str());
+        }
+      } else if (segmentSpec == -1) {
+        // Unpack sequence by appending.
+        try {
+          if (std::get<0>(it.value()).is_none()) {
+            // Treat it as an empty list.
+            resultSegmentLengths.push_back(0);
+          } else {
+            // Unpack the list.
+            auto segment = py::cast<py::sequence>(std::get<0>(it.value()));
+            for (py::object segmentItem : segment) {
+              resultTypes.push_back(py::cast<PyType *>(segmentItem));
+              if (!resultTypes.back()) {
+                throw py::cast_error("contained a None item");
+              }
+            }
+            resultSegmentLengths.push_back(segment.size());
+          }
+        } catch (std::exception &err) {
+          // NOTE: Sloppy to be using a catch-all here, but there are at least
+          // three different unrelated exceptions that can be thrown in the
+          // above "casts". Just keep the scope above small and catch them all.
+          throw py::value_error((llvm::Twine("Result ") +
+                                 llvm::Twine(it.index()) + " of operation \"" +
+                                 name + "\" must be a Sequence of Types (" +
+                                 err.what() + ")")
+                                    .str());
+        }
+      } else {
+        throw py::value_error("Unexpected segment spec");
+      }
+    }
+  }
+
+  // Unpack operands.
+  std::vector<PyValue *> operands;
+  operands.reserve(operands.size());
+  if (operandSegmentSpecObj.is_none()) {
+    // Non-sized operand unpacking.
+    for (auto it : llvm::enumerate(operandList)) {
+      try {
+        operands.push_back(py::cast<PyValue *>(it.value()));
+        if (!operands.back())
+          throw py::cast_error();
+      } catch (py::cast_error &err) {
+        throw py::value_error((llvm::Twine("Operand ") +
+                               llvm::Twine(it.index()) + " of operation \"" +
+                               name + "\" must be a Value (" + err.what() + ")")
+                                  .str());
+      }
+    }
+  } else {
+    // Sized operand unpacking.
+    auto operandSegmentSpec = py::cast<std::vector<int>>(operandSegmentSpecObj);
+    if (operandSegmentSpec.size() != operandList.size()) {
+      throw py::value_error((llvm::Twine("Operation \"") + name +
+                             "\" requires " +
+                             llvm::Twine(operandSegmentSpec.size()) +
+                             "operand segments but was provided " +
+                             llvm::Twine(operandList.size()))
+                                .str());
+    }
+    operandSegmentLengths.reserve(operandList.size());
+    for (auto it :
+         llvm::enumerate(llvm::zip(operandList, operandSegmentSpec))) {
+      int segmentSpec = std::get<1>(it.value());
+      if (segmentSpec == 1 || segmentSpec == 0) {
+        // Unpack unary element.
+        try {
+          auto operandValue = py::cast<PyValue *>(std::get<0>(it.value()));
+          if (operandValue) {
+            operands.push_back(operandValue);
+            operandSegmentLengths.push_back(1);
+          } else if (segmentSpec == 0) {
+            // Allowed to be optional.
+            operandSegmentLengths.push_back(0);
+          } else {
+            throw py::cast_error("was None and operand is not optional");
+          }
+        } catch (py::cast_error &err) {
+          throw py::value_error((llvm::Twine("Operand ") +
+                                 llvm::Twine(it.index()) + " of operation \"" +
+                                 name + "\" must be a Value (" + err.what() +
+                                 ")")
+                                    .str());
+        }
+      } else if (segmentSpec == -1) {
+        // Unpack sequence by appending.
+        try {
+          if (std::get<0>(it.value()).is_none()) {
+            // Treat it as an empty list.
+            operandSegmentLengths.push_back(0);
+          } else {
+            // Unpack the list.
+            auto segment = py::cast<py::sequence>(std::get<0>(it.value()));
+            for (py::object segmentItem : segment) {
+              operands.push_back(py::cast<PyValue *>(segmentItem));
+              if (!operands.back()) {
+                throw py::cast_error("contained a None item");
+              }
+            }
+            operandSegmentLengths.push_back(segment.size());
+          }
+        } catch (std::exception &err) {
+          // NOTE: Sloppy to be using a catch-all here, but there are at least
+          // three different unrelated exceptions that can be thrown in the
+          // above "casts". Just keep the scope above small and catch them all.
+          throw py::value_error((llvm::Twine("Operand ") +
+                                 llvm::Twine(it.index()) + " of operation \"" +
+                                 name + "\" must be a Sequence of Values (" +
+                                 err.what() + ")")
+                                    .str());
+        }
+      } else {
+        throw py::value_error("Unexpected segment spec");
+      }
+    }
+  }
+
+  // Merge operand/result segment lengths into attributes if needed.
+  if (!operandSegmentLengths.empty() || !resultSegmentLengths.empty()) {
+    // Dup.
+    if (attributes) {
+      attributes = py::dict(*attributes);
+    } else {
+      attributes = py::dict();
+    }
+    if (attributes->contains("result_segment_sizes") ||
+        attributes->contains("operand_segment_sizes")) {
+      throw py::value_error("Manually setting a 'result_segment_sizes' or "
+                            "'operand_segment_sizes' attribute is unsupported. "
+                            "Use Operation.create for such low-level access.");
+    }
+
+    // Add result_segment_sizes attribute.
+    if (!resultSegmentLengths.empty()) {
+      int64_t size = resultSegmentLengths.size();
+      MlirAttribute segmentLengthAttr = mlirDenseElementsAttrUInt64Get(
+          mlirVectorTypeGet(1, &size, mlirIntegerTypeGet(context->get(), 64)),
+          resultSegmentLengths.size(), resultSegmentLengths.data());
+      (*attributes)["result_segment_sizes"] =
+          PyAttribute(context, segmentLengthAttr);
+    }
+
+    // Add operand_segment_sizes attribute.
+    if (!operandSegmentLengths.empty()) {
+      int64_t size = operandSegmentLengths.size();
+      MlirAttribute segmentLengthAttr = mlirDenseElementsAttrUInt64Get(
+          mlirVectorTypeGet(1, &size, mlirIntegerTypeGet(context->get(), 64)),
+          operandSegmentLengths.size(), operandSegmentLengths.data());
+      (*attributes)["operand_segment_sizes"] =
+          PyAttribute(context, segmentLengthAttr);
+    }
+  }
+
+  // Delegate to create.
+  return PyOperation::create(std::move(name), /*operands=*/std::move(operands),
+                             /*results=*/std::move(resultTypes),
+                             /*attributes=*/std::move(attributes),
+                             /*successors=*/std::move(successors),
+                             /*regions=*/*regions, location, maybeIp);
 }
 
 PyOpView::PyOpView(py::object operationObject)
@@ -2564,7 +2832,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
          "get",
-         [](PyType &elementType, std::vector<int64_t> shape,
+         [](std::vector<int64_t> shape, PyType &elementType,
             std::vector<PyAffineMap> layout, unsigned memorySpace,
             DefaultingPyLocation loc) {
            SmallVector<MlirAffineMap> maps;
@@ -2588,7 +2856,7 @@ public:
            }
            return PyMemRefType(elementType.getContext(), t);
          },
-         py::arg("element_type"), py::arg("shape"),
+         py::arg("shape"), py::arg("element_type"),
          py::arg("layout") = py::list(), py::arg("memory_space") = 0,
          py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly("layout", &PyMemRefType::getLayout,
@@ -3397,17 +3665,29 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "Context that owns the Operation")
       .def_property_readonly("opview", &PyOperation::createOpView);
 
-  py::class_<PyOpView, PyOperationBase>(m, "OpView")
-      .def(py::init<py::object>())
-      .def_property_readonly("operation", &PyOpView::getOperationObject)
-      .def_property_readonly(
-          "context",
-          [](PyOpView &self) {
-            return self.getOperation().getContext().getObject();
-          },
-          "Context that owns the Operation")
-      .def("__str__",
-           [](PyOpView &self) { return py::str(self.getOperationObject()); });
+  auto opViewClass =
+      py::class_<PyOpView, PyOperationBase>(m, "OpView")
+          .def(py::init<py::object>())
+          .def_property_readonly("operation", &PyOpView::getOperationObject)
+          .def_property_readonly(
+              "context",
+              [](PyOpView &self) {
+                return self.getOperation().getContext().getObject();
+              },
+              "Context that owns the Operation")
+          .def("__str__", [](PyOpView &self) {
+            return py::str(self.getOperationObject());
+          });
+  opViewClass.attr("_ODS_REGIONS") = py::make_tuple(0, true);
+  opViewClass.attr("_ODS_OPERAND_SEGMENTS") = py::none();
+  opViewClass.attr("_ODS_RESULT_SEGMENTS") = py::none();
+  opViewClass.attr("_ods_build_default") = classmethod(
+      &PyOpView::odsBuildDefault, py::arg("cls"),
+      py::arg("operands") = py::none(), py::arg("results") = py::none(),
+      py::arg("attributes") = py::none(), py::arg("successors") = py::none(),
+      py::arg("regions") = py::none(), py::arg("loc") = py::none(),
+      py::arg("ip") = py::none(),
+      "Builds a specific, generated OpView based on class level attributes.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.

@@ -77,15 +77,8 @@ class Clause<string c> {
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
-  // Optional class holding the clause in flang AST. If left blank, the class
-  // is assumed to be the name of the clause with capitalized word and
-  // underscores removed.
-  // ex: async -> Async
-  //     num_threads -> NumThreads
-  string flangClass = "";
-
   // Optional class holding value of the clause in flang AST.
-  string flangClassValue = "";
+  string flangClass = "";
 
   // If set to true, value is optional. Not optional by default.
   bit isValueOptional = false;

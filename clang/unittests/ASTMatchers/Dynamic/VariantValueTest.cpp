@@ -184,6 +184,25 @@ TEST(VariantValueTest, Matcher) {
                   .getTypedMatcher<Stmt>()));
 }
 
+TEST(VariantValueTest, NodeKind) {
+  VariantValue Value = ASTNodeKind::getFromNodeKind<Stmt>();
+  EXPECT_TRUE(Value.isNodeKind());
+  EXPECT_TRUE(Value.getNodeKind().isSame(ASTNodeKind::getFromNodeKind<Stmt>()));
+
+  Value = ASTNodeKind::getFromNodeKind<CXXMethodDecl>();
+  EXPECT_TRUE(Value.isNodeKind());
+  EXPECT_TRUE(Value.getNodeKind().isSame(
+      ASTNodeKind::getFromNodeKind<CXXMethodDecl>()));
+
+  Value.setNodeKind(ASTNodeKind::getFromNodeKind<PointerType>());
+  EXPECT_TRUE(Value.isNodeKind());
+  EXPECT_TRUE(
+      Value.getNodeKind().isSame(ASTNodeKind::getFromNodeKind<PointerType>()));
+
+  Value = 42;
+  EXPECT_TRUE(!Value.isNodeKind());
+}
+
 } // end anonymous namespace
 } // end namespace dynamic
 } // end namespace ast_matchers

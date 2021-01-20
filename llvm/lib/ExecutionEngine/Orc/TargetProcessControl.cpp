@@ -65,8 +65,7 @@ SelfTargetProcessControl::loadDylib(const char *DylibPath) {
 }
 
 Expected<std::vector<tpctypes::LookupResult>>
-SelfTargetProcessControl::lookupSymbols(
-    ArrayRef<tpctypes::LookupRequest> Request) {
+SelfTargetProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {

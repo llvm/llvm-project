@@ -9,7 +9,7 @@
 namespace lldb {
 
 %feature("docstring",
-"Utility functions for :py:class:`LanguageType`"
+"Utility functions for :ref:`LanguageType`"
 ) SBLanguageRuntime;
 class SBLanguageRuntime
 {

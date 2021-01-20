@@ -3,8 +3,8 @@
 
 %struct.__tile_str = type { i16, i16, <256 x i32> }
 
-@buf = dso_local global [1024 x i8] zeroinitializer, align 16
-@buf2 = dso_local global [1024 x i8] zeroinitializer, align 16
+@buf = dso_local global [1024 x i8] zeroinitializer, align 64
+@buf2 = dso_local global [1024 x i8] zeroinitializer, align 64
 
 ; test bitcast x86_amx to <256 x i32>
 define dso_local void @test_user_empty(i16 %m, i16 %n, i8 *%buf, i64 %s) {

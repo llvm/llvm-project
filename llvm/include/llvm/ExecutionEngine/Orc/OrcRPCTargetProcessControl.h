@@ -309,7 +309,7 @@ public:
   }
 
   Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<tpctypes::LookupRequest> Request) override {
+  lookupSymbols(ArrayRef<LookupRequest> Request) override {
     std::vector<orcrpctpc::RemoteLookupRequest> RR;
     for (auto &E : Request) {
       RR.push_back({});

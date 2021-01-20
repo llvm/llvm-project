@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"

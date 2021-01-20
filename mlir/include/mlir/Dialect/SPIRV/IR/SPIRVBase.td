@@ -3117,6 +3117,8 @@ def InModuleScope : PredOpTrait<
 
 def UnsignedOp : NativeOpTrait<"spirv::UnsignedOp">;
 
+def SignedOp : NativeOpTrait<"spirv::SignedOp">;
+
 def UsableInSpecConstantOp : NativeOpTrait<"spirv::UsableInSpecConstantOp">;
 
 //===----------------------------------------------------------------------===//

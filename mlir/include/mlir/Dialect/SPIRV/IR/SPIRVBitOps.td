@@ -178,7 +178,8 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
 
 // -----
 
-def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract", []> {
+def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
+                                                   [SignedOp]> {
   let summary = "Extract a bit field from an object, with sign extension.";
 
   let description = [{

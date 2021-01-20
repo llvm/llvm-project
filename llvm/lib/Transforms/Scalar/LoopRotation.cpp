@@ -34,8 +34,14 @@ static cl::opt<unsigned> DefaultRotationThreshold(
     "rotation-max-header-size", cl::init(16), cl::Hidden,
     cl::desc("The default maximum header size for automatic loop rotation"));
 
-LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication)
-    : EnableHeaderDuplication(EnableHeaderDuplication) {}
+static cl::opt<bool> PrepareForLTOOption(
+    "rotation-prepare-for-lto", cl::init(false), cl::Hidden,
+    cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
+             "should be used for testing only."));
+
+LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO)
+    : EnableHeaderDuplication(EnableHeaderDuplication),
+      PrepareForLTO(PrepareForLTO) {}
 
 PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
@@ -53,9 +59,10 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   Optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
-  bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
-                              MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-                              SQ, false, Threshold, false);
+  bool Changed =
+      LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
+                   MSSAU.hasValue() ? MSSAU.getPointer() : nullptr, SQ, false,
+                   Threshold, false, PrepareForLTO || PrepareForLTOOption);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -73,10 +80,13 @@ namespace {
 
 class LoopRotateLegacyPass : public LoopPass {
   unsigned MaxHeaderSize;
+  bool PrepareForLTO;
 
 public:
   static char ID; // Pass ID, replacement for typeid
-  LoopRotateLegacyPass(int SpecifiedMaxHeaderSize = -1) : LoopPass(ID) {
+  LoopRotateLegacyPass(int SpecifiedMaxHeaderSize = -1,
+                       bool PrepareForLTO = false)
+      : LoopPass(ID), PrepareForLTO(PrepareForLTO) {
     initializeLoopRotateLegacyPassPass(*PassRegistry::getPassRegistry());
     if (SpecifiedMaxHeaderSize == -1)
       MaxHeaderSize = DefaultRotationThreshold;
@@ -121,7 +131,8 @@ public:
 
     return LoopRotation(L, LI, TTI, AC, &DT, &SE,
                         MSSAU.hasValue() ? MSSAU.getPointer() : nullptr, SQ,
-                        false, Threshold, false);
+                        false, Threshold, false,
+                        PrepareForLTO || PrepareForLTOOption);
   }
 };
 } // end namespace
@@ -136,6 +147,6 @@ INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops", false,
                     false)
 
-Pass *llvm::createLoopRotatePass(int MaxHeaderSize) {
-  return new LoopRotateLegacyPass(MaxHeaderSize);
+Pass *llvm::createLoopRotatePass(int MaxHeaderSize, bool PrepareForLTO) {
+  return new LoopRotateLegacyPass(MaxHeaderSize, PrepareForLTO);
 }

@@ -385,4 +385,5 @@ EXTERN int omp_test_lock(omp_lock_t *lock) {
   PRINT(LD_IO, "call omp_test_lock() return %d\n", rc);
   return rc;
 }
+
 #pragma omp end declare target

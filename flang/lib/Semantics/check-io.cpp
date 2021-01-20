@@ -928,9 +928,12 @@ void IoChecker::CheckForDefinableVariable(
     const A &var, const std::string &s) const {
   const Symbol *sym{
       GetFirstName(*parser::Unwrap<parser::Variable>(var)).symbol};
-  if (WhyNotModifiable(*sym, context_.FindScope(*context_.location()))) {
-    context_.Say(parser::FindSourceLocation(var),
-        "%s variable '%s' must be definable"_err_en_US, s, sym->name());
+  if (auto whyNot{
+          WhyNotModifiable(*sym, context_.FindScope(*context_.location()))}) {
+    auto at{parser::FindSourceLocation(var)};
+    context_
+        .Say(at, "%s variable '%s' must be definable"_err_en_US, s, sym->name())
+        .Attach(at, std::move(*whyNot), sym->name());
   }
 }
 

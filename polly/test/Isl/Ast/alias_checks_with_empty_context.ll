@@ -56,7 +56,7 @@ bb19:                                             ; preds = %bb18, %bb17
   br label %bb1
 }
 
-; CHECK: if (1 && (&MemRef_global_1[1] <= &MemRef_tmp3[0] || &MemRef_tmp3[1] <= &MemRef_global_1[0]) && (&MemRef_tmp[1] <= &MemRef_tmp3[0] || &MemRef_tmp3[1] <= &MemRef_tmp[0]) && (&MemRef_tmp[1] <= &MemRef_global_1[0] || &MemRef_global_1[1] <= &MemRef_tmp[0]))
+; CHECK: if (1 && (&MemRef_tmp3[1] <= &MemRef_global_1[0] || &MemRef_global_1[1] <= &MemRef_tmp3[0]) && (&MemRef_tmp[1] <= &MemRef_global_1[0] || &MemRef_global_1[1] <= &MemRef_tmp[0]) && (&MemRef_tmp[1] <= &MemRef_tmp3[0] || &MemRef_tmp3[1] <= &MemRef_tmp[0]))
 
 ; CHECK:            for (int c0 = 0; c0 <= 64; c0 += 1) {
 ; CHECK-NEXT:         Stmt_bb7(c0);

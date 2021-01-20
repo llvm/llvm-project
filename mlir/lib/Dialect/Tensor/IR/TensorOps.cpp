@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -203,6 +205,223 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
   if (elementsAttr && elementsAttr.isValidIndex(indices))
     return elementsAttr.getValue(indices);
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// FromElementsOp
+//===----------------------------------------------------------------------===//
+
+void FromElementsOp::build(OpBuilder &builder, OperationState &result,
+                           Type elementType, ValueRange elements) {
+  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        elementType);
+  result.addOperands(elements);
+  result.addTypes(resultTy);
+}
+
+void FromElementsOp::build(OpBuilder &builder, OperationState &result,
+                           ValueRange elements) {
+  assert(!elements.empty() && "expected at least one element");
+  build(builder, result, elements.front().getType(), elements);
+}
+
+namespace {
+
+// Canonicalizes the pattern of the form
+//
+// %tensor = tensor.from_elements(%element) : (i32) -> tensor<1xi32>
+// %extracted_element = tensor.extract %tensor[%c0] : tensor<1xi32>
+//
+// to just %element.
+struct ExtractElementFromTensorFromElements
+    : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+                                PatternRewriter &rewriter) const final {
+    if (extract.indices().size() != 1)
+      return failure();
+
+    auto tensorFromElements = extract.tensor().getDefiningOp<FromElementsOp>();
+    if (tensorFromElements == nullptr)
+      return failure();
+
+    APInt index;
+    if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
+      return failure();
+    rewriter.replaceOp(extract,
+                       tensorFromElements.getOperand(index.getZExtValue()));
+    return success();
+  }
+};
+
+} // namespace
+
+void FromElementsOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ExtractElementFromTensorFromElements>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GenerateOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(GenerateOp op) {
+  // Ensure that the tensor type has as many dynamic dimensions as are specified
+  // by the operands.
+  RankedTensorType resultTy = op.getType().cast<RankedTensorType>();
+  if (op.getNumOperands() != resultTy.getNumDynamicDims())
+    return op.emitError("must have as many index operands as dynamic extents "
+                        "in the result type");
+
+  // Ensure that region arguments span the index space.
+  if (!llvm::all_of(op.body().getArgumentTypes(),
+                    [](Type ty) { return ty.isIndex(); }))
+    return op.emitError("all body arguments must be index");
+  if (op.body().getNumArguments() != resultTy.getRank())
+    return op.emitError("must have one body argument per input dimension");
+
+  // Ensure that the region yields an element of the right type.
+  auto yieldOp =
+      llvm::cast<YieldOp>(op.body().getBlocks().front().getTerminator());
+  if (yieldOp.value().getType() != resultTy.getElementType())
+    return op.emitOpError(
+        "body must be terminated with a `yield` operation of the tensor "
+        "element type");
+
+  return success();
+}
+
+void GenerateOp::build(
+    OpBuilder &b, OperationState &result, Type resultTy,
+    ValueRange dynamicExtents,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  build(b, result, resultTy, dynamicExtents);
+
+  // Build and populate body.
+  OpBuilder::InsertionGuard guard(b);
+  Region *bodyRegion = result.regions.front().get();
+  auto rank = resultTy.cast<RankedTensorType>().getRank();
+  SmallVector<Type, 2> argumentTypes(rank, b.getIndexType());
+  Block *bodyBlock =
+      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes);
+  bodyBuilder(b, result.location, bodyBlock->getArguments());
+}
+
+namespace {
+
+/// Canonicalizes tensor.generate operations with a constant
+/// operand into the equivalent operation with the operand expressed in the
+/// result type, instead. We also insert a type cast to make sure that the
+/// resulting IR is still well-typed.
+struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
+  using OpRewritePattern<GenerateOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenerateOp tensorFromElements,
+                                PatternRewriter &rewriter) const final {
+    auto resultType =
+        tensorFromElements.getResult().getType().cast<RankedTensorType>();
+
+    if (resultType.hasStaticShape())
+      return failure();
+
+    SmallVector<Value, 4> newOperands;
+    SmallVector<int64_t, 4> newShape;
+    auto operandsIt = tensorFromElements.dynamicExtents().begin();
+
+    for (int64_t dim : resultType.getShape()) {
+      if (dim != RankedTensorType::kDynamicSize) {
+        newShape.push_back(dim);
+        continue;
+      }
+      APInt index;
+      if (!matchPattern(*operandsIt, m_ConstantInt(&index))) {
+        newShape.push_back(RankedTensorType::kDynamicSize);
+        newOperands.push_back(*operandsIt++);
+        continue;
+      }
+      newShape.push_back(index.getSExtValue());
+      operandsIt++;
+    }
+
+    if (newOperands.size() == tensorFromElements.dynamicExtents().size())
+      return failure();
+
+    auto loc = tensorFromElements.getLoc();
+    auto newOp = rewriter.create<GenerateOp>(
+        loc, RankedTensorType::get(newShape, resultType.getElementType()),
+        newOperands);
+    rewriter.inlineRegionBefore(tensorFromElements.body(), newOp.body(),
+                                newOp.body().begin());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(tensorFromElements, resultType,
+                                                newOp);
+    return success();
+  }
+};
+
+/// Canonicalizes the pattern of the form
+///
+/// %tensor = tensor.generate %x {
+///   ^bb0(%arg0: index):  // no predecessors
+///   <computation>
+///   yield %1 : index
+/// } : tensor<?xindex>
+/// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
+///
+/// to just <computation> with %arg0 replaced by %c0. We only do this if the
+/// tensor.generate operation has no side-effects.
+struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorFromElements = extract.tensor().getDefiningOp<GenerateOp>();
+    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
+      return failure();
+
+    BlockAndValueMapping mapping;
+    Block *body = tensorFromElements.getBody();
+    mapping.map(body->getArguments(), extract.indices());
+    for (auto &op : body->without_terminator())
+      rewriter.clone(op, mapping);
+
+    auto yield = cast<YieldOp>(body->getTerminator());
+
+    rewriter.replaceOp(extract, mapping.lookupOrDefault(yield.value()));
+    return success();
+  }
+};
+
+/// Canonicalizes the pattern of the form
+///
+/// %val = tensor.cast %source : : tensor<?xi32> to tensor<2xi32>
+/// %extracted_element = tensor.extract %val[%c0] : tensor<2xi32>
+///
+/// to
+///
+/// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
+struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCast = extract.tensor().getDefiningOp<tensor::CastOp>();
+    if (!tensorCast)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(extract, tensorCast.source(),
+                                                   extract.indices());
+    return success();
+  }
+};
+
+} // namespace
+
+void GenerateOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                             MLIRContext *context) {
+  // TODO: Move extract patterns to tensor::ExtractOp.
+  results.insert<ExtractFromTensorGenerate, ExtractFromTensorCast,
+                 StaticTensorGenerate>(context);
 }
 
 //===----------------------------------------------------------------------===//

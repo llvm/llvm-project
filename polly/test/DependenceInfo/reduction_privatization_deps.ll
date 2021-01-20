@@ -1,11 +1,11 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
-; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_S1[o0, i0 - o0] : i0 <= 1023 and 0 <= o0 <= i0; Stmt_S1[i0, i1] -> Stmt_S2[-1 + i0 + i1] : 0 <= i0 <= 1023 and i1 >= 0 and -i0 < i1 <= 1024 - i0 and i1 <= 1023 }
+; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S2[-1 + i0 + i1] : 0 <= i0 <= 1023 and i1 >= 0 and -i0 < i1 <= 1024 - i0 and i1 <= 1023; Stmt_S0[i0] -> Stmt_S1[o0, i0 - o0] : i0 <= 1023 and 0 <= o0 <= i0 }
 ; CHECK-NEXT: WAR dependences:
-; CHECK-NEXT:     { Stmt_S2[i0] -> Stmt_S2[1 + i0] : 0 <= i0 <= 1022; Stmt_S1[i0, i1] -> Stmt_S2[i0 + i1] : i0 >= 0 and 0 <= i1 <= 1023 - i0 }
+; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S2[i0 + i1] : i0 >= 0 and 0 <= i1 <= 1023 - i0; Stmt_S2[i0] -> Stmt_S2[1 + i0] : 0 <= i0 <= 1022 }
 ; CHECK-NEXT: WAW dependences:
-; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_S1[o0, i0 - o0] : i0 <= 1023 and 0 <= o0 <= i0; Stmt_S1[i0, i1] -> Stmt_S2[i0 + i1] : i0 >= 0 and 0 <= i1 <= 1023 - i0 }
+; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S2[i0 + i1] : i0 >= 0 and 0 <= i1 <= 1023 - i0; Stmt_S0[i0] -> Stmt_S1[o0, i0 - o0] : i0 <= 1023 and 0 <= o0 <= i0 }
 ; CHECK-NEXT: Reduction dependences:
 ; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S1[1 + i0, -1 + i1] : 0 <= i0 <= 1022 and 0 < i1 <= 1023 }
 ;
