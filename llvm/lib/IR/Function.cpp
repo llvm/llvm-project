@@ -87,9 +87,11 @@ void Argument::setParent(Function *parent) {
   Parent = parent;
 }
 
-bool Argument::hasNonNullAttr() const {
+bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
   if (!getType()->isPointerTy()) return false;
-  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull))
+  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull) &&
+      (AllowUndefOrPoison ||
+       getParent()->hasParamAttribute(getArgNo(), Attribute::NoUndef)))
     return true;
   else if (getDereferenceableBytes() > 0 &&
            !NullPointerIsDefined(getParent(),

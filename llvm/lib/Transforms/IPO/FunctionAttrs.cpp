@@ -642,7 +642,7 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       if (auto *CalledFunc = CB->getCalledFunction()) {
         for (auto &CSArg : CalledFunc->args()) {
-          if (!CSArg.hasNonNullAttr())
+          if (!CSArg.hasNonNullAttr(/* AllowUndefOrPoison */ false))
             continue;
 
           // If the non-null callsite argument operand is an argument to 'F'

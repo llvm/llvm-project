@@ -1041,6 +1041,19 @@ return:                                           ; preds = %entry, %if.then
   ret i32* %retval.0
 }
 
+; FIXME: align 4 should not be propagated to the caller's p unless there is noundef
+define void @align4_caller(i8* %p) {
+; CHECK-LABEL: define {{[^@]+}}@align4_caller
+; CHECK-SAME: (i8* align 4 [[P:%.*]]) {
+; CHECK-NEXT:    call void @align4_callee(i8* align 4 [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @align4_callee(i8* %p)
+  ret void
+}
+
+declare void @align4_callee(i8* align(4) %p)
+
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }

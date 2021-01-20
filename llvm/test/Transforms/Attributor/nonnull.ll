@@ -1654,5 +1654,18 @@ define i8* @nonnull_function_ptr_2() {
   ret i8* %bc
 }
 
+; FIXME: nonnull should not be propagated to the caller's p unless there is noundef
+define void @nonnull_caller(i8* %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_caller
+; CHECK-SAME: (i8* nonnull [[P:%.*]]) {
+; CHECK-NEXT:    call void @nonnull_callee(i8* nonnull [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @nonnull_callee(i8* %p)
+  ret void
+}
+
+declare void @nonnull_callee(i8* nonnull %p)
+
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
