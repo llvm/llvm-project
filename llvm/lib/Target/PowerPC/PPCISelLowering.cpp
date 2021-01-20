@@ -8604,14 +8604,41 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // If it is a splat of a double, check if we can shrink it to a 32 bit
   // non-denormal float which when converted back to double gives us the same
-  // double. This is to exploit the XXSPLTIDP instruction.
-  if (BVNIsConstantSplat && Subtarget.hasPrefixInstrs() &&
-      (SplatBitSize == 64) && (Op->getValueType(0) == MVT::v2f64) &&
-      convertToNonDenormSingle(APSplatBits)) {
-    SDValue SplatNode = DAG.getNode(
-        PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
-        DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
-    return DAG.getBitcast(Op.getValueType(), SplatNode);
+  // double. This is to exploit the XXSPLTIDP instruction.+  // If we lose precision, we use XXSPLTI32DX.
+  if (BVNIsConstantSplat && (SplatBitSize == 64) &&
+      Subtarget.hasPrefixInstrs()) {
+    if (convertToNonDenormSingle(APSplatBits) &&
+        (Op->getValueType(0) == MVT::v2f64)) {
+      SDValue SplatNode = DAG.getNode(
+          PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
+          DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
+      return DAG.getBitcast(Op.getValueType(), SplatNode);
+    } else { // We may lose precision, so we have to use XXSPLTI32DX.
+
+      uint32_t Hi =
+          (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
+      uint32_t Lo =
+          (uint32_t)(APSplatBits.getZExtValue() & 0xFFFFFFFF);
+      SDValue SplatNode = DAG.getUNDEF(MVT::v2i64);
+
+      if (!Hi || !Lo)
+        // If either load is 0, then we should generate XXLXOR to set to 0.
+        SplatNode = DAG.getTargetConstant(0, dl, MVT::v2i64);
+
+      if (Hi)
+        SplatNode = DAG.getNode(
+            PPCISD::XXSPLTI32DX, dl, MVT::v2i64, SplatNode,
+            DAG.getTargetConstant(0, dl, MVT::i32),
+            DAG.getTargetConstant(Hi, dl, MVT::i32));
+
+      if (Lo)
+        SplatNode =
+            DAG.getNode(PPCISD::XXSPLTI32DX, dl, MVT::v2i64, SplatNode,
+                        DAG.getTargetConstant(1, dl, MVT::i32),
+                        DAG.getTargetConstant(Lo, dl, MVT::i32));
+
+      return DAG.getBitcast(Op.getValueType(), SplatNode);
+    }
   }
 
   if (!BVNIsConstantSplat || SplatBitSize > 32) {

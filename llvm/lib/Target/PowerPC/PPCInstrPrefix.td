@@ -2533,6 +2533,9 @@ let Predicates = [IsISA3_1] in {
 
   def : Pat<(v1i128 (rotl v1i128:$vA, v1i128:$vB)),
             (v1i128 (VRLQ v1i128:$vA, v1i128:$vB))>;
+
+  def : Pat <(v2i64 (PPCxxsplti32dx v2i64:$XT, i32:$XI, i32:$IMM32)),
+             (v2i64 (XXSPLTI32DX v2i64:$XT, i32:$XI, i32:$IMM32))>;
 }
 
 let Predicates = [IsISA3_1, HasVSX] in {
