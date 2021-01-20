@@ -1,5 +1,5 @@
 // RUN: mlir-cuda-runner %s \
-// RUN:   --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext
+// RUN:   --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
