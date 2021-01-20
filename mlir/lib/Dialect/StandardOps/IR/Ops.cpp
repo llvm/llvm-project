@@ -2892,12 +2892,11 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
                             ArrayRef<NamedAttribute> attrs) {
   auto sourceMemRefType = source.getType().cast<MemRefType>();
   unsigned rank = sourceMemRefType.getRank();
-  SmallVector<int64_t, 4> staticOffsetsVector;
-  staticOffsetsVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
-  SmallVector<int64_t, 4> staticSizesVector;
-  staticSizesVector.assign(rank, ShapedType::kDynamicSize);
-  SmallVector<int64_t, 4> staticStridesVector;
-  staticStridesVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
   build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
@@ -3444,6 +3443,38 @@ void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
+/// Build a SubTensorOp as above but with custom result type.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              RankedTensorType resultType, Value source,
+                              ArrayRef<int64_t> staticOffsets,
+                              ArrayRef<int64_t> staticSizes,
+                              ArrayRef<int64_t> staticStrides,
+                              ValueRange offsets, ValueRange sizes,
+                              ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubTensorOp as above but with custom result type.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              RankedTensorType resultType, Value source,
+                              ValueRange offsets, ValueRange sizes,
+                              ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceRankedTensorType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
 /// Verifier for SubTensorOp.
 static LogicalResult verify(SubTensorOp op) {
   // Verify result type against inferred type.
@@ -3528,8 +3559,8 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
                                     ValueRange offsets, ValueRange sizes,
                                     ValueRange strides,
                                     ArrayRef<NamedAttribute> attrs) {
-  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
-  unsigned rank = sourceRankedTensorType.getRank();
+  auto destRankedTensorType = dest.getType().cast<RankedTensorType>();
+  unsigned rank = destRankedTensorType.getRank();
   SmallVector<int64_t, 4> staticOffsetsVector(
       rank, ShapedType::kDynamicStrideOrOffset);
   SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
