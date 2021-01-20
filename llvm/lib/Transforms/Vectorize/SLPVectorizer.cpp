@@ -6409,9 +6409,6 @@ class HorizontalReduction {
     RecurKind Kind = RecurKind::None;
     bool IsLeafValue = false;
 
-    /// Checks if the reduction operation can be vectorized.
-    bool isVectorizable() const { return Kind != RecurKind::None; }
-
   public:
     explicit OperationData() = default;
 
@@ -6425,29 +6422,6 @@ class HorizontalReduction {
 
     explicit operator bool() const {
       return IsLeafValue || Kind != RecurKind::None;
-    }
-
-    /// Checks if instruction is associative and can be vectorized.
-    bool isAssociative(Instruction *I) const {
-      assert(Kind != RecurKind::None && "Expected reduction operation.");
-      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
-        return true;
-
-      if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
-        // FP min/max are associative except for NaN and -0.0. We do not
-        // have to rule out -0.0 here because the intrinsic semantics do not
-        // specify a fixed result for it.
-        // TODO: This is artificially restricted to fast because the code that
-        //       creates reductions assumes/produces fast ops.
-        return I->getFastMathFlags().isFast();
-      }
-
-      return I->isAssociative();
-    }
-
-    /// Checks if the reduction operation can be vectorized.
-    bool isVectorizable(Instruction *I) const {
-      return isVectorizable() && isAssociative(I);
     }
 
     /// Checks if two operation data are both a reduction op or both a reduced
@@ -6465,6 +6439,25 @@ class HorizontalReduction {
 
   /// The operation data of the reduction operation.
   OperationData RdxTreeInst;
+
+  /// Checks if instruction is associative and can be vectorized.
+  static bool isVectorizable(RecurKind Kind, Instruction *I) {
+    if (Kind == RecurKind::None)
+      return false;
+    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
+      return true;
+
+    if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
+      // FP min/max are associative except for NaN and -0.0. We do not
+      // have to rule out -0.0 here because the intrinsic semantics do not
+      // specify a fixed result for it.
+      // TODO: This is artificially restricted to fast because the code that
+      //       creates reductions assumes/produces fast ops.
+      return I->getFastMathFlags().isFast();
+    }
+
+    return I->isAssociative();
+  }
 
   /// Checks if the ParentStackElem.first should be marked as a reduction
   /// operation with an extra argument or as extra argument itself.
@@ -6694,8 +6687,7 @@ class HorizontalReduction {
   }
 
   /// Initializes the list of reduction operations.
-  static void initReductionOps(RecurKind Kind,
-                               ReductionOpsListType &ReductionOps) {
+  void initReductionOps(RecurKind Kind) {
     if (isCmpSel(Kind))
       ReductionOps.assign(2, ReductionOpsType());
     else
@@ -6703,8 +6695,7 @@ class HorizontalReduction {
   }
 
   /// Add all reduction operations for the reduction instruction \p I.
-  static void addReductionOps(RecurKind Kind, Instruction *I,
-                              ReductionOpsListType &ReductionOps) {
+  void addReductionOps(RecurKind Kind, Instruction *I) {
     assert(Kind != RecurKind::None && "Expected reduction operation.");
     if (isCmpSel(Kind)) {
       ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
@@ -6750,7 +6741,7 @@ public:
       }
     }
 
-    if (!RdxTreeInst.isVectorizable(B))
+    if (!isVectorizable(RdxTreeInst.getKind(), B))
       return false;
 
     // Analyze "regular" integer/FP types for reductions - no target-specific
@@ -6772,7 +6763,7 @@ public:
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
     Stack.push_back(
         std::make_pair(B, getFirstOperandIndex(RdxTreeInst.getKind())));
-    initReductionOps(RdxTreeInst.getKind(), ReductionOps);
+    initReductionOps(RdxTreeInst.getKind());
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVisit = Stack.back().second++;
@@ -6799,7 +6790,7 @@ public:
             markExtraArg(Stack[Stack.size() - 2], TreeN);
             ExtraArgs.erase(TreeN);
           } else
-            addReductionOps(RdxTreeInst.getKind(), TreeN, ReductionOps);
+            addReductionOps(RdxTreeInst.getKind(), TreeN);
         }
         // Retract.
         Stack.pop_back();
@@ -6824,7 +6815,7 @@ public:
           (!LeafOpcode || LeafOpcode == I->getOpcode() || IsRdxInst)) {
         if (IsRdxInst) {
           // We need to be able to reassociate the reduction operations.
-          if (!EdgeOpData.isAssociative(I)) {
+          if (!isVectorizable(EdgeOpData.getKind(), I)) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
