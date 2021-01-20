@@ -16,6 +16,23 @@
 
 #include <cuda.h>
 
+// Forward declaration of CUDA primitives which will be evetually transformed
+// into LLVM intrinsics.
+extern "C" {
+unsigned int __activemask();
+unsigned int __ballot(unsigned);
+// The default argument here is based on NVIDIA's website
+// https://developer.nvidia.com/blog/using-cuda-warp-level-primitives/
+int __shfl_sync(unsigned mask, int val, int src_line, int width = WARPSIZE);
+int __shfl(int val, int src_line, int width = WARPSIZE);
+int __shfl_down(int var, unsigned detla, int width);
+int __shfl_down_sync(unsigned mask, int var, unsigned detla, int width);
+void __syncwarp(int mask);
+void __threadfence();
+void __threadfence_block();
+void __threadfence_system();
+}
+
 DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
 }
