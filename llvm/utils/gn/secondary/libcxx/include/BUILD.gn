@@ -25,7 +25,6 @@ write_cmake_config("write_config") {
     "_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS=1",
     "_LIBCPP_NO_VCRUNTIME=",
     "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=",
-    "_LIBCPP_ABI_NAMESPACE=",
     "_LIBCPP_HAS_PARALLEL_ALGORITHMS=",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE=",
     "_LIBCPP_HAS_NO_LOCALIZATION=",
@@ -38,6 +37,8 @@ write_cmake_config("write_config") {
   }
   if (libcxx_abi_namespace != "") {
     values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
+  } else {
+    values += [ "_LIBCPP_ABI_NAMESPACE=" ]
   }
   if (libcxx_abi_unstable) {
     values += [ "_LIBCPP_ABI_UNSTABLE=1" ]
