@@ -1795,6 +1795,15 @@ void Sema::checkDeviceDecl(const ValueDecl *D, SourceLocation Loc) {
     if (Ty->isDependentType())
       return;
 
+    if (Ty->isExtIntType()) {
+      if (!Context.getTargetInfo().hasExtIntType()) {
+        targetDiag(Loc, diag::err_device_unsupported_type)
+            << D << false /*show bit size*/ << 0 /*bitsize*/
+            << Ty << Context.getTargetInfo().getTriple().str();
+      }
+      return;
+    }
+
     if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
         ((Ty->isFloat128Type() ||
           (Ty->isRealFloatingType() && Context.getTypeSize(Ty) == 128)) &&
@@ -1802,7 +1811,8 @@ void Sema::checkDeviceDecl(const ValueDecl *D, SourceLocation Loc) {
         (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
          !Context.getTargetInfo().hasInt128Type())) {
       targetDiag(Loc, diag::err_device_unsupported_type)
-          << D << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
+          << D << true /*show bit size*/
+          << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
           << Context.getTargetInfo().getTriple().str();
       targetDiag(D->getLocation(), diag::note_defined_here) << D;
     }

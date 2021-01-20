@@ -131,3 +131,7 @@ struct B {
   enum { value = bool(Sp::value) || bool(Tp::value) };
   typedef typename A_type<value>::type type;
 };
+
+void bar(_ExtInt(66) a) {
+  auto b = a;
+}
