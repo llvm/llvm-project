@@ -15,9 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600AsmPrinter.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
+#include "R600Subtarget.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"

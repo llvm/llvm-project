@@ -604,6 +604,11 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   return alignTo(TotalSize, 4);
 }
 
+AMDGPUDwarfFlavour AMDGPUSubtarget::getAMDGPUDwarfFlavour() const {
+  return getWavefrontSize() == 32 ? AMDGPUDwarfFlavour::Wave32
+                                  : AMDGPUDwarfFlavour::Wave64;
+}
+
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
   R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/GPU, FS),

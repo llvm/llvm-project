@@ -8,7 +8,6 @@
 
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
-#include "AMDGPUSubtarget.h"
 
 #define MAX_LANES 64
 
