@@ -66,7 +66,7 @@ auto IsVariableHelper::operator()(const Substring &x) const -> Result {
 auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
     -> Result {
   const Symbol *symbol{x.GetSymbol()};
-  return symbol && symbol->attrs().test(semantics::Attr::POINTER);
+  return symbol && IsPointer(*symbol);
 }
 
 // Conversions of COMPLEX component expressions to REAL.
@@ -696,6 +696,40 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
       expr.u);
 }
 
+template <typename A> inline const ProcedureRef *UnwrapProcedureRef(const A &) {
+  return nullptr;
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const FunctionRef<T> &func) {
+  return &func;
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const Expr<T> &expr) {
+  return std::visit(
+      [](const auto &x) { return UnwrapProcedureRef(x); }, expr.u);
+}
+
+// IsObjectPointer()
+bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
+  if (IsNullPointer(expr)) {
+    return true;
+  } else if (IsProcedurePointer(expr)) {
+    return false;
+  } else if (const auto *procRef{UnwrapProcedureRef(expr)}) {
+    auto proc{
+        characteristics::Procedure::Characterize(procRef->proc(), context)};
+    return proc && proc->functionResult &&
+        proc->functionResult->attrs.test(
+            characteristics::FunctionResult::Attr::Pointer);
+  } else if (const Symbol * symbol{GetLastSymbol(expr)}) {
+    return IsPointer(symbol->GetUltimate());
+  } else {
+    return false;
+  }
+}
+
 // IsNullPointer()
 struct IsNullPointerHelper : public AllTraverse<IsNullPointerHelper, false> {
   using Base = AllTraverse<IsNullPointerHelper, false>;
@@ -1026,6 +1060,11 @@ bool IsFunction(const Symbol &symbol) {
       symbol.GetUltimate().details());
 }
 
+bool IsFunction(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsFunction(*symbol);
+}
+
 bool IsProcedure(const Symbol &symbol) {
   return std::visit(common::visitors{
                         [](const SubprogramDetails &) { return true; },
@@ -1038,8 +1077,14 @@ bool IsProcedure(const Symbol &symbol) {
       symbol.GetUltimate().details());
 }
 
-const Symbol *FindCommonBlockContaining(const Symbol &object) {
-  const auto *details{object.detailsIf<ObjectEntityDetails>()};
+bool IsProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsProcedure(*symbol);
+}
+
+const Symbol *FindCommonBlockContaining(const Symbol &original) {
+  const Symbol &root{GetAssociationRoot(original)};
+  const auto *details{root.detailsIf<ObjectEntityDetails>()};
   return details ? details->commonBlock() : nullptr;
 }
 
