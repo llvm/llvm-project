@@ -2,6 +2,21 @@
 // RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -std=c++20 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix CXX20-X64 %s
+
+// Check that array-to-pointer decay is mangled as the underlying declaration.
+extern const char arr[4] = "foo";
+template<const char*> struct Decay1 {};
+// CHECK: "?decay1@@3U?$Decay1@$1?arr@@3QBDB@@A"
+Decay1<arr> decay1;
+#if __cplusplus >= 201702L
+// Note that this mangling approach can lead to collisions.
+template<const void*> struct Decay2 {};
+// CXX20-X64: "?decay2a@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)arr> decay2a;
+// CXX20-X64: "?decay2b@@3U?$Decay2@$1?arr@@3QBDB@@A"
+Decay2<(const void*)&arr> decay2b;
+#endif
 
 template<typename T>
 class Class {
@@ -326,4 +341,13 @@ void fun_uint128(UInt128<0>) {}
 void fun_uint128(UInt128<(unsigned __int128)-1>) {}
 // X64: define {{.*}} @"?fun_uint128@@YAXU?$UInt128@$0DPPPPPPPPPPPPPPPAAAAAAAAAAAAAAAB@@@@Z"(
 void fun_uint128(UInt128<(unsigned __int128)9223372036854775807 * (unsigned __int128)9223372036854775807>) {}
+#endif
+
+#if __cplusplus >= 202002L
+template<float> struct Float {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$Float@$ADPIAAAAA@@@@Z"(
+void f(Float<1.0f>) {}
+template<auto> struct Auto {};
+// CXX20-X64: define {{.*}} @"?f@@YAXU?$Auto@$MMADPIAAAAA@@@@Z"(
+void f(Auto<1.0f>) {}
 #endif

@@ -59,6 +59,11 @@ VariantMatcher::MatcherOps::canConstructFrom(const DynTypedMatcher &Matcher,
   return Matcher.canConvertTo(NodeKind);
 }
 
+DynTypedMatcher VariantMatcher::MatcherOps::convertMatcher(
+    const DynTypedMatcher &Matcher) const {
+  return Matcher.dynCastTo(NodeKind);
+}
+
 llvm::Optional<DynTypedMatcher>
 VariantMatcher::MatcherOps::constructVariadicOperator(
     DynTypedMatcher::VariadicOperator Op,

@@ -5,7 +5,68 @@
 # Re-export the parent _cext so that every level of the API can get it locally.
 from .. import _cext
 
-def _segmented_accessor(elements, raw_segments, idx):
+__all__ = [
+    "equally_sized_accessor",
+    "extend_opview_class",
+    "get_default_loc_context",
+    "segmented_accessor",
+]
+
+
+def extend_opview_class(ext_module):
+  """Decorator to extend an OpView class from an extension module.
+
+  Extension modules can expose various entry-points:
+    def select_opview_mixin(parent_opview_cls):
+      If defined, allows an appropriate mixin class to be selected dynamically
+      based on the parent OpView class. Should return NotImplemented if a
+      decision is not made.
+
+    Stand-alone class with the same name as a parent OpView class (i.e.
+    "ReturnOp").
+
+  Args:
+    ext_module: A module from which to locate extensions. Can be None if not
+      available.
+
+  Returns:
+    A decorator that takes an OpView subclass and further extends it as
+    needed.
+  """
+
+  def class_decorator(parent_opview_cls: type):
+    if ext_module is None:
+      return parent_opview_cls
+    mixin_cls = NotImplemented
+    try:
+      select_mixin = getattr(ext_module, "select_opview_mixin")
+    except AttributeError:
+      # Try to default resolve it.
+      try:
+        select_mixin = getattr(ext_module, parent_opview_cls.__name__)
+      except AttributeError:
+        pass
+    else:
+      mixin_cls = select_mixin(parent_opview_cls)
+    if mixin_cls is NotImplemented or mixin_cls is None:
+      return parent_opview_cls
+
+    # Have a mixin_cls. Create an appropriate subclass.
+    try:
+
+      class LocalOpView(mixin_cls, parent_opview_cls):
+        pass
+    except TypeError as e:
+      raise TypeError(
+          f"Could not mixin {mixin_cls} into {parent_opview_cls}") from e
+    LocalOpView.__name__ = parent_opview_cls.__name__
+    LocalOpView.__qualname__ = parent_opview_cls.__qualname__
+    return LocalOpView
+
+  return class_decorator
+
+
+def segmented_accessor(elements, raw_segments, idx):
   """
   Returns a slice of elements corresponding to the idx-th segment.
 
@@ -20,8 +81,8 @@ def _segmented_accessor(elements, raw_segments, idx):
   return elements[start:end]
 
 
-def _equally_sized_accessor(elements, n_variadic, n_preceding_simple,
-                            n_preceding_variadic):
+def equally_sized_accessor(elements, n_variadic, n_preceding_simple,
+                           n_preceding_variadic):
   """
   Returns a starting position and a number of elements per variadic group
   assuming equally-sized groups and the given numbers of preceding groups.
@@ -42,7 +103,8 @@ def _equally_sized_accessor(elements, n_variadic, n_preceding_simple,
   start = n_preceding_simple + n_preceding_variadic * elements_per_group
   return start, elements_per_group
 
-def _get_default_loc_context(location = None):
+
+def get_default_loc_context(location=None):
   """
   Returns a context in which the defaulted location is created. If the location
   is None, takes the current location from the stack, raises ValueError if there

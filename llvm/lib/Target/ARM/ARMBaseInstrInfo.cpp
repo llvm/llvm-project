@@ -367,15 +367,15 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     // Skip over DEBUG values, predicated nonterminators and speculation
     // barrier terminators.
     while (I->isDebugInstr() || !I->isTerminator() ||
-           isSpeculationBarrierEndBBOpcode(I->getOpcode()) ){
+           isSpeculationBarrierEndBBOpcode(I->getOpcode()) ||
+           I->getOpcode() == ARM::t2DoLoopStartTP){
       if (I == MBB.instr_begin())
         return false;
       --I;
     }
 
     if (isIndirectBranchOpcode(I->getOpcode()) ||
-        isJumpTableBranchOpcode(I->getOpcode()) ||
-        isLowOverheadTerminatorOpcode(I->getOpcode())) {
+        isJumpTableBranchOpcode(I->getOpcode())) {
       // Indirect branches and jump tables can't be analyzed, but we still want
       // to clean up any instructions at the tail of the basic block.
       CantAnalyze = true;
@@ -5914,6 +5914,112 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
                                     NumBytesToCreateFrame, FrameID);
 }
 
+bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
+                                                 int64_t Fixup,
+                                                 bool Updt) const {
+  int SPIdx = MI->findRegisterUseOperandIdx(ARM::SP);
+  unsigned AddrMode = (MI->getDesc().TSFlags & ARMII::AddrModeMask);
+  if (SPIdx < 0)
+    // No SP operand
+    return true;
+  else if (SPIdx != 1 && (AddrMode != ARMII::AddrModeT2_i8s4 || SPIdx != 2))
+    // If SP is not the base register we can't do much
+    return false;
+
+  // Stack might be involved but addressing mode doesn't handle any offset.
+  // Rq: AddrModeT1_[1|2|4] don't operate on SP
+  if (AddrMode == ARMII::AddrMode1        // Arithmetic instructions
+      || AddrMode == ARMII::AddrMode4     // Load/Store Multiple
+      || AddrMode == ARMII::AddrMode6     // Neon Load/Store Multiple
+      || AddrMode == ARMII::AddrModeT2_so // SP can't be used as based register
+      || AddrMode == ARMII::AddrModeT2_pc // PCrel access
+      || AddrMode == ARMII::AddrMode2     // Used by PRE and POST indexed LD/ST
+      || AddrMode == ARMII::AddrModeNone)
+    return false;
+
+  unsigned NumOps = MI->getDesc().getNumOperands();
+  unsigned ImmIdx = NumOps - 3;
+
+  const MachineOperand &Offset = MI->getOperand(ImmIdx);
+  assert(Offset.isImm() && "Is not an immediate");
+  int64_t OffVal = Offset.getImm();
+
+  if (OffVal < 0)
+    // Don't override data if the are below SP.
+    return false;
+
+  unsigned NumBits = 0;
+  unsigned Scale = 1;
+
+  switch (AddrMode) {
+  case ARMII::AddrMode3:
+    if (ARM_AM::getAM3Op(OffVal) == ARM_AM::sub)
+      return false;
+    OffVal = ARM_AM::getAM3Offset(OffVal);
+    NumBits = 8;
+    break;
+  case ARMII::AddrMode5:
+    if (ARM_AM::getAM5Op(OffVal) == ARM_AM::sub)
+      return false;
+    OffVal = ARM_AM::getAM5Offset(OffVal);
+    NumBits = 8;
+    Scale = 4;
+    break;
+  case ARMII::AddrMode5FP16:
+    if (ARM_AM::getAM5FP16Op(OffVal) == ARM_AM::sub)
+      return false;
+    OffVal = ARM_AM::getAM5FP16Offset(OffVal);
+    NumBits = 8;
+    Scale = 2;
+    break;
+  case ARMII::AddrModeT2_i8:
+    NumBits = 8;
+    break;
+  case ARMII::AddrModeT2_i8s4:
+  case ARMII::AddrModeT2_ldrex:
+    NumBits = 8;
+    Scale = 4;
+    break;
+  case ARMII::AddrModeT2_i12:
+  case ARMII::AddrMode_i12:
+    NumBits = 12;
+    break;
+  case ARMII::AddrModeT2_i7:
+    NumBits = 7;
+    break;
+  case ARMII::AddrModeT2_i7s2:
+    NumBits = 7;
+    Scale = 2;
+    break;
+  case ARMII::AddrModeT2_i7s4:
+    NumBits = 7;
+    Scale = 4;
+    break;
+  case ARMII::AddrModeT1_s: // SP-relative LD/ST
+    NumBits = 8;
+    Scale = 4;
+    break;
+  default:
+    llvm_unreachable("Unsupported addressing mode!");
+  }
+  // Make sure the offset is encodable for instructions that scale the
+  // immediate.
+  if (((OffVal * Scale + Fixup) & (Scale - 1)) != 0)
+    return false;
+  OffVal += Fixup / Scale;
+
+  unsigned Mask = (1 << NumBits) - 1;
+
+  if (OffVal <= Mask) {
+    if (Updt)
+      MI->getOperand(ImmIdx).setImm(OffVal);
+    return true;
+  }
+
+  return false;
+
+}
+
 bool ARMBaseInstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
   const Function &F = MF.getFunction();
@@ -6125,6 +6231,19 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     if (!MightNeedStackFixUp)
       return outliner::InstrType::Legal;
 
+    // Any modification of SP will break our code to save/restore LR.
+    // FIXME: We could handle some instructions which add a constant offset to
+    // SP, with a bit more work.
+    if (MI.modifiesRegister(ARM::SP, TRI))
+      return outliner::InstrType::Illegal;
+
+    // At this point, we have a stack instruction that we might need to fix up.
+    // up. We'll handle it if it's a load or store.
+    if (checkAndUpdateStackOffset(&MI, Subtarget.getStackAlignment().value(),
+                                  false))
+      return outliner::InstrType::Legal;
+
+    // We can't fix it up, so don't outline it.
     return outliner::InstrType::Illegal;
   }
 
@@ -6138,6 +6257,12 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
+}
+
+void ARMBaseInstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
+  for (MachineInstr &MI : MBB) {
+    checkAndUpdateStackOffset(&MI, Subtarget.getStackAlignment().value(), true);
+  }
 }
 
 void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
@@ -6275,6 +6400,12 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
     saveLROnStack(MBB, It);
     emitCFIForLRSaveOnStack(MBB, It);
 
+    // Fix up the instructions in the range, since we're going to modify the
+    // stack.
+    assert(OF.FrameConstructionID != MachineOutlinerDefault &&
+           "Can only fix up stack references once");
+    fixupPostOutline(MBB);
+
     // Insert a restore before the terminator for the function.  Restore LR.
     restoreLRFromStack(MBB, Et);
     emitCFIForLRRestoreFromStack(MBB, Et);
@@ -6289,6 +6420,15 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
   // current feature set.
   BuildMI(MBB, MBB.end(), DebugLoc(), get(Subtarget.getReturnOpcode()))
       .add(predOps(ARMCC::AL));
+
+  // Did we have to modify the stack by saving the link register?
+  if (OF.FrameConstructionID != MachineOutlinerDefault &&
+      OF.Candidates[0].CallConstructionID != MachineOutlinerDefault)
+    return;
+
+  // We modified the stack.
+  // Walk over the basic block and fix up all the stack accesses.
+  fixupPostOutline(MBB);
 }
 
 MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
@@ -6345,6 +6485,8 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     return CallPt;
   }
   // We have the default case. Save and restore from SP.
+  if (!MBB.isLiveIn(ARM::LR))
+    MBB.addLiveIn(ARM::LR);
   saveLROnStack(MBB, It);
   if (!AFI.isLRSpilled())
     emitCFIForLRSaveOnStack(MBB, It);

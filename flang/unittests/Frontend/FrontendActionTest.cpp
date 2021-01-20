@@ -40,7 +40,7 @@ protected:
     // Generate a unique test file name.
     const testing::TestInfo *const test_info =
         testing::UnitTest::GetInstance()->current_test_info();
-    inputFileName_ = std::string(test_info->name()) + "_test-file.f";
+    inputFileName_ = std::string(test_info->name()) + "_test-file.f90";
 
     // Create the input file stream. Note that this stream is populated
     // separately in every test (i.e. the input is test specific).

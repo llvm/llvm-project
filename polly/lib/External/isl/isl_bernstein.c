@@ -99,10 +99,17 @@ error:
  * which is the case if we select exactly one vertex (i.e., one of the
  * exponents in "k" is exactly "d") and if that vertex
  * is integral for all values of the parameters.
+ *
+ * If the degree "d" is zero, then there are no exponents.
+ * Since the polynomial is a constant expression in this case,
+ * the bound is necessarily tight.
  */
 static isl_bool is_tight(int *k, int n, int d, isl_cell *cell)
 {
 	int i;
+
+	if (d == 0)
+		return isl_bool_true;
 
 	for (i = 0; i < n; ++i) {
 		int v;
@@ -352,43 +359,34 @@ error:
  * We compute the chamber decomposition of the parametric polytope "bset"
  * and then perform bernstein expansion on the parametric vertices
  * that are active on each chamber.
+ *
+ * If the polynomial does not depend on the set variables
+ * (and in particular if the number of set variables is zero)
+ * then the bound is equal to the polynomial and
+ * no actual bernstein expansion needs to be performed.
  */
 static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_base(
 	__isl_take isl_basic_set *bset,
 	__isl_take isl_qpolynomial *poly, struct bernstein_data *data,
 	isl_bool *tight)
 {
+	int degree;
 	isl_size nvar;
 	isl_space *space;
-	isl_pw_qpolynomial_fold *pwf;
 	isl_vertices *vertices;
 	isl_bool covers;
 
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
 	if (nvar < 0)
 		bset = isl_basic_set_free(bset);
-	if (nvar == 0) {
-		isl_set *dom;
-		isl_qpolynomial_fold *fold;
+	if (nvar == 0)
+		return isl_qpolynomial_cst_bound(bset, poly, data->type, tight);
 
-		fold = isl_qpolynomial_fold_alloc(data->type, poly);
-		dom = isl_set_from_basic_set(bset);
-		if (tight)
-			*tight = isl_bool_true;
-		pwf = isl_pw_qpolynomial_fold_alloc(data->type, dom, fold);
-		return isl_pw_qpolynomial_fold_project_domain_on_params(pwf);
-	}
-
-	if (isl_qpolynomial_is_zero(poly)) {
-		isl_set *dom;
-		isl_qpolynomial_fold *fold;
-		fold = isl_qpolynomial_fold_alloc(data->type, poly);
-		dom = isl_set_from_basic_set(bset);
-		pwf = isl_pw_qpolynomial_fold_alloc(data->type, dom, fold);
-		if (tight)
-			*tight = isl_bool_true;
-		return isl_pw_qpolynomial_fold_project_domain_on_params(pwf);
-	}
+	degree = isl_qpolynomial_degree(poly);
+	if (degree < -1)
+		bset = isl_basic_set_free(bset);
+	if (degree <= 0)
+		return isl_qpolynomial_cst_bound(bset, poly, data->type, tight);
 
 	space = isl_basic_set_get_space(bset);
 	space = isl_space_params(space);
@@ -482,7 +480,7 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_factors(
 		goto error;
 	if (f->n_group == 0) {
 		isl_factorizer_free(f);
-		return  bernstein_coefficients_base(bset, poly, data, tight);
+		return bernstein_coefficients_base(bset, poly, data, tight);
 	}
 
 	set = isl_set_from_basic_set(bset);
@@ -575,11 +573,9 @@ isl_stat isl_qpolynomial_bound_on_domain_bernstein(
 		pwf = bernstein_coefficients_base(bset, poly, &data, tp);
 
 	if (tight)
-		bound->pwf_tight = isl_pw_qpolynomial_fold_fold(bound->pwf_tight, pwf);
+		return isl_bound_add_tight(bound, pwf);
 	else
-		bound->pwf = isl_pw_qpolynomial_fold_fold(bound->pwf, pwf);
-
-	return isl_stat_ok;
+		return isl_bound_add(bound, pwf);
 error:
 	isl_basic_set_free(bset);
 	isl_qpolynomial_free(poly);

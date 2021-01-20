@@ -1685,6 +1685,7 @@ private:
     if (PreferredType)
       Relevance.HadContextType = true;
     Relevance.ContextWords = &ContextWords;
+    Relevance.MainFileSignals = Opts.MainFileSignals;
 
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))

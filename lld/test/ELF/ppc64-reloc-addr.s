@@ -1,25 +1,51 @@
 # REQUIRES: ppc
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le %S/Inputs/abs255.s -o %t255.o
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le %S/Inputs/abs256.s -o %t256.o
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le %S/Inputs/abs257.s -o %t257.o
+# RUN: llvm-mc -filetype=obj -triple=ppc64le %s -o %t.o
+# RUN: ld.lld %t.o --defsym=a=0x0123456789abcdef --defsym=b=0x76543210 -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump -s --no-show-raw-insn %t | FileCheck --check-prefixes=HEX,HEXLE %s
 
-# RUN: ld.lld %t.o %t256.o -o %t
-# RUN: llvm-readelf -x .data %t | FileCheck %s
-# CHECK: 0x{{[0-9a-f]+}} ffff0080 ffffffff 00000080
+# HEX-LABEL:  section .R_PPC64_ADDR32:
+# HEXLE-NEXT:   10325476
+# HEXBE-NEXT:   76543210
+.section .R_PPC64_ADDR32,"a",@progbits
+  .long b
 
-# RUN: not ld.lld %t.o %t255.o -o /dev/null 2>&1 | FileCheck --check-prefix=OVERFLOW1 %s
-# OVERFLOW1: relocation R_PPC64_ADDR16 out of range: -32769 is not in [-32768, 65535]; references foo
-# OVERFLOW1: relocation R_PPC64_ADDR32 out of range: -2147483649 is not in [-2147483648, 4294967295]; references foo
+# CHECK-LABEL: <.R_PPC64_ADDR16_LO>:
+# CHECK-NEXT:    addi 4, 4, 12816
+.section .R_PPC64_ADDR16_LO,"ax",@progbits
+  addi 4, 4, b@l
 
-# RUN: not ld.lld %t.o %t257.o -o /dev/null 2>&1 | FileCheck --check-prefix=OVERFLOW2 %s
-# OVERFLOW2: relocation R_PPC64_ADDR16 out of range: 65536 is not in [-32768, 65535]; references foo
-# OVERFLOW2: relocation R_PPC64_ADDR32 out of range: 4294967296 is not in [-2147483648, 4294967295]; references foo
+# CHECK-LABEL: <.R_PPC64_ADDR16_HI>:
+# CHECK-NEXT:    lis 4, 30292
+.section .R_PPC64_ADDR16_HI,"ax",@progbits
+  lis 4, b@h
 
-.globl _start
-_start:
-.data
-.word foo + 0xfeff
-.word foo - 0x8100
-.long foo + 0xfffffeff
-.long foo - 0x80000100
+# CHECK-LABEL: <.R_PPC64_ADDR16_HA>:
+# CHECK-NEXT:    lis 4, 30292
+.section .R_PPC64_ADDR16_HA,"ax",@progbits
+  lis 4, b@ha
+
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGH>:
+# CHECK-NEXT:    lis 4, -30293
+.section .R_PPC64_ADDR16_HIGH,"ax",@progbits
+  lis 4, a@high
+
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGHER>:
+# CHECK-NEXT:    li 3, 17767
+.section .R_PPC64_ADDR16_HIGHER,"ax",@progbits
+  li 3, a@higher
+
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGHERA>:
+# CHECK-NEXT:    li 3, 17767
+.section .R_PPC64_ADDR16_HIGHERA,"ax",@progbits
+  li 3, a@highera
+
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGHEST>:
+# CHECK-NEXT:    li 3, 291
+.section .R_PPC64_ADDR16_HIGHEST,"ax",@progbits
+  li 3, a@highest
+
+# CHECK-LABEL: <.R_PPC64_ADDR16_HIGHESTA>:
+# CHECK-NEXT:    li 3, 291
+.section .R_PPC64_ADDR16_HIGHESTA,"ax",@progbits
+  li 3, a@highesta

@@ -99,14 +99,14 @@ if (LIBCXX_INCLUDE_TESTS)
     ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
     MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
 
-  add_custom_target(check-cxx-deps
+  add_custom_target(cxx-test-depends
     DEPENDS cxx ${LIBCXX_TEST_DEPS}
     COMMENT "Builds dependencies required to run the test suite.")
 
   add_lit_target(check-cxx
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS check-cxx-deps
+    DEPENDS cxx-test-depends
     PARAMS "${LIBCXX_TEST_PARAMS}")
 endif()
 

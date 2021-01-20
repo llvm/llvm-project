@@ -1866,7 +1866,8 @@ define arm_aapcs_vfpcc void @usatmul_4_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    cbz r3, .LBB11_8
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    beq .LBB11_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB11_3
@@ -2131,7 +2132,8 @@ define arm_aapcs_vfpcc void @ssatmul_4_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    cbz r3, .LBB13_8
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    beq .LBB13_8
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    cmp r3, #3
 ; CHECK-NEXT:    bhi .LBB13_3

@@ -20,6 +20,7 @@ add_mlir_conversion_library(MLIRShapeToStandard
   MLIREDSC
   MLIRIR
   MLIRShape
+  MLIRTensor
   MLIRPass
   MLIRSCF
   MLIRTransforms

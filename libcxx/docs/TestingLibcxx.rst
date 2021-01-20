@@ -27,12 +27,12 @@ Usage
 After building libc++, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
-`check-cxx-deps` target. For example:
+`cxx-test-depends` target. For example:
 
 .. code-block:: bash
 
   $ cd <monorepo-root>
-  $ make -C <build> check-cxx-deps # If you want to make sure the targets get rebuilt
+  $ make -C <build> cxx-test-depends # If you want to make sure the targets get rebuilt
   $ <build>/bin/llvm-lit -sv libcxx/test/std/re # Run all of the std::regex tests
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
@@ -87,7 +87,7 @@ configuration easier.
    .. code-block:: bash
 
      $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-     $ make -C <build> check-cxx-deps
+     $ make -C <build> cxx-test-depends
      $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
 
 

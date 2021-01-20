@@ -10,4 +10,4 @@
 #include "mlir-c/Dialect/Shape.h"
 #include "mlir/CAPI/Registration.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Shape, shape, mlir::shape::ShapeDialect);
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Shape, shape, mlir::shape::ShapeDialect)

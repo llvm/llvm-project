@@ -11,4 +11,4 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Linalg, linalg,
-                                      mlir::linalg::LinalgDialect);
+                                      mlir::linalg::LinalgDialect)

@@ -244,7 +244,7 @@ def clang_ignored_gcc_optimization_f_Group : OptionGroup<
 class DiagnosticOpts<string base>
   : KeyPathAndMacro<"DiagnosticOpts->", base, "DIAG_"> {}
 class LangOpts<string base>
-  : KeyPathAndMacro<"LangOpts->", base> {}
+  : KeyPathAndMacro<"LangOpts->", base, "LANG_"> {}
 class TargetOpts<string base>
   : KeyPathAndMacro<"TargetOpts->", base> {}
 class FrontendOpts<string base>
@@ -254,7 +254,7 @@ class PreprocessorOutputOpts<string base>
 class DependencyOutputOpts<string base>
   : KeyPathAndMacro<"DependencyOutputOpts.", base> {}
 class CodeGenOpts<string base>
-  : KeyPathAndMacro<"CodeGenOpts.", base> {}
+  : KeyPathAndMacro<"CodeGenOpts.", base, "CODEGEN_"> {}
 class HeaderSearchOpts<string base>
   : KeyPathAndMacro<"HeaderSearchOpts->", base> {}
 class PreprocessorOpts<string base>
@@ -510,6 +510,9 @@ multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
               Group<g_Group>;
 }
 
+// Key paths that are constant during parsing of options with the same key path prefix.
+defvar open_cl = LangOpts<"OpenCL">;
+
 /////////
 // Options
 
@@ -675,7 +678,7 @@ def I_ : Flag<["-"], "I-">, Group<I_Group>,
     HelpText<"Restrict all prior -I flags to double-quoted inclusion and "
              "remove current directory from include path">;
 def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
-    Flags<[CC1Option,CC1AsOption]>, MetaVarName<"<dir>">,
+    Flags<[CC1Option,CC1AsOption,FlangOption,FC1Option]>, MetaVarName<"<dir>">,
     HelpText<"Add directory to the end of the list of include search paths">,
     DocBrief<[{Add directory to include search path. For C++ inputs, if
 there are multiple -I options, these directories are searched
@@ -1820,9 +1823,13 @@ defm experimental_relative_cxx_abi_vtables : BoolFOption<"experimental-relative-
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Group<f_Group>,
   HelpText<"Enable implicit vector bit-casts">, Values<"none,integer,all">, Flags<[CC1Option]>,
-  NormalizedValuesScope<"LangOptions::LaxVectorConversionKind">,
-  NormalizedValues<["None", "Integer", "All"]>,
-  MarshallingInfoString<LangOpts<"LaxVectorConversions">, "All">, AutoNormalizeEnum;
+  NormalizedValues<["LangOptions::LaxVectorConversionKind::None",
+                    "LangOptions::LaxVectorConversionKind::Integer",
+                    "LangOptions::LaxVectorConversionKind::All"]>,
+  MarshallingInfoString<LangOpts<"LaxVectorConversions">,
+                        !strconcat(open_cl.KeyPath, " ? LangOptions::LaxVectorConversionKind::None"
+                                                    " : LangOptions::LaxVectorConversionKind::All")>,
+  AutoNormalizeEnum;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["integer"]>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;

@@ -34,7 +34,6 @@ int test_imath_internals()
 	assert(MP_SMALL_MAX == LONG_MAX);
 
 	assert(sizeof(mp_usmall) == sizeof(unsigned long));
-	assert(MP_USMALL_MIN == ULONG_MIN);
 	assert(MP_USMALL_MAX == ULONG_MAX);
 
 	retval = mp_int_init_value(&val, 0);

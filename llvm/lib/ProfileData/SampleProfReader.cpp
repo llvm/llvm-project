@@ -740,6 +740,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
     if (!Entry.Size)
       continue;
 
+    // Skip sections without context when SkipFlatProf is true.
+    if (SkipFlatProf && hasSecFlag(Entry, SecCommonFlags::SecFlagFlat))
+      continue;
+
     const uint8_t *SecStart = BufStart + Entry.Offset;
     uint64_t SecSize = Entry.Size;
 
@@ -985,6 +989,9 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
     Flags.append("{compressed,");
   else
     Flags.append("{");
+
+  if (hasSecFlag(Entry, SecCommonFlags::SecFlagFlat))
+    Flags.append("flat,");
 
   switch (Entry.Type) {
   case SecNameTable:

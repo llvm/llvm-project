@@ -816,6 +816,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindUncommonValue,
 };
 
 /// Options that can be set for a formatter to alter its behavior. Not
@@ -970,7 +971,7 @@ enum GdbSignal {
   eGdbSignalBreakpoint = 0x96
 };
 
-/// Used with SBHost::GetPath (lldb::PathType) to find files that are
+/// Used with SBHostOS::GetLLDBPath (lldb::PathType) to find files that are
 /// related to LLDB on the current host machine. Most files are
 /// relative to LLDB or are in known locations.
 enum PathType {

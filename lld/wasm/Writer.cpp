@@ -606,10 +606,6 @@ void Writer::calculateExports() {
     out.exportSec->exports.push_back(
         WasmExport{"memory", WASM_EXTERNAL_MEMORY, 0});
 
-  if (!config->relocatable && config->exportTable)
-    out.exportSec->exports.push_back(
-        WasmExport{functionTableName, WASM_EXTERNAL_TABLE, 0});
-
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
@@ -745,6 +741,19 @@ void Writer::createCommandExportWrappers() {
   }
 }
 
+static void finalizeIndirectFunctionTable() {
+  if (!WasmSym::indirectFunctionTable)
+    return;
+
+  uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+  WasmLimits limits = {0, tableSize, 0};
+  if (WasmSym::indirectFunctionTable->isDefined() && !config->growableTable) {
+    limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
+    limits.Maximum = limits.Initial;
+  }
+  WasmSym::indirectFunctionTable->setLimits(limits);
+}
+
 static void scanRelocations() {
   for (ObjFile *file : symtab->objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
@@ -792,6 +801,9 @@ void Writer::assignIndexes() {
       out.tableSec->addTable(table);
   }
 
+  for (InputTable *table : symtab->syntheticTables)
+    out.tableSec->addTable(table);
+
   out.globalSec->assignIndexes();
 }
 
@@ -829,7 +841,7 @@ void Writer::createOutputSegments() {
         LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
         s = make<OutputSegment>(name);
         if (config->sharedMemory)
-          s->initFlags = WASM_SEGMENT_IS_PASSIVE;
+          s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
         // Exported memories are guaranteed to be zero-initialized, so no need
         // to emit data segments for bss sections.
         // TODO: consider initializing bss sections with memory.fill
@@ -874,7 +886,7 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
 }
 
 bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
-  return segment->initFlags & WASM_SEGMENT_IS_PASSIVE &&
+  return segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE &&
          segment->name != ".tdata" && !segment->isBss;
 }
 
@@ -1341,6 +1353,8 @@ void Writer::run() {
 
   log("-- scanRelocations");
   scanRelocations();
+  log("-- finalizeIndirectFunctionTable");
+  finalizeIndirectFunctionTable();
   log("-- createSyntheticInitFunctions");
   createSyntheticInitFunctions();
   log("-- assignIndexes");

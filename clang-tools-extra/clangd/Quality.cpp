@@ -294,6 +294,38 @@ void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
   if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
     Scope = AccessibleScope::FileScope;
   }
+  if (MainFileSignals) {
+    MainFileRefs =
+        std::max(MainFileRefs,
+                 MainFileSignals->ReferencedSymbols.lookup(IndexResult.ID));
+    ScopeRefsInFile =
+        std::max(ScopeRefsInFile,
+                 MainFileSignals->RelatedNamespaces.lookup(IndexResult.Scope));
+  }
+}
+
+void SymbolRelevanceSignals::computeASTSignals(
+    const CodeCompletionResult &SemaResult) {
+  if (!MainFileSignals)
+    return;
+  if ((SemaResult.Kind != CodeCompletionResult::RK_Declaration) &&
+      (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
+    return;
+  if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    auto ID = getSymbolID(ND);
+    if (!ID)
+      return;
+    MainFileRefs =
+        std::max(MainFileRefs, MainFileSignals->ReferencedSymbols.lookup(ID));
+    if (const auto *NSD = dyn_cast<NamespaceDecl>(ND->getDeclContext())) {
+      if (NSD->isAnonymousNamespace())
+        return;
+      std::string Scope = printNamespaceScope(*NSD);
+      if (!Scope.empty())
+        ScopeRefsInFile = std::max(
+            ScopeRefsInFile, MainFileSignals->RelatedNamespaces.lookup(Scope));
+    }
+  }
 }
 
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -315,6 +347,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
     InBaseClass |= SemaCCResult.InBaseClass;
   }
 
+  computeASTSignals(SemaCCResult);
   // Declarations are scoped, others (like macros) are assumed global.
   if (SemaCCResult.Declaration)
     Scope = std::min(Scope, computeScope(SemaCCResult.Declaration));
@@ -440,6 +473,21 @@ float SymbolRelevanceSignals::evaluateHeuristics() const {
   // Penalize for FixIts.
   if (NeedsFixIts)
     Score *= 0.5f;
+
+  // Use a sigmoid style boosting function similar to `References`, which flats
+  // out nicely for large values. This avoids a sharp gradient for heavily
+  // referenced symbols. Use smaller gradient for ScopeRefsInFile since ideally
+  // MainFileRefs <= ScopeRefsInFile.
+  if (MainFileRefs >= 2) {
+    // E.g.: (2, 1.12), (9, 2.0), (48, 3.0).
+    float S = std::pow(MainFileRefs, -0.11);
+    Score *= 11.0 * (1 - S) / (1 + S) + 0.7;
+  }
+  if (ScopeRefsInFile >= 2) {
+    // E.g.: (2, 1.04), (14, 2.0), (109, 3.0), (400, 3.6).
+    float S = std::pow(ScopeRefsInFile, -0.10);
+    Score *= 10.0 * (1 - S) / (1 + S) + 0.7;
+  }
 
   return Score;
 }

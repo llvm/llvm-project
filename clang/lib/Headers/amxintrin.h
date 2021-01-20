@@ -258,7 +258,7 @@ static void __tile_loadd(__tile1024i *dst, const void *base,
 }
 
 __DEFAULT_FN_ATTRS_INT8
-static void __tile_dpbsud(__tile1024i *dst, __tile1024i src1,
+static void __tile_dpbssd(__tile1024i *dst, __tile1024i src1,
                           __tile1024i src2) {
   dst->tile = _tile_dpbssd_internal(src1.row, src2.col, src1.col, dst->tile,
                                     src1.tile, src2.tile);

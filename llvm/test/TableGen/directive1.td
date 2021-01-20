@@ -20,7 +20,6 @@ def TDLCV_valb : ClauseVal<"valb",2,1> {}
 def TDLCV_valc : ClauseVal<"valc",3,0> { let isDefault = 1; }
 
 def TDLC_ClauseA : Clause<"clausea"> {
-  let flangClass = "TdlClauseA";
   let enumClauseValue = "AKind";
   let allowedClauseValues = [
     TDLCV_vala,
@@ -30,7 +29,7 @@ def TDLC_ClauseA : Clause<"clausea"> {
 }
 
 def TDLC_ClauseB : Clause<"clauseb"> {
-  let flangClassValue = "IntExpr";
+  let flangClass = "IntExpr";
   let isValueOptional = 1;
   let isDefault = 1;
 }
@@ -226,6 +225,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
 // GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
 // GEN-EMPTY:
+// GEN-NEXT:  EMPTY_CLASS(Clausea);
 // GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
@@ -233,7 +233,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
 // GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
 // GEN-EMPTY:
-// GEN-NEXT:  TdlClauseA
+// GEN-NEXT:  Clausea
 // GEN-NEXT:  , Clauseb
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
@@ -241,6 +241,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 // GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 // GEN-EMPTY:
+// GEN-NEXT:  NODE(TdlClause, Clausea)
 // GEN-NEXT:  NODE(TdlClause, Clauseb)
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
@@ -248,6 +249,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
 // GEN-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
 // GEN-EMPTY:
+// GEN-NEXT:  void Before(const TdlClause::Clausea &) { Word("CLAUSEA"); }
 // GEN-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
 // GEN-NEXT:    Word("CLAUSEB");
 // GEN-NEXT:    Walk("(", x.v, ")");

@@ -70,6 +70,7 @@ AArch64::AArch64() {
   pltEntrySize = 16;
   ipltEntrySize = 16;
   defaultMaxPageSize = 65536;
+  gotBaseSymInGotPlt = false;
 
   // Align to the 2 MiB page size (known as a superpage or huge page).
   // FreeBSD automatically promotes 2 MiB-aligned allocations.

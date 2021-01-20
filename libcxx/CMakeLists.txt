@@ -10,16 +10,7 @@ endif()
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
-endif()
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 NEW) # Required when interacting with LLVM and Clang
-endif()
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-endif()
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
@@ -854,6 +845,7 @@ config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITHMS)
+config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)

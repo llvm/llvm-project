@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
+#include "ASTSignals.h"
 #include "Compiler.h"
 #include "Headers.h"
 #include "Protocol.h"
@@ -89,6 +90,7 @@ struct CodeCompleteOptions {
   /// clangd.
   const SymbolIndex *Index = nullptr;
 
+  const ASTSignals *MainFileSignals = nullptr;
   /// Include completions that require small corrections, e.g. change '.' to
   /// '->' on member access etc.
   bool IncludeFixIts = false;

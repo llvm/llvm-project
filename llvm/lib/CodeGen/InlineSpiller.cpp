@@ -431,7 +431,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.
-  if (std::distance(MIS.begin(), MII) <= 1)
+  if (MIS.begin() == MII)
     HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
   ++NumSpills;
   return true;

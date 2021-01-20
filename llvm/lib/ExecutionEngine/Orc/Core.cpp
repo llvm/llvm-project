@@ -11,7 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
