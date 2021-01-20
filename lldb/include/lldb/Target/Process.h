@@ -30,7 +30,6 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ProcessRunLock.h"
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
@@ -208,32 +207,6 @@ protected:
   bool m_async; // Use an async attach where we start the attach and return
                 // immediately (used by GUI programs with --waitfor so they can
                 // call SBProcess::Stop() to cancel attach)
-};
-
-class ProcessLaunchCommandOptions : public Options {
-public:
-  ProcessLaunchCommandOptions() : Options() {
-    // Keep default values of all options in one place: OptionParsingStarting
-    // ()
-    OptionParsingStarting(nullptr);
-  }
-
-  ~ProcessLaunchCommandOptions() override = default;
-
-  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                        ExecutionContext *execution_context) override;
-
-  void OptionParsingStarting(ExecutionContext *execution_context) override {
-    launch_info.Clear();
-    disable_aslr = eLazyBoolCalculate;
-  }
-
-  llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
-
-  // Instance variables to hold the values for command options.
-
-  ProcessLaunchInfo launch_info;
-  lldb_private::LazyBool disable_aslr;
 };
 
 // This class tracks the Modification state of the process.  Things that can
