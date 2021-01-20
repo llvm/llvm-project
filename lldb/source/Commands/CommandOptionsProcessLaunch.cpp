@@ -61,7 +61,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     break;
   }
 
-  case 'p': // Process plug-in name
+  case 'P': // Process plug-in name
     launch_info.SetProcessPluginName(option_arg);
     break;
 
