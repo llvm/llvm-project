@@ -6,8 +6,8 @@
 
 // GCN-LABEL: warning: test_target
 // GFX8-NOT: error:
-// GFX10: error: target id must match options
-// NONAMDHSA: error: target id must match options
+// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-amdhsa--gfx1010+xnack
+// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa--gfx810+xnack does not match the specified target id amdgcn-amd-unknown--gfx810
 .warning "test_target"
 .amdgcn_target "amdgcn-amd-amdhsa--gfx810+xnack"
 
