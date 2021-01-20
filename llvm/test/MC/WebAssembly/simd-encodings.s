@@ -742,4 +742,22 @@ main:
     # CHECK: prefetch.nt 16 # encoding: [0xfd,0xc6,0x01,0x00,0x10]
     prefetch.nt 16
 
+    # CHECK: f64x2.convert_low_i32x4_s # encoding: [0xfd,0x53]
+    f64x2.convert_low_i32x4_s
+
+    # CHECK: f64x2.convert_low_i32x4_u # encoding: [0xfd,0x54]
+    f64x2.convert_low_i32x4_u
+
+    # CHECK: i32x4.trunc_sat_zero_f64x2_s # encoding: [0xfd,0x55]
+    i32x4.trunc_sat_zero_f64x2_s
+
+    # CHECK: i32x4.trunc_sat_zero_f64x2_u # encoding: [0xfd,0x56]
+    i32x4.trunc_sat_zero_f64x2_u
+
+    # CHECK: f32x4.demote_zero_f64x2 # encoding: [0xfd,0x57]
+    f32x4.demote_zero_f64x2
+
+    # CHECK: f64x2.promote_low_f32x4 # encoding: [0xfd,0x69]
+    f64x2.promote_low_f32x4
+
     end_function
