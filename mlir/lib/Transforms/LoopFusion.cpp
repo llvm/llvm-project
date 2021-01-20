@@ -763,9 +763,11 @@ bool MemRefDependenceGraph::init(FuncOp f) {
     }
   }
 
+#ifndef NDEBUG
   for (auto &idAndNode : nodes)
     LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
                             << *(idAndNode.second.op) << "\n");
+#endif
 
   // Add dependence edges between nodes which produce SSA values and their
   // users.
