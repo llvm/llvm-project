@@ -80,6 +80,13 @@ class MxSet<int eew> {
                            !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
 }
 
+class NFSet<LMULInfo m> {
+  list<int> L = !cond(!eq(m.value, V_M8.value): [],
+                      !eq(m.value, V_M4.value): [2],
+                      !eq(m.value, V_M2.value): [2, 3, 4],
+                      true: [2, 3, 4, 5, 6, 7, 8]);
+}
+
 class shift_amount<int num> {
   int val = !if(!eq(num, 1), 0, !add(1, shift_amount<!srl(num, 1)>.val));
 }
@@ -121,6 +128,13 @@ class ToFPR32<ValueType type, DAGOperand operand, string name> {
                       (SUBREG_TO_REG (i16 -1), !dag(type, [FPR16], [name]), sub_16),
                   !eq(1, 1):
                       !dag(type, [operand], [name]));
+}
+
+class SegRegClass<LMULInfo m, int nf> {
+  VReg RC = !cast<VReg>("VRN" # nf # !cond(!eq(m.value, V_MF8.value): V_M1.MX,
+                                           !eq(m.value, V_MF4.value): V_M1.MX,
+                                           !eq(m.value, V_MF2.value): V_M1.MX,
+                                           true: m.MX));
 }
 
 //===----------------------------------------------------------------------===//
@@ -386,6 +400,20 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
+class RISCVZvlsseg<string IntrName, bits<11> S, bits<3> L> {
+  Intrinsic IntrinsicID = !cast<Intrinsic>(IntrName);
+  bits<11> SEW = S;
+  bits<3> LMUL = L;
+  Pseudo Pseudo = !cast<Pseudo>(NAME);
+}
+
+def RISCVZvlssegTable : GenericTable {
+  let FilterClass = "RISCVZvlsseg";
+  let Fields = ["IntrinsicID", "SEW", "LMUL", "Pseudo"];
+  let PrimaryKey = ["IntrinsicID", "SEW", "LMUL"];
+  let PrimaryKeyName = "getPseudo";
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers to define the different pseudo instructions.
 //===----------------------------------------------------------------------===//
@@ -407,6 +435,23 @@ class PseudoToVInst<string PseudoInst> {
                  !subst("_B64", "",
                  !subst("_MASK", "",
                  !subst("Pseudo", "", PseudoInst))))))))))))))));
+}
+
+class ToLowerCase<string Upper> {
+  string L = !subst("VLSEG", "vlseg", Upper);
+}
+
+// Example: PseudoVLSEG2E32_V_M2 -> int_riscv_vlseg2
+// Example: PseudoVLSEG2E32_V_M2_MASK -> int_riscv_vlseg2_mask
+class PseudoToIntrinsic<string PseudoInst, bit IsMasked> {
+  string Intrinsic = !strconcat("int_riscv_",
+                        ToLowerCase<
+                        !subst("E8", "",
+                        !subst("E16", "",
+                        !subst("E32", "",
+                        !subst("E64", "",
+                        !subst("_V", "", PseudoToVInst<PseudoInst>.VInst)))))>.L,
+                        !if(IsMasked, "_mask", ""));
 }
 
 // The destination vector register group for a masked vector instruction cannot
@@ -929,6 +974,40 @@ multiclass VPseudoAMO {
     defm "EI" # eew : VPseudoAMOEI<eew>;
 }
 
+class VPseudoUSSegLoadNoMask<VReg RetClass, bits<11> EEW>:
+      Pseudo<(outs RetClass:$rd),
+             (ins GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVZvlsseg<PseudoToIntrinsic<NAME, false>.Intrinsic, EEW, VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoUSSegLoadMask<VReg RetClass, bits<11> EEW>:
+      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+             (ins GetVRegNoV0<RetClass>.R:$merge, GPR:$rs1,
+                  VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVZvlsseg<PseudoToIntrinsic<NAME, true>.Intrinsic, EEW, VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Constraints = "$rd = $merge";
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasMergeOp = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 multiclass VPseudoUSLoad {
   foreach lmul = MxList.m in {
     defvar LInfo = lmul.MX;
@@ -1435,6 +1514,21 @@ multiclass VPseudoConversionV_W {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList.m[0-5] in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>;
+}
+
+multiclass VPseudoUSSegLoad {
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      let VLMul = lmul.value in {
+        foreach nf = NFSet<lmul>.L in {
+          defvar vreg = SegRegClass<lmul, nf>.RC;
+          def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegLoadNoMask<vreg, eew>;
+          def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSSegLoadMask<vreg, eew>;
+        }
+      }
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2631,6 +2725,11 @@ let hasSideEffects = 1, Defs = [VL] in
 foreach eew = EEWList in {
   defm PseudoVLE # eew # FF : VPseudoUSLoad;
 }
+
+//===----------------------------------------------------------------------===//
+// 7.8. Vector Load/Store Segment Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVLSEG : VPseudoUSSegLoad;
 
 //===----------------------------------------------------------------------===//
 // 8. Vector AMO Operations
