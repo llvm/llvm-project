@@ -31,9 +31,9 @@ def FuncOp(name: str, func_type: Type) -> Tuple[Operation, Block]:
 
 
 def build_matmul_buffers_func(func_name, m, k, n, dtype):
-  lhs_type = MemRefType.get(dtype, [m, k])
-  rhs_type = MemRefType.get(dtype, [k, n])
-  result_type = MemRefType.get(dtype, [m, n])
+  lhs_type = MemRefType.get([m, k], dtype)
+  rhs_type = MemRefType.get([k, n], dtype)
+  result_type = MemRefType.get([m, n], dtype)
   # TODO: There should be a one-liner for this.
   func_type = FunctionType.get([lhs_type, rhs_type, result_type], [])
   _, entry = FuncOp(func_name, func_type)
@@ -49,8 +49,6 @@ def build_matmul_buffers_func(func_name, m, k, n, dtype):
 
 
 def build_matmul_tensors_func(func_name, m, k, n, dtype):
-  # TODO: MemRefType and TensorTypes should not have inverted dtype/shapes
-  # from each other.
   lhs_type = RankedTensorType.get([m, k], dtype)
   rhs_type = RankedTensorType.get([k, n], dtype)
   result_type = RankedTensorType.get([m, n], dtype)
