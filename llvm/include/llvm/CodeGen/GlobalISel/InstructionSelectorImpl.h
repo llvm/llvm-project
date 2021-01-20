@@ -1058,8 +1058,12 @@ bool InstructionSelector::executeMatchTable(
       int64_t OpIdx = MatchTable[CurrentIdx++];
       int64_t RCEnum = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      constrainOperandRegToRegClass(*OutMIs[InsnID].getInstr(), OpIdx,
-                                    *TRI.getRegClass(RCEnum), TII, TRI, RBI);
+      MachineInstr &I = *OutMIs[InsnID].getInstr();
+      MachineFunction &MF = *I.getParent()->getParent();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      const TargetRegisterClass &RC = *TRI.getRegClass(RCEnum);
+      MachineOperand &MO = I.getOperand(OpIdx);
+      constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, RC, MO);
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_ConstrainOperandRC(OutMIs["
                              << InsnID << "], " << OpIdx << ", " << RCEnum
