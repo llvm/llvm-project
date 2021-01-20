@@ -8,11 +8,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/wrap.s -o %t/wrap.o
 # RUN: ld.lld -shared --soname=fixed %t/wrap.o -o %t/wrap.so
 
+## foo is defined, then referenced in another object file.
 # RUN: ld.lld -shared %t/main.o %t/call-foo.o --wrap foo -o %t1.so
 # RUN: llvm-readelf -r %t1.so | FileCheck %s --check-prefix=CHECK1
 
 # CHECK1:      R_X86_64_JUMP_SLOT 0000000000000000 bar + 0
-# CHECK1-NEXT: R_X86_64_JUMP_SLOT                  0{{$}}
+# CHECK1-NEXT: R_X86_64_JUMP_SLOT 0000000000000000 __wrap_foo + 0
 
 ## --no-allow-shlib-undefined errors because __real_foo is not defined.
 # RUN: not ld.lld %t/main.o %t/bar.so -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
@@ -32,9 +33,10 @@
 ## __wrap_bar is undefined.
 # RUN: ld.lld -shared %t.o --wrap=bar -o %t3.so
 # RUN: llvm-readelf -r --dyn-syms %t3.so | FileCheck %s --check-prefix=CHECK3
-# CHECK3:      R_X86_64_JUMP_SLOT 0{{$}}
-# CHECK3:      Symbol table '.dynsym' contains 3 entries:
+# CHECK3:      R_X86_64_JUMP_SLOT 0000000000000000 __wrap_bar + 0
+# CHECK3:      Symbol table '.dynsym' contains 4 entries:
 # CHECK3:      NOTYPE  LOCAL  DEFAULT  UND
+# CHECK3-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_bar
 # CHECK3-NEXT: NOTYPE  GLOBAL DEFAULT    6 _start
 # CHECK3-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
