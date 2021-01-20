@@ -545,9 +545,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     DstSize = (DstSize + 1) / 2;
   }
 
-  // FIXME: Add tfe support
   if (MI.getOperand(TFEIdx).getImm())
-    return MCDisassembler::Success;
+    DstSize += 1;
 
   if (DstSize == Info->VDataDwords && AddrSize == Info->VAddrDwords)
     return MCDisassembler::Success;

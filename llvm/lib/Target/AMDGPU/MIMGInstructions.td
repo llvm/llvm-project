@@ -413,6 +413,8 @@ multiclass MIMG_Store <bits<8> op, string asm, bit has_d16, bit mip = 0> {
     defm _V3 : MIMG_Store_Addr_Helper <op, asm, VReg_96, 0>;
     let VDataDwords = 4 in
     defm _V4 : MIMG_Store_Addr_Helper <op, asm, VReg_128, 0>;
+    let VDataDwords = 5 in
+    defm _V5 : MIMG_Store_Addr_Helper <op, asm, VReg_160, 0>;
   }
 }
 
