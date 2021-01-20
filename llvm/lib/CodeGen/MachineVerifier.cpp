@@ -1005,16 +1005,15 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   }
   case TargetOpcode::G_PHI: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    if (!DstTy.isValid() ||
-        !std::all_of(MI->operands_begin() + 1, MI->operands_end(),
-                     [this, &DstTy](const MachineOperand &MO) {
-                       if (!MO.isReg())
-                         return true;
-                       LLT Ty = MRI->getType(MO.getReg());
-                       if (!Ty.isValid() || (Ty != DstTy))
-                         return false;
-                       return true;
-                     }))
+    if (!DstTy.isValid() || !all_of(drop_begin(MI->operands()),
+                                    [this, &DstTy](const MachineOperand &MO) {
+                                      if (!MO.isReg())
+                                        return true;
+                                      LLT Ty = MRI->getType(MO.getReg());
+                                      if (!Ty.isValid() || (Ty != DstTy))
+                                        return false;
+                                      return true;
+                                    }))
       report("Generic Instruction G_PHI has operands with incompatible/missing "
              "types",
              MI);
