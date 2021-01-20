@@ -11408,9 +11408,9 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       return false;
   }
 
-  // If we point outside of the object, there are no accessible bytes.
-  if (LVal.getLValueOffset().isNegative() ||
-      ((Type & 1) && !LVal.Designator.isValidSubobject())) {
+  // If we point to before the start of the object, there are no accessible
+  // bytes.
+  if (LVal.getLValueOffset().isNegative()) {
     Size = 0;
     return true;
   }
