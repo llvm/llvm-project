@@ -58,6 +58,8 @@
 // CHECK-NEXT: Destructor (SubjectMatchRule_function)
 // CHECK-NEXT: DisableTailCalls (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: EnableIf (SubjectMatchRule_function)
+// CHECK-NEXT: EnforceTCB (SubjectMatchRule_function)
+// CHECK-NEXT: EnforceTCBLeaf (SubjectMatchRule_function)
 // CHECK-NEXT: EnumExtensibility (SubjectMatchRule_enum)
 // CHECK-NEXT: ExcludeFromExplicitInstantiation (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: ExternalSourceSymbol ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))

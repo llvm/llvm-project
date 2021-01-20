@@ -46,7 +46,7 @@ opening the archive once if mulitple of its members are used).
 CHECK-ARCHIVE:      trying to open {{.*}}basic-archive.macho.x86_64'
 CHECK-ARCHIVE-NEXT: 	loaded object.
 CHECK-ARCHIVE-NEXT: trying to open {{.*}}/Inputs/basic1.macho.x86_64.o'
-CHECK-ARCHIVE-NEXT: 	loaded object.
+CHECK-ARCHIVE: 	loaded object.
 CHECK-ARCHIVE-NEXT: trying to open {{.*}}/libbasic.a(basic2.macho.x86_64.o)'
 CHECK-ARCHIVE-NEXT: 	loaded archive {{.*}}/libbasic.a'
 CHECK-ARCHIVE-NEXT: 	found member in archive.

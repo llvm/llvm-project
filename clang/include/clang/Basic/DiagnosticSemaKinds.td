@@ -3322,7 +3322,7 @@ def warn_attribute_dllexport_explicit_instantiation_def : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
 def warn_invalid_initializer_from_system_header : Warning<
-  "invalid constructor form class in system header, should not be explicit">,
+  "invalid constructor from class in system header, should not be explicit">,
   InGroup<DiagGroup<"invalid-initializer-from-system-header">>;
 def note_used_in_initialization_here : Note<"used in initialization here">;
 def err_attribute_dll_member_of_dll_class : Error<
@@ -11209,4 +11209,11 @@ def err_probability_not_constant_float : Error<
 def err_probability_out_of_range : Error<
    "probability argument to __builtin_expect_with_probability is outside the "
    "range [0.0, 1.0]">;
+
+// TCB warnings
+def err_tcb_conflicting_attributes : Error<
+  "attributes '%0(\"%2\")' and '%1(\"%2\")' are mutually exclusive">;
+def warn_tcb_enforcement_violation : Warning<
+  "calling %0 is a violation of trusted computing base '%1'">,
+  InGroup<DiagGroup<"tcb-enforcement">>;
 } // end of sema component.

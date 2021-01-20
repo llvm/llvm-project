@@ -620,6 +620,23 @@ constexpr u16 GetOSMajorKernelOffset() {
 
 using VersStr = char[64];
 
+static uptr ApproximateOSVersionViaKernelVersion(VersStr vers) {
+  u16 kernel_major = GetDarwinKernelVersion().major;
+  u16 offset = GetOSMajorKernelOffset();
+  CHECK_GE(kernel_major, offset);
+  u16 os_major = kernel_major - offset;
+
+  const char *format = "%d.0";
+  if (TARGET_OS_OSX) {
+    if (os_major >= 16) {  // macOS 11+
+      os_major -= 5;
+    } else {  // macOS 10.15 and below
+      format = "10.%d";
+    }
+  }
+  return internal_snprintf(vers, sizeof(VersStr), format, os_major);
+}
+
 static void GetOSVersion(VersStr vers) {
   uptr len = sizeof(VersStr);
   if (SANITIZER_IOSSIM) {
@@ -633,17 +650,19 @@ static void GetOSVersion(VersStr vers) {
   } else {
     int res =
         internal_sysctlbyname("kern.osproductversion", vers, &len, nullptr, 0);
-    if (res) {
-      // Fallback for XNU 17 (macOS 10.13) and below that do not provide the
-      // `kern.osproductversion` property.
-      u16 kernel_major = GetDarwinKernelVersion().major;
-      u16 offset = GetOSMajorKernelOffset();
-      CHECK_LE(kernel_major, 17);
-      CHECK_GE(kernel_major, offset);
-      u16 os_major = kernel_major - offset;
 
-      auto format = TARGET_OS_OSX ? "10.%d" : "%d.0";
-      len = internal_snprintf(vers, len, format, os_major);
+    // XNU 17 (macOS 10.13) and below do not provide the sysctl
+    // `kern.osproductversion` entry (res != 0).
+    bool no_os_version = res != 0;
+
+    // For launchd, sanitizer initialization runs before sysctl is setup
+    // (res == 0 && len != strlen(vers), vers is not a valid version).  However,
+    // the kernel version `kern.osrelease` is available.
+    bool launchd = (res == 0 && internal_strlen(vers) < 3);
+    if (launchd) CHECK_EQ(internal_getpid(), 1);
+
+    if (no_os_version || launchd) {
+      len = ApproximateOSVersionViaKernelVersion(vers);
     }
   }
   CHECK_LT(len, sizeof(VersStr));
@@ -681,7 +700,7 @@ static void MapToMacos(u16 *major, u16 *minor) {
 }
 
 static MacosVersion GetMacosAlignedVersionInternal() {
-  VersStr vers;
+  VersStr vers = {};
   GetOSVersion(vers);
 
   u16 major, minor;
@@ -707,7 +726,7 @@ MacosVersion GetMacosAlignedVersion() {
 }
 
 DarwinKernelVersion GetDarwinKernelVersion() {
-  VersStr vers;
+  VersStr vers = {};
   uptr len = sizeof(VersStr);
   int res = internal_sysctlbyname("kern.osrelease", vers, &len, nullptr, 0);
   CHECK_EQ(res, 0);
