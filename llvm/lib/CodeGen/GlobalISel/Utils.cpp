@@ -48,7 +48,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt,
-    const TargetRegisterClass &RegClass, const MachineOperand &RegMO) {
+    const TargetRegisterClass &RegClass, MachineOperand &RegMO) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -69,6 +69,13 @@ Register llvm::constrainOperandRegClass(
               TII.get(TargetOpcode::COPY), Reg)
           .addReg(ConstrainedReg);
     }
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changingInstr(*RegMO.getParent());
+    }
+    RegMO.setReg(ConstrainedReg);
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changedInstr(*RegMO.getParent());
+    }
   } else {
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       if (!RegMO.isDef()) {
@@ -86,7 +93,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt, const MCInstrDesc &II,
-    const MachineOperand &RegMO, unsigned OpIdx) {
+    MachineOperand &RegMO, unsigned OpIdx) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -156,8 +163,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
     // If the operand is a vreg, we should constrain its regclass, and only
     // insert COPYs if that's impossible.
     // constrainOperandRegClass does that for us.
-    MO.setReg(constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(),
-                                       MO, OpI));
+    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(), MO, OpI);
 
     // Tie uses to defs as indicated in MCInstrDesc if this hasn't already been
     // done.

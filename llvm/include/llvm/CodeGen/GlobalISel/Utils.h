@@ -52,9 +52,10 @@ Register constrainRegToClass(MachineRegisterInfo &MRI,
 
 /// Constrain the Register operand OpIdx, so that it is now constrained to the
 /// TargetRegisterClass passed as an argument (RegClass).
-/// If this fails, create a new virtual register in the correct class and
-/// insert a COPY before \p InsertPt if it is a use or after if it is a
-/// definition. The debug location of \p InsertPt is used for the new copy.
+/// If this fails, create a new virtual register in the correct class and insert
+/// a COPY before \p InsertPt if it is a use or after if it is a definition.
+/// In both cases, the function also updates the register of RegMo. The debug
+/// location of \p InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
 Register constrainOperandRegClass(const MachineFunction &MF,
@@ -64,12 +65,13 @@ Register constrainOperandRegClass(const MachineFunction &MF,
                                   const RegisterBankInfo &RBI,
                                   MachineInstr &InsertPt,
                                   const TargetRegisterClass &RegClass,
-                                  const MachineOperand &RegMO);
+                                  MachineOperand &RegMO);
 
-/// Try to constrain Reg so that it is usable by argument OpIdx of the
-/// provided MCInstrDesc \p II. If this fails, create a new virtual
-/// register in the correct class and insert a COPY before \p InsertPt
-/// if it is a use or after if it is a definition.
+/// Try to constrain Reg so that it is usable by argument OpIdx of the provided
+/// MCInstrDesc \p II. If this fails, create a new virtual register in the
+/// correct class and insert a COPY before \p InsertPt if it is a use or after
+/// if it is a definition. In both cases, the function also updates the register
+/// of RegMo.
 /// This is equivalent to constrainOperandRegClass(..., RegClass, ...)
 /// with RegClass obtained from the MCInstrDesc. The debug location of \p
 /// InsertPt is used for the new copy.
@@ -81,7 +83,7 @@ Register constrainOperandRegClass(const MachineFunction &MF,
                                   const TargetInstrInfo &TII,
                                   const RegisterBankInfo &RBI,
                                   MachineInstr &InsertPt, const MCInstrDesc &II,
-                                  const MachineOperand &RegMO, unsigned OpIdx);
+                                  MachineOperand &RegMO, unsigned OpIdx);
 
 /// Mutate the newly-selected instruction \p I to constrain its (possibly
 /// generic) virtual register operands to the instruction's register class.
