@@ -2165,7 +2165,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining.
-  unsigned Cost = 0;
+  InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
       // Don't unroll vectorised loop. MVE does not benefit from it as much as
