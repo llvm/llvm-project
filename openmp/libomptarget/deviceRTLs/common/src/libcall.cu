@@ -10,6 +10,7 @@
 // invoked by the user in an OpenMP region
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "common/target_atomic.h"
@@ -362,3 +363,5 @@ EXTERN int omp_test_lock(omp_lock_t *lock) {
   PRINT(LD_IO, "call omp_test_lock() return %d\n", rc);
   return rc;
 }
+
+#pragma omp end declare target

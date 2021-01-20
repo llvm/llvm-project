@@ -9,6 +9,7 @@
 // Definitions of target specific functions
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "target_impl.h"
 
@@ -151,3 +152,5 @@ EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
 // Stub implementations
 DEVICE void *__kmpc_impl_malloc(size_t) { return nullptr; }
 DEVICE void __kmpc_impl_free(void *) {}
+
+#pragma omp end declare target
