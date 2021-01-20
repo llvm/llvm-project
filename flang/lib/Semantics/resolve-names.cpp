@@ -429,6 +429,7 @@ public:
 
 protected:
   const ArraySpec &arraySpec();
+  void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
   void BeginArraySpec();
   void EndArraySpec();
@@ -3250,8 +3251,18 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
 
 void DeclarationVisitor::Post(const parser::PointerDecl &x) {
   const auto &name{std::get<parser::Name>(x.t)};
-  Symbol &symbol{DeclareUnknownEntity(name, Attrs{Attr::POINTER})};
-  symbol.ReplaceName(name.source);
+  if (const auto &deferredShapeSpecs{
+          std::get<std::optional<parser::DeferredShapeSpecList>>(x.t)}) {
+    CHECK(arraySpec().empty());
+    BeginArraySpec();
+    set_arraySpec(AnalyzeDeferredShapeSpecList(context(), *deferredShapeSpecs));
+    Symbol &symbol{DeclareObjectEntity(name, Attrs{Attr::POINTER})};
+    symbol.ReplaceName(name.source);
+    EndArraySpec();
+  } else {
+    Symbol &symbol{DeclareUnknownEntity(name, Attrs{Attr::POINTER})};
+    symbol.ReplaceName(name.source);
+  }
 }
 
 bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
