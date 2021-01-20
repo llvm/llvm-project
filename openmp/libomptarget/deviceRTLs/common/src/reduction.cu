@@ -9,6 +9,7 @@
 // This file contains the implementation of reduction with KMPC interface.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "common/target_atomic.h"
@@ -312,3 +313,4 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   return 0;
 }
 
+#pragma omp end declare target

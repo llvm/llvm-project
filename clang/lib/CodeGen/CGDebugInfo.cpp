@@ -1949,14 +1949,6 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter, V));
     } break;
-    case TemplateArgument::UncommonValue: {
-      QualType T = TA.getUncommonValueType();
-      llvm::DIType *TTy = getOrCreateType(T, Unit);
-      llvm::Constant *V = ConstantEmitter(CGM).emitAbstract(
-          SourceLocation(), TA.getAsUncommonValue(), T);
-      TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter, V));
-    } break;
     case TemplateArgument::Template:
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
           TheCU, Name, nullptr,

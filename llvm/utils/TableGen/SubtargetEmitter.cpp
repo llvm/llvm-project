@@ -730,10 +730,8 @@ void SubtargetEmitter::EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
   unsigned QueueID = 0;
   if (ProcModel.LoadQueue) {
     const Record *Queue = ProcModel.LoadQueue->getValueAsDef("QueueDescriptor");
-    QueueID =
-        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
-                          std::find(ProcModel.ProcResourceDefs.begin(),
-                                    ProcModel.ProcResourceDefs.end(), Queue));
+    QueueID = 1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                                find(ProcModel.ProcResourceDefs, Queue));
   }
   OS << "  " << QueueID << ", // Resource Descriptor for the Load Queue\n";
 
@@ -741,10 +739,8 @@ void SubtargetEmitter::EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
   if (ProcModel.StoreQueue) {
     const Record *Queue =
         ProcModel.StoreQueue->getValueAsDef("QueueDescriptor");
-    QueueID =
-        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
-                          std::find(ProcModel.ProcResourceDefs.begin(),
-                                    ProcModel.ProcResourceDefs.end(), Queue));
+    QueueID = 1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                                find(ProcModel.ProcResourceDefs, Queue));
   }
   OS << "  " << QueueID << ", // Resource Descriptor for the Store Queue\n";
 }

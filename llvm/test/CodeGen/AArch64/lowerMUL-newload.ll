@@ -5,7 +5,7 @@ define <4 x i16> @mlai16_trunc(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2
 ; CHECK-LABEL: mlai16_trunc:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v0.4s, v1.4h, v0.4h
-; CHECK-NEXT:    saddw v0.4s, v0.4s, v2.4h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -21,7 +21,7 @@ entry:
 define <4 x i32> @mlai16_and(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: mlai16_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umull v0.4s, v1.4h, v0.4h
+; CHECK-NEXT:    smull v0.4s, v1.4h, v0.4h
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -43,7 +43,7 @@ define void @mlai16_loadstore(i16* %a, i16* %b, i16* %c) {
 ; CHECK-NEXT:    ldr d1, [x1, #16]
 ; CHECK-NEXT:    ldr d2, [x2, #16]
 ; CHECK-NEXT:    smull v0.4s, v1.4h, v0.4h
-; CHECK-NEXT:    saddw v0.4s, v0.4s, v2.4h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    str d0, [x0, #16]
 ; CHECK-NEXT:    ret
@@ -89,8 +89,8 @@ entry:
 define <4 x i32> @addmuli16_and(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: addmuli16_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    umlal v1.4s, v0.4h, v2.4h
+; CHECK-NEXT:    smull v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    smlal v1.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
@@ -141,7 +141,7 @@ define <2 x i32> @mlai32_trunc(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2
 ; CHECK-LABEL: mlai32_trunc:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v0.2d, v1.2s, v0.2s
-; CHECK-NEXT:    saddw v0.2d, v0.2d, v2.2s
+; CHECK-NEXT:    uaddw v0.2d, v0.2d, v2.2s
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -157,7 +157,7 @@ entry:
 define <2 x i64> @mlai32_and(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2) {
 ; CHECK-LABEL: mlai32_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umull v0.2d, v1.2s, v0.2s
+; CHECK-NEXT:    smull v0.2d, v1.2s, v0.2s
 ; CHECK-NEXT:    uaddw v0.2d, v0.2d, v2.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -179,7 +179,7 @@ define void @mlai32_loadstore(i32* %a, i32* %b, i32* %c) {
 ; CHECK-NEXT:    ldr d1, [x1, #32]
 ; CHECK-NEXT:    ldr d2, [x2, #32]
 ; CHECK-NEXT:    smull v0.2d, v1.2s, v0.2s
-; CHECK-NEXT:    saddw v0.2d, v0.2d, v2.2s
+; CHECK-NEXT:    uaddw v0.2d, v0.2d, v2.2s
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    str d0, [x0, #32]
 ; CHECK-NEXT:    ret
@@ -225,8 +225,8 @@ entry:
 define <2 x i64> @addmuli32_and(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2) {
 ; CHECK-LABEL: addmuli32_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
-; CHECK-NEXT:    umlal v1.2d, v0.2s, v2.2s
+; CHECK-NEXT:    smull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    smlal v1.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
@@ -359,7 +359,7 @@ define void @func2(i16* %a, i16* %b, i16* %c) {
 ; CHECK-NEXT:    str d1, [x1, #16]
 ; CHECK-NEXT:    ldr d1, [x2, #16]
 ; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
-; CHECK-NEXT:    saddw v0.4s, v0.4s, v2.4h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    str d0, [x0, #16]
 ; CHECK-NEXT:    ret

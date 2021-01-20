@@ -351,8 +351,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();
-  if (Inputs.Opts.SuggestMissingIncludes && Inputs.Index &&
-      !BuildDir.getError()) {
+  if (Inputs.Index && !BuildDir.getError()) {
     auto Style = getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
     auto Inserter = std::make_shared<IncludeInserter>(
         Filename, Inputs.Contents, Style, BuildDir.get(),

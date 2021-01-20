@@ -26,7 +26,7 @@
 #define MLIR_CRUNNERUTILS_EXPORT __declspec(dllimport)
 #endif // mlir_c_runner_utils_EXPORTS
 #endif // MLIR_CRUNNERUTILS_EXPORT
-#else
+#else  // _WIN32
 #define MLIR_CRUNNERUTILS_EXPORT
 #define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #endif // _WIN32

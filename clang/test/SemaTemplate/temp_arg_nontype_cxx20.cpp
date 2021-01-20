@@ -8,8 +8,8 @@ namespace std {
 
 // floating-point arguments
 template<float> struct Float {};
-using F1 = Float<1.0f>;
-using F1 = Float<2.0f / 2>;
+using F1 = Float<1.0f>; // FIXME expected-error {{sorry}}
+using F1 = Float<2.0f / 2>; // FIXME expected-error {{sorry}}
 
 struct S { int n[3]; } s; // expected-note 1+{{here}}
 union U { int a, b; } u;
@@ -17,24 +17,24 @@ int n; // expected-note 1+{{here}}
 
 // pointers to subobjects
 template<int *> struct IntPtr {};
-using IPn = IntPtr<&n + 1>;
-using IPn = IntPtr<&n + 1>;
+using IPn = IntPtr<&n + 1>; // FIXME expected-error {{refers to subobject}}
+using IPn = IntPtr<&n + 1>; // FIXME expected-error {{refers to subobject}}
 
-using IP2 = IntPtr<&s.n[2]>;
-using IP2 = IntPtr<s.n + 2>;
+using IP2 = IntPtr<&s.n[2]>; // FIXME expected-error {{refers to subobject}}
+using IP2 = IntPtr<s.n + 2>; // FIXME expected-error {{refers to subobject}}
 
-using IP3 = IntPtr<&s.n[3]>;
-using IP3 = IntPtr<s.n + 3>;
+using IP3 = IntPtr<&s.n[3]>; // FIXME expected-error {{refers to subobject}}
+using IP3 = IntPtr<s.n + 3>; // FIXME expected-error {{refers to subobject}}
 
 template<int &> struct IntRef {};
-using IRn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
-using IRn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
+using IPn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
+using IPn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
 
-using IR2 = IntRef<s.n[2]>;
-using IR2 = IntRef<*(s.n + 2)>;
+using IP2 = IntRef<s.n[2]>; // FIXME expected-error {{refers to subobject}}
+using IP2 = IntRef<*(s.n + 2)>; // FIXME expected-error {{refers to subobject}}
 
-using IR3 = IntRef<s.n[3]>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of subobject of 's'}}
-using IR3 = IntRef<*(s.n + 3)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of subobject of 's'}}
+using IP3 = IntRef<s.n[3]>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of subobject of 's'}}
+using IP3 = IntRef<*(s.n + 3)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of subobject of 's'}}
 
 // classes
 template<S> struct Struct {};
@@ -48,12 +48,12 @@ using U1 = Union<U{.b = 1}>; // expected-error {{different types}}
 
 // miscellaneous scalar types
 template<_Complex int> struct ComplexInt {};
-using CI = ComplexInt<1 + 3i>;
-using CI = ComplexInt<3i + 1>;
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
 
 template<_Complex float> struct ComplexFloat {};
-using CF = ComplexFloat<1.0f + 3.0fi>;
-using CF = ComplexFloat<3.0fi + 1.0f>;
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
 
 namespace ClassNTTP {
   struct A { // expected-note 2{{candidate}}
@@ -291,48 +291,4 @@ namespace Predefined {
     Y<A{__func__}>(); // expected-error {{pointer to subobject of predefined '__func__' variable}}
     Y<B{__func__[0]}>(); // expected-error {{reference to subobject of predefined '__func__' variable}}
   }
-}
-
-namespace dependent {
-  template<auto &V> struct R { static inline auto &v = V; };
-  template<auto &V, auto &W> constexpr bool operator==(R<V>, R<W>) { return &V == &W; }
-  template<auto *V> struct S { static inline auto *v = V; };
-  template<auto *V, auto *W> constexpr bool operator==(S<V>, S<W>) { return V == W; }
-  template<auto V> struct T { static inline const auto &v = V; };
-  template<auto V, auto W> constexpr bool operator==(T<V>, T<W>) { return &V == &W; }
-  template<typename T> struct V { T v; };
-  template<int N> auto f() {
-    static int n;
-    static V<int> vn;
-    if constexpr (N < 10)
-      return R<n>();
-    else if constexpr (N < 20)
-      return R<vn.v>();
-    else if constexpr (N < 30)
-      return S<&n>();
-    else if constexpr (N < 40)
-      return S<&vn.v>();
-    else if constexpr (N < 50)
-      return T<V<int&>{n}>();
-    else if constexpr (N < 60)
-      return T<V<int*>{&n}>();
-    else if constexpr (N < 70)
-      return T<V<int&>{vn.v}>();
-    else if constexpr (N < 80)
-      return T<V<int*>{&vn.v}>();
-  }
-  template<int Base> void check() {
-    auto v = f<Base + 0>();
-    auto w = f<Base + 1>();
-    static_assert(!__is_same(decltype(v), decltype(w)));
-    static_assert(v != w);
-  }
-  template void check<0>();
-  template void check<10>();
-  template void check<20>();
-  template void check<30>();
-  template void check<40>();
-  template void check<50>();
-  template void check<60>();
-  template void check<70>();
 }

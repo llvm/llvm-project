@@ -152,8 +152,7 @@ public:
               });
   }
 
-  llvm::unique_function<bool(llvm::StringRef) const>
-  indexedFiles() const override {
+  llvm::unique_function<bool(llvm::StringRef) const> indexedFiles() const {
     // FIXME: For now we always return "false" regardless of whether the file
     //        was indexed or not. A possible implementation could be based on
     //        the idea that we do not want to send a request at every
