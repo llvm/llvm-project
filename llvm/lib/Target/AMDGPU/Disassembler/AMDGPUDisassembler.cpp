@@ -378,8 +378,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
               MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx11 ||
               MI.getOpcode() == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10)) {
+              MI.getOpcode() == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx11)) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
@@ -414,6 +417,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = convertMIMGInst(MI);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::EXP))
+    Res = convertEXPInst(MI);
+
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
@@ -438,6 +444,16 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   Size = Res ? (MaxInstBytesNum - Bytes.size())
              : std::min((size_t)4, Bytes_.size());
   return Res;
+}
+
+DecodeStatus AMDGPUDisassembler::convertEXPInst(MCInst &MI) const {
+  if (STI.getFeatureBits()[AMDGPU::FeatureGFX11]) {
+    // The MCInst still has these fields even though they are no longer encoded
+    // in the GFX11 instruction.
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::vm);
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::compr);
+  }
+  return MCDisassembler::Success;
 }
 
 DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {

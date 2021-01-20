@@ -17,7 +17,7 @@ define float @v_fma(float %a, float %b, float %c)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fmac_legacy_f32_e64 v2, v0, v1
+; GFX11-NEXT:    v_fmac_dx9_zero_f32_e64 v2, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -37,7 +37,7 @@ define float @v_fabs_fma(float %a, float %b, float %c)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fma_legacy_f32 v0, |v0|, v1, v2
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, |v0|, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fabs.a = call float @llvm.fabs.f32(float %a)
   %fma = call float @llvm.amdgcn.fma.legacy(float %fabs.a, float %b, float %c)
@@ -56,7 +56,7 @@ define float @v_fneg_fabs_fma(float %a, float %b, float %c)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fma_legacy_f32 v0, v0, -|v1|, v2
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, -|v1|, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fabs.b = call float @llvm.fabs.f32(float %b)
   %neg.fabs.b = fneg float %fabs.b
@@ -76,7 +76,7 @@ define float @v_fneg_fma(float %a, float %b, float %c)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fma_legacy_f32 v0, v0, v1, -v2
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, -v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.c = fneg float %c
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float %b, float %neg.c)
@@ -95,7 +95,7 @@ define float @v_fma_const_const(float %a)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_fma_legacy_f32 v0, v0, 2.0, -1.0
+; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, 2.0, -1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 2.0, float -1.0)
   ret float %fma

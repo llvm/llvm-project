@@ -186,6 +186,8 @@ def AMDGPUumin3 : SDNode<"AMDGPUISD::UMIN3", AMDGPUDTIntTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
+//TODO-GFX11 Minmax and maxmin insts
+
 // out = (src0 + src1 > 0xFFFFFFFF) ? 1 : 0
 def AMDGPUcarry : SDNode<"AMDGPUISD::CARRY", SDTIntBinOp, []>;
 

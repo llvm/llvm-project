@@ -665,8 +665,8 @@ def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 
 let SubtargetPredicate = isGFX11Plus in {
 
-def DS_ADD_GS_REG : DS_0A1D_RET_GDS<"ds_add_gs_reg", VReg_64, VGPR_32>;
-def DS_SUB_GS_REG : DS_0A1D_RET_GDS<"ds_sub_gs_reg", VReg_64, VGPR_32>;
+def DS_ADD_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_add_gs_reg_rtn", VReg_64, VGPR_32>;
+def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 } // let SubtargetPredicate = isGFX11Plus
@@ -1108,8 +1108,8 @@ defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11<0x070>;
 defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11<0x079>;
-defm DS_ADD_GS_REG                       : DS_Real_gfx11<0x07a>;
-defm DS_SUB_GS_REG                       : DS_Real_gfx11<0x07b>;
+defm DS_ADD_GS_REG_RTN                   : DS_Real_gfx11<0x07a>;
+defm DS_SUB_GS_REG_RTN                   : DS_Real_gfx11<0x07b>;
 defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
 
 //===----------------------------------------------------------------------===//

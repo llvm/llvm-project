@@ -260,6 +260,11 @@ class Enc64 {
   int Size = 8;
 }
 
+class Enc96 {
+  field bits<96> Inst;
+  int Size = 12;
+}
+
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
 
 class VINTRPe <bits<2> op> : Enc32 {

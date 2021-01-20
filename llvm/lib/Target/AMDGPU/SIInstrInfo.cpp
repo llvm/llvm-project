@@ -3969,6 +3969,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  // TODO-GFX11 Verify VOP3 Opsel. Related to 16 bit reg support
+  if ( isVOP3(MI) ) {
+     // if uses opsel and target != gfx11 and vop3opsel not set
+     // return false
+  }
+
   // Verify misc. restrictions on specific instructions.
   if (Desc.getOpcode() == AMDGPU::V_DIV_SCALE_F32_e64 ||
       Desc.getOpcode() == AMDGPU::V_DIV_SCALE_F64_e64) {
@@ -7175,12 +7181,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
-
-  // TODO-GFX11: Remove this.
-  // Hack to allow some GFX11 codegen tests to run before all the encodings are
-  // implemented.
-  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX11)
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX10);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
