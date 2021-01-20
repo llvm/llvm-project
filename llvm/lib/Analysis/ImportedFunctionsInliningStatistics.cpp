@@ -9,7 +9,7 @@
 // ThinLTO.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -186,7 +186,7 @@ ImportedFunctionsInliningStatistics::SortedNodesTy
 ImportedFunctionsInliningStatistics::getSortedNodes() {
   SortedNodesTy SortedNodes;
   SortedNodes.reserve(NodesMap.size());
-  for (const NodesMapTy::value_type& Node : NodesMap)
+  for (const NodesMapTy::value_type &Node : NodesMap)
     SortedNodes.push_back(&Node);
 
   llvm::sort(SortedNodes, [&](const SortedNodesTy::value_type &Lhs,
