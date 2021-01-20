@@ -115,7 +115,12 @@ bool llvm::canPeel(Loop *L) {
   // This can be an indication of two different things:
   // 1) The loop is not rotated.
   // 2) The loop contains irreducible control flow that involves the latch.
-  if (L->getLoopLatch() != L->getExitingBlock())
+  const BasicBlock *Latch = L->getLoopLatch();
+  if (Latch != L->getExitingBlock())
+    return false;
+
+  // Peeling is only supported if the latch is a branch.
+  if (!isa<BranchInst>(Latch->getTerminator()))
     return false;
 
   return true;
