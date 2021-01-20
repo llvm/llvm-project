@@ -21,7 +21,7 @@
 # RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST,CHECK-INSTOBJ64 %s
 
 # CHECK-BYTES: 2e 85
-# CHECK-ALIAS: add a0, zero, a1
+# CHECK-ALIAS: mv a0, a1
 # CHECK-INST: c.mv a0, a1
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0
@@ -183,13 +183,13 @@ lw ra, 252(sp)
 jalr zero, 0(ra)
 
 # CHECK-BYTES: 92 80
-# CHECK-ALIAS: add ra, zero, tp
+# CHECK-ALIAS: mv ra, tp
 # CHECK-INST: c.mv ra, tp
 # CHECK:  # encoding: [0x92,0x80]
 add ra, zero, tp
 
 # CHECK-BYTES: 92 80
-# CHECK-ALIAS: add ra, zero, tp
+# CHECK-ALIAS: mv ra, tp
 # CHECK-INST: c.mv ra, tp
 # CHECK:  # encoding: [0x92,0x80]
 add ra, tp, zero
