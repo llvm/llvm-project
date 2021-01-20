@@ -47,7 +47,7 @@ table.mapping td.content {
 /* Workaround for a Safari bug that would otherwise make table cells less wide
 than the containing text. This just sets it back to the default browser
 property.*/
-td p {
+td {
   -webkit-hyphens: manual !important;
 }
 
