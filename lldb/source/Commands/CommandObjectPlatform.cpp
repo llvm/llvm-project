@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectPlatform.h"
+#include "CommandOptionsProcessLaunch.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -1083,7 +1084,7 @@ protected:
     return result.Succeeded();
   }
 
-  ProcessLaunchCommandOptions m_options;
+  CommandOptionsProcessLaunch m_options;
 };
 
 // "platform process list"
