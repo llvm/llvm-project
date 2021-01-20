@@ -164,25 +164,25 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
         // reader need to get the offset of each function profile first.
         //
         // DefaultLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary},
-                                          {SecNameTable},
-                                          {SecFuncOffsetTable},
-                                          {SecLBRProfile},
-                                          {SecProfileSymbolList},
-                                          {SecFuncMetadata}}),
+        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
+                                          {SecNameTable, 0, 0, 0, 0},
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
+                                          {SecProfileSymbolList, 0, 0, 0, 0},
+                                          {SecFuncMetadata, 0, 0, 0, 0}}),
         // CtxSplitLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary},
-                                          {SecNameTable},
+        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
+                                          {SecNameTable, 0, 0, 0, 0},
                                           // profile with context
                                           // for next two sections
-                                          {SecFuncOffsetTable},
-                                          {SecLBRProfile},
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
                                           // profile without context
                                           // for next two sections
-                                          {SecFuncOffsetTable},
-                                          {SecLBRProfile},
-                                          {SecProfileSymbolList},
-                                          {SecFuncMetadata}}),
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
+                                          {SecProfileSymbolList, 0, 0, 0, 0},
+                                          {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
 class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
