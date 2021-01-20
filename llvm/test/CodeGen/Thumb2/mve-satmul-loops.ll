@@ -1503,7 +1503,6 @@ define arm_aapcs_vfpcc void @ssatmul_s4t_q15(i16* nocapture readonly %pSrcA, i16
 ; CHECK-NEXT:    vldrht.s32 q3, [r1], #8
 ; CHECK-NEXT:    vmul.i32 q2, q3, q2
 ; CHECK-NEXT:    vqshrnb.s32 q2, q2, #15
-; CHECK-NEXT:    vmovlb.s16 q2, q2
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.32 q2, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB8_2
@@ -2717,7 +2716,6 @@ define arm_aapcs_vfpcc void @ssatmul_8t_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    vldrbt.s16 q6, [r1], #8
 ; CHECK-NEXT:    vmul.i16 q5, q6, q5
 ; CHECK-NEXT:    vqshrnb.s16 q5, q5, #7
-; CHECK-NEXT:    vmovlb.s8 q5, q5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrbt.16 q5, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB17_2

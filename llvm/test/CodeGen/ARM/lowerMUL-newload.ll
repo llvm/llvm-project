@@ -4,8 +4,8 @@
 define arm_aapcs_vfpcc <4 x i16> @mla_args(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: mla_args:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.s16 q8, d1, d0
-; CHECK-NEXT:    vaddw.s16 q8, q8, d2
+; CHECK-NEXT:    vmull.u16 q8, d1, d0
+; CHECK-NEXT:    vaddw.u16 q8, q8, d2
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
 entry:
@@ -24,8 +24,8 @@ define void @mla_loadstore(i16* %a, i16* %b, i16* %c) {
 ; CHECK-NEXT:    vldr d16, [r0, #16]
 ; CHECK-NEXT:    vldr d17, [r1, #16]
 ; CHECK-NEXT:    vldr d18, [r2, #16]
-; CHECK-NEXT:    vmull.s16 q8, d17, d16
-; CHECK-NEXT:    vaddw.s16 q8, q8, d18
+; CHECK-NEXT:    vmull.u16 q8, d17, d16
+; CHECK-NEXT:    vaddw.u16 q8, q8, d18
 ; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vstr d16, [r0, #16]
 ; CHECK-NEXT:    bx lr
@@ -54,8 +54,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i16> @addmul_args(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: addmul_args:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.s16 q8, d1, d2
-; CHECK-NEXT:    vmlal.s16 q8, d0, d2
+; CHECK-NEXT:    vmull.u16 q8, d1, d2
+; CHECK-NEXT:    vmlal.u16 q8, d0, d2
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
 entry:
@@ -73,9 +73,9 @@ define void @addmul_loadstore(i16* %a, i16* %b, i16* %c) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r2, #16]
 ; CHECK-NEXT:    vldr d17, [r1, #16]
-; CHECK-NEXT:    vmull.s16 q9, d17, d16
+; CHECK-NEXT:    vmull.u16 q9, d17, d16
 ; CHECK-NEXT:    vldr d17, [r0, #16]
-; CHECK-NEXT:    vmlal.s16 q9, d17, d16
+; CHECK-NEXT:    vmlal.u16 q9, d17, d16
 ; CHECK-NEXT:    vmovn.i32 d16, q9
 ; CHECK-NEXT:    vstr d16, [r0, #16]
 ; CHECK-NEXT:    bx lr
@@ -108,7 +108,7 @@ define void @func1(i16* %a, i16* %b, i16* %c) {
 ; CHECK-NEXT:    vldr d18, [r2, #16]
 ; CHECK-NEXT:    vld1.16 {d16}, [r3:64]
 ; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vaddw.s16 q10, q8, d18
+; CHECK-NEXT:    vaddw.u16 q10, q8, d18
 ; CHECK-NEXT:    vmovn.i32 d19, q10
 ; CHECK-NEXT:    vldr d20, [r0, #16]
 ; CHECK-NEXT:    vstr d19, [r0, #16]
@@ -119,7 +119,7 @@ define void @func1(i16* %a, i16* %b, i16* %c) {
 ; CHECK-NEXT:    vmovn.i32 d16, q11
 ; CHECK-NEXT:    vstr d16, [r1, #16]
 ; CHECK-NEXT:    vldr d16, [r2, #16]
-; CHECK-NEXT:    vmlal.s16 q11, d16, d20
+; CHECK-NEXT:    vmlal.u16 q11, d16, d20
 ; CHECK-NEXT:    vmovn.i32 d16, q11
 ; CHECK-NEXT:    vstr d16, [r0, #16]
 ; CHECK-NEXT:    bx lr
@@ -175,23 +175,26 @@ entry:
 define void @func2(i16* %a, i16* %b, i16* %c) {
 ; CHECK-LABEL: func2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add r3, r1, #16
+; CHECK-NEXT:    vldr d16, [r1, #16]
+; CHECK-NEXT:    add r3, r0, #16
+; CHECK-NEXT:    vldr d17, [r2, #16]
+; CHECK-NEXT:    vaddl.u16 q9, d17, d16
+; CHECK-NEXT:    vmovn.i32 d18, q9
+; CHECK-NEXT:    vld1.16 {d19}, [r3:64]
+; CHECK-NEXT:    vstr d18, [r0, #16]
 ; CHECK-NEXT:    vldr d18, [r2, #16]
-; CHECK-NEXT:    vld1.16 {d16}, [r3:64]
+; CHECK-NEXT:    vmull.s16 q10, d17, d18
+; CHECK-NEXT:    vmovl.s16 q11, d18
 ; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vaddw.s16 q10, q8, d18
-; CHECK-NEXT:    vmovn.i32 d19, q10
-; CHECK-NEXT:    vldr d20, [r0, #16]
-; CHECK-NEXT:    vstr d19, [r0, #16]
-; CHECK-NEXT:    vldr d19, [r2, #16]
-; CHECK-NEXT:    vmull.s16 q11, d18, d19
 ; CHECK-NEXT:    vmovl.s16 q9, d19
-; CHECK-NEXT:    vmla.i32 q11, q8, q9
-; CHECK-NEXT:    vmovn.i32 d16, q11
+; CHECK-NEXT:    vmla.i32 q10, q8, q11
+; CHECK-NEXT:    vmovn.i32 d16, q10
 ; CHECK-NEXT:    vstr d16, [r1, #16]
-; CHECK-NEXT:    vldr d16, [r2, #16]
-; CHECK-NEXT:    vmlal.s16 q11, d16, d20
-; CHECK-NEXT:    vaddw.s16 q8, q11, d20
+; CHECK-NEXT:    add r1, r2, #16
+; CHECK-NEXT:    vld1.16 {d16}, [r1:64]
+; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vmla.i32 q10, q8, q9
+; CHECK-NEXT:    vadd.i32 q8, q10, q9
 ; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vstr d16, [r0, #16]
 ; CHECK-NEXT:    bx lr
