@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic -post-RA-scheduler=1 -break-anti-dependencies=critical  | FileCheck %s
 
-; PR20308 ( http://llvm.org/bugs/show_bug.cgi?id=20308 )
+; PR20308 ( http://llvm.org/bugs/show_bug.cgi?id=20308 ).
 ; The critical-anti-dependency-breaker must not use register def information from a kill inst.
 ; This test case expects such an instruction to appear as a comment with def info for RDI.
 ; There is an anti-dependency (WAR) hazard using RAX using default reg allocation and scheduling.
