@@ -40,30 +40,30 @@ The module is designed to be able to select a single slice of an
 executable image as it would appear on disk and during program
 execution.
 
-You can retrieve SBModule from SBSymbolContext, which in turn is available
+You can retrieve SBModule from :py:class:`SBSymbolContext` , which in turn is available
 from SBFrame.
 
-SBModule supports symbol iteration, for example,
+SBModule supports symbol iteration, for example, ::
 
     for symbol in module:
         name = symbol.GetName()
         saddr = symbol.GetStartAddress()
         eaddr = symbol.GetEndAddress()
 
-and rich comparison methods which allow the API program to use,
+and rich comparison methods which allow the API program to use, ::
 
     if thisModule == thatModule:
         print('This module is the same as that module')
 
 to test module equality.  A module also contains object file sections, namely
-SBSection.  SBModule supports section iteration through section_iter(), for
-example,
+:py:class:`SBSection` .  SBModule supports section iteration through section_iter(), for
+example, ::
 
     print('Number of sections: %d' % module.GetNumSections())
     for sec in module.section_iter():
         print(sec)
 
-And to iterate the symbols within a SBSection, use symbol_in_section_iter(),
+And to iterate the symbols within a SBSection, use symbol_in_section_iter(), ::
 
     # Iterates the text section and prints each symbols within each sub-section.
     for subsec in text_sec:
@@ -72,7 +72,7 @@ And to iterate the symbols within a SBSection, use symbol_in_section_iter(),
             print(INDENT2 + repr(sym))
             print(INDENT2 + 'symbol type: %s' % symbol_type_to_str(sym.GetType()))
 
-produces this following output:
+produces this following output: ::
 
     [0x0000000100001780-0x0000000100001d5c) a.out.__TEXT.__text
         id = {0x00000004}, name = 'mask_access(MaskAction, unsigned int)', range = [0x00000001000017c0-0x0000000100001870)
@@ -204,15 +204,15 @@ public:
     GetCompileUnitAtIndex (uint32_t);
 
     %feature("docstring", "
-    Find compile units related to *this module and passed source
+    Find compile units related to this module and passed source
     file.
 
     @param[in] sb_file_spec
-        A lldb::SBFileSpec object that contains source file
+        A :py:class:`SBFileSpec` object that contains source file
         specification.
 
     @return
-        A lldb::SBSymbolContextList that gets filled in with all of
+        A :py:class:`SBSymbolContextList` that gets filled in with all of
         the symbol contexts for all the matches.") FindCompileUnits;
     lldb::SBSymbolContextList
     FindCompileUnits (const lldb::SBFileSpec &sb_file_spec);

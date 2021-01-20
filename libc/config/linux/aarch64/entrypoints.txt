@@ -20,6 +20,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
+    # fenv.h entrypoints
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.fegetround
+    libc.src.fenv.fesetround
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.labs
@@ -30,6 +37,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
+    libc.src.string.memmove
     libc.src.string.memset
     libc.src.string.memrchr
     libc.src.string.strcat

@@ -260,8 +260,23 @@ BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
 /// Everything before \p SplitPt stays in \p Old and everything starting with \p
 /// SplitPt moves to a new block. The two blocks are joined by an unconditional
 /// branch. The new block with name \p BBName is returned.
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
+                       LoopInfo *LI = nullptr,
+                       MemorySSAUpdater *MSSAU = nullptr,
+                       const Twine &BBName = "", bool Before = false);
+
+/// Split the specified block at the specified instruction.
+///
+/// If \p Before is true, splitBlockBefore handles the block
+/// splitting. Otherwise, execution proceeds as described below.
+///
+/// Everything before \p SplitPt stays in \p Old and everything starting with \p
+/// SplitPt moves to a new block. The two blocks are joined by an unconditional
+/// branch. The new block with name \p BBName is returned.
 BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                       DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
                        MemorySSAUpdater *MSSAU = nullptr,
                        const Twine &BBName = "", bool Before = false);
 
@@ -271,8 +286,30 @@ BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 /// old block are joined by inserting an unconditional branch to the end of the
 /// new block. The new block with name \p BBName is returned.
 BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
-                             DominatorTree *DT, LoopInfo *LI,
+                             DomTreeUpdater *DTU, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName = "");
+
+/// This method introduces at least one new basic block into the function and
+/// moves some of the predecessors of BB to be predecessors of the new block.
+/// The new predecessors are indicated by the Preds array. The new block is
+/// given a suffix of 'Suffix'. Returns new basic block to which predecessors
+/// from Preds are now pointing.
+///
+/// If BB is a landingpad block then additional basicblock might be introduced.
+/// It will have Suffix+".split_lp". See SplitLandingPadPredecessors for more
+/// details on this case.
+///
+/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
+/// no other analyses. In particular, it does not preserve LoopSimplify
+/// (because it's complicated to handle the case where one of the edges being
+/// split is an exit of a loop with other exits).
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
+                                   const char *Suffix, DominatorTree *DT,
+                                   LoopInfo *LI = nullptr,
+                                   MemorySSAUpdater *MSSAU = nullptr,
+                                   bool PreserveLCSSA = false);
 
 /// This method introduces at least one new basic block into the function and
 /// moves some of the predecessors of BB to be predecessors of the new block.
@@ -290,7 +327,7 @@ BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 /// split is an exit of a loop with other exits).
 BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                                    const char *Suffix,
-                                   DominatorTree *DT = nullptr,
+                                   DomTreeUpdater *DTU = nullptr,
                                    LoopInfo *LI = nullptr,
                                    MemorySSAUpdater *MSSAU = nullptr,
                                    bool PreserveLCSSA = false);
@@ -306,10 +343,31 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+void SplitLandingPadPredecessors(BasicBlock *OrigBB,
+                                 ArrayRef<BasicBlock *> Preds,
+                                 const char *Suffix, const char *Suffix2,
+                                 SmallVectorImpl<BasicBlock *> &NewBBs,
+                                 DominatorTree *DT, LoopInfo *LI = nullptr,
+                                 MemorySSAUpdater *MSSAU = nullptr,
+                                 bool PreserveLCSSA = false);
+
+/// This method transforms the landing pad, OrigBB, by introducing two new basic
+/// blocks into the function. One of those new basic blocks gets the
+/// predecessors listed in Preds. The other basic block gets the remaining
+/// predecessors of OrigBB. The landingpad instruction OrigBB is clone into both
+/// of the new basic blocks. The new blocks are given the suffixes 'Suffix1' and
+/// 'Suffix2', and are returned in the NewBBs vector.
+///
+/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
+/// no other analyses. In particular, it does not preserve LoopSimplify
+/// (because it's complicated to handle the case where one of the edges being
+/// split is an exit of a loop with other exits).
 void SplitLandingPadPredecessors(
     BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
-    DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
     MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
 
 /// This method duplicates the specified return instruction into a predecessor
@@ -341,10 +399,39 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// Returns the NewBasicBlock's terminator.
 ///
 /// Updates DT and LI if given.
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
+                                       bool Unreachable, MDNode *BranchWeights,
+                                       DominatorTree *DT,
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ThenBlock = nullptr);
+
+/// Split the containing block at the specified instruction - everything before
+/// SplitBefore stays in the old basic block, and the rest of the instructions
+/// in the BB are moved to a new block. The two blocks are connected by a
+/// conditional branch (with value of Cmp being the condition).
+/// Before:
+///   Head
+///   SplitBefore
+///   Tail
+/// After:
+///   Head
+///   if (Cond)
+///     ThenBlock
+///   SplitBefore
+///   Tail
+///
+/// If \p ThenBlock is not specified, a new block will be created for it.
+/// If \p Unreachable is true, the newly created block will end with
+/// UnreachableInst, otherwise it branches to Tail.
+/// Returns the NewBasicBlock's terminator.
+///
+/// Updates DT and LI if given.
 Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
-                                       DominatorTree *DT = nullptr,
+                                       DomTreeUpdater *DTU = nullptr,
                                        LoopInfo *LI = nullptr,
                                        BasicBlock *ThenBlock = nullptr);
 

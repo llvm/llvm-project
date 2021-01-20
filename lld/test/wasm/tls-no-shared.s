@@ -1,5 +1,5 @@
 # Test that linking without shared memory causes __tls_base to be
-# interlized
+# internalized
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 

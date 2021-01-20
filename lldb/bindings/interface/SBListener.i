@@ -11,7 +11,7 @@ namespace lldb {
 %feature("docstring",
 "API clients can register its own listener to debugger events.
 
-See aslo SBEvent for example usage of creating and adding a listener."
+See also :py:class:`SBEvent` for example usage of creating and adding a listener."
 ) SBListener;
 class SBListener
 {

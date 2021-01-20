@@ -1582,7 +1582,7 @@ public:
         AllocatedTemporariesBaseID(AllocatedTemporariesBaseID) {}
 
   bool hasSymbolicName() const { return !SymbolicName.empty(); }
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
   void setSymbolicName(StringRef Name) {
     assert(SymbolicName.empty() && "Operand already has a symbolic name");
     SymbolicName = std::string(Name);
@@ -2536,7 +2536,7 @@ public:
     return R->getKind() == OR_Copy;
   }
 
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
@@ -2603,7 +2603,7 @@ public:
     return R->getKind() == OR_CopyOrAddZeroReg;
   }
 
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
@@ -2640,7 +2640,7 @@ public:
     return R->getKind() == OR_CopyConstantAsImm;
   }
 
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
@@ -2671,7 +2671,7 @@ public:
     return R->getKind() == OR_CopyFConstantAsFPImm;
   }
 
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
@@ -2705,7 +2705,7 @@ public:
     return R->getKind() == OR_CopySubReg;
   }
 
-  const StringRef getSymbolicName() const { return SymbolicName; }
+  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
@@ -5480,15 +5480,13 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
       OpcodeOrder[Opcode] = CurrentOrdering++;
   }
 
-  std::stable_sort(InputRules.begin(), InputRules.end(),
-                   [&OpcodeOrder](const Matcher *A, const Matcher *B) {
-                     auto *L = static_cast<const RuleMatcher *>(A);
-                     auto *R = static_cast<const RuleMatcher *>(B);
-                     return std::make_tuple(OpcodeOrder[L->getOpcode()],
-                                            L->getNumOperands()) <
-                            std::make_tuple(OpcodeOrder[R->getOpcode()],
-                                            R->getNumOperands());
-                   });
+  llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
+                                               const Matcher *B) {
+    auto *L = static_cast<const RuleMatcher *>(A);
+    auto *R = static_cast<const RuleMatcher *>(B);
+    return std::make_tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
+           std::make_tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+  });
 
   for (Matcher *Rule : InputRules)
     Rule->optimize();
@@ -6088,11 +6086,10 @@ void SwitchMatcher::finalize() {
   if (empty())
     return;
 
-  std::stable_sort(Matchers.begin(), Matchers.end(),
-                   [](const Matcher *L, const Matcher *R) {
-                     return L->getFirstCondition().getValue() <
-                            R->getFirstCondition().getValue();
-                   });
+  llvm::stable_sort(Matchers, [](const Matcher *L, const Matcher *R) {
+    return L->getFirstCondition().getValue() <
+           R->getFirstCondition().getValue();
+  });
   Condition = Matchers[0]->popFirstCondition();
   for (unsigned I = 1, E = Values.size(); I < E; ++I)
     Matchers[I]->popFirstCondition();

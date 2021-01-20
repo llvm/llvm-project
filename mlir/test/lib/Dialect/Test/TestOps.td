@@ -1733,6 +1733,15 @@ def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
+def FormatTypesMatchVariadicOp : TEST_Op<"format_types_match_variadic", [
+    RangedTypesMatchWith<"result type matches operand", "value", "result",
+                         "llvm::make_range($_self.begin(), $_self.end())">
+  ]> {
+  let arguments = (ins Variadic<AnyType>:$value);
+  let results = (outs Variadic<AnyType>:$result);
+  let assemblyFormat = "attr-dict $value `:` type($value)";
+}
+
 def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
     TypesMatchWith<"result type matches constant", "value", "result", "$_self">
   ]> {

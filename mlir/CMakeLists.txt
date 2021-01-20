@@ -98,6 +98,7 @@ include_directories( ${MLIR_INCLUDE_DIR})
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
 add_subdirectory(tools/mlir-tblgen)
+add_subdirectory(tools/mlir-linalg-ods-gen)
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)

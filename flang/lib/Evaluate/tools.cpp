@@ -659,8 +659,8 @@ std::optional<Expr<SomeType>> ConvertToType(
   }
 }
 
-bool IsAssumedRank(const Symbol &symbol0) {
-  const Symbol &symbol{ResolveAssociations(symbol0)};
+bool IsAssumedRank(const Symbol &original) {
+  const Symbol &symbol{semantics::ResolveAssociations(original)};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     return details->IsAssumedRank();
   } else {
@@ -741,15 +741,6 @@ const Symbol *GetLastTarget(const SymbolVector &symbols) {
         {semantics::Attr::POINTER, semantics::Attr::TARGET});
   })};
   return iter == end ? nullptr : &**iter;
-}
-
-const Symbol &ResolveAssociations(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
-      return ResolveAssociations(*nested);
-    }
-  }
-  return symbol.GetUltimate();
 }
 
 struct CollectSymbolsHelper
@@ -905,43 +896,84 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   return msg;
 }
 
+// GetLastPointerSymbol()
+static const Symbol *GetLastPointerSymbol(const Symbol &symbol) {
+  return IsPointer(GetAssociationRoot(symbol)) ? &symbol : nullptr;
+}
+static const Symbol *GetLastPointerSymbol(const SymbolRef &symbol) {
+  return GetLastPointerSymbol(*symbol);
+}
+static const Symbol *GetLastPointerSymbol(const Component &x) {
+  const Symbol &c{x.GetLastSymbol()};
+  return IsPointer(c) ? &c : GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const NamedEntity &x) {
+  const auto *c{x.UnwrapComponent()};
+  return c ? GetLastPointerSymbol(*c) : GetLastPointerSymbol(x.GetLastSymbol());
+}
+static const Symbol *GetLastPointerSymbol(const ArrayRef &x) {
+  return GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const CoarrayRef &x) {
+  return nullptr;
+}
+const Symbol *GetLastPointerSymbol(const DataRef &x) {
+  return std::visit([](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
+
+const Symbol &ResolveAssociations(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
+  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
+    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
+      return ResolveAssociations(*nested);
+    }
+  }
+  return symbol;
+}
 
 // When a construct association maps to a variable, and that variable
 // is not an array with a vector-valued subscript, return the base
 // Symbol of that variable, else nullptr.  Descends into other construct
 // associations when one associations maps to another.
-static const Symbol *GetAssociatedVariable(
-    const semantics::AssocEntityDetails &details) {
+static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   if (const auto &expr{details.expr()}) {
     if (IsVariable(*expr) && !HasVectorSubscript(*expr)) {
       if (const Symbol * varSymbol{GetFirstSymbol(*expr)}) {
-        return GetAssociationRoot(*varSymbol);
+        return &GetAssociationRoot(*varSymbol);
       }
     }
   }
   return nullptr;
 }
 
-const Symbol *GetAssociationRoot(const Symbol &symbol) {
-  const Symbol &ultimate{symbol.GetUltimate()};
-  const auto *details{ultimate.detailsIf<semantics::AssocEntityDetails>()};
-  return details ? GetAssociatedVariable(*details) : &ultimate;
+const Symbol &GetAssociationRoot(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
+    if (const Symbol * root{GetAssociatedVariable(*details)}) {
+      return *root;
+    }
+  }
+  return symbol;
 }
 
-Symbol *GetAssociationRoot(Symbol &symbol) {
-  return const_cast<Symbol *>(
-      GetAssociationRoot(const_cast<const Symbol &>(symbol)));
+bool IsVariableName(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (symbol.has<ObjectEntityDetails>()) {
+    return !IsNamedConstant(symbol);
+  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
+    const auto &expr{assoc->expr()};
+    return expr && IsVariable(*expr) && !HasVectorSubscript(*expr);
+  } else {
+    return false;
+  }
 }
 
-bool IsVariableName(const Symbol &symbol) {
-  const Symbol *root{GetAssociationRoot(symbol)};
-  return root && root->has<ObjectEntityDetails>() && !IsNamedConstant(*root);
-}
-
-bool IsPureProcedure(const Symbol &symbol) {
+bool IsPureProcedure(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
       // procedure component with a pure interface
@@ -960,8 +992,7 @@ bool IsPureProcedure(const Symbol &symbol) {
         if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
           return false;
         }
-        const Symbol *root{GetAssociationRoot(*ref)};
-        if (root && root->attrs().test(Attr::VOLATILE)) {
+        if (ref->GetUltimate().attrs().test(Attr::VOLATILE)) {
           return false;
         }
       }
@@ -990,24 +1021,21 @@ bool IsFunction(const Symbol &symbol) {
             return ifc.type() || (ifc.symbol() && IsFunction(*ifc.symbol()));
           },
           [](const ProcBindingDetails &x) { return IsFunction(x.symbol()); },
-          [](const UseDetails &x) { return IsFunction(x.symbol()); },
           [](const auto &) { return false; },
       },
-      symbol.details());
+      symbol.GetUltimate().details());
 }
 
 bool IsProcedure(const Symbol &symbol) {
-  return std::visit(
-      common::visitors{
-          [](const SubprogramDetails &) { return true; },
-          [](const SubprogramNameDetails &) { return true; },
-          [](const ProcEntityDetails &) { return true; },
-          [](const GenericDetails &) { return true; },
-          [](const ProcBindingDetails &) { return true; },
-          [](const UseDetails &x) { return IsProcedure(x.symbol()); },
-          [](const auto &) { return false; },
-      },
-      symbol.details());
+  return std::visit(common::visitors{
+                        [](const SubprogramDetails &) { return true; },
+                        [](const SubprogramNameDetails &) { return true; },
+                        [](const ProcEntityDetails &) { return true; },
+                        [](const GenericDetails &) { return true; },
+                        [](const ProcBindingDetails &) { return true; },
+                        [](const auto &) { return false; },
+                    },
+      symbol.GetUltimate().details());
 }
 
 const Symbol *FindCommonBlockContaining(const Symbol &object) {
@@ -1015,39 +1043,39 @@ const Symbol *FindCommonBlockContaining(const Symbol &object) {
   return details ? details->commonBlock() : nullptr;
 }
 
-bool IsProcedurePointer(const Symbol &symbol) {
+bool IsProcedurePointer(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
   return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
 }
 
 bool IsSaved(const Symbol &original) {
-  if (const Symbol * root{GetAssociationRoot(original)}) {
-    const Symbol &symbol{*root};
-    const Scope *scope{&symbol.owner()};
-    auto scopeKind{scope->kind()};
-    if (scopeKind == Scope::Kind::Module) {
-      return true; // BLOCK DATA entities must all be in COMMON, handled below
-    } else if (symbol.attrs().test(Attr::SAVE)) {
-      return true;
-    } else if (scopeKind == Scope::Kind::DerivedType) {
-      return false; // this is a component
-    } else if (IsNamedConstant(symbol)) {
-      return false;
-    } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-               object && object->init()) {
-      return true;
-    } else if (IsProcedurePointer(symbol) &&
-        symbol.get<ProcEntityDetails>().init()) {
-      return true;
-    } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-               block && block->attrs().test(Attr::SAVE)) {
-      return true;
-    } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
-      return false;
-    } else if (scope->hasSAVE() ) {
-      return true;
-    }
+  const Symbol &symbol{GetAssociationRoot(original)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  if (symbol.has<AssocEntityDetails>()) {
+    return false; // ASSOCIATE(non-variable)
+  } else if (scopeKind == Scope::Kind::Module) {
+    return true; // BLOCK DATA entities must all be in COMMON, handled below
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (scopeKind == Scope::Kind::DerivedType) {
+    return false; // this is a component
+  } else if (IsNamedConstant(symbol)) {
+    return false;
+  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+             object && object->init()) {
+    return true;
+  } else if (IsProcedurePointer(symbol) &&
+      symbol.get<ProcEntityDetails>().init()) {
+    return true;
+  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
+             block && block->attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
+    return false;
+  } else {
+    return scope.hasSAVE();
   }
-  return false;
 }
 
 bool IsDummy(const Symbol &symbol) {
@@ -1055,12 +1083,12 @@ bool IsDummy(const Symbol &symbol) {
       common::visitors{[](const EntityDetails &x) { return x.isDummy(); },
           [](const ObjectEntityDetails &x) { return x.isDummy(); },
           [](const ProcEntityDetails &x) { return x.isDummy(); },
-          [](const HostAssocDetails &x) { return IsDummy(x.symbol()); },
           [](const auto &) { return false; }},
-      symbol.details());
+      ResolveAssociations(symbol).details());
 }
 
-bool IsFunctionResult(const Symbol &symbol) {
+bool IsFunctionResult(const Symbol &original) {
+  const Symbol &symbol{GetAssociationRoot(original)};
   return (symbol.has<ObjectEntityDetails>() &&
              symbol.get<ObjectEntityDetails>().isFuncResult()) ||
       (symbol.has<ProcEntityDetails>() &&
@@ -1068,12 +1096,12 @@ bool IsFunctionResult(const Symbol &symbol) {
 }
 
 bool IsKindTypeParameter(const Symbol &symbol) {
-  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  const auto *param{symbol.GetUltimate().detailsIf<TypeParamDetails>()};
   return param && param->attr() == common::TypeParamAttr::Kind;
 }
 
 bool IsLenTypeParameter(const Symbol &symbol) {
-  const auto *param{symbol.detailsIf<TypeParamDetails>()};
+  const auto *param{symbol.GetUltimate().detailsIf<TypeParamDetails>()};
   return param && param->attr() == common::TypeParamAttr::Len;
 }
 

@@ -1466,6 +1466,21 @@ void MicrosoftCXXNameMangler::mangleTemplateArgs(
   }
 }
 
+/// If value V (with type T) represents a decayed pointer to the first element
+/// of an array, return that array.
+static ValueDecl *getAsArrayToPointerDecayedDecl(QualType T, const APValue &V) {
+  // Must be a pointer...
+  if (!T->isPointerType() || !V.isLValue() || !V.hasLValuePath() ||
+      !V.getLValueBase())
+    return nullptr;
+  // ... to element 0 of an array.
+  QualType BaseT = V.getLValueBase().getType();
+  if (!BaseT->isArrayType() || V.getLValuePath().size() != 1 ||
+      V.getLValuePath()[0].getAsArrayIndex() != 0)
+    return nullptr;
+  return const_cast<ValueDecl*>(V.getLValueBase().dyn_cast<const ValueDecl*>());
+}
+
 void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
                                                 const TemplateArgument &TA,
                                                 const NamedDecl *Parm) {
@@ -1575,6 +1590,25 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
                          cast<NonTypeTemplateParmDecl>(Parm), T);
     break;
   }
+  case TemplateArgument::UncommonValue:
+    if (ValueDecl *D = getAsArrayToPointerDecayedDecl(
+            TA.getUncommonValueType(), TA.getAsUncommonValue())) {
+      // Mangle the result of array-to-pointer decay as if it were a reference
+      // to the original declaration, to match MSVC's behavior. This can result
+      // in mangling collisions in some cases!
+      return mangleTemplateArg(
+          TD, TemplateArgument(D, TA.getUncommonValueType()), Parm);
+    }
+    Out << "$";
+    if (cast<NonTypeTemplateParmDecl>(Parm)
+            ->getType()
+            ->getContainedDeducedType()) {
+      Out << "M";
+      mangleType(TA.getNonTypeTemplateArgumentType(), SourceRange(), QMM_Drop);
+    }
+    mangleTemplateArgValue(TA.getUncommonValueType(), TA.getAsUncommonValue(),
+                           /*WithScalarType=*/false);
+    break;
   case TemplateArgument::Expression:
     mangleExpression(TA.getAsExpr(), cast<NonTypeTemplateParmDecl>(Parm));
     break;

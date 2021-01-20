@@ -155,6 +155,41 @@ PatternRewriter::~PatternRewriter() {
   // Out of line to provide a vtable anchor for the class.
 }
 
+/// This method replaces the uses of the results of `op` with the values in
+/// `newValues` when the provided `functor` returns true for a specific use.
+/// The number of values in `newValues` is required to match the number of
+/// results of `op`.
+void PatternRewriter::replaceOpWithIf(
+    Operation *op, ValueRange newValues, bool *allUsesReplaced,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
+  assert(op->getNumResults() == newValues.size() &&
+         "incorrect number of values to replace operation");
+
+  // Notify the rewriter subclass that we're about to replace this root.
+  notifyRootReplaced(op);
+
+  // Replace each use of the results when the functor is true.
+  bool replacedAllUses = true;
+  for (auto it : llvm::zip(op->getResults(), newValues)) {
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), functor);
+    replacedAllUses &= std::get<0>(it).use_empty();
+  }
+  if (allUsesReplaced)
+    *allUsesReplaced = replacedAllUses;
+}
+
+/// This method replaces the uses of the results of `op` with the values in
+/// `newValues` when a use is nested within the given `block`. The number of
+/// values in `newValues` is required to match the number of results of `op`.
+/// If all uses of this operation are replaced, the operation is erased.
+void PatternRewriter::replaceOpWithinBlock(Operation *op, ValueRange newValues,
+                                           Block *block,
+                                           bool *allUsesReplaced) {
+  replaceOpWithIf(op, newValues, allUsesReplaced, [block](OpOperand &use) {
+    return block->getParentOp()->isProperAncestor(use.getOwner());
+  });
+}
+
 /// This method performs the final replacement for a pattern, where the
 /// results of the operation are updated to use the specified list of SSA
 /// values.

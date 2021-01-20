@@ -4647,20 +4647,24 @@ def : InstAlias<"xvmovdp $XT, $XB",
 def : InstAlias<"xvmovsp $XT, $XB",
                 (XVCPSGNSP vsrc:$XT, vsrc:$XB, vsrc:$XB)>;
 
-def : InstAlias<"xxspltd $XT, $XB, 0",
-                (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 0)>;
-def : InstAlias<"xxspltd $XT, $XB, 1",
-                (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 3)>;
+// Certain versions of the AIX assembler may missassemble these mnemonics.
+let Predicates = [ModernAs] in {
+  def : InstAlias<"xxspltd $XT, $XB, 0",
+                  (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 0)>;
+  def : InstAlias<"xxspltd $XT, $XB, 1",
+                  (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 3)>;
+  def : InstAlias<"xxspltd $XT, $XB, 0",
+                  (XXPERMDIs vsrc:$XT, vsfrc:$XB, 0)>;
+  def : InstAlias<"xxspltd $XT, $XB, 1",
+                  (XXPERMDIs vsrc:$XT, vsfrc:$XB, 3)>;
+}
+
 def : InstAlias<"xxmrghd $XT, $XA, $XB",
                 (XXPERMDI vsrc:$XT, vsrc:$XA, vsrc:$XB, 0)>;
 def : InstAlias<"xxmrgld $XT, $XA, $XB",
                 (XXPERMDI vsrc:$XT, vsrc:$XA, vsrc:$XB, 3)>;
 def : InstAlias<"xxswapd $XT, $XB",
                 (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 2)>;
-def : InstAlias<"xxspltd $XT, $XB, 0",
-                (XXPERMDIs vsrc:$XT, vsfrc:$XB, 0)>;
-def : InstAlias<"xxspltd $XT, $XB, 1",
-                (XXPERMDIs vsrc:$XT, vsfrc:$XB, 3)>;
 def : InstAlias<"xxswapd $XT, $XB",
                 (XXPERMDIs vsrc:$XT, vsfrc:$XB, 2)>;
 def : InstAlias<"mfvrd $rA, $XT",

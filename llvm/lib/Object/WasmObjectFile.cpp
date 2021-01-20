@@ -527,7 +527,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     wasm::WasmSymbolInfo Info;
     const wasm::WasmSignature *Signature = nullptr;
     const wasm::WasmGlobalType *GlobalType = nullptr;
-    uint8_t TableType = 0;
+    const wasm::WasmTableType *TableType = nullptr;
     const wasm::WasmEventType *EventType = nullptr;
 
     Info.Kind = readUint8(Ctx);
@@ -609,7 +609,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         Info.Name = readString(Ctx);
         unsigned TableIndex = Info.ElementIndex - NumImportedTables;
         wasm::WasmTable &Table = Tables[TableIndex];
-        TableType = Table.Type.ElemType;
+        TableType = &Table.Type;
         if (Table.SymbolName.empty())
           Table.SymbolName = Info.Name;
       } else {
@@ -620,8 +620,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         } else {
           Info.Name = Import.Field;
         }
-        TableType = Import.Table.ElemType;
-        // FIXME: Parse limits here too.
+        TableType = &Import.Table;
         if (!Import.Module.empty()) {
           Info.ImportModule = Import.Module;
         }
@@ -1367,9 +1366,11 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   while (Count--) {
     WasmSegment Segment;
     Segment.Data.InitFlags = readVaruint32(Ctx);
-    Segment.Data.MemoryIndex = (Segment.Data.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
-                               ? readVaruint32(Ctx) : 0;
-    if ((Segment.Data.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
+    Segment.Data.MemoryIndex =
+        (Segment.Data.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX)
+            ? readVaruint32(Ctx)
+            : 0;
+    if ((Segment.Data.InitFlags & wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
         return Err;
     } else {

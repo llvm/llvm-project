@@ -3372,10 +3372,9 @@ bool NewGVN::runGVN() {
   for (auto &B : RPOT) {
     auto *Node = DT->getNode(B);
     if (Node->getNumChildren() > 1)
-      llvm::sort(Node->begin(), Node->end(),
-                 [&](const DomTreeNode *A, const DomTreeNode *B) {
-                   return RPOOrdering[A] < RPOOrdering[B];
-                 });
+      llvm::sort(*Node, [&](const DomTreeNode *A, const DomTreeNode *B) {
+        return RPOOrdering[A] < RPOOrdering[B];
+      });
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.

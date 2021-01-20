@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a73 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a75 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cortex-a76 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=a64fx < %s | FileCheck --check-prefixes=ALIGN5,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=a64fx < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=cyclone < %s | FileCheck --check-prefixes=ALIGN2,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=falkor < %s | FileCheck --check-prefixes=ALIGN2,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=kryo < %s | FileCheck --check-prefixes=ALIGN2,CHECK %s

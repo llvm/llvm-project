@@ -310,22 +310,16 @@ llvm::Regex convertGlobsToRegex(llvm::ArrayRef<std::string> Globs) {
 /// Extracts system includes from a trusted driver by parsing the output of
 /// include search path and appends them to the commands coming from underlying
 /// compilation database.
-class QueryDriverDatabase : public GlobalCompilationDatabase {
+class QueryDriverDatabase : public DelegatingCDB {
 public:
   QueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
                       std::unique_ptr<GlobalCompilationDatabase> Base)
-      : QueryDriverRegex(convertGlobsToRegex(QueryDriverGlobs)),
-        Base(std::move(Base)) {
-    assert(this->Base);
-    BaseChanged =
-        this->Base->watch([this](const std::vector<std::string> &Changes) {
-          OnCommandChanged.broadcast(Changes);
-        });
-  }
+      : DelegatingCDB(std::move(Base)),
+        QueryDriverRegex(convertGlobsToRegex(QueryDriverGlobs)) {}
 
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override {
-    auto Cmd = Base->getCompileCommand(File);
+    auto Cmd = DelegatingCDB::getCompileCommand(File);
     if (!Cmd || Cmd->CommandLine.empty())
       return Cmd;
 
@@ -364,17 +358,10 @@ public:
     return Cmd;
   }
 
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
-    return Base->getProjectInfo(File);
-  }
-
 private:
   // Caches includes extracted from a driver. Key is driver:lang.
   Memoize<llvm::StringMap<llvm::Optional<DriverInfo>>> QueriedDrivers;
   llvm::Regex QueryDriverRegex;
-
-  std::unique_ptr<GlobalCompilationDatabase> Base;
-  CommandChanged::Subscription BaseChanged;
 };
 } // namespace
 

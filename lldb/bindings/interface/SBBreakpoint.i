@@ -11,7 +11,7 @@ namespace lldb {
 "Represents a logical breakpoint and its associated settings.
 
 For example (from test/functionalities/breakpoint/breakpoint_ignore_count/
-TestBreakpointIgnoreCount.py),
+TestBreakpointIgnoreCount.py),::
 
     def breakpoint_ignore_count_python(self):
         '''Use Python APIs to set breakpoint ignore count.'''
@@ -62,13 +62,13 @@ TestBreakpointIgnoreCount.py),
 
         process.Continue()
 
-SBBreakpoint supports breakpoint location iteration, for example,
+SBBreakpoint supports breakpoint location iteration, for example,::
 
     for bl in breakpoint:
         print('breakpoint location load addr: %s' % hex(bl.GetLoadAddress()))
         print('breakpoint location condition: %s' % hex(bl.GetCondition()))
 
-and rich comparison methods which allow the API program to use,
+and rich comparison methods which allow the API program to use,::
 
     if aBreakpoint == bBreakpoint:
         ...
@@ -102,7 +102,7 @@ public:
 
     lldb::SBTarget
     GetTarget() const;
-  
+
     lldb::SBBreakpointLocation
     FindLocationByAddress (lldb::addr_t vm_addr);
 
@@ -313,6 +313,10 @@ public:
 
 class SBBreakpointListImpl;
 
+
+%feature("docstring",
+"Represents a list of :py:class:`SBBreakpoint`."
+) SBBreakpointList;
 class LLDB_API SBBreakpointList
 {
 public:

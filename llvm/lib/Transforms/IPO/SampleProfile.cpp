@@ -321,15 +321,14 @@ private:
 class SampleProfileLoader {
 public:
   SampleProfileLoader(
-      StringRef Name, StringRef RemapName, bool IsThinLTOPreLink,
+      StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI)
       : GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
         CoverageTracker(*this), Filename(std::string(Name)),
-        RemappingFilename(std::string(RemapName)),
-        IsThinLTOPreLink(IsThinLTOPreLink) {}
+        RemappingFilename(std::string(RemapName)), LTOPhase(LTOPhase) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -448,11 +447,12 @@ protected:
   /// Flag indicating whether input profile is context-sensitive
   bool ProfileIsCS = false;
 
-  /// Flag indicating if the pass is invoked in ThinLTO compile phase.
+  /// Flag indicating which LTO/ThinLTO phase the pass is invoked in.
   ///
-  /// In this phase, in annotation, we should not promote indirect calls.
-  /// Instead, we will mark GUIDs that needs to be annotated to the function.
-  bool IsThinLTOPreLink;
+  /// We need to know the LTO phase because for example in ThinLTOPrelink
+  /// phase, in annotation, we should not promote indirect calls. Instead,
+  /// we will mark GUIDs that needs to be annotated to the function.
+  ThinOrFullLTOPhase LTOPhase;
 
   /// Profile Summary Info computed from sample profile.
   ProfileSummaryInfo *PSI = nullptr;
@@ -505,10 +505,11 @@ public:
   // Class identification, replacement for typeinfo
   static char ID;
 
-  SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile,
-                                bool IsThinLTOPreLink = false)
+  SampleProfileLoaderLegacyPass(
+      StringRef Name = SampleProfileFile,
+      ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
       : ModulePass(ID), SampleLoader(
-                            Name, SampleProfileRemappingFile, IsThinLTOPreLink,
+                            Name, SampleProfileRemappingFile, LTOPhase,
                             [&](Function &F) -> AssumptionCache & {
                               return ACT->getAssumptionCache(F);
                             },
@@ -1120,7 +1121,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           continue;
         uint64_t Sum;
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
-          if (IsThinLTOPreLink) {
+          if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
             FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
                                      PSI->getOrCompHotCountThreshold());
             continue;
@@ -1173,7 +1174,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           LocalChanged = true;
           ++NumCSInlined;
         }
-      } else if (IsThinLTOPreLink) {
+      } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
             InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
       }
@@ -1945,6 +1946,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
     return false;
   }
   Reader = std::move(ReaderOrErr.get());
+  Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
   Reader->collectFuncsFrom(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   PSL = Reader->getProfileSymbolList();
@@ -2110,7 +2112,10 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
       initialEntryCount = -1;
   }
 
-  F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
+  // Initialize entry count when the function has no existing entry
+  // count value.
+  if (!F.getEntryCount().hasValue())
+    F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {
     auto &FAM =
@@ -2151,7 +2156,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
-      IsThinLTOPreLink, GetAssumptionCache, GetTTI, GetTLI);
+      LTOPhase, GetAssumptionCache, GetTTI, GetTLI);
 
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();

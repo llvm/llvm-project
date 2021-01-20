@@ -88,6 +88,7 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.inc"
         ) {
   }
+  using llvmOmpClause = const llvm::omp::Clause;
 
   void Enter(const parser::OpenMPConstruct &);
   void Enter(const parser::OpenMPLoopConstruct &);
@@ -207,6 +208,11 @@ private:
       const parser::OmpObjectList &, const llvm::omp::Clause);
   void GetSymbolsInObjectList(
       const parser::OmpObjectList &, std::vector<const Symbol *> &);
+  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
+  void SetLoopInfo(const parser::OpenMPLoopConstruct &x);
+  void CheckIsLoopIvPartOfClause(
+      llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
+  void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

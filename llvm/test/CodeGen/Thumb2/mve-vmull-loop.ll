@@ -10,37 +10,26 @@ define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noa
 ; CHECK-NEXT:    blt .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmullt.s32 q0, q2, q1
-; CHECK-NEXT:    vmullb.s32 q3, q2, q1
-; CHECK-NEXT:    vmov r5, s3
-; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    vmov r7, s1
+; CHECK-NEXT:    vmullb.s32 q2, q1, q0
+; CHECK-NEXT:    vmullt.s32 q3, q1, q0
+; CHECK-NEXT:    vmov r5, s11
+; CHECK-NEXT:    vmov r12, s10
 ; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov r4, s0
-; CHECK-NEXT:    lsrl r4, r7, #31
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r12
-; CHECK-NEXT:    vmov r12, s14
-; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
+; CHECK-NEXT:    vmov r4, s8
+; CHECK-NEXT:    vmov r5, s9
+; CHECK-NEXT:    lsrl r4, r5, #31
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r12
 ; CHECK-NEXT:    vmov r5, s15
-; CHECK-NEXT:    vmov r7, s13
+; CHECK-NEXT:    vmov r12, s14
 ; CHECK-NEXT:    lsrl r12, r5, #31
 ; CHECK-NEXT:    vmov r4, s12
-; CHECK-NEXT:    lsrl r4, r7, #31
-; CHECK-NEXT:    vmov q1[2], q1[0], r4, r12
-; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov.f32 s9, s7
-; CHECK-NEXT:    vmov.f32 s6, s0
-; CHECK-NEXT:    vmov.f32 s7, s1
-; CHECK-NEXT:    vmov.f32 s10, s2
-; CHECK-NEXT:    vmov.f32 s5, s6
-; CHECK-NEXT:    vmov.f32 s11, s3
-; CHECK-NEXT:    vmov.f32 s6, s8
-; CHECK-NEXT:    vmov.f32 s7, s10
-; CHECK-NEXT:    vstrb.8 q1, [r2], #16
+; CHECK-NEXT:    vmov r5, s13
+; CHECK-NEXT:    lsrl r4, r5, #31
+; CHECK-NEXT:    vmov q2[3], q2[1], r4, r12
+; CHECK-NEXT:    vstrb.8 q2, [r2], #16
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}

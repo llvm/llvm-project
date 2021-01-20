@@ -96,6 +96,7 @@ namespace format {
   TYPE(RegexLiteral)                                                           \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
+  TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \

@@ -9,6 +9,9 @@
 namespace lldb {
 
 
+%feature("docstring",
+"Describes how :py:class:`SBPlatform.ConnectRemote` connects to a remote platform."
+) SBPlatformConnectOptions;
 class SBPlatformConnectOptions
 {
 public:
@@ -42,6 +45,9 @@ public:
     SetLocalCacheDirectory(const char *path);
 };
 
+%feature("docstring",
+"Represents a shell command that can be run by :py:class:`SBPlatform.Run`."
+) SBPlatformShellCommand;
 class SBPlatformShellCommand
 {
 public:
@@ -104,7 +110,7 @@ current processes on the remote host, attach to one of those processes,
 install programs on the remote system, attach and launch processes,
 and much more.
 
-Every SBTarget has a corresponding SBPlatform. The platform can be
+Every :py:class:`SBTarget` has a corresponding SBPlatform. The platform can be
 specified upon target creation, or the currently selected platform
 will attempt to be used when creating the target automatically as long
 as the currently selected platform matches the target architecture

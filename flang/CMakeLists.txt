@@ -1,20 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-# RPATH settings on macOS do not affect INSTALL_NAME.
-if (POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-endif()
-
-# Include file check macros honor CMAKE_REQUIRED_LIBRARIES.
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
-# option() honors normal variables.
-if (POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)
-endif()
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 option(LINK_WITH_FIR "Link driver with FIR and LLVM" ON)
 option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" OFF)
@@ -268,10 +254,6 @@ endif()
 
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
-# Override LLVM versioning for now...
-set(FLANG_VERSION_MAJOR      "0")
-set(FLANG_VERSION_MINOR      "1")
-set(FLANG_VERSION_PATCHLEVEL "0")
 
 
 if (NOT DEFINED FLANG_VERSION_MAJOR)

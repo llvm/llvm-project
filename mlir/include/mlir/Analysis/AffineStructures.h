@@ -13,6 +13,7 @@
 #ifndef MLIR_ANALYSIS_AFFINE_STRUCTURES_H
 #define MLIR_ANALYSIS_AFFINE_STRUCTURES_H
 
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LogicalResult.h"
@@ -152,6 +153,12 @@ public:
   /// Returns true if the set of constraints is found to have no solution,
   /// false if a solution exists or all tests were inconclusive.
   bool isIntegerEmpty() const;
+
+  // Returns a matrix where each row is a vector along which the polytope is
+  // bounded. The span of the returned vectors is guaranteed to contain all
+  // such vectors. The returned vectors are NOT guaranteed to be linearly
+  // independent. This function should not be called on empty sets.
+  Matrix getBoundedDirections() const;
 
   /// Find a sample point satisfying the constraints. This uses a branch and
   /// bound algorithm with generalized basis reduction, which always works if

@@ -1106,12 +1106,15 @@ public:
     for (BasicBlock *Succ : successors(Check0))
       DTUpdates.push_back({DT->Delete, Check0, Succ});
 
-    BasicBlock *Check1 = SplitBlock(MatMul->getParent(), MatMul, nullptr, LI,
-                                    nullptr, "alias_cont");
+    BasicBlock *Check1 =
+        SplitBlock(MatMul->getParent(), MatMul, (DomTreeUpdater *)nullptr, LI,
+                   nullptr, "alias_cont");
     BasicBlock *Copy =
-        SplitBlock(MatMul->getParent(), MatMul, nullptr, LI, nullptr, "copy");
-    BasicBlock *Fusion = SplitBlock(MatMul->getParent(), MatMul, nullptr, LI,
-                                    nullptr, "no_alias");
+        SplitBlock(MatMul->getParent(), MatMul, (DomTreeUpdater *)nullptr, LI,
+                   nullptr, "copy");
+    BasicBlock *Fusion =
+        SplitBlock(MatMul->getParent(), MatMul, (DomTreeUpdater *)nullptr, LI,
+                   nullptr, "no_alias");
 
     // Check if the loaded memory location begins before the end of the store
     // location. If the condition holds, they might overlap, otherwise they are
@@ -1809,7 +1812,6 @@ public:
 
       for (Value *Op : cast<Instruction>(V)->operand_values())
         collectSharedInfo(Leaf, Op, ExprsInSubprogram, Shared);
-      return;
     }
 
     /// Calculate the number of exclusive and shared op counts for expression

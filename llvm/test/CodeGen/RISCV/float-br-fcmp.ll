@@ -93,8 +93,7 @@ define void @br_fcmp_oeq_alt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
 ; RV32IF-NEXT:    feq.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    beqz a0, .LBB2_2
+; RV32IF-NEXT:    bnez a0, .LBB2_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -109,8 +108,7 @@ define void @br_fcmp_oeq_alt(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a1
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
 ; RV64IF-NEXT:    feq.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    beqz a0, .LBB2_2
+; RV64IF-NEXT:    bnez a0, .LBB2_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -378,8 +376,7 @@ define void @br_fcmp_ueq(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    flt.s a0, ft1, ft0
 ; RV32IF-NEXT:    flt.s a1, ft0, ft1
 ; RV32IF-NEXT:    or a0, a1, a0
-; RV32IF-NEXT:    addi a1, zero, 1
-; RV32IF-NEXT:    bne a0, a1, .LBB9_2
+; RV32IF-NEXT:    beqz a0, .LBB9_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -396,8 +393,7 @@ define void @br_fcmp_ueq(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    flt.s a0, ft1, ft0
 ; RV64IF-NEXT:    flt.s a1, ft0, ft1
 ; RV64IF-NEXT:    or a0, a1, a0
-; RV64IF-NEXT:    addi a1, zero, 1
-; RV64IF-NEXT:    bne a0, a1, .LBB9_2
+; RV64IF-NEXT:    beqz a0, .LBB9_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -421,8 +417,7 @@ define void @br_fcmp_ugt(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
 ; RV32IF-NEXT:    fle.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB10_2
+; RV32IF-NEXT:    beqz a0, .LBB10_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -437,8 +432,7 @@ define void @br_fcmp_ugt(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a1
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
 ; RV64IF-NEXT:    fle.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB10_2
+; RV64IF-NEXT:    beqz a0, .LBB10_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -462,8 +456,7 @@ define void @br_fcmp_uge(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
 ; RV32IF-NEXT:    flt.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB11_2
+; RV32IF-NEXT:    beqz a0, .LBB11_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -478,8 +471,7 @@ define void @br_fcmp_uge(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a1
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
 ; RV64IF-NEXT:    flt.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB11_2
+; RV64IF-NEXT:    beqz a0, .LBB11_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -503,8 +495,7 @@ define void @br_fcmp_ult(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
 ; RV32IF-NEXT:    fle.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB12_2
+; RV32IF-NEXT:    beqz a0, .LBB12_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -519,8 +510,7 @@ define void @br_fcmp_ult(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a0
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
 ; RV64IF-NEXT:    fle.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB12_2
+; RV64IF-NEXT:    beqz a0, .LBB12_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -544,8 +534,7 @@ define void @br_fcmp_ule(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
 ; RV32IF-NEXT:    flt.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB13_2
+; RV32IF-NEXT:    beqz a0, .LBB13_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -560,8 +549,7 @@ define void @br_fcmp_ule(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a0
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
 ; RV64IF-NEXT:    flt.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB13_2
+; RV64IF-NEXT:    beqz a0, .LBB13_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -585,8 +573,7 @@ define void @br_fcmp_une(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
 ; RV32IF-NEXT:    feq.s a0, ft1, ft0
-; RV32IF-NEXT:    xori a0, a0, 1
-; RV32IF-NEXT:    bnez a0, .LBB14_2
+; RV32IF-NEXT:    beqz a0, .LBB14_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -601,8 +588,7 @@ define void @br_fcmp_une(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a1
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
 ; RV64IF-NEXT:    feq.s a0, ft1, ft0
-; RV64IF-NEXT:    xori a0, a0, 1
-; RV64IF-NEXT:    bnez a0, .LBB14_2
+; RV64IF-NEXT:    beqz a0, .LBB14_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -629,8 +615,7 @@ define void @br_fcmp_uno(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    feq.s a0, ft1, ft1
 ; RV32IF-NEXT:    feq.s a1, ft0, ft0
 ; RV32IF-NEXT:    and a0, a1, a0
-; RV32IF-NEXT:    addi a1, zero, 1
-; RV32IF-NEXT:    bne a0, a1, .LBB15_2
+; RV32IF-NEXT:    beqz a0, .LBB15_2
 ; RV32IF-NEXT:  # %bb.1: # %if.else
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -647,8 +632,7 @@ define void @br_fcmp_uno(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    feq.s a0, ft1, ft1
 ; RV64IF-NEXT:    feq.s a1, ft0, ft0
 ; RV64IF-NEXT:    and a0, a1, a0
-; RV64IF-NEXT:    addi a1, zero, 1
-; RV64IF-NEXT:    bne a0, a1, .LBB15_2
+; RV64IF-NEXT:    beqz a0, .LBB15_2
 ; RV64IF-NEXT:  # %bb.1: # %if.else
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16

@@ -692,7 +692,7 @@ private:
   /// vector.
   /// One "Extra" case is allowed to differ from the other.
   void gather(Value *V) {
-    bool isEQ = (cast<Instruction>(V)->getOpcode() == Instruction::Or);
+    bool isEQ = match(V, m_LogicalOr(m_Value(), m_Value()));
 
     // Keep a stack (SmallVector for efficiency) for depth-first traversal
     SmallVector<Value *, 8> DFT;
@@ -707,11 +707,14 @@ private:
 
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         // If it is a || (or && depending on isEQ), process the operands.
-        if (I->getOpcode() == (isEQ ? Instruction::Or : Instruction::And)) {
-          if (Visited.insert(I->getOperand(1)).second)
-            DFT.push_back(I->getOperand(1));
-          if (Visited.insert(I->getOperand(0)).second)
-            DFT.push_back(I->getOperand(0));
+        Value *Op0, *Op1;
+        if (isEQ ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
+                 : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+          if (Visited.insert(Op1).second)
+            DFT.push_back(Op1);
+          if (Visited.insert(Op0).second)
+            DFT.push_back(Op0);
+
           continue;
         }
 
@@ -1113,7 +1116,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
         for (auto *Succ : FailBlocks) {
           if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split",
-                                      DTU ? &DTU->getDomTree() : nullptr))
+                                      DTU))
             return false;
         }
       }
@@ -1345,7 +1348,7 @@ static bool isSafeToHoistInvoke(BasicBlock *BB1, BasicBlock *BB2,
   return true;
 }
 
-static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I);
+static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified = false);
 
 /// Given a conditional branch that goes to BB1 and BB2, hoist any common code
 /// in the two blocks up into the branch block. The caller of this function
@@ -1977,8 +1980,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
     // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split",
-                                DTU ? &DTU->getDomTree() : nullptr))
+    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split", DTU))
       // Edges couldn't be split.
       return false;
     Changed = true;
@@ -3391,8 +3393,7 @@ static bool mergeConditionalStoreToAddress(
     // branch to QFB and PostBB.
     BasicBlock *TruePred = QTB ? QTB : QFB->getSinglePredecessor();
     BasicBlock *NewBB =
-        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split",
-                               DTU ? &DTU->getDomTree() : nullptr);
+        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split", DTU);
     if (!NewBB)
       return false;
     PostBB = NewBB;
@@ -3421,9 +3422,9 @@ static bool mergeConditionalStoreToAddress(
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(
-      CombinedPred, &*QB.GetInsertPoint(), /*Unreachable=*/false,
-      /*BranchWeights=*/nullptr, DTU ? &DTU->getDomTree() : nullptr);
+  auto *T = SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(),
+                                      /*Unreachable=*/false,
+                                      /*BranchWeights=*/nullptr, DTU);
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   AAMDNodes AAMD;
@@ -4149,7 +4150,7 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   if (UsedICmps <= 1)
     return false;
 
-  bool TrueWhenEqual = (Cond->getOpcode() == Instruction::Or);
+  bool TrueWhenEqual = match(Cond, m_LogicalOr(m_Value(), m_Value()));
 
   // There might be duplicate constants in the list, which the switch
   // instruction can't handle, remove them now.
@@ -4187,9 +4188,8 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // then we evaluate them with an explicit branch first. Split the block
   // right before the condbr to handle it.
   if (ExtraCase) {
-    BasicBlock *NewBB =
-        SplitBlock(BB, BI, DTU ? &DTU->getDomTree() : nullptr, /*LI=*/nullptr,
-                   /*MSSAU=*/nullptr, "switch.early.test");
+    BasicBlock *NewBB = SplitBlock(BB, BI, DTU, /*LI=*/nullptr,
+                                   /*MSSAU=*/nullptr, "switch.early.test");
 
     // Remove the uncond branch added to the old block.
     Instruction *OldTI = BB->getTerminator();
@@ -4828,16 +4828,14 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
                                            DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
-  BasicBlock *NewDefaultBlock =
-      SplitBlockPredecessors(Switch->getDefaultDest(), Switch->getParent(), "",
-                             DTU ? &DTU->getDomTree() : nullptr);
+  BasicBlock *NewDefaultBlock = SplitBlockPredecessors(
+      Switch->getDefaultDest(), Switch->getParent(), "", DTU);
   auto *OrigDefaultBlock = Switch->getDefaultDest();
   Switch->setDefaultDest(&*NewDefaultBlock);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, &*NewDefaultBlock},
                        {DominatorTree::Delete, BB, OrigDefaultBlock}});
-  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(),
-             DTU ? &DTU->getDomTree() : nullptr);
+  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(), DTU);
   SmallVector<DominatorTree::UpdateType, 2> Updates;
   for (auto *Successor : successors(NewDefaultBlock))
     Updates.push_back({DominatorTree::Delete, NewDefaultBlock, Successor});
@@ -5399,20 +5397,25 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
                                               Value *SelectValue,
                                               IRBuilder<> &Builder,
                                               DomTreeUpdater *DTU) {
+  std::vector<DominatorTree::UpdateType> Updates;
+
   BasicBlock *SelectBB = SI->getParent();
+  BasicBlock *DestBB = PHI->getParent();
+
+  if (!is_contained(predecessors(DestBB), SelectBB))
+    Updates.push_back({DominatorTree::Insert, SelectBB, DestBB});
+  Builder.CreateBr(DestBB);
+
+  // Remove the switch.
+
   while (PHI->getBasicBlockIndex(SelectBB) >= 0)
     PHI->removeIncomingValue(SelectBB);
   PHI->addIncoming(SelectValue, SelectBB);
 
-  Builder.CreateBr(PHI->getParent());
-
-  std::vector<DominatorTree::UpdateType> Updates;
-
-  // Remove the switch.
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
     BasicBlock *Succ = SI->getSuccessor(i);
 
-    if (Succ == PHI->getParent())
+    if (Succ == DestBB)
       continue;
     Succ->removePredecessor(SelectBB);
     Updates.push_back({DominatorTree::Delete, SelectBB, Succ});
@@ -6545,7 +6548,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 }
 
 /// Check if passing a value to an instruction will cause undefined behavior.
-static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
+static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified) {
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     return false;
@@ -6568,12 +6571,15 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
 
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
-      if (GEP->getPointerOperand() == I)
-        return passingValueIsAlwaysUndefined(V, GEP);
+      if (GEP->getPointerOperand() == I) {
+        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+          PtrValueMayBeModified = true;
+        return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
+      }
 
     // Look through bitcasts.
     if (BitCastInst *BC = dyn_cast<BitCastInst>(Use))
-      return passingValueIsAlwaysUndefined(V, BC);
+      return passingValueIsAlwaysUndefined(V, BC, PtrValueMayBeModified);
 
     // Load from null is undefined.
     if (LoadInst *LI = dyn_cast<LoadInst>(Use))
@@ -6588,10 +6594,35 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
 
-    // A call to null is undefined.
-    if (auto *CB = dyn_cast<CallBase>(Use))
-      return !NullPointerIsDefined(CB->getFunction()) &&
-             CB->getCalledOperand() == I;
+    if (auto *CB = dyn_cast<CallBase>(Use)) {
+      if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))
+        return false;
+      // A call to null is undefined.
+      if (CB->getCalledOperand() == I)
+        return true;
+
+      if (C->isNullValue()) {
+        for (const llvm::Use &Arg : CB->args())
+          if (Arg == I) {
+            unsigned ArgIdx = CB->getArgOperandNo(&Arg);
+            if (CB->paramHasAttr(ArgIdx, Attribute::NonNull) &&
+                CB->paramHasAttr(ArgIdx, Attribute::NoUndef)) {
+              // Passing null to a nonnnull+noundef argument is undefined.
+              return !PtrValueMayBeModified;
+            }
+          }
+      } else if (isa<UndefValue>(C)) {
+        // Passing undef to a noundef argument is undefined.
+        for (const llvm::Use &Arg : CB->args())
+          if (Arg == I) {
+            unsigned ArgIdx = CB->getArgOperandNo(&Arg);
+            if (CB->paramHasAttr(ArgIdx, Attribute::NoUndef)) {
+              // Passing undef to a noundef argument is undefined.
+              return true;
+            }
+          }
+      }
+    }
   }
   return false;
 }

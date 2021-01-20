@@ -966,9 +966,13 @@ def : BccSwapPat<setle, BGE>;
 def : BccSwapPat<setugt, BLTU>;
 def : BccSwapPat<setule, BGEU>;
 
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// Extra patterns are needed for a brcond without a setcc (i.e. where the
 // condition was calculated elsewhere).
 def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
+// In this pattern, the `(xor $cond, 1)` functions like (boolean) `not`, as the
+// `brcond` only uses the lowest bit.
+def : Pat<(brcond (XLenVT (xor GPR:$cond, 1)), bb:$imm12),
+          (BEQ GPR:$cond, X0, bb:$imm12)>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
@@ -1070,19 +1074,19 @@ def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
 
 // There are single-instruction versions of these in Zbb, so disable these
 // Pseudos if that extension is present.
-let Predicates = [NotHasStdExtZbb], hasSideEffects = 0, mayLoad = 0,
+let hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
 def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
 def PseudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.h", "$rd, $rs">;
 // rv64's sext.w is defined above, using InstAlias<"sext.w ...
 // zext.b is defined above, using InstAlias<"zext.b ...
 def PseudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.h", "$rd, $rs">;
-} // Predicates = [NotHasStdExtZbb], ...
+} // hasSideEffects = 0, ...
 
-let Predicates = [NotHasStdExtZbb, IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+let Predicates = [IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   isCodeGenOnly = 0, isAsmParserOnly = 1 in {
 def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
-} // Predicates = [NotHasStdExtZbb, IsRV64], ...
+} // Predicates = [IsRV64], ...
 
 /// Loads
 

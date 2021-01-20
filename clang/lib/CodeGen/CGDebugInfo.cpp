@@ -254,24 +254,12 @@ StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
   FunctionTemplateSpecializationInfo *Info =
       FD->getTemplateSpecializationInfo();
 
-  // Emit the unqualified name in normal operation. LLVM and the debugger can
-  // compute the fully qualified name from the scope chain. If we're only
-  // emitting line table info, there won't be any scope chains, so emit the
-  // fully qualified name here so that stack traces are more accurate.
-  // FIXME: Do this when emitting DWARF as well as when emitting CodeView after
-  // evaluating the size impact.
-  bool UseQualifiedName = DebugKind == codegenoptions::DebugLineTablesOnly &&
-                          CGM.getCodeGenOpts().EmitCodeView;
-
-  if (!Info && FII && !UseQualifiedName)
+  if (!Info && FII)
     return FII->getName();
 
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
-  if (!UseQualifiedName)
-    FD->printName(OS);
-  else
-    FD->printQualifiedName(OS, getPrintingPolicy());
+  FD->printName(OS);
 
   // Add any template specialization args.
   if (Info) {
@@ -1058,7 +1046,10 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
       Flags |= llvm::DINode::FlagNonTrivial;
 
   // Create the type.
-  SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+  SmallString<256> Identifier;
+  // Don't include a linkage name in line tables only.
+  if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+    Identifier = getTypeIdentifier(Ty, CGM, TheCU);
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align, Flags,
       Identifier);
@@ -1958,6 +1949,14 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter, V));
     } break;
+    case TemplateArgument::UncommonValue: {
+      QualType T = TA.getUncommonValueType();
+      llvm::DIType *TTy = getOrCreateType(T, Unit);
+      llvm::Constant *V = ConstantEmitter(CGM).emitAbstract(
+          SourceLocation(), TA.getAsUncommonValue(), T);
+      TemplateParams.push_back(DBuilder.createTemplateValueParameter(
+          TheCU, Name, TTy, defaultParameter, V));
+    } break;
     case TemplateArgument::Template:
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
           TheCU, Name, nullptr,
@@ -2325,6 +2324,9 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (auto *ES = RD->getASTContext().getExternalSource())
     if (ES->hasExternalDefinitions(RD) == ExternalASTSource::EK_Always)
       return true;
+
+  if (DebugKind == codegenoptions::DebugLineTablesOnly)
+    return true;
 
   if (DebugKind > codegenoptions::LimitedDebugInfo)
     return false;
@@ -3473,7 +3475,11 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
                               DebugKind <= codegenoptions::DebugLineTablesOnly))
     LinkageName = StringRef();
 
-  if (CGM.getCodeGenOpts().hasReducedDebugInfo()) {
+  // Emit the function scope in line tables only mode (if CodeView) to
+  // differentiate between function names.
+  if (CGM.getCodeGenOpts().hasReducedDebugInfo() ||
+      (DebugKind == codegenoptions::DebugLineTablesOnly &&
+       CGM.getCodeGenOpts().EmitCodeView)) {
     if (const NamespaceDecl *NSDecl =
             dyn_cast_or_null<NamespaceDecl>(FD->getDeclContext()))
       FDContext = getOrCreateNamespace(NSDecl);
@@ -3482,6 +3488,8 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
       llvm::DIScope *Mod = getParentModuleOrNull(RDecl);
       FDContext = getContextDescriptor(RDecl, Mod ? Mod : TheCU);
     }
+  }
+  if (CGM.getCodeGenOpts().hasReducedDebugInfo()) {
     // Check if it is a noreturn-marked function
     if (FD->isNoReturn())
       Flags |= llvm::DINode::FlagNoReturn;

@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PERFREADER_H
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
 #include <fstream>
@@ -75,8 +76,60 @@ struct LBREntry {
       : Source(S), Target(T), IsArtificial(I) {}
 };
 
+// Hash interface for generic data of type T
+// Data should implement a \fn getHashCode and a \fn isEqual
+// Currently getHashCode is non-virtual to avoid the overhead of calling vtable,
+// i.e we explicitly calculate hash of derived class, assign to base class's
+// HashCode. This also provides the flexibility for calculating the hash code
+// incrementally(like rolling hash) during frame stack unwinding since unwinding
+// only changes the leaf of frame stack. \fn isEqual is a virtual function,
+// which will have perf overhead. In the future, if we redesign a better hash
+// function, then we can just skip this or switch to non-virtual function(like
+// just ignore comparision if hash conflicts probabilities is low)
+template <class T> class Hashable {
+public:
+  std::shared_ptr<T> Data;
+  Hashable(const std::shared_ptr<T> &D) : Data(D) {}
+
+  // Hash code generation
+  struct Hash {
+    uint64_t operator()(const Hashable<T> &Key) const {
+      // Don't make it virtual for getHashCode
+      assert(Key.Data->getHashCode() && "Should generate HashCode for it!");
+      return Key.Data->getHashCode();
+    }
+  };
+
+  // Hash equal
+  struct Equal {
+    bool operator()(const Hashable<T> &LHS, const Hashable<T> &RHS) const {
+      // Precisely compare the data, vtable will have overhead.
+      return LHS.Data->isEqual(RHS.Data.get());
+    }
+  };
+
+  T *getPtr() const { return Data.get(); }
+};
+
+// Base class to extend for all types of perf sample
+struct PerfSample {
+  uint64_t HashCode = 0;
+
+  virtual ~PerfSample() = default;
+  uint64_t getHashCode() const { return HashCode; }
+  virtual bool isEqual(const PerfSample *K) const {
+    return HashCode == K->HashCode;
+  };
+
+  // Utilities for LLVM-style RTTI
+  enum PerfKind { PK_HybridSample };
+  const PerfKind Kind;
+  PerfKind getKind() const { return Kind; }
+  PerfSample(PerfKind K) : Kind(K){};
+};
+
 // The parsed hybrid sample including call stack and LBR stack.
-struct HybridSample {
+struct HybridSample : public PerfSample {
   // Profiled binary that current frame address belongs to
   ProfiledBinary *Binary;
   // Call stack recorded in FILO(leaf to root) order
@@ -84,12 +137,18 @@ struct HybridSample {
   // LBR stack recorded in FIFO order
   SmallVector<LBREntry, 16> LBRStack;
 
+  HybridSample() : PerfSample(PK_HybridSample){};
+  static bool classof(const PerfSample *K) {
+    return K->getKind() == PK_HybridSample;
+  }
+
   // Used for sample aggregation
-  bool operator==(const HybridSample &Other) const {
-    if (Other.Binary != Binary)
+  bool isEqual(const PerfSample *K) const override {
+    const HybridSample *Other = dyn_cast<HybridSample>(K);
+    if (Other->Binary != Binary)
       return false;
-    const std::list<uint64_t> &OtherCallStack = Other.CallStack;
-    const SmallVector<LBREntry, 16> &OtherLBRStack = Other.LBRStack;
+    const std::list<uint64_t> &OtherCallStack = Other->CallStack;
+    const SmallVector<LBREntry, 16> &OtherLBRStack = Other->LBRStack;
 
     if (CallStack.size() != OtherCallStack.size() ||
         LBRStack.size() != OtherLBRStack.size())
@@ -108,7 +167,31 @@ struct HybridSample {
     }
     return true;
   }
+
+  void genHashCode() {
+    // Use simple DJB2 hash
+    auto HashCombine = [](uint64_t H, uint64_t V) {
+      return ((H << 5) + H) + V;
+    };
+    uint64_t Hash = 5381;
+    Hash = HashCombine(Hash, reinterpret_cast<uint64_t>(Binary));
+    for (const auto &Value : CallStack) {
+      Hash = HashCombine(Hash, Value);
+    }
+    for (const auto &Entry : LBRStack) {
+      Hash = HashCombine(Hash, Entry.Source);
+      Hash = HashCombine(Hash, Entry.Target);
+    }
+    HashCode = Hash;
+  }
 };
+
+// After parsing the sample, we record the samples by aggregating them
+// into this counter. The key stores the sample data and the value is
+// the sample repeat times.
+using AggregatedCounter =
+    std::unordered_map<Hashable<PerfSample>, uint64_t,
+                       Hashable<PerfSample>::Hash, Hashable<PerfSample>::Equal>;
 
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
@@ -124,10 +207,10 @@ struct UnwindState {
   const SmallVector<LBREntry, 16> &LBRStack;
   // Used to iterate the address range
   InstructionPointer InstPtr;
-  UnwindState(const HybridSample &Sample)
-      : Binary(Sample.Binary), CallStack(Sample.CallStack),
-        LBRStack(Sample.LBRStack),
-        InstPtr(Sample.Binary, Sample.CallStack.front()) {}
+  UnwindState(const HybridSample *Sample)
+      : Binary(Sample->Binary), CallStack(Sample->CallStack),
+        LBRStack(Sample->LBRStack),
+        InstPtr(Sample->Binary, Sample->CallStack.front()) {}
 
   bool validateInitialState() {
     uint64_t LBRLeaf = LBRStack[LBRIndex].Target;
@@ -160,56 +243,92 @@ struct UnwindState {
   void advanceLBR() { LBRIndex++; }
 };
 
+// Base class for sample counter key with context
+struct ContextKey {
+  uint64_t HashCode = 0;
+  virtual ~ContextKey() = default;
+  uint64_t getHashCode() const { return HashCode; }
+  virtual bool isEqual(const ContextKey *K) const {
+    return HashCode == K->HashCode;
+  };
+
+  // Utilities for LLVM-style RTTI
+  enum ContextKind { CK_StringBased, CK_ProbeBased };
+  const ContextKind Kind;
+  ContextKind getKind() const { return Kind; }
+  ContextKey(ContextKind K) : Kind(K){};
+};
+
+// String based context id
+struct StringBasedCtxKey : public ContextKey {
+  std::string Context;
+  StringBasedCtxKey() : ContextKey(CK_StringBased){};
+  static bool classof(const ContextKey *K) {
+    return K->getKind() == CK_StringBased;
+  }
+
+  bool isEqual(const ContextKey *K) const override {
+    const StringBasedCtxKey *Other = dyn_cast<StringBasedCtxKey>(K);
+    return Context == Other->Context;
+  }
+
+  void genHashCode() { HashCode = hash_value(Context); }
+};
+
+// Probe based context key as the intermediate key of context
+// String based context key will introduce redundant string handling
+// since the callee context is inferred from the context string which
+// need to be splitted by '@' to get the last location frame, so we
+// can just use probe instead and generate the string in the end.
+struct ProbeBasedCtxKey : public ContextKey {
+  SmallVector<const PseudoProbe *, 16> Probes;
+
+  ProbeBasedCtxKey() : ContextKey(CK_ProbeBased) {}
+  static bool classof(const ContextKey *K) {
+    return K->getKind() == CK_ProbeBased;
+  }
+
+  bool isEqual(const ContextKey *K) const override {
+    const ProbeBasedCtxKey *O = dyn_cast<ProbeBasedCtxKey>(K);
+    assert(O != nullptr && "Probe based key shouldn't be null in isEqual");
+    return std::equal(Probes.begin(), Probes.end(), O->Probes.begin(),
+                      O->Probes.end());
+  }
+
+  void genHashCode() {
+    for (const auto *P : Probes) {
+      HashCode = hash_combine(HashCode, P);
+    }
+    if (HashCode == 0) {
+      // Avoid zero value of HashCode when it's an empty list
+      HashCode = 1;
+    }
+  }
+};
+
 // The counter of branch samples for one function indexed by the branch,
 // which is represented as the source and target offset pair.
 using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
-// Range sample counters indexed by the context string
-using ContextRangeCounter = std::unordered_map<std::string, RangeSample>;
-// Branch sample counters indexed by the context string
-using ContextBranchCounter = std::unordered_map<std::string, BranchSample>;
+// Wrapper for sample counters including range counter and branch counter
+struct SampleCounter {
+  RangeSample RangeCounter;
+  BranchSample BranchCounter;
 
-// For Hybrid sample counters
-struct ContextSampleCounters {
-  ContextRangeCounter RangeCounter;
-  ContextBranchCounter BranchCounter;
-
-  void recordRangeCount(std::string &ContextId, uint64_t Start, uint64_t End,
-                        uint64_t Repeat) {
-    RangeCounter[ContextId][{Start, End}] += Repeat;
+  void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
+    RangeCounter[{Start, End}] += Repeat;
   }
-  void recordBranchCount(std::string &ContextId, uint64_t Source,
-                         uint64_t Target, uint64_t Repeat) {
-    BranchCounter[ContextId][{Source, Target}] += Repeat;
+  void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
+    BranchCounter[{Source, Target}] += Repeat;
   }
 };
 
-struct HybridSampleHash {
-  uint64_t hashCombine(uint64_t Hash, uint64_t Value) const {
-    // Simple DJB2 hash
-    return ((Hash << 5) + Hash) + Value;
-  }
-
-  uint64_t operator()(const HybridSample &Sample) const {
-    uint64_t Hash = 5381;
-    Hash = hashCombine(Hash, reinterpret_cast<uint64_t>(Sample.Binary));
-    for (const auto &Value : Sample.CallStack) {
-      Hash = hashCombine(Hash, Value);
-    }
-    for (const auto &Entry : Sample.LBRStack) {
-      Hash = hashCombine(Hash, Entry.Source);
-      Hash = hashCombine(Hash, Entry.Target);
-    }
-    return Hash;
-  }
-};
-
-// After parsing the sample, we record the samples by aggregating them
-// into this structure and the value is the sample counter.
-using AggregationCounter =
-    std::unordered_map<HybridSample, uint64_t, HybridSampleHash>;
+// Sample counter with context to support context-sensitive profile
+using ContextSampleCounterMap =
+    std::unordered_map<Hashable<ContextKey>, SampleCounter,
+                       Hashable<ContextKey>::Hash, Hashable<ContextKey>::Equal>;
 
 /*
 As in hybrid sample we have a group of LBRs and the most recent sampling call
@@ -232,7 +351,7 @@ range as sample counter for further CS profile generation.
 */
 class VirtualUnwinder {
 public:
-  VirtualUnwinder(ContextSampleCounters *Counters) : SampleCounters(Counters) {}
+  VirtualUnwinder(ContextSampleCounterMap *Counter) : CtxCounterMap(Counter) {}
 
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
@@ -250,14 +369,29 @@ public:
   void unwindLinear(UnwindState &State, uint64_t Repeat);
   void unwindReturn(UnwindState &State);
   void unwindBranchWithinFrame(UnwindState &State);
-  bool unwind(const HybridSample &Sample, uint64_t Repeat);
+  bool unwind(const HybridSample *Sample, uint64_t Repeat);
   void recordRangeCount(uint64_t Start, uint64_t End, UnwindState &State,
                         uint64_t Repeat);
   void recordBranchCount(const LBREntry &Branch, UnwindState &State,
                          uint64_t Repeat);
+  SampleCounter &getOrCreateCounter(const ProfiledBinary *Binary,
+                                    std::list<uint64_t> &CallStack);
+  // Use pseudo probe based context key to get the sample counter
+  // A context stands for a call path from 'main' to an uninlined
+  // callee with all inline frames recovered on that path. The probes
+  // belonging to that call path is the probes either originated from
+  // the callee or from any functions inlined into the callee. Since
+  // pseudo probes are organized in a tri-tree style after decoded,
+  // the tree path from the tri-tree root (which is the uninlined
+  // callee) to the probe node forms an inline context.
+  // Here we use a list of probe(pointer) as the context key to speed up
+  // aggregation and the final context string will be generate in
+  // ProfileGenerator
+  SampleCounter &getOrCreateCounterForProbe(const ProfiledBinary *Binary,
+                                            std::list<uint64_t> &CallStack);
 
 private:
-  ContextSampleCounters *SampleCounters;
+  ContextSampleCounterMap *CtxCounterMap;
 };
 
 // Filename to binary map
@@ -268,7 +402,7 @@ using AddressBinaryMap = std::map<uint64_t, ProfiledBinary *>;
 // same binary loaded at different addresses, they should share the same sample
 // counter
 using BinarySampleCounterMap =
-    std::unordered_map<ProfiledBinary *, ContextSampleCounters>;
+    std::unordered_map<ProfiledBinary *, ContextSampleCounterMap>;
 
 // Load binaries and read perf trace to parse the events and samples
 class PerfReader {
@@ -344,7 +478,7 @@ private:
 private:
   BinarySampleCounterMap BinarySampleCounters;
   // Samples with the repeating time generated by the perf reader
-  AggregationCounter AggregatedSamples;
+  AggregatedCounter AggregatedSamples;
   PerfScriptType PerfType;
 };
 

@@ -182,20 +182,22 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Use the greater of the alignment on the load or its source pointer.
   Alignment = std::max(SrcPtr->getPointerAlignment(DL), Alignment);
   Type *LoadTy = Load->getType();
-  int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
+  InstructionCost OldCost =
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
   OldCost += TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
                                           /* Insert */ true, HasExtract);
 
   // New pattern: load VecPtr
-  int NewCost = TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
   // Optionally, we are shuffling the loaded vector element(s) into place.
   if (OffsetEltIndex)
     NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
-  if (OldCost < NewCost)
+  if (OldCost < NewCost || !NewCost.isValid())
     return false;
 
   // It is safe and potentially profitable to load a vector directly:
@@ -239,8 +241,14 @@ ExtractElementInst *VectorCombine::getShuffleExtract(
 
   Type *VecTy = Ext0->getVectorOperand()->getType();
   assert(VecTy == Ext1->getVectorOperand()->getType() && "Need matching types");
-  int Cost0 = TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
-  int Cost1 = TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
+  InstructionCost Cost0 =
+      TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
+  InstructionCost Cost1 =
+      TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
+
+  // If both costs are invalid no shuffle is needed
+  if (!Cost0.isValid() && !Cost1.isValid())
+    return nullptr;
 
   // We are extracting from 2 different indexes, so one operand must be shuffled
   // before performing a vector operation and/or extract. The more expensive
@@ -276,7 +284,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
          "Expected constant extract indexes");
   Type *ScalarTy = Ext0->getType();
   auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
-  int ScalarOpCost, VectorOpCost;
+  InstructionCost ScalarOpCost, VectorOpCost;
 
   // Get cost estimates for scalar and vector versions of the operation.
   bool IsBinOp = Instruction::isBinaryOp(Opcode);
@@ -297,9 +305,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   unsigned Ext0Index = cast<ConstantInt>(Ext0->getOperand(1))->getZExtValue();
   unsigned Ext1Index = cast<ConstantInt>(Ext1->getOperand(1))->getZExtValue();
 
-  int Extract0Cost =
+  InstructionCost Extract0Cost =
       TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, Ext0Index);
-  int Extract1Cost =
+  InstructionCost Extract1Cost =
       TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, Ext1Index);
 
   // A more expensive extract will always be replaced by a splat shuffle.
@@ -309,11 +317,11 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // TODO: Evaluate whether that always results in lowest cost. Alternatively,
   //       check the cost of creating a broadcast shuffle and shuffling both
   //       operands to element 0.
-  int CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
+  InstructionCost CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
 
   // Extra uses of the extracts mean that we include those costs in the
   // vector total because those instructions will not be eliminated.
-  int OldCost, NewCost;
+  InstructionCost OldCost, NewCost;
   if (Ext0->getOperand(0) == Ext1->getOperand(0) && Ext0Index == Ext1Index) {
     // Handle a special case. If the 2 extracts are identical, adjust the
     // formulas to account for that. The extra use charge allows for either the
@@ -510,8 +518,11 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
 
   // The new shuffle must not cost more than the old shuffle. The bitcast is
   // moved ahead of the shuffle, so assume that it has the same cost as before.
-  if (TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DestTy) >
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy))
+  InstructionCost DestCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DestTy);
+  InstructionCost SrcCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy);
+  if (DestCost > SrcCost || !DestCost.isValid())
     return false;
 
   unsigned DestNumElts = DestTy->getNumElements();
@@ -601,7 +612,7 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
          "Unexpected types for insert element into binop or cmp");
 
   unsigned Opcode = I.getOpcode();
-  int ScalarOpCost, VectorOpCost;
+  InstructionCost ScalarOpCost, VectorOpCost;
   if (IsCmp) {
     ScalarOpCost = TTI.getCmpSelInstrCost(Opcode, ScalarTy);
     VectorOpCost = TTI.getCmpSelInstrCost(Opcode, VecTy);
@@ -612,16 +623,16 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
-  int InsertCost =
+  InstructionCost InsertCost =
       TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, Index);
-  int OldCost = (IsConst0 ? 0 : InsertCost) + (IsConst1 ? 0 : InsertCost) +
-                VectorOpCost;
-  int NewCost = ScalarOpCost + InsertCost +
-                (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCost) +
-                (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCost);
+  InstructionCost OldCost =
+      (IsConst0 ? 0 : InsertCost) + (IsConst1 ? 0 : InsertCost) + VectorOpCost;
+  InstructionCost NewCost = ScalarOpCost + InsertCost +
+                            (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCost) +
+                            (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCost);
 
   // We want to scalarize unless the vector variant actually has lower cost.
-  if (OldCost < NewCost)
+  if (OldCost < NewCost || !NewCost.isValid())
     return false;
 
   // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
@@ -701,7 +712,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   if (!VecTy)
     return false;
 
-  int OldCost = TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
+  InstructionCost OldCost =
+      TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
   OldCost += TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
   OldCost += TTI.getCmpSelInstrCost(CmpOpcode, I0->getType()) * 2;
   OldCost += TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
@@ -712,7 +724,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   int CheapIndex = ConvertToShuf == Ext0 ? Index1 : Index0;
   int ExpensiveIndex = ConvertToShuf == Ext0 ? Index0 : Index1;
   auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
-  int NewCost = TTI.getCmpSelInstrCost(CmpOpcode, X->getType());
+  InstructionCost NewCost = TTI.getCmpSelInstrCost(CmpOpcode, X->getType());
   NewCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy);
   NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
@@ -721,7 +733,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   // Aggressively form vector ops if the cost is equal because the transform
   // may enable further optimization.
   // Codegen can reverse this transform (scalarize) if it was not profitable.
-  if (OldCost < NewCost)
+  if (OldCost < NewCost || !NewCost.isValid())
     return false;
 
   // Create a vector constant from the 2 scalar constants.

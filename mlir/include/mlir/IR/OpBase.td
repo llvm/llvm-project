@@ -466,6 +466,8 @@ class FloatOfWidths<list<int> widths> :
 def F16 : F<16>;
 def F32 : F<32>;
 def F64 : F<64>;
+def F80 : F<80>;
+def F128 : F<128>;
 
 def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
            BuildableType<"$_builder.getBF16Type()">;
@@ -2191,15 +2193,27 @@ class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
+// An optional comparator function may be provided that changes the above form
+// into: `comparator(transform(lhs.getType()), rhs.getType())`.
 class TypesMatchWith<string summary, string lhsArg, string rhsArg,
-                     string transform> :
-    PredOpTrait<summary, CPred<
-      !subst("$_self", "$" # lhsArg # ".getType()", transform)
-      # " == $" # rhsArg # ".getType()">> {
+                     string transform, string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+      comparator # "(" #
+      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
+      ", $" # rhsArg # ".getType())">> {
   string lhs = lhsArg;
   string rhs = rhsArg;
   string transformer = transform;
 }
+
+// Special variant of `TypesMatchWith` that provides a comparator suitable for
+// ranged arguments.
+class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                           string transform>
+  : TypesMatchWith<summary, lhsArg, rhsArg, transform,
+    "[](auto &&lhs, auto &&rhs) { "
+    "return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());"
+    " }">;
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[

@@ -146,8 +146,11 @@ struct WasmFunction {
 
 struct WasmDataSegment {
   uint32_t InitFlags;
-  uint32_t MemoryIndex; // present if InitFlags & WASM_SEGMENT_HAS_MEMINDEX
-  WasmInitExpr Offset; // present if InitFlags & WASM_SEGMENT_IS_PASSIVE == 0
+  // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
+  uint32_t MemoryIndex;
+  // Present if InitFlags & WASM_DATA_SEGMENT_IS_PASSIVE == 0.
+  WasmInitExpr Offset;
+
   ArrayRef<uint8_t> Content;
   StringRef Name; // from the "segment info" section
   uint32_t Alignment;
@@ -192,8 +195,8 @@ struct WasmSymbolInfo {
   // For symbols to be exported from the final module
   Optional<StringRef> ExportName;
   union {
-    // For function or global symbols, the index in function or global index
-    // space.
+    // For function, table, or global symbols, the index in function, table, or
+    // global index space.
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
@@ -300,8 +303,8 @@ enum : unsigned {
 };
 
 enum : unsigned {
-  WASM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_SEGMENT_HAS_MEMINDEX = 0x02,
+  WASM_DATA_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_DATA_SEGMENT_HAS_MEMINDEX = 0x02,
 };
 
 // Feature policy prefixes used in the custom "target_features" section

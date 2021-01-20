@@ -120,7 +120,6 @@ template <typename Benchmark> struct Harness : Benchmark {
           std::function<unsigned()> SizeSampler,
           std::function<unsigned()> OffsetSampler)
       : Benchmark(BufferSize), BufferSize(BufferSize),
-        BatchParameterCount(BatchParameterCount),
         Parameters(BatchParameterCount), SizeSampler(SizeSampler),
         OffsetSampler(OffsetSampler) {}
 
@@ -136,7 +135,6 @@ template <typename Benchmark> struct Harness : Benchmark {
 
 private:
   const size_t BufferSize;
-  const size_t BatchParameterCount;
   std::vector<ParameterType> Parameters;
   std::function<unsigned()> SizeSampler;
   std::function<unsigned()> OffsetSampler;
@@ -262,17 +260,21 @@ private:
     };
   }
 
-  void reportProgress(BenchmarkStatus BS) {
+  void reportProgress() {
+    static size_t LastPercent = -1;
     const size_t TotalSteps = Study.Measurements.capacity();
     const size_t Steps = Study.Measurements.size();
     const size_t Percent = 100 * Steps / TotalSteps;
+    if (Percent == LastPercent)
+      return;
+    LastPercent = Percent;
     size_t I = 0;
     errs() << '[';
     for (; I <= Percent; ++I)
       errs() << '#';
     for (; I <= 100; ++I)
       errs() << '_';
-    errs() << "] " << Percent << "%\r";
+    errs() << "] " << Percent << '%' << '\r';
   }
 
   void runTrials(const BenchmarkOptions &Options,
@@ -283,7 +285,7 @@ private:
     for (size_t i = 0; i < NumTrials; ++i) {
       const BenchmarkResult Result = benchmark(Options, B, B.functor());
       Study.Measurements.push_back(Result.BestGuess);
-      reportProgress(Result.TerminationStatus);
+      reportProgress();
     }
   }
 
@@ -330,6 +332,7 @@ void writeStudy(const Study &S) {
                            .concat(Output));
   json::OStream JOS(FOS);
   serializeToJson(S, JOS);
+  FOS << "\n";
 }
 
 void main() {

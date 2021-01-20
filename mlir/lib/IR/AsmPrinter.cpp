@@ -1257,12 +1257,19 @@ void ModulePrinter::printLocationInternal(LocationAttr loc, bool pretty) {
           os << "unknown";
       })
       .Case<FileLineColLoc>([&](FileLineColLoc loc) {
-        StringRef mayQuote = pretty ? "" : "\"";
-        os << mayQuote << loc.getFilename() << mayQuote << ':' << loc.getLine()
-           << ':' << loc.getColumn();
+        if (pretty) {
+          os << loc.getFilename();
+        } else {
+          os << "\"";
+          printEscapedString(loc.getFilename(), os);
+          os << "\"";
+        }
+        os << ':' << loc.getLine() << ':' << loc.getColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
-        os << '\"' << loc.getName() << '\"';
+        os << '\"';
+        printEscapedString(loc.getName(), os);
+        os << '\"';
 
         // Print the child if it isn't unknown.
         auto childLoc = loc.getChildLoc();
@@ -1816,6 +1823,8 @@ void ModulePrinter::printType(Type type) {
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<Float32Type>([&](Type) { os << "f32"; })
       .Case<Float64Type>([&](Type) { os << "f64"; })
+      .Case<Float80Type>([&](Type) { os << "f80"; })
+      .Case<Float128Type>([&](Type) { os << "f128"; })
       .Case<IntegerType>([&](IntegerType integerTy) {
         if (integerTy.isSigned())
           os << 's';

@@ -6466,10 +6466,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Drop the intrinsic, but forward the value
     setValue(&I, getValue(I.getOperand(0)));
     return;
+
   case Intrinsic::assume:
+  case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
-    // Discard annotate attributes, assumptions, and artificial side-effects.
+    // Discard annotate attributes, noalias scope declarations, assumptions, and
+    // artificial side-effects.
     return;
 
   case Intrinsic::codeview_annotation: {
@@ -6599,7 +6602,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT OverflowVT = MVT::i1;
     if (ResultVT.isVector())
       OverflowVT = EVT::getVectorVT(
-          *Context, OverflowVT, ResultVT.getVectorNumElements());
+          *Context, OverflowVT, ResultVT.getVectorElementCount());
 
     SDVTList VTs = DAG.getVTList(ResultVT, OverflowVT);
     setValue(&I, DAG.getNode(Op, sdl, VTs, Op1, Op2));

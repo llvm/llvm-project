@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/ctype/isascii.h"
-
 #include "utils/UnitTest/Test.h"
+
+#include "src/ctype/isascii.h"
 
 TEST(IsAscii, DefaultLocale) {
   // Loops through all characters, verifying that ascii characters

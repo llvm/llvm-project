@@ -314,6 +314,7 @@ enum NodeType : unsigned {
   DUP_MERGE_PASSTHRU,
   INDEX_VECTOR,
 
+  // Cast between vectors of the same element type but differ in length.
   REINTERPRET_CAST,
 
   LD1_MERGE_ZERO,
@@ -1022,6 +1023,17 @@ private:
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
   // used for 64bit and 128bit vectors as well.
   bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
+
+  // With the exception of data-predicate transitions, no instructions are
+  // required to cast between legal scalable vector types. However:
+  //  1. Packed and unpacked types have different bit lengths, meaning BITCAST
+  //     is not universally useable.
+  //  2. Most unpacked integer types are not legal and thus integer extends
+  //     cannot be used to convert between unpacked and packed types.
+  // These can make "bitcasting" a multiphase process. REINTERPRET_CAST is used
+  // to transition between unpacked and packed types of the same element type,
+  // with BITCAST used otherwise.
+  SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
 };
 
 namespace AArch64 {

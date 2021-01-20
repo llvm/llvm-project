@@ -553,6 +553,7 @@ include "AArch64SchedExynosM4.td"
 include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
+include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
 
@@ -743,7 +744,10 @@ def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                   FeatureFullFP16,
                                   FeatureSVE,
                                   FeaturePostRAScheduler,
-                                  FeatureComplxNum
+                                  FeatureComplxNum,
+                                  FeatureAggressiveFMA,
+                                  FeatureArithmeticBccFusion,
+                                  FeaturePredictableSelectIsExpensive
                                   ]>;
 
 def ProcCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
@@ -842,6 +846,38 @@ def ProcAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                      FeatureFuseCryptoEOR,
                                      FeatureNEON,
                                      FeaturePerfMon,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing,
+                                     FeatureFullFP16,
+                                     FeatureFP16FML,
+                                     FeatureSHA3,
+                                     HasV8_4aOps
+                                     ]>;
+
+def ProcAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
+                                     "Apple A14", [
+                                     FeatureAggressiveFMA,
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureAltFPCmp,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFPARMv8,
+                                     FeatureFRInt3264,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureFuseLiterals,
+                                     FeatureNEON,
+                                     FeaturePerfMon,
+                                     FeatureSpecRestrict,
+                                     FeatureSSBS,
+                                     FeatureSB,
+                                     FeaturePredRes,
+                                     FeatureCacheDeepPersist,
                                      FeatureZCRegMove,
                                      FeatureZCZeroing,
                                      FeatureFullFP16,
@@ -1143,6 +1179,7 @@ def : ProcessorModel<"apple-a10", CycloneModel, [ProcAppleA10]>;
 def : ProcessorModel<"apple-a11", CycloneModel, [ProcAppleA11]>;
 def : ProcessorModel<"apple-a12", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-a13", CycloneModel, [ProcAppleA13]>;
+def : ProcessorModel<"apple-a14", CycloneModel, [ProcAppleA14]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, [ProcAppleA12]>;
@@ -1152,8 +1189,7 @@ def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA13]>;
 
 // Fujitsu A64FX
-// FIXME: Scheduling model is not implemented yet.
-def : ProcessorModel<"a64fx", NoSchedModel, [ProcA64FX]>;
+def : ProcessorModel<"a64fx", A64FXModel, [ProcA64FX]>;
 
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, [ProcCarmel]>;

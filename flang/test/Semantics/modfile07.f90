@@ -598,3 +598,29 @@ end
 ! end interface
 ! private::operator(.ne.)
 !end
+
+module m11a
+contains
+  subroutine s1()
+  end
+end
+!Expect: m11a.mod
+!module m11a
+!contains
+! subroutine s1()
+! end
+!end
+
+module m11b
+  use m11a
+  interface g
+    module procedure s1
+  end interface
+end
+!Expect: m11b.mod
+!module m11b
+! use m11a,only:s1
+! interface g
+!  procedure::s1
+! end interface
+!end

@@ -153,8 +153,10 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  // X * -1 == 0 - X
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  unsigned BitWidth = I.getType()->getScalarSizeInBits();
+
+  // X * -1 == 0 - X
   if (match(Op1, m_AllOnes())) {
     BinaryOperator *BO = BinaryOperator::CreateNeg(Op0, I.getName());
     if (I.hasNoSignedWrap())
@@ -359,6 +361,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op1);
   if (match(Op1, m_LShr(m_Value(X), m_APInt(C))) && *C == C->getBitWidth() - 1)
     return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op0);
+
+  // ((ashr X, 31) | 1) * X --> abs(X)
+  // X * ((ashr X, 31) | 1) --> abs(X)
+  if (match(&I, m_c_BinOp(m_Or(m_AShr(m_Value(X),
+                                    m_SpecificIntAllowUndef(BitWidth - 1)),
+                             m_One()),
+                        m_Deferred(X)))) {
+    Value *Abs = Builder.CreateBinaryIntrinsic(
+        Intrinsic::abs, X,
+        ConstantInt::getBool(I.getContext(), I.hasNoSignedWrap()));
+    Abs->takeName(&I);
+    return replaceInstUsesWith(I, Abs);
+  }
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;

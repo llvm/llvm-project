@@ -55,7 +55,7 @@ func @main() {
     scf.for %j = %c0 to %n step %c1 {
       %e1 = load %C1[%i, %j] : memref<?x?xf32>
       %e2 = load %C2[%i, %j] : memref<?x?xf32>
-      %c = cmpf "oeq", %e1, %e2 : f32
+      %c = cmpf oeq, %e1, %e2 : f32
       assert %c, "Matmul does not produce same output as matvec"
     }
   }

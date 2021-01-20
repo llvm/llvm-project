@@ -12,23 +12,27 @@
 
 Some of the important classes are described here:
 
-o SBTarget: Represents the target program running under the debugger.
-o SBProcess: Represents the process associated with the target program.
-o SBThread: Represents a thread of execution. SBProcess contains SBThread(s).
-o SBFrame: Represents one of the stack frames associated with a thread. SBThread
-      contains SBFrame(s).
-o SBSymbolContext: A container that stores various debugger related info.
-o SBValue: Represents the value of a variable, a register, or an expression.
-o SBModule: Represents an executable image and its associated object and symbol
-      files.  SBTarget contains SBModule(s).
-o SBBreakpoint: Represents a logical breakpoint and its associated settings.
-      SBTarget contains SBBreakpoint(s).
-o SBSymbol: Represents the symbol possibly associated with a stack frame.
-o SBCompileUnit: Represents a compilation unit, or compiled source file.
-o SBFunction: Represents a generic function, which can be inlined or not.
-o SBBlock: Represents a lexical block. SBFunction contains SBBlock(s).
-o SBLineEntry: Specifies an association with a contiguous range of instructions
-      and a source file location. SBCompileUnit contains SBLineEntry(s)."
+* :py:class:`SBTarget`: Represents the target program running under the debugger.
+* :py:class:`SBProcess`: Represents the process associated with the target program.
+* :py:class:`SBThread`: Represents a thread of execution. :py:class:`SBProcess` contains SBThreads.
+* :py:class:`SBFrame`: Represents one of the stack frames associated with a thread. :py:class:`SBThread`
+  contains SBFrame(s).
+* :py:class:`SBSymbolContext`: A container that stores various debugger related info.
+* :py:class:`SBValue`: Represents the value of a variable, a register, or an expression.
+* :py:class:`SBModule`: Represents an executable image and its associated object and symbol
+  files.  :py:class:`SBTarget` contains SBModule.
+* :py:class:`SBBreakpoint`: Represents a logical breakpoint and its associated settings.
+  :py:class:`SBTarget` contains SBBreakpoints.
+* :py:class:`SBSymbol`: Represents the symbol possibly associated with a stack frame.
+* :py:class:`SBCompileUnit`: Represents a compilation unit, or compiled source file.
+* :py:class:`SBFunction`: Represents a generic function, which can be inlined or not.
+* :py:class:`SBBlock`: Represents a lexical block. :py:class:`SBFunction` contains SBBlocks.
+* :py:class:`SBLineEntry`: Specifies an association with a contiguous range of instructions
+  and a source file location. :py:class:`SBCompileUnit` contains SBLineEntry.
+
+The different enums in the `lldb` module are described in :doc:`python_api_enums`.
+
+"
 %enddef
 
 /*

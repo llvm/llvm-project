@@ -1386,12 +1386,11 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
   }
   // Sort variable captures by the order in which they matched the input.
   // Ranges shouldn't be overlapping, so we can just compare the start.
-  std::sort(VarCaptures.begin(), VarCaptures.end(),
-            [](const VarCapture &A, const VarCapture &B) {
-              assert(A.Range.Start != B.Range.Start &&
-                     "unexpected overlapping variable captures");
-              return A.Range.Start.getPointer() < B.Range.Start.getPointer();
-            });
+  llvm::sort(VarCaptures, [](const VarCapture &A, const VarCapture &B) {
+    assert(A.Range.Start != B.Range.Start &&
+           "unexpected overlapping variable captures");
+    return A.Range.Start.getPointer() < B.Range.Start.getPointer();
+  });
   // Create notes for the sorted captures.
   for (const VarCapture &VC : VarCaptures) {
     SmallString<256> Msg;
@@ -2318,7 +2317,6 @@ bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
     PrintMatch(false, SM, Prefix, Pat->getLoc(), *Pat, 1, Buffer, Pos, MatchLen,
                Req, Diags);
     DirectiveFail = true;
-    continue;
   }
 
   return DirectiveFail;

@@ -470,8 +470,9 @@ def err_decomp_decl_not_alone : Error<
 def err_decomp_decl_requires_init : Error<
   "decomposition declaration %0 requires an initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
-  "type %0 decomposes into %2 elements, but %select{only |}3%1 "
-  "names were provided">;
+  "type %0 decomposes into %3 %plural{1:element|:elements}2, but "
+  "%select{%plural{0:no|:only %1}1|%1}4 "
+  "%plural{1:name was|:names were}1 provided">;
 def err_decomp_decl_unbindable_type : Error<
   "cannot decompose %select{union|non-class, non-array}1 type %2">;
 def err_decomp_decl_multiple_bases_with_members : Error<
@@ -854,6 +855,8 @@ def err_pragma_options_align_mac68k_target_unsupported : Error<
 def warn_pragma_pack_invalid_alignment : Warning<
   "expected #pragma pack parameter to be '1', '2', '4', '8', or '16'">,
   InGroup<IgnoredPragmas>;
+def err_pragma_pack_invalid_alignment : Error<
+  warn_pragma_pack_invalid_alignment.Text>;
 def warn_pragma_pack_non_default_at_include : Warning<
   "non-default #pragma pack value changes the alignment of struct or union "
   "members in the included file">, InGroup<PragmaPackSuspiciousInclude>,
@@ -887,6 +890,8 @@ def warn_cxx_ms_struct :
   Warning<"ms_struct may not produce Microsoft-compatible layouts for classes "
           "with base classes or virtual functions">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def err_pragma_pack_identifer_not_supported : Error<
+  "specifying an identifier within `#pragma pack` is not supported on this target">;
 def err_section_conflict : Error<"%0 causes a section type conflict with %1">;
 def err_no_base_classes : Error<"invalid use of '__super', %0 has no base classes">;
 def err_invalid_super_scope : Error<"invalid use of '__super', "
@@ -4690,8 +4695,6 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
-def err_non_type_template_arg_unsupported : Error<
-  "sorry, non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -4743,9 +4746,6 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
-def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "sorry, non-type template argument of pointer-to-member type %1 that refers "
-  "to member %q0 of a different class is not supported yet">;
 def ext_template_arg_extra_parens : ExtWarn<
   "address non-type template argument cannot be surrounded by parentheses">;
 def warn_cxx98_compat_template_arg_extra_parens : Warning<
@@ -7604,7 +7604,7 @@ def err_no_typeid_with_fno_rtti : Error<
 def err_no_dynamic_cast_with_fno_rtti : Error<
   "use of dynamic_cast requires -frtti">;
 def warn_no_dynamic_cast_with_rtti_disabled: Warning<
-  "dynamic_cast will not work since RTTI data is disabled by " 
+  "dynamic_cast will not work since RTTI data is disabled by "
   "%select{-fno-rtti-data|/GR-}0">, InGroup<RTTI>;
 def warn_no_typeid_with_rtti_disabled: Warning<
   "typeid will not work since RTTI data is disabled by "
@@ -7620,8 +7620,7 @@ def warn_condition_is_assignment : Warning<"using the result of an "
   InGroup<Parentheses>;
 def warn_free_nonheap_object
   : Warning<"attempt to call %0 on non-heap object %1">,
-    InGroup<DiagGroup<"free-nonheap-object">>,
-    DefaultIgnore; // FIXME: add to -Wall after sufficient testing
+    InGroup<FreeNonHeapObject>;
 
 // Completely identical except off by default.
 def warn_condition_is_idiomatic_assignment : Warning<"using the result "

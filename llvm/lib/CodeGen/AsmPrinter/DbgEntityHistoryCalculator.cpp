@@ -242,7 +242,7 @@ void DbgValueHistoryMap::trimLocationRanges(
       if (ReferenceCount[i] <= 0 && HistoryMapEntries[i].isClobber())
         ToRemove.push_back(i);
 
-    std::sort(ToRemove.begin(), ToRemove.end());
+    llvm::sort(ToRemove);
 
     // Build an offset map so we can update the EndIndex of the remaining
     // entries.

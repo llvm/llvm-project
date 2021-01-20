@@ -913,6 +913,24 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_BR_CC(SDNode *N) {
                  0);
 }
 
+// Even if the result type is legal, no libcall may exactly match. (e.g. We
+// don't have FP-i8 conversions) This helper method looks for an appropriate
+// promoted libcall.
+static RTLIB::Libcall findFPToIntLibcall(EVT SrcVT, EVT RetVT, EVT &Promoted,
+                                         bool Signed) {
+  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+  for (unsigned IntVT = MVT::FIRST_INTEGER_VALUETYPE;
+       IntVT <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
+       ++IntVT) {
+    Promoted = (MVT::SimpleValueType)IntVT;
+    // The type needs to big enough to hold the result.
+    if (Promoted.bitsGE(RetVT))
+      LC = Signed ? RTLIB::getFPTOSINT(SrcVT, Promoted)
+                  : RTLIB::getFPTOUINT(SrcVT, Promoted);
+  }
+  return LC;
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   bool Signed = N->getOpcode() == ISD::FP_TO_SINT ||
@@ -928,16 +946,9 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
   // a larger type, eg: fp -> i32. Even if it is legal, no libcall may exactly
   // match, eg. we don't have fp -> i8 conversions.
   // Look for an appropriate libcall.
-  RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  for (unsigned IntVT = MVT::FIRST_INTEGER_VALUETYPE;
-       IntVT <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
-       ++IntVT) {
-    NVT = (MVT::SimpleValueType)IntVT;
-    // The type needs to big enough to hold the result.
-    if (NVT.bitsGE(RVT))
-      LC = Signed ? RTLIB::getFPTOSINT(SVT, NVT) : RTLIB::getFPTOUINT(SVT, NVT);
-  }
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_XINT!");
+  RTLIB::Libcall LC = findFPToIntLibcall(SVT, RVT, NVT, Signed);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && NVT.isSimple() &&
+         "Unsupported FP_TO_XINT!");
 
   Op = GetSoftenedFloat(Op);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
@@ -1895,12 +1906,14 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_XINT(SDNode *N) {
                 N->getOpcode() == ISD::STRICT_FP_TO_SINT;
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-  RTLIB::Libcall LC = Signed ? RTLIB::getFPTOSINT(Op.getValueType(), RVT)
-                             : RTLIB::getFPTOUINT(Op.getValueType(), RVT);
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_TO_XINT!");
+
+  EVT NVT;
+  RTLIB::Libcall LC = findFPToIntLibcall(Op.getValueType(), RVT, NVT, Signed);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && NVT.isSimple() &&
+         "Unsupported FP_TO_XINT!");
   TargetLowering::MakeLibCallOptions CallOptions;
   std::pair<SDValue, SDValue> Tmp =
-      TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, dl, Chain);
+      TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, dl, Chain);
   if (!IsStrict)
     return Tmp.first;
 

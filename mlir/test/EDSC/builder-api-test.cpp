@@ -91,7 +91,7 @@ TEST_FUNC(builder_dynamic_for_func_args) {
   // CHECK-LABEL: func @builder_dynamic_for_func_args(%{{.*}}: index, %{{.*}}: index) {
   //     CHECK:  affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to affine_map<(d0) -> (d0)>(%{{.*}}) step 3 {
   //     CHECK:  {{.*}} = affine.apply affine_map<()[s0] -> (s0 * 3)>()[%{{.*}}]
-  //     CHECK:  {{.*}} = affine.apply affine_map<()[s0, s1] -> (s1 + s0 * 3)>()[%{{.*}}, %{{.*}}]
+  //     CHECK:  {{.*}} = affine.apply affine_map<()[s0, s1] -> (s0 * 3 + s1)>()[%{{.*}}, %{{.*}}]
   //     CHECK:  {{.*}} = affine.apply affine_map<()[s0] -> (s0 + 3)>()[%{{.*}}]
   //     CHECK:  affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to affine_map<(d0) -> (d0)>(%{{.*}}) step 2 {
   //     CHECK:    {{.*}} = affine.apply affine_map<(d0, d1) -> ((d0 + d1 * 3) floordiv 32)>(%{{.*}}, %{{.*}})
@@ -565,43 +565,43 @@ TEST_FUNC(select_op_i32) {
   // CHECK-LABEL: @select_op
   //      CHECK: affine.for %{{.*}} = 0 to 1 {
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 1 {
-  //  CHECK-DAG:     {{.*}} = cmpi "eq"
+  //  CHECK-DAG:     {{.*}} = cmpi eq
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "ne"
+  //  CHECK-DAG:     {{.*}} = cmpi ne
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "slt"
+  //  CHECK-DAG:     {{.*}} = cmpi slt
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "sle"
+  //  CHECK-DAG:     {{.*}} = cmpi sle
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "sgt"
+  //  CHECK-DAG:     {{.*}} = cmpi sgt
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "sge"
+  //  CHECK-DAG:     {{.*}} = cmpi sge
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "ult"
+  //  CHECK-DAG:     {{.*}} = cmpi ult
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "ule"
+  //  CHECK-DAG:     {{.*}} = cmpi ule
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "ugt"
+  //  CHECK-DAG:     {{.*}} = cmpi ugt
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
-  //  CHECK-DAG:     {{.*}} = cmpi "uge"
+  //  CHECK-DAG:     {{.*}} = cmpi uge
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
@@ -641,70 +641,70 @@ TEST_FUNC(select_op_f32) {
   // CHECK-LABEL: @select_op
   //      CHECK: affine.for %{{.*}} = 0 to 1 {
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 1 {
-  //  CHECK-DAG:     cmpf "oeq"
+  //  CHECK-DAG:     cmpf oeq
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "one"
+  //  CHECK-DAG:     cmpf one
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "oge"
+  //  CHECK-DAG:     cmpf oge
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "ole"
+  //  CHECK-DAG:     cmpf ole
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "olt"
+  //  CHECK-DAG:     cmpf olt
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "ogt"
+  //  CHECK-DAG:     cmpf ogt
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "oge"
+  //  CHECK-DAG:     cmpf oge
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "ole"
+  //  CHECK-DAG:     cmpf ole
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "olt"
+  //  CHECK-DAG:     cmpf olt
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
-  //  CHECK-DAG:     cmpf "ogt"
+  //  CHECK-DAG:     cmpf ogt
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
@@ -903,7 +903,7 @@ TEST_FUNC(affine_if_op) {
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME: ins({{.*}}memref<?x?xf32>, memref<?x?xf32>)
 // CHECK-SAME: outs({{.*}}memref<?x?xf32>)
-//       CHECK:       cmpf "ogt"
+//       CHECK:       cmpf ogt
 //       CHECK:       select
 //       CHECK:   linalg.generic {
 // CHECK-SAME:      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
@@ -1078,7 +1078,7 @@ TEST_FUNC(linalg_metadata_ops) {
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME: ins(%{{[a-z0-9]*}}, %{{[a-z0-9]*}} : tensor<?x?xf32>, tensor<?x?xf32>)
-//       CHECK:       cmpf "ogt"
+//       CHECK:       cmpf ogt
 //       CHECK:       select
 //       CHECK:   } -> tensor<?x?xf32>
 //       CHECK:   linalg.generic {

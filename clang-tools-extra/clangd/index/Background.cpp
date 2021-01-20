@@ -43,6 +43,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/xxhash.h"
 
 #include <algorithm>
 #include <atomic>
@@ -139,8 +140,8 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
                  std::mt19937(std::random_device{}()));
     std::vector<BackgroundQueue::Task> Tasks;
     Tasks.reserve(NeedsReIndexing.size());
-    for (auto &Cmd : NeedsReIndexing)
-      Tasks.push_back(indexFileTask(std::move(Cmd)));
+    for (const auto &File : NeedsReIndexing)
+      Tasks.push_back(indexFileTask(std::move(File)));
     Queue.append(std::move(Tasks));
   });
 
@@ -156,6 +157,7 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
 
 BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
+  uint64_t Key = llvm::xxHash64(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
     llvm::Optional<WithContext> WithProvidedContext;
     if (ContextProvider)
@@ -168,6 +170,7 @@ BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   });
   T.QueuePri = IndexFile;
   T.Tag = std::move(Tag);
+  T.Key = Key;
   return T;
 }
 

@@ -164,14 +164,13 @@ public:
   }
 
   std::unique_ptr<MLInlineAdvice>
-  getMandatoryAdvice(CallBase &CB, OptimizationRemarkEmitter &ORE) override;
-  std::unique_ptr<MLInlineAdvice>
   getAdviceFromModel(CallBase &CB, OptimizationRemarkEmitter &ORE) override;
 
   Optional<size_t> getNativeSizeEstimate(const Function &F) const;
 
 private:
   bool isLogging() const { return !!Logger; }
+  std::unique_ptr<MLInlineAdvice> getMandatoryAdviceImpl(CallBase &CB) override;
 
   std::function<bool(CallBase &)> GetDefaultAdvice;
   const bool IsDoingInference;
@@ -416,14 +415,11 @@ DevelopmentModeMLInlineAdvisor::getNativeSizeEstimate(const Function &F) const {
 }
 
 std::unique_ptr<MLInlineAdvice>
-DevelopmentModeMLInlineAdvisor::getMandatoryAdvice(
-    CallBase &CB, OptimizationRemarkEmitter &ORE) {
-  if (!isLogging())
-    return MLInlineAdvisor::getMandatoryAdvice(CB, ORE);
-
+DevelopmentModeMLInlineAdvisor::getMandatoryAdviceImpl(CallBase &CB) {
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
-      /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/*Logger,
+      /*CB=*/CB, /*ORE=*/getCallerORE(CB), /*Recommendation=*/true,
+      /*Logger=*/*Logger,
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),

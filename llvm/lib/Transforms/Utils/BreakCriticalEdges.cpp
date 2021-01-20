@@ -158,22 +158,21 @@ BasicBlock *llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   SmallVector<BasicBlock *, 4> LoopPreds;
   // Check if extra modifications will be required to preserve loop-simplify
   // form after splitting. If it would require splitting blocks with IndirectBr
-  // terminators, bail out if preserving loop-simplify form is requested.
+  // or CallBr terminators, bail out if preserving loop-simplify form is
+  // requested.
   if (LI) {
     if (Loop *TIL = LI->getLoopFor(TIBB)) {
 
-      // The only that we can break LoopSimplify form by splitting a critical
-      // edge is if after the split there exists some edge from TIL to DestBB
-      // *and* the only edge into DestBB from outside of TIL is that of
+      // The only way that we can break LoopSimplify form by splitting a
+      // critical edge is if after the split there exists some edge from TIL to
+      // DestBB *and* the only edge into DestBB from outside of TIL is that of
       // NewBB. If the first isn't true, then LoopSimplify still holds, NewBB
       // is the new exit block and it has no non-loop predecessors. If the
       // second isn't true, then DestBB was not in LoopSimplify form prior to
       // the split as it had a non-loop predecessor. In both of these cases,
       // the predecessor must be directly in TIL, not in a subloop, or again
       // LoopSimplify doesn't hold.
-      for (pred_iterator I = pred_begin(DestBB), E = pred_end(DestBB); I != E;
-           ++I) {
-        BasicBlock *P = *I;
+      for (BasicBlock *P : predecessors(DestBB)) {
         if (P == TIBB)
           continue; // The new block is known.
         if (LI->getLoopFor(P) != TIL) {
@@ -186,7 +185,10 @@ BasicBlock *llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
       // Loop-simplify form can be preserved, if we can split all in-loop
       // predecessors.
       if (any_of(LoopPreds, [](BasicBlock *Pred) {
-            return isa<IndirectBrInst>(Pred->getTerminator());
+            const Instruction *T = Pred->getTerminator();
+            if (const auto *CBR = dyn_cast<CallBrInst>(T))
+              return CBR->getDefaultDest() != Pred;
+            return isa<IndirectBrInst>(T);
           })) {
         if (Options.PreserveLoopSimplify)
           return nullptr;

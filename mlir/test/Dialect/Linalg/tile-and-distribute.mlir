@@ -42,8 +42,8 @@ func @gemm2(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //  CHECK-DAG: %[[BIDX:.*]] = "gpu.block_id"() {dimension = "x"}
 //      CHECK: %[[ITERY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
 //      CHECK: %[[ITERX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
-//      CHECK: %[[INBOUNDSY:.*]] = cmpi "slt", %[[ITERY]], %{{.*}}
-//      CHECK: %[[INBOUNDSX:.*]] = cmpi "slt", %[[ITERX]], %{{.*}}
+//      CHECK: %[[INBOUNDSY:.*]] = cmpi slt, %[[ITERY]], %{{.*}}
+//      CHECK: %[[INBOUNDSX:.*]] = cmpi slt, %[[ITERX]], %{{.*}}
 //      CHECK: %[[INBOUNDS:.*]] = and %[[INBOUNDSY]], %[[INBOUNDSX]]
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.for %[[ARG3:.*]] =
@@ -102,7 +102,7 @@ func @gemm4(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK: %[[BIDY:.*]] = "gpu.block_id"() {dimension = "y"}
 //      CHECK: %[[BIDX:.*]] = "gpu.block_id"() {dimension = "x"}
 //      CHECK: %[[LBX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
-//      CHECK: %[[INBOUNDS:.*]] = cmpi "slt", %[[LBX]], %{{.*}}
+//      CHECK: %[[INBOUNDS:.*]] = cmpi slt, %[[LBX]], %{{.*}}
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.for %[[ARG3:.*]] =
 //      CHECK:     %[[OFFSETY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
@@ -134,7 +134,7 @@ func @gemm5(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK: %[[LBY:.*]] = affine.apply #[[MAP0]]()[%[[BIDY]]]
 //      CHECK: %[[LBX:.*]] = affine.apply #[[MAP0]]()[%[[BIDX]]]
 //      CHECK: %[[STEPX:.*]] = affine.apply #[[MAP0]]()[%[[NBLOCKSX]]]
-//      CHECK: %[[INBOUNDS:.*]] = cmpi "slt", %[[LBY]], %{{.*}}
+//      CHECK: %[[INBOUNDS:.*]] = cmpi slt, %[[LBY]], %{{.*}}
 //      CHECK: scf.if %[[INBOUNDS]]
 //      CHECK:   scf.parallel (%[[ARG3.*]]) = (%[[LBX]]) to (%{{.*}}) step (%[[STEPX]])
 //      CHECK:     scf.for %[[ARG4:.*]] =

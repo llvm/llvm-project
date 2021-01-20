@@ -480,7 +480,7 @@ void CheckHelper::CheckObjectEntity(
       }
     }
   }
-  if (IsInitialized(symbol, true /* ignore DATA inits */)) { // C808
+  if (IsStaticallyInitialized(symbol, true /* ignore DATA inits */)) { // C808
     CheckPointerInitialization(symbol);
     if (IsAutomatic(symbol)) {
       messages_.Say(
@@ -632,6 +632,14 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   if (details.isDummy()) {
+    if (!symbol.attrs().test(Attr::POINTER) && // C843
+        (symbol.attrs().test(Attr::INTENT_IN) ||
+            symbol.attrs().test(Attr::INTENT_OUT) ||
+            symbol.attrs().test(Attr::INTENT_INOUT))) {
+      messages_.Say("A dummy procedure without the POINTER attribute"
+                    " may not have an INTENT attribute"_err_en_US);
+    }
+
     const Symbol *interface{details.interface().symbol()};
     if (!symbol.attrs().test(Attr::INTRINSIC) &&
         (symbol.attrs().test(Attr::ELEMENTAL) ||

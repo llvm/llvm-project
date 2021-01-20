@@ -912,15 +912,14 @@ bool TargetLowering::SimplifyDemandedBits(
 
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
-    Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
-    Known.Zero = ~Known.One;
+    Known = KnownBits::makeConstant(cast<ConstantSDNode>(Op)->getAPIntValue());
     return false;
   }
 
   if (Op.getOpcode() == ISD::ConstantFP) {
     // We know all of the bits for a floating point constant!
-    Known.One = cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt();
-    Known.Zero = ~Known.One;
+    Known = KnownBits::makeConstant(
+        cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt());
     return false;
   }
 
@@ -1016,10 +1015,8 @@ bool TargetLowering::SimplifyDemandedBits(
                              Depth + 1))
       return true;
 
-    if (!!DemandedVecElts) {
-      Known.One &= KnownVec.One;
-      Known.Zero &= KnownVec.Zero;
-    }
+    if (!!DemandedVecElts)
+      Known = KnownBits::commonBits(Known, KnownVec);
 
     return false;
   }
@@ -1044,14 +1041,10 @@ bool TargetLowering::SimplifyDemandedBits(
 
     Known.Zero.setAllBits();
     Known.One.setAllBits();
-    if (!!DemandedSubElts) {
-      Known.One &= KnownSub.One;
-      Known.Zero &= KnownSub.Zero;
-    }
-    if (!!DemandedSrcElts) {
-      Known.One &= KnownSrc.One;
-      Known.Zero &= KnownSrc.Zero;
-    }
+    if (!!DemandedSubElts)
+      Known = KnownBits::commonBits(Known, KnownSub);
+    if (!!DemandedSrcElts)
+      Known = KnownBits::commonBits(Known, KnownSrc);
 
     // Attempt to avoid multi-use src if we don't need anything from it.
     if (!DemandedBits.isAllOnesValue() || !DemandedSubElts.isAllOnesValue() ||
@@ -1108,10 +1101,8 @@ bool TargetLowering::SimplifyDemandedBits(
                                Known2, TLO, Depth + 1))
         return true;
       // Known bits are shared by every demanded subvector element.
-      if (!!DemandedSubElts) {
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
-      }
+      if (!!DemandedSubElts)
+        Known = KnownBits::commonBits(Known, Known2);
     }
     break;
   }
@@ -1149,15 +1140,13 @@ bool TargetLowering::SimplifyDemandedBits(
         if (SimplifyDemandedBits(Op0, DemandedBits, DemandedLHS, Known2, TLO,
                                  Depth + 1))
           return true;
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
+        Known = KnownBits::commonBits(Known, Known2);
       }
       if (!!DemandedRHS) {
         if (SimplifyDemandedBits(Op1, DemandedBits, DemandedRHS, Known2, TLO,
                                  Depth + 1))
           return true;
-        Known.One &= Known2.One;
-        Known.Zero &= Known2.Zero;
+        Known = KnownBits::commonBits(Known, Known2);
       }
 
       // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -1384,8 +1373,7 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
 
     // Only known if known in both the LHS and RHS.
-    Known.One &= Known2.One;
-    Known.Zero &= Known2.Zero;
+    Known = KnownBits::commonBits(Known, Known2);
     break;
   case ISD::SELECT_CC:
     if (SimplifyDemandedBits(Op.getOperand(3), DemandedBits, Known, TLO,
@@ -1402,8 +1390,7 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
 
     // Only known if known in both the LHS and RHS.
-    Known.One &= Known2.One;
-    Known.Zero &= Known2.Zero;
+    Known = KnownBits::commonBits(Known, Known2);
     break;
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
@@ -1733,6 +1720,32 @@ bool TargetLowering::SimplifyDemandedBits(
                                Depth + 1))
         return true;
     }
+    break;
+  }
+  case ISD::UMIN: {
+    // Check if one arg is always less than (or equal) to the other arg.
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
+    KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+    Known = KnownBits::umin(Known0, Known1);
+    if (Optional<bool> IsULE = KnownBits::ule(Known0, Known1))
+      return TLO.CombineTo(Op, IsULE.getValue() ? Op0 : Op1);
+    if (Optional<bool> IsULT = KnownBits::ult(Known0, Known1))
+      return TLO.CombineTo(Op, IsULT.getValue() ? Op0 : Op1);
+    break;
+  }
+  case ISD::UMAX: {
+    // Check if one arg is always greater than (or equal) to the other arg.
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
+    KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+    Known = KnownBits::umax(Known0, Known1);
+    if (Optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
+      return TLO.CombineTo(Op, IsUGE.getValue() ? Op0 : Op1);
+    if (Optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
+      return TLO.CombineTo(Op, IsUGT.getValue() ? Op0 : Op1);
     break;
   }
   case ISD::BITREVERSE: {
@@ -6105,8 +6118,6 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
 
   unsigned OuterBitSize = VT.getScalarSizeInBits();
   unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
-  unsigned LHSSB = DAG.ComputeNumSignBits(LHS);
-  unsigned RHSSB = DAG.ComputeNumSignBits(RHS);
 
   // LL, LH, RL, and RH must be either all NULL or all set to a value.
   assert((LL.getNode() && LH.getNode() && RL.getNode() && RH.getNode()) ||
@@ -6155,8 +6166,9 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
     }
   }
 
-  if (!VT.isVector() && Opcode == ISD::MUL && LHSSB > InnerBitSize &&
-      RHSSB > InnerBitSize) {
+  if (!VT.isVector() && Opcode == ISD::MUL &&
+      DAG.ComputeNumSignBits(LHS) > InnerBitSize &&
+      DAG.ComputeNumSignBits(RHS) > InnerBitSize) {
     // The input values are both sign-extended.
     // TODO non-MUL case?
     if (MakeMUL_LOHI(LL, RL, Lo, Hi, true)) {

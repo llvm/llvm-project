@@ -129,6 +129,20 @@ public:
   /// when the caller knows it is safe to do so.
   unsigned getDimPosition(unsigned idx) const;
 
+  /// Return true if any affine expression involves AffineDimExpr `position`.
+  bool isFunctionOfDim(unsigned position) const {
+    return llvm::any_of(getResults(), [&](AffineExpr e) {
+      return e.isFunctionOfDim(position);
+    });
+  }
+
+  /// Return true if any affine expression involves AffineSymbolExpr `position`.
+  bool isFunctionOfSymbol(unsigned position) const {
+    return llvm::any_of(getResults(), [&](AffineExpr e) {
+      return e.isFunctionOfSymbol(position);
+    });
+  }
+
   /// Walk all of the AffineExpr's in this mapping. Each node in an expression
   /// tree is visited in postorder.
   void walkExprs(std::function<void(AffineExpr)> callback) const;
@@ -142,6 +156,40 @@ public:
                                   ArrayRef<AffineExpr> symReplacements,
                                   unsigned numResultDims,
                                   unsigned numResultSyms) const;
+
+  /// Sparse replace method. Apply AffineExpr::replace(`expr`, `replacement`) to
+  /// each of the results and return a new AffineMap with the new results and
+  /// with the specified number of dims and symbols.
+  AffineMap replace(AffineExpr expr, AffineExpr replacement,
+                    unsigned numResultDims, unsigned numResultSyms) const;
+
+  /// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
+  /// results and return a new AffineMap with the new results and with the
+  /// specified number of dims and symbols.
+  AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map,
+                    unsigned numResultDims, unsigned numResultSyms) const;
+
+  /// Replace dims[0 .. numDims - 1] by dims[shift .. shift + numDims - 1].
+  AffineMap shiftDims(unsigned shift) const {
+    return AffineMap::get(
+        getNumDims() + shift, getNumSymbols(),
+        llvm::to_vector<4>(llvm::map_range(
+            getResults(),
+            [&](AffineExpr e) { return e.shiftDims(getNumDims(), shift); })),
+        getContext());
+  }
+
+  /// Replace symbols[0 .. numSymbols - 1] by
+  ///         symbols[shift .. shift + numSymbols - 1].
+  AffineMap shiftSymbols(unsigned shift) const {
+    return AffineMap::get(getNumDims(), getNumSymbols() + shift,
+                          llvm::to_vector<4>(llvm::map_range(
+                              getResults(),
+                              [&](AffineExpr e) {
+                                return e.shiftSymbols(getNumSymbols(), shift);
+                              })),
+                          getContext());
+  }
 
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
@@ -327,6 +375,21 @@ AffineMap inversePermutation(AffineMap map);
 /// ```
 AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 
+/// Returns the map that results from projecting out the dimensions specified in
+/// `projectedDimensions`. The projected dimensions are set to 0.
+///
+/// Example:
+/// 1) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {2}
+///    result               : affine_map<(d0, d1) -> (d0, d1)>
+///
+/// 2) map                  : affine_map<(d0, d1) -> (d0 + d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0) -> (d0)>
+///
+/// 3) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0, d1) -> (d0, 0)>
 AffineMap getProjectedMap(AffineMap map,
                           ArrayRef<unsigned> projectedDimensions);
 

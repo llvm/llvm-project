@@ -1535,9 +1535,11 @@ static void rewritePHIs(BasicBlock &BB) {
     for (BasicBlock *Pred : Preds) {
       if (CatchSwitchInst *CS =
               dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
+        (void)CS;
         // CleanupPad with a CatchSwitch predecessor: therefore this is an
         // unwind destination that needs to be handle specially.
         assert(CS->getUnwindDest() == &BB);
+        (void)CS;
         rewritePHIsForCleanupPad(&BB, CleanupPad);
         return;
       }
@@ -2001,17 +2003,14 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 
   // Sort by dominance.
   SmallVector<Instruction *, 64> InsertionList(ToMove.begin(), ToMove.end());
-  std::sort(InsertionList.begin(), InsertionList.end(),
-            [&Dom](Instruction *A, Instruction *B) -> bool {
-              // If a dominates b it should preceed (<) b.
-              return Dom.dominates(A, B);
-            });
+  llvm::sort(InsertionList, [&Dom](Instruction *A, Instruction *B) -> bool {
+    // If a dominates b it should preceed (<) b.
+    return Dom.dominates(A, B);
+  });
 
   Instruction *InsertPt = CoroBegin->getNextNode();
   for (Instruction *Inst : InsertionList)
     Inst->moveBefore(InsertPt);
-
-  return;
 }
 
 /// For each local variable that all of its user are only used inside one of

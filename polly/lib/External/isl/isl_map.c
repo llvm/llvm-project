@@ -6864,6 +6864,18 @@ __isl_give isl_set *isl_set_upper_bound_val(__isl_take isl_set *set,
 	return set_from_map(isl_map_upper_bound_val(map, type, pos, value));
 }
 
+/* If "mv" has an explicit domain, then intersect the domain of "map"
+ * with this explicit domain.
+ *
+ * An isl_multi_val object never has an explicit domain,
+ * so simply return "map".
+ */
+static __isl_give isl_map *isl_map_intersect_multi_val_explicit_domain(
+	__isl_take isl_map *map, __isl_keep isl_multi_val *mv)
+{
+	return map;
+}
+
 #undef BASE
 #define BASE	val
 #include "isl_map_bound_templ.c"
@@ -6921,15 +6933,6 @@ __isl_give isl_set *isl_set_lower_bound_multi_val(__isl_take isl_set *set,
 	return set_bound_multi_val(set, lower, &map_lower_bound_val);
 }
 
-/* Force the values of the output dimensions of "map"
- * to be no smaller than the corresponding values in "lower".
- */
-__isl_give isl_map *isl_map_lower_bound_multi_val(__isl_take isl_map *map,
-	__isl_take isl_multi_val *lower)
-{
-	return map_bound_multi_val(map, lower, &map_lower_bound_val);
-}
-
 /* Wrapper around isl_map_upper_bound_val for use in map_bound_multi_val,
  * setting a bound on the given output dimension.
  */
@@ -6946,15 +6949,6 @@ __isl_give isl_set *isl_set_upper_bound_multi_val(__isl_take isl_set *set,
 	__isl_take isl_multi_val *upper)
 {
 	return set_bound_multi_val(set, upper, &map_upper_bound_val);
-}
-
-/* Force the values of the set dimensions of "set"
- * to be no greater than the corresponding values in "upper".
- */
-__isl_give isl_map *isl_map_upper_bound_multi_val(__isl_take isl_map *map,
-	__isl_take isl_multi_val *upper)
-{
-	return map_bound_multi_val(map, upper, &map_upper_bound_val);
 }
 
 /* Force the symbolic constant expression "bound"
@@ -8287,6 +8281,11 @@ error:
 	return NULL;
 }
 
+#undef TYPE
+#define TYPE isl_map
+static
+#include "isl_copy_tuple_id_templ.c"
+
 /* Data structure that specifies how isl_map_intersect_factor
  * should operate.
  *
@@ -8322,8 +8321,7 @@ static __isl_give isl_map *isl_map_intersect_factor(
 	__isl_take isl_map *map, __isl_take isl_map *factor,
 	struct isl_intersect_factor_control *control)
 {
-	isl_bool equal, has_id;
-	isl_id *id;
+	isl_bool equal;
 	isl_space *space;
 	isl_map *other, *product;
 
@@ -8336,19 +8334,12 @@ static __isl_give isl_map *isl_map_intersect_factor(
 	}
 
 	space = isl_map_get_space(map);
-	has_id = isl_space_has_tuple_id(space, control->preserve_type);
-	if (has_id < 0)
-		space = isl_space_free(space);
-	else if (has_id)
-		id = isl_space_get_tuple_id(space, control->preserve_type);
-
 	other = isl_map_universe(control->other_factor(space));
 	product = control->product(factor, other);
 
-	if (has_id >= 0 && has_id)
-		product = isl_map_set_tuple_id(product,
-						control->preserve_type, id);
-
+	space = isl_map_peek_space(map);
+	product = isl_map_copy_tuple_id(product, control->preserve_type,
+					space, control->preserve_type);
 	return map_intersect(map, product);
 error:
 	isl_map_free(map);
@@ -8370,6 +8361,21 @@ static __isl_give isl_map *isl_map_reverse_range_product(
 	__isl_take isl_map *map1, __isl_take isl_map *map2)
 {
 	return isl_map_range_product(map2, map1);
+}
+
+/* Given a map "map" in a space [A -> B] -> C and a map "factor"
+ * in the space A -> C, return the intersection.
+ */
+__isl_give isl_map *isl_map_intersect_domain_factor_domain(
+	__isl_take isl_map *map, __isl_take isl_map *factor)
+{
+	struct isl_intersect_factor_control control = {
+		.preserve_type = isl_dim_in,
+		.other_factor = isl_space_domain_factor_range,
+		.product = isl_map_domain_product,
+	};
+
+	return isl_map_intersect_factor(map, factor, &control);
 }
 
 /* Given a map "map" in a space [A -> B] -> C and a map "factor"
@@ -8604,6 +8610,17 @@ isl_bool isl_map_tuple_is_equal(__isl_keep isl_map *map1,
 	return isl_space_tuple_is_equal(space1, type1, space2, type2);
 }
 
+/* Is the space of "obj" equal to "space", ignoring parameters?
+ */
+isl_bool isl_map_has_space_tuples(__isl_keep isl_map *map,
+	__isl_keep isl_space *space)
+{
+	isl_space *map_space;
+
+	map_space = isl_map_peek_space(map);
+	return isl_space_has_equal_tuples(map_space, space);
+}
+
 /* Check that "map" is a transformation, i.e.,
  * that it relates elements from the same space.
  */
@@ -8705,6 +8722,20 @@ __isl_give isl_map *isl_map_deltas_map(__isl_take isl_map *map)
 
 	return isl_map_transform(map, &isl_space_range_map,
 					&isl_basic_map_deltas_map);
+}
+
+/* Return pairs of elements { x -> y } such that y - x is in "deltas".
+ */
+__isl_give isl_map *isl_set_translation(__isl_take isl_set *deltas)
+{
+	isl_space *space;
+	isl_map *map;
+
+	space = isl_space_map_from_set(isl_set_get_space(deltas));
+	map = isl_map_deltas_map(isl_map_universe(space));
+	map = isl_map_intersect_range(map, deltas);
+
+	return isl_set_unwrap(isl_map_domain(map));
 }
 
 __isl_give isl_basic_map *isl_basic_map_identity(__isl_take isl_space *space)
@@ -9022,6 +9053,7 @@ isl_stat isl_basic_set_check_equal_space(__isl_keep isl_basic_set *bset1,
 
 #include "isl_type_has_equal_space_bin_templ.c"
 #include "isl_type_check_equal_space_templ.c"
+#include "isl_type_has_space_templ.c"
 
 isl_bool isl_set_has_equal_space(__isl_keep isl_set *set1,
 	__isl_keep isl_set *set2)
@@ -9480,6 +9512,16 @@ static int find_div(__isl_keep isl_basic_map *dst,
 /* Align the divs of "dst" to those of "src", adding divs from "src"
  * if needed.  That is, make sure that the first src->n_div divs
  * of the result are equal to those of src.
+ * The integer division of "src" are assumed to be ordered.
+ *
+ * The integer divisions are swapped into the right position
+ * (possibly after adding them first).  This may result
+ * in the remaining integer divisions appearing in the wrong order,
+ * i.e., with some integer division appearing before
+ * some other integer division on which it depends.
+ * The integer divisions therefore need to be ordered.
+ * This will not affect the integer divisions aligned to those of "src",
+ * since "src" is assumed to have ordered integer divisions.
  *
  * The result is not finalized as by design it will have redundant
  * divs if any divs from "src" were copied.
@@ -9511,10 +9553,6 @@ __isl_give isl_basic_map *isl_basic_map_align_divs(
 	if (v_div < 0)
 		return isl_basic_map_free(dst);
 
-	src = isl_basic_map_order_divs(isl_basic_map_copy(src));
-	if (!src)
-		return isl_basic_map_free(dst);
-
 	extended = 0;
 	dst_n_div = isl_basic_map_dim(dst, isl_dim_div);
 	if (dst_n_div < 0)
@@ -9528,32 +9566,27 @@ __isl_give isl_basic_map *isl_basic_map_align_divs(
 				int extra = src->n_div - i;
 				dst = isl_basic_map_cow(dst);
 				if (!dst)
-					goto error;
+					return isl_basic_map_free(dst);
 				dst = isl_basic_map_extend(dst,
 						extra, 0, 2 * extra);
 				extended = 1;
 			}
 			j = isl_basic_map_alloc_div(dst);
 			if (j < 0)
-				goto error;
+				return isl_basic_map_free(dst);
 			isl_seq_cpy(dst->div[j], src->div[i], 1+1+v_div+i);
 			isl_seq_clr(dst->div[j]+1+1+v_div+i, dst->n_div - i);
 			dst_n_div++;
 			dst = isl_basic_map_add_div_constraints(dst, j);
 			if (!dst)
-				goto error;
+				return isl_basic_map_free(dst);
 		}
 		if (j != i)
 			dst = isl_basic_map_swap_div(dst, i, j);
 		if (!dst)
-			goto error;
+			return isl_basic_map_free(dst);
 	}
-	isl_basic_map_free(src);
-	return dst;
-error:
-	isl_basic_map_free(src);
-	isl_basic_map_free(dst);
-	return NULL;
+	return isl_basic_map_order_divs(dst);
 }
 
 __isl_give isl_map *isl_map_align_divs_internal(__isl_take isl_map *map)
@@ -9565,6 +9598,7 @@ __isl_give isl_map *isl_map_align_divs_internal(__isl_take isl_map *map)
 	if (map->n == 0)
 		return map;
 	map = isl_map_compute_divs(map);
+	map = isl_map_order_divs(map);
 	map = isl_map_cow(map);
 	if (!map)
 		return NULL;
@@ -9613,6 +9647,7 @@ __isl_give isl_map *isl_map_align_divs_to_basic_map_list(
 		isl_basic_map *bmap;
 
 		bmap = isl_basic_map_list_get_basic_map(list, i);
+		bmap = isl_basic_map_order_divs(bmap);
 		map->p[0] = isl_basic_map_align_divs(map->p[0], bmap);
 		isl_basic_map_free(bmap);
 	}

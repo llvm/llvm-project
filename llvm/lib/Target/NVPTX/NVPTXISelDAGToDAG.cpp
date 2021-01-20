@@ -2854,7 +2854,7 @@ bool NVPTXDAGToDAGISel::tryTextureIntrinsic(SDNode *N) {
   }
 
   // Copy over operands
-  SmallVector<SDValue, 8> Ops(N->op_begin() + 1, N->op_end());
+  SmallVector<SDValue, 8> Ops(drop_begin(N->ops()));
   Ops.push_back(N->getOperand(0)); // Move chain to the back.
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops));
@@ -3363,7 +3363,7 @@ bool NVPTXDAGToDAGISel::trySurfaceIntrinsic(SDNode *N) {
   }
 
   // Copy over operands
-  SmallVector<SDValue, 8> Ops(N->op_begin() + 1, N->op_end());
+  SmallVector<SDValue, 8> Ops(drop_begin(N->ops()));
   Ops.push_back(N->getOperand(0)); // Move chain to the back.
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops));

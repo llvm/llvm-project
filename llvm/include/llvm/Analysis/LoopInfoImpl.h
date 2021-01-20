@@ -673,7 +673,8 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
          "Mismatched basic blocks in the loops!");
 
   const SmallPtrSetImpl<const BlockT *> &BlocksSet = L->getBlocksSet();
-  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet = L->getBlocksSet();
+  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet =
+      OtherL->getBlocksSet();
   assert(BlocksSet.size() == OtherBlocksSet.size() &&
          llvm::all_of(BlocksSet,
                       [&OtherBlocksSet](const BlockT *BB) {

@@ -846,7 +846,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
     CommentOS << *Size << "-byte Reload\n";
   } else if ((Size = MI.getFoldedRestoreSize(TII))) {
     if (*Size) {
-      if (*Size == static_cast<unsigned>(MemoryLocation::UnknownSize))
+      if (*Size == unsigned(MemoryLocation::UnknownSize))
         CommentOS << "Unknown-size Folded Reload\n";
       else
         CommentOS << *Size << "-byte Folded Reload\n";
@@ -855,7 +855,7 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
     CommentOS << *Size << "-byte Spill\n";
   } else if ((Size = MI.getFoldedSpillSize(TII))) {
     if (*Size) {
-      if (*Size == static_cast<unsigned>(MemoryLocation::UnknownSize))
+      if (*Size == unsigned(MemoryLocation::UnknownSize))
         CommentOS << "Unknown-size Folded Spill\n";
       else
         CommentOS << *Size << "-byte Folded Spill\n";

@@ -415,7 +415,7 @@ func @dead_block_elim() {
 }
 
 // CHECK-LABEL: func @dyn_shape_fold(%arg0: index, %arg1: index)
-func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x ? x f32>) {
+func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>) {
   // CHECK: %c0 = constant 0 : index
   %zero = constant 0 : index
   // The constants below disappear after they propagate into shapes.
@@ -449,7 +449,7 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
     }
   }
 
-  return %c, %d : memref<? x ? x i32>, memref<? x ? x f32>
+  return %c, %d, %e : memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>
 }
 
 #map1 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
@@ -577,7 +577,7 @@ func @lowered_affine_mod() -> (index, index) {
   %c42 = constant 42 : index
   %0 = remi_signed %c-43, %c42 : index
   %c0 = constant 0 : index
-  %1 = cmpi "slt", %0, %c0 : index
+  %1 = cmpi slt, %0, %c0 : index
   %2 = addi %0, %c42 : index
   %3 = select %1, %2, %0 : index
 // CHECK-NEXT: {{.*}} = constant 1 : index
@@ -585,7 +585,7 @@ func @lowered_affine_mod() -> (index, index) {
   %c42_0 = constant 42 : index
   %4 = remi_signed %c43, %c42_0 : index
   %c0_1 = constant 0 : index
-  %5 = cmpi "slt", %4, %c0_1 : index
+  %5 = cmpi slt, %4, %c0_1 : index
   %6 = addi %4, %c42_0 : index
   %7 = select %5, %6, %4 : index
   return %3, %7 : index, index
@@ -603,7 +603,7 @@ func @lowered_affine_floordiv() -> (index, index) {
   %c42 = constant 42 : index
   %c0 = constant 0 : index
   %c-1 = constant -1 : index
-  %0 = cmpi "slt", %c-43, %c0 : index
+  %0 = cmpi slt, %c-43, %c0 : index
   %1 = subi %c-1, %c-43 : index
   %2 = select %0, %1, %c-43 : index
   %3 = divi_signed %2, %c42 : index
@@ -614,7 +614,7 @@ func @lowered_affine_floordiv() -> (index, index) {
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
   %c-1_2 = constant -1 : index
-  %6 = cmpi "slt", %c43, %c0_1 : index
+  %6 = cmpi slt, %c43, %c0_1 : index
   %7 = subi %c-1_2, %c43 : index
   %8 = select %6, %7, %c43 : index
   %9 = divi_signed %8, %c42_0 : index
@@ -635,7 +635,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %c42 = constant 42 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %0 = cmpi "sle", %c-43, %c0 : index
+  %0 = cmpi sle, %c-43, %c0 : index
   %1 = subi %c0, %c-43 : index
   %2 = subi %c-43, %c1 : index
   %3 = select %0, %1, %2 : index
@@ -648,7 +648,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
   %c1_2 = constant 1 : index
-  %8 = cmpi "sle", %c43, %c0_1 : index
+  %8 = cmpi sle, %c43, %c0_1 : index
   %9 = subi %c0_1, %c43 : index
   %10 = subi %c43, %c1_2 : index
   %11 = select %8, %9, %10 : index
@@ -1028,93 +1028,6 @@ func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: i
   // CHECK:  subview{{.*}}: memref<16x16xf32> to memref<3x4xf32, #[[$map0]]>
   // CHECK:  memref_cast{{.*}}: memref<3x4xf32, #[[$map0]]> to memref<3x4xf32, #[[$map1]]>
   return %1: memref<3x4xf32, offset:?, strides:[?, 1]>
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_from_tensor_from_elements
-func @extract_from_tensor_from_elements(%element : index) -> index {
-  // CHECK-SAME: ([[ARG:%.*]]: index)
-  %c0 = constant 0 : index
-  %tensor = tensor_from_elements %element : tensor<1xindex>
-  %extracted_element = tensor.extract %tensor[%c0] : tensor<1xindex>
-  // CHECK: [[ARG]] : index
-  return %extracted_element : index
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements
-// CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_from_dynamic_tensor_from_elements(%idx: index, %tensor: tensor<*xf32>) -> index {
-  %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[RES:.*]] = dim %[[TENSOR]], %[[IDX]]
-  %0 = dynamic_tensor_from_elements %size {
-    ^bb0(%arg0: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
-    yield %1 : index
-  } : tensor<?xindex>
-  %1 = tensor.extract %0[%idx] : tensor<?xindex>
-  // CHECK-NEXT: return %[[RES]]
-  return %1 : index
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements_2d
-// CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_from_dynamic_tensor_from_elements_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
-  %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[DIM0:.*]] = dim %[[TENSOR]], %[[IDX0]]
-  // CHECK-NEXT: %[[DIM1:.*]] = dim %[[TENSOR]], %[[IDX1]]
-  // CHECK-NEXT: %[[RES:.*]] = addi %[[DIM0]], %[[DIM1]]
-  %0 = dynamic_tensor_from_elements %size, %size {
-    ^bb0(%arg0: index, %arg1: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
-    %2 = dim %tensor, %arg1 : tensor<*xf32>
-    %3 = addi %1, %2 : index
-    yield %3 : index
-  } : tensor<?x?xindex>
-  %4 = tensor.extract %0[%idx0, %idx1] : tensor<?x?xindex>
-  // CHECK-NEXT: return %[[RES]]
-  return %4 : index
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_from_dynamic_tensor_from_elements_sideeffects
-// CHECK-SAME: %[[IDX:.*]]: index
-func @extract_from_dynamic_tensor_from_elements_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
-  %size = rank %tensor : tensor<*xf32>
-  %mem = alloc(%size) : memref<?xindex>
-  // CHECK: %[[DTENSOR:.*]] = dynamic_tensor_from_elements
-  %0 = dynamic_tensor_from_elements %size {
-    ^bb0(%arg0: index):
-    %1 = dim %tensor, %arg0 : tensor<*xf32>
-    store %1, %mem[%arg0] : memref<?xindex>
-    yield %1 : index
-  } : tensor<?xindex>
-  // CHECK: %[[RES:.*]] = tensor.extract %[[DTENSOR]][%[[IDX]]]
-  %1 = tensor.extract %0[%idx] : tensor<?xindex>
-  // CHECK-NEXT: return %[[RES]]
-  return %1 : index
-}
-
-// -----
-
-// CHECK-LABEL: @static_dynamic_tensor_from_elements
-// CHECK-SAME: %[[SIZE1:.*]]: index, %[[SIZE4:.*]]: index)
-func @static_dynamic_tensor_from_elements(%size1: index, %size4: index) -> tensor<3x?x?x7x?xindex> {
-  %c5 = constant 5 : index
-  // CHECK: dynamic_tensor_from_elements %[[SIZE1]], %[[SIZE4]]
-  %0 = dynamic_tensor_from_elements %size1, %c5, %size4 {
-    ^bb0(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index):
-    %1 = constant 32 : index
-    yield %1 : index
-  // CHECK: : tensor<3x?x5x7x?xindex>
-  } : tensor<3x?x?x7x?xindex>
-  // CHECK: tensor.cast %{{.*}} : tensor<3x?x5x7x?xindex> to tensor<3x?x?x7x?xindex>
-  return %0 : tensor<3x?x?x7x?xindex>
 }
 
 // -----

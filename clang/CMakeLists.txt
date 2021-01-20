@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
 # If we are not building as a part of LLVM, build Clang as an
 # standalone project, using LLVM as an external library:
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )

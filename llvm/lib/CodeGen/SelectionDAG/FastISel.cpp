@@ -1252,6 +1252,8 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::sideeffect:
   // Neither does the assume intrinsic; it's also OK not to codegen its operand.
   case Intrinsic::assume:
+  // Neither does the llvm.experimental.noalias.scope.decl intrinsic
+  case Intrinsic::experimental_noalias_scope_decl:
     return true;
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);

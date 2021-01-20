@@ -469,6 +469,20 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
+  // For atomic operations without mask
+  // Input: (base, index, value, vl)
+  class RISCVAMONoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty, LLVMMatchType<0>,
+                     llvm_anyint_ty],
+                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic;
+  // For atomic operations with mask
+  // Input: (base, index, value, mask, vl)
+  class RISCVAMOMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic;
 
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
@@ -568,6 +582,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" #NAME :RISCVConversionNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVConversionMask;
   }
+  multiclass RISCVAMO {
+    def "int_riscv_" # NAME : RISCVAMONoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVAMOMask;
+  }
 
   defm vle : RISCVUSLoad;
   defm vleff : RISCVUSLoad;
@@ -577,6 +595,16 @@ let TargetPrefix = "riscv" in {
   defm vlxe: RISCVILoad;
   defm vsxe: RISCVIStore;
   defm vsuxe: RISCVIStore;
+
+  defm vamoswap : RISCVAMO;
+  defm vamoadd : RISCVAMO;
+  defm vamoxor : RISCVAMO;
+  defm vamoand : RISCVAMO;
+  defm vamoor : RISCVAMO;
+  defm vamomin : RISCVAMO;
+  defm vamomax : RISCVAMO;
+  defm vamominu : RISCVAMO;
+  defm vamomaxu : RISCVAMO;
 
   defm vadd : RISCVBinaryAAX;
   defm vsub : RISCVBinaryAAX;

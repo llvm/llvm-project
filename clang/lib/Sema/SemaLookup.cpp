@@ -2657,6 +2657,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     case TemplateArgument::Integral:
     case TemplateArgument::Expression:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::UncommonValue:
       // [Note: non-type template arguments do not contribute to the set of
       //  associated namespaces. ]
       break;

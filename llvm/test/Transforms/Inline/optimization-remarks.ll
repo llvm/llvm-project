@@ -19,10 +19,10 @@
 ; RUN:       -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 | \
 ; RUN:       FileCheck -check-prefixes=CHECK,HOTNESS,ALWAYS %s
 
-; RUN: opt < %s -passes=inliner-wrapper -pass-remarks=inline -pass-remarks-missed=inline \
+; RUN: opt < %s -passes=inliner-wrapper-no-mandatory-first -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:       -pass-remarks-analysis=inline -S 2>&1 | \
 ; RUN:       FileCheck -check-prefixes=CHECK,NO_HOTNESS,ALWAYS %s
-; RUN: opt < %s -passes=inliner-wrapper -pass-remarks=inline -pass-remarks-missed=inline \
+; RUN: opt < %s -passes=inliner-wrapper-no-mandatory-first -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:       -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 | \
 ; RUN:       FileCheck -check-prefixes=CHECK,HOTNESS,ALWAYS %s
 

@@ -552,7 +552,7 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    lw s11, 116(s1)
 ; RV32I-NEXT:    lw s2, 120(s1)
 ; RV32I-NEXT:    lw s3, 124(s1)
-; RV32I-NEXT:    call callee
+; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    sw s3, 124(s1)
 ; RV32I-NEXT:    sw s2, 120(s1)
 ; RV32I-NEXT:    sw s11, 116(s1)
@@ -697,7 +697,7 @@ define void @caller() nounwind {
 ; RV32I-WITH-FP-NEXT:    lw s4, 116(s1)
 ; RV32I-WITH-FP-NEXT:    lw s5, 120(s1)
 ; RV32I-WITH-FP-NEXT:    lw s7, 124(s1)
-; RV32I-WITH-FP-NEXT:    call callee
+; RV32I-WITH-FP-NEXT:    call callee@plt
 ; RV32I-WITH-FP-NEXT:    sw s7, 124(s1)
 ; RV32I-WITH-FP-NEXT:    sw s5, 120(s1)
 ; RV32I-WITH-FP-NEXT:    sw s4, 116(s1)
@@ -841,7 +841,7 @@ define void @caller() nounwind {
 ; RV64I-NEXT:    lw s11, 116(s1)
 ; RV64I-NEXT:    lw s2, 120(s1)
 ; RV64I-NEXT:    lw s3, 124(s1)
-; RV64I-NEXT:    call callee
+; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    sw s3, 124(s1)
 ; RV64I-NEXT:    sw s2, 120(s1)
 ; RV64I-NEXT:    sw s11, 116(s1)
@@ -986,7 +986,7 @@ define void @caller() nounwind {
 ; RV64I-WITH-FP-NEXT:    lw s4, 116(s1)
 ; RV64I-WITH-FP-NEXT:    lw s5, 120(s1)
 ; RV64I-WITH-FP-NEXT:    lw s7, 124(s1)
-; RV64I-WITH-FP-NEXT:    call callee
+; RV64I-WITH-FP-NEXT:    call callee@plt
 ; RV64I-WITH-FP-NEXT:    sw s7, 124(s1)
 ; RV64I-WITH-FP-NEXT:    sw s5, 120(s1)
 ; RV64I-WITH-FP-NEXT:    sw s4, 116(s1)

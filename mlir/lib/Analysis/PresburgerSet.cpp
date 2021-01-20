@@ -281,6 +281,19 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   return result;
 }
 
+/// Two sets S and T are equal iff S contains T and T contains S.
+/// By "S contains T", we mean that S is a superset of or equal to T.
+///
+/// S contains T iff T \ S is empty, since if T \ S contains a
+/// point then this is a point that is contained in T but not S.
+///
+/// Therefore, S is equal to T iff S \ T and T \ S are both empty.
+bool PresburgerSet::isEqual(const PresburgerSet &set) const {
+  assertDimensionsCompatible(set, *this);
+  return this->subtract(set).isIntegerEmpty() &&
+         set.subtract(*this).isIntegerEmpty();
+}
+
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {

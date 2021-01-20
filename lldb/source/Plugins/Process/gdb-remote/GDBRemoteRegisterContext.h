@@ -27,20 +27,25 @@ namespace process_gdb_remote {
 
 class ThreadGDBRemote;
 class ProcessGDBRemote;
+class GDBRemoteDynamicRegisterInfo;
 
-class GDBRemoteDynamicRegisterInfo : public DynamicRegisterInfo {
+typedef std::shared_ptr<GDBRemoteDynamicRegisterInfo>
+    GDBRemoteDynamicRegisterInfoSP;
+
+class GDBRemoteDynamicRegisterInfo final : public DynamicRegisterInfo {
 public:
   GDBRemoteDynamicRegisterInfo() : DynamicRegisterInfo() {}
 
   ~GDBRemoteDynamicRegisterInfo() override = default;
 
   void HardcodeARMRegisters(bool from_scratch);
+  bool UpdateARM64SVERegistersInfos(uint64_t vg);
 };
 
 class GDBRemoteRegisterContext : public RegisterContext {
 public:
   GDBRemoteRegisterContext(ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-                           GDBRemoteDynamicRegisterInfo &reg_info,
+                           GDBRemoteDynamicRegisterInfoSP reg_info_sp,
                            bool read_all_at_once, bool write_all_at_once);
 
   ~GDBRemoteRegisterContext() override;
@@ -72,6 +77,8 @@ public:
 
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
+
+  bool AArch64SVEReconfigure();
 
 protected:
   friend class ThreadGDBRemote;
@@ -106,7 +113,7 @@ protected:
       m_reg_valid[reg] = valid;
   }
 
-  GDBRemoteDynamicRegisterInfo &m_reg_info;
+  GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
   std::vector<bool> m_reg_valid;
   DataExtractor m_reg_data;
   bool m_read_all_at_once;

@@ -153,6 +153,8 @@ protected:
   bool UsePPCPostRASchedStrategy;
   bool PairedVectorMemops;
   bool PredictableSelectIsExpensive;
+  bool HasModernAIXAs;
+  bool IsAIX;
 
   POPCNTDKind HasPOPCNTD;
 

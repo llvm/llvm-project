@@ -196,7 +196,7 @@ func @func_with_ops(i32) {
 // Comparison are defined for arguments of the same type.
 func @func_with_ops(i32, i64) {
 ^bb0(%a : i32, %b : i64): // expected-note {{prior use here}}
-  %r = cmpi "eq", %a, %b : i32 // expected-error {{use of value '%b' expects different type than prior uses}}
+  %r = cmpi eq, %a, %b : i32 // expected-error {{use of value '%b' expects different type than prior uses}}
 }
 
 // -----
@@ -204,7 +204,7 @@ func @func_with_ops(i32, i64) {
 // Comparisons must have the "predicate" attribute.
 func @func_with_ops(i32, i32) {
 ^bb0(%a : i32, %b : i32):
-  %r = cmpi %a, %b : i32 // expected-error {{expected non-function type}}
+  %r = cmpi %a, %b : i32 // expected-error {{expected string or keyword containing one of the following enum values}}
 }
 
 // -----
@@ -212,7 +212,7 @@ func @func_with_ops(i32, i32) {
 // Integer comparisons are not recognized for float types.
 func @func_with_ops(f32, f32) {
 ^bb0(%a : f32, %b : f32):
-  %r = cmpi "eq", %a, %b : f32 // expected-error {{'lhs' must be signless-integer-like, but got 'f32'}}
+  %r = cmpi eq, %a, %b : f32 // expected-error {{'lhs' must be signless-integer-like, but got 'f32'}}
 }
 
 // -----
@@ -285,7 +285,7 @@ func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 
 func @invalid_cmp_shape(%idx : () -> ()) {
   // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
-  %cmp = cmpi "eq", %idx, %idx : () -> ()
+  %cmp = cmpi eq, %idx, %idx : () -> ()
 
 // -----
 
@@ -446,7 +446,7 @@ func @dma_wait_wrong_num_elements_type(%tag : memref<2xi32>, %idx: index, %flt: 
 // -----
 
 func @invalid_cmp_attr(%idx : i32) {
-  // expected-error@+1 {{invalid kind of attribute specified}}
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
   %cmp = cmpi i1, %idx, %idx : i32
 
 // -----
@@ -459,22 +459,22 @@ func @cmpf_generic_invalid_predicate_value(%a : f32) {
 // -----
 
 func @cmpf_canonical_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{invalid predicate attribute specification: "foo"}}
-  %r = cmpf "foo", %a, %a : f32
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
+  %r = cmpf foo, %a, %a : f32
 }
 
 // -----
 
 func @cmpf_canonical_invalid_predicate_value_signed(%a : f32) {
-  // expected-error@+1 {{invalid predicate attribute specification: "sge"}}
-  %r = cmpf "sge", %a, %a : f32
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
+  %r = cmpf sge, %a, %a : f32
 }
 
 // -----
 
 func @cmpf_canonical_invalid_predicate_value_no_order(%a : f32) {
-  // expected-error@+1 {{invalid predicate attribute specification: "eq"}}
-  %r = cmpf "eq", %a, %a : f32
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values}}
+  %r = cmpf eq, %a, %a : f32
 }
 
 // -----
@@ -493,7 +493,7 @@ func @cmpf_generic_no_predicate_attr(%a : f32, %b : f32) {
 // -----
 
 func @cmpf_wrong_type(%a : i32, %b : i32) {
-  %r = cmpf "oeq", %a, %b : i32 // expected-error {{must be floating-point-like}}
+  %r = cmpf oeq, %a, %b : i32 // expected-error {{must be floating-point-like}}
 }
 
 // -----
@@ -506,7 +506,7 @@ func @cmpf_generic_wrong_result_type(%a : f32, %b : f32) {
 // -----
 
 func @cmpf_canonical_wrong_result_type(%a : f32, %b : f32) -> f32 {
-  %r = cmpf "oeq", %a, %b : f32 // expected-note {{prior use here}}
+  %r = cmpf oeq, %a, %b : f32 // expected-note {{prior use here}}
   // expected-error@+1 {{use of value '%r' expects different type than prior uses}}
   return %r : f32
 }
@@ -536,25 +536,7 @@ func @cmpf_generic_operand_type_mismatch(%a : f32, %b : f64) {
 
 func @cmpf_canonical_type_mismatch(%a : f32, %b : f64) { // expected-note {{prior use here}}
   // expected-error@+1 {{use of value '%b' expects different type than prior uses}}
-  %r = cmpf "oeq", %a, %b : f32
-}
-
-// -----
-
-func @tensor_from_elements_wrong_result_type() {
-  // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
-  %c0 = constant 0 : i32
-  %0 = tensor_from_elements %c0 : tensor<*xi32>
-  return
-}
-
-// -----
-
-func @tensor_from_elements_wrong_elements_count() {
-  // expected-error@+2 {{1 operands present, but expected 2}}
-  %c0 = constant 0 : index
-  %0 = tensor_from_elements %c0 : tensor<2xindex>
-  return
+  %r = cmpf oeq, %a, %b : f32
 }
 
 // -----
@@ -1083,7 +1065,7 @@ func @invalid_memref_cast() {
 
 func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
   // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
-  %x = atomic_rmw "addf" %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
+  %x = atomic_rmw addf %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
   return
 }
 
@@ -1091,7 +1073,7 @@ func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f3
 
 func @atomic_rmw_expects_float(%I: memref<16x10xi32>, %i : index, %val : i32) {
   // expected-error@+1 {{expects a floating-point type}}
-  %x = atomic_rmw "addf" %val, %I[%i, %i] : (i32, memref<16x10xi32>) -> i32
+  %x = atomic_rmw addf %val, %I[%i, %i] : (i32, memref<16x10xi32>) -> i32
   return
 }
 
@@ -1099,7 +1081,7 @@ func @atomic_rmw_expects_float(%I: memref<16x10xi32>, %i : index, %val : i32) {
 
 func @atomic_rmw_expects_int(%I: memref<16x10xf32>, %i : index, %val : f32) {
   // expected-error@+1 {{expects an integer type}}
-  %x = atomic_rmw "addi" %val, %I[%i, %i] : (f32, memref<16x10xf32>) -> f32
+  %x = atomic_rmw addi %val, %I[%i, %i] : (f32, memref<16x10xf32>) -> f32
   return
 }
 

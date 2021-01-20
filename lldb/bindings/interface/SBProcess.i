@@ -11,24 +11,22 @@ namespace lldb {
 %feature("docstring",
 "Represents the process associated with the target program.
 
-SBProcess supports thread iteration. For example (from test/lldbutil.py),
+SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 
-# ==================================================
-# Utility functions related to Threads and Processes
-# ==================================================
+    # ==================================================
+    # Utility functions related to Threads and Processes
+    # ==================================================
 
-def get_stopped_threads(process, reason):
-    '''Returns the thread(s) with the specified stop reason in a list.
+    def get_stopped_threads(process, reason):
+        '''Returns the thread(s) with the specified stop reason in a list.
 
-    The list can be empty if no such thread exists.
-    '''
-    threads = []
-    for t in process:
-        if t.GetStopReason() == reason:
-            threads.append(t)
-    return threads
-
-...
+        The list can be empty if no such thread exists.
+        '''
+        threads = []
+        for t in process:
+            if t.GetStopReason() == reason:
+                threads.append(t)
+        return threads
 "
 ) SBProcess;
 class SBProcess
@@ -246,67 +244,67 @@ public:
     %feature("autodoc", "
     Reads memory from the current process's address space and removes any
     traps that may have been inserted into the memory. It returns the byte
-    buffer in a Python string. Example:
+    buffer in a Python string. Example: ::
 
-    # Read 4 bytes from address 'addr' and assume error.Success() is True.
-    content = process.ReadMemory(addr, 4, error)
-    new_bytes = bytearray(content)") ReadMemory;
+        # Read 4 bytes from address 'addr' and assume error.Success() is True.
+        content = process.ReadMemory(addr, 4, error)
+        new_bytes = bytearray(content)") ReadMemory;
     size_t
     ReadMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
     %feature("autodoc", "
     Writes memory to the current process's address space and maintains any
-    traps that might be present due to software breakpoints. Example:
+    traps that might be present due to software breakpoints. Example: ::
 
-    # Create a Python string from the byte array.
-    new_value = str(bytes)
-    result = process.WriteMemory(addr, new_value, error)
-    if not error.Success() or result != len(bytes):
-        print('SBProcess.WriteMemory() failed!')") WriteMemory;
+        # Create a Python string from the byte array.
+        new_value = str(bytes)
+        result = process.WriteMemory(addr, new_value, error)
+        if not error.Success() or result != len(bytes):
+            print('SBProcess.WriteMemory() failed!')") WriteMemory;
     size_t
     WriteMemory (addr_t addr, const void *buf, size_t size, lldb::SBError &error);
 
     %feature("autodoc", "
     Reads a NULL terminated C string from the current process's address space.
     It returns a python string of the exact length, or truncates the string if
-    the maximum character limit is reached. Example:
+    the maximum character limit is reached. Example: ::
 
-    # Read a C string of at most 256 bytes from address '0x1000'
-    error = lldb.SBError()
-    cstring = process.ReadCStringFromMemory(0x1000, 256, error)
-    if error.Success():
-        print('cstring: ', cstring)
-    else
-        print('error: ', error)") ReadCStringFromMemory;
+        # Read a C string of at most 256 bytes from address '0x1000'
+        error = lldb.SBError()
+        cstring = process.ReadCStringFromMemory(0x1000, 256, error)
+        if error.Success():
+            print('cstring: ', cstring)
+        else
+            print('error: ', error)") ReadCStringFromMemory;
 
     size_t
     ReadCStringFromMemory (addr_t addr, void *char_buf, size_t size, lldb::SBError &error);
 
     %feature("autodoc", "
     Reads an unsigned integer from memory given a byte size and an address.
-    Returns the unsigned integer that was read. Example:
+    Returns the unsigned integer that was read. Example: ::
 
-    # Read a 4 byte unsigned integer from address 0x1000
-    error = lldb.SBError()
-    uint = ReadUnsignedFromMemory(0x1000, 4, error)
-    if error.Success():
-        print('integer: %u' % uint)
-    else
-        print('error: ', error)") ReadUnsignedFromMemory;
+        # Read a 4 byte unsigned integer from address 0x1000
+        error = lldb.SBError()
+        uint = ReadUnsignedFromMemory(0x1000, 4, error)
+        if error.Success():
+            print('integer: %u' % uint)
+        else
+            print('error: ', error)") ReadUnsignedFromMemory;
 
     uint64_t
     ReadUnsignedFromMemory (addr_t addr, uint32_t byte_size, lldb::SBError &error);
 
     %feature("autodoc", "
-    Reads a pointer from memory from an address and returns the value. Example:
+    Reads a pointer from memory from an address and returns the value. Example: ::
 
-    # Read a pointer from address 0x1000
-    error = lldb.SBError()
-    ptr = ReadPointerFromMemory(0x1000, error)
-    if error.Success():
-        print('pointer: 0x%x' % ptr)
-    else
-        print('error: ', error)") ReadPointerFromMemory;
+        # Read a pointer from address 0x1000
+        error = lldb.SBError()
+        ptr = ReadPointerFromMemory(0x1000, error)
+        if error.Success():
+            print('pointer: 0x%x' % ptr)
+        else
+            print('error: ', error)") ReadPointerFromMemory;
 
     lldb::addr_t
     ReadPointerFromMemory (addr_t addr, lldb::SBError &error);
@@ -414,11 +412,11 @@ public:
     %feature("autodoc", "
     Get information about the process.
     Valid process info will only be returned when the process is alive,
-    use IsValid() to check if the info returned is valid.
+    use IsValid() to check if the info returned is valid. ::
 
-    process_info = process.GetProcessInfo()
-    if process_info.IsValid():
-        process_info.GetProcessID()") GetProcessInfo;
+        process_info = process.GetProcessInfo()
+        if process_info.IsValid():
+            process_info.GetProcessID()") GetProcessInfo;
     lldb::SBProcessInfo
     GetProcessInfo();
 

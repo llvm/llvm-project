@@ -41,11 +41,10 @@ append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC GWP_ASAN_CFLAGS)
 # Remove -stdlib= which is unused when passing -nostdinc++.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-# Options parsing support is optional. GwpAsan is totally independent of
-# sanitizer_common, the options parser is not. This is an optional library
-# that can be used by an allocator to automatically parse GwpAsan options from
-# the environment variable GWP_ASAN_FLAGS, but the allocator can choose to
-# implement its own options parsing and populate the Options struct itself.
+# Options parsing support is optional. This is an optional library that can be
+# used by an allocator to automatically parse GwpAsan options from the
+# environment variable GWP_ASAN_FLAGS, but the allocator can choose to implement
+# its own options parsing and populate the Options struct itself.
 set(GWP_ASAN_OPTIONS_PARSER_SOURCES
   optional/options_parser.cpp
 )
@@ -64,11 +63,7 @@ set(GWP_ASAN_SEGV_HANDLER_HEADERS
   options.h)
 
 set(GWP_ASAN_OPTIONS_PARSER_CFLAGS
-    ${GWP_ASAN_CFLAGS}
-    ${SANITIZER_COMMON_CFLAGS})
-set(GWP_ASAN_OPTIONS_PARSER_OBJECT_LIBS
-    RTSanitizerCommon
-    RTSanitizerCommonNoLibc)
+    ${GWP_ASAN_CFLAGS})
 
 if (COMPILER_RT_HAS_GWP_ASAN)
   foreach(arch ${GWP_ASAN_SUPPORTED_ARCH})
@@ -89,11 +84,6 @@ if (COMPILER_RT_HAS_GWP_ASAN)
       ADDITIONAL_HEADERS ${GWP_ASAN_HEADERS}
       CFLAGS ${GWP_ASAN_CFLAGS})
 
-  # Note: If you choose to add this as an object library, ensure you also
-  # include the sanitizer_common flag parsing object lib (generally
-  # 'RTSanitizerCommonNoTermination'). Also, you'll need to either implement
-  # your own backtrace support (see optional/backtrace.h), or choose between one
-  # of the pre-implemented backtrace support options (see below).
   add_compiler_rt_object_libraries(RTGwpAsanOptionsParser
       ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
       SOURCES ${GWP_ASAN_OPTIONS_PARSER_SOURCES}

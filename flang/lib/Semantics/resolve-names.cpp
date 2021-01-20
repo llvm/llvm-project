@@ -2050,7 +2050,9 @@ Symbol &ScopeHandler::MakeSymbol(const parser::Name &name, Attrs attrs) {
 }
 Symbol &ScopeHandler::MakeHostAssocSymbol(
     const parser::Name &name, const Symbol &hostSymbol) {
-  Symbol &symbol{MakeSymbol(name, HostAssocDetails{hostSymbol})};
+  Symbol &symbol{*NonDerivedTypeScope()
+                      .try_emplace(name.source, HostAssocDetails{hostSymbol})
+                      .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
   symbol.flags() = hostSymbol.flags();
@@ -2356,7 +2358,11 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
         useModuleScope_->GetName().value());
     return {};
   }
-  if (useSymbol->attrs().test(Attr::PRIVATE)) {
+  if (useSymbol->attrs().test(Attr::PRIVATE) &&
+      !FindModuleFileContaining(currScope())) {
+    // Privacy is not enforced in module files so that generic interfaces
+    // can be resolved to private specific procedures in specification
+    // expressions.
     Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
         useModuleScope_->GetName().value());
     return {};
@@ -2601,36 +2607,43 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       Say(*name, "Procedure '%s' not found"_err_en_US);
       continue;
     }
-    symbol = &symbol->GetUltimate();
     if (symbol == &generic) {
       if (auto *specific{generic.get<GenericDetails>().specific()}) {
         symbol = specific;
       }
     }
-    if (!symbol->has<SubprogramDetails>() &&
-        !symbol->has<SubprogramNameDetails>()) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (!ultimate.has<SubprogramDetails>() &&
+        !ultimate.has<SubprogramNameDetails>()) {
       Say(*name, "'%s' is not a subprogram"_err_en_US);
       continue;
     }
     if (kind == ProcedureKind::ModuleProcedure) {
-      if (const auto *nd{symbol->detailsIf<SubprogramNameDetails>()}) {
+      if (const auto *nd{ultimate.detailsIf<SubprogramNameDetails>()}) {
         if (nd->kind() != SubprogramKind::Module) {
           Say(*name, "'%s' is not a module procedure"_err_en_US);
         }
       } else {
         // USE-associated procedure
-        const auto *sd{symbol->detailsIf<SubprogramDetails>()};
+        const auto *sd{ultimate.detailsIf<SubprogramDetails>()};
         CHECK(sd);
-        if (symbol->owner().kind() != Scope::Kind::Module ||
+        if (ultimate.owner().kind() != Scope::Kind::Module ||
             sd->isInterface()) {
           Say(*name, "'%s' is not a module procedure"_err_en_US);
         }
       }
     }
-    if (!symbolsSeen.insert(*symbol).second) {
-      Say(name->source,
-          "Procedure '%s' is already specified in generic '%s'"_err_en_US,
-          name->source, MakeOpName(generic.name()));
+    if (!symbolsSeen.insert(ultimate).second) {
+      if (symbol == &ultimate) {
+        Say(name->source,
+            "Procedure '%s' is already specified in generic '%s'"_err_en_US,
+            name->source, MakeOpName(generic.name()));
+      } else {
+        Say(name->source,
+            "Procedure '%s' from module '%s' is already specified in generic '%s'"_err_en_US,
+            ultimate.name(), ultimate.owner().GetName().value(),
+            MakeOpName(generic.name()));
+      }
       continue;
     }
     details.AddSpecificProc(*symbol, name->source);
@@ -4945,18 +4958,19 @@ void ConstructVisitor::ResolveIndexName(
     // type came from explicit type-spec
   } else if (!prev) {
     ApplyImplicitRules(symbol);
-  } else if (const Symbol * prevRoot{GetAssociationRoot(*prev)}) {
+  } else {
+    const Symbol &prevRoot{ResolveAssociations(*prev)};
     // prev could be host- use- or construct-associated with another symbol
-    if (!prevRoot->has<ObjectEntityDetails>() &&
-        !prevRoot->has<EntityDetails>()) {
+    if (!prevRoot.has<ObjectEntityDetails>() &&
+        !prevRoot.has<EntityDetails>()) {
       Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
           *prev, "Previous declaration of '%s'"_en_US);
       return;
     } else {
-      if (const auto *type{prevRoot->GetType()}) {
+      if (const auto *type{prevRoot.GetType()}) {
         symbol.SetType(*type);
       }
-      if (prevRoot->IsObjectArray()) {
+      if (prevRoot.IsObjectArray()) {
         SayWithDecl(name, *prev, "Index variable '%s' is not scalar"_err_en_US);
         return;
       }
@@ -5047,7 +5061,7 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
 }
 
 // Sets InDataStmt flag on a variable (or misidentified function) in a DATA
-// statement so that the predicate IsInitialized(base symbol) will be true
+// statement so that the predicate IsStaticallyInitialized() will be true
 // during semantic analysis before the symbol's initializer is constructed.
 bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
   std::visit(
@@ -5090,11 +5104,10 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
   if (auto *elem{parser::Unwrap<parser::ArrayElement>(mutableData)}) {
     if (const auto *name{std::get_if<parser::Name>(&elem->base.u)}) {
       if (const Symbol * symbol{FindSymbol(*name)}) {
-        if (const Symbol * ultimate{GetAssociationRoot(*symbol)}) {
-          if (ultimate->has<DerivedTypeDetails>()) {
-            mutableData.u = elem->ConvertToStructureConstructor(
-                DerivedTypeSpec{name->source, *ultimate});
-          }
+        const Symbol &ultimate{symbol->GetUltimate()};
+        if (ultimate.has<DerivedTypeDetails>()) {
+          mutableData.u = elem->ConvertToStructureConstructor(
+              DerivedTypeSpec{name->source, ultimate});
         }
       }
     }

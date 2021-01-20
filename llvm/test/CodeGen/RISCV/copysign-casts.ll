@@ -42,8 +42,7 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; RV64I-NEXT:    slli a2, a2, 63
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, zero, 1
-; RV64I-NEXT:    slli a2, a2, 31
+; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
@@ -188,10 +187,7 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    addiw a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, zero, 1
-; RV64I-NEXT:    slli a2, a2, 33
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    slli a2, a2, 15
+; RV64I-NEXT:    lui a2, 1048568
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a1, a1, 16
 ; RV64I-NEXT:    or a0, a0, a1

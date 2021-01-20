@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=haswell < %s | FileCheck %s --check-prefix=NOFSRM
 ; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=icelake-client < %s | FileCheck %s --check-prefix=FSRM
 ; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=icelake-server < %s | FileCheck %s --check-prefix=FSRM
+; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=znver3 < %s | FileCheck %s --check-prefix=FSRM
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 

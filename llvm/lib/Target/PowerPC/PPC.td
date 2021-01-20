@@ -57,6 +57,10 @@ def DirectivePwrFuture
 
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;
+def AIXOS: SubtargetFeature<"aix", "IsAIX", "true", "AIX OS">;
+def FeatureModernAIXAs
+    : SubtargetFeature<"modern-aix-as", "HasModernAIXAs", "true",
+                       "AIX system assembler is modern enough to support new mnes">;
 def FeatureHardFloat : SubtargetFeature<"hard-float", "HasHardFloat", "true",
                               "Enable floating-point instructions">;
 def Feature64BitRegs : SubtargetFeature<"64bitregs","Use64BitRegs", "true",

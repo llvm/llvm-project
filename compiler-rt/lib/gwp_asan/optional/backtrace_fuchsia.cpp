@@ -11,12 +11,11 @@
 // GWP-ASan on Fuchsia doesn't currently support backtraces.
 
 namespace gwp_asan {
-namespace options {
-Backtrace_t getBacktraceFunction() { return nullptr; }
-crash_handler::PrintBacktrace_t getPrintBacktraceFunction() { return nullptr; }
-} // namespace options
+namespace backtrace {
 
-namespace crash_handler {
+options::Backtrace_t getBacktraceFunction() { return nullptr; }
+PrintBacktrace_t getPrintBacktraceFunction() { return nullptr; }
 SegvBacktrace_t getSegvBacktraceFunction() { return nullptr; }
-} // namespace crash_handler
+
+} // namespace backtrace
 } // namespace gwp_asan

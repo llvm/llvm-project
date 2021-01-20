@@ -345,3 +345,23 @@ func @fclamp(%arg0 : i32, %min : i32, %max : i32) -> () {
   %2 = spv.GLSL.SClamp %arg0, %min, %max : i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Fma
+//===----------------------------------------------------------------------===//
+
+func @fma(%a : f32, %b : f32, %c : f32) -> () {
+  // CHECK: spv.GLSL.Fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+  %2 = spv.GLSL.Fma %a, %b, %c : f32
+  return
+}
+
+// -----
+
+func @fma(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> () {
+  // CHECK: spv.GLSL.Fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
+  %2 = spv.GLSL.Fma %a, %b, %c : vector<3xf32>
+  return
+}

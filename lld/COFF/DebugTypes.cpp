@@ -679,6 +679,26 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
   auto nextUniqueIndex = uniqueTypes.begin();
   assert(mergedTpi.recs.empty());
   assert(mergedIpi.recs.empty());
+
+  // Pre-compute the number of elements in advance to avoid std::vector resizes.
+  unsigned nbTpiRecs = 0;
+  unsigned nbIpiRecs = 0;
+  forEachTypeChecked(typeRecords, [&](const CVType &ty) {
+    if (nextUniqueIndex != uniqueTypes.end() &&
+        *nextUniqueIndex == ghashIndex) {
+      assert(ty.length() <= codeview::MaxRecordLength);
+      size_t newSize = alignTo(ty.length(), 4);
+      (isIdRecord(ty.kind()) ? nbIpiRecs : nbTpiRecs) += newSize;
+      ++nextUniqueIndex;
+    }
+    ++ghashIndex;
+  });
+  mergedTpi.recs.reserve(nbTpiRecs);
+  mergedIpi.recs.reserve(nbIpiRecs);
+
+  // Do the actual type merge.
+  ghashIndex = 0;
+  nextUniqueIndex = uniqueTypes.begin();
   forEachTypeChecked(typeRecords, [&](const CVType &ty) {
     if (nextUniqueIndex != uniqueTypes.end() &&
         *nextUniqueIndex == ghashIndex) {

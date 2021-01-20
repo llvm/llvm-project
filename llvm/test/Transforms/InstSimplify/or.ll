@@ -301,3 +301,149 @@ define i32 @poison(i32 %x) {
   %v = or i32 %x, poison
   ret i32 %v
 }
+
+declare void @use(i32)
+
+define i32 @and_or_not_or(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %B, -1
+  %i2 = and i32 %i, %A
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or2(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or2(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %i, %B
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define <4 x i32> @and_or_not_or3_vec(<4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: @and_or_not_or3_vec(
+; CHECK-NEXT:    [[I:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    ret <4 x i32> [[I]]
+;
+  %i = xor <4 x i32> %A, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %i2 = and <4 x i32> %i, %B
+  %i3 = or <4 x i32> %B, %A
+  %i4 = xor <4 x i32> %i3, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %i5 = or <4 x i32> %i2, %i4
+  ret <4 x i32> %i5
+}
+
+define i32 @and_or_not_or4_use(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or4_use(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[B:%.*]]
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %i, %B
+  tail call void @use(i32 %i2)
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or4_use2(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or4_use2(
+; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    ret i32 [[I3]]
+;
+  %i = or i32 %B, %A
+  %i2 = xor i32 %i, -1
+  tail call void @use(i32 %i2)
+  %i3 = xor i32 %A, -1
+  %i4 = and i32 %i3, %B
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or4_use3(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or4_use3(
+; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], [[B]]
+; CHECK-NEXT:    tail call void @use(i32 [[I4]])
+; CHECK-NEXT:    ret i32 [[I3]]
+;
+  %i = or i32 %B, %A
+  %i2 = xor i32 %i, -1
+  tail call void @use(i32 %i2)
+  %i3 = xor i32 %A, -1
+  %i4 = and i32 %i3, %B
+  tail call void @use(i32 %i4)
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or5(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or5(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %B, %i
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or6(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or6(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %i, %B
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or7(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or7(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %B, %i
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
+
+define i32 @and_or_not_or8(i32 %A, i32 %B) {
+; CHECK-LABEL: @and_or_not_or8(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+  %i = xor i32 %B, -1
+  %i2 = and i32 %A, %i
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}

@@ -145,9 +145,7 @@ struct LTOCodeGenerator {
   /// \note It is up to the linker to remove the intermediate output file.  Do
   /// not try to remove the object file in LTOCodeGenerator's destructor as we
   /// don't who (LTOCodeGenerator or the output file) will last longer.
-  bool compile_to_file(const char **Name, bool DisableVerify,
-                       bool DisableInline, bool DisableGVNLoadPRE,
-                       bool DisableVectorization);
+  bool compile_to_file(const char **Name, bool DisableVerify);
 
   /// As with compile_to_file(), this function compiles the merged module into
   /// single output file. Instead of returning the output file path to the
@@ -155,15 +153,12 @@ struct LTOCodeGenerator {
   /// to the caller. This function should delete the intermediate file once
   /// its content is brought to memory. Return NULL if the compilation was not
   /// successful.
-  std::unique_ptr<MemoryBuffer> compile(bool DisableVerify, bool DisableInline,
-                                        bool DisableGVNLoadPRE,
-                                        bool DisableVectorization);
+  std::unique_ptr<MemoryBuffer> compile(bool DisableVerify);
 
   /// Optimizes the merged module.  Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool optimize(bool DisableVerify, bool DisableInline, bool DisableGVNLoadPRE,
-                bool DisableVectorization);
+  bool optimize(bool DisableVerify);
 
   /// Compiles the merged optimized module into a single output file. It brings
   /// the output to a buffer, and returns the buffer to the caller. Return NULL

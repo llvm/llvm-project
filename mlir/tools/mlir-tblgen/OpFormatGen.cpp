@@ -35,6 +35,15 @@ static llvm::cl::opt<bool> formatErrorIsFatal(
     llvm::cl::desc("Emit a fatal error if format parsing fails"),
     llvm::cl::init(true));
 
+/// Returns true if the given string can be formatted as a keyword.
+static bool canFormatStringAsKeyword(StringRef value) {
+  if (!isalpha(value.front()) && value.front() != '_')
+    return false;
+  return llvm::all_of(value.drop_front(), [](char c) {
+    return isalnum(c) || c == '_' || c == '$' || c == '.';
+  });
+}
+
 //===----------------------------------------------------------------------===//
 // Element
 //===----------------------------------------------------------------------===//
@@ -289,11 +298,7 @@ bool LiteralElement::isValidLiteral(StringRef value) {
     return true;
 
   // Otherwise, this must be an identifier.
-  if (!isalpha(front) && front != '_')
-    return false;
-  return llvm::all_of(value.drop_front(), [](char c) {
-    return isalnum(c) || c == '_' || c == '$' || c == '.';
-  });
+  return canFormatStringAsKeyword(value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -536,41 +541,32 @@ const char *const optionalSymbolNameAttrParserCode = R"(
 /// {1}: The c++ namespace for the enum symbolize functions.
 /// {2}: The function to symbolize a string of the enum.
 /// {3}: The constant builder call to create an attribute of the enum type.
+/// {4}: The set of allowed enum keywords.
+/// {5}: The error message on failure when the enum isn't present.
 const char *const enumAttrParserCode = R"(
   {
-    ::mlir::StringAttr attrVal;
+    ::llvm::StringRef attrStr;
     ::mlir::NamedAttrList attrStorage;
     auto loc = parser.getCurrentLocation();
-    if (parser.parseAttribute(attrVal, parser.getBuilder().getNoneType(),
-                              "{0}", attrStorage))
-      return ::mlir::failure();
-
-    auto attrOptional = {1}::{2}(attrVal.getValue());
-    if (!attrOptional)
-      return parser.emitError(loc, "invalid ")
-             << "{0} attribute specification: " << attrVal;
-
-    {0}Attr = {3};
-    result.addAttribute("{0}", {0}Attr);
-  }
-)";
-const char *const optionalEnumAttrParserCode = R"(
-  {
-    ::mlir::StringAttr attrVal;
-    ::mlir::NamedAttrList attrStorage;
-    auto loc = parser.getCurrentLocation();
-
-    ::mlir::OptionalParseResult parseResult =
-      parser.parseOptionalAttribute(attrVal, parser.getBuilder().getNoneType(),
-                                    "{0}", attrStorage);
-    if (parseResult.hasValue()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-
-      auto attrOptional = {1}::{2}(attrVal.getValue());
+    if (parser.parseOptionalKeyword(&attrStr, {4})) {
+      ::mlir::StringAttr attrVal;
+      ::mlir::OptionalParseResult parseResult =
+        parser.parseOptionalAttribute(attrVal,
+                                      parser.getBuilder().getNoneType(),
+                                      "{0}", attrStorage);
+      if (parseResult.hasValue()) {{
+        if (failed(*parseResult))
+          return ::mlir::failure();
+        attrStr = attrVal.getValue();
+      } else {
+        {5}
+      }
+    }
+    if (!attrStr.empty()) {
+      auto attrOptional = {1}::{2}(attrStr);
       if (!attrOptional)
         return parser.emitError(loc, "invalid ")
-               << "{0} attribute specification: " << attrVal;
+               << "{0} attribute specification: \"" << attrStr << '"';;
 
       {0}Attr = {3};
       result.addAttribute("{0}", {0}Attr);
@@ -1029,6 +1025,49 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
   body << "  }\n";
 }
 
+/// Generate the parser for a enum attribute.
+static void genEnumAttrParser(const NamedAttribute *var, OpMethodBody &body,
+                              FmtContext &attrTypeCtx) {
+  Attribute baseAttr = var->attr.getBaseAttr();
+  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
+  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+
+  // Generate the code for building an attribute for this enum.
+  std::string attrBuilderStr;
+  {
+    llvm::raw_string_ostream os(attrBuilderStr);
+    os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
+                "attrOptional.getValue()");
+  }
+
+  // Build a string containing the cases that can be formatted as a keyword.
+  std::string validCaseKeywordsStr = "{";
+  llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
+  for (const EnumAttrCase &attrCase : cases)
+    if (canFormatStringAsKeyword(attrCase.getStr()))
+      validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
+  validCaseKeywordsOS.str().back() = '}';
+
+  // If the attribute is not optional, build an error message for the missing
+  // attribute.
+  std::string errorMessage;
+  if (!var->attr.isOptional()) {
+    llvm::raw_string_ostream errorMessageOS(errorMessage);
+    errorMessageOS
+        << "return parser.emitError(loc, \"expected string or "
+           "keyword containing one of the following enum values for attribute '"
+        << var->name << "' [";
+    llvm::interleaveComma(cases, errorMessageOS, [&](const auto &attrCase) {
+      errorMessageOS << attrCase.getStr();
+    });
+    errorMessageOS << "]\");";
+  }
+
+  body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
+                  enumAttr.getStringToSymbolFnName(), attrBuilderStr,
+                  validCaseKeywordsStr, errorMessage);
+}
+
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   llvm::SmallVector<OpMethodParameter, 4> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
@@ -1130,24 +1169,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     const NamedAttribute *var = attr->getVar();
 
     // Check to see if we can parse this as an enum attribute.
-    if (canFormatEnumAttr(var)) {
-      Attribute baseAttr = var->attr.getBaseAttr();
-      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-
-      // Generate the code for building an attribute for this enum.
-      std::string attrBuilderStr;
-      {
-        llvm::raw_string_ostream os(attrBuilderStr);
-        os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
-                    "attrOptional.getValue()");
-      }
-
-      body << formatv(var->attr.isOptional() ? optionalEnumAttrParserCode
-                                             : enumAttrParserCode,
-                      var->name, enumAttr.getCppNamespace(),
-                      enumAttr.getStringToSymbolFnName(), attrBuilderStr);
-      return;
-    }
+    if (canFormatEnumAttr(var))
+      return genEnumAttrParser(var, body, attrTypeCtx);
 
     // Check to see if we should parse this as a symbol name attribute.
     if (shouldFormatSymbolNameAttr(var)) {
@@ -1287,10 +1310,16 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     if (Optional<int> val = resolver.getBuilderIdx()) {
       body << "odsBuildableType" << *val;
     } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
-      if (Optional<StringRef> tform = resolver.getVarTransformer())
-        body << tgfmt(*tform, &FmtContext().withSelf(var->name + "Types[0]"));
-      else
+      if (Optional<StringRef> tform = resolver.getVarTransformer()) {
+        FmtContext fmtContext;
+        if (var->isVariadic())
+          fmtContext.withSelf(var->name + "Types");
+        else
+          fmtContext.withSelf(var->name + "Types[0]");
+        body << tgfmt(*tform, &fmtContext);
+      } else {
         body << var->name << "Types";
+      }
     } else if (const NamedAttribute *attr = resolver.getAttribute()) {
       if (Optional<StringRef> tform = resolver.getVarTransformer())
         body << tgfmt(*tform,
@@ -1491,6 +1520,17 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   }
 )";
 
+/// The code snippet used to generate a printer call for an enum that has cases
+/// that can't be represented with a keyword.
+///
+/// {0}: The name of the enum attribute.
+/// {1}: The name of the enum attributes symbolToString function.
+const char *enumAttrBeginPrinterCode = R"(
+  {
+    auto caseValue = {0}();
+    auto caseValueStr = {1}(caseValue);
+)";
+
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                OpMethodBody &body, bool withKeyword) {
@@ -1633,6 +1673,82 @@ static OpMethodBody &genTypeOperandPrinter(Element *arg, OpMethodBody &body) {
               << "().getType())";
 }
 
+/// Generate the printer for an enum attribute.
+static void genEnumAttrPrinter(const NamedAttribute *var, OpMethodBody &body) {
+  Attribute baseAttr = var->attr.getBaseAttr();
+  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
+  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+
+  body << llvm::formatv(enumAttrBeginPrinterCode,
+                        (var->attr.isOptional() ? "*" : "") + var->name,
+                        enumAttr.getSymbolToStringFnName());
+
+  // Get a string containing all of the cases that can't be represented with a
+  // keyword.
+  llvm::BitVector nonKeywordCases(cases.size());
+  bool hasStrCase = false;
+  for (auto it : llvm::enumerate(cases)) {
+    hasStrCase = it.value().isStrCase();
+    if (!canFormatStringAsKeyword(it.value().getStr()))
+      nonKeywordCases.set(it.index());
+  }
+
+  // If this is a string enum, use the case string to determine which cases
+  // need to use the string form.
+  if (hasStrCase) {
+    if (nonKeywordCases.any()) {
+      body << "    if (llvm::is_contained(llvm::ArrayRef<llvm::StringRef>(";
+      llvm::interleaveComma(nonKeywordCases.set_bits(), body, [&](unsigned it) {
+        body << '"' << cases[it].getStr() << '"';
+      });
+      body << ")))\n"
+              "      p << '\"' << caseValueStr << '\"';\n"
+              "    else\n  ";
+    }
+    body << "    p << caseValueStr;\n"
+            "  }\n";
+    return;
+  }
+
+  // Otherwise if this is a bit enum attribute, don't allow cases that may
+  // overlap with other cases. For simplicity sake, only allow cases with a
+  // single bit value.
+  if (enumAttr.isBitEnum()) {
+    for (auto it : llvm::enumerate(cases)) {
+      int64_t value = it.value().getValue();
+      if (value < 0 || !llvm::isPowerOf2_64(value))
+        nonKeywordCases.set(it.index());
+    }
+  }
+
+  // If there are any cases that can't be used with a keyword, switch on the
+  // case value to determine when to print in the string form.
+  if (nonKeywordCases.any()) {
+    body << "    switch (caseValue) {\n";
+    StringRef cppNamespace = enumAttr.getCppNamespace();
+    StringRef enumName = enumAttr.getEnumClassName();
+    for (auto it : llvm::enumerate(cases)) {
+      if (nonKeywordCases.test(it.index()))
+        continue;
+      StringRef symbol = it.value().getSymbol();
+      body << llvm::formatv("    case {0}::{1}::{2}:\n", cppNamespace, enumName,
+                            llvm::isDigit(symbol.front()) ? ("_" + symbol)
+                                                          : symbol);
+    }
+    body << "      p << caseValueStr;\n"
+            "      break;\n"
+            "    default:\n"
+            "      p << '\"' << caseValueStr << '\"';\n"
+            "      break;\n"
+            "    }\n"
+            "  }\n";
+    return;
+  }
+
+  body << "    p << caseValueStr;\n"
+          "  }\n";
+}
+
 void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                                         Operator &op, bool &shouldEmitSpace,
                                         bool &lastWasPunctuation) {
@@ -1641,7 +1757,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                              lastWasPunctuation);
 
   // Emit a whitespace element.
-  if (NewlineElement *newline = dyn_cast<NewlineElement>(element)) {
+  if (isa<NewlineElement>(element)) {
     body << "  p.printNewline();\n";
     return;
   }
@@ -1708,14 +1824,8 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     const NamedAttribute *var = attr->getVar();
 
     // If we are formatting as an enum, symbolize the attribute as a string.
-    if (canFormatEnumAttr(var)) {
-      Attribute baseAttr = var->attr.getBaseAttr();
-      const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-      body << "  p << '\"' << " << enumAttr.getSymbolToStringFnName() << "("
-           << (var->attr.isOptional() ? "*" : "") << var->name
-           << "()) << '\"';\n";
-      return;
-    }
+    if (canFormatEnumAttr(var))
+      return genEnumAttrPrinter(var, body);
 
     // If we are formatting as a symbol name, handle it as a symbol name.
     if (shouldFormatSymbolNameAttr(var)) {

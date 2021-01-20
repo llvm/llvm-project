@@ -9891,6 +9891,71 @@ TEST_F(FormatTest, SplitEmptyClass) {
                "{\n"
                "} Foo_t;",
                Style);
+
+  Style.BraceWrapping.SplitEmptyRecord = true;
+  Style.BraceWrapping.AfterStruct = true;
+  verifyFormat("class rep\n"
+               "{\n"
+               "};",
+               Style);
+  verifyFormat("struct rep\n"
+               "{\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> class rep\n"
+               "{\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> struct rep\n"
+               "{\n"
+               "};",
+               Style);
+  verifyFormat("class rep\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("struct rep\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> class rep\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> struct rep\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> class rep // Foo\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> struct rep // Bar\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T> class rep<T>\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T> class rep<std::complex<T>>\n"
+               "{\n"
+               "  int x;\n"
+               "};",
+               Style);
+  verifyFormat("template <typename T> class rep<std::complex<T>>\n"
+               "{\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, SplitEmptyStruct) {
@@ -13416,6 +13481,58 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                "#endif",
                AllmanBraceStyle);
 
+  EXPECT_EQ(AllmanBraceStyle.AllowShortLambdasOnASingleLine,
+            FormatStyle::SLS_All);
+
+  verifyFormat("[](int i) { return i + 2; };\n"
+               "[](int i, int j)\n"
+               "{\n"
+               "  auto x = i + j;\n"
+               "  auto y = i * j;\n"
+               "  return x ^ y;\n"
+               "};\n"
+               "void foo()\n"
+               "{\n"
+               "  auto shortLambda = [](int i) { return i + 2; };\n"
+               "  auto longLambda = [](int i, int j)\n"
+               "  {\n"
+               "    auto x = i + j;\n"
+               "    auto y = i * j;\n"
+               "    return x ^ y;\n"
+               "  };\n"
+               "}",
+               AllmanBraceStyle);
+
+  AllmanBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+
+  verifyFormat("[](int i)\n"
+               "{\n"
+               "  return i + 2;\n"
+               "};\n"
+               "[](int i, int j)\n"
+               "{\n"
+               "  auto x = i + j;\n"
+               "  auto y = i * j;\n"
+               "  return x ^ y;\n"
+               "};\n"
+               "void foo()\n"
+               "{\n"
+               "  auto shortLambda = [](int i)\n"
+               "  {\n"
+               "    return i + 2;\n"
+               "  };\n"
+               "  auto longLambda = [](int i, int j)\n"
+               "  {\n"
+               "    auto x = i + j;\n"
+               "    auto y = i * j;\n"
+               "    return x ^ y;\n"
+               "  };\n"
+               "}",
+               AllmanBraceStyle);
+
+  // Reset
+  AllmanBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
+
   // This shouldn't affect ObjC blocks..
   verifyFormat("[self doSomeThingWithACompletionHandler:^{\n"
                "  // ...\n"
@@ -14282,7 +14399,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL(IndentPragmas);
   CHECK_PARSE_BOOL(IndentRequires);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
@@ -14666,6 +14782,11 @@ TEST_F(FormatTest, ParsesConfiguration) {
               std::vector<std::string>{"__capability"});
   CHECK_PARSE("AttributeMacros: [attr1, attr2]", AttributeMacros,
               std::vector<std::string>({"attr1", "attr2"}));
+
+  Style.StatementAttributeLikeMacros.clear();
+  CHECK_PARSE("StatementAttributeLikeMacros: [emit,Q_EMIT]",
+              StatementAttributeLikeMacros,
+              std::vector<std::string>({"emit", "Q_EMIT"}));
 
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
@@ -17740,128 +17861,35 @@ TEST_F(FormatTest, ConceptsAndRequires) {
                Style);
 }
 
-TEST_F(FormatTest, IndentPragmas) {
+TEST_F(FormatTest, StatementAttributeLikeMacros) {
   FormatStyle Style = getLLVMStyle();
-  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  StringRef Source = "void Foo::slot() {\n"
+                     "  unsigned char MyChar = 'x';\n"
+                     "  emit signal(MyChar);\n"
+                     "  Q_EMIT signal(MyChar);\n"
+                     "}";
 
-  Style.IndentPragmas = false;
-  verifyFormat("#pragma once", Style);
-  verifyFormat("#pragma omp simd\n"
-               "for (int i = 0; i < 10; i++) {\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "#pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "  }\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "// outer loop\n"
-               "#pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "// inner loop\n"
-               "#pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
+  EXPECT_EQ(Source, format(Source, Style));
 
-  verifyFormat("void foo() {\n"
-               "// outer loop\n"
-               "#if 1\n"
-               "#pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "// inner loop\n"
-               "#pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "#endif\n"
-               "}",
-               Style);
-
-  Style.IndentPragmas = true;
-  verifyFormat("#pragma once", Style);
-  verifyFormat("#pragma omp simd\n"
-               "for (int i = 0; i < 10; i++) {\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "  }\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "    #pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (...) {\n"
-               "    #pragma omp simd\n"
-               "    for (...) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
-
-  verifyFormat("void foo() {\n"
-               "# pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "#   pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "#if 1\n"
-               "# pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "#   pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "#endif\n"
-               "}",
-               Style);
-
-  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
-  EXPECT_EQ("void foo() {\n"
-            "#if 1\n"
-            "  #pragma omp simd\n"
-            "  for (int k = 0; k < 10; k++) {\n"
-            "    #pragma omp simd\n"
-            "    for (int j = 0; j < 10; j++) {\n"
-            "    }\n"
-            "  }\n"
-            "#endif\n"
+  Style.AlignConsecutiveDeclarations = true;
+  EXPECT_EQ("void Foo::slot() {\n"
+            "  unsigned char MyChar = 'x';\n"
+            "  emit          signal(MyChar);\n"
+            "  Q_EMIT signal(MyChar);\n"
             "}",
-            format("void foo() {\n"
-                   "#if 1\n"
-                   "  #pragma omp simd\n"
-                   "  for (int k = 0; k < 10; k++) {\n"
-                   "    #pragma omp simd\n"
-                   "    for (int j = 0; j < 10; j++) {\n"
-                   "    }\n"
-                   "  }\n"
-                   "#endif\n"
-                   "}",
-                   Style));
-}
+            format(Source, Style));
 
+  Style.StatementAttributeLikeMacros.push_back("emit");
+  EXPECT_EQ(Source, format(Source, Style));
+
+  Style.StatementAttributeLikeMacros = {};
+  EXPECT_EQ("void Foo::slot() {\n"
+            "  unsigned char MyChar = 'x';\n"
+            "  emit          signal(MyChar);\n"
+            "  Q_EMIT        signal(MyChar);\n"
+            "}",
+            format(Source, Style));
+}
 } // namespace
 } // namespace format
 } // namespace clang

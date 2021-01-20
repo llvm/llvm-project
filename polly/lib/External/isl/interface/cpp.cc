@@ -397,7 +397,7 @@ void cpp_generator::print_method<cpp_generator::decl>(ostream &os,
  * 	inline explicit val(ctx ctx, const std::string &str);
  */
 void cpp_generator::print_constructors_decl(ostream &os,
-       const isl_class &clazz)
+	const isl_class &clazz)
 {
 	function_set::const_iterator in;
 	const function_set &constructors = clazz.constructors;
@@ -643,7 +643,7 @@ void cpp_generator::print_persistent_callback_data(ostream &os,
  * public methods for setting the persistent callbacks.
  */
 void cpp_generator::print_persistent_callbacks_decl(ostream &os,
-       const isl_class &clazz)
+	const isl_class &clazz)
 {
 	std::string cppstring = type2cpp(clazz);
 	const char *cppname = cppstring.c_str();
@@ -1223,7 +1223,7 @@ void cpp_generator::print_method<cpp_generator::impl>(ostream &os,
 /* Print implementations of constructors for class "clazz" to "os".
  */
 void cpp_generator::print_constructors_impl(ostream &os,
-       const isl_class &clazz)
+	const isl_class &clazz)
 {
 	function_set::const_iterator in;
 	const function_set constructors = clazz.constructors;
@@ -1405,7 +1405,7 @@ void cpp_generator::print_ctx_impl(ostream &os, const isl_class &clazz)
  * of "clazz".
  */
 void cpp_generator::print_persistent_callbacks_impl(ostream &os,
-       const isl_class &clazz)
+	const isl_class &clazz)
 {
 	std::string cppstring = type2cpp(clazz);
 	const char *cppname = cppstring.c_str();
@@ -1502,7 +1502,6 @@ void cpp_generator::print_set_enums_impl(ostream &os, const isl_class &clazz,
 	const vector<set_enum> &set_enums = clazz.set_enums.at(fd);
 
 	for (it = set_enums.begin(); it != set_enums.end(); ++it) {
-		osprintf(os, "\n");
 		print_set_enum_impl(os, clazz, fd, it->name, it->method_name);
 	}
 }
@@ -1984,7 +1983,8 @@ ParmVarDecl *cpp_generator::get_param(FunctionDecl *fd, int pos,
  * For static functions and constructors all parameters of the original isl
  * function are exposed.
  *
- * Parameters that are defined as __isl_keep or are of type string, are passed
+ * Parameters that are defined as __isl_keep, are of type string or
+ * are callbacks, are passed
  * as const reference, which allows the compiler to optimize the parameter
  * transfer.
  *

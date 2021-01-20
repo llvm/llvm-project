@@ -117,6 +117,10 @@ public:
     assert(isSealed);
     return numImportedEvents;
   }
+  uint32_t getNumImportedTables() const {
+    assert(isSealed);
+    return numImportedTables;
+  }
 
   std::vector<const Symbol *> importedSymbols;
   std::vector<const Symbol *> gotSymbols;
@@ -126,6 +130,7 @@ protected:
   unsigned numImportedGlobals = 0;
   unsigned numImportedFunctions = 0;
   unsigned numImportedEvents = 0;
+  unsigned numImportedTables = 0;
 };
 
 class FunctionSection : public SyntheticSection {
@@ -145,19 +150,11 @@ class TableSection : public SyntheticSection {
 public:
   TableSection() : SyntheticSection(llvm::wasm::WASM_SEC_TABLE) {}
 
-  bool isNeeded() const override {
-    // Always output a table section (or table import), even if there are no
-    // indirect calls.  There are two reasons for this:
-    //  1. For executables it is useful to have an empty table slot at 0
-    //     which can be filled with a null function call handler.
-    //  2. If we don't do this, any program that contains a call_indirect but
-    //     no address-taken function will fail at validation time since it is
-    //     a validation error to include a call_indirect instruction if there
-    //     is not table.
-    return !config->importTable;
-  }
-
+  bool isNeeded() const override { return inputTables.size() > 0; };
   void writeBody() override;
+  void addTable(InputTable *table);
+
+  std::vector<InputTable *> inputTables;
 };
 
 class MemorySection : public SyntheticSection {

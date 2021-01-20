@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "InputTable.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
@@ -94,7 +95,8 @@ void ObjFile::dumpInfo() const {
       "\n              Symbols : " + Twine(symbols.size()) +
       "\n     Function Imports : " + Twine(wasmObj->getNumImportedFunctions()) +
       "\n       Global Imports : " + Twine(wasmObj->getNumImportedGlobals()) +
-      "\n        Event Imports : " + Twine(wasmObj->getNumImportedEvents()));
+      "\n        Event Imports : " + Twine(wasmObj->getNumImportedEvents()) +
+      "\n        Table Imports : " + Twine(wasmObj->getNumImportedTables()));
 }
 
 // Relocations contain either symbol or type indices.  This function takes a
@@ -123,6 +125,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
     return reloc.Addend;
@@ -187,7 +190,8 @@ uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_I32:
-  case R_WASM_EVENT_INDEX_LEB: {
+  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_TABLE_NUMBER_LEB: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return sym.Info.ElementIndex;
   }
@@ -269,6 +273,8 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone) 
   }
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->outputOffset + reloc.Addend;
+  case R_WASM_TABLE_NUMBER_LEB:
+    return getTableSymbol(reloc.Index)->getTableNumber();
   default:
     llvm_unreachable("unknown relocation type");
   }
@@ -301,6 +307,71 @@ static void setRelocs(const std::vector<T *> &chunks,
         relocsStart, relocsEnd, c->getInputSectionOffset() + c->getInputSize(),
         relocLess);
     c->setRelocations(ArrayRef<WasmRelocation>(relocsStart, relocsNext));
+  }
+}
+
+// Since LLVM 12, we expect that if an input file defines or uses a table, it
+// declares the tables using symbols and records each use with a relocation.
+// This way when the linker combines inputs, it can collate the tables used by
+// the inputs, assigning them distinct table numbers, and renumber all the uses
+// as appropriate.  At the same time, the linker has special logic to build the
+// indirect function table if it is needed.
+//
+// However, object files produced by LLVM 11 and earlier neither write table
+// symbols nor record relocations, and yet still use tables via call_indirect,
+// and via function pointer bitcasts.  We can detect these object files, as they
+// declare tables as imports or define them locally, but don't have table
+// symbols.  synthesizeTableSymbols serves as a shim when loading these older
+// input files, defining the missing symbols to allow the indirect function
+// table to be built.
+//
+// Table uses in these older files won't be relocated, as they have no
+// relocations.  In practice this isn't a problem, as these object files
+// typically just declare a single table named __indirect_function_table and
+// having table number 0, so relocation would be idempotent anyway.
+void ObjFile::synthesizeTableSymbols() {
+  uint32_t tableNumber = 0;
+  const WasmGlobalType *globalType = nullptr;
+  const WasmEventType *eventType = nullptr;
+  const WasmSignature *signature = nullptr;
+  if (wasmObj->getNumImportedTables()) {
+    for (const auto &import : wasmObj->imports()) {
+      if (import.Kind == WASM_EXTERNAL_TABLE) {
+        auto *info = make<WasmSymbolInfo>();
+        info->Name = import.Field;
+        info->Kind = WASM_SYMBOL_TYPE_TABLE;
+        info->ImportModule = import.Module;
+        info->ImportName = import.Field;
+        info->Flags = WASM_SYMBOL_UNDEFINED;
+        info->Flags |= WASM_SYMBOL_NO_STRIP;
+        info->ElementIndex = tableNumber++;
+        LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: "
+                          << info->Name << "\n");
+        auto *wasmSym = make<WasmSymbol>(*info, globalType, &import.Table,
+                                         eventType, signature);
+        symbols.push_back(createUndefined(*wasmSym, false));
+        // Because there are no TABLE_NUMBER relocs in this case, we can't
+        // compute accurate liveness info; instead, just mark the symbol as
+        // always live.
+        symbols.back()->markLive();
+      }
+    }
+  }
+  for (const auto &table : tables) {
+    auto *info = make<llvm::wasm::WasmSymbolInfo>();
+    // Empty name.
+    info->Kind = WASM_SYMBOL_TYPE_TABLE;
+    info->Flags = WASM_SYMBOL_BINDING_LOCAL;
+    info->Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+    info->Flags |= WASM_SYMBOL_NO_STRIP;
+    info->ElementIndex = tableNumber++;
+    LLVM_DEBUG(dbgs() << "Synthesizing symbol for table definition: "
+                      << info->Name << "\n");
+    auto *wasmSym = make<WasmSymbol>(*info, globalType, &table->getType(),
+                                     eventType, signature);
+    symbols.push_back(createDefined(*wasmSym));
+    // Mark live, for the same reasons as for imported tables.
+    symbols.back()->markLive();
   }
 }
 
@@ -404,6 +475,10 @@ void ObjFile::parse(bool ignoreComdats) {
   }
   setRelocs(functions, codeSection);
 
+  // Populate `Tables`.
+  for (const WasmTable &t : wasmObj->tables())
+    tables.emplace_back(make<InputTable>(t, this));
+
   // Populate `Globals`.
   for (const WasmGlobal &g : wasmObj->globals())
     globals.emplace_back(make<InputGlobal>(g, this));
@@ -414,8 +489,11 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());
+  bool haveTableSymbol = false;
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
+    if (wasmSym.isTypeTable())
+      haveTableSymbol = true;
     if (wasmSym.isDefined()) {
       // createDefined may fail if the symbol is comdat excluded in which case
       // we fall back to creating an undefined symbol
@@ -427,6 +505,13 @@ void ObjFile::parse(bool ignoreComdats) {
     size_t idx = symbols.size();
     symbols.push_back(createUndefined(wasmSym, isCalledDirectly[idx]));
   }
+
+  // As a stopgap measure while implementing table support, if the object file
+  // has table definitions or imports but no table symbols, synthesize symbols
+  // for those tables.  Mark as NO_STRIP to ensure they reach the output file,
+  // even if there are no TABLE_NUMBER relocs against them.
+  if (!haveTableSymbol)
+    synthesizeTableSymbols();
 }
 
 bool ObjFile::isExcludedByComdat(InputChunk *chunk) const {
@@ -446,6 +531,10 @@ GlobalSymbol *ObjFile::getGlobalSymbol(uint32_t index) const {
 
 EventSymbol *ObjFile::getEventSymbol(uint32_t index) const {
   return cast<EventSymbol>(symbols[index]);
+}
+
+TableSymbol *ObjFile::getTableSymbol(uint32_t index) const {
+  return cast<TableSymbol>(symbols[index]);
 }
 
 SectionSymbol *ObjFile::getSectionSymbol(uint32_t index) const {
@@ -503,6 +592,13 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
       return make<DefinedEvent>(name, flags, this, event);
     return symtab->addDefinedEvent(name, flags, this, event);
   }
+  case WASM_SYMBOL_TYPE_TABLE: {
+    InputTable *table =
+        tables[sym.Info.ElementIndex - wasmObj->getNumImportedTables()];
+    if (sym.isBindingLocal())
+      return make<DefinedTable>(name, flags, this, table);
+    return symtab->addDefinedTable(name, flags, this, table);
+  }
   }
   llvm_unreachable("unknown symbol kind");
 }
@@ -532,6 +628,14 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
     return symtab->addUndefinedGlobal(name, sym.Info.ImportName,
                                       sym.Info.ImportModule, flags, this,
                                       sym.GlobalType);
+  case WASM_SYMBOL_TYPE_TABLE:
+    if (sym.isBindingLocal())
+      return make<UndefinedTable>(name, sym.Info.ImportName,
+                                  sym.Info.ImportModule, flags, this,
+                                  sym.TableType);
+    return symtab->addUndefinedTable(name, sym.Info.ImportName,
+                                     sym.Info.ImportModule, flags, this,
+                                     sym.TableType);
   case WASM_SYMBOL_TYPE_SECTION:
     llvm_unreachable("section symbols cannot be undefined");
   }

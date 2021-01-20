@@ -2181,30 +2181,6 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentPragmas** (``bool``)
-  Indent pragmas
-
-  When ``false``, pragmas are flushed left or follow IndentPPDirectives.
-  When ``true``, pragmas are indented to the current scope level.
-
-  .. code-block:: c++
-
-    false:                                  true:
-    #pragma once                   vs       #pragma once
-    void foo() {                            void foo() {
-    #pragma omp simd                          #pragma omp simd
-      for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-    #pragma omp simd                            #pragma omp simd
-        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-        }                                       }
-    #if 1                                   #if 1
-    #pragma omp simd                            #pragma omp simd
-        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-        }                                       }
-    #endif                                  #endif
-      }                                       }
-    }                                       }
-
 **IndentRequires** (``bool``)
   Indent the requires clause in a template
 
@@ -3097,6 +3073,23 @@ the configuration (without a prefix: ``Auto``).
     Automatic detection based on the input.
 
 
+
+**StatementAttributeLikeMacros** (``std::vector<std::string>``)
+  Macros which are ignored in front of a statement, as if they were an
+  attribute. So that they are not parsed as identifier, for example for Qts
+  emit.
+
+  .. code-block:: c++
+
+    AlignConsecutiveDeclarations: true
+    StatementAttributeLikeMacros: []
+    unsigned char data = 'x';
+    emit          signal(data); // This is parsed as variable declaration.
+
+    AlignConsecutiveDeclarations: true
+    StatementAttributeLikeMacros: [emit]
+    unsigned char data = 'x';
+    emit signal(data); // Now it's fine again.
 
 **StatementMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as complete

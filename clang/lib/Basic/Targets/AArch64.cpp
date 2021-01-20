@@ -356,6 +356,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
+  if (HasLS64)
+    Builder.defineMacro("__ARM_FEATURE_LS64", "1");
+
   switch (ArchKind) {
   default:
     break;

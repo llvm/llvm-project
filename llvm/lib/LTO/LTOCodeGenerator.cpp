@@ -326,22 +326,15 @@ LTOCodeGenerator::compileOptimized() {
   return std::move(*BufferOrErr);
 }
 
-bool LTOCodeGenerator::compile_to_file(const char **Name, bool DisableVerify,
-                                       bool DisableInline,
-                                       bool DisableGVNLoadPRE,
-                                       bool DisableVectorization) {
-  if (!optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                DisableVectorization))
+bool LTOCodeGenerator::compile_to_file(const char **Name, bool DisableVerify) {
+  if (!optimize(DisableVerify))
     return false;
 
   return compileOptimizedToFile(Name);
 }
 
-std::unique_ptr<MemoryBuffer>
-LTOCodeGenerator::compile(bool DisableVerify, bool DisableInline,
-                          bool DisableGVNLoadPRE, bool DisableVectorization) {
-  if (!optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                DisableVectorization))
+std::unique_ptr<MemoryBuffer> LTOCodeGenerator::compile(bool DisableVerify) {
+  if (!optimize(DisableVerify))
     return nullptr;
 
   return compileOptimized();
@@ -534,9 +527,7 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
 }
 
 /// Optimize merged modules using various IPO passes
-bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
-                                bool DisableGVNLoadPRE,
-                                bool DisableVectorization) {
+bool LTOCodeGenerator::optimize(bool DisableVerify) {
   if (!this->determineTarget())
     return false;
 
@@ -585,11 +576,9 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
 
   Triple TargetTriple(TargetMach->getTargetTriple());
   PassManagerBuilder PMB;
-  PMB.DisableGVNLoadPRE = DisableGVNLoadPRE;
-  PMB.LoopVectorize = !DisableVectorization;
-  PMB.SLPVectorize = !DisableVectorization;
-  if (!DisableInline)
-    PMB.Inliner = createFunctionInliningPass();
+  PMB.LoopVectorize = true;
+  PMB.SLPVectorize = true;
+  PMB.Inliner = createFunctionInliningPass();
   PMB.LibraryInfo = new TargetLibraryInfoImpl(TargetTriple);
   if (Freestanding)
     PMB.LibraryInfo->disableAllFunctions();

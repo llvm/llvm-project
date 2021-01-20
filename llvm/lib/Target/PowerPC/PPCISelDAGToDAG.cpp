@@ -352,6 +352,7 @@ namespace {
 
 private:
     bool trySETCC(SDNode *N);
+    bool tryFoldSWTestBRCC(SDNode *N);
     bool tryAsSingleRLDICL(SDNode *N);
     bool tryAsSingleRLDICR(SDNode *N);
     bool tryAsSingleRLWINM(SDNode *N);
@@ -4378,6 +4379,81 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
   return true;
 }
 
+// Return true if it's a software square-root/divide operand.
+static bool isSWTestOp(SDValue N) {
+  if (N.getOpcode() == PPCISD::FTSQRT)
+    return true;
+  if (N.getNumOperands() < 1 || !isa<ConstantSDNode>(N.getOperand(0)))
+    return false;
+  switch (N.getConstantOperandVal(0)) {
+  case Intrinsic::ppc_vsx_xvtdivdp:
+  case Intrinsic::ppc_vsx_xvtdivsp:
+  case Intrinsic::ppc_vsx_xvtsqrtdp:
+  case Intrinsic::ppc_vsx_xvtsqrtsp:
+    return true;
+  }
+  return false;
+}
+
+bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
+  assert(N->getOpcode() == ISD::BR_CC && "ISD::BR_CC is expected.");
+  // We are looking for following patterns, where `truncate to i1` actually has
+  // the same semantic with `and 1`.
+  // (br_cc seteq, (truncateToi1 SWTestOp), 0) -> (BCC PRED_NU, SWTestOp)
+  // (br_cc seteq, (and SWTestOp, 2), 0) -> (BCC PRED_NE, SWTestOp)
+  // (br_cc seteq, (and SWTestOp, 4), 0) -> (BCC PRED_LE, SWTestOp)
+  // (br_cc seteq, (and SWTestOp, 8), 0) -> (BCC PRED_GE, SWTestOp)
+  // (br_cc setne, (truncateToi1 SWTestOp), 0) -> (BCC PRED_UN, SWTestOp)
+  // (br_cc setne, (and SWTestOp, 2), 0) -> (BCC PRED_EQ, SWTestOp)
+  // (br_cc setne, (and SWTestOp, 4), 0) -> (BCC PRED_GT, SWTestOp)
+  // (br_cc setne, (and SWTestOp, 8), 0) -> (BCC PRED_LT, SWTestOp)
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return false;
+
+  SDValue CmpRHS = N->getOperand(3);
+  if (!isa<ConstantSDNode>(CmpRHS) ||
+      cast<ConstantSDNode>(CmpRHS)->getSExtValue() != 0)
+    return false;
+
+  SDValue CmpLHS = N->getOperand(2);
+  if (CmpLHS.getNumOperands() < 1 || !isSWTestOp(CmpLHS.getOperand(0)))
+    return false;
+
+  unsigned PCC = 0;
+  bool IsCCNE = CC == ISD::SETNE;
+  if (CmpLHS.getOpcode() == ISD::AND &&
+      isa<ConstantSDNode>(CmpLHS.getOperand(1)))
+    switch (CmpLHS.getConstantOperandVal(1)) {
+    case 1:
+      PCC = IsCCNE ? PPC::PRED_UN : PPC::PRED_NU;
+      break;
+    case 2:
+      PCC = IsCCNE ? PPC::PRED_EQ : PPC::PRED_NE;
+      break;
+    case 4:
+      PCC = IsCCNE ? PPC::PRED_GT : PPC::PRED_LE;
+      break;
+    case 8:
+      PCC = IsCCNE ? PPC::PRED_LT : PPC::PRED_GE;
+      break;
+    default:
+      return false;
+    }
+  else if (CmpLHS.getOpcode() == ISD::TRUNCATE &&
+           CmpLHS.getValueType() == MVT::i1)
+    PCC = IsCCNE ? PPC::PRED_UN : PPC::PRED_NU;
+
+  if (PCC) {
+    SDLoc dl(N);
+    SDValue Ops[] = {getI32Imm(PCC, dl), CmpLHS.getOperand(0), N->getOperand(4),
+                     N->getOperand(0)};
+    CurDAG->SelectNodeTo(N, PPC::BCC, MVT::Other, Ops);
+    return true;
+  }
+  return false;
+}
+
 bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   assert(N->getOpcode() == ISD::AND && "ISD::AND SDNode expected");
   unsigned Imm;
@@ -5247,6 +5323,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ISD::BR_CC: {
+    if (tryFoldSWTestBRCC(N))
+      return;
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
     unsigned PCC =
         getPredicateForSetCC(CC, N->getOperand(2).getValueType(), Subtarget);

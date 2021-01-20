@@ -404,6 +404,16 @@ private:
   /// after the LR is was restored from a register.
   void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator It) const;
+  /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
+  /// so that they will be valid post-outlining.
+  ///
+  /// \param MBB A \p MachineBasicBlock in an outlined function.
+  void fixupPostOutline(MachineBasicBlock &MBB) const;
+
+  /// Returns true if the machine instruction offset can handle the stack fixup
+  /// and updates it if requested.
+  bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
+                                 bool Updt) const;
 
   unsigned getInstBundleLength(const MachineInstr &MI) const;
 
@@ -632,6 +642,11 @@ static inline bool isJumpTableBranchOpcode(int Opc) {
   return Opc == ARM::BR_JTr || Opc == ARM::BR_JTm_i12 ||
          Opc == ARM::BR_JTm_rs || Opc == ARM::BR_JTadd || Opc == ARM::tBR_JTr ||
          Opc == ARM::t2BR_JT;
+}
+
+static inline bool isLowOverheadTerminatorOpcode(int Opc) {
+  return Opc == ARM::t2DoLoopStartTP || Opc == ARM::t2WhileLoopStart ||
+         Opc == ARM::t2LoopEnd || Opc == ARM::t2LoopEndDec;
 }
 
 static inline

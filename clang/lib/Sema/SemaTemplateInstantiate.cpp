@@ -1556,16 +1556,18 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
       VD = nullptr;
     }
 
-    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
+    refParam = paramType->isReferenceType();
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       arg.getIntegralType()));
+                                       paramType.getNonReferenceType()));
   }
 
   if (result.isInvalid())
@@ -1595,7 +1597,9 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
 ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
-  ExprResult SubstReplacement = TransformExpr(E->getReplacement());
+  ExprResult SubstReplacement = E->getReplacement();
+  if (!isa<ConstantExpr>(SubstReplacement.get()))
+    SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
   QualType SubstType = TransformType(E->getParameterType(getSema().Context));
@@ -2794,7 +2798,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
     Attr *NewAttr =
       instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    I->NewDecl->addAttr(NewAttr);
+    if (NewAttr)
+      I->NewDecl->addAttr(NewAttr);
     LocalInstantiationScope::deleteScopes(I->Scope,
                                           Instantiator.getStartingScope());
   }
@@ -3227,7 +3232,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (FunctionDecl *Pattern =
               Function->getInstantiatedFromMemberFunction()) {
 
-        if (Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (TSK != TSK_ImplicitInstantiation &&
+            Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo =
@@ -3272,7 +3278,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if (Var->isStaticDataMember()) {
-        if (Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (TSK != TSK_ImplicitInstantiation &&
+            Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo = Var->getMemberSpecializationInfo();
@@ -3289,7 +3296,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             SuppressNew)
           continue;
 
-        if (TSK == TSK_ExplicitInstantiationDefinition) {
+        if (TSK != TSK_ExplicitInstantiationDeclaration) {
           // C++0x [temp.explicit]p8:
           //   An explicit instantiation definition that names a class template
           //   specialization explicitly instantiates the class template

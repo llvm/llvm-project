@@ -578,12 +578,12 @@ public:
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
     /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects;
+    bool HasSideEffects = false;
 
     /// Whether the evaluation hit undefined behavior.
     /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior;
+    bool HasUndefinedBehavior = false;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
@@ -592,10 +592,7 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
-    SmallVectorImpl<PartialDiagnosticAt> *Diag;
-
-    EvalStatus()
-        : HasSideEffects(false), HasUndefinedBehavior(false), Diag(nullptr) {}
+    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
     // hasSideEffects - Return true if the evaluated expression has
     // side effects.
@@ -606,8 +603,11 @@ public:
 
   /// EvalResult is a struct with detailed info about an evaluated expression.
   struct EvalResult : EvalStatus {
-    /// Val - This is the value the expression can be folded to.
+    /// This is the value the expression can be folded to.
     APValue Val;
+    /// Indicates whether Val contains a pointer or reference or pointer to
+    /// member naming a templated entity, and thus the value is dependent.
+    bool Dependent = false;
 
     // isGlobalLValue - Return true if the evaluated lvalue expression
     // is global.
@@ -4994,10 +4994,10 @@ public:
     uintptr_t NameOrField;
 
     /// The location of the '.' in the designated initializer.
-    unsigned DotLoc;
+    SourceLocation DotLoc;
 
     /// The location of the field name in the designated initializer.
-    unsigned FieldLoc;
+    SourceLocation FieldLoc;
   };
 
   /// An array or GNU array-range designator, e.g., "[9]" or "[10..15]".
@@ -5006,12 +5006,12 @@ public:
     /// initializer expression's list of subexpressions.
     unsigned Index;
     /// The location of the '[' starting the array range designator.
-    unsigned LBracketLoc;
+    SourceLocation LBracketLoc;
     /// The location of the ellipsis separating the start and end
     /// indices. Only valid for GNU array-range designators.
-    unsigned EllipsisLoc;
+    SourceLocation EllipsisLoc;
     /// The location of the ']' terminating the array range designator.
-    unsigned RBracketLoc;
+    SourceLocation RBracketLoc;
   };
 
   /// Represents a single C99 designator.
@@ -5043,29 +5043,32 @@ public:
     Designator(const IdentifierInfo *FieldName, SourceLocation DotLoc,
                SourceLocation FieldLoc)
       : Kind(FieldDesignator) {
+      new (&Field) DesignatedInitExpr::FieldDesignator;
       Field.NameOrField = reinterpret_cast<uintptr_t>(FieldName) | 0x01;
-      Field.DotLoc = DotLoc.getRawEncoding();
-      Field.FieldLoc = FieldLoc.getRawEncoding();
+      Field.DotLoc = DotLoc;
+      Field.FieldLoc = FieldLoc;
     }
 
     /// Initializes an array designator.
     Designator(unsigned Index, SourceLocation LBracketLoc,
                SourceLocation RBracketLoc)
       : Kind(ArrayDesignator) {
+      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
       ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc.getRawEncoding();
-      ArrayOrRange.EllipsisLoc = SourceLocation().getRawEncoding();
-      ArrayOrRange.RBracketLoc = RBracketLoc.getRawEncoding();
+      ArrayOrRange.LBracketLoc = LBracketLoc;
+      ArrayOrRange.EllipsisLoc = SourceLocation();
+      ArrayOrRange.RBracketLoc = RBracketLoc;
     }
 
     /// Initializes a GNU array-range designator.
     Designator(unsigned Index, SourceLocation LBracketLoc,
                SourceLocation EllipsisLoc, SourceLocation RBracketLoc)
       : Kind(ArrayRangeDesignator) {
+      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
       ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc.getRawEncoding();
-      ArrayOrRange.EllipsisLoc = EllipsisLoc.getRawEncoding();
-      ArrayOrRange.RBracketLoc = RBracketLoc.getRawEncoding();
+      ArrayOrRange.LBracketLoc = LBracketLoc;
+      ArrayOrRange.EllipsisLoc = EllipsisLoc;
+      ArrayOrRange.RBracketLoc = RBracketLoc;
     }
 
     bool isFieldDesignator() const { return Kind == FieldDesignator; }
@@ -5089,30 +5092,30 @@ public:
 
     SourceLocation getDotLoc() const {
       assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return SourceLocation::getFromRawEncoding(Field.DotLoc);
+      return Field.DotLoc;
     }
 
     SourceLocation getFieldLoc() const {
       assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return SourceLocation::getFromRawEncoding(Field.FieldLoc);
+      return Field.FieldLoc;
     }
 
     SourceLocation getLBracketLoc() const {
       assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
              "Only valid on an array or array-range designator");
-      return SourceLocation::getFromRawEncoding(ArrayOrRange.LBracketLoc);
+      return ArrayOrRange.LBracketLoc;
     }
 
     SourceLocation getRBracketLoc() const {
       assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
              "Only valid on an array or array-range designator");
-      return SourceLocation::getFromRawEncoding(ArrayOrRange.RBracketLoc);
+      return ArrayOrRange.RBracketLoc;
     }
 
     SourceLocation getEllipsisLoc() const {
       assert(Kind == ArrayRangeDesignator &&
              "Only valid on an array-range designator");
-      return SourceLocation::getFromRawEncoding(ArrayOrRange.EllipsisLoc);
+      return ArrayOrRange.EllipsisLoc;
     }
 
     unsigned getFirstExprIndex() const {

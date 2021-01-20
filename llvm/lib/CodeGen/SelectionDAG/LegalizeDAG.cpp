@@ -431,7 +431,6 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
 
   LLVM_DEBUG(dbgs() << "Optimizing float store operations\n");
   // Turn 'store float 1.0, Ptr' -> 'store int 0x12345678, Ptr'
-  // FIXME: We shouldn't do this for TargetConstantFP's.
   // FIXME: move this to the DAG Combiner!  Note that we can't regress due
   // to phase ordering between legalized code and the dag combiner.  This
   // probably means that we need to integrate dag combiner and legalizer
@@ -439,10 +438,16 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
   // We generally can't do this one for long doubles.
   SDValue Chain = ST->getChain();
   SDValue Ptr = ST->getBasePtr();
+  SDValue Value = ST->getValue();
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
   AAMDNodes AAInfo = ST->getAAInfo();
   SDLoc dl(ST);
-  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(ST->getValue())) {
+
+  // Don't optimise TargetConstantFP
+  if (Value.getOpcode() == ISD::TargetConstantFP)
+    return SDValue();
+
+  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Value)) {
     if (CFP->getValueType(0) == MVT::f32 &&
         TLI.isTypeLegal(MVT::i32)) {
       SDValue Con = DAG.getConstant(CFP->getValueAPF().
@@ -482,7 +487,7 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
       }
     }
   }
-  return SDValue(nullptr, 0);
+  return SDValue();
 }
 
 void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
@@ -2189,7 +2194,7 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
 
   if (Node->isStrictFPOpcode()) {
     EVT RetVT = Node->getValueType(0);
-    SmallVector<SDValue, 4> Ops(Node->op_begin() + 1, Node->op_end());
+    SmallVector<SDValue, 4> Ops(drop_begin(Node->ops()));
     TargetLowering::MakeLibCallOptions CallOptions;
     // FIXME: This doesn't support tail calls.
     std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
@@ -3961,16 +3966,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     (void)Legalized;
     assert(Legalized && "Can't legalize BR_CC with legal condition!");
 
-    assert(!NeedInvert && "Don't know how to invert BR_CC!");
-
     // If we expanded the SETCC by swapping LHS and RHS, create a new BR_CC
     // node.
     if (Tmp4.getNode()) {
+      assert(!NeedInvert && "Don't know how to invert BR_CC!");
+
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, Node->getValueType(0), Tmp1,
                          Tmp4, Tmp2, Tmp3, Node->getOperand(4));
     } else {
       Tmp3 = DAG.getConstant(0, dl, Tmp2.getValueType());
-      Tmp4 = DAG.getCondCode(ISD::SETNE);
+      Tmp4 = DAG.getCondCode(NeedInvert ? ISD::SETEQ : ISD::SETNE);
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, Node->getValueType(0), Tmp1, Tmp4,
                          Tmp2, Tmp3, Node->getOperand(4));
     }

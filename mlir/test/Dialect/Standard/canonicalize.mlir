@@ -59,16 +59,16 @@ func @load_from_tensor_to_memref(%arg0: index, %arg1: index, %arg2: tensor<?x?xf
   return %1 : f32
 }
 
-// Test case: Folding of dim(dynamic_tensor_from_elements %idx) -> %idx
-// CHECK-LABEL: func @dim_of_dynamic_tensor_from_elements(
+// Test case: Folding of dim(tensor.generate %idx) -> %idx
+// CHECK-LABEL: func @dim_of_tensor.generate(
 //  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
 //   CHECK-NOT:   dim
 //       CHECK:   return %[[IDX1]] : index
-func @dim_of_dynamic_tensor_from_elements(%arg0: index, %arg1: index) -> index {
+func @dim_of_tensor.generate(%arg0: index, %arg1: index) -> index {
   %c3 = constant 3 : index
-  %0 = dynamic_tensor_from_elements %arg0, %arg1 {
+  %0 = tensor.generate %arg0, %arg1 {
   ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: index):
-    yield %c3 : index
+    tensor.yield %c3 : index
   } : tensor<2x?x4x?x5xindex>
   %1 = dim %0, %c3 : tensor<2x?x4x?x5xindex>
   return %1 : index
@@ -82,16 +82,16 @@ func @dim_of_dynamic_tensor_from_elements(%arg0: index, %arg1: index) -> index {
 //  CHECK-SAME:          %[[F]], %[[F]], %[[F]], %[[F]], %[[F]]
 func @cmpi_equal_operands(%arg0: i64)
     -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
-  %0 = cmpi "eq", %arg0, %arg0 : i64
-  %1 = cmpi "sle", %arg0, %arg0 : i64
-  %2 = cmpi "sge", %arg0, %arg0 : i64
-  %3 = cmpi "ule", %arg0, %arg0 : i64
-  %4 = cmpi "uge", %arg0, %arg0 : i64
-  %5 = cmpi "ne", %arg0, %arg0 : i64
-  %6 = cmpi "slt", %arg0, %arg0 : i64
-  %7 = cmpi "sgt", %arg0, %arg0 : i64
-  %8 = cmpi "ult", %arg0, %arg0 : i64
-  %9 = cmpi "ugt", %arg0, %arg0 : i64
+  %0 = cmpi eq, %arg0, %arg0 : i64
+  %1 = cmpi sle, %arg0, %arg0 : i64
+  %2 = cmpi sge, %arg0, %arg0 : i64
+  %3 = cmpi ule, %arg0, %arg0 : i64
+  %4 = cmpi uge, %arg0, %arg0 : i64
+  %5 = cmpi ne, %arg0, %arg0 : i64
+  %6 = cmpi slt, %arg0, %arg0 : i64
+  %7 = cmpi sgt, %arg0, %arg0 : i64
+  %8 = cmpi ult, %arg0, %arg0 : i64
+  %9 = cmpi ugt, %arg0, %arg0 : i64
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9
       : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }

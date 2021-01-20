@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: func @nested_region_control_flow_div_nested
 func @nested_region_control_flow_div_nested(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-  %0 = cmpi "eq", %arg0, %arg1 : index
+  %0 = cmpi eq, %arg0, %arg1 : index
   %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
   // CHECK: %{{.*}} = scf.if
   %2 = scf.if %0 -> (memref<?x?xf32>) {
@@ -311,7 +311,7 @@ func @loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2xf32>,
   // CHECK: linalg.copy
   linalg.copy(%arg3, %1) : memref<2xf32>, memref<2xf32>
   %2 = scf.for %arg5 = %arg0 to %arg1 step %arg2 iter_args(%arg6 = %1) -> (memref<2xf32>) {
-    %3 = cmpi "eq", %arg5, %arg1 : index
+    %3 = cmpi eq, %arg5, %arg1 : index
     // CHECK: dealloc
     dealloc %arg6 : memref<2xf32>
     // CHECK: %[[PERCENT4:.*]] = alloc()
@@ -347,7 +347,7 @@ func @check_with_affine_dialect(%arg0: memref<4xf32>, %arg1: memref<4xf32>, %arg
   affine.for %arg3 = 0 to 4 {
     %5 = affine.load %arg0[%arg3] : memref<4xf32>
     %6 = affine.load %arg1[%arg3] : memref<4xf32>
-    %7 = cmpf "ogt", %5, %6 : f32
+    %7 = cmpf ogt, %5, %6 : f32
     // CHECK: %[[SELECT_RES:.*]] = select
     %8 = select %7, %5, %6 : f32
     // CHECK-NEXT: affine.store %[[SELECT_RES]], %[[RES]]

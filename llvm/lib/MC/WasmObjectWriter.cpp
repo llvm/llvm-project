@@ -519,6 +519,13 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       Sym->setUndefined();
     }
     Sym->setUsedInReloc();
+    // Any time we have a TABLE_INDEX relocation against a function symbol, we
+    // need to ensure that table itself is part of the final output too.  In the
+    // future we may want to define a new kind of reloc against both the
+    // function and the table, so that the linker can see that the function
+    // symbol keeps the table alive, but for now manually mark the table as
+    // live.
+    Sym->setNoStrip();
     Asm.registerSymbol(*Sym);
   }
 
@@ -972,9 +979,9 @@ uint32_t WasmObjectWriter::writeDataSection(const MCAsmLayout &Layout) {
 
   for (const WasmDataSegment &Segment : DataSegments) {
     encodeULEB128(Segment.InitFlags, W->OS); // flags
-    if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
+    if (Segment.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX)
       encodeULEB128(0, W->OS); // memory index
-    if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
+    if ((Segment.InitFlags & wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       W->OS << char(Segment.Offset > INT32_MAX ? wasm::WASM_OPCODE_I64_CONST
                                                : wasm::WASM_OPCODE_I32_CONST);
       encodeSLEB128(Segment.Offset, W->OS); // offset
@@ -1393,8 +1400,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       DataSegments.emplace_back();
       WasmDataSegment &Segment = DataSegments.back();
       Segment.Name = SectionName;
-      Segment.InitFlags =
-          Section.getPassive() ? (uint32_t)wasm::WASM_SEGMENT_IS_PASSIVE : 0;
+      Segment.InitFlags = Section.getPassive()
+                              ? (uint32_t)wasm::WASM_DATA_SEGMENT_IS_PASSIVE
+                              : 0;
       Segment.Offset = DataSize;
       Segment.Section = &Section;
       addData(Segment.Data, Section);
@@ -1668,10 +1676,6 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (!isInSymtab(WS)) {
       WS.setIndex(InvalidIndex);
-      continue;
-    }
-    if (WS.isTable() && WS.getName() == "__indirect_function_table") {
-      // For the moment, don't emit table symbols -- wasm-ld can't handle them.
       continue;
     }
     LLVM_DEBUG(dbgs() << "adding to symtab: " << WS << "\n");

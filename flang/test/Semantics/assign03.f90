@@ -42,7 +42,7 @@ contains
 
   ! C1030 and 10.2.2.4 - procedure names as target of procedure pointer
   subroutine s4(s_dummy)
-    procedure(s), intent(in) :: s_dummy
+    procedure(s) :: s_dummy
     procedure(s), pointer :: p, q
     procedure(), pointer :: r
     integer :: i

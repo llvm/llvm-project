@@ -91,7 +91,7 @@ define i1 @logical_or_implies(i32 %x) {
 ; CHECK-LABEL: @logical_or_implies(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X]], 42
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[C1]], [[C2]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c1 = icmp eq i32 %x, 0
@@ -103,10 +103,7 @@ define i1 @logical_or_implies(i32 %x) {
 ; Will fold after conversion to or.
 define i1 @logical_or_implies_folds(i32 %x) {
 ; CHECK-LABEL: @logical_or_implies_folds(
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c1 = icmp slt i32 %x, 0
   %c2 = icmp sge i32 %x, 0
@@ -119,7 +116,7 @@ define i1 @logical_and_implies(i32 %x) {
 ; CHECK-LABEL: @logical_and_implies(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[X]], 42
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[C1]], [[C2]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %c1 = icmp ne i32 %x, 0
@@ -132,9 +129,7 @@ define i1 @logical_and_implies(i32 %x) {
 define i1 @logical_and_implies_folds(i32 %x) {
 ; CHECK-LABEL: @logical_and_implies_folds(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %c1 = icmp ugt i32 %x, 42
   %c2 = icmp ne i32 %x, 0
@@ -155,7 +150,7 @@ define i1 @logical_or_noundef_a(i1 noundef %a, i1 %b) {
 ; Noundef on false value allows conversion to or.
 define i1 @logical_or_noundef_b(i1 %a, i1 noundef %b) {
 ; CHECK-LABEL: @logical_or_noundef_b(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = select i1 %a, i1 true, i1 %b
@@ -175,7 +170,7 @@ define i1 @logical_and_noundef_a(i1 noundef %a, i1 %b) {
 ; Noundef on false value allows conversion to and.
 define i1 @logical_and_noundef_b(i1 %a, i1 noundef %b) {
 ; CHECK-LABEL: @logical_and_noundef_b(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = select i1 %a, i1 %b, i1 false

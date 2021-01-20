@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -588,6 +589,10 @@ public:
 
   /// Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
+
+  /// Emit a AlignPackInfo.
+  void AddAlignPackInfo(const Sema::AlignPackInfo &Info,
+                        RecordDataImpl &Record);
 
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
