@@ -1150,9 +1150,8 @@ define <4 x i32> @mul_v4i64_zero_lower(<4 x i32> %val1, <4 x i64> %val2) {
 ; AVX-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX-NEXT:    vpsrlq $32, %ymm1, %ymm1
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vpsllq $32, %ymm0, %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 entry:
