@@ -47,8 +47,9 @@
 // | callee-saved gpr registers        | <--.
 // |                                   |    | On Darwin platforms these
 // |- - - - - - - - - - - - - - - - - -|    | callee saves are swapped,
-// |                                   |    | (frame record first)
-// | prev_fp, prev_lr                  | <--'
+// | prev_lr                           |    | (frame record first)
+// | prev_fp                           | <--'
+// | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
 // |                                   |
@@ -953,6 +954,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
+  // If the first store isn't right where we want SP then we can't fold the
+  // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII,
@@ -1831,9 +1834,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 
-  // We need to reset FP to its untagged state on return. Bit 60 is currently
-  // used to show the presence of an extended frame.
   if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    // We need to reset FP to its untagged state on return. Bit 60 is currently
+    // used to show the presence of an extended frame.
+
     // BIC x29, x29, #0x1000_0000_0000_0000
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::ANDXri),
             AArch64::FP)

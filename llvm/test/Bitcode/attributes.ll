@@ -422,6 +422,12 @@ define void @f71() hot
   ret void
 }
 
+; CHECK: define void @f72(i8* swiftasync %0)
+define void @f72(i8* swiftasync %0)
+{
+  ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

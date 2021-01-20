@@ -747,7 +747,7 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
 
   //     add x16, xBase, #Offset
   //     movk x16, #0xc31a, lsl #48
-  //     mov x17, x22
+  //     mov x17, x22/xzr
   //     pacdb x17, x16
   //     str x17, [xBase, #Offset]
   unsigned Opc = Offset >= 0 ? AArch64::ADDXri : AArch64::SUBXri;
