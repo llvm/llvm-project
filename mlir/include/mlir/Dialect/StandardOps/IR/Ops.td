@@ -3244,6 +3244,17 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
     // Build a SubTensorOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with mixed static and dynamic entries
+    // and custom result type.
+    OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<int64_t>":$staticOffsets, "ArrayRef<int64_t>":$staticSizes,
+      "ArrayRef<int64_t>":$staticStrides, "ValueRange":$offsets,
+      "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with all dynamic entries and custom result type.
+    OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -3349,7 +3360,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
       return source().getType().cast<RankedTensorType>();
     }
 
-    /// The result of a subtensor is always a tensor.
+    /// The result of a subtensor_insert is always a tensor.
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
@@ -3357,7 +3368,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrRanks() {
-      unsigned rank = getSourceType().getRank();
+      unsigned rank = getType().getRank();
       return {rank, rank, rank};
     }
 
