@@ -136,8 +136,6 @@ public:
         /*RebuildRatio=*/1,
     };
 
-    bool SuggestMissingIncludes = false;
-
     /// Clangd will execute compiler drivers matching one of these globs to
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
@@ -375,10 +373,6 @@ private:
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;
-
-  // If this is true, suggest include insertion fixes for diagnostic errors that
-  // can be caused by missing includes (e.g. member access in incomplete type).
-  bool SuggestMissingIncludes = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

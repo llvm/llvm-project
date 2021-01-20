@@ -80,8 +80,21 @@ OptionCategory CompileCommands("clangd compilation flags options");
 OptionCategory Features("clangd feature options");
 OptionCategory Misc("clangd miscellaneous options");
 OptionCategory Protocol("clangd protocol and logging options");
+OptionCategory Retired("clangd flags no longer in use");
 const OptionCategory *ClangdCategories[] = {&Features, &Protocol,
-                                            &CompileCommands, &Misc};
+                                            &CompileCommands, &Misc, &Retired};
+
+template <typename T> class RetiredFlag {
+  opt<T> Option;
+
+public:
+  RetiredFlag(llvm::StringRef Name)
+      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden,
+               llvm::cl::callback([Name](const T &) {
+                 llvm::errs()
+                     << "The flag `-" << Name << "` is obsolete and ignored.\n";
+               })) {}
+};
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 opt<CompileArgsFrom> CompileArgsFrom{
@@ -267,15 +280,7 @@ opt<bool> IncludeIneligibleResults{
     Hidden,
 };
 
-opt<bool> EnableIndex{
-    "index",
-    cat(Features),
-    desc("Enable index-based features. By default, clangd maintains an index "
-         "built from symbols in opened files. Global index support needs to "
-         "enabled separatedly"),
-    init(true),
-    Hidden,
-};
+RetiredFlag<bool> EnableIndex("index");
 
 opt<int> LimitResults{
     "limit-results",
@@ -285,13 +290,7 @@ opt<int> LimitResults{
     init(100),
 };
 
-opt<bool> SuggestMissingIncludes{
-    "suggest-missing-includes",
-    cat(Features),
-    desc("Attempts to fix diagnostic errors caused by missing "
-         "includes using index"),
-    init(true),
-};
+RetiredFlag<bool> SuggestMissingIncludes("suggest-missing-includes");
 
 list<std::string> TweakList{
     "tweaks",
@@ -308,21 +307,8 @@ opt<bool> CrossFileRename{
     init(true),
 };
 
-opt<bool> RecoveryAST{
-    "recovery-ast",
-    cat(Features),
-    desc("Preserve expressions in AST for broken code."),
-    init(false),
-    Hidden,
-};
-
-opt<bool> RecoveryASTType{
-    "recovery-ast-type",
-    cat(Features),
-    desc("Preserve the type for recovery AST."),
-    init(false),
-    Hidden,
-};
+RetiredFlag<bool> RecoveryAST("recovery-ast");
+RetiredFlag<bool> RecoveryASTType("recovery-ast-type");
 
 opt<bool> FoldingRanges{
     "folding-ranges",
@@ -464,6 +450,7 @@ opt<bool> PrettyPrint{
     init(false),
 };
 
+// FIXME: retire this flag in llvm 13 release cycle.
 opt<bool> AsyncPreamble{
     "async-preamble",
     cat(Misc),
@@ -487,11 +474,13 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+// FIXME: retire this flag in llvm 13 release cycle.
 opt<bool> CollectMainFileRefs{
     "collect-main-file-refs",
     cat(Misc),
     desc("Store references to main-file-only symbols in the index"),
     init(ClangdServer::Options().CollectMainFileRefs),
+    Hidden,
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
@@ -770,12 +759,12 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
-  Opts.BuildDynamicSymbolIndex = EnableIndex;
+  Opts.BuildDynamicSymbolIndex = true;
   Opts.CollectMainFileRefs = CollectMainFileRefs;
   std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
-  if (EnableIndex && !IndexFile.empty()) {
+  if (!IndexFile.empty()) {
     // Load the index asynchronously. Meanwhile SwapIndex returns no results.
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(std::make_unique<MemIndex>()));
@@ -872,7 +861,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
   Opts.AsyncPreambleBuilds = AsyncPreamble;
-  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {
     if (T.hidden() && !HiddenFeatures)

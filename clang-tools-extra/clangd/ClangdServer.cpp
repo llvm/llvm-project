@@ -146,7 +146,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                                      Opts.CollectMainFileRefs)
                      : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
-      SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
@@ -201,7 +200,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
   ParseOptions Opts;
-  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
