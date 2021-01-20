@@ -58,6 +58,7 @@ add_llvm_component_library(LLVMAnalysis
   IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
+  ImportedFunctionsInliningStatistics.cpp
   IndirectCallPromotionAnalysis.cpp
   InlineCost.cpp
   InlineAdvisor.cpp
