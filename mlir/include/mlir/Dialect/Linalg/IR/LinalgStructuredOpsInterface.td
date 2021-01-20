@@ -1083,9 +1083,11 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       Operation::operand_range res{
         getOperation()->getOperands().begin() + getNumShapedOperands(),
         getOperation()->getOperands().end()};
-      for (Type t : TypeRange{res})
+      for (Type t : TypeRange{res}) {
+        (void)t;
         assert((t.isSignlessIntOrIndexOrFloat() || t.template isa<VectorType>())
                &&"expected scalar or vector type");
+      }
       return res;
     }
 
