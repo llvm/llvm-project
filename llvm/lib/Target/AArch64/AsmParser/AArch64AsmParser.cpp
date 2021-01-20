@@ -2920,6 +2920,7 @@ static const struct Extension {
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
     {"pauth", {AArch64::FeaturePAuth}},
+    {"flagm", {AArch64::FeatureFlagM}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
