@@ -42,24 +42,26 @@ static bool IsBlank(char C) {
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
   static constexpr StringRef KnownCStylePrefixes[] = {"///<", "//!<", "///",
-                                                      "//",   "//!",  "//:"};
-  static constexpr StringRef KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
-                                                         "####"};
+                                                      "//!",  "//:",  "//"};
+  static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
+                                                         "//", "#"};
   ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
-  StringRef LongestPrefix;
+  assert(std::is_sorted(KnownPrefixes.begin(), KnownPrefixes.end(),
+                        [](StringRef Lhs, StringRef Rhs) noexcept {
+                          return Lhs.size() > Rhs.size();
+                        }));
+
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
-      size_t PrefixLength = KnownPrefix.size();
-      while (PrefixLength < Comment.size() && Comment[PrefixLength] == ' ')
-        ++PrefixLength;
-      if (PrefixLength > LongestPrefix.size())
-        LongestPrefix = Comment.substr(0, PrefixLength);
+      const auto PrefixLength =
+          Comment.find_first_not_of(' ', KnownPrefix.size());
+      return Comment.substr(0, PrefixLength);
     }
   }
-  return LongestPrefix;
+  return {};
 }
 
 static BreakableToken::Split
