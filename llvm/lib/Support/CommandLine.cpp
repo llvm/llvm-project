@@ -1204,7 +1204,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     };
 
     // Check for recursive response files.
-    if (std::any_of(FileStack.begin() + 1, FileStack.end(), IsEquivalent)) {
+    if (any_of(drop_begin(FileStack), IsEquivalent)) {
       // This file is recursive, so we leave it in the argument stream and
       // move on.
       AllExpanded = false;
