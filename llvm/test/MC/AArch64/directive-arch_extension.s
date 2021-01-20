@@ -75,3 +75,7 @@ ld64b x0, [x13]
 .arch_extension pauth
 paciasp
 // CHECK: paciasp
+
+.arch_extension flagm
+cfinv
+// CHECK: cfinv
