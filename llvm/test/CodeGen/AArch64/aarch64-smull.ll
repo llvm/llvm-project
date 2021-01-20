@@ -96,7 +96,7 @@ define <8 x i16> @amull_v8i8_v8i16(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
@@ -113,7 +113,7 @@ define <4 x i32> @amull_v4i16_v4i32(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -131,7 +131,7 @@ define <2 x i64> @amull_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -258,7 +258,7 @@ define <8 x i16> @amlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
+; CHECK-NEXT:    umlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, <8 x i16>* %A
@@ -278,7 +278,7 @@ define <4 x i32> @amlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -299,7 +299,7 @@ define <2 x i64> @amlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -428,7 +428,7 @@ define <8 x i16> @amlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
+; CHECK-NEXT:    umlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, <8 x i16>* %A
@@ -448,7 +448,7 @@ define <4 x i32> @amlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -469,7 +469,7 @@ define <2 x i64> @amlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -586,7 +586,7 @@ define <8 x i16> @amull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; CHECK-LABEL: amull_extvec_v8i8_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8b, #12
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
@@ -600,7 +600,7 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234
 ; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -615,7 +615,7 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234
 ; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -752,8 +752,8 @@ define <4 x i64> @smull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-LABEL: amull2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    smull2 v1.8h, v0.16b, v1.16b
+; CHECK-NEXT:    umull v2.8h, v0.8b, v1.8b
+; CHECK-NEXT:    umull2 v1.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    bic v2.8h, #255, lsl #8
 ; CHECK-NEXT:    bic v1.8h, #255, lsl #8
 ; CHECK-NEXT:    mov v0.16b, v2.16b
@@ -768,8 +768,8 @@ define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-LABEL: amull2_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.4s, v0.4h, v1.4h
-; CHECK-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-NEXT:    umull v2.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull2 v0.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    movi v3.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v1.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    and v0.16b, v2.16b, v3.16b
@@ -784,8 +784,8 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-LABEL: amull2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    smull2 v0.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-NEXT:    umull2 v0.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v3.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v1.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    and v0.16b, v2.16b, v3.16b
