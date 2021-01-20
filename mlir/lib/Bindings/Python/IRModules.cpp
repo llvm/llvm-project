@@ -2832,7 +2832,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
          "get",
-         [](PyType &elementType, std::vector<int64_t> shape,
+         [](std::vector<int64_t> shape, PyType &elementType,
             std::vector<PyAffineMap> layout, unsigned memorySpace,
             DefaultingPyLocation loc) {
            SmallVector<MlirAffineMap> maps;
@@ -2856,7 +2856,7 @@ public:
            }
            return PyMemRefType(elementType.getContext(), t);
          },
-         py::arg("element_type"), py::arg("shape"),
+         py::arg("shape"), py::arg("element_type"),
          py::arg("layout") = py::list(), py::arg("memory_space") = 0,
          py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly("layout", &PyMemRefType::getLayout,
