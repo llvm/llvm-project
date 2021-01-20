@@ -13,8 +13,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
-#include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
