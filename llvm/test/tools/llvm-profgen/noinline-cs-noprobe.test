@@ -7,7 +7,7 @@
 ; CHECK: 2: 2
 ; CHECK: 4: 1
 ; CHECK: 5: 3
-; CHECK:[main:1 @ foo]:9:0
+; CHECK:[main:1 @ foo]:6:0
 ; CHECK: 2: 3
 ; CHECK: 3: 3 bar:3
 
