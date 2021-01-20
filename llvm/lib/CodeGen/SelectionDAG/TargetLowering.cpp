@@ -1986,7 +1986,8 @@ bool TargetLowering::SimplifyDemandedBits(
     // zero/one bits live out.
     unsigned OperandBitWidth = Src.getScalarValueSizeInBits();
     APInt TruncMask = DemandedBits.zext(OperandBitWidth);
-    if (SimplifyDemandedBits(Src, TruncMask, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Src, TruncMask, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     Known = Known.trunc(BitWidth);
 
@@ -2009,9 +2010,9 @@ bool TargetLowering::SimplifyDemandedBits(
           // undesirable.
           break;
 
-        SDValue ShAmt = Src.getOperand(1);
-        auto *ShAmtC = dyn_cast<ConstantSDNode>(ShAmt);
-        if (!ShAmtC || ShAmtC->getAPIntValue().uge(BitWidth))
+        const APInt *ShAmtC =
+            TLO.DAG.getValidShiftAmountConstant(Src, DemandedElts);
+        if (!ShAmtC)
           break;
         uint64_t ShVal = ShAmtC->getZExtValue();
 
@@ -2023,6 +2024,7 @@ bool TargetLowering::SimplifyDemandedBits(
         if (!(HighBits & DemandedBits)) {
           // None of the shifted in bits are needed.  Add a truncate of the
           // shift input, then shift it.
+          SDValue ShAmt = Src.getOperand(1);
           if (TLO.LegalTypes())
             ShAmt = TLO.DAG.getConstant(ShVal, dl, getShiftAmountTy(VT, DL));
           SDValue NewTrunc =
