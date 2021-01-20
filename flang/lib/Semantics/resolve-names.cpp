@@ -1010,9 +1010,9 @@ public:
   bool Pre(const parser::BlockStmt &);
   bool Pre(const parser::EndBlockStmt &);
   void Post(const parser::Selector &);
-  bool Pre(const parser::AssociateStmt &);
+  void Post(const parser::AssociateStmt &);
   void Post(const parser::EndAssociateStmt &);
-  void Post(const parser::Association &);
+  bool Pre(const parser::Association &);
   void Post(const parser::SelectTypeStmt &);
   void Post(const parser::SelectRankStmt &);
   bool Pre(const parser::SelectTypeConstruct &);
@@ -1081,6 +1081,7 @@ private:
     Selector selector;
   };
   std::vector<Association> associationStack_;
+  Association *currentAssociation_{nullptr};
 
   template <typename T> bool CheckDef(const T &t) {
     return CheckDef(std::get<std::optional<parser::Name>>(t));
@@ -1098,9 +1099,10 @@ private:
   void SetAttrsFromAssociation(Symbol &);
   Selector ResolveSelector(const parser::Selector &);
   void ResolveIndexName(const parser::ConcurrentControl &control);
+  void SetCurrentAssociation(std::size_t n);
   Association &GetCurrentAssociation();
   void PushAssociation();
-  void PopAssociation();
+  void PopAssociation(std::size_t count = 1);
 };
 
 // Create scopes for OpenACC constructs
@@ -5153,29 +5155,33 @@ void ConstructVisitor::Post(const parser::Selector &x) {
   GetCurrentAssociation().selector = ResolveSelector(x);
 }
 
-bool ConstructVisitor::Pre(const parser::AssociateStmt &x) {
+void ConstructVisitor::Post(const parser::AssociateStmt &x) {
   CheckDef(x.t);
   PushScope(Scope::Kind::Block, nullptr);
-  PushAssociation();
-  return true;
+  const auto assocCount{std::get<std::list<parser::Association>>(x.t).size()};
+  for (auto nthLastAssoc{assocCount}; nthLastAssoc > 0; --nthLastAssoc) {
+    SetCurrentAssociation(nthLastAssoc);
+    if (auto *symbol{MakeAssocEntity()}) {
+      if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+        Say("Selector must not be a coindexed object"_err_en_US);
+      }
+      SetTypeFromAssociation(*symbol);
+      SetAttrsFromAssociation(*symbol);
+    }
+  }
+  PopAssociation(assocCount);
 }
+
 void ConstructVisitor::Post(const parser::EndAssociateStmt &x) {
-  PopAssociation();
   PopScope();
   CheckRef(x.v);
 }
 
-void ConstructVisitor::Post(const parser::Association &x) {
+bool ConstructVisitor::Pre(const parser::Association &x) {
+  PushAssociation();
   const auto &name{std::get<parser::Name>(x.t)};
   GetCurrentAssociation().name = &name;
-  if (auto *symbol{MakeAssocEntity()}) {
-    if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
-      Say("Selector must not be a coindexed object"_err_en_US);
-    }
-    SetTypeFromAssociation(*symbol);
-    SetAttrsFromAssociation(*symbol);
-  }
-  GetCurrentAssociation() = {}; // clean for further parser::Association.
+  return true;
 }
 
 bool ConstructVisitor::Pre(const parser::ChangeTeamStmt &x) {
@@ -5330,14 +5336,14 @@ void ConstructVisitor::CheckRef(const std::optional<parser::Name> &x) {
   }
 }
 
-// Make a symbol representing an associating entity from current association.
+// Make a symbol for the associating entity of the current association.
 Symbol *ConstructVisitor::MakeAssocEntity() {
   Symbol *symbol{nullptr};
   auto &association{GetCurrentAssociation()};
   if (association.name) {
     symbol = &MakeSymbol(*association.name, UnknownDetails{});
     if (symbol->has<AssocEntityDetails>() && symbol->owner() == currScope()) {
-      Say(*association.name, // C1104
+      Say(*association.name, // C1102
           "The associate name '%s' is already used in this associate statement"_err_en_US);
       return nullptr;
     }
@@ -5405,18 +5411,29 @@ ConstructVisitor::Selector ConstructVisitor::ResolveSelector(
       x.u);
 }
 
+// Set the current association to the nth to the last association on the
+// association stack.  The top of the stack is at n = 1.  This allows access
+// to the interior of a list of associations at the top of the stack.
+void ConstructVisitor::SetCurrentAssociation(std::size_t n) {
+  CHECK(n > 0 && n <= associationStack_.size());
+  currentAssociation_ = &associationStack_[associationStack_.size() - n];
+}
+
 ConstructVisitor::Association &ConstructVisitor::GetCurrentAssociation() {
-  CHECK(!associationStack_.empty());
-  return associationStack_.back();
+  CHECK(currentAssociation_);
+  return *currentAssociation_;
 }
 
 void ConstructVisitor::PushAssociation() {
   associationStack_.emplace_back(Association{});
+  currentAssociation_ = &associationStack_.back();
 }
 
-void ConstructVisitor::PopAssociation() {
-  CHECK(!associationStack_.empty());
-  associationStack_.pop_back();
+void ConstructVisitor::PopAssociation(std::size_t count) {
+  CHECK(count > 0 && count <= associationStack_.size());
+  associationStack_.resize(associationStack_.size() - count);
+  currentAssociation_ =
+      associationStack_.empty() ? nullptr : &associationStack_.back();
 }
 
 const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
