@@ -29,8 +29,6 @@
 #define SHARED __attribute__((shared))
 #define ALIGN(N) __attribute__((aligned(N)))
 
-#include "hip_atomics.h"
-
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
 ////////////////////////////////////////////////////////////////////////////////
@@ -126,6 +124,31 @@ DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
+
+// Atomics
+template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
+  return __atomic_fetch_add(address, val, __ATOMIC_SEQ_CST);
+}
+
+INLINE uint32_t __kmpc_atomic_inc(uint32_t *address, uint32_t max) {
+  return __builtin_amdgcn_atomic_inc32(address, max, __ATOMIC_SEQ_CST, "");
+}
+
+template <typename T> INLINE T __kmpc_atomic_max(T *address, T val) {
+  return __atomic_fetch_max(address, val, __ATOMIC_SEQ_CST);
+}
+
+template <typename T> INLINE T __kmpc_atomic_exchange(T *address, T val) {
+  T r;
+  __atomic_exchange(address, &val, &r, __ATOMIC_SEQ_CST);
+  return r;
+}
+
+template <typename T> INLINE T __kmpc_atomic_cas(T *address, T compare, T val) {
+  (void)__atomic_compare_exchange(address, &compare, &val, false,
+                                  __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+  return compare;
+}
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

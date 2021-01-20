@@ -13,7 +13,6 @@
 
 #include "target_impl.h"
 #include "common/debug.h"
-#include "common/target_atomic.h"
 
 #include <cuda.h>
 

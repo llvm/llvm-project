@@ -130,6 +130,27 @@ DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
 
+// Atomics
+template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
+  return atomicAdd(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_inc(T *address, T val) {
+  return atomicInc(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_max(T *address, T val) {
+  return atomicMax(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_exchange(T *address, T val) {
+  return atomicExch(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_cas(T *address, T compare, T val) {
+  return atomicCAS(address, compare, val);
+}
+
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);
 DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock);
