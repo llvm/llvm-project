@@ -239,6 +239,26 @@ void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
+const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
+    // Codegen control options which don't matter.
+    AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
+    AMDGPU::FeatureUnalignedAccessMode,
+
+    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
+
+    // Property of the kernel/environment which can't actually differ.
+    AMDGPU::FeatureSGPRInitBug, AMDGPU::FeatureXNACK,
+    AMDGPU::FeatureTrapHandler,
+
+    // The default assumption needs to be ecc is enabled, but no directly
+    // exposed operations depend on it, so it can be safely inlined.
+    AMDGPU::FeatureSRAMECC,
+
+    // Perf-tuning features
+    AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
+
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
@@ -1111,6 +1131,11 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                        TTI::PeelingPreferences &PP) {
   CommonTTI.getPeelingPreferences(L, SE, PP);
+}
+
+int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
+  return ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
+                                : getQuarterRateInstrCost(CostKind);
 }
 
 R600TTIImpl::R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)

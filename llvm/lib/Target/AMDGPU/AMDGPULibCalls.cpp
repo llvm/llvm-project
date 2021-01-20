@@ -13,7 +13,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
