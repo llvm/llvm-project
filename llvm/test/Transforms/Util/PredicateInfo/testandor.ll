@@ -56,6 +56,10 @@ define void @test_or_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 true, i1 [[YZ]]
 ; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[Z]])
+; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[XZ]])
+; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.{{.+}}(i32 [[X]])
+; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[YZ]])
+; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.{{.+}}(i32 [[Y]])
 ; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER:%.*]]
 ; CHECK:       oneof:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
@@ -64,10 +68,10 @@ define void @test_or_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @bar(i32 [[Y]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       neither:
-; CHECK-NEXT:    call void @foo(i1 [[XZ]])
-; CHECK-NEXT:    call void @foo(i1 [[YZ]])
-; CHECK-NEXT:    call void @bar(i32 [[X]])
-; CHECK-NEXT:    call void @bar(i32 [[Y]])
+; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
+; CHECK-NEXT:    call void @foo(i1 [[YZ_0]])
+; CHECK-NEXT:    call void @bar(i32 [[X_0]])
+; CHECK-NEXT:    call void @bar(i32 [[Y_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[Z_0]])
 ; CHECK-NEXT:    ret void
 ;
@@ -142,12 +146,16 @@ define void @test_and_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 [[YZ]], i1 false
 ; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[Z]])
+; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[XZ]])
+; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.{{.+}}(i32 [[X]])
+; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[YZ]])
+; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.{{.+}}(i32 [[Y]])
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
-; CHECK-NEXT:    call void @foo(i1 [[XZ]])
-; CHECK-NEXT:    call void @foo(i1 [[YZ]])
-; CHECK-NEXT:    call void @bar(i32 [[X]])
-; CHECK-NEXT:    call void @bar(i32 [[Y]])
+; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
+; CHECK-NEXT:    call void @foo(i1 [[YZ_0]])
+; CHECK-NEXT:    call void @bar(i32 [[X_0]])
+; CHECK-NEXT:    call void @bar(i32 [[Y_0]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       nope:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])

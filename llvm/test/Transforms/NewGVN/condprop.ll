@@ -43,10 +43,10 @@ define void @test_and_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 [[YZ]], i1 false
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH_ZERO:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both_zero:
-; CHECK-NEXT:    call void @foo(i1 [[XZ]])
-; CHECK-NEXT:    call void @foo(i1 [[YZ]])
-; CHECK-NEXT:    call void @bar(i32 [[X]])
-; CHECK-NEXT:    call void @bar(i32 [[Y]])
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
 ; CHECK-NEXT:    ret void
 ; CHECK:       nope:
 ; CHECK-NEXT:    call void @foo(i1 false)
@@ -105,10 +105,10 @@ define void @test_or_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 true, i1 [[YZ]]
 ; CHECK-NEXT:    br i1 [[Z]], label [[NOPE:%.*]], label [[BOTH_ZERO:%.*]]
 ; CHECK:       both_zero:
-; CHECK-NEXT:    call void @foo(i1 [[XZ]])
-; CHECK-NEXT:    call void @foo(i1 [[YZ]])
-; CHECK-NEXT:    call void @bar(i32 [[X]])
-; CHECK-NEXT:    call void @bar(i32 [[Y]])
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
 ; CHECK-NEXT:    ret void
 ; CHECK:       nope:
 ; CHECK-NEXT:    call void @foo(i1 true)
