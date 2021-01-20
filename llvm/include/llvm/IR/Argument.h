@@ -52,7 +52,9 @@ public:
   /// Return true if this argument has the nonnull attribute. Also returns true
   /// if at least one byte is known to be dereferenceable and the pointer is in
   /// addrspace(0).
-  bool hasNonNullAttr() const;
+  /// If AllowUndefOrPoison is true, respect the semantics of nonnull attribute
+  /// and return true even if the argument can be undef or poison.
+  bool hasNonNullAttr(bool AllowUndefOrPoison = true) const;
 
   /// If this argument has the dereferenceable attribute, return the number of
   /// bytes known to be dereferenceable. Otherwise, zero is returned.
