@@ -1531,8 +1531,13 @@ int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::usub_sat: {
     if (!ST->hasMVEIntegerOps())
       break;
+    // Get the Return type, either directly of from ICA.ReturnType and ICA.VF.
+    Type *VT = ICA.getReturnType();
+    if (!VT->isVectorTy() && !ICA.getVectorFactor().isScalar())
+      VT = VectorType::get(VT, ICA.getVectorFactor());
+
     std::pair<int, MVT> LT =
-        TLI->getTypeLegalizationCost(DL, ICA.getReturnType());
+        TLI->getTypeLegalizationCost(DL, VT);
     if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
         LT.second == MVT::v16i8) {
       // This is a base cost of 1 for the vadd, plus 3 extract shifts if we
