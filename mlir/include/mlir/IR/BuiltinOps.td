@@ -17,6 +17,8 @@
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for Builtin dialect ops.
 class Builtin_Op<string mnemonic, list<OpTrait> traits = []> :
@@ -218,6 +220,55 @@ def ModuleTerminatorOp : Builtin_Op<"module_terminator", [
     well-formed.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// UnrealizedConversionCastOp
+//===----------------------------------------------------------------------===//
+
+def UnrealizedConversionCastOp : Builtin_Op<"unrealized_conversion_cast", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
+  let summary = "An unrealized conversion from one set of types to another";
+  let description = [{
+    An `unrealized_conversion_cast` operation represents an unrealized
+    conversion from one set of types to another, that is used to enable the
+    inter-mixing of different type systems. This operation should not be
+    attributed any special representational or execution semantics, and is
+    generally only intended to be used to satisfy the temporary intermixing of
+    type systems during the conversion of one type system to another.
+
+    This operation may produce results of arity 1-N, and accept as input
+    operands of arity 0-N.
+
+    Example:
+
+    ```mlir
+    // An unrealized 0-1 conversion. These types of conversions are useful in
+    // cases where a type is removed from the type system, but not all uses have
+    // been converted. For example, imagine we have a tuple type that is
+    // expanded to its element types. If only some uses of an empty tuple type
+    // instance are converted we still need an instance of the tuple type, but
+    // have no inputs to the unrealized conversion.
+    %result = unrealized_conversion_cast to !bar.tuple_type<>
+
+    // An unrealized 1-1 conversion.
+    %result1 = unrealized_conversion_cast %operand : !foo.type to !bar.lowered_type
+
+    // An unrealized 1-N conversion.
+    %results2:2 = unrealized_conversion_cast %tuple_operand : !foo.tuple_type<!foo.type, !foo.type> to !foo.type, !foo.type
+
+    // An unrealized N-1 conversion.
+    %result3 = unrealized_conversion_cast %operand, %operand : !foo.type, !foo.type to !bar.tuple_type<!foo.type, !foo.type>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let assemblyFormat = [{
+    ($inputs^ `:` type($inputs))? `to` type($outputs) attr-dict
+  }];
+  let hasFolder = 1;
 }
 
 #endif // BUILTIN_OPS
