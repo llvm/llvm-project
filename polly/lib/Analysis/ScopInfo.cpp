@@ -1109,6 +1109,7 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
          "Access dims must match array dims");
 #endif
 
+  NewAccess = NewAccess.gist_params(getStatement()->getParent()->getContext());
   NewAccess = NewAccess.gist_domain(getStatement()->getDomain());
   NewAccessRelation = NewAccess;
 }
