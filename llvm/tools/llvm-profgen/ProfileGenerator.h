@@ -28,7 +28,10 @@ public:
   create(const BinarySampleCounterMap &BinarySampleCounters,
          enum PerfScriptType SampleType);
   virtual void generateProfile() = 0;
-
+  // Merge and trim profile with cold context before serialization,
+  // only eligible for CS profile
+  virtual void
+  mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap){};
   // Use SampleProfileWriter to serialize profile map
   void write();
 
@@ -200,6 +203,9 @@ public:
 protected:
   // Lookup or create FunctionSamples for the context
   FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
+  // Merge cold context profile whose total sample is below threshold
+  // into base profile.
+  void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap) override;
 
 private:
   // Helper function for updating body sample for a leaf location in
