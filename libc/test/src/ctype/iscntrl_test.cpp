@@ -9,7 +9,7 @@
 #include "src/ctype/iscntrl.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsCntrl, DefaultLocale) {
+TEST(LlvmLibcIsCntrl, DefaultLocale) {
   // Loops through all characters, verifying that control characters
   // return a non-zero integer, all others return zero.
   for (int ch = 0; ch < 255; ++ch) {

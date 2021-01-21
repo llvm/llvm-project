@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -74,6 +75,14 @@ static cl::opt<int> ExperimentalPrefLoopAlignment(
         "Sets the preferable loop alignment for experiments (as log2 bytes)"
         "(the last x86-experimental-pref-loop-alignment bits"
         " of the loop header PC will be 0)."),
+    cl::Hidden);
+
+static cl::opt<int> ExperimentalPrefInnermostLoopAlignment(
+    "x86-experimental-pref-innermost-loop-alignment", cl::init(4),
+    cl::desc(
+        "Sets the preferable loop alignment for experiments (as log2 bytes) "
+        "for innermost loops only. If specified, this option overrides "
+        "alignment set by x86-experimental-pref-loop-alignment."),
     cl::Hidden);
 
 static cl::opt<bool> MulConstantOptimization(
@@ -37324,6 +37333,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     SDValue Ins1 = peekThroughBitcasts(N.getOperand(1));
     unsigned Imm = N.getConstantOperandVal(2);
 
+    // Handle subvector splat by tweaking values to match binary concat.
+    // vperm2x128 (ins ?, X, C1), undef, 0x11 ->
+    // vperm2x128 (ins ?, X, C1), (ins ?, X, C1), 0x31 -> concat X, X
+    if (Imm == 0x11 && Ins1.isUndef()) {
+      Imm = 0x31;
+      Ins1 = Ins0;
+    }
+
     if (!(Imm == 0x31 &&
           Ins0.getOpcode() == ISD::INSERT_SUBVECTOR &&
           Ins1.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -51687,4 +51704,11 @@ X86TargetLowering::getStackProbeSize(MachineFunction &MF) const {
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
   return StackProbeSize;
+}
+
+Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  if (ML->isInnermost() &&
+      ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
+    return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
+  return TargetLowering::getPrefLoopAlignment();
 }

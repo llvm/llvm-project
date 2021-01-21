@@ -130,8 +130,7 @@ bool TruncInstCombine::buildTruncExpressionDag() {
     case Instruction::Select: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
-      for (Value *Operand : Operands)
-        Worklist.push_back(Operand);
+      append_range(Worklist, Operands);
       break;
     }
     default:

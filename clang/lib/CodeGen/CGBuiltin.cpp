@@ -17220,6 +17220,46 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
   }
+  case WebAssembly::BI__builtin_wasm_convert_low_s_i32x4_f64x2:
+  case WebAssembly::BI__builtin_wasm_convert_low_u_i32x4_f64x2: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_convert_low_s_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_convert_low_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_convert_low_u_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_convert_low_unsigned;
+      break;
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo);
+    return Builder.CreateCall(Callee, Vec);
+  }
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_zero_s_f64x2_i32x4:
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_zero_u_f64x2_i32x4: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_trunc_saturate_zero_s_f64x2_i32x4:
+      IntNo = Intrinsic::wasm_trunc_saturate_zero_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_trunc_saturate_zero_u_f64x2_i32x4:
+      IntNo = Intrinsic::wasm_trunc_saturate_zero_unsigned;
+      break;
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo);
+    return Builder.CreateCall(Callee, Vec);
+  }
+  case WebAssembly::BI__builtin_wasm_demote_zero_f64x2_f32x4: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_demote_zero);
+    return Builder.CreateCall(Callee, Vec);
+  }
+  case WebAssembly::BI__builtin_wasm_promote_low_f32x4_f64x2: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_promote_low);
+    return Builder.CreateCall(Callee, Vec);
+  }
   case WebAssembly::BI__builtin_wasm_load32_zero: {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_load32_zero);

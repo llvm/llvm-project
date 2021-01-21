@@ -10,6 +10,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -49,10 +50,9 @@ struct ParallelLoopToGpuPass
     OwningRewritePatternList patterns;
     populateParallelLoopToGPUPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalDialect<AffineDialect>();
-    target.addLegalDialect<gpu::GPUDialect>();
-    target.addLegalDialect<scf::SCFDialect>();
+    target.addLegalDialect<AffineDialect, complex::ComplexDialect,
+                           gpu::GPUDialect, scf::SCFDialect,
+                           StandardOpsDialect>();
     configureParallelLoopToGPULegality(target);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

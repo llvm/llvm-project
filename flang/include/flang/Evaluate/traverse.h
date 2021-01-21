@@ -50,7 +50,7 @@ public:
   Result operator()(const common::Indirection<A, C> &x) const {
     return visitor_(x.value());
   }
-  template <typename A> Result operator()(SymbolRef x) const {
+  template <typename A> Result operator()(const SymbolRef x) const {
     return visitor_(*x);
   }
   template <typename A> Result operator()(const std::unique_ptr<A> &x) const {

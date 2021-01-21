@@ -16,7 +16,7 @@ const char *call_memchr(const void *src, int c, size_t size) {
   return reinterpret_cast<const char *>(__llvm_libc::memchr(src, c, size));
 }
 
-TEST(MemChrTest, FindsCharacterAfterNullTerminator) {
+TEST(LlvmLibcMemChrTest, FindsCharacterAfterNullTerminator) {
   // memchr should continue searching after a null terminator.
   const size_t size = 5;
   const unsigned char src[size] = {'a', '\0', 'b', 'c', '\0'};
@@ -24,7 +24,7 @@ TEST(MemChrTest, FindsCharacterAfterNullTerminator) {
   ASSERT_STREQ(call_memchr(src, 'b', size), "bc");
 }
 
-TEST(MemChrTest, FindsCharacterInNonNullTerminatedCollection) {
+TEST(LlvmLibcMemChrTest, FindsCharacterInNonNullTerminatedCollection) {
   const size_t size = 3;
   const unsigned char src[size] = {'a', 'b', 'c'};
   // Should return 'b', 'c'.
@@ -33,49 +33,49 @@ TEST(MemChrTest, FindsCharacterInNonNullTerminatedCollection) {
   ASSERT_EQ(ret[1], 'c');
 }
 
-TEST(MemChrTest, FindsFirstCharacter) {
+TEST(LlvmLibcMemChrTest, FindsFirstCharacter) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return original array since 'a' is the first character.
   ASSERT_STREQ(call_memchr(src, 'a', size), "abcde");
 }
 
-TEST(MemChrTest, FindsMiddleCharacter) {
+TEST(LlvmLibcMemChrTest, FindsMiddleCharacter) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return characters after (and including) 'c'.
   ASSERT_STREQ(call_memchr(src, 'c', size), "cde");
 }
 
-TEST(MemChrTest, FindsLastCharacterThatIsNotNullTerminator) {
+TEST(LlvmLibcMemChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return 'e' and null-terminator.
   ASSERT_STREQ(call_memchr(src, 'e', size), "e");
 }
 
-TEST(MemChrTest, FindsNullTerminator) {
+TEST(LlvmLibcMemChrTest, FindsNullTerminator) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return null terminator.
   ASSERT_STREQ(call_memchr(src, '\0', size), "");
 }
 
-TEST(MemChrTest, CharacterNotWithinStringShouldReturnNullptr) {
+TEST(LlvmLibcMemChrTest, CharacterNotWithinStringShouldReturnNullptr) {
   const size_t size = 4;
   const unsigned char src[size] = {'1', '2', '3', '?'};
   // Since 'z' is not within 'characters', should return nullptr.
   ASSERT_STREQ(call_memchr(src, 'z', size), nullptr);
 }
 
-TEST(MemChrTest, CharacterNotWithinSizeShouldReturnNullptr) {
+TEST(LlvmLibcMemChrTest, CharacterNotWithinSizeShouldReturnNullptr) {
   const unsigned char src[5] = {'1', '2', '3', '4', '\0'};
   // Since '4' is not the first or second character, this should return nullptr.
   const size_t size = 2;
   ASSERT_STREQ(call_memchr(src, '4', size), nullptr);
 }
 
-TEST(MemChrTest, TheSourceShouldNotChange) {
+TEST(LlvmLibcMemChrTest, TheSourceShouldNotChange) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   const char *src_copy = reinterpret_cast<const char *>(src);
@@ -87,14 +87,14 @@ TEST(MemChrTest, TheSourceShouldNotChange) {
   ASSERT_STREQ(reinterpret_cast<const char *>(src), src_copy);
 }
 
-TEST(MemChrTest, ShouldFindFirstOfDuplicates) {
+TEST(LlvmLibcMemChrTest, ShouldFindFirstOfDuplicates) {
   const size_t size = 12; // 11 characters + null terminator.
   const char *dups = "abc1def1ghi";
   // 1 is duplicated in 'dups', but it should find the first copy.
   ASSERT_STREQ(call_memchr(dups, '1', size), "1def1ghi");
 }
 
-TEST(MemChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
+TEST(LlvmLibcMemChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   const size_t size = 1; // Null terminator.
   const char *empty_string = "";
   // Null terminator should match.
@@ -105,14 +105,14 @@ TEST(MemChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   ASSERT_STREQ(call_memchr(empty_string, '?', size), nullptr);
 }
 
-TEST(MemChrTest, SingleRepeatedCharacterShouldReturnFirst) {
+TEST(LlvmLibcMemChrTest, SingleRepeatedCharacterShouldReturnFirst) {
   const char *dups = "XXXXX";
   const size_t size = 6; // 5 characters + null terminator.
   // Should return original string since X is first character.
   ASSERT_STREQ(call_memchr(dups, 'X', size), dups);
 }
 
-TEST(MemChrTest, SignedCharacterFound) {
+TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
   char c = -1;
   const size_t size = 1;
   char src[size] = {c};

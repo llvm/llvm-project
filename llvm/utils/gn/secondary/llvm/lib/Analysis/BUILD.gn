@@ -56,6 +56,7 @@ static_library("Analysis") {
     "IRSimilarityIdentifier.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
+    "ImportedFunctionsInliningStatistics.cpp",
     "IndirectCallPromotionAnalysis.cpp",
     "InlineAdvisor.cpp",
     "InlineCost.cpp",

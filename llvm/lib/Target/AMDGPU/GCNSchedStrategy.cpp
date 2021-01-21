@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNSchedStrategy.h"
-#include "AMDGPUSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 
 #define DEBUG_TYPE "machine-scheduler"

@@ -73,7 +73,7 @@ define <8 x i32> @trunc8i64_8i32_ashr(<8 x i64> %a) {
 ;
 ; AVX2-FAST-LABEL: trunc8i64_8i32_ashr:
 ; AVX2-FAST:       # %bb.0: # %entry
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} xmm2 = [1,3,5,7]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [1,3,5,7,5,7,6,7]
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -81,7 +81,7 @@ define <8 x i32> @trunc8i64_8i32_ashr(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: trunc8i64_8i32_ashr:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm0
+; AVX512-NEXT:    vpsraq $32, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
 ; AVX512-NEXT:    retq
 entry:
@@ -383,47 +383,33 @@ entry:
 }
 
 define <8 x i16> @trunc8i32_8i16_ashr(<8 x i32> %a) {
-; SSE2-LABEL: trunc8i32_8i16_ashr:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    psrad $16, %xmm0
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: trunc8i32_8i16_ashr:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    psrad $16, %xmm1
-; SSSE3-NEXT:    psrad $16, %xmm0
-; SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: trunc8i32_8i16_ashr:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    psrld $16, %xmm1
-; SSE41-NEXT:    psrld $16, %xmm0
-; SSE41-NEXT:    packusdw %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: trunc8i32_8i16_ashr:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    psrad $16, %xmm1
+; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc8i32_8i16_ashr:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc8i32_8i16_ashr:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrad $16, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc8i32_8i16_ashr:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrad $16, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
@@ -431,14 +417,14 @@ define <8 x i16> @trunc8i32_8i16_ashr(<8 x i32> %a) {
 ;
 ; AVX512VL-LABEL: trunc8i32_8i16_ashr:
 ; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrad $16, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: trunc8i32_8i16_ashr:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpsrad $16, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -446,7 +432,7 @@ define <8 x i16> @trunc8i32_8i16_ashr(<8 x i32> %a) {
 ;
 ; AVX512BWVL-LABEL: trunc8i32_8i16_ashr:
 ; AVX512BWVL:       # %bb.0: # %entry
-; AVX512BWVL-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    vpsrad $16, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
@@ -698,52 +684,28 @@ entry:
 }
 
 define void @trunc16i32_16i16_ashr(<16 x i32> %a) {
-; SSE2-LABEL: trunc16i32_16i16_ashr:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    psrad $16, %xmm0
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    psrad $16, %xmm3
-; SSE2-NEXT:    psrad $16, %xmm2
-; SSE2-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-NEXT:    movdqu %xmm2, (%rax)
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: trunc16i32_16i16_ashr:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    psrad $16, %xmm1
-; SSSE3-NEXT:    psrad $16, %xmm0
-; SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSSE3-NEXT:    psrad $16, %xmm3
-; SSSE3-NEXT:    psrad $16, %xmm2
-; SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSSE3-NEXT:    movdqu %xmm2, (%rax)
-; SSSE3-NEXT:    movdqu %xmm0, (%rax)
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: trunc16i32_16i16_ashr:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    psrld $16, %xmm3
-; SSE41-NEXT:    psrld $16, %xmm2
-; SSE41-NEXT:    packusdw %xmm3, %xmm2
-; SSE41-NEXT:    psrld $16, %xmm1
-; SSE41-NEXT:    psrld $16, %xmm0
-; SSE41-NEXT:    packusdw %xmm1, %xmm0
-; SSE41-NEXT:    movdqu %xmm2, (%rax)
-; SSE41-NEXT:    movdqu %xmm0, (%rax)
-; SSE41-NEXT:    retq
+; SSE-LABEL: trunc16i32_16i16_ashr:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    psrad $16, %xmm3
+; SSE-NEXT:    psrad $16, %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    psrad $16, %xmm1
+; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    movdqu %xmm2, (%rax)
+; SSE-NEXT:    movdqu %xmm0, (%rax)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc16i32_16i16_ashr:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrad $16, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $16, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm1, (%rax)
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
@@ -751,9 +713,9 @@ define void @trunc16i32_16i16_ashr(<16 x i32> %a) {
 ;
 ; AVX2-LABEL: trunc16i32_16i16_ashr:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
-; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrad $16, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrad $16, %ymm0, %ymm0
+; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
@@ -928,64 +890,40 @@ entry:
 }
 
 define void @trunc16i32_16i8_ashr(<16 x i32> %a) {
-; SSE2-LABEL: trunc16i32_16i8_ashr:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    psrld $24, %xmm1
-; SSE2-NEXT:    psrld $24, %xmm0
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    psrld $24, %xmm3
-; SSE2-NEXT:    psrld $24, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm0
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: trunc16i32_16i8_ashr:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    psrld $24, %xmm1
-; SSSE3-NEXT:    psrld $24, %xmm0
-; SSSE3-NEXT:    packuswb %xmm1, %xmm0
-; SSSE3-NEXT:    psrld $24, %xmm3
-; SSSE3-NEXT:    psrld $24, %xmm2
-; SSSE3-NEXT:    packuswb %xmm3, %xmm2
-; SSSE3-NEXT:    packuswb %xmm2, %xmm0
-; SSSE3-NEXT:    movdqu %xmm0, (%rax)
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: trunc16i32_16i8_ashr:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    psrld $24, %xmm1
-; SSE41-NEXT:    psrld $24, %xmm0
-; SSE41-NEXT:    packusdw %xmm1, %xmm0
-; SSE41-NEXT:    psrld $24, %xmm3
-; SSE41-NEXT:    psrld $24, %xmm2
-; SSE41-NEXT:    packusdw %xmm3, %xmm2
-; SSE41-NEXT:    packuswb %xmm2, %xmm0
-; SSE41-NEXT:    movdqu %xmm0, (%rax)
-; SSE41-NEXT:    retq
+; SSE-LABEL: trunc16i32_16i8_ashr:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    psrad $24, %xmm1
+; SSE-NEXT:    psrad $24, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    psrad $24, %xmm3
+; SSE-NEXT:    psrad $24, %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    packsswb %xmm2, %xmm0
+; SSE-NEXT:    movdqu %xmm0, (%rax)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc16i32_16i8_ashr:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsrld $24, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrld $24, %xmm0, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $24, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrad $24, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpsrld $24, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrld $24, %xmm1, %xmm1
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrad $24, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrad $24, %xmm1, %xmm1
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc16i32_16i8_ashr:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpsrld $24, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrld $24, %ymm0, %ymm0
-; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrad $24, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrad $24, %ymm0, %ymm0
+; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
@@ -1146,27 +1084,27 @@ entry:
 define void @trunc16i16_16i8_ashr(<16 x i16> %a) {
 ; SSE-LABEL: trunc16i16_16i8_ashr:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    psrlw $8, %xmm1
-; SSE-NEXT:    psrlw $8, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    psraw $8, %xmm1
+; SSE-NEXT:    psraw $8, %xmm0
+; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    movdqu %xmm0, (%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc16i16_16i8_ashr:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsraw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpsraw $8, %xmm0, %xmm0
+; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc16i16_16i8_ashr:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $8, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1189,7 +1127,7 @@ define void @trunc16i16_16i8_ashr(<16 x i16> %a) {
 ;
 ; AVX512BW-LABEL: trunc16i16_16i8_ashr:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpsraw $8, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BW-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper

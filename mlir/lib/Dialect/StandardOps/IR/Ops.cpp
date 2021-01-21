@@ -195,7 +195,8 @@ static LogicalResult foldMemRefCast(Operation *op) {
 /// Returns 'true' if the vector types are cast compatible,  and 'false'
 /// otherwise.
 static bool areVectorCastSimpleCompatible(
-    Type a, Type b, function_ref<bool(Type, Type)> areElementsCastCompatible) {
+    Type a, Type b,
+    function_ref<bool(TypeRange, TypeRange)> areElementsCastCompatible) {
   if (auto va = a.dyn_cast<VectorType>())
     if (auto vb = b.dyn_cast<VectorType>())
       return va.getShape().equals(vb.getShape()) &&
@@ -1746,7 +1747,10 @@ LogicalResult DmaWaitOp::verify() {
 // FPExtOp
 //===----------------------------------------------------------------------===//
 
-bool FPExtOp::areCastCompatible(Type a, Type b) {
+bool FPExtOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() < fb.getWidth();
@@ -1757,7 +1761,10 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
 // FPToSIOp
 //===----------------------------------------------------------------------===//
 
-bool FPToSIOp::areCastCompatible(Type a, Type b) {
+bool FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (a.isa<FloatType>() && b.isSignlessInteger())
     return true;
   return areVectorCastSimpleCompatible(a, b, areCastCompatible);
@@ -1767,7 +1774,10 @@ bool FPToSIOp::areCastCompatible(Type a, Type b) {
 // FPToUIOp
 //===----------------------------------------------------------------------===//
 
-bool FPToUIOp::areCastCompatible(Type a, Type b) {
+bool FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (a.isa<FloatType>() && b.isSignlessInteger())
     return true;
   return areVectorCastSimpleCompatible(a, b, areCastCompatible);
@@ -1777,7 +1787,10 @@ bool FPToUIOp::areCastCompatible(Type a, Type b) {
 // FPTruncOp
 //===----------------------------------------------------------------------===//
 
-bool FPTruncOp::areCastCompatible(Type a, Type b) {
+bool FPTruncOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() > fb.getWidth();
@@ -1889,7 +1902,10 @@ GetGlobalMemrefOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 //===----------------------------------------------------------------------===//
 
 // Index cast is applicable from index to integer and backwards.
-bool IndexCastOp::areCastCompatible(Type a, Type b) {
+bool IndexCastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (a.isa<ShapedType>() && b.isa<ShapedType>()) {
     auto aShaped = a.cast<ShapedType>();
     auto bShaped = b.cast<ShapedType>();
@@ -1965,7 +1981,10 @@ void LoadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 
 Value MemRefCastOp::getViewSource() { return source(); }
 
-bool MemRefCastOp::areCastCompatible(Type a, Type b) {
+bool MemRefCastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   auto aT = a.dyn_cast<MemRefType>();
   auto bT = b.dyn_cast<MemRefType>();
 
@@ -2036,8 +2055,6 @@ bool MemRefCastOp::areCastCompatible(Type a, Type b) {
 }
 
 OpFoldResult MemRefCastOp::fold(ArrayRef<Attribute> operands) {
-  if (Value folded = impl::foldCastOp(*this))
-    return folded;
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
@@ -2633,7 +2650,10 @@ OpFoldResult SignedRemIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 // sitofp is applicable from integer types to float types.
-bool SIToFPOp::areCastCompatible(Type a, Type b) {
+bool SIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (a.isSignlessInteger() && b.isa<FloatType>())
     return true;
   return areVectorCastSimpleCompatible(a, b, areCastCompatible);
@@ -2715,7 +2735,10 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 // uitofp is applicable from integer types to float types.
-bool UIToFPOp::areCastCompatible(Type a, Type b) {
+bool UIToFPOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   if (a.isSignlessInteger() && b.isa<FloatType>())
     return true;
   return areVectorCastSimpleCompatible(a, b, areCastCompatible);
@@ -2892,12 +2915,11 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
                             ArrayRef<NamedAttribute> attrs) {
   auto sourceMemRefType = source.getType().cast<MemRefType>();
   unsigned rank = sourceMemRefType.getRank();
-  SmallVector<int64_t, 4> staticOffsetsVector;
-  staticOffsetsVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
-  SmallVector<int64_t, 4> staticSizesVector;
-  staticSizesVector.assign(rank, ShapedType::kDynamicSize);
-  SmallVector<int64_t, 4> staticStridesVector;
-  staticStridesVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
   build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
@@ -3444,6 +3466,38 @@ void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
+/// Build a SubTensorOp as above but with custom result type.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              RankedTensorType resultType, Value source,
+                              ArrayRef<int64_t> staticOffsets,
+                              ArrayRef<int64_t> staticSizes,
+                              ArrayRef<int64_t> staticStrides,
+                              ValueRange offsets, ValueRange sizes,
+                              ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubTensorOp as above but with custom result type.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              RankedTensorType resultType, Value source,
+                              ValueRange offsets, ValueRange sizes,
+                              ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceRankedTensorType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
 /// Verifier for SubTensorOp.
 static LogicalResult verify(SubTensorOp op) {
   // Verify result type against inferred type.
@@ -3528,8 +3582,8 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
                                     ValueRange offsets, ValueRange sizes,
                                     ValueRange strides,
                                     ArrayRef<NamedAttribute> attrs) {
-  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
-  unsigned rank = sourceRankedTensorType.getRank();
+  auto destRankedTensorType = dest.getType().cast<RankedTensorType>();
+  unsigned rank = destRankedTensorType.getRank();
   SmallVector<int64_t, 4> staticOffsetsVector(
       rank, ShapedType::kDynamicStrideOrOffset);
   SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);

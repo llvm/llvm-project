@@ -1,7 +1,18 @@
 ## Test how we create SHT_GNU_verdef sections.
 
+## Check that we link the SHT_GNU_verdef section to
+## the `.dynstr` section by default.
+## Check that we set the value of `sh_info` field to the
+## number of version definitions by default.
+
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s
+# RUN: llvm-readelf --sections %t1 | \
+# RUN:   FileCheck %s -DLINK=3 -DINFO=4 --check-prefix=FIELDS
+
+# FIELDS: [Nr] Name              Type   {{.*}} Flg Lk       Inf
+# FIELDS: [ 1] .gnu.version_d    VERDEF {{.*}}   A [[LINK]] [[INFO]]
+# FIELDS: [ 3] .dynstr
 
 # CHECK:      VersionDefinitions [
 # CHECK-NEXT:   Definition {
@@ -56,8 +67,8 @@ Sections:
   - Name:  .gnu.version_d
     Type:  SHT_GNU_verdef
     Flags: [ SHF_ALLOC ]
-    Link:  .dynstr
-    Info:  0x4
+    Info:  [[INFO=<none>]]
+    Link:  [[LINK=<none>]]
     Entries:
 ## Case 1: an entry that has no Version, Flags, VersionNdx or Hash fields set.
 ##         Used to check values that are written by default. Also shows
@@ -92,6 +103,12 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
+## Check that we are able to set sh_info and sh_link fields to arbitrary values.
+
+# RUN: yaml2obj --docnum=1 -DINFO=123 -DLINK=234 %s -o %t1.fields
+# RUN: llvm-readelf --sections %t1.fields | \
+# RUN:   FileCheck %s -DINFO=123 -DLINK=234 --check-prefix=FIELDS
+
 ## Check we are able to emit a version definition which has a version revision
 ## (vd_version) field value that is not equal to 1.
 
@@ -101,6 +118,7 @@ DynamicSymbols:
 # VERSION-ERR: unable to dump SHT_GNU_verdef section with index 1: version 2 is not yet supported
 
 ## Check we can use "Content" to describe the content.
+## Check we set the sh_link field to 0 when there is no .dynstr section.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CONTENT
@@ -114,7 +132,7 @@ DynamicSymbols:
 # CONTENT-NEXT: Offset: 0x40
 # CONTENT-NEXT: Size: 3
 # CONTENT-NEXT: Link: 0
-# CONTENT-NEXT: Info: 1
+# CONTENT-NEXT: Info: 0
 # CONTENT-NEXT: AddressAlignment:
 # CONTENT-NEXT: EntrySize:
 # CONTENT-NEXT: SectionData (
@@ -130,7 +148,6 @@ Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
     Flags:   [ SHF_ALLOC ]
-    Info:    0x0000000000000001
     Content: "112233"
 
 ## Check we can omit "Content" and "Entries" fields to produce an empty SHT_GNU_verdef section.
@@ -139,7 +156,7 @@ Sections:
 # RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NO-PROPS
 
 # NO-PROPS: [Nr] Name           Type   Address          Off    Size   ES Flg Lk Inf Al
-# NO-PROPS: [ 1] .gnu.version_d VERDEF 0000000000000000 000040 000000 00   A 0   1  0
+# NO-PROPS: [ 1] .gnu.version_d VERDEF 0000000000000000 000040 000000 00   A 0   0  0
 
 --- !ELF
 FileHeader:
@@ -150,7 +167,6 @@ Sections:
   - Name:  .gnu.version_d
     Type:  SHT_GNU_verdef
     Flags: [ SHF_ALLOC ]
-    Info:  0x0000000000000001
 
 ## Check we can use the "Content" key with the "Size" key when the size is greater
 ## than or equal to the content size.
@@ -168,7 +184,6 @@ FileHeader:
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
-    Info:    0x1
     Size:    [[SIZE=<none>]]
     Content: [[CONTENT=<none>]]
     Entries: [[ENTRIES=<none>]]
@@ -206,3 +221,30 @@ Sections:
 # RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
 
 # ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"
+
+## Check we set the sh_link field to 0 when the .dynstr section is excluded
+## from the section header table.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readelf --sections %t5 | FileCheck %s --check-prefix=EXCLUDED
+
+# EXCLUDED: [Nr] Name           {{.*}} ES Flg Lk Inf
+# EXCLUDED: [ 1] .gnu.version_d {{.*}} 00     0   0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+  - Name: .dynstr
+    Type: SHT_STRTAB
+SectionHeaderTable:
+  Sections:
+    - Name: .gnu.version_d
+    - Name: .strtab
+    - Name: .shstrtab
+  Excluded:
+    - Name: .dynstr

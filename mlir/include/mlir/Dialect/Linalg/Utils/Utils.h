@@ -142,6 +142,12 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
   inVec = auxVec;
 }
 
+/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
+/// is a constant then return a new value set to the smallest such constant.
+/// If `size` comes from a ConstantOp, return the constant.
+/// Otherwise return nullptr.
+IntegerAttr getSmallestBoundingIndex(Value size);
+
 /// Scheme used to distribute loops to processors.
 enum class DistributionMethod {
   /// Cyclic distribution where no assumption is made about the dynamic

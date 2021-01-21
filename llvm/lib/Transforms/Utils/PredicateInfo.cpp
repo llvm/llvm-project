@@ -53,6 +53,10 @@ static cl::opt<bool> VerifyPredicateInfo(
 DEBUG_COUNTER(RenameCounter, "predicateinfo-rename",
               "Controls which variables are renamed with predicateinfo");
 
+// Maximum number of conditions considered for renaming for each branch/assume.
+// This limits renaming of deep and/or chains.
+static const unsigned MaxCondsPerBranch = 8;
+
 namespace {
 // Given a predicate info that is a type of branching terminator, get the
 // branching block.
@@ -367,6 +371,13 @@ void PredicateInfoBuilder::convertUsesToDFSOrdered(
   }
 }
 
+bool shouldRename(Value *V) {
+  // Only want real values, not constants.  Additionally, operands with one use
+  // are only being used in the comparison, which means they will not be useful
+  // for us to consider for predicateinfo.
+  return (isa<Instruction>(V) || isa<Argument>(V)) && !V->hasOneUse();
+}
+
 // Collect relevant operations from Comparison that we may want to insert copies
 // for.
 void collectCmpOps(CmpInst *Comparison, SmallVectorImpl<Value *> &CmpOperands) {
@@ -374,15 +385,9 @@ void collectCmpOps(CmpInst *Comparison, SmallVectorImpl<Value *> &CmpOperands) {
   auto *Op1 = Comparison->getOperand(1);
   if (Op0 == Op1)
     return;
-  CmpOperands.push_back(Comparison);
-  // Only want real values, not constants.  Additionally, operands with one use
-  // are only being used in the comparison, which means they will not be useful
-  // for us to consider for predicateinfo.
-  //
-  if ((isa<Instruction>(Op0) || isa<Argument>(Op0)) && !Op0->hasOneUse())
-    CmpOperands.push_back(Op0);
-  if ((isa<Instruction>(Op1) || isa<Argument>(Op1)) && !Op1->hasOneUse())
-    CmpOperands.push_back(Op1);
+
+  CmpOperands.push_back(Op0);
+  CmpOperands.push_back(Op1);
 }
 
 // Add Op, PB to the list of value infos for Op, and mark Op to be renamed.
@@ -400,38 +405,32 @@ void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
 void PredicateInfoBuilder::processAssume(
     IntrinsicInst *II, BasicBlock *AssumeBB,
     SmallVectorImpl<Value *> &OpsToRename) {
-  // See if we have a comparison we support
-  SmallVector<Value *, 8> CmpOperands;
-  SmallVector<Value *, 2> ConditionsToProcess;
-  CmpInst::Predicate Pred;
-  Value *Operand = II->getOperand(0);
-  if (m_c_And(m_Cmp(Pred, m_Value(), m_Value()),
-              m_Cmp(Pred, m_Value(), m_Value()))
-          .match(II->getOperand(0))) {
-    ConditionsToProcess.push_back(cast<BinaryOperator>(Operand)->getOperand(0));
-    ConditionsToProcess.push_back(cast<BinaryOperator>(Operand)->getOperand(1));
-    ConditionsToProcess.push_back(Operand);
-  } else if (isa<CmpInst>(Operand)) {
+  SmallVector<Value *, 4> Worklist;
+  SmallPtrSet<Value *, 4> Visited;
+  Worklist.push_back(II->getOperand(0));
+  while (!Worklist.empty()) {
+    Value *Cond = Worklist.pop_back_val();
+    if (!Visited.insert(Cond).second)
+      continue;
+    if (Visited.size() > MaxCondsPerBranch)
+      break;
 
-    ConditionsToProcess.push_back(Operand);
-  }
-  for (auto Cond : ConditionsToProcess) {
-    if (auto *Cmp = dyn_cast<CmpInst>(Cond)) {
-      collectCmpOps(Cmp, CmpOperands);
-      // Now add our copy infos for our operands
-      for (auto *Op : CmpOperands) {
-        auto *PA = new PredicateAssume(Op, II, Cmp);
-        addInfoFor(OpsToRename, Op, PA);
+    Value *Op0, *Op1;
+    if (match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+      Worklist.push_back(Op1);
+      Worklist.push_back(Op0);
+    }
+
+    SmallVector<Value *, 4> Values;
+    Values.push_back(Cond);
+    if (auto *Cmp = dyn_cast<CmpInst>(Cond))
+      collectCmpOps(Cmp, Values);
+
+    for (Value *V : Values) {
+      if (shouldRename(V)) {
+        auto *PA = new PredicateAssume(V, II, Cond);
+        addInfoFor(OpsToRename, V, PA);
       }
-      CmpOperands.clear();
-    } else if (auto *BinOp = dyn_cast<BinaryOperator>(Cond)) {
-      // Otherwise, it should be an AND.
-      assert(BinOp->getOpcode() == Instruction::And &&
-             "Should have been an AND");
-      auto *PA = new PredicateAssume(BinOp, II, BinOp);
-      addInfoFor(OpsToRename, BinOp, PA);
-    } else {
-      llvm_unreachable("Unknown type of condition");
     }
   }
 }
@@ -443,68 +442,46 @@ void PredicateInfoBuilder::processBranch(
     SmallVectorImpl<Value *> &OpsToRename) {
   BasicBlock *FirstBB = BI->getSuccessor(0);
   BasicBlock *SecondBB = BI->getSuccessor(1);
-  SmallVector<BasicBlock *, 2> SuccsToProcess;
-  SuccsToProcess.push_back(FirstBB);
-  SuccsToProcess.push_back(SecondBB);
-  SmallVector<Value *, 2> ConditionsToProcess;
 
-  auto InsertHelper = [&](Value *Op, bool isAnd, bool isOr, Value *Cond) {
-    for (auto *Succ : SuccsToProcess) {
-      // Don't try to insert on a self-edge. This is mainly because we will
-      // eliminate during renaming anyway.
-      if (Succ == BranchBB)
-        continue;
-      bool TakenEdge = (Succ == FirstBB);
-      // For and, only insert on the true edge
-      // For or, only insert on the false edge
-      if ((isAnd && !TakenEdge) || (isOr && TakenEdge))
-        continue;
-      PredicateBase *PB =
-          new PredicateBranch(Op, BranchBB, Succ, Cond, TakenEdge);
-      addInfoFor(OpsToRename, Op, PB);
-      if (!Succ->getSinglePredecessor())
-        EdgeUsesOnly.insert({BranchBB, Succ});
-    }
-  };
+  for (BasicBlock *Succ : {FirstBB, SecondBB}) {
+    bool TakenEdge = Succ == FirstBB;
+    // Don't try to insert on a self-edge. This is mainly because we will
+    // eliminate during renaming anyway.
+    if (Succ == BranchBB)
+      continue;
 
-  // Match combinations of conditions.
-  CmpInst::Predicate Pred;
-  bool isAnd = false;
-  bool isOr = false;
-  SmallVector<Value *, 8> CmpOperands;
-  if (match(BI->getCondition(), m_And(m_Cmp(Pred, m_Value(), m_Value()),
-                                      m_Cmp(Pred, m_Value(), m_Value()))) ||
-      match(BI->getCondition(), m_Or(m_Cmp(Pred, m_Value(), m_Value()),
-                                     m_Cmp(Pred, m_Value(), m_Value())))) {
-    auto *BinOp = cast<BinaryOperator>(BI->getCondition());
-    if (BinOp->getOpcode() == Instruction::And)
-      isAnd = true;
-    else if (BinOp->getOpcode() == Instruction::Or)
-      isOr = true;
-    ConditionsToProcess.push_back(BinOp->getOperand(0));
-    ConditionsToProcess.push_back(BinOp->getOperand(1));
-    ConditionsToProcess.push_back(BI->getCondition());
-  } else if (isa<CmpInst>(BI->getCondition())) {
-    ConditionsToProcess.push_back(BI->getCondition());
-  }
-  for (auto Cond : ConditionsToProcess) {
-    if (auto *Cmp = dyn_cast<CmpInst>(Cond)) {
-      collectCmpOps(Cmp, CmpOperands);
-      // Now add our copy infos for our operands
-      for (auto *Op : CmpOperands)
-        InsertHelper(Op, isAnd, isOr, Cmp);
-    } else if (auto *BinOp = dyn_cast<BinaryOperator>(Cond)) {
-      // This must be an AND or an OR.
-      assert((BinOp->getOpcode() == Instruction::And ||
-              BinOp->getOpcode() == Instruction::Or) &&
-             "Should have been an AND or an OR");
-      // The actual value of the binop is not subject to the same restrictions
-      // as the comparison. It's either true or false on the true/false branch.
-      InsertHelper(BinOp, false, false, BinOp);
-    } else {
-      llvm_unreachable("Unknown type of condition");
+    SmallVector<Value *, 4> Worklist;
+    SmallPtrSet<Value *, 4> Visited;
+    Worklist.push_back(BI->getCondition());
+    while (!Worklist.empty()) {
+      Value *Cond = Worklist.pop_back_val();
+      if (!Visited.insert(Cond).second)
+        continue;
+      if (Visited.size() > MaxCondsPerBranch)
+        break;
+
+      Value *Op0, *Op1;
+      if (TakenEdge ? match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))
+                    : match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+        Worklist.push_back(Op1);
+        Worklist.push_back(Op0);
+      }
+
+      SmallVector<Value *, 4> Values;
+      Values.push_back(Cond);
+      if (auto *Cmp = dyn_cast<CmpInst>(Cond))
+        collectCmpOps(Cmp, Values);
+
+      for (Value *V : Values) {
+        if (shouldRename(V)) {
+          PredicateBase *PB =
+              new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
+          addInfoFor(OpsToRename, V, PB);
+          if (!Succ->getSinglePredecessor())
+            EdgeUsesOnly.insert({BranchBB, Succ});
+        }
+      }
     }
-    CmpOperands.clear();
   }
 }
 // Process a block terminating switch, and place relevant operations to be

@@ -101,11 +101,12 @@ class RISCVCompressInstEmitter {
     IndexedMap<OpData>
         DestOperandMap; // Maps operands in the Dest Instruction
                         // to the corresponding Source instruction operand.
+    bool IsCompressOnly;
     CompressPat(CodeGenInstruction &S, CodeGenInstruction &D,
                 std::vector<Record *> RF, IndexedMap<OpData> &SourceMap,
-                IndexedMap<OpData> &DestMap)
+                IndexedMap<OpData> &DestMap, bool IsCompressOnly)
         : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
-          DestOperandMap(DestMap) {}
+          DestOperandMap(DestMap), IsCompressOnly(IsCompressOnly) {}
   };
   enum EmitterType { Compress, Uncompress, CheckCompress };
   RecordKeeper &Records;
@@ -466,7 +467,8 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   });
 
   CompressPatterns.push_back(CompressPat(SourceInst, DestInst, PatReqFeatures,
-                                         SourceOperandMap, DestOperandMap));
+                                         SourceOperandMap, DestOperandMap,
+                                         Rec->getValueAsBit("isCompressOnly")));
 }
 
 static void
@@ -634,6 +636,9 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     EType == EmitterType::Compress || EType == EmitterType::Uncompress;
 
   for (auto &CompressPat : CompressPatterns) {
+    if (EType == EmitterType::Uncompress && CompressPat.IsCompressOnly)
+      continue;
+
     std::string CondString;
     std::string CodeString;
     raw_string_ostream CondStream(CondString);

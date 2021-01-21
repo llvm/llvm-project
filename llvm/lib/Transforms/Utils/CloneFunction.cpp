@@ -433,9 +433,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
-    const Instruction *TI = BB->getTerminator();
-    for (const BasicBlock *Succ : successors(TI))
-      ToClone.push_back(Succ);
+    append_range(ToClone, successors(BB->getTerminator()));
   }
 
   if (CodeInfo) {

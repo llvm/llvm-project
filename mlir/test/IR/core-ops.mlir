@@ -596,6 +596,9 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_4, %cst_4 : tensor<42xi32>
   %174 = ceildivi_signed %tci32, %tci32 : tensor<42 x i32>
 
+  // CHECK: %{{[0-9]+}} = log1p %arg1 : f32
+  %175 = log1p %f : f32
+
   return
 }
 
@@ -905,7 +908,11 @@ func @subtensor(%t: tensor<8x16x4xf32>, %idx : index) {
 }
 
 // CHECK-LABEL: func @subtensor_insert({{.*}}) {
-func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : index) {
+func @subtensor_insert(
+    %t: tensor<8x16x4xf32>, 
+    %t2: tensor<16x32x8xf32>, 
+    %t3: tensor<4x4xf32>, 
+    %idx : index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
 
@@ -918,6 +925,11 @@ func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : 
   // CHECK-SAME: tensor<8x16x4xf32> into tensor<16x32x8xf32>
   %2 = subtensor_insert %t into %t2[%c0, %idx, %c0][%idx, 4, %idx][%c1, 1, %c1]
     : tensor<8x16x4xf32> into tensor<16x32x8xf32>
+
+  // CHECK: subtensor_insert
+  // CHECK-SAME: tensor<4x4xf32> into tensor<8x16x4xf32>
+  %3 = subtensor_insert %t3 into %t[0, 2, 0][4, 1, 4][1, 1, 1]
+    : tensor<4x4xf32> into tensor<8x16x4xf32>
 
   return
 }

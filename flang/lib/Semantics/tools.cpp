@@ -330,15 +330,22 @@ const Symbol *FindExternallyVisibleObject(
     const Symbol &object, const Scope &scope) {
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
-  if (IsUseAssociated(object, scope) || IsHostAssociated(object, scope) ||
-      (IsPureProcedure(scope) && IsPointerDummy(object)) ||
-      (IsIntentIn(object) && IsDummy(object))) {
+  const Symbol &ultimate{GetAssociationRoot(object)};
+  if (IsDummy(ultimate)) {
+    if (IsIntentIn(ultimate)) {
+      return &ultimate;
+    }
+    if (IsPointer(ultimate) && IsPureProcedure(ultimate.owner()) &&
+        IsFunction(ultimate.owner())) {
+      return &ultimate;
+    }
+  } else if (&GetProgramUnitContaining(ultimate) !=
+      &GetProgramUnitContaining(scope)) {
     return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(object)}) {
+  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
     return block;
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 bool ExprHasTypeCategory(

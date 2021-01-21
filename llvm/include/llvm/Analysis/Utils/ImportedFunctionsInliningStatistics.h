@@ -101,6 +101,12 @@ private:
   StringRef ModuleName;
 };
 
+enum class InlinerFunctionImportStatsOpts {
+  No = 0,
+  Basic = 1,
+  Verbose = 2,
+};
+
 } // llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_IMPORTEDFUNCTIONSINLININGSTATISTICS_H
