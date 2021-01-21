@@ -50,6 +50,7 @@ class Preprocessor;
 class Sema;
 class SourceManager;
 class TargetInfo;
+enum class DisableValidationForModuleKind;
 
 /// CompilerInstance - Helper class for managing a single instance of the Clang
 /// compiler.
@@ -659,16 +660,17 @@ public:
 
   /// Create an external AST source to read a PCH file and attach it to the AST
   /// context.
-  void createPCHExternalASTSource(StringRef Path, bool DisablePCHValidation,
-                                  bool AllowPCHWithCompilerErrors,
-                                  void *DeserializationListener,
-                                  bool OwnDeserializationListener);
+  void createPCHExternalASTSource(
+      StringRef Path, DisableValidationForModuleKind DisableValidation,
+      bool AllowPCHWithCompilerErrors, void *DeserializationListener,
+      bool OwnDeserializationListener);
 
   /// Create an external AST source to read a PCH file.
   ///
   /// \return - The new object on success, or null on failure.
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
-      StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
+      StringRef Path, StringRef Sysroot,
+      DisableValidationForModuleKind DisableValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP,
       InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
