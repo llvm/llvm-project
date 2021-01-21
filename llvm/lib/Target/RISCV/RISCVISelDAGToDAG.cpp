@@ -204,6 +204,50 @@ void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo) {
   CurDAG->RemoveDeadNode(Node);
 }
 
+void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo) {
+  SDLoc DL(Node);
+  unsigned NF = Node->getNumOperands() - 4;
+  EVT VT = Node->getOperand(2)->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
+  SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
+  SDValue Operands[] = {StoreVal,
+                        Node->getOperand(2 + NF),  // Base pointer.
+                        Node->getOperand(3 + NF),  // VL.
+                        SEW, Node->getOperand(0)}; // Chain
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, ScalarSize, static_cast<unsigned>(LMUL));
+  SDNode *Store =
+      CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
+  ReplaceNode(Node, Store);
+}
+
+void RISCVDAGToDAGISel::selectVSSEGMask(SDNode *Node, unsigned IntNo) {
+  SDLoc DL(Node);
+  unsigned NF = Node->getNumOperands() - 5;
+  EVT VT = Node->getOperand(2)->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
+  SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
+  SDValue Operands[] = {StoreVal,
+                        Node->getOperand(2 + NF), // Base pointer.
+                        Node->getOperand(3 + NF), // Mask.
+                        Node->getOperand(4 + NF), // VL.
+                        SEW,
+                        Node->getOperand(0)}; // Chain
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, ScalarSize, static_cast<unsigned>(LMUL));
+  SDNode *Store =
+      CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
+  ReplaceNode(Node, Store);
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -344,6 +388,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlseg7_mask:
     case Intrinsic::riscv_vlseg8_mask: {
       selectVLSEGMask(Node, IntNo);
+      return;
+    }
+    }
+    break;
+  }
+  case ISD::INTRINSIC_VOID: {
+    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntNo) {
+    case Intrinsic::riscv_vsseg2:
+    case Intrinsic::riscv_vsseg3:
+    case Intrinsic::riscv_vsseg4:
+    case Intrinsic::riscv_vsseg5:
+    case Intrinsic::riscv_vsseg6:
+    case Intrinsic::riscv_vsseg7:
+    case Intrinsic::riscv_vsseg8: {
+      selectVSSEG(Node, IntNo);
+      return;
+    }
+    case Intrinsic::riscv_vsseg2_mask:
+    case Intrinsic::riscv_vsseg3_mask:
+    case Intrinsic::riscv_vsseg4_mask:
+    case Intrinsic::riscv_vsseg5_mask:
+    case Intrinsic::riscv_vsseg6_mask:
+    case Intrinsic::riscv_vsseg7_mask:
+    case Intrinsic::riscv_vsseg8_mask: {
+      selectVSSEGMask(Node, IntNo);
       return;
     }
     }

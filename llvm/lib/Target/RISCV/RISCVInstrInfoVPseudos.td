@@ -438,7 +438,8 @@ class PseudoToVInst<string PseudoInst> {
 }
 
 class ToLowerCase<string Upper> {
-  string L = !subst("VLSEG", "vlseg", Upper);
+  string L = !subst("VLSEG", "vlseg",
+             !subst("VSSEG", "vsseg", Upper));
 }
 
 // Example: PseudoVLSEG2E32_V_M2 -> int_riscv_vlseg2
@@ -1008,6 +1009,38 @@ class VPseudoUSSegLoadMask<VReg RetClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoUSSegStoreNoMask<VReg ValClass, bits<11> EEW>:
+      Pseudo<(outs),
+             (ins ValClass:$rd, GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVZvlsseg<PseudoToIntrinsic<NAME, false>.Intrinsic, EEW, VLMul> {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoUSSegStoreMask<VReg ValClass, bits<11> EEW>:
+      Pseudo<(outs),
+             (ins ValClass:$rd, GPR:$rs1,
+                  VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVZvlsseg<PseudoToIntrinsic<NAME, true>.Intrinsic, EEW, VLMul> {
+  let mayLoad = 0;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 multiclass VPseudoUSLoad {
   foreach lmul = MxList.m in {
     defvar LInfo = lmul.MX;
@@ -1525,6 +1558,21 @@ multiclass VPseudoUSSegLoad {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegLoadNoMask<vreg, eew>;
           def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSSegLoadMask<vreg, eew>;
+        }
+      }
+    }
+  }
+}
+
+multiclass VPseudoUSSegStore {
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      let VLMul = lmul.value in {
+        foreach nf = NFSet<lmul>.L in {
+          defvar vreg = SegRegClass<lmul, nf>.RC;
+          def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegStoreNoMask<vreg, eew>;
+          def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSSegStoreMask<vreg, eew>;
         }
       }
     }
@@ -2730,6 +2778,7 @@ foreach eew = EEWList in {
 // 7.8. Vector Load/Store Segment Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVLSEG : VPseudoUSSegLoad;
+defm PseudoVSSEG : VPseudoUSSegStore;
 
 //===----------------------------------------------------------------------===//
 // 8. Vector AMO Operations
