@@ -689,9 +689,7 @@ public:
   bool use_empty() const { return UseList == nullptr; }
 
   /// Return true if there is exactly one use of this node.
-  bool hasOneUse() const {
-    return !use_empty() && std::next(use_begin()) == use_end();
-  }
+  bool hasOneUse() const { return hasSingleElement(uses()); }
 
   /// Return the number of uses of this node. This method takes
   /// time proportional to the number of uses.
