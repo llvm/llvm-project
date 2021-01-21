@@ -1109,6 +1109,10 @@ bool GCNPassConfig::addRegBankSelect() {
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
+  // TODO: Fix instruction selection to do the right thing for image
+  // instructions with tfe or lwe in the first place, instead of running a
+  // separate pass to fix them up?
+  addPass(createSIAddIMGInitPass());
   return false;
 }
 
