@@ -2315,6 +2315,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
         child_bitfield_bit_offset, child_is_base_class,
         child_is_deref_of_parent, valobj, language_flags);
   };
+  auto ast_num_children = m_swift_ast_context->GetNumChildren(
+      ReconstructType(type), omit_empty_base_classes, exe_ctx);
   auto impl = [&]() -> CompilerType {
     ExecutionContextScope *exe_scope = nullptr;
     if (exe_ctx)
@@ -2334,6 +2336,15 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           if (llvm::StringRef(AsMangledName(type))
                   .endswith("sSo18NSNotificationNameaD"))
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
+          if (result.GetMangledTypeName().GetStringRef().count('$') > 1 &&
+              ast_num_children == runtime->GetNumChildren({this, type}, valobj))
+            // If available, prefer the AST for private types. Private
+            // identifiers are not ABI; the runtime returns anonymous private
+            // identifiers (using a '$' prefix) which cannot match identifiers
+            // in the AST. Because these private types can't be used in an AST
+            // context, prefer the AST type if available.
+            if (auto ast_type = fallback())
+              return ast_type;
           return result;
         }
     }
@@ -2432,8 +2443,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // Because the API deals out an index into a list of children we
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
-  if (m_swift_ast_context->GetNumChildren(ReconstructType(type),
-                                          omit_empty_base_classes, exe_ctx) <
+  if (ast_num_children <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return impl();
 
