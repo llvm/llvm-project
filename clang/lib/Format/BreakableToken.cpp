@@ -751,8 +751,7 @@ bool BreakableBlockComment::mayReflow(
 }
 
 BreakableLineCommentSection::BreakableLineCommentSection(
-    const FormatToken &Token, unsigned StartColumn,
-    unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
+    const FormatToken &Token, unsigned StartColumn, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style) {
   assert(Tok.is(TT_LineComment) &&
