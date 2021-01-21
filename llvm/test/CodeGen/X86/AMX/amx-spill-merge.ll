@@ -36,10 +36,11 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tileloadd (%r15,%r14), %tmm5
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %if.true
+; CHECK-NEXT:    sttilecfg {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Folded Spill
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movw $8, %cx
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %if.true
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm0
 ; CHECK-NEXT:    movl $buf+1024, %eax
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm1
@@ -51,13 +52,11 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Folded Reload
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %if.false
-; CHECK-NEXT:    movl $buf, %eax
-; CHECK-NEXT:    movw $8, %cx
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm2
 ; CHECK-NEXT:    movl $buf+1024, %eax
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm3
@@ -69,7 +68,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Folded Reload
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm6, (%r15,%r14)
@@ -140,6 +139,7 @@ define dso_local void @test3(i8 *%buf) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $32, %r14d
 ; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    sttilecfg {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Folded Spill
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -149,7 +149,7 @@ define dso_local void @test3(i8 *%buf) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Folded Reload
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    tileloadd (%rbx,%r14), %tmm1
 ; CHECK-NEXT:    tileloadd (%rbx,%r14), %tmm2
