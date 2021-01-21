@@ -29,6 +29,19 @@ static cl::opt<int32_t, true> RecursionCompression(
     cl::Hidden,
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxCompressionSize));
 
+static cl::opt<uint64_t> CSProfColdThres(
+    "csprof-cold-thres", cl::init(100), cl::ZeroOrMore,
+    cl::desc("Specify the total samples threshold for a context profile to "
+             "be considered cold, any cold profiles will be merged into "
+             "context-less base profiles"));
+
+static cl::opt<bool> CSProfKeepCold(
+    "csprof-keep-cold", cl::init(false), cl::ZeroOrMore,
+    cl::desc("This works together with --csprof-cold-thres. If the total count "
+             "of the profile after all merge is done is still smaller than the "
+             "csprof-cold-thres, it will be trimmed unless csprof-keep-cold "
+             "flag is specified."));
+
 using namespace llvm;
 using namespace sampleprof;
 
@@ -68,6 +81,7 @@ void ProfileGenerator::write() {
   if (std::error_code EC = WriterOrErr.getError())
     exitWithError(EC, OutputFilename);
   auto Writer = std::move(WriterOrErr.get());
+  mergeAndTrimColdProfile(ProfileMap);
   Writer->write(ProfileMap);
 }
 
@@ -326,6 +340,49 @@ void CSProfileGenerator::populateInferredFunctionSamples() {
                                  CallerLeafFrameLoc.second.Discriminator,
                                  EstimatedCallCount);
     CallerProfile.addTotalSamples(EstimatedCallCount);
+  }
+}
+
+void CSProfileGenerator::mergeAndTrimColdProfile(
+    StringMap<FunctionSamples> &ProfileMap) {
+  // Nothing to merge if sample threshold is zero
+  if (!CSProfColdThres)
+    return;
+
+  // Filter the cold profiles from ProfileMap and move them into a tmp
+  // container
+  std::vector<std::pair<StringRef, const FunctionSamples *>> ToRemoveVec;
+  for (const auto &I : ProfileMap) {
+    const FunctionSamples &FunctionProfile = I.second;
+    if (FunctionProfile.getTotalSamples() >= CSProfColdThres)
+      continue;
+    ToRemoveVec.emplace_back(I.getKey(), &I.second);
+  }
+
+  // Remove the code profile from ProfileMap and merge them into BaseProileMap
+  StringMap<FunctionSamples> BaseProfileMap;
+  for (const auto &I : ToRemoveVec) {
+    auto Ret =
+        BaseProfileMap.try_emplace(I.second->getName(), FunctionSamples());
+    FunctionSamples &BaseProfile = Ret.first->second;
+    BaseProfile.merge(*I.second);
+    ProfileMap.erase(I.first);
+  }
+
+  // Merge the base profiles into ProfileMap;
+  for (const auto &I : BaseProfileMap) {
+    // Filter the cold base profile
+    if (!CSProfKeepCold && I.second.getTotalSamples() < CSProfColdThres &&
+        ProfileMap.find(I.getKey()) == ProfileMap.end())
+      continue;
+    // Merge the profile if the original profile exists, otherwise just insert
+    // as a new profile
+    FunctionSamples &OrigProfile = getFunctionProfileForContext(I.getKey());
+    StringRef TmpName = OrigProfile.getName();
+    OrigProfile.merge(I.second);
+    // Should use the name ref from ProfileMap's key to avoid name being freed
+    // from BaseProfileMap
+    OrigProfile.setName(TmpName);
   }
 }
 
