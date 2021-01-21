@@ -150,6 +150,7 @@ if(ENABLE_SHARED)
   else()
     set_target_properties(libclang
       PROPERTIES
+      SOVERSION ${LIBCLANG_LIBRARY_VERSION}
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
     # FIXME: _CINDEX_LIB_ affects dllexport/dllimport on Win32.
