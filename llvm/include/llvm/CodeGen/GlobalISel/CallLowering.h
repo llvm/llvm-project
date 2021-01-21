@@ -282,6 +282,14 @@ protected:
                       CCAssignFn &AssignFnFixed,
                       CCAssignFn &AssignFnVarArg) const;
 
+  /// Check whether parameters to a call that are passed in callee saved
+  /// registers are the same as from the calling function.  This needs to be
+  /// checked for tail call eligibility.
+  bool parametersInCSRMatch(const MachineRegisterInfo &MRI,
+                            const uint32_t *CallerPreservedMask,
+                            const SmallVectorImpl<CCValAssign> &ArgLocs,
+                            const SmallVectorImpl<ArgInfo> &OutVals) const;
+
   /// \returns True if the calling convention for a callee and its caller pass
   /// results in the same way. Typically used for tail call eligibility checks.
   ///
