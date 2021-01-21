@@ -100,7 +100,8 @@ Error BinaryHolder::ObjectEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
     llvm::ErrorOr<vfs::Status> Stat = VFS->status(Filename);
     if (!Stat)
       return errorCodeToError(Stat.getError());
-    if (Timestamp != Stat->getLastModificationTime())
+    if (Timestamp != std::chrono::time_point_cast<std::chrono::seconds>(
+                         Stat->getLastModificationTime()))
       WithColor::warning() << Filename
                            << ": timestamp mismatch between object file ("
                            << Stat->getLastModificationTime()
@@ -192,7 +193,8 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
             return ModTimeOrErr.takeError();
 
           if (Timestamp != sys::TimePoint<>() &&
-              Timestamp != ModTimeOrErr.get()) {
+              Timestamp != std::chrono::time_point_cast<std::chrono::seconds>(
+                               ModTimeOrErr.get())) {
             if (Verbose)
               WithColor::warning()
                   << *NameOrErr
