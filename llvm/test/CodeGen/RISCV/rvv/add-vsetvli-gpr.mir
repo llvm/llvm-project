@@ -39,13 +39,13 @@ body:             |
 # POST-INSERTER: %1:gpr = COPY $x12
 # POST-INSERTER: %2:gpr = COPY $x11
 # POST-INSERTER: %3:gpr = COPY $x10
-# POST-INSERTER: dead %7:gpr = PseudoVSETVLI %0, 76, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: dead %7:gpr = PseudoVSETVLI %0, 88, implicit-def $vl, implicit-def $vtype
 # POST-INSERTER: %4:vr = PseudoVLE64_V_M1 %2, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
-# POST-INSERTER: dead %8:gpr = PseudoVSETVLI %0, 76, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: dead %8:gpr = PseudoVSETVLI %0, 88, implicit-def $vl, implicit-def $vtype
 # POST-INSERTER: %5:vr = PseudoVLE64_V_M1 %1, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pb, align 8)
-# POST-INSERTER: dead %9:gpr = PseudoVSETVLI %0, 76, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: dead %9:gpr = PseudoVSETVLI %0, 88, implicit-def $vl, implicit-def $vtype
 # POST-INSERTER: %6:vr = PseudoVADD_VV_M1 killed %4, killed %5, $noreg, -1, implicit $vl, implicit $vtype
-# POST-INSERTER: dead %10:gpr = PseudoVSETVLI %0, 76, implicit-def $vl, implicit-def $vtype
+# POST-INSERTER: dead %10:gpr = PseudoVSETVLI %0, 88, implicit-def $vl, implicit-def $vtype
 # POST-INSERTER: PseudoVSE64_V_M1 killed %6, %3, $noreg, -1, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
 
 # CODEGEN: vsetvli	a3, a3, e64,m1,ta,mu
