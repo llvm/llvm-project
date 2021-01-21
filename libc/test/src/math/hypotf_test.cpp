@@ -10,7 +10,7 @@
 
 #include "src/math/hypotf.h"
 
-using HypotfTest = HypotTestTemplate<float>;
+using LlvmLibcHypotfTest = HypotTestTemplate<float>;
 
 TEST_F(LlvmLibcHypotfTest, SpecialNumbers) {
   testSpecialNumbers(&__llvm_libc::hypotf);
