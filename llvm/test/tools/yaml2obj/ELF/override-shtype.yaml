@@ -31,7 +31,6 @@ Sections:
     Type:   SHT_GNU_verneed
     Flags:  [ SHF_ALLOC ]
     ShType: [[TYPE=SHT_GNU_verneed]]
-    Info:   0
     Dependencies:
       - Version: 1
         File:    dso.so.0
