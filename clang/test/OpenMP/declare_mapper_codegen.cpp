@@ -86,7 +86,7 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
 
-// CK0: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK0: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 // CK0: store i8* %{{[^,]+}}, i8** [[HANDLEADDR:%[^,]+]]
 // CK0: store i8* %{{[^,]+}}, i8** [[BPTRADDR:%[^,]+]]
 // CK0: store i8* %{{[^,]+}}, i8** [[VPTRADDR:%[^,]+]]
@@ -112,7 +112,7 @@ public:
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
 // CK0-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]])
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK0: br label %[[LHEAD:[^,]+]]
 
 // CK0: [[LHEAD]]
@@ -165,7 +165,7 @@ public:
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
 // CK0-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR0BC]], i8* [[PTRADDR0BC]], i64 [[CUSIZE]], i64 [[PHITYPE0]])
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR0BC]], i8* [[PTRADDR0BC]], i64 [[CUSIZE]], i64 [[PHITYPE0]], {{.*}})
 // CK0-DAG: [[BPTRADDR1BC:%.+]] = bitcast %class.C* [[OBJ]] to i8*
 // CK0-DAG: [[PTRADDR1BC:%.+]] = bitcast i32* [[ABEGIN]] to i8*
 // CK0-DAG: br label %[[MEMBER:[^,]+]]
@@ -197,7 +197,7 @@ public:
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
 // CK0-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]])
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]], {{.*}})
 // CK0-DAG: [[BPTRADDR2BC:%.+]] = bitcast double** [[BBEGIN]] to i8*
 // CK0-DAG: [[PTRADDR2BC:%.+]] = bitcast double* [[BARRBEGINGEP]] to i8*
 // CK0-DAG: br label %[[MEMBER:[^,]+]]
@@ -229,7 +229,7 @@ public:
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
 // CK0-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR2BC]], i8* [[PTRADDR2BC]], i64 16, i64 [[TYPE2]])
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR2BC]], i8* [[PTRADDR2BC]], i64 16, i64 [[TYPE2]], {{.*}})
 // CK0: [[PTRNEXT]] = getelementptr %class.C*, %class.C** [[PTR]], i32 1
 // CK0: [[ISDONE:%.+]] = icmp eq %class.C** [[PTRNEXT]], [[PTREND]]
 // CK0: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -245,7 +245,7 @@ public:
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
 // CK0-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]])
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK0: br label %[[DONE]]
 // CK0: [[DONE]]
 // CK0: ret void
@@ -268,7 +268,7 @@ void foo(int a){
   // CK0-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[CBP1]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[CP1]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
   // CK0: call void [[KERNEL_1:@.+]](%class.C* [[VAL]])
   #pragma omp target map(mapper(id),tofrom: c)
   {
@@ -282,7 +282,7 @@ void foo(int a){
   // CK0: [[P2CAST:%.+]] = bitcast i8** [[P2GEP]] to %class.C**
   // CK0: store %class.C* [[CADDR]], %class.C** [[P2CAST]], align
   // CK0: [[MAPPER2GEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[OFFLOAD_MAPPER2:%[^,]+]], i[[SZ]] 0, i[[SZ]] 0
-  // CK0: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MAPPER2GEP]], align
+  // CK0: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MAPPER2GEP]], align
   // CK0: [[BP2:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[OFFLOAD_BP2]], i32 0, i32 0
   // CK0: [[P2:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[OFFLOAD_P2]], i32 0, i32 0
   // CK0: [[MAPPER2:%.+]] = bitcast [1 x i8*]* [[OFFLOAD_MAPPER2]] to i8**
@@ -307,7 +307,7 @@ void foo(int a){
   // CK0-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[CBP1]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[CP1]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
   // CK0: call void [[KERNEL_3:@.+]](%class.C* [[VAL]])
   #pragma omp target teams map(mapper(id),to: c)
   {
@@ -336,7 +336,7 @@ void foo(int a){
   // CK0-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[CBP1]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[CP1]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
   #pragma omp target enter data map(mapper(id),to: c)
 
   // CK0-DAG: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i8* [[TASK_2:%.+]])
@@ -371,7 +371,7 @@ void foo(int a){
   // CK0-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPMPRADDR]], i8* align {{4|8}} [[MPRADDR]], i[[sz]] {{4|8}}, i1 false)
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%.+]] to i8**
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[MPR]], i[[sz]] 0, i[[sz]] 0
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
   #pragma omp target enter data map(mapper(id),to: c) nowait
 
   // CK0-DAG: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[EXDSIZES]]{{.+}}, {{.+}}[[EXDTYPES]]{{.+}}, i8** null, i8** [[MPRGEP:%.+]])
@@ -385,7 +385,7 @@ void foo(int a){
   // CK0-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[CBP1]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[CP1]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
   #pragma omp target exit data map(mapper(id),from: c)
 
   // CK0-DAG: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i8* [[TASK_3:%.+]])
@@ -420,7 +420,7 @@ void foo(int a){
   // CK0-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPMPRADDR]], i8* align {{4|8}} [[MPRADDR]], i[[sz]] {{4|8}}, i1 false)
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%.+]] to i8**
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[MPR]], i[[sz]] 0, i[[sz]] 0
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
   #pragma omp target exit data map(mapper(id),from: c) nowait
 
   // CK0-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** null, i8** [[TMPRGEP:%.+]])
@@ -434,7 +434,7 @@ void foo(int a){
   // CK0-DAG: [[TCP0:%.+]] = bitcast i8** [[TP0]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[TCBP0]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[TCP0]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
   #pragma omp target update to(mapper(id): c)
 
   // CK0-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** null, i8** [[FMPRGEP:%.+]])
@@ -448,7 +448,7 @@ void foo(int a){
   // CK0-DAG: [[FCP0:%.+]] = bitcast i8** [[FP0]] to %class.C**
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[FCBP0]]
   // CK0-DAG: store %class.C* [[VAL]], %class.C** [[FCP0]]
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[FMPR1]]
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[FMPR1]]
   #pragma omp target update from(mapper(id): c)
 
   // CK0-DAG: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{[^,]+}}, i32 %{{[^,]+}}, i8* [[TASK_4:%.+]])
@@ -483,7 +483,7 @@ void foo(int a){
   // CK0-DAG: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{4|8}} [[FPMPRADDR]], i8* align {{4|8}} [[MPRADDR]], i[[sz]] {{4|8}}, i1 false)
   // CK0-DAG: [[MPRGEP]] = bitcast [1 x i8*]* [[MPR:%.+]] to i8**
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[MPR]], i[[sz]] 0, i[[sz]] 0
-  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
+  // CK0-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPRGEP]], align
   #pragma omp target update from(mapper(id): c) nowait
 }
 
@@ -652,7 +652,7 @@ public:
 
 #pragma omp declare mapper(id: C<int> s) map(s.a)
 
-// CK1-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id{{.*}}(i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK1-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id{{.*}}(i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 // CK1: store i8* %{{[^,]+}}, i8** [[HANDLEADDR:%[^,]+]]
 // CK1: store i8* %{{[^,]+}}, i8** [[BPTRADDR:%[^,]+]]
 // CK1: store i8* %{{[^,]+}}, i8** [[VPTRADDR:%[^,]+]]
@@ -676,7 +676,7 @@ public:
 // CK1: [[INIT]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
 // CK1-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
-// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]])
+// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK1: br label %[[LHEAD:[^,]+]]
 
 // CK1: [[LHEAD]]
@@ -718,7 +718,7 @@ public:
 // CK1-DAG: br label %[[TYEND]]
 // CK1-DAG: [[TYEND]]
 // CK1-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]])
+// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]], {{.*}})
 // CK1: [[PTRNEXT]] = getelementptr %class.C*, %class.C** [[PTR]], i32 1
 // CK1: [[ISDONE:%.+]] = icmp eq %class.C** [[PTRNEXT]], [[PTREND]]
 // CK1: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -733,7 +733,7 @@ public:
 // CK1: [[DEL]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
 // CK1-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
-// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]])
+// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK1: br label %[[DONE]]
 // CK1: [[DONE]]
 // CK1: ret void
@@ -774,9 +774,9 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.b)
 
-// CK2: define {{.*}}void [[BMPRFUNC:@[.]omp_mapper[.].*B[.]default]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK2: define {{.*}}void [[BMPRFUNC:@[.]omp_mapper[.].*B[.]default]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 
-// CK2-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id(i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK2-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id(i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 // CK2: store i8* %{{[^,]+}}, i8** [[HANDLEADDR:%[^,]+]]
 // CK2: store i8* %{{[^,]+}}, i8** [[BPTRADDR:%[^,]+]]
 // CK2: store i8* %{{[^,]+}}, i8** [[VPTRADDR:%[^,]+]]
@@ -800,7 +800,7 @@ public:
 // CK2: [[INIT]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK2-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
-// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]])
+// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK2: br label %[[LHEAD:[^,]+]]
 
 // CK2: [[LHEAD]]
@@ -842,7 +842,7 @@ public:
 // CK2-DAG: br label %[[TYEND]]
 // CK2-DAG: [[TYEND]]
 // CK2-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK2: call void [[BMPRFUNC]](i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 8, i64 [[TYPE1]])
+// CK2: call void [[BMPRFUNC]](i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 8, i64 [[TYPE1]], {{.*}})
 // CK2: [[PTRNEXT]] = getelementptr %class.C*, %class.C** [[PTR]], i32 1
 // CK2: [[ISDONE:%.+]] = icmp eq %class.C** [[PTRNEXT]], [[PTREND]]
 // CK2: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -857,7 +857,7 @@ public:
 // CK2: [[DEL]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK2-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
-// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]])
+// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK2: br label %[[DONE]]
 // CK2: [[DONE]]
 // CK2: ret void
@@ -900,7 +900,7 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
 
-// CK3: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK3: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 
 // CK3-LABEL: define {{.*}}void @{{.*}}foo{{.*}}
 void foo(int a){
@@ -922,7 +922,7 @@ void foo(int a){
   // CK3-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CK3-DAG: store %class.B* [[BVAL]], %class.B** [[CBP1]]
   // CK3-DAG: store %class.C* [[BC]], %class.C** [[CP1]]
-  // CK3-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
+  // CK3-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR1]]
   // CK3-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 1
   // CK3-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[PS]], i32 0, i32 1
   // CK3-DAG: [[MPR2:%.+]] = getelementptr inbounds {{.+}}[[MPR]], i{{64|32}} 0, i{{64|32}} 1
@@ -931,7 +931,7 @@ void foo(int a){
   // CK3-DAG: store [10 x %class.C]* [[CVAL]], [10 x %class.C]** [[CBP2]]
   // CK3-DAG: [[CVALGEP:%.+]] = getelementptr inbounds {{.+}}[[CVAL]], i{{64|32}} 0, i{{64|32}} 0
   // CK3-DAG: store %class.C* [[CVALGEP]], %class.C** [[CP2]]
-  // CK3-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[MPR2]]
+  // CK3-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[MPR2]]
   // CK3: call void [[KERNEL:@.+]](%class.B* [[BVAL]], [10 x %class.C]* [[CVAL]])
   #pragma omp target map(mapper(id),tofrom: c[0:10], b.c)
   for (int i = 0; i < 10; i++) {
@@ -980,7 +980,7 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
 
-// CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}}, i8*{{.*}})
 // CK4: store i8* %{{[^,]+}}, i8** [[HANDLEADDR:%[^,]+]]
 // CK4: store i8* %{{[^,]+}}, i8** [[BPTRADDR:%[^,]+]]
 // CK4: store i8* %{{[^,]+}}, i8** [[VPTRADDR:%[^,]+]]
@@ -1006,7 +1006,7 @@ public:
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
 // CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]])
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
 // CK4: br label %[[LHEAD:[^,]+]]
 
 // CK4: [[LHEAD]]
@@ -1059,7 +1059,7 @@ public:
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
 // CK4-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR0BC]], i8* [[PTRADDR0BC]], i64 [[CUSIZE]], i64 [[PHITYPE0]])
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR0BC]], i8* [[PTRADDR0BC]], i64 [[CUSIZE]], i64 [[PHITYPE0]], {{.*}})
 // CK4-DAG: [[BPTRADDR1BC:%.+]] = bitcast %class.C* [[OBJ]] to i8*
 // CK4-DAG: [[PTRADDR1BC:%.+]] = bitcast i32* [[ABEGIN]] to i8*
 // CK4-DAG: br label %[[MEMBER:[^,]+]]
@@ -1091,7 +1091,7 @@ public:
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
 // CK4-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]])
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]], {{.*}})
 // CK4-DAG: [[BPTRADDR2BC:%.+]] = bitcast double** [[BBEGIN]] to i8*
 // CK4-DAG: [[PTRADDR2BC:%.+]] = bitcast double* [[BARRBEGINGEP]] to i8*
 // CK4-DAG: br label %[[MEMBER:[^,]+]]
@@ -1123,7 +1123,7 @@ public:
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
 // CK4-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR2BC]], i8* [[PTRADDR2BC]], i64 16, i64 [[TYPE2]])
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR2BC]], i8* [[PTRADDR2BC]], i64 16, i64 [[TYPE2]], {{.*}})
 // CK4: [[PTRNEXT]] = getelementptr %class.C*, %class.C** [[PTR]], i32 1
 // CK4: [[ISDONE:%.+]] = icmp eq %class.C** [[PTRNEXT]], [[PTREND]]
 // CK4: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -1139,7 +1139,7 @@ public:
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
 // CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]])
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
 // CK4: br label %[[DONE]]
 // CK4: [[DONE]]
 // CK4: ret void
@@ -1162,7 +1162,7 @@ void foo(int a){
   // CK4-DAG: [[TCP0:%.+]] = bitcast i8** [[TP0]] to %class.C**
   // CK4-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[TCBP0]]
   // CK4-DAG: store %class.C* [[VAL]], %class.C** [[TCP0]]
-  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
+  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
   #pragma omp target update to(present, mapper(id): c)
 
   // CK4-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** null, i8** [[FMPRGEP:%.+]])
@@ -1176,7 +1176,7 @@ void foo(int a){
   // CK4-DAG: [[FCP0:%.+]] = bitcast i8** [[FP0]] to %class.C**
   // CK4-DAG: store %class.C* [[VAL]], %class.C** [[FCBP0]]
   // CK4-DAG: store %class.C* [[VAL]], %class.C** [[FCP0]]
-  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[FMPR1]]
+  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MPRFUNC]] to i8*), i8** [[FMPR1]]
   #pragma omp target update from(mapper(id), present: c)
 }
 
