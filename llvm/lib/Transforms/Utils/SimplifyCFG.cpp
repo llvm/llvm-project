@@ -2775,7 +2775,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                                   unsigned BonusInstThreshold) {
   // If this block ends with an unconditional branch,
   // let SpeculativelyExecuteBB() deal with it.
-  if (!BI->isConditional())
+  if (!BI->isConditional() || is_splat(successors(BI)))
     return false;
 
   BasicBlock *BB = BI->getParent();
@@ -2863,7 +2863,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Check that we have two conditional branches.  If there is a PHI node in
     // the common successor, verify that the same value flows in from both
     // blocks.
-    if (!PBI || PBI->isUnconditional() || !SafeToMergeTerminators(BI, PBI))
+    if (!PBI || PBI->isUnconditional() || is_splat(successors(PBI)) ||
+        !SafeToMergeTerminators(BI, PBI))
       continue;
 
     // Determine if the two branches share a common destination.
