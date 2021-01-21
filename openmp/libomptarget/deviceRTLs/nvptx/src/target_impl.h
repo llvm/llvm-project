@@ -130,6 +130,15 @@ DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
 
+// Forward declaration of atomics. Although they're template functions, we
+// already have definitions for different types in CUDA internal headers with
+// the right mangled names.
+template <typename T> DEVICE T atomicAdd(T *address, T val);
+template <typename T> DEVICE T atomicInc(T *address, T val);
+template <typename T> DEVICE T atomicMax(T *address, T val);
+template <typename T> DEVICE T atomicExch(T *address, T val);
+template <typename T> DEVICE T atomicCAS(T *address, T compare, T val);
+
 // Atomics
 template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
   return atomicAdd(address, val);
