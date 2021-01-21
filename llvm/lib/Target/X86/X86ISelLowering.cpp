@@ -2516,11 +2516,11 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
       if (Offset == (unsigned)-1)
         Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
 
-      auto GuardReg = getTargetMachine().Options.StackProtectorGuardReg;
-        if (GuardReg == "fs")
-          AddressSpace = X86AS::FS;
-        else if (GuardReg == "gs")
-          AddressSpace = X86AS::GS;
+      const auto &GuardReg = getTargetMachine().Options.StackProtectorGuardReg;
+      if (GuardReg == "fs")
+        AddressSpace = X86AS::FS;
+      else if (GuardReg == "gs")
+        AddressSpace = X86AS::GS;
       return SegmentOffset(IRB, Offset, AddressSpace);
     }
   }
