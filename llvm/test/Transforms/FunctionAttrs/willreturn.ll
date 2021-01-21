@@ -71,9 +71,10 @@ B:
   ret i64 0
 }
 
+; Function without loops or non-willreturn calls will return.
 define void @willreturn_no_loop(i1 %c, i32* %p) {
-; CHECK-NOT: Function Attrs: {{.*}}willreturn
-; CHECK: define void @willreturn_no_loop(
+; CHECK: Function Attrs: willreturn
+; CHECK-NEXT: define void @willreturn_no_loop(
 ;
   br i1 %c, label %if, label %else
 
@@ -90,6 +91,7 @@ end:
   ret void
 }
 
+; Calls a function that is not guaranteed to return, not willreturn.
 define void @willreturn_non_returning_function(i1 %c, i32* %p) {
 ; CHECK-NOT: Function Attrs: {{.*}}willreturn
 ; CHECK: define void @willreturn_non_returning_function(
@@ -98,6 +100,7 @@ define void @willreturn_non_returning_function(i1 %c, i32* %p) {
   ret void
 }
 
+; Infinite loop without mustprogress, will not return.
 define void @willreturn_loop() {
 ; CHECK-NOT: Function Attrs: {{.*}}willreturn
 ; CHECK: define void @willreturn_loop(
@@ -108,6 +111,8 @@ loop:
   br label %loop
 }
 
+; Finite loop. Could be willreturn but not detected.
+; FIXME
 define void @willreturn_finite_loop() {
 ; CHECK-NOT: Function Attrs: {{.*}}willreturn
 ; CHECK: define void @willreturn_finite_loop(
@@ -123,6 +128,29 @@ loop:
 
 end:
   ret void
+}
+
+; Infinite recursion without mustprogress, will not return.
+define void @willreturn_recursion() {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_recursion(
+;
+  tail call void @willreturn_recursion()
+  ret void
+}
+
+; Irreducible infinite loop, will not return.
+define void @willreturn_irreducible(i1 %c) {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_irreducible(
+;
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  br label %bb2
+
+bb2:
+  br label %bb1
 }
 
 declare i64 @fn_noread() readnone
