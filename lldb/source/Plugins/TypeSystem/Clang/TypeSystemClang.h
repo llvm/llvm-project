@@ -1125,7 +1125,7 @@ public:
   /// These ASTs are isolated from the main scratch AST and are each
   /// dedicated to a special language option/feature that makes the contained
   /// AST nodes incompatible with other AST nodes.
-  enum class IsolatedASTKind {
+  enum IsolatedASTKind {
     /// The isolated AST for declarations/types from expressions that imported
     /// type information from a C++ module. The templates from a C++ module
     /// often conflict with the templates we generate from debug information,
