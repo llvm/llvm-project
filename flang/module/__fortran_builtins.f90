@@ -29,4 +29,6 @@ module __Fortran_builtins
   type :: __builtin_team_type
     integer(kind=int64) :: __id
   end type
+
+  procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 end module
