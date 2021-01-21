@@ -75,12 +75,10 @@ define <4 x float> @lshr_truncate_mask_ucvt_4i64_4f32(<4 x i64> *%p0) {
 ; X32-SSE-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE-NEXT:    movdqu (%eax), %xmm0
-; X32-SSE-NEXT:    movdqu 16(%eax), %xmm1
-; X32-SSE-NEXT:    psrlq $16, %xmm1
-; X32-SSE-NEXT:    psrlq $16, %xmm0
+; X32-SSE-NEXT:    movups (%eax), %xmm0
+; X32-SSE-NEXT:    movups 16(%eax), %xmm1
 ; X32-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    psrld $16, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X32-SSE-NEXT:    mulps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    retl
@@ -88,38 +86,28 @@ define <4 x float> @lshr_truncate_mask_ucvt_4i64_4f32(<4 x i64> *%p0) {
 ; X32-AVX-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vmovdqu (%eax), %xmm0
-; X32-AVX-NEXT:    vmovdqu 16(%eax), %xmm1
-; X32-AVX-NEXT:    vpsrlq $16, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X32-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X32-AVX-NEXT:    vmovups (%eax), %xmm0
+; X32-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; X32-AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-AVX-NEXT:    vmulps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movdqu (%rdi), %xmm0
-; X64-SSE-NEXT:    movdqu 16(%rdi), %xmm1
-; X64-SSE-NEXT:    psrlq $16, %xmm1
-; X64-SSE-NEXT:    psrlq $16, %xmm0
+; X64-SSE-NEXT:    movups (%rdi), %xmm0
+; X64-SSE-NEXT:    movups 16(%rdi), %xmm1
 ; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    psrld $16, %xmm0
 ; X64-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE-NEXT:    mulps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX-NEXT:    vpsrlq $16, %xmm1, %xmm1
-; X64-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X64-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X64-AVX-NEXT:    vmovups (%rdi), %xmm0
+; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; X64-AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
