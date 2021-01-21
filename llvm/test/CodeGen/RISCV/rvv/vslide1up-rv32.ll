@@ -10,8 +10,8 @@ define <vscale x 1 x i8> @intrinsic_vslide1up_vx_nxv1i8_nxv1i8_i8(<vscale x 1 x 
 ; CHECK-LABEL: intrinsic_vslide1up_vx_nxv1i8_nxv1i8_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vslide1up.vx v25, v16, a0
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vslide1up.vx v25, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vslide1up.nxv1i8.i8(
