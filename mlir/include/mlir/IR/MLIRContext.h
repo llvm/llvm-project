@@ -156,16 +156,18 @@ public:
   void enterMultiThreadedExecution();
   void exitMultiThreadedExecution();
 
-private:
-  const std::unique_ptr<MLIRContextImpl> impl;
-
   /// Get a dialect for the provided namespace and TypeID: abort the program if
   /// a dialect exist for this namespace with different TypeID. If a dialect has
   /// not been loaded for this namespace/TypeID yet, use the provided ctor to
   /// create one on the fly and load it. Returns a pointer to the dialect owned
   /// by the context.
+  /// The use of this method is in general discouraged in favor of
+  /// 'getOrLoadDialect<DialectClass>()'.
   Dialect *getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                             function_ref<std::unique_ptr<Dialect>()> ctor);
+
+private:
+  const std::unique_ptr<MLIRContextImpl> impl;
 
   MLIRContext(const MLIRContext &) = delete;
   void operator=(const MLIRContext &) = delete;
