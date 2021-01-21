@@ -2023,12 +2023,12 @@ bool TargetLowering::SimplifyDemandedBits(
         if (!(HighBits & DemandedBits)) {
           // None of the shifted in bits are needed.  Add a truncate of the
           // shift input, then shift it.
-          if (TLO.LegalTypes())
-            ShAmt = TLO.DAG.getConstant(ShVal, dl, getShiftAmountTy(VT, DL));
+          SDValue NewShAmt = TLO.DAG.getConstant(
+              ShVal, dl, getShiftAmountTy(VT, DL, TLO.LegalTypes()));
           SDValue NewTrunc =
               TLO.DAG.getNode(ISD::TRUNCATE, dl, VT, Src.getOperand(0));
           return TLO.CombineTo(
-              Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, ShAmt));
+              Op, TLO.DAG.getNode(ISD::SRL, dl, VT, NewTrunc, NewShAmt));
         }
         break;
       }
