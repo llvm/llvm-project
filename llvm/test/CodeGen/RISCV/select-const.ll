@@ -179,22 +179,16 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV32IBT-LABEL: select_const_int_harder:
 ; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    mv a1, a0
-; RV32IBT-NEXT:    addi a0, zero, 6
-; RV32IBT-NEXT:    bnez a1, .LBB3_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    addi a0, zero, 38
-; RV32IBT-NEXT:  .LBB3_2:
+; RV32IBT-NEXT:    addi a1, zero, 38
+; RV32IBT-NEXT:    addi a2, zero, 6
+; RV32IBT-NEXT:    cmov a0, a0, a2, a1
 ; RV32IBT-NEXT:    ret
 ;
 ; RV32IFBT-LABEL: select_const_int_harder:
 ; RV32IFBT:       # %bb.0:
-; RV32IFBT-NEXT:    mv a1, a0
-; RV32IFBT-NEXT:    addi a0, zero, 6
-; RV32IFBT-NEXT:    bnez a1, .LBB3_2
-; RV32IFBT-NEXT:  # %bb.1:
-; RV32IFBT-NEXT:    addi a0, zero, 38
-; RV32IFBT-NEXT:  .LBB3_2:
+; RV32IFBT-NEXT:    addi a1, zero, 38
+; RV32IFBT-NEXT:    addi a2, zero, 6
+; RV32IFBT-NEXT:    cmov a0, a0, a2, a1
 ; RV32IFBT-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_int_harder:
@@ -219,22 +213,16 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV64IBT-LABEL: select_const_int_harder:
 ; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    mv a1, a0
-; RV64IBT-NEXT:    addi a0, zero, 6
-; RV64IBT-NEXT:    bnez a1, .LBB3_2
-; RV64IBT-NEXT:  # %bb.1:
-; RV64IBT-NEXT:    addi a0, zero, 38
-; RV64IBT-NEXT:  .LBB3_2:
+; RV64IBT-NEXT:    addi a1, zero, 38
+; RV64IBT-NEXT:    addi a2, zero, 6
+; RV64IBT-NEXT:    cmov a0, a0, a2, a1
 ; RV64IBT-NEXT:    ret
 ;
 ; RV64IFDBT-LABEL: select_const_int_harder:
 ; RV64IFDBT:       # %bb.0:
-; RV64IFDBT-NEXT:    mv a1, a0
-; RV64IFDBT-NEXT:    addi a0, zero, 6
-; RV64IFDBT-NEXT:    bnez a1, .LBB3_2
-; RV64IFDBT-NEXT:  # %bb.1:
-; RV64IFDBT-NEXT:    addi a0, zero, 38
-; RV64IFDBT-NEXT:  .LBB3_2:
+; RV64IFDBT-NEXT:    addi a1, zero, 38
+; RV64IFDBT-NEXT:    addi a2, zero, 6
+; RV64IFDBT-NEXT:    cmov a0, a0, a2, a1
 ; RV64IFDBT-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38
   ret i32 %1
@@ -267,12 +255,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV32IBT-LABEL: select_const_fp:
 ; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    mv a1, a0
-; RV32IBT-NEXT:    lui a0, 263168
-; RV32IBT-NEXT:    bnez a1, .LBB4_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    lui a0, 264192
-; RV32IBT-NEXT:  .LBB4_2:
+; RV32IBT-NEXT:    lui a1, 264192
+; RV32IBT-NEXT:    lui a2, 263168
+; RV32IBT-NEXT:    cmov a0, a0, a2, a1
 ; RV32IBT-NEXT:    ret
 ;
 ; RV32IFBT-LABEL: select_const_fp:
@@ -315,12 +300,9 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV64IBT-LABEL: select_const_fp:
 ; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    mv a1, a0
-; RV64IBT-NEXT:    lui a0, 263168
-; RV64IBT-NEXT:    bnez a1, .LBB4_2
-; RV64IBT-NEXT:  # %bb.1:
-; RV64IBT-NEXT:    lui a0, 264192
-; RV64IBT-NEXT:  .LBB4_2:
+; RV64IBT-NEXT:    lui a1, 264192
+; RV64IBT-NEXT:    lui a2, 263168
+; RV64IBT-NEXT:    cmov a0, a0, a2, a1
 ; RV64IBT-NEXT:    ret
 ;
 ; RV64IFDBT-LABEL: select_const_fp:
