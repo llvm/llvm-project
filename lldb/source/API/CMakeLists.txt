@@ -213,13 +213,12 @@ else()
   # When building the LLDB framework, this isn't necessary as there we copy everything we need into
   # the framework (including the Clang resourece directory).
   if(NOT LLDB_BUILD_FRAMEWORK)
-    set(LLDB_CLANG_RESOURCE_DIR_PARENT "$<TARGET_FILE_DIR:liblldb>/clang")
-    file(MAKE_DIRECTORY "${LLDB_CLANG_RESOURCE_DIR_PARENT}")
+    get_target_property(liblldb_TARGET_FILE_DIR liblldb TARGET_FILE_DIR)
+    file(MAKE_DIRECTORY "${liblldb_TARGET_FILE_DIR}/clang")
     add_custom_command(TARGET liblldb POST_BUILD
-      COMMENT "Linking Clang resource dir into LLDB build directory: ${LLDB_CLANG_RESOURCE_DIR_PARENT}"
-      COMMAND ${CMAKE_COMMAND} -E make_directory "${LLDB_CLANG_RESOURCE_DIR_PARENT}"
-      COMMAND ${CMAKE_COMMAND} -E create_symlink "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}"
-              "${LLDB_CLANG_RESOURCE_DIR_PARENT}/${LLDB_CLANG_RESOURCE_DIR_NAME}"
+      COMMENT "Linking Clang resource dir into LLDB build directory: ${liblldb_TARGET_FILE_DIR}/clang"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${liblldb_TARGET_FILE_DIR}/clang"
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}" "${liblldb_TARGET_FILE_DIR}/clang/${LLDB_CLANG_RESOURCE_DIR_NAME}"
     )
   endif()
 endif()
