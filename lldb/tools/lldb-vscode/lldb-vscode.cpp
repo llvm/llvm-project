@@ -440,30 +440,6 @@ void EventThreadFunction() {
             g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
-      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
-        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
-          int num_modules = lldb::SBTarget::GetNumModulesFromEvent(event);
-          for (int i = 0; i < num_modules; i++) {
-            auto module = lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-            auto module_event = CreateEventObject("module");
-            llvm::json::Value module_value = CreateModule(module);
-            llvm::json::Object body;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              body.try_emplace("reason", "new");
-            } else if (event_mask &
-                       lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-              body.try_emplace("reason", "removed");
-            } else if (event_mask &
-                       lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
-              body.try_emplace("reason", "changed");
-            }
-            body.try_emplace("module", module_value);
-            module_event.try_emplace("body", std::move(body));
-            g_vsc.SendJSON(llvm::json::Value(std::move(module_event)));
-          }
-        }
       } else if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
         if (event_mask & eBroadcastBitStopEventThread) {
           done = true;
@@ -1196,26 +1172,26 @@ void request_evaluate(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// "getCompileUnitsRequest": {
+// "compileUnitsRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
 //     "description": "Compile Unit request; value of command field is
-//                     'getCompileUnits'.",
+//                     'compileUnits'.",
 //     "properties": {
 //       "command": {
 //         "type": "string",
-//         "enum": [ "getCompileUnits" ]
+//         "enum": [ "compileUnits" ]
 //       },
 //       "arguments": {
-//         "$ref": "#/definitions/getCompileUnitRequestArguments"
+//         "$ref": "#/definitions/compileUnitRequestArguments"
 //       }
 //     },
 //     "required": [ "command", "arguments" ]
 //   }]
 // },
-// "getCompileUnitsRequestArguments": {
+// "compileUnitsRequestArguments": {
 //   "type": "object",
-//   "description": "Arguments for 'getCompileUnits' request.",
+//   "description": "Arguments for 'compileUnits' request.",
 //   "properties": {
 //     "moduleId": {
 //       "type": "string",
@@ -1224,23 +1200,21 @@ void request_evaluate(const llvm::json::Object &request) {
 //   },
 //   "required": [ "moduleId" ]
 // },
-// "getCompileUnitsResponse": {
+// "compileUnitsResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
 //     "type": "object",
-//     "description": "Response to 'getCompileUnits' request.",
+//     "description": "Response to 'compileUnits' request.",
 //     "properties": {
 //       "body": {
-//         "description": "Response to 'getCompileUnits' request. Array of
+//         "description": "Response to 'compileUnits' request. Array of
 //                         paths of compile units."
 //       }
 //     }
 //   }]
 // }
-
-void request_getCompileUnits(const llvm::json::Object &request) {
+void request_compileUnits(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  lldb::SBProcess process = g_vsc.target.GetProcess();
   llvm::json::Object body;
   llvm::json::Array units;
   auto arguments = request.getObject("arguments");
@@ -1258,6 +1232,48 @@ void request_getCompileUnits(const llvm::json::Object &request) {
       break;
     }
   }
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "modulesRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Modules request; value of command field is
+//                     'modules'.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "modules" ]
+//       },
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "modulesResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to 'modules' request.",
+//     "properties": {
+//       "body": {
+//         "description": "Response to 'modules' request. Array of
+//                         module objects."
+//       }
+//     }
+//   }]
+// }
+void request_modules(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+
+  llvm::json::Array modules;
+  for (size_t i = 0; i < g_vsc.target.GetNumModules(); i++) {
+    lldb::SBModule module = g_vsc.target.GetModuleAtIndex(i);
+    modules.emplace_back(CreateModule(module));
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("modules", std::move(modules));
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2901,7 +2917,6 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("disconnect", request_disconnect);
   g_vsc.RegisterRequestCallback("evaluate", request_evaluate);
   g_vsc.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
-  g_vsc.RegisterRequestCallback("getCompileUnits", request_getCompileUnits);
   g_vsc.RegisterRequestCallback("initialize", request_initialize);
   g_vsc.RegisterRequestCallback("launch", request_launch);
   g_vsc.RegisterRequestCallback("next", request_next);
@@ -2919,6 +2934,9 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("stepOut", request_stepOut);
   g_vsc.RegisterRequestCallback("threads", request_threads);
   g_vsc.RegisterRequestCallback("variables", request_variables);
+  // Custom requests
+  g_vsc.RegisterRequestCallback("compileUnits", request_compileUnits);
+  g_vsc.RegisterRequestCallback("modules", request_modules);
   // Testing requests
   g_vsc.RegisterRequestCallback("_testGetTargetBreakpoints",
                                 request__testGetTargetBreakpoints);
