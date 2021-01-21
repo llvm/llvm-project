@@ -929,16 +929,14 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     User *U = srcUseList.pop_back_val();
 
     if (isa<BitCastInst>(U) || isa<AddrSpaceCastInst>(U)) {
-      for (User *UU : U->users())
-        srcUseList.push_back(UU);
+      append_range(srcUseList, U->users());
       continue;
     }
     if (GetElementPtrInst *G = dyn_cast<GetElementPtrInst>(U)) {
       if (!G->hasAllZeroIndices())
         return false;
 
-      for (User *UU : U->users())
-        srcUseList.push_back(UU);
+      append_range(srcUseList, U->users());
       continue;
     }
     if (const IntrinsicInst *IT = dyn_cast<IntrinsicInst>(U))

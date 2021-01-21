@@ -253,12 +253,10 @@ public:
     // We can get our predecessor info by walking the pred_iterator list,
     // but it is relatively slow.  If we already have PHI nodes in this
     // block, walk one of them to get the predecessor list instead.
-    if (PHINode *SomePhi = dyn_cast<PHINode>(BB->begin())) {
-      Preds->append(SomePhi->block_begin(), SomePhi->block_end());
-    } else {
-      for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI)
-        Preds->push_back(*PI);
-    }
+    if (PHINode *SomePhi = dyn_cast<PHINode>(BB->begin()))
+      append_range(*Preds, SomePhi->blocks());
+    else
+      append_range(*Preds, predecessors(BB));
   }
 
   /// GetUndefVal - Get an undefined value of the same type as the value
