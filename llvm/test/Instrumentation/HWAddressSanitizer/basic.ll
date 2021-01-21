@@ -1,14 +1,14 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ABORT-DYNAMIC-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
 ; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,RECOVER-DYNAMIC-SHADOW
-; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ABORT-ZERO-BASED-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
 ; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,RECOVER-ZERO-BASED-SHADOW
 
 ; Ensure than hwasan runs with the new PM pass
-; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ABORT-DYNAMIC-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,RECOVER-DYNAMIC-SHADOW
-; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ABORT-ZERO-BASED-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,RECOVER-ZERO-BASED-SHADOW
 
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @hwasan.module_ctor, i8* bitcast (void ()* @hwasan.module_ctor to i8*) }]

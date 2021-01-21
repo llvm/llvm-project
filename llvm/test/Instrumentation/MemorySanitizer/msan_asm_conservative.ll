@@ -1,8 +1,8 @@
 ; Test for handling of asm constraints in MSan instrumentation.
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
-; RUN: "-check-prefixes=CHECK,CHECK-NONCONS" %s
-; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK,CHECK-NONCONS %s
+; RUN: "-check-prefix=CHECK" %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
 ; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
