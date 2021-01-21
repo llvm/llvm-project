@@ -138,16 +138,22 @@ void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
 }
 
 bool CompilerInstance::ExecuteAction(FrontendAction &act) {
-  // Set some sane defaults for the frontend.
-  // TODO: Instead of defaults we should be setting these options based on the
-  // user input.
-  this->invocation().SetDefaultFortranOpts();
-  // Set the fortran options to user-based input.
-  this->invocation().setFortranOpts();
+  auto &invoc = this->invocation();
 
-  // Connect Input to a CompileInstance
+  // Set some sane defaults for the frontend.
+  invoc.SetDefaultFortranOpts();
+  // Update the fortran options based on user-based input.
+  invoc.setFortranOpts();
+
+  // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : frontendOpts().inputs_) {
     if (act.BeginSourceFile(*this, fif)) {
+      // Switch between fixed and free form format based on the input file
+      // extension. Ideally we should have all Fortran options set before
+      // entering this loop (i.e. processing any input files). However, we
+      // can't decide between fixed and free form based on the file extension
+      // earlier than this.
+      invoc.fortranOpts().isFixedForm = fif.IsFixedForm();
       if (llvm::Error err = act.Execute()) {
         consumeError(std::move(err));
       }
