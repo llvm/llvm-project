@@ -182,6 +182,10 @@ Changes to the LLVM tools
   executed with no input files instead of reading an input from stdin.
   Reading from stdin can still be achieved by specifying `-` as an input file.
 
+* llvm-mca supports serialization of the timeline and summary views.
+  The `--json` command line option prints a JSON representation of
+  these views to stdout.
+
 Changes to LLDB
 ---------------------------------
 
