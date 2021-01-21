@@ -96,5 +96,19 @@ void SummaryView::collectData(DisplayValues &DV) const {
   DV.BlockRThroughput = computeBlockRThroughput(SM, DispatchWidth, NumMicroOps,
                                                 ProcResourceUsage);
 }
+
+json::Value SummaryView::toJSON() const {
+  DisplayValues DV;
+  collectData(DV);
+  json::Object JO({{"Iterations", DV.Iterations},
+                   {"Instructions", DV.TotalInstructions},
+                   {"TotalCycles", DV.TotalCycles},
+                   {"TotaluOps", DV.TotalUOps},
+                   {"DispatchWidth", DV.DispatchWidth},
+                   {"uOpsPerCycle", DV.UOpsPerCycle},
+                   {"IPC", DV.IPC},
+                   {"BlockRThroughput", DV.BlockRThroughput}});
+  return JO;
+}
 } // namespace mca.
 } // namespace llvm

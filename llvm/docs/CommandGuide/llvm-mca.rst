@@ -206,6 +206,12 @@ option specifies "``-``", then the output will also be sent to standard output.
   can be expensive, and it is disabled by default.  Bottlenecks are highlighted
   in the summary view.
 
+.. option:: -json
+
+  Print the requested views in JSON format. The instructions and the processor
+  resources are printed as members of special top level JSON objects.  The
+  individual views refer to them by index.
+
 
 EXIT STATUS
 -----------
