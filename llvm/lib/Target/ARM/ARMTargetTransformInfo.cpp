@@ -1511,6 +1511,25 @@ int ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            CostKind);
 }
 
+InstructionCost
+ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
+                                        Type *ResTy, VectorType *ValTy,
+                                        TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, ValTy);
+  EVT ResVT = TLI->getValueType(DL, ResTy);
+  if (ST->hasMVEIntegerOps() && ValVT.isSimple() && ResVT.isSimple()) {
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    if ((LT.second == MVT::v16i8 && ResVT.getSizeInBits() <= 32) ||
+        (LT.second == MVT::v8i16 &&
+         ResVT.getSizeInBits() <= (IsMLA ? 64 : 32)) ||
+        (LT.second == MVT::v4i32 && ResVT.getSizeInBits() <= 64))
+      return ST->getMVEVectorCostFactor() * LT.first;
+  }
+
+  return BaseT::getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, ValTy,
+                                            CostKind);
+}
+
 int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   switch (ICA.getID()) {
@@ -2082,7 +2101,7 @@ bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
   unsigned ScalarBits = Ty->getScalarSizeInBits();
   switch (Opcode) {
   case Instruction::Add:
-    return ScalarBits <= 32;
+    return ScalarBits <= 64;
   default:
     return false;
   }

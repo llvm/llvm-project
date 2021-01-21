@@ -2014,6 +2014,27 @@ public:
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
   }
 
+  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
+                                              Type *ResTy, VectorType *Ty,
+                                              TTI::TargetCostKind CostKind) {
+    // Without any native support, this is equivalent to the cost of
+    // vecreduce.add(ext) or if IsMLA vecreduce.add(mul(ext, ext))
+    VectorType *ExtTy = VectorType::get(ResTy, Ty);
+    unsigned RedCost = thisT()->getArithmeticReductionCost(
+        Instruction::Add, ExtTy, false, CostKind);
+    unsigned MulCost = 0;
+    unsigned ExtCost = thisT()->getCastInstrCost(
+        IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,
+        TTI::CastContextHint::None, CostKind);
+    if (IsMLA) {
+      MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
+      ExtCost *= 2;
+    }
+
+    return RedCost + MulCost + ExtCost;
+  }
+
   unsigned getVectorSplitCost() { return 1; }
 
   /// @}
