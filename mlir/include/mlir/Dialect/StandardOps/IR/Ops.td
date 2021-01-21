@@ -151,18 +151,6 @@ class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
 
-// Base class for standard arithmetic operations on complex numbers with a
-// floating-point element type.
-// These operations take two operands and return one result, all of which must
-// be complex numbers of the same type.
-// The assembly format is as follows
-//
-//     <op>cf %0, %1 : complex<f32>
-//
-class ComplexFloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic, traits>,
-    Arguments<(ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs)>;
-
 // Base class for memref allocating ops: alloca and alloc.
 //
 //   %0 = alloclike(%m)[%s] : memref<8x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1)>
@@ -261,26 +249,6 @@ def AbsFOp : FloatUnaryOp<"absf"> {
 
     // Tensor element-wise absolute value.
     %x = absf %y : tensor<4x?xf8>
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// AddCFOp
-//===----------------------------------------------------------------------===//
-
-def AddCFOp : ComplexFloatArithmeticOp<"addcf"> {
-  let summary = "complex number addition";
-  let description = [{
-    The `addcf` operation takes two complex number operands and returns their
-    sum, a single complex number.
-    All operands and result must be of the same type, a complex number with a
-    floating-point element type.
-
-    Example:
-
-    ```mlir
-    %a = addcf %b, %c : complex<f32>
     ```
   }];
 }
@@ -1181,40 +1149,6 @@ def CmpIOp : Std_Op<"cmpi",
 }
 
 //===----------------------------------------------------------------------===//
-// CreateComplexOp
-//===----------------------------------------------------------------------===//
-
-def CreateComplexOp : Std_Op<"create_complex",
-    [NoSideEffect,
-     AllTypesMatch<["real", "imaginary"]>,
-     TypesMatchWith<"complex element type matches real operand type",
-                    "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">,
-     TypesMatchWith<"complex element type matches imaginary operand type",
-                    "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
-  let summary = "creates a complex number";
-  let description = [{
-    The `create_complex` operation creates a complex number from two
-    floating-point operands, the real and the imaginary part.
-
-    Example:
-
-    ```mlir
-    %a = create_complex %b, %c : complex<f32>
-    ```
-  }];
-
-  let arguments = (ins AnyFloat:$real, AnyFloat:$imaginary);
-  let results = (outs Complex<AnyFloat>:$complex);
-
-  let assemblyFormat = "$real `,` $imaginary attr-dict `:` type($complex)";
-
-  // `CreateComplexOp` is fully verified by its traits.
-  let verifier = ?;
-}
-
-//===----------------------------------------------------------------------===//
 // CondBranchOp
 //===----------------------------------------------------------------------===//
 
@@ -1774,36 +1708,6 @@ def GetGlobalMemrefOp : Std_Op<"get_global_memref",
   let assemblyFormat = "$name `:` type($result) attr-dict";
 
   // `GetGlobalMemrefOp` is fully verified by its traits.
-  let verifier = ?;
-}
-
-//===----------------------------------------------------------------------===//
-// ImOp
-//===----------------------------------------------------------------------===//
-
-def ImOp : Std_Op<"im",
-    [NoSideEffect,
-     TypesMatchWith<"complex element type matches result type",
-                    "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
-  let summary = "extracts the imaginary part of a complex number";
-  let description = [{
-    The `im` operation takes a single complex number as its operand and extracts
-    the imaginary part as a floating-point value.
-
-    Example:
-
-    ```mlir
-    %a = im %b : complex<f32>
-    ```
-  }];
-
-  let arguments = (ins Complex<AnyFloat>:$complex);
-  let results = (outs AnyFloat:$imaginary);
-
-  let assemblyFormat = "$complex attr-dict `:` type($complex)";
-
-  // `ImOp` is fully verified by its traits.
   let verifier = ?;
 }
 
@@ -2372,36 +2276,6 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
-// ReOp
-//===----------------------------------------------------------------------===//
-
-def ReOp : Std_Op<"re",
-    [NoSideEffect,
-     TypesMatchWith<"complex element type matches result type",
-                    "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
-  let summary = "extracts the real part of a complex number";
-  let description = [{
-    The `re` operation takes a single complex number as its operand and extracts
-    the real part as a floating-point value.
-
-    Example:
-
-    ```mlir
-    %a = re %b : complex<f32>
-    ```
-  }];
-
-  let arguments = (ins Complex<AnyFloat>:$complex);
-  let results = (outs AnyFloat:$real);
-
-  let assemblyFormat = "$complex attr-dict `:` type($complex)";
-
-  // `ReOp` is fully verified by its traits.
-  let verifier = ?;
-}
-
-//===----------------------------------------------------------------------===//
 // RemFOp
 //===----------------------------------------------------------------------===//
 
@@ -2885,26 +2759,6 @@ def StoreOp : Std_Op<"store",
 
   let assemblyFormat = [{
     $value `,` $memref `[` $indices `]` attr-dict `:` type($memref)
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// SubCFOp
-//===----------------------------------------------------------------------===//
-
-def SubCFOp : ComplexFloatArithmeticOp<"subcf"> {
-  let summary = "complex number subtraction";
-  let description = [{
-    The `subcf` operation takes two complex number operands and returns their
-    difference, a single complex number.
-    All operands and result must be of the same type, a complex number with a
-    floating-point element type.
-
-    Example:
-
-    ```mlir
-    %a = subcf %b, %c : complex<f32>
-    ```
   }];
 }
 
