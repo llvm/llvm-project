@@ -1,4 +1,4 @@
-#include "libc_header.h"
+#include "stdio.h"
 
 namespace std {
   // Makes sure we get a support file for this header.
