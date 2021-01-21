@@ -37,8 +37,10 @@ add_mlir_library(MLIRIR
   MLIRBuiltinOpsIncGen
   MLIRBuiltinTypesIncGen
   MLIRCallInterfacesIncGen
+  MLIRCastInterfacesIncGen
   MLIROpAsmInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
+  MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
 
   LINK_LIBS PUBLIC
