@@ -278,10 +278,11 @@ unsigned HexagonTTIImpl::getArithmeticInstrCost(
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
-unsigned HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
-                                          Type *SrcTy, TTI::CastContextHint CCH,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) {
+InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
+                                                 Type *SrcTy,
+                                                 TTI::CastContextHint CCH,
+                                                 TTI::TargetCostKind CostKind,
+                                                 const Instruction *I) {
   if (SrcTy->isFPOrFPVectorTy() || DstTy->isFPOrFPVectorTy()) {
     unsigned SrcN = SrcTy->isFPOrFPVectorTy() ? getTypeNumElements(SrcTy) : 0;
     unsigned DstN = DstTy->isFPOrFPVectorTy() ? getTypeNumElements(DstTy) : 0;

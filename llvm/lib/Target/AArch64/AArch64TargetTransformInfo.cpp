@@ -343,10 +343,11 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstElTySize;
 }
 
-int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                                     TTI::CastContextHint CCH,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I) {
+InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                                 Type *Src,
+                                                 TTI::CastContextHint CCH,
+                                                 TTI::TargetCostKind CostKind,
+                                                 const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -371,7 +372,7 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   }
 
   // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](int Cost) {
+  auto AdjustCost = [&CostKind](InstructionCost Cost) -> InstructionCost {
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost == 0 ? 0 : 1;
     return Cost;
@@ -593,9 +594,10 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                             VectorType *VecTy,
-                                             unsigned Index) {
+InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
+                                                         Type *Dst,
+                                                         VectorType *VecTy,
+                                                         unsigned Index) {
 
   // Make sure we were given a valid extend opcode.
   assert((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
@@ -610,7 +612,8 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
 
   // Get the cost for the extract. We compute the cost (if any) for the extend
   // below.
-  auto Cost = getVectorInstrCost(Instruction::ExtractElement, VecTy, Index);
+  InstructionCost Cost =
+      getVectorInstrCost(Instruction::ExtractElement, VecTy, Index);
 
   // Legalize the types.
   auto VecLT = TLI->getTypeLegalizationCost(DL, VecTy);
