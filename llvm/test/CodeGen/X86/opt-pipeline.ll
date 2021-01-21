@@ -120,8 +120,6 @@
 ; CHECK-NEXT:       X86 EFLAGS copy lowering
 ; CHECK-NEXT:       X86 WinAlloca Expander
 ; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Slot index numbering
-; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Tile Register Pre-configure
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Process Implicit Definitions
