@@ -600,6 +600,12 @@ public:
     return 1;
   }
 
+  InstructionCost getExtendedAddReductionCost(
+      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const {
+    return 1;
+  }
+
   unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
     return 0;
   }
