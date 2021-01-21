@@ -104,34 +104,6 @@ public:
   /// Return the operation that this refers to.
   Operation *getOperation() { return state; }
 
-  /// Return the dialect that this refers to.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Dialect *getDialect(),
-      "Use Operation::getDialect() instead (replace '.' with '->').");
-
-  /// Return the parent Region of this operation.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Region *getParentRegion(),
-      "Use Operation::getParentRegion() instead (replace '.' with '->').");
-
-  /// Returns the closest surrounding operation that contains this operation
-  /// or nullptr if this is a top-level operation.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Operation *getParentOp(),
-      "Use Operation::getParentOp() instead (replace '.' with '->').");
-
-  /// Return the closest surrounding parent operation that is of type 'OpTy'.
-  template <typename OpTy>
-  LLVM_ATTRIBUTE_DEPRECATED(
-      OpTy getParentOfType(),
-      "Use Operation::getParentOfType() instead (replace '.' with '->').");
-
-  /// Returns the closest surrounding parent operation with trait `Trait`.
-  template <template <typename T> class Trait>
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Operation *getParentWithTrait(),
-      "Use Operation::getParentWithTrait() instead (replace '.' with '->').");
-
   /// Return the context this operation belongs to.
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
@@ -157,45 +129,6 @@ public:
   /// A utility iterator that filters out non-dialect attributes.
   using dialect_attr_iterator = Operation::dialect_attr_iterator;
   using dialect_attr_range = Operation::dialect_attr_range;
-
-  /// Return a range corresponding to the dialect attributes for this operation.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      dialect_attr_range getDialectAttrs(),
-      "Use Operation::getDialectAttrs() instead (replace '.' with '->').");
-  LLVM_ATTRIBUTE_DEPRECATED(
-      dialect_attr_iterator dialect_attr_begin(),
-      "Use Operation::dialect_attr_begin() instead (replace '.' with '->').");
-  LLVM_ATTRIBUTE_DEPRECATED(
-      dialect_attr_iterator dialect_attr_end(),
-      "Use Operation::dialect_attr_end() instead (replace '.' with '->').");
-
-  /// Return an attribute with the specified name.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Attribute getAttr(StringRef name),
-      "Use Operation::getAttr() instead (replace '.' with '->').");
-
-  /// If the operation has an attribute of the specified type, return it.
-  template <typename AttrClass>
-  LLVM_ATTRIBUTE_DEPRECATED(
-      AttrClass getAttrOfType(StringRef name),
-      "Use Operation::getAttrOfType() instead (replace '.' with '->').");
-
-  /// If the an attribute exists with the specified name, change it to the new
-  /// value.  Otherwise, add a new attribute with the specified name/value.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      void setAttr(Identifier name, Attribute value),
-      "Use Operation::setAttr() instead (replace '.' with '->').");
-  LLVM_ATTRIBUTE_DEPRECATED(
-      void setAttr(StringRef name, Attribute value),
-      "Use Operation::setAttr() instead (replace '.' with '->').");
-
-  /// Set the attributes held by this operation.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      void setAttrs(ArrayRef<NamedAttribute> attributes),
-      "Use Operation::setAttrs() instead (replace '.' with '->').");
-  LLVM_ATTRIBUTE_DEPRECATED(
-      void setAttrs(DictionaryAttr newAttrs),
-      "Use Operation::setAttrs() instead (replace '.' with '->').");
 
   /// Set the dialect attributes for this operation, and preserve all dependent.
   template <typename DialectAttrs>
@@ -271,19 +204,6 @@ private:
   /// Allow access to internal hook implementation methods.
   friend AbstractOperation;
 };
-
-template <typename OpTy>
-OpTy OpState::getParentOfType() {
-  return getOperation()->getParentOfType<OpTy>();
-}
-template <template <typename T> class Trait>
-Operation *OpState::getParentWithTrait() {
-  return getOperation()->getParentWithTrait<Trait>();
-}
-template <typename AttrClass>
-AttrClass OpState::getAttrOfType(StringRef name) {
-  return getAttr(name).dyn_cast_or_null<AttrClass>();
-}
 
 // Allow comparing operators.
 inline bool operator==(OpState lhs, OpState rhs) {
