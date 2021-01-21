@@ -24,12 +24,8 @@ define signext i32 @select_of_or(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i
 ;
 ; RV32IBT-LABEL: select_of_or:
 ; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    or a1, a0, a1
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:    bnez a1, .LBB0_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    mv a0, a3
-; RV32IBT-NEXT:  .LBB0_2:
+; RV32IBT-NEXT:    or a0, a0, a1
+; RV32IBT-NEXT:    cmov a0, a0, a2, a3
 ; RV32IBT-NEXT:    ret
 ;
 ; RV64I-LABEL: select_of_or:
@@ -44,12 +40,8 @@ define signext i32 @select_of_or(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i
 ;
 ; RV64IBT-LABEL: select_of_or:
 ; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    or a1, a0, a1
-; RV64IBT-NEXT:    mv a0, a2
-; RV64IBT-NEXT:    bnez a1, .LBB0_2
-; RV64IBT-NEXT:  # %bb.1:
-; RV64IBT-NEXT:    mv a0, a3
-; RV64IBT-NEXT:  .LBB0_2:
+; RV64IBT-NEXT:    or a0, a0, a1
+; RV64IBT-NEXT:    cmov a0, a0, a2, a3
 ; RV64IBT-NEXT:    ret
   %1 = or i1 %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
