@@ -14,6 +14,7 @@
 #define TOY_OPS
 
 include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "toy/ShapeInferenceInterface.td"
 
@@ -102,25 +103,25 @@ def AddOp : Toy_Op<"add",
   ];
 }
 
-def CastOp : Toy_Op<"cast",
-    [DeclareOpInterfaceMethods<ShapeInferenceOpInterface>, NoSideEffect,
-     SameOperandsAndResultShape]> {
+def CastOp : Toy_Op<"cast", [
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<ShapeInferenceOpInterface>,
+     NoSideEffect,
+     SameOperandsAndResultShape
+  ]> {
   let summary = "shape cast operation";
   let description = [{
     The "cast" operation converts a tensor from one type to an equivalent type
-    without changing any data elements. The source and destination types
-    must both be tensor types with the same element type. If both are ranked
-    then the rank should be the same and static dimensions should match. The
-    operation is invalid if converting to a mismatching constant dimension.
+    without changing any data elements. The source and destination types must
+    both be tensor types with the same element type. If both are ranked, then
+    shape is required to match. The operation is invalid if converting to a
+    mismatching constant dimension.
   }];
 
   let arguments = (ins F64Tensor:$input);
   let results = (outs F64Tensor:$output);
 
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
-
-  // Set the folder bit so that we can fold redundant cast operations.
-  let hasFolder = 1;
 }
 
 def GenericCallOp : Toy_Op<"generic_call",

@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRStandard
 
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
+  MLIRCastInterfaces
   MLIRControlFlowInterfaces
   MLIREDSC
   MLIRIR
