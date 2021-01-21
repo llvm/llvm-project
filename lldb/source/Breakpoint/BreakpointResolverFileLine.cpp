@@ -187,6 +187,14 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
     // is 0, then we can't do this calculation.  That can happen if
     // GetStartLineSourceInfo gets an error, or if the first line number in
     // the function really is 0 - which happens for some languages.
+    
+    // But only do this calculation if the line number we found in the SC
+    // was different from the one requested in the source file.  If we actually
+    // found an exact match it must be valid.
+    
+    if (m_line_number == sc.line_entry.line)
+      continue;
+
     const int decl_line_is_too_late_fudge = 1;
     if (line && m_line_number < line - decl_line_is_too_late_fudge) {
       LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
