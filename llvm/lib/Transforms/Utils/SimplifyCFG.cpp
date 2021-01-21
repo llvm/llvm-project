@@ -2766,6 +2766,27 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
+// Determine if the two branches share a common destination,
+// and deduce a glue that we need to use to join branch's conditions
+// to arrive at the common destination.
+static Optional<std::pair<Instruction::BinaryOps, bool>>
+CheckIfCondBranchesShareCommonDestination(BranchInst *BI, BranchInst *PBI) {
+  assert(BI && PBI && BI->isConditional() && PBI->isConditional() &&
+         "Both blocks must end with a conditional branches.");
+  assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
+         "PredBB must be a predecessor of BB.");
+
+  if (PBI->getSuccessor(0) == BI->getSuccessor(0))
+    return {{Instruction::Or, false}};
+  else if (PBI->getSuccessor(1) == BI->getSuccessor(1))
+    return {{Instruction::And, false}};
+  else if (PBI->getSuccessor(0) == BI->getSuccessor(1))
+    return {{Instruction::And, true}};
+  else if (PBI->getSuccessor(1) == BI->getSuccessor(0))
+    return {{Instruction::Or, true}};
+  return None;
+}
+
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -2868,22 +2889,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       continue;
 
     // Determine if the two branches share a common destination.
-    Instruction::BinaryOps Opc = Instruction::BinaryOpsEnd;
-    bool InvertPredCond = false;
-
-    if (PBI->getSuccessor(0) == TrueDest) {
-      Opc = Instruction::Or;
-    } else if (PBI->getSuccessor(1) == FalseDest) {
-      Opc = Instruction::And;
-    } else if (PBI->getSuccessor(0) == FalseDest) {
-      Opc = Instruction::And;
-      InvertPredCond = true;
-    } else if (PBI->getSuccessor(1) == TrueDest) {
-      Opc = Instruction::Or;
-      InvertPredCond = true;
-    } else {
+    Instruction::BinaryOps Opc;
+    bool InvertPredCond;
+    if (auto Recepie = CheckIfCondBranchesShareCommonDestination(BI, PBI))
+      std::tie(Opc, InvertPredCond) = *Recepie;
+    else
       continue;
-    }
 
     // Check the cost of inserting the necessary logic before performing the
     // transformation.
