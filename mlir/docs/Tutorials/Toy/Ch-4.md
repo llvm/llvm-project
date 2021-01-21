@@ -182,26 +182,50 @@ to add a new operation to the Toy dialect, `ToyCastOp`(toy.cast), to represent
 casts between two different shapes.
 
 ```tablegen
-def CastOp : Toy_Op<"cast", [NoSideEffect, SameOperandsAndResultShape]> {
+def CastOp : Toy_Op<"cast", [
+    DeclareOpInterfaceMethods<CastOpInterface>,
+    NoSideEffect,
+    SameOperandsAndResultShape]
+  > {
   let summary = "shape cast operation";
   let description = [{
     The "cast" operation converts a tensor from one type to an equivalent type
     without changing any data elements. The source and destination types
-    must both be tensor types with the same element type. If both are ranked
-    then the rank should be the same and static dimensions should match. The
-    operation is invalid if converting to a mismatching constant dimension.
+    must both be tensor types with the same element type. If both are ranked,
+    then shape is required to match. The operation is invalid if converting
+    to a mismatching constant dimension.
   }];
 
   let arguments = (ins F64Tensor:$input);
   let results = (outs F64Tensor:$output);
-
-  // Set the folder bit so that we can fold redundant cast operations.
-  let hasFolder = 1;
 }
 ```
 
-We can then override the necessary hook on the ToyInlinerInterface to insert
-this for us when necessary:
+Note that the definition of this cast operation adds a `CastOpInterface` to the
+traits list. This interface provides several utilities for cast-like operation,
+such as folding identity casts and verification. We hook into this interface by
+providing a definition for the `areCastCompatible` method:
+
+```c++
+/// Returns true if the given set of input and result types are compatible with
+/// this cast operation. This is required by the `CastOpInterface` to verify
+/// this operation and provide other additional utilities.
+bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  // The inputs must be Tensors with the same element type.
+  TensorType input = inputs.front().dyn_cast<TensorType>();
+  TensorType output = outputs.front().dyn_cast<TensorType>();
+  if (!input || !output || input.getElementType() != output.getElementType())
+    return false;
+  // The shape is required to match if both types are ranked.
+  return !input.hasRank() || !output.hasRank() || input == output;
+}
+
+```
+
+With a proper cast operation, we can now override the necessary hook on the
+ToyInlinerInterface to insert it for us when necessary:
 
 ```c++
 struct ToyInlinerInterface : public DialectInlinerInterface {
