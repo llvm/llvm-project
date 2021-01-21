@@ -122,6 +122,12 @@ vnsrl.wv v8, v4, v20, v0.t
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 04 4a b0 <unknown>
 
+vnsrl.wv v4, v4, v20, v0.t
+# CHECK-INST: vnsrl.wv v4, v4, v20, v0.t
+# CHECK-ENCODING: [0x57,0x02,0x4a,0xb0]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 02 4a b0 <unknown>
+
 vnsrl.wv v8, v4, v20
 # CHECK-INST: vnsrl.wv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0xb2]
