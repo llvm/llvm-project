@@ -1832,13 +1832,12 @@ bool BasicAAResult::constantOffsetHeuristic(
 AnalysisKey BasicAA::Key;
 
 BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return BasicAAResult(F.getParent()->getDataLayout(),
-                       F,
-                       AM.getResult<TargetLibraryAnalysis>(F),
-                       AM.getResult<AssumptionAnalysis>(F),
-                       &AM.getResult<DominatorTreeAnalysis>(F),
-                       AM.getCachedResult<LoopAnalysis>(F),
-                       AM.getCachedResult<PhiValuesAnalysis>(F));
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  auto *PV = AM.getCachedResult<PhiValuesAnalysis>(F);
+  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT, LI, PV);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
