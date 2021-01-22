@@ -140,6 +140,41 @@ DEVICE int GetNumberOfThreadsInBlock() { return __nvvm_read_ptx_sreg_ntid_x(); }
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
+// Forward declaration of atomics. Although they're template functions, we
+// already have definitions for different types in CUDA internal headers with
+// the right mangled names.
+template <typename T> DEVICE T atomicAdd(T *address, T val);
+template <typename T> DEVICE T atomicInc(T *address, T val);
+template <typename T> DEVICE T atomicMax(T *address, T val);
+template <typename T> DEVICE T atomicExch(T *address, T val);
+template <typename T> DEVICE T atomicCAS(T *address, T compare, T val);
+
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+  return atomicAdd(Address, Val);
+}
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+  return atomicInc(Address, Val);
+}
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+  return atomicMax(Address, Val);
+}
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+  return atomicExch(Address, Val);
+}
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
+                                  uint32_t Val) {
+  return atomicCAS(Address, Compare, Val);
+}
+
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                                 unsigned long long Val) {
+  return atomicExch(Address, Val);
+}
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                            unsigned long long Val) {
+  return atomicAdd(Address, Val);
+}
+
 #define __OMP_SPIN 1000
 #define UNSET 0u
 #define SET 1u

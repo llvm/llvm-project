@@ -132,11 +132,13 @@ DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 } // namespace
 
 DEVICE int GetNumberOfBlocksInKernel() {
-  return get_grid_dim(__builtin_amdgcn_grid_size_x(), __builtin_amdgcn_workgroup_size_x());
+  return get_grid_dim(__builtin_amdgcn_grid_size_x(),
+                      __builtin_amdgcn_workgroup_size_x());
 }
 
 DEVICE int GetNumberOfThreadsInBlock() {
-  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(), __builtin_amdgcn_grid_size_x(),
+  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
+                           __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
 }
 
@@ -147,6 +149,40 @@ DEVICE unsigned GetLaneId() {
 
 EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
   return GetNumberOfThreadsInBlock();
+}
+
+// Atomics
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+  return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
+}
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+  return __builtin_amdgcn_atomic_inc32(Address, max, __ATOMIC_SEQ_CST, "");
+}
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+  return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
+}
+
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+  uint32_t R;
+  __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
+  return R;
+}
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
+                                  uint32_t Val) {
+  (void)__atomic_compare_exchange(Address, &Compare, &Val, false,
+                                  __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+  return Compare;
+}
+
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                                 unsigned long long Val) {
+  unsigned long long R;
+  __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
+  return R;
+}
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                            unsigned long long Val) {
+  return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 
 // Stub implementations
