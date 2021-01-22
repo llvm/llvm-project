@@ -1,12 +1,12 @@
 # RUN: not llvm-mc -triple riscv64 -mattr=+experimental-b,experimental-zbb < %s 2>&1 | FileCheck %s
 
 # Too few operands
-slliu.w t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+slli.uw t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Immediate operand out of range
-slliu.w t0, t1, 64 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 63]
-slliu.w t0, t1, -1 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 63]
+slli.uw t0, t1, 64 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 63]
+slli.uw t0, t1, -1 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 63]
 # Too few operands
-addu.w t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+add.uw t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Too few operands
 slow t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Too few operands
