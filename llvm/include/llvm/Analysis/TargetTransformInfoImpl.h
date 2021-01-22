@@ -621,8 +621,8 @@ public:
     return 1;
   }
 
-  unsigned getMinMaxReductionCost(VectorType *, VectorType *, bool, bool,
-                                  TTI::TargetCostKind) const {
+  InstructionCost getMinMaxReductionCost(VectorType *, VectorType *, bool, bool,
+                                         TTI::TargetCostKind) const {
     return 1;
   }
 

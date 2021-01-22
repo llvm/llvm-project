@@ -179,11 +179,11 @@ public:
       unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
 
-  int getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
+  InstructionCost getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
 
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwiseForm, bool IsUnsigned,
-                             TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                         bool IsPairwiseForm, bool IsUnsigned,
+                                         TTI::TargetCostKind CostKind);
 
   int getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
