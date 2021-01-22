@@ -2089,10 +2089,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                   CmpInst::Predicate VecPred,
-                                   TTI::TargetCostKind CostKind,
-                                   const Instruction *I) {
+InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
+                                               Type *CondTy,
+                                               CmpInst::Predicate VecPred,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
@@ -3275,19 +3276,20 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
       !isPowerOf2_32(NumElem)) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnesValue(NumElem);
-    int MaskSplitCost =
+    InstructionCost MaskSplitCost =
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
-    int ScalarCompareCost = getCmpSelInstrCost(
+    InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
-    int MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
-    int ValueSplitCost =
+    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
+    InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
+    InstructionCost ValueSplitCost =
         getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                          Alignment, AddressSpace, CostKind);
-    return MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost;
+    return *(MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost)
+                .getValue();
   }
 
   // Legalize the type.
@@ -3713,10 +3715,12 @@ InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   // Otherwise fall back to cmp+select.
-  return getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CmpInst::BAD_ICMP_PREDICATE,
-                            CostKind) +
-         getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
-                            CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost Result =
+      getCmpSelInstrCost(CmpOpcode, Ty, CondTy, CmpInst::BAD_ICMP_PREDICATE,
+                         CostKind) +
+      getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                         CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  return Result;
 }
 
 InstructionCost
@@ -4185,20 +4189,20 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, const Value *Ptr,
 /// AddressSpace - pointer[s] address space.
 ///
 /// FIXME: Add TargetCostKind support.
-int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
-                                bool VariableMask, Align Alignment,
-                                unsigned AddressSpace) {
+InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
+                                            bool VariableMask, Align Alignment,
+                                            unsigned AddressSpace) {
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(VF);
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  int MaskUnpackCost = 0;
+  InstructionCost MaskUnpackCost = 0;
   if (VariableMask) {
     auto *MaskTy =
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
     MaskUnpackCost =
         getScalarizationOverhead(MaskTy, DemandedElts, false, true);
-    int ScalarCompareCost = getCmpSelInstrCost(
+    InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
     int BranchCost = getCFInstrCost(Instruction::Br, CostKind);
