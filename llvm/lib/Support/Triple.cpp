@@ -1038,7 +1038,7 @@ StringRef Triple::getOSAndEnvironmentName() const {
 }
 
 static unsigned EatNumber(StringRef &Str) {
-  assert(!Str.empty() && Str[0] >= '0' && Str[0] <= '9' && "Not a number");
+  assert(!Str.empty() && isDigit(Str[0]) && "Not a number");
   unsigned Result = 0;
 
   do {
@@ -1047,7 +1047,7 @@ static unsigned EatNumber(StringRef &Str) {
 
     // Eat the digit.
     Str = Str.substr(1);
-  } while (!Str.empty() && Str[0] >= '0' && Str[0] <= '9');
+  } while (!Str.empty() && isDigit(Str[0]));
 
   return Result;
 }
