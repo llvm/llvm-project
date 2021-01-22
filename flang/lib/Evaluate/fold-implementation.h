@@ -1105,12 +1105,13 @@ Expr<TO> FoldOperation(
         // This variable is a workaround for msvc which emits an error when
         // using the FROMCAT template parameter below.
         TypeCategory constexpr FromCat{FROMCAT};
+        static_assert(FromCat == Operand::category);
         auto &convert{msvcWorkaround.convert};
         char buffer[64];
         if (auto value{GetScalarConstantValue<Operand>(kindExpr)}) {
           FoldingContext &ctx{msvcWorkaround.context};
           if constexpr (TO::category == TypeCategory::Integer) {
-            if constexpr (Operand::category == TypeCategory::Integer) {
+            if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::ConvertSigned(*value)};
               if (converted.overflow) {
                 ctx.messages().Say(
@@ -1118,7 +1119,7 @@ Expr<TO> FoldOperation(
                     Operand::kind, TO::kind);
               }
               return ScalarConstantToExpr(std::move(converted.value));
-            } else if constexpr (Operand::category == TypeCategory::Real) {
+            } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{value->template ToInteger<Scalar<TO>>()};
               if (converted.flags.test(RealFlag::InvalidArgument)) {
                 ctx.messages().Say(
@@ -1132,7 +1133,7 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             }
           } else if constexpr (TO::category == TypeCategory::Real) {
-            if constexpr (Operand::category == TypeCategory::Integer) {
+            if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::FromInteger(*value)};
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
@@ -1141,7 +1142,7 @@ Expr<TO> FoldOperation(
                 RealFlagWarnings(ctx, converted.flags, buffer);
               }
               return ScalarConstantToExpr(std::move(converted.value));
-            } else if constexpr (Operand::category == TypeCategory::Real) {
+            } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{Scalar<TO>::Convert(*value)};
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
@@ -1154,7 +1155,7 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             }
           } else if constexpr (TO::category == TypeCategory::Complex) {
-            if constexpr (Operand::category == TypeCategory::Complex) {
+            if constexpr (FromCat == TypeCategory::Complex) {
               return FoldOperation(ctx,
                   ComplexConstructor<TO::kind>{
                       AsExpr(Convert<typename TO::Part>{AsCategoryExpr(
@@ -1163,17 +1164,31 @@ Expr<TO> FoldOperation(
                           Constant<typename Operand::Part>{value->AIMAG()})})});
             }
           } else if constexpr (TO::category == TypeCategory::Character &&
-              Operand::category == TypeCategory::Character) {
+              FromCat == TypeCategory::Character) {
             if (auto converted{ConvertString<Scalar<TO>>(std::move(*value))}) {
               return ScalarConstantToExpr(std::move(*converted));
             }
           } else if constexpr (TO::category == TypeCategory::Logical &&
-              Operand::category == TypeCategory::Logical) {
+              FromCat == TypeCategory::Logical) {
             return Expr<TO>{value->IsTrue()};
           }
-        } else if constexpr (std::is_same_v<Operand, TO> &&
+        } else if constexpr (TO::category == FromCat &&
             FromCat != TypeCategory::Character) {
-          return std::move(kindExpr); // remove needless conversion
+          // Conversion of non-constant in same type category
+          if constexpr (std::is_same_v<Operand, TO>) {
+            return std::move(kindExpr); // remove needless conversion
+          } else if constexpr (std::is_same_v<TO, DescriptorInquiry::Result>) {
+            if (auto *innerConv{
+                    std::get_if<Convert<Operand, TypeCategory::Integer>>(
+                        &kindExpr.u)}) {
+              if (auto *x{std::get_if<Expr<TO>>(&innerConv->left().u)}) {
+                if (std::holds_alternative<DescriptorInquiry>(x->u)) {
+                  // int(int(size(...),kind=k),kind=8) -> size(...)
+                  return std::move(*x);
+                }
+              }
+            }
+          }
         }
         return Expr<TO>{std::move(convert)};
       },
@@ -1201,7 +1216,9 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
     return *array;
   }
   auto &operand{x.left()};
-  if (auto value{GetScalarConstantValue<T>(operand)}) {
+  if (auto *nn{std::get_if<Negate<T>>(&x.left().u)}) {
+    return std::move(nn->left()); // -(-x) -> x
+  } else if (auto value{GetScalarConstantValue<T>(operand)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto negated{value->Negate()};
       if (negated.overflow) {
@@ -1307,6 +1324,20 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
         product.value = product.value.FlushSubnormalToZero();
       }
       return Expr<T>{Constant<T>{product.value}};
+    }
+  } else if constexpr (T::category == TypeCategory::Integer) {
+    if (auto c{GetScalarConstantValue<T>(x.right())}) {
+      x.right() = std::move(x.left());
+      x.left() = Expr<T>{std::move(*c)};
+    }
+    if (auto c{GetScalarConstantValue<T>(x.left())}) {
+      if (c->IsZero()) {
+        return std::move(x.left());
+      } else if (c->CompareSigned(Scalar<T>{1}) == Ordering::Equal) {
+        return std::move(x.right());
+      } else if (c->CompareSigned(Scalar<T>{-1}) == Ordering::Equal) {
+        return Expr<T>{Negate<T>{std::move(x.right())}};
+      }
     }
   }
   return Expr<T>{std::move(x)};
