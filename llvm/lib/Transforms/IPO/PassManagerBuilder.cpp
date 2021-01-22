@@ -60,7 +60,7 @@ UseGVNAfterVectorization("use-gvn-after-vectorization",
   cl::init(false), cl::Hidden,
   cl::desc("Run GVN instead of Early CSE after vectorization passes"));
 
-static cl::opt<bool> ExtraVectorizerPasses(
+cl::opt<bool> ExtraVectorizerPasses(
     "extra-vectorizer-passes", cl::init(false), cl::Hidden,
     cl::desc("Run cleanup optimization passes after vectorization."));
 
