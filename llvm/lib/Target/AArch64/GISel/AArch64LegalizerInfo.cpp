@@ -165,8 +165,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
-  getActionDefinitionsBuilder(
-      {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
+  getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO})
       .legalFor({{s32, s1}, {s64, s1}})
       .minScalar(0, s32);
 
