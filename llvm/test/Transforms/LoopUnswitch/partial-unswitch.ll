@@ -731,11 +731,10 @@ exit:
 
 ; Do not unswitch if the condition depends on an atomic load. Duplicating such
 ; loads is not safe.
-; TODO
 define i32 @no_partial_unswitch_atomic_load_unordered(i32* %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_atomic_load_unordered
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %loop.header
 ;
 entry:
   br label %loop.header
@@ -764,11 +763,10 @@ exit:
 
 ; Do not unswitch if the condition depends on an atomic load. Duplicating such
 ; loads is not safe.
-; TODO
 define i32 @no_partial_unswitch_atomic_load_monotonic(i32* %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_atomic_load_monotonic
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %loop.header
 ;
 entry:
   br label %loop.header
