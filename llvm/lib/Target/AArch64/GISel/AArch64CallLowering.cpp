@@ -456,6 +456,9 @@ bool AArch64CallLowering::lowerFormalArguments(
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
 
+    if (Arg.hasAttribute(Attribute::SwiftAsync))
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv());
     ++i;
   }

@@ -108,6 +108,11 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// True if this function has any preallocated calls.
   bool HasPreallocatedCall = false;
 
+  /// Whether this function has an extended frame record [Ctx, RBP, Return
+  /// addr]. If so, bit 60 of the in-memory frame pointer will be 1 to enable
+  /// other tools to detect the extended record.
+  bool HasSwiftAsyncContext = false;
+
   ValueMap<const Value *, size_t> PreallocatedIds;
   SmallVector<size_t, 0> PreallocatedStackSizes;
   SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
@@ -196,6 +201,9 @@ public:
 
   bool hasPreallocatedCall() const { return HasPreallocatedCall; }
   void setHasPreallocatedCall(bool v) { HasPreallocatedCall = v; }
+
+  bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+  void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
 
   size_t getPreallocatedIdForCallSite(const Value *CS) {
     auto Insert = PreallocatedIds.insert({CS, PreallocatedIds.size()});
