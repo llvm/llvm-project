@@ -1227,6 +1227,57 @@ def LLVM_UMulWithOverflowOp
 }
 
 //
+// Coroutine intrinsics.
+//
+
+def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
+  let arguments = (ins LLVM_i32:$align,
+                       LLVM_i8Ptr:$promise,
+                       LLVM_i8Ptr:$coroaddr,
+                       LLVM_i8Ptr:$fnaddrs);
+  let assemblyFormat = "$align `,` $promise `,` $coroaddr `,` $fnaddrs"
+    " attr-dict `:` type($res)";
+}
+
+def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
+  let arguments = (ins LLVM_TokenType:$token,
+                       LLVM_i8Ptr:$mem);
+  let assemblyFormat = "$token `,` $mem attr-dict `:` type($res)";
+}
+
+def LLVM_CoroSizeOp : LLVM_IntrOp<"coro.size", [0], [], [], 1> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
+  let arguments = (ins LLVM_i8Ptr:$handle);
+  let assemblyFormat = "$handle attr-dict `:` type($res)";
+}
+
+def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
+  let arguments = (ins LLVM_TokenType:$save,
+                       LLVM_i1:$final);
+  let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
+}
+
+def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
+  let arguments = (ins LLVM_i8Ptr:$handle,
+                       LLVM_i1:$unwind);
+  let assemblyFormat = "$handle `,` $unwind attr-dict `:` type($res)";
+}
+
+def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
+  let arguments = (ins LLVM_TokenType:$id,
+                       LLVM_i8Ptr:$handle);
+  let assemblyFormat = "$id `,` $handle attr-dict `:` type($res)";
+}
+
+def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
+  let arguments = (ins LLVM_i8Ptr:$handle);
+  let assemblyFormat = "$handle attr-dict";
+}
+
+//
 // Vector Reductions.
 //
 

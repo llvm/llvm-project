@@ -21,8 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
   let summary = [{
-    Construct a new composite object from a set of constituent objects that
-    will fully form it.
+    Construct a new composite object from a set of constituent objects.
   }];
 
   let description = [{
@@ -217,13 +216,12 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
   let results = (outs
     SPV_Scalar:$result
   );
-  
+
   let verifier = [{ return success(); }];
   
   let assemblyFormat = [{
     $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
   }];
-  
 }
 
 // -----
@@ -281,7 +279,7 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic",
   let results = (outs
     SPV_Vector:$result
   );
-  
+
   let verifier = [{ return success(); }];
   
   let assemblyFormat = [{

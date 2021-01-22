@@ -20,8 +20,8 @@
 def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
   [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
-    Return the Value of the invocation identified by the local id LocalId to
-    all invocations in the group.
+    Broadcast the Value of the invocation identified by the local id LocalId
+    to the result of all invocations in the group.
   }];
 
   let description = [{

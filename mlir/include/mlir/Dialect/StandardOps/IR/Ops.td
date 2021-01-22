@@ -2795,7 +2795,7 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 
     The SubView operation supports the following arguments:
 
-    * semref: the "base" memref on which to create a "view" memref.
+    * source: the "base" memref on which to create a "view" memref.
     * offsets: memref-rank number of offsets into the "base" memref at which to
                create the "view" memref.
     * sizes: memref-rank number of sizes which specify the sizes of the result
@@ -2995,7 +2995,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 
     The subtensor operation supports the following arguments:
 
-    * tensor: the "base" tensor from which to extract a subtensor.
+    * source: the "base" tensor from which to extract a subtensor.
     * offsets: tensor-rank number of offsets into the "base" tensor from which
                to extract the subtensor.
     * sizes: tensor-rank number of sizes which specify the sizes of the result
@@ -3072,9 +3072,9 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
       return getResult().getType().cast<RankedTensorType>();
     }
 
-    /// A subview result type can be fully inferred from the source type and the
-    /// static representation of offsets, sizes and strides. Special sentinels
-    /// encode the dynamic case.
+    /// A subtensor result type can be fully inferred from the source type and
+    /// the static representation of offsets, sizes and strides. Special
+    /// sentinels encode the dynamic case.
     static Type inferResultType(RankedTensorType sourceRankedTensorType,
                                 ArrayRef<int64_t> staticOffsets,
                                 ArrayRef<int64_t> staticSizes,

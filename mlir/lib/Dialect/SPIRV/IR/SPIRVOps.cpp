@@ -900,6 +900,16 @@ static void buildLogicalBinaryOp(OpBuilder &builder, OperationState &state,
   state.addOperands({lhs, rhs});
 }
 
+static void buildLogicalUnaryOp(OpBuilder &builder, OperationState &state,
+                                Value value) {
+  Type boolType = builder.getI1Type();
+  if (auto vecType = value.getType().dyn_cast<VectorType>())
+    boolType = VectorType::get(vecType.getShape(), boolType);
+  state.addTypes(boolType);
+
+  state.addOperands(value);
+}
+
 //===----------------------------------------------------------------------===//
 // spv.AccessChainOp
 //===----------------------------------------------------------------------===//
