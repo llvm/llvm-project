@@ -208,11 +208,8 @@ if is_configured('test_compiler'):
 if is_configured('dsymutil'):
   dotest_cmd += ['--dsymutil', config.dsymutil]
 
-if is_configured('filecheck'):
-  dotest_cmd += ['--filecheck', config.filecheck]
-
-if is_configured('yaml2obj'):
-  dotest_cmd += ['--yaml2obj', config.yaml2obj]
+if is_configured('llvm_tools_dir'):
+  dotest_cmd += ['--llvm-tools-dir', config.llvm_tools_dir]
 
 if is_configured('server'):
   dotest_cmd += ['--server', config.server]
