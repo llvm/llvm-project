@@ -12923,7 +12923,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     return ExprError();
   }
 
-  // Build an implicit member access expression if appropriate. Just drop the
+  // Build an implicit member call if appropriate.  Just drop the
   // casts and such from the call, we don't really care.
   ExprResult NewFn = ExprError();
   if ((*R.begin())->isCXXClassMember())
@@ -12938,19 +12938,12 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   if (NewFn.isInvalid())
     return ExprError();
 
-  auto CallE =
-      SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
-                            MultiExprArg(Args.data(), Args.size()), RParenLoc);
-  if (CallE.isInvalid())
-    return ExprError();
-  // We now have recovered a callee. However, building a real call may lead to
-  // incorrect secondary diagnostics if our recovery wasn't correct.
-  // We keep the recovery behavior but suppress all following diagnostics by
-  // using RecoveryExpr. We deliberately drop the return type of the recovery
-  // function, and rely on clang's dependent mechanism to suppress following
-  // diagnostics.
-  return SemaRef.CreateRecoveryExpr(CallE.get()->getBeginLoc(),
-                                    CallE.get()->getEndLoc(), {CallE.get()});
+  // This shouldn't cause an infinite loop because we're giving it
+  // an expression with viable lookup results, which should never
+  // end up here.
+  return SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
+                               MultiExprArg(Args.data(), Args.size()),
+                               RParenLoc);
 }
 
 /// Constructs and populates an OverloadedCandidateSet from
