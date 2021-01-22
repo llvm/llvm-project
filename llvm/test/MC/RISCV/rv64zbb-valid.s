@@ -12,12 +12,6 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zbb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: slli.uw t0, t1, 0
-# CHECK-ASM: encoding: [0x9b,0x12,0x03,0x08]
-slli.uw t0, t1, 0
-# CHECK-ASM-AND-OBJ: add.uw t0, t1, t2
-# CHECK-ASM: encoding: [0xbb,0x02,0x73,0x08]
-add.uw t0, t1, t2
 # CHECK-ASM-AND-OBJ: slow t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0x20]
 slow t0, t1, t2
