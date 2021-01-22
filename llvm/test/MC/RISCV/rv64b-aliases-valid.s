@@ -23,7 +23,7 @@ zext.b x5, x6
 # CHECK-S-OBJ: zext.h t0, t1
 zext.h x5, x6
 
-# CHECK-S-OBJ-NOALIAS: pack t0, t1, zero
+# CHECK-S-OBJ-NOALIAS: add.uw t0, t1, zero
 # CHECK-S-OBJ: zext.w t0, t1
 zext.w x5, x6
 
