@@ -1904,9 +1904,6 @@ private:
   void init(AAResults &AA, AssumptionCache &AC, DominatorTree &DT,
             LoopInfo &LI);
 
-  /// Add parameter constraints to @p C that imply a non-empty domain.
-  isl::set addNonEmptyDomainConstraints(isl::set C) const;
-
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
