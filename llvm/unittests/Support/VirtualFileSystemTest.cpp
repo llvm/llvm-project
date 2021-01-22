@@ -2135,7 +2135,41 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {
   EXPECT_TRUE(Status->exists());
 
   Status = FS->status("foo/a");
-  ASSERT_TRUE(Status.getError());
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+}
+
+TEST_F(VFSFromYAMLTest, VirtualWorkingDirectory) {
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/");
+  Lower->addDirectory("//root/foo");
+  Lower->addRegularFile("//root/foo/a");
+  Lower->addRegularFile("//root/foo/b");
+  Lower->addRegularFile("//root/c");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/bar',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'a',\n"
+      "                  'external-contents': '//root/foo/a'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+  std::error_code EC = FS->setCurrentWorkingDirectory("//root/bar");
+  ASSERT_FALSE(EC);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  llvm::ErrorOr<vfs::Status> Status = FS->status("a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
 }
 
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
