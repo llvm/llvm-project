@@ -54,6 +54,9 @@
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager
+; CHECK-O-NEXT: Running analysis: BasicAA
+; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
+; CHECK-O-NEXT: Running analysis: TypeBasedAA
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
@@ -104,17 +107,19 @@
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
-; CHECK-O-NEXT: Running analysis: AAManager on foo
+; CHECK-O-NEXT: Running analysis: AAManager
+; CHECK-O-NEXT: Running analysis: BasicAA
+; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
+; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
+; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
+; CHECK-O-NEXT: Running analysis: TypeBasedAA
+; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
 ; CHECK-O3-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O2-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O3-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Starting {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Running pass: SROA
-; These next two can appear in any order since they are accessed as parameters
-; on the same call to SROA::runImpl
-; CHECK-O-DAG: Running analysis: DominatorTreeAnalysis on foo
-; CHECK-O-DAG: Running analysis: AssumptionAnalysis on foo
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O1-NEXT: Running analysis: TargetIRAnalysis on foo
 ; CHECK-O2-NEXT: Running analysis: TargetIRAnalysis on foo
@@ -129,7 +134,6 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
