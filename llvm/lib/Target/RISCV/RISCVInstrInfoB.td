@@ -85,26 +85,26 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
 }]>;
 
 // Checks if this mask has a single 0 bit and cannot be used with ANDI.
-def SBCLRMask : ImmLeaf<XLenVT, [{
+def BCLRMask : ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return !isInt<12>(Imm) && isPowerOf2_64(~Imm);
   return !isInt<12>(Imm) && isPowerOf2_32(~Imm);
 }]>;
 
 // Checks if this mask has a single 1 bit and cannot be used with ORI/XORI.
-def SBSETINVMask : ImmLeaf<XLenVT, [{
+def BSETINVMask : ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return !isInt<12>(Imm) && isPowerOf2_64(Imm);
   return !isInt<12>(Imm) && isPowerOf2_32(Imm);
 }]>;
 
-def SBCLRXForm : SDNodeXForm<imm, [{
+def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
   return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingOnes(),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
-def SBSETINVXForm : SDNodeXForm<imm, [{
+def BSETINVXForm : SDNodeXForm<imm, [{
   // Find the lowest 1.
   return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
                                    SDLoc(N), N->getValueType(0));
@@ -112,13 +112,13 @@ def SBSETINVXForm : SDNodeXForm<imm, [{
 
 // Similar to above, but makes sure the immediate has 33 sign bits. When used
 // with an AND/OR/XOR where the other operand has at least 33 sign bits, the
-// result will have 33 sign bits. This can match SBCLRIW/SBSETIW/SBINVIW.
-def SBCLRWMask : ImmLeaf<i64, [{
+// result will have 33 sign bits. This can match BCLRIW/BSETIW/BINVIW.
+def BCLRWMask : ImmLeaf<i64, [{
   // After checking the sign bits, truncate to 32 bits for power of 2 check.
   return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(~Imm);
 }]>;
 
-def SBSETINVWMask : ImmLeaf<i64, [{
+def BSETINVWMask : ImmLeaf<i64, [{
   return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(Imm);
 }]>;
 
@@ -241,10 +241,10 @@ def ROR   : ALU_rr<0b0110000, 0b101, "ror">, Sched<[]>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbs] in {
-def SBCLR : ALU_rr<0b0100100, 0b001, "sbclr">, Sched<[]>;
-def SBSET : ALU_rr<0b0010100, 0b001, "sbset">, Sched<[]>;
-def SBINV : ALU_rr<0b0110100, 0b001, "sbinv">, Sched<[]>;
-def SBEXT : ALU_rr<0b0100100, 0b101, "sbext">, Sched<[]>;
+def BCLR : ALU_rr<0b0100100, 0b001, "bclr">, Sched<[]>;
+def BSET : ALU_rr<0b0010100, 0b001, "bset">, Sched<[]>;
+def BINV : ALU_rr<0b0110100, 0b001, "binv">, Sched<[]>;
+def BEXT : ALU_rr<0b0100100, 0b101, "bext">, Sched<[]>;
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbp] in {
@@ -261,10 +261,10 @@ let Predicates = [HasStdExtZbbOrZbp] in
 def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">, Sched<[]>;
 
 let Predicates = [HasStdExtZbs] in {
-def SBCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "sbclri">, Sched<[]>;
-def SBSETI : RVBShift_ri<0b00101, 0b001, OPC_OP_IMM, "sbseti">, Sched<[]>;
-def SBINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "sbinvi">, Sched<[]>;
-def SBEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "sbexti">, Sched<[]>;
+def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">, Sched<[]>;
+def BSETI : RVBShift_ri<0b00101, 0b001, OPC_OP_IMM, "bseti">, Sched<[]>;
+def BINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "binvi">, Sched<[]>;
+def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">, Sched<[]>;
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbp] in {
@@ -350,8 +350,10 @@ def UNSHFL : ALU_rr<0b0000100, 0b101, "unshfl">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbe] in {
-def BDEP : ALU_rr<0b0100100, 0b110, "bdep">, Sched<[]>;
-def BEXT : ALU_rr<0b0000100, 0b110, "bext">, Sched<[]>;
+// NOTE: These mnemonics are from the 0.94 spec. There is a name conflict with
+// bext in the 0.93 spec.
+def BDECOMPRESS : ALU_rr<0b0100100, 0b110, "bdecompress">, Sched<[]>;
+def BCOMPRESS   : ALU_rr<0b0000100, 0b110, "bcompress">, Sched<[]>;
 } // Predicates = [HasStdExtZbe]
 
 let Predicates = [HasStdExtZbbOrZbp] in {
@@ -394,10 +396,10 @@ def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">, Sched<[]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
-def SBCLRW : ALUW_rr<0b0100100, 0b001, "sbclrw">, Sched<[]>;
-def SBSETW : ALUW_rr<0b0010100, 0b001, "sbsetw">, Sched<[]>;
-def SBINVW : ALUW_rr<0b0110100, 0b001, "sbinvw">, Sched<[]>;
-def SBEXTW : ALUW_rr<0b0100100, 0b101, "sbextw">, Sched<[]>;
+def BCLRW : ALUW_rr<0b0100100, 0b001, "bclrw">, Sched<[]>;
+def BSETW : ALUW_rr<0b0010100, 0b001, "bsetw">, Sched<[]>;
+def BINVW : ALUW_rr<0b0110100, 0b001, "binvw">, Sched<[]>;
+def BEXTW : ALUW_rr<0b0100100, 0b101, "bextw">, Sched<[]>;
 } // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
@@ -414,11 +416,11 @@ let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
 def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">, Sched<[]>;
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
-def SBCLRIW : RVBShiftW_ri<0b0100100, 0b001, OPC_OP_IMM_32, "sbclriw">,
+def BCLRIW : RVBShiftW_ri<0b0100100, 0b001, OPC_OP_IMM_32, "bclriw">,
               Sched<[]>;
-def SBSETIW : RVBShiftW_ri<0b0010100, 0b001, OPC_OP_IMM_32, "sbsetiw">,
+def BSETIW : RVBShiftW_ri<0b0010100, 0b001, OPC_OP_IMM_32, "bsetiw">,
               Sched<[]>;
-def SBINVIW : RVBShiftW_ri<0b0110100, 0b001, OPC_OP_IMM_32, "sbinviw">,
+def BINVIW : RVBShiftW_ri<0b0110100, 0b001, OPC_OP_IMM_32, "binviw">,
               Sched<[]>;
 } // Predicates = [HasStdExtZbs, IsRV64]
 
@@ -451,8 +453,10 @@ def UNSHFLW : ALUW_rr<0b0000100, 0b101, "unshflw">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbe, IsRV64] in {
-def BDEPW : ALUW_rr<0b0100100, 0b110, "bdepw">, Sched<[]>;
-def BEXTW : ALUW_rr<0b0000100, 0b110, "bextw">, Sched<[]>;
+// NOTE: These mnemonics are from the 0.94 spec. There is a name conflict with
+// bextw in the 0.93 spec.
+def BDECOMPRESSW : ALUW_rr<0b0100100, 0b110, "bdecompressw">, Sched<[]>;
+def BCOMPRESSW   : ALUW_rr<0b0000100, 0b110, "bcompressw">, Sched<[]>;
 } // Predicates = [HasStdExtZbe, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
@@ -651,24 +655,24 @@ def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
 
 let Predicates = [HasStdExtZbs] in {
 def : Pat<(and (not (shiftop<shl> 1, GPR:$rs2)), GPR:$rs1),
-          (SBCLR GPR:$rs1, GPR:$rs2)>;
-def : Pat<(and (rotl -2, GPR:$rs2), GPR:$rs1), (SBCLR GPR:$rs1, GPR:$rs2)>;
+          (BCLR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(and (rotl -2, GPR:$rs2), GPR:$rs1), (BCLR GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
-          (SBSET GPR:$rs1, GPR:$rs2)>;
+          (BSET GPR:$rs1, GPR:$rs2)>;
 def : Pat<(xor (shiftop<shl> 1, GPR:$rs2), GPR:$rs1),
-          (SBINV GPR:$rs1, GPR:$rs2)>;
+          (BINV GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (shiftop<srl> GPR:$rs1, GPR:$rs2), 1),
-          (SBEXT GPR:$rs1, GPR:$rs2)>;
+          (BEXT GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(shiftop<shl> 1, GPR:$rs2),
-          (SBSET X0, GPR:$rs2)>;
+          (BSET X0, GPR:$rs2)>;
 
-def : Pat<(and GPR:$rs1, SBCLRMask:$mask),
-          (SBCLRI GPR:$rs1, (SBCLRXForm imm:$mask))>;
-def : Pat<(or GPR:$rs1, SBSETINVMask:$mask),
-          (SBSETI GPR:$rs1, (SBSETINVXForm imm:$mask))>;
-def : Pat<(xor GPR:$rs1, SBSETINVMask:$mask),
-          (SBINVI GPR:$rs1, (SBSETINVXForm imm:$mask))>;
+def : Pat<(and GPR:$rs1, BCLRMask:$mask),
+          (BCLRI GPR:$rs1, (BCLRXForm imm:$mask))>;
+def : Pat<(or GPR:$rs1, BSETINVMask:$mask),
+          (BSETI GPR:$rs1, (BSETINVXForm imm:$mask))>;
+def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
+          (BINVI GPR:$rs1, (BSETINVXForm imm:$mask))>;
 }
 
 let Predicates = [HasStdExtZbp] in {
@@ -691,7 +695,7 @@ def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
 // pattern-matched by simple andi, ori, and xori.
 let Predicates = [HasStdExtZbs] in
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
-          (SBEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
+          (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 
 def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDTIntBinOp, []>;
 def riscv_greviw   : SDNode<"RISCVISD::GREVIW", SDTIntBinOp, []>;
@@ -876,29 +880,29 @@ def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
 def : Pat<(and (not (riscv_sllw 1, GPR:$rs2)), (assertsexti32 GPR:$rs1)),
-          (SBCLRW GPR:$rs1, GPR:$rs2)>;
+          (BCLRW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (and (not (riscv_sllw 1, GPR:$rs2)), GPR:$rs1), i32),
-          (SBCLRW GPR:$rs1, GPR:$rs2)>;
+          (BCLRW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
-          (SBSETW GPR:$rs1, GPR:$rs2)>;
+          (BSETW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (or (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
-          (SBSETW GPR:$rs1, GPR:$rs2)>;
+          (BSETW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(xor (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
-          (SBINVW GPR:$rs1, GPR:$rs2)>;
+          (BINVW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (xor (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
-          (SBINVW GPR:$rs1, GPR:$rs2)>;
+          (BINVW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
-          (SBEXTW GPR:$rs1, GPR:$rs2)>;
+          (BEXTW GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(riscv_sllw 1, GPR:$rs2),
-          (SBSETW X0, GPR:$rs2)>;
+          (BSETW X0, GPR:$rs2)>;
 
-def : Pat<(and (assertsexti32 GPR:$rs1), SBCLRWMask:$mask),
-          (SBCLRIW GPR:$rs1, (SBCLRXForm imm:$mask))>;
-def : Pat<(or (assertsexti32 GPR:$rs1), SBSETINVWMask:$mask),
-          (SBSETIW GPR:$rs1, (SBSETINVXForm imm:$mask))>;
-def : Pat<(xor (assertsexti32 GPR:$rs1), SBSETINVWMask:$mask),
-          (SBINVIW GPR:$rs1, (SBSETINVXForm imm:$mask))>;
+def : Pat<(and (assertsexti32 GPR:$rs1), BCLRWMask:$mask),
+          (BCLRIW GPR:$rs1, (BCLRXForm imm:$mask))>;
+def : Pat<(or (assertsexti32 GPR:$rs1), BSETINVWMask:$mask),
+          (BSETIW GPR:$rs1, (BSETINVXForm imm:$mask))>;
+def : Pat<(xor (assertsexti32 GPR:$rs1), BSETINVWMask:$mask),
+          (BINVIW GPR:$rs1, (BSETINVXForm imm:$mask))>;
 
 } // Predicates = [HasStdExtZbs, IsRV64]
 
