@@ -631,8 +631,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   if (IsUpdatedCSRsInitialized)
     UpdatedCSRs.clear();
 
-  for (MCPhysReg Reg : CSRs)
-    UpdatedCSRs.push_back(Reg);
+  append_range(UpdatedCSRs, CSRs);
 
   // Zero value represents the end of the register list
   // (no more registers should be pushed).

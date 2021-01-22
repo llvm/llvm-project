@@ -998,9 +998,7 @@ void SplitEditor::computeRedundantBackCopies(
     }
     if (!DominatedVNIs.empty()) {
       forceRecompute(0, *ParentVNI);
-      for (auto VNI : DominatedVNIs) {
-        BackCopies.push_back(VNI);
-      }
+      append_range(BackCopies, DominatedVNIs);
       DominatedVNIs.clear();
     }
   }
