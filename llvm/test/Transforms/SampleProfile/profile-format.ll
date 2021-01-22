@@ -8,6 +8,8 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.md5extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.fixlenmd5.extbinary.afdo -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.fixlenmd5.extbinary.afdo -S | FileCheck %s
+; RUN: not opt < %s -sample-profile -sample-profile-file=%S/Inputs/bad.extbinary.afdo -S 2>&1 | FileCheck %s -check-prefix=BAD-PROFILE
+; RUN: not opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/bad.extbinary.afdo -S 2>&1 | FileCheck %s -check-prefix=BAD-PROFILE
 
 ; Original C++ test case
 ;
@@ -37,6 +39,9 @@
 ; CHECK: ![[IDX1]] = !{!"branch_weights", i32 5392, i32 163}
 ; CHECK: ![[IDX2]] = !{!"branch_weights", i32 5280, i32 113}
 ; CHECK: ![[IDX3]] = !{!"branch_weights", i32 1}
+
+; Check sample-profile phase will report error when it is reading a bad profile.
+; BAD-PROFILE: error: {{.*}}bad.extbinary.afdo: profile reading failed: Malformed sample profile data
 
 ; Function Attrs: nounwind uwtable
 define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !4 {
