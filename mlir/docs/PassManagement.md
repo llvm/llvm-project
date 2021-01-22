@@ -1145,8 +1145,7 @@ was executing, as well as the initial IR before any passes were run. A potential
 reproducible may have the form:
 
 ```mlir
-// configuration: -pass-pipeline='func(cse,canonicalize),inline'
-// note: verifyPasses=false
+// configuration: -pass-pipeline='func(cse,canonicalize),inline' -verify-each
 
 module {
   func @foo() {
@@ -1158,6 +1157,10 @@ module {
 The configuration dumped can be passed to `mlir-opt` by specifying
 `-run-reproducer` flag. This will result in parsing the first line configuration
 of the reproducer and adding those to the command line options.
+
+Beyond specifying a filename, one can also register a `ReproducerStreamFactory`
+function that would be invoked in the case of a crash and the reproducer written
+to its stream.
 
 ### Local Reproducer Generation
 

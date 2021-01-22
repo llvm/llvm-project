@@ -192,6 +192,29 @@ public:
   void enableCrashReproducerGeneration(StringRef outputFile,
                                        bool genLocalReproducer = false);
 
+  /// Streams on which to output crash reproducer.
+  struct ReproducerStream {
+    virtual ~ReproducerStream() = default;
+
+    /// Description of the reproducer stream.
+    virtual StringRef description() = 0;
+
+    /// Stream on which to output reproducer.
+    virtual raw_ostream &os() = 0;
+  };
+
+  /// Method type for constructing ReproducerStream.
+  using ReproducerStreamFactory =
+      std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
+
+  /// Enable support for the pass manager to generate a reproducer on the event
+  /// of a crash or a pass failure. `factory` is used to construct the streams
+  /// to write the generated reproducer to. If `genLocalReproducer` is true, the
+  /// pass manager will attempt to generate a local reproducer that contains the
+  /// smallest pipeline.
+  void enableCrashReproducerGeneration(ReproducerStreamFactory factory,
+                                       bool genLocalReproducer = false);
+
   /// Runs the verifier after each individual pass.
   void enableVerifier(bool enabled = true);
 
@@ -349,8 +372,8 @@ private:
   /// A manager for pass instrumentations.
   std::unique_ptr<PassInstrumentor> instrumentor;
 
-  /// An optional filename to use when generating a crash reproducer if valid.
-  Optional<std::string> crashReproducerFileName;
+  /// An optional factory to use when generating a crash reproducer if valid.
+  ReproducerStreamFactory crashReproducerStreamFactory;
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
