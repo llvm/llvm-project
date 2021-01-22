@@ -25,6 +25,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -348,13 +349,15 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
   return true;
 }
 
+/// For `consumer` with buffer semantics, find the Linalg operation on buffers
+/// that is the last writer of `consumerOpOperand`. For now the fusable
+/// dependence is returned as an instance of the `dependenceGraph`.
 static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
 findFusableProducer(OpOperand &consumerOpOperand,
                     const LinalgDependenceGraph &dependenceGraph) {
-  LinalgOp consumerOp = cast<LinalgOp>(consumerOpOperand.getOwner());
-  // Note that buffer semantics implies that the dependence will only be from
-  // OpOperand -> OpOperand.
-  assert(consumerOp.hasBufferSemantics() && "revisit usage of shaped operand");
+  LinalgOp consumerOp = dyn_cast<LinalgOp>(consumerOpOperand.getOwner());
+  if (!consumerOp)
+    return {};
 
   // Only consider RAW and WAW atm.
   for (auto depType : {
@@ -378,18 +381,21 @@ findFusableProducer(OpOperand &consumerOpOperand,
       LLVM_DEBUG(llvm::dbgs()
                  << "\n"
                  << LinalgDependenceGraph::getDependenceTypeStr(depType)
-                 << "producer: " << *dependence.getDependentOp() << " view: "
-                 << dependence.getDependentValue() << " output index: "
-                 << (dependence.getDependentOpViewOperandNum().getValue() -
-                     producer.getNumInputs())
-                 << "\n");
+                 << "producer: " << *dependence.getDependentOp()
+                 << " view: " << dependence.getDependentValue() << "\n");
 
-      // Simple fusability checks.
-      if (!isFusableInto(dependenceGraph, consumerOp, consumerOpOperand.get(),
-                         producer))
-        continue;
-
-      return dependence;
+      // If the producer and consumer have tensor semantics, the only dependence
+      // between them is through a RAW dependence and they are fusable by
+      // construction. For buffer semantics need additional checks.
+      if (producer.hasBufferSemantics() && consumerOp.hasBufferSemantics() &&
+          isFusableInto(dependenceGraph, consumerOp, consumerOpOperand.get(),
+                        producer))
+        return dependence;
+      if (producer.hasTensorSemantics() && consumerOp.hasTensorSemantics()) {
+        assert(dependence.dependenceType ==
+               LinalgDependenceGraph::DependenceType::RAW);
+        return dependence;
+      }
     }
   }
   return {};
@@ -439,6 +445,10 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
 
 /// Walk back use-def chain through scf::For yields.
 /// Sets `producer` and `outputIndex` if it finds a producer LinalgOp
+
+// TODO(ravishankarm, ntv): This can be moved into the dependence graphs
+// dependence tracking since the dependence tracking is similar to what is done
+// w.r.t to buffers.
 static void getProducerOfTensor(Value tensor, OpResult &opResult) {
   if (!tensor.getType().isa<RankedTensorType>())
     return;
@@ -722,6 +732,45 @@ collectFusableLoops(ArrayRef<LinalgOp> ops,
   return fusableLoops;
 }
 
+// /// For `consumer` with tensor semantics, find the Linalg operation on
+// tensors
+// /// producer the operand at position `consumerIdx`. This is a simple use-def
+// /// chain using the SSA value, but returned as an element of the
+// /// `LinalgDependenceGraphElem` to use the same analysis for both tensors and
+// /// buffers.
+// static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+// findFusableProducerForTensorOp(OpOperand &consumerOpOperand) {
+//   // For now only looking for cases where the operand is produced by another
+//   // Linalg structured operation.
+//   LinalgOp consumer = cast<LinalgOp>(consumerOpOperand.getOwner());
+//   if (!consumer || !consumer.hasTensorSemantics())
+//     return llvm::None;
+//   unsigned consumerIdx = consumerOpOperand.getOperandNumber();
+//   Value value = consumerOpOperand.get();
+//   if (auto linalgOp = value.getDefiningOp<LinalgOp>()) {
+//     return LinalgDependenceGraph::LinalgDependenceGraphElem{
+//         &(linalgOp
+//               .getOutputOpOperands()[value.cast<OpResult>().getResultNumber()]),
+//         &(consumer.getInputOpOperands()[consumerIdx]),
+//         LinalgDependenceGraph::DependenceType::RAW};
+//   }
+//   return llvm::None;
+// }
+
+// static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+// findFusableProducer(OpOperand &consumerOpOperand,
+//                     const LinalgDependenceGraph &dependenceGraph) {
+//   LinalgOp consumer = cast<LinalgOp>(consumerOpOperand.getOwner());
+//   if (!consumer)
+//     return llvm::None;
+//   if (consumer.hasBufferSemantics())
+//     return findFusableProducerForBufferOp(consumerOpOperand,
+//     dependenceGraph);
+//   if (consumer.hasTensorSemantics())
+//     return findFusableProducerForTensorOp(consumerOpOperand);
+//   return llvm::None;
+// }
+
 /// Find all dependences that are fusable.
 FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
     ArrayRef<LinalgOp> ops, const LinalgDependenceGraph &dependenceGraph) {
@@ -798,7 +847,7 @@ static Optional<TiledLinalgOp> tileRootOperation(
 /// `fusionCandidates`, i.e. move the operation within the inter-tile loops of
 /// `tiledOp`.
 static SmallVector<LinalgOp, 1>
-fuseOperations(OpBuilder &builder, LinalgOp tiledOp,
+fuseOperations(OpBuilder &builder, LinalgOp rootOp, LinalgOp tiledOp,
                ArrayRef<LinalgOp> fusionCandidates,
                const FusableOpDependencesTy &fusableDependences,
                const std::set<unsigned> &fusedLoops) {
@@ -812,9 +861,33 @@ fuseOperations(OpBuilder &builder, LinalgOp tiledOp,
   }
 
   SmallVector<LinalgOp, 1> fusedOps(fusionCandidates.size());
+  DenseMap<Operation *, LinalgOp> origOpToFusedOp;
+  origOpToFusedOp[rootOp.getOperation()] = tiledOp;
   for (auto candidate : enumerate(llvm::reverse(fusionCandidates))) {
-    LinalgOp fusedOp = fuse(builder, candidate.value(), fusedLoopsAndRanges);
+    LinalgOp origOp = candidate.value();
+    LinalgOp fusedOp = fuse(builder, origOp, fusedLoopsAndRanges);
+    origOpToFusedOp[origOp.getOperation()] = fusedOp;
     fusedOps[fusionCandidates.size() - candidate.index() - 1] = fusedOp;
+    // If the producer consumer operations are linalg operations on tensors, the
+    // dependence is due to value produced (as a return tensor) by the producer
+    // and used in the consumer. The returned value of the fused op needs to be
+    // made the operand of the tiled/fused consumer operation. By construction
+    // the value returned by the producer is the value used by the consumer.
+    for (auto &dependence : fusableDependences.lookup(origOp.getOperation())) {
+      if (origOp.hasTensorSemantics() &&
+          dependence.dependenceType ==
+              LinalgDependenceGraph::DependenceType::RAW) {
+        unsigned resultIndex =
+            dependence.getDependentOpViewResultNum().getValue();
+        LinalgOp consumer = origOpToFusedOp.lookup(dependence.getIndexingOp());
+        if (!consumer)
+          continue;
+        Value replacementValue = fusedOp.getOperation()->getResult(resultIndex);
+        consumer.getOperation()->setOperand(
+            dependence.getIndexingOpViewOperandNum().getValue(),
+            replacementValue);
+      }
+    }
     builder.setInsertionPoint(fusedOp);
   }
   return fusedOps;
@@ -828,14 +901,16 @@ tileAndFuseLinalgOpsImpl(OpBuilder &builder, ArrayRef<LinalgOp> ops,
   if (ops.size() < 2)
     return llvm::None;
   LinalgOp rootOp = ops.back();
-  for (auto op : enumerate(ops)) {
-    // TODO: Nothing in the fusion of sequence of ops is specific to
-    // buffers. This check can be removed after it is tested on tensors.
-    LinalgOp linalgOp = op.value();
-    if (!linalgOp.hasBufferSemantics()) {
-      linalgOp.emitRemark("tile and fuse only tested for buffer operation");
-      return llvm::None;
-    }
+  if (!llvm::all_of(
+          ops,
+          [](LinalgOp linalgOp) { return linalgOp.hasBufferSemantics(); }) &&
+      !llvm::all_of(ops, [](LinalgOp linalgOp) {
+        return linalgOp.hasTensorSemantics();
+      })) {
+    rootOp.emitError(
+        "unable to fuse operations that have tensor semantics with operations "
+        "that have buffer semantics and viceversa.");
+    return llvm::None;
   }
   // TODO: Support interchange with tile + fuse. This might actually help do
   // better fusion.
@@ -877,8 +952,9 @@ tileAndFuseLinalgOpsImpl(OpBuilder &builder, ArrayRef<LinalgOp> ops,
   ret.fusedLoops.assign(tiledRootOp->loops.begin(), tiledRootOp->loops.end());
 
   // Fuse the other operations into the fused inter-tile loops produced above.
-  ret.fusedProducers = fuseOperations(builder, ret.op, ops.drop_back(),
+  ret.fusedProducers = fuseOperations(builder, rootOp, ret.op, ops.drop_back(),
                                       fusableDependences, ret.fusedLoopDims);
+
   return ret;
 }
 

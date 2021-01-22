@@ -247,8 +247,9 @@ private:
   // Uses std::pair to keep operations and view together and avoid usage errors
   // related to src/dst and producer/consumer terminology in the context of
   // dependences.
-  void addDependenceElem(DependenceType dt, OpOperand *indexingOpView,
-                         OpOperand *dependentOpView);
+  void addDependenceElem(DependenceType dt,
+                         LinalgDependenceGraphElem::OpView indexingOpView,
+                         LinalgDependenceGraphElem::OpView dependentOpView);
 
   /// Implementation detail for findCoveringxxx.
   SmallVector<Operation *, 8>
