@@ -417,7 +417,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     return !SIInstrInfo::isLegalMUBUFImmOffset(FullOffset);
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  return TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
+  return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
 }
 
 Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
@@ -496,7 +496,6 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
 
-#ifndef NDEBUG
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI) || TII->isFLATScratch(MI));
 
@@ -508,6 +507,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
     return;
   }
 
+#ifndef NDEBUG
   MachineOperand *SOffset = TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
   assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
@@ -522,7 +522,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                         Register BaseReg,
                                         int64_t Offset) const {
-  if (!SIInstrInfo::isMUBUF(*MI) && !!SIInstrInfo::isFLATScratch(*MI))
+  if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 
   int64_t NewOffset = Offset + getScratchInstrOffset(MI);
