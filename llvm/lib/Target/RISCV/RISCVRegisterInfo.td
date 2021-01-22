@@ -411,7 +411,7 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul> {
 // Vector registers
 let RegAltNameIndices = [ABIRegAltName] in {
   foreach Index = 0-31 in {
-    def V#Index : RISCVReg<Index, "v"#Index, ["v"#Index]>, DwarfRegNum<[!add(Index, 64)]>;
+    def V#Index : RISCVReg<Index, "v"#Index, ["v"#Index]>, DwarfRegNum<[!add(Index, 96)]>;
   }
 
   foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,

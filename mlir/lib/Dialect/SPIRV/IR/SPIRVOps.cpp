@@ -25,6 +25,8 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
@@ -1581,6 +1583,25 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
     return builder.create<spirv::ConstantOp>(
         loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
   }
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getFloatAttr(floatType, 0.0));
+  }
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    Type elemType = vectorType.getElementType();
+    if (elemType.isa<IntegerType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseElementsAttr::get(vectorType,
+                                 IntegerAttr::get(elemType, 0.0).getValue()));
+    }
+    if (elemType.isa<FloatType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseFPElementsAttr::get(vectorType,
+                                   FloatAttr::get(elemType, 0.0).getValue()));
+    }
+  }
 
   llvm_unreachable("unimplemented types for ConstantOp::getZero()");
 }
@@ -1594,6 +1615,25 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
                                                builder.getBoolAttr(true));
     return builder.create<spirv::ConstantOp>(
         loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
+  }
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getFloatAttr(floatType, 1.0));
+  }
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    Type elemType = vectorType.getElementType();
+    if (elemType.isa<IntegerType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseElementsAttr::get(vectorType,
+                                 IntegerAttr::get(elemType, 1.0).getValue()));
+    }
+    if (elemType.isa<FloatType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseFPElementsAttr::get(vectorType,
+                                   FloatAttr::get(elemType, 1.0).getValue()));
+    }
   }
 
   llvm_unreachable("unimplemented types for ConstantOp::getOne()");

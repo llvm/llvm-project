@@ -28,8 +28,8 @@ namespace llvm {
 /// This is a simple intrusive list for a \c T that inherits from \c
 /// ilist_node<T>.  The list never takes ownership of anything inserted in it.
 ///
-/// Unlike \a iplist<T> and \a ilist<T>, \a simple_ilist<T> never allocates or
-/// deletes values, and has no callback traits.
+/// Unlike \a iplist<T> and \a ilist<T>, \a simple_ilist<T> never deletes
+/// values, and has no callback traits.
 ///
 /// The API for adding nodes include \a push_front(), \a push_back(), and \a
 /// insert().  These all take values by reference (not by pointer), except for

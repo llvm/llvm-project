@@ -2061,24 +2061,6 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.DoubleSquareBracketAttributes = Opts.CPlusPlus11 || Opts.C2x;
 }
 
-/// Attempt to parse a visibility value out of the given argument.
-static Visibility parseVisibility(Arg *arg, ArgList &args,
-                                  DiagnosticsEngine &diags) {
-  StringRef value = arg->getValue();
-  if (value == "default") {
-    return DefaultVisibility;
-  } else if (value == "hidden" || value == "internal") {
-    return HiddenVisibility;
-  } else if (value == "protected") {
-    // FIXME: diagnose if target does not support protected visibility
-    return ProtectedVisibility;
-  }
-
-  diags.Report(diag::err_drv_invalid_value)
-    << arg->getAsString(args) << value;
-  return DefaultVisibility;
-}
-
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
@@ -2364,45 +2346,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         << "-fgnu89-inline" << GetInputKindName(IK);
     else
       Opts.GNUInline = 1;
-  }
-
-  // The type-visibility mode defaults to the value-visibility mode.
-  if (Arg *typeVisOpt = Args.getLastArg(OPT_ftype_visibility)) {
-    Opts.setTypeVisibilityMode(parseVisibility(typeVisOpt, Args, Diags));
-  } else {
-    Opts.setTypeVisibilityMode(Opts.getValueVisibilityMode());
-  }
-
-  if (Args.hasArg(OPT_fvisibility_from_dllstorageclass)) {
-    Opts.VisibilityFromDLLStorageClass = 1;
-
-    // Translate dllexport defintions to default visibility, by default.
-    if (Arg *O = Args.getLastArg(OPT_fvisibility_dllexport_EQ))
-      Opts.setDLLExportVisibility(parseVisibility(O, Args, Diags));
-    else
-      Opts.setDLLExportVisibility(DefaultVisibility);
-
-    // Translate defintions without an explict DLL storage class to hidden
-    // visibility, by default.
-    if (Arg *O = Args.getLastArg(OPT_fvisibility_nodllstorageclass_EQ))
-      Opts.setNoDLLStorageClassVisibility(parseVisibility(O, Args, Diags));
-    else
-      Opts.setNoDLLStorageClassVisibility(HiddenVisibility);
-
-    // Translate dllimport external declarations to default visibility, by
-    // default.
-    if (Arg *O = Args.getLastArg(OPT_fvisibility_externs_dllimport_EQ))
-      Opts.setExternDeclDLLImportVisibility(parseVisibility(O, Args, Diags));
-    else
-      Opts.setExternDeclDLLImportVisibility(DefaultVisibility);
-
-    // Translate external declarations without an explicit DLL storage class
-    // to hidden visibility, by default.
-    if (Arg *O = Args.getLastArg(OPT_fvisibility_externs_nodllstorageclass_EQ))
-      Opts.setExternDeclNoDLLStorageClassVisibility(
-          parseVisibility(O, Args, Diags));
-    else
-      Opts.setExternDeclNoDLLStorageClassVisibility(HiddenVisibility);
   }
 
   if (Args.hasArg(OPT_ftrapv)) {

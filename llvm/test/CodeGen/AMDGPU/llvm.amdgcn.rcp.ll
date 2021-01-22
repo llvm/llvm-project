@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
@@ -107,9 +107,13 @@ define amdgpu_kernel void @rcp_pat_f64(double addrspace(1)* %out, double %src) #
 }
 
 ; FUNC-LABEL: {{^}}unsafe_rcp_pat_f64:
-; SI: v_rcp_f64_e32 [[RESULT:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}
-; SI-NOT: [[RESULT]]
-; SI: buffer_store_dwordx2 [[RESULT]]
+; SI: v_rcp_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
+; SI: v_fma_f64
 define amdgpu_kernel void @unsafe_rcp_pat_f64(double addrspace(1)* %out, double %src) #2 {
   %rcp = fdiv double 1.0, %src
   store double %rcp, double addrspace(1)* %out, align 8
@@ -128,8 +132,8 @@ define amdgpu_kernel void @safe_rsq_rcp_pat_f64(double addrspace(1)* %out, doubl
 }
 
 ; FUNC-LABEL: {{^}}unsafe_rsq_rcp_pat_f64:
-; SI: v_rsq_f64_e32 [[RESULT:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}
-; SI-NOT: [[RESULT]]
+; SI: v_sqrt_f64_e32 [[SQRT:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}
+; SI: v_rcp_f64_e32 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[SQRT]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @unsafe_rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #2 {
   %sqrt = call double @llvm.sqrt.f64(double %src)

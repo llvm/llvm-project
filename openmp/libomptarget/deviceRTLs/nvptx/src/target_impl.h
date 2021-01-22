@@ -131,25 +131,17 @@ DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
 
 // Atomics
-template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
-  return atomicAdd(address, val);
-}
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *, uint32_t, uint32_t);
 
-template <typename T> INLINE T __kmpc_atomic_inc(T *address, T val) {
-  return atomicInc(address, val);
-}
-
-template <typename T> INLINE T __kmpc_atomic_max(T *address, T val) {
-  return atomicMax(address, val);
-}
-
-template <typename T> INLINE T __kmpc_atomic_exchange(T *address, T val) {
-  return atomicExch(address, val);
-}
-
-template <typename T> INLINE T __kmpc_atomic_cas(T *address, T compare, T val) {
-  return atomicCAS(address, compare, val);
-}
+static_assert(sizeof(unsigned long long) == sizeof(uint64_t), "");
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *,
+                                                 unsigned long long);
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *,
+                                            unsigned long long);
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

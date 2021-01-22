@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -3399,6 +3398,7 @@ static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
 
 static bool isSignExtended(SDNode *N, SelectionDAG &DAG) {
   return N->getOpcode() == ISD::SIGN_EXTEND ||
+         N->getOpcode() == ISD::ANY_EXTEND ||
          isExtendedBUILD_VECTOR(N, DAG, true);
 }
 

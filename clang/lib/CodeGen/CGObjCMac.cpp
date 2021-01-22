@@ -1800,7 +1800,8 @@ struct NullReturnState {
     // If we've got a scalar return, build a phi.
     if (result.isScalar()) {
       // Derive the null-initialization value.
-      llvm::Constant *null = CGF.CGM.EmitNullConstant(resultType);
+      llvm::Value *null =
+          CGF.EmitFromMemory(CGF.CGM.EmitNullConstant(resultType), resultType);
 
       // If no join is necessary, just flow out.
       if (!contBB) return RValue::get(null);

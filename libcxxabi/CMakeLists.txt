@@ -146,6 +146,8 @@ option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
 # The default terminate handler attempts to demangle uncaught exceptions, which
 # causes extra I/O and demangling code to be pulled in.
 option(LIBCXXABI_SILENT_TERMINATE "Set this to make the terminate handler default to a silent alternative" OFF)
+option(LIBCXXABI_NON_DEMANGLING_TERMINATE "Set this to make the terminate handler
+avoid demangling" OFF)
 
 if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
@@ -450,6 +452,10 @@ endif()
 
 if (LIBCXXABI_SILENT_TERMINATE)
   add_definitions(-DLIBCXXABI_SILENT_TERMINATE)
+endif()
+
+if (LIBCXXABI_NON_DEMANGLING_TERMINATE)
+  add_definitions(-DLIBCXXABI_NON_DEMANGLING_TERMINATE)
 endif()
 
 if (LIBCXXABI_BAREMETAL)

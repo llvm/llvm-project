@@ -64,7 +64,7 @@ const char *getGenericEdgeKindName(Edge::Kind K) {
   case Edge::KeepAlive:
     return "Keep-Alive";
   default:
-    llvm_unreachable("Unrecognized relocation kind");
+    return "<Unrecognized edge kind>";
   }
 }
 

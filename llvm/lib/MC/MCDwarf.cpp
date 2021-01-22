@@ -811,7 +811,7 @@ MCDwarfLineAddr::fixedEncode(MCContext &Context, int64_t LineDelta,
     OS << char(dwarf::DW_LNS_copy);
   }
 
-  return {Offset, Size, SetDelta};
+  return std::make_tuple(Offset, Size, SetDelta);
 }
 
 // Utility function to write a tuple for .debug_abbrev.

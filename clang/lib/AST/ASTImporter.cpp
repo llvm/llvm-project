@@ -644,6 +644,7 @@ namespace clang {
     ExpectedStmt VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E);
     ExpectedStmt VisitTypeTraitExpr(TypeTraitExpr *E);
     ExpectedStmt VisitCXXTypeidExpr(CXXTypeidExpr *E);
+    ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
 
     template<typename IIter, typename OIter>
     Error ImportArrayChecked(IIter Ibegin, IIter Iend, OIter Obegin) {
@@ -8009,6 +8010,25 @@ ExpectedStmt ASTNodeImporter::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
 
   return new (Importer.getToContext()) CXXTypeidExpr(
       *ToTypeOrErr, *ToExprOperandOrErr, *ToSourceRangeOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXFoldExpr(CXXFoldExpr *E) {
+  Error Err = Error::success();
+
+  QualType ToType = importChecked(Err, E->getType());
+  UnresolvedLookupExpr *ToCallee = importChecked(Err, E->getCallee());
+  SourceLocation ToLParenLoc = importChecked(Err, E->getLParenLoc());
+  Expr *ToLHS = importChecked(Err, E->getLHS());
+  SourceLocation ToEllipsisLoc = importChecked(Err, E->getEllipsisLoc());
+  Expr *ToRHS = importChecked(Err, E->getRHS());
+  SourceLocation ToRParenLoc = importChecked(Err, E->getRParenLoc());
+
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext())
+      CXXFoldExpr(ToType, ToCallee, ToLParenLoc, ToLHS, E->getOperator(),
+                  ToEllipsisLoc, ToRHS, ToRParenLoc, E->getNumExpansions());
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,

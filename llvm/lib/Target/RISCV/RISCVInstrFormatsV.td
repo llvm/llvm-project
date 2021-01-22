@@ -24,9 +24,10 @@ def OPMVX : RISCVVFormat<0b110>;
 class RISCVMOP<bits<2> val> {
   bits<2> Value = val;
 }
-def MOPLDUnitStride : RISCVMOP<0b00>;
-def MOPLDStrided    : RISCVMOP<0b10>;
-def MOPLDIndexed    : RISCVMOP<0b11>;
+def MOPLDUnitStride   : RISCVMOP<0b00>;
+def MOPLDIndexedUnord : RISCVMOP<0b01>;
+def MOPLDStrided      : RISCVMOP<0b10>;
+def MOPLDIndexedOrder : RISCVMOP<0b11>;
 
 def MOPSTUnitStride   : RISCVMOP<0b00>;
 def MOPSTIndexedUnord : RISCVMOP<0b01>;
@@ -242,7 +243,7 @@ class RVInstVLS<bits<3> nf, bit mew, bits<3> width,
   let RVVConstraint = VMConstraint;
 }
 
-class RVInstVLX<bits<3> nf, bit mew, bits<3> width,
+class RVInstVLX<bits<3> nf, bit mew, RISCVMOP mop, bits<3> width,
                 dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> vs2;
@@ -252,7 +253,7 @@ class RVInstVLX<bits<3> nf, bit mew, bits<3> width,
 
   let Inst{31-29} = nf;
   let Inst{28} = mew;
-  let Inst{27-26} = MOPLDIndexed.Value;
+  let Inst{27-26} = mop.Value;
   let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = rs1;

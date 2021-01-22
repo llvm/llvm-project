@@ -56,17 +56,15 @@ protected:
   SmallVectorBase(void *FirstEl, size_t TotalCapacity)
       : BeginX(FirstEl), Capacity(TotalCapacity) {}
 
+  /// This is a helper for \a grow() that's out of line to reduce code
+  /// duplication.  This function will report a fatal error if it can't grow at
+  /// least to \p MinSize.
+  void *mallocForGrow(size_t MinSize, size_t TSize, size_t &NewCapacity);
+
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
   void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
-
-  /// Report that MinSize doesn't fit into this vector's size type. Throws
-  /// std::length_error or calls report_fatal_error.
-  LLVM_ATTRIBUTE_NORETURN static void report_size_overflow(size_t MinSize);
-  /// Report that this vector is already at maximum capacity. Throws
-  /// std::length_error or calls report_fatal_error.
-  LLVM_ATTRIBUTE_NORETURN static void report_at_maximum_capacity();
 
 public:
   size_t size() const { return Size; }
@@ -211,15 +209,6 @@ protected:
                        bool> = false>
   void assertSafeToAddRange(ItTy, ItTy) {}
 
-  /// Check whether any argument will be invalidated by growing for
-  /// emplace_back.
-  template <class ArgType1, class... ArgTypes>
-  void assertSafeToEmplace(ArgType1 &Arg1, ArgTypes &... Args) {
-    this->assertSafeToAdd(&Arg1);
-    this->assertSafeToEmplace(Args...);
-  }
-  void assertSafeToEmplace() {}
-
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
   template <class U>
@@ -359,6 +348,21 @@ protected:
   /// element, or MinSize more elements if specified.
   void grow(size_t MinSize = 0);
 
+  /// Create a new allocation big enough for \p MinSize and pass back its size
+  /// in \p NewCapacity. This is the first section of \a grow().
+  T *mallocForGrow(size_t MinSize, size_t &NewCapacity) {
+    return static_cast<T *>(
+        SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
+            MinSize, sizeof(T), NewCapacity));
+  }
+
+  /// Move existing elements over to the new allocation \p NewElts, the middle
+  /// section of \a grow().
+  void moveElementsForGrow(T *NewElts);
+
+  /// Transfer ownership of the allocation, finishing up \a grow().
+  void takeAllocationForGrow(T *NewElts, size_t NewCapacity);
+
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
   const T *reserveForParamAndGetAddress(const T &Elt, size_t N = 1) {
@@ -374,6 +378,27 @@ protected:
 
   static T &&forward_value_param(T &&V) { return std::move(V); }
   static const T &forward_value_param(const T &V) { return V; }
+
+  void growAndAssign(size_t NumElts, const T &Elt) {
+    // Grow manually in case Elt is an internal reference.
+    size_t NewCapacity;
+    T *NewElts = mallocForGrow(NumElts, NewCapacity);
+    std::uninitialized_fill_n(NewElts, NumElts, Elt);
+    this->destroy_range(this->begin(), this->end());
+    takeAllocationForGrow(NewElts, NewCapacity);
+    this->set_size(NumElts);
+  }
+
+  template <typename... ArgTypes> T &growAndEmplaceBack(ArgTypes &&... Args) {
+    // Grow manually in case one of Args is an internal reference.
+    size_t NewCapacity;
+    T *NewElts = mallocForGrow(0, NewCapacity);
+    ::new ((void *)(NewElts + this->size())) T(std::forward<ArgTypes>(Args)...);
+    moveElementsForGrow(NewElts);
+    takeAllocationForGrow(NewElts, NewCapacity);
+    this->set_size(this->size() + 1);
+    return this->back();
+  }
 
 public:
   void push_back(const T &Elt) {
@@ -397,29 +422,27 @@ public:
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
 template <typename T, bool TriviallyCopyable>
 void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
-  // Ensure we can fit the new capacity.
-  // This is only going to be applicable when the capacity is 32 bit.
-  if (MinSize > this->SizeTypeMax())
-    this->report_size_overflow(MinSize);
+  size_t NewCapacity;
+  T *NewElts = mallocForGrow(MinSize, NewCapacity);
+  moveElementsForGrow(NewElts);
+  takeAllocationForGrow(NewElts, NewCapacity);
+}
 
-  // Ensure we can meet the guarantee of space for at least one more element.
-  // The above check alone will not catch the case where grow is called with a
-  // default MinSize of 0, but the current capacity cannot be increased.
-  // This is only going to be applicable when the capacity is 32 bit.
-  if (this->capacity() == this->SizeTypeMax())
-    this->report_at_maximum_capacity();
-
-  // Always grow, even from zero.
-  size_t NewCapacity = size_t(NextPowerOf2(this->capacity() + 2));
-  NewCapacity = std::min(std::max(NewCapacity, MinSize), this->SizeTypeMax());
-  T *NewElts = static_cast<T*>(llvm::safe_malloc(NewCapacity*sizeof(T)));
-
+// Define this out-of-line to dissuade the C++ compiler from inlining it.
+template <typename T, bool TriviallyCopyable>
+void SmallVectorTemplateBase<T, TriviallyCopyable>::moveElementsForGrow(
+    T *NewElts) {
   // Move the elements over.
   this->uninitialized_move(this->begin(), this->end(), NewElts);
 
   // Destroy the original elements.
   destroy_range(this->begin(), this->end());
+}
 
+// Define this out-of-line to dissuade the C++ compiler from inlining it.
+template <typename T, bool TriviallyCopyable>
+void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
+    T *NewElts, size_t NewCapacity) {
   // If this wasn't grown from the inline copy, deallocate the old space.
   if (!this->isSmall())
     free(this->begin());
@@ -501,6 +524,23 @@ protected:
 
   /// Copy \p V or return a reference, depending on \a ValueParamT.
   static ValueParamT forward_value_param(ValueParamT V) { return V; }
+
+  void growAndAssign(size_t NumElts, T Elt) {
+    // Elt has been copied in case it's an internal reference, side-stepping
+    // reference invalidation problems without losing the realloc optimization.
+    this->set_size(0);
+    this->grow(NumElts);
+    std::uninitialized_fill_n(this->begin(), NumElts, Elt);
+    this->set_size(NumElts);
+  }
+
+  template <typename... ArgTypes> T &growAndEmplaceBack(ArgTypes &&... Args) {
+    // Use push_back with a copy in case Args has an internal reference,
+    // side-stepping reference invalidation problems without losing the realloc
+    // optimization.
+    push_back(T(std::forward<ArgTypes>(Args)...));
+    return this->back();
+  }
 
 public:
   void push_back(ValueParamT Elt) {
@@ -624,16 +664,24 @@ public:
     append(IL.begin(), IL.end());
   }
 
+  void assign(size_type NumElts, ValueParamT Elt) {
+    // Note that Elt could be an internal reference.
+    if (NumElts > this->capacity()) {
+      this->growAndAssign(NumElts, Elt);
+      return;
+    }
+
+    // Assign over existing elements.
+    std::fill_n(this->begin(), std::min(NumElts, this->size()), Elt);
+    if (NumElts > this->size())
+      std::uninitialized_fill_n(this->end(), NumElts - this->size(), Elt);
+    else if (NumElts < this->size())
+      this->destroy_range(this->begin() + NumElts, this->end());
+    this->set_size(NumElts);
+  }
+
   // FIXME: Consider assigning over existing elements, rather than clearing &
   // re-initializing them - for all assign(...) variants.
-
-  void assign(size_type NumElts, const T &Elt) {
-    this->assertSafeToReferenceAfterResize(&Elt, 0);
-    clear();
-    this->reserve(NumElts);
-    this->set_size(NumElts);
-    std::uninitialized_fill(this->begin(), this->end(), Elt);
-  }
 
   template <typename in_iter,
             typename = std::enable_if_t<std::is_convertible<
@@ -854,9 +902,9 @@ public:
   }
 
   template <typename... ArgTypes> reference emplace_back(ArgTypes &&... Args) {
-    this->assertSafeToEmplace(Args...);
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
-      this->grow();
+      return this->growAndEmplaceBack(std::forward<ArgTypes>(Args)...);
+
     ::new ((void *)this->end()) T(std::forward<ArgTypes>(Args)...);
     this->set_size(this->size() + 1);
     return this->back();

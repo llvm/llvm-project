@@ -2077,7 +2077,7 @@ static bool parseRefinementStep(StringRef In, size_t &Position,
   // step parameter.
   if (RefStepString.size() == 1) {
     char RefStepChar = RefStepString[0];
-    if (RefStepChar >= '0' && RefStepChar <= '9') {
+    if (isDigit(RefStepChar)) {
       Value = RefStepChar - '0';
       return true;
     }

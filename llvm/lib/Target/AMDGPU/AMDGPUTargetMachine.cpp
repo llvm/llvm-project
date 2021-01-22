@@ -259,7 +259,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
-  initializeAMDGPUInlinerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeGCNRegBankReassignPass(*PR);
   initializeGCNNSAReassignPass(*PR);
@@ -429,7 +428,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   if (EnableFunctionCalls) {
     delete Builder.Inliner;
-    Builder.Inliner = createAMDGPUFunctionInliningPass();
+    Builder.Inliner = createFunctionInliningPass();
   }
 
   Builder.addExtension(
@@ -1135,6 +1134,10 @@ void GCNPassConfig::addPreGlobalInstructionSelect() {
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
+  // TODO: Fix instruction selection to do the right thing for image
+  // instructions with tfe or lwe in the first place, instead of running a
+  // separate pass to fix them up?
+  addPass(createSIAddIMGInitPass());
   return false;
 }
 
@@ -1253,6 +1256,12 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   MFI->initializeBaseYamlFields(YamlMFI);
+
+  if (MFI->Occupancy == 0) {
+    // Fixup the subtarget dependent default value.
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+  }
 
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
     Register TempReg;

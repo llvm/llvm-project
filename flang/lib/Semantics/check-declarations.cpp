@@ -53,8 +53,7 @@ private:
     evaluate::CheckSpecificationExpr(x, DEREF(scope_), foldingContext_);
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
-  void CheckVolatile(
-      const Symbol &, bool isAssociated, const DerivedTypeSpec *);
+  void CheckVolatile(const Symbol &, const DerivedTypeSpec *);
   void CheckPointer(const Symbol &);
   void CheckPassArg(
       const Symbol &proc, const Symbol *interface, const WithPassArg &);
@@ -172,22 +171,18 @@ void CheckHelper::Check(const Symbol &symbol) {
   context_.set_location(symbol.name());
   const DeclTypeSpec *type{symbol.GetType()};
   const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
-  bool isAssociated{symbol.has<UseDetails>() || symbol.has<HostAssocDetails>()};
-  if (symbol.attrs().test(Attr::VOLATILE)) {
-    CheckVolatile(symbol, isAssociated, derived);
-  }
-  if (isAssociated) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
-      CheckHostAssoc(symbol, *details);
-    }
-    return; // no other checks on associated symbols
-  }
-  if (IsPointer(symbol)) {
-    CheckPointer(symbol);
-  }
+  bool isDone{false};
   std::visit(
       common::visitors{
-          [&](const ProcBindingDetails &x) { CheckProcBinding(symbol, x); },
+          [&](const UseDetails &x) { isDone = true; },
+          [&](const HostAssocDetails &x) {
+            CheckHostAssoc(symbol, x);
+            isDone = true;
+          },
+          [&](const ProcBindingDetails &x) {
+            CheckProcBinding(symbol, x);
+            isDone = true;
+          },
           [&](const ObjectEntityDetails &x) { CheckObjectEntity(symbol, x); },
           [&](const ProcEntityDetails &x) { CheckProcEntity(symbol, x); },
           [&](const SubprogramDetails &x) { CheckSubprogram(symbol, x); },
@@ -196,6 +191,15 @@ void CheckHelper::Check(const Symbol &symbol) {
           [](const auto &) {},
       },
       symbol.details());
+  if (symbol.attrs().test(Attr::VOLATILE)) {
+    CheckVolatile(symbol, derived);
+  }
+  if (isDone) {
+    return; // following checks do not apply
+  }
+  if (IsPointer(symbol)) {
+    CheckPointer(symbol);
+  }
   if (InPure()) {
     if (IsSaved(symbol)) {
       messages_.Say(
@@ -1279,7 +1283,7 @@ const Procedure *CheckHelper::Characterize(const Symbol &symbol) {
   return common::GetPtrFromOptional(it->second);
 }
 
-void CheckHelper::CheckVolatile(const Symbol &symbol, bool isAssociated,
+void CheckHelper::CheckVolatile(const Symbol &symbol,
     const DerivedTypeSpec *derived) { // C866 - C868
   if (IsIntentIn(symbol)) {
     messages_.Say(
@@ -1288,7 +1292,7 @@ void CheckHelper::CheckVolatile(const Symbol &symbol, bool isAssociated,
   if (IsProcedure(symbol)) {
     messages_.Say("VOLATILE attribute may apply only to a variable"_err_en_US);
   }
-  if (isAssociated) {
+  if (symbol.has<UseDetails>() || symbol.has<HostAssocDetails>()) {
     const Symbol &ultimate{symbol.GetUltimate()};
     if (IsCoarray(ultimate)) {
       messages_.Say(

@@ -1008,14 +1008,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
     if (RsrcIntr->IsImage) {
-      Info.ptrVal = MFI->getImagePSV(
-        *MF.getSubtarget<GCNSubtarget>().getInstrInfo(),
-        CI.getArgOperand(RsrcIntr->RsrcArg));
+      Info.ptrVal =
+          MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
       Info.align.reset();
     } else {
-      Info.ptrVal = MFI->getBufferPSV(
-        *MF.getSubtarget<GCNSubtarget>().getInstrInfo(),
-        CI.getArgOperand(RsrcIntr->RsrcArg));
+      Info.ptrVal =
+          MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     }
 
     Info.flags = MachineMemOperand::MODereferenceable;
@@ -1096,9 +1094,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.ptrVal = MFI->getBufferPSV(
-      *MF.getSubtarget<GCNSubtarget>().getInstrInfo(),
-      CI.getArgOperand(1));
+    Info.ptrVal =
+        MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
@@ -1147,8 +1144,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
-    Info.ptrVal = MFI->getImagePSV(
-        *MF.getSubtarget<GCNSubtarget>().getInstrInfo(), CI.getArgOperand(5));
+    Info.ptrVal =
+        MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
     Info.align.reset();
     Info.flags = MachineMemOperand::MOLoad |
                  MachineMemOperand::MODereferenceable;
@@ -8236,6 +8233,33 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   return DAG.getNode(ISD::FMUL, SL, VT, LHS, Recip, Flags);
 }
 
+SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+  EVT VT = Op.getValueType();
+  const SDNodeFlags Flags = Op->getFlags();
+
+  bool AllowInaccurateDiv = Flags.hasApproximateFuncs() ||
+                            DAG.getTarget().Options.UnsafeFPMath;
+  if (!AllowInaccurateDiv)
+    return SDValue();
+
+  SDValue NegY = DAG.getNode(ISD::FNEG, SL, VT, Y);
+  SDValue One = DAG.getConstantFP(1.0, SL, VT);
+
+  SDValue R = DAG.getNode(AMDGPUISD::RCP, SL, VT, Y);
+  SDValue Tmp0 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
+
+  R = DAG.getNode(ISD::FMA, SL, VT, Tmp0, R, R);
+  SDValue Tmp1 = DAG.getNode(ISD::FMA, SL, VT, NegY, R, One);
+  R = DAG.getNode(ISD::FMA, SL, VT, Tmp1, R, R);
+  SDValue Ret = DAG.getNode(ISD::FMUL, SL, VT, X, R);
+  SDValue Tmp2 = DAG.getNode(ISD::FMA, SL, VT, NegY, Ret, X);
+  return DAG.getNode(ISD::FMA, SL, VT, Tmp2, R, Ret);
+}
+
 static SDValue getFPBinOp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &SL,
                           EVT VT, SDValue A, SDValue B, SDValue GlueChain,
                           SDNodeFlags Flags) {
@@ -8464,8 +8488,8 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::LowerFDIV64(SDValue Op, SelectionDAG &DAG) const {
-  if (DAG.getTarget().Options.UnsafeFPMath)
-    return lowerFastUnsafeFDIV(Op, DAG);
+  if (SDValue FastLowered = lowerFastUnsafeFDIV64(Op, DAG))
+    return FastLowered;
 
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);

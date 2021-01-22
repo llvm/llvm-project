@@ -144,7 +144,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
   }
 
   StringRef Rest = Input.substr(n1 + 2);
-  if (Rest[0] >= '0' && Rest[0] <= '9') {
+  if (isDigit(Rest[0])) {
     LineTy = LineType::BodyProfile;
     size_t n3 = Rest.find(' ');
     if (n3 == StringRef::npos) {

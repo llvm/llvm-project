@@ -21,13 +21,12 @@ SymbolOccurrence::SymbolOccurrence(const SymbolName &Name, OccurrenceKind Kind,
          "mismatching number of locations and lengths");
   assert(!Locations.empty() && "no locations");
   if (Locations.size() == 1) {
-    RangeOrNumRanges = SourceRange(
+    new (&SingleRange) SourceRange(
         Locations[0], Locations[0].getLocWithOffset(NamePieces[0].size()));
     return;
   }
   MultipleRanges = std::make_unique<SourceRange[]>(Locations.size());
-  RangeOrNumRanges.setBegin(
-      SourceLocation::getFromRawEncoding(Locations.size()));
+  NumRanges = Locations.size();
   for (const auto &Loc : llvm::enumerate(Locations)) {
     MultipleRanges[Loc.index()] = SourceRange(
         Loc.value(),

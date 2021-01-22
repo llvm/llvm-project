@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Object/WindowsResource.h"

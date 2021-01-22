@@ -352,9 +352,6 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-Pass *createAMDGPUFunctionInliningPass();
-void initializeAMDGPUInlinerPass(PassRegistry&);
-
 ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;

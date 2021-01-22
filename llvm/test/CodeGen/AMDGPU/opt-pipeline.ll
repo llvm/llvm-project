@@ -23,7 +23,7 @@
 ; GCN-O0-NEXT:     Force set function attributes
 ; GCN-O0-NEXT:     CallGraph Construction
 ; GCN-O0-NEXT:     Call Graph SCC Pass Manager
-; GCN-O0-NEXT:       AMDGPU Function Integration/Inlining
+; GCN-O0-NEXT:       Function Integration/Inlining
 ; GCN-O0-NEXT:     A No-Op Barrier Pass
 
 
@@ -97,7 +97,7 @@
 ; GCN-O1-NEXT:     Globals Alias Analysis
 ; GCN-O1-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:       Remove unused exception handling info
-; GCN-O1-NEXT:       AMDGPU Function Integration/Inlining
+; GCN-O1-NEXT:       Function Integration/Inlining
 ; GCN-O1-NEXT:       Deduce function attributes
 ; GCN-O1-NEXT:       FunctionPass Manager
 ; GCN-O1-NEXT:         Infer address spaces
@@ -408,7 +408,7 @@
 ; GCN-O2-NEXT:     Globals Alias Analysis
 ; GCN-O2-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O2-NEXT:       Remove unused exception handling info
-; GCN-O2-NEXT:       AMDGPU Function Integration/Inlining
+; GCN-O2-NEXT:       Function Integration/Inlining
 ; GCN-O2-NEXT:       OpenMP specific optimizations
 ; GCN-O2-NEXT:       Deduce function attributes
 ; GCN-O2-NEXT:       FunctionPass Manager
@@ -770,7 +770,7 @@
 ; GCN-O3-NEXT:     Globals Alias Analysis
 ; GCN-O3-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:       Remove unused exception handling info
-; GCN-O3-NEXT:       AMDGPU Function Integration/Inlining
+; GCN-O3-NEXT:       Function Integration/Inlining
 ; GCN-O3-NEXT:       OpenMP specific optimizations
 ; GCN-O3-NEXT:       Deduce function attributes
 ; GCN-O3-NEXT:       Promote 'by reference' arguments to scalars

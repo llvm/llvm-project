@@ -289,6 +289,9 @@ public:
   /// individual classes of instructions would be better.
   unsigned getInliningThresholdMultiplier() const;
 
+  /// \returns A value to be added to the inlining threshold.
+  unsigned adjustInliningThreshold(const CallBase *CB) const;
+
   /// \returns Vector bonus in percent.
   ///
   /// Vector bonuses: We want to more aggressively inline vector-dense kernels
@@ -1182,6 +1185,16 @@ public:
     VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
+  /// Calculate the cost of an extended reduction pattern, similar to
+  /// getArithmeticReductionCost of an Add reduction with an extension and
+  /// optional multiply. This is the cost of as:
+  /// ResTy vecreduce.add(ext(Ty A)), or if IsMLA flag is set then:
+  /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)). The reduction happens
+  /// on a VectorType with ResTy elements and Ty lanes.
+  InstructionCost getExtendedAddReductionCost(
+      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
   /// 3. scalar instruction which is to be vectorized.
@@ -1385,6 +1398,7 @@ public:
                          ArrayRef<const Value *> Operands,
                          TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
+  virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
   virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
@@ -1588,6 +1602,9 @@ public:
   virtual int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                                      bool IsPairwiseForm, bool IsUnsigned,
                                      TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost getExtendedAddReductionCost(
+      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) = 0;
   virtual int getCallInstrCost(Function *F, Type *RetTy,
@@ -1665,6 +1682,9 @@ public:
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
+  }
+  unsigned adjustInliningThreshold(const CallBase *CB) override {
+    return Impl.adjustInliningThreshold(CB);
   }
   int getInlinerVectorBonusPercent() override {
     return Impl.getInlinerVectorBonusPercent();
@@ -2064,6 +2084,12 @@ public:
                              TTI::TargetCostKind CostKind) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned,
                                        CostKind);
+  }
+  InstructionCost getExtendedAddReductionCost(
+      bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
+    return Impl.getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, Ty,
+                                            CostKind);
   }
   int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                             TTI::TargetCostKind CostKind) override {

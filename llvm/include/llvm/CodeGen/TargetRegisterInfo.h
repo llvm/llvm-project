@@ -415,6 +415,16 @@ public:
   virtual Register lookThruCopyLike(Register SrcReg,
                                     const MachineRegisterInfo *MRI) const;
 
+  /// Find the original SrcReg unless it is the target of a copy-like operation,
+  /// in which case we chain backwards through all such operations to the
+  /// ultimate source register. If a physical register is encountered, we stop
+  /// the search.
+  /// Return the original SrcReg if all the definitions in the chain only have
+  /// one user and not a physical register.
+  virtual Register
+  lookThruSingleUseCopyChain(Register SrcReg,
+                             const MachineRegisterInfo *MRI) const;
+
   /// Return a null-terminated list of all of the callee-saved registers on
   /// this target. The register should be in the order of desired callee-save
   /// stack frame offset. The first register is closest to the incoming stack

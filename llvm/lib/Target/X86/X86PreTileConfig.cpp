@@ -38,7 +38,6 @@
 #include "X86InstrBuilder.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -63,13 +62,8 @@ class X86PreTileConfig : public MachineFunctionPass {
   const TargetInstrInfo *TII;
   MachineDominatorTree *DomTree = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  LiveIntervals *LIS = nullptr;
-  SmallVector<Register, 16> VTileRegs;
-  MachineInstr *TileConfigMI = nullptr;
 
-  void buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx);
   MachineInstr *getTileConfigPoint();
-  void reloadTileConfig(int FI);
 
 public:
   X86PreTileConfig() : MachineFunctionPass(ID) {}
@@ -94,21 +88,20 @@ char X86PreTileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
                       "Tile Register Configure", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
                     "Tile Register Configure", false, false)
 
 void X86PreTileConfig::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
   AU.addRequired<MachineDominatorTree>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void X86PreTileConfig::buildConfigMI(MachineBasicBlock::iterator MI,
-                                     int FrameIdx) {
+static Register buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
+                              const TargetInstrInfo *TII,
+                              MachineRegisterInfo *MRI,
+                              const X86Subtarget *ST) {
   auto *MBB = MI->getParent();
 
   // FIXME: AMX should assume AVX512 enabled.
@@ -118,15 +111,18 @@ void X86PreTileConfig::buildConfigMI(MachineBasicBlock::iterator MI,
     BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VPXORDZrr), Zmm)
         .addReg(Zmm, RegState::Undef)
         .addReg(Zmm, RegState::Undef);
-    TileConfigMI = &*addFrameReference(BuildMI(*MBB, MI, DebugLoc(),
-                                               TII->get(X86::VMOVUPSZmr)),
-                                       FrameIdx)
-                         .addReg(Zmm);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSZmr)),
+                      FrameIdx)
+        .addReg(Zmm);
   }
 
   // build psuedo ldtilecfg
-  addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::LDTILECFG)),
-                    FrameIdx);
+  Register VReg = MRI->createVirtualRegister(&X86::TILECFGRegClass);
+
+  addFrameReference(
+      BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::PLDTILECFG), VReg), FrameIdx);
+
+  return VReg;
 }
 
 static ShapeT getShape(const MachineInstr &MI, MachineRegisterInfo *MRI) {
@@ -155,7 +151,6 @@ MachineInstr *X86PreTileConfig::getTileConfigPoint() {
     const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
     if (RC.getID() != X86::TILERegClassID)
       continue;
-    VTileRegs.push_back(VirtReg);
 
     // Find the common dominator for all MI that define tile register.
     for (const MachineOperand &MO : MRI->def_operands(VirtReg)) {
@@ -224,138 +219,23 @@ MachineInstr *X86PreTileConfig::getTileConfigPoint() {
   return &*MII;
 }
 
-void X86PreTileConfig::reloadTileConfig(int FI) {
-  SmallSet<MachineInstr *, 8> MIVisited;
-  const TargetRegisterClass *RC = TRI->getRegClass(X86::TILERegClassID);
-  auto TileRegNum = RC->getNumRegs();
+static void addTileCFGUse(MachineFunction &MF, Register CFG) {
+  for (MachineBasicBlock &MBB : MF) {
 
-  for (Register VReg : VTileRegs) {
-    BitVector UsableRegs(TRI->getNumRegs());
-    for (unsigned I = 0; I < TileRegNum; I++)
-      UsableRegs.set(X86::TMM0 + I);
-    SmallVector<SlotIndex, 8> RegSlots;
-    SmallVector<const uint32_t *, 8> RegMasks;
-    LiveInterval &LI = LIS->getInterval(VReg);
-    if (!LIS->getInterferenceRegMasks(LI, RegSlots, RegMasks))
-      continue;
-    for (unsigned I = 0; I < RegSlots.size(); I++) {
-      SlotIndex &SI = RegSlots[I];
-      MachineInstr *MI = LIS->getInstructionFromIndex(SI);
-      // We have reload the tile config register before.
-      if (MIVisited.count(MI))
-        continue;
-      // For inline assembly, we don't reload tile config register.
-      // If there is any ldtilecfg instruction in inline assembly,
-      // it is user's reponsibility to restore everything.
-      if (!MI->isCall())
-        continue;
-      UsableRegs.clearBitsInMask(RegMasks[I]);
-      MIVisited.insert(MI);
-      // There is no interference in callee. This is benifited from
-      // IPRA.
-      if (UsableRegs.none())
-        continue;
-
-      // build psuedo ldtilecfg
-      auto *MBB = MI->getParent();
-      auto MII = MachineBasicBlock::iterator(MI);
-      MII++;
-      addFrameReference(
-          BuildMI(*MBB, *MII, DebugLoc(), TII->get(X86::LDTILECFG)), FI);
-    }
-  }
-  // We just check tile data register interference, we also need check tile
-  // config register interference. Since we don't model the config register
-  // we should check interference from the ldtilecfg to each tile data register
-  // def.
-  //              ldtilecfg
-  //              /       \
-  //             BB1      BB2
-  //             /         \
-  //            call       BB3
-  //            /           \
-  //        %1=tileload   %2=tilezero
-  // We can start from the instruction of each tile def, and backward to
-  // ldtilecfg. If there is any call instruction, and tile data register is
-  // not preserved, we should insert ldtilecfg after the call instruction.
-  SmallSet<MachineBasicBlock *, 8> MBBVisited;
-  for (Register VReg : VTileRegs) {
-    for (MachineOperand &MO : MRI->def_operands(VReg)) {
-      if (MO.isUndef())
-        continue;
-      MachineInstr *MI = MO.getParent();
-      // May be PHI instructiion.
-      // There must be several def tile before PHI instruction.
-      if (MI->isTransient())
-        continue;
-
-      bool Terminate = false;
-      MachineBasicBlock *MBB = MI->getParent();
-      // backward to see if there is any call instruction after ldtilecfg.
-      std::queue<MachineBasicBlock *> WorkList;
-      WorkList.push(MBB);
-      bool First = true;
-      while (!WorkList.empty()) {
-        MBB = WorkList.front();
-        WorkList.pop();
-        // If we have iterate the basic block before, don't iterate it and
-        // its predecessor again. This may be caused by loop, or it has a
-        // cross path from several successor, or it has been iterated when
-        // handle other tile register. In below example, BB1 hit the condition.
-        //               ldtilecfg
-        //                  |
-        //              ---BB1---
-        //              /        \
-        //            BB2        BB3
-        //            /           \
-        //        %1=tileload   %2=tilezero
-        if (MBBVisited.count(MBB))
-          continue;
-        // For the first MBB, we start from the amx instruction which def
-        // tile register.
-        auto I = (First) ? MI->getReverseIterator() : MBB->instr_rbegin();
-        for (auto E = MBB->instr_rend(); I != E; ++I) {
-          // If it is inserted point for ldtilecfg, then we've finished
-          // backward.
-          if (&*I == TileConfigMI) {
-            Terminate = true;
-            break;
-          }
-          if (MIVisited.count(&*I))
-            continue;
-          if (!I->isCall())
-            continue;
-          BitVector UsableRegs(TRI->getNumRegs());
-          for (unsigned I = 0; I < TileRegNum; I++)
-            UsableRegs.set(X86::TMM0 + I);
-          for (MachineOperand &CallMO : I->operands()) {
-            if (CallMO.isRegMask())
-              UsableRegs.clearBitsInMask(CallMO.getRegMask());
-          }
-          // Record the call to avoid double ldtilecfg insert.
-          MIVisited.insert(&*I);
-          if (UsableRegs.none())
-            continue;
-          // Insert ldtilecfg after call instruction.
-          --I;
-          addFrameReference(
-              BuildMI(*MBB, *I, DebugLoc(), TII->get(X86::LDTILECFG)), FI);
-        }
-        // We encounter visited MachineInst, so we don't need to do backward
-        // again.
-        if (Terminate)
-          break;
-        // Next we will iterate its predecessor.
-        for (MachineBasicBlock::pred_iterator S = MBB->pred_begin(),
-                                              E = MBB->pred_end();
-             S != E; S++)
-          WorkList.push(*S);
-
-        // The first the MBB may be visited for the second time when it is in
-        // a loop.
-        if (!First)
-          MBBVisited.insert(MBB);
-        First = false;
+    // Traverse the basic block.
+    for (MachineInstr &MI : MBB) {
+      unsigned Opcode = MI.getOpcode();
+      switch (Opcode) {
+      default:
+        break;
+      case X86::PTILELOADDV:
+      case X86::PTILESTOREDV:
+      case X86::PTDPBSSDV:
+      case X86::PTILEZEROV:
+        unsigned NumOperands = MI.getNumOperands();
+        MI.RemoveOperand(NumOperands - 1);
+        MI.addOperand(MF, MachineOperand::CreateReg(CFG, false));
+        break;
       }
     }
   }
@@ -368,17 +248,15 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &mf) {
   TRI = ST->getRegisterInfo();
   TII = mf.getSubtarget().getInstrInfo();
   DomTree = &getAnalysis<MachineDominatorTree>();
-  LIS = &getAnalysis<LiveIntervals>();
 
-  auto *TileConfigPoint = getTileConfigPoint();
-  if (!TileConfigPoint)
+  MachineInstr *MI = getTileConfigPoint();
+  if (!MI)
     return false;
   unsigned Size = ST->getTileConfigSize();
   Align Alignment = ST->getTileConfigAlignment();
   int SS = mf.getFrameInfo().CreateStackObject(Size, Alignment, false);
-  buildConfigMI(TileConfigPoint, SS);
-  reloadTileConfig(SS);
-  VTileRegs.clear();
+  Register CFG = buildConfigMI(MI, SS, TII, MRI, ST);
+  addTileCFGUse(mf, CFG);
   return true;
 }
 

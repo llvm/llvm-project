@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S -inline-threshold=1 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INL1 %s
 ; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -O3 -S < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INLDEF %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S -inline-threshold=1 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INL1 %s
+; RUN: opt -mtriple=amdgcn--amdhsa -data-layout=A5 -passes='default<O3>' -S < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-INLDEF %s
 
 define coldcc float @foo(float %x, float %y) {
 entry:
