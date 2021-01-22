@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++98 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,WARNINGS,CXX98-WARNINGS %s
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,WARNINGS %s
 // RUN: %clang_analyze_cc1 -std=c++98 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,ANALYZER,CXX98-ANALYZER %s
 // RUN: %clang_analyze_cc1 -std=c++11 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
