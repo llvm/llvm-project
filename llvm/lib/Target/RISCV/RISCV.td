@@ -62,6 +62,7 @@ def FeatureExtZba
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                              AssemblerPredicate<(all_of FeatureExtZba),
                              "'Zba' (Address calculation 'B' Instructions)">;
+def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureExtZbb
     : SubtargetFeature<"experimental-zbb", "HasStdExtZbb", "true",
@@ -131,8 +132,6 @@ def HasStdExtZbt : Predicate<"Subtarget->hasStdExtZbt()">,
 def HasStdExtZbbOrZbp
     : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp()">,
                 AssemblerPredicate<(any_of FeatureExtZbb, FeatureExtZbp)>;
-def NotHasStdExtZbbOrZbp
-    : Predicate<"!(Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())">;
 
 def FeatureExtZbproposedc
     : SubtargetFeature<"experimental-zbproposedc", "HasStdExtZbproposedc", "true",

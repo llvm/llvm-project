@@ -109,3 +109,23 @@ define signext i8 @adduw_2(i32 signext %0, i8* %1) {
   %5 = load i8, i8* %4
   ret i8 %5
 }
+
+define i64 @zextw_i64(i64 %a) nounwind {
+; RV64I-LABEL: zextw_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: zextw_i64:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.w a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: zextw_i64:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    zext.w a0, a0
+; RV64IBA-NEXT:    ret
+  %and = and i64 %a, 4294967295
+  ret i64 %and
+}
