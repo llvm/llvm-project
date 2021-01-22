@@ -72,6 +72,7 @@ struct AllocFnsTy {
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_malloc,              {MallocLike,  1, 0,  -1}},
+  {LibFunc_vec_malloc,          {MallocLike,  1, 0,  -1}},
   {LibFunc_valloc,              {MallocLike,  1, 0,  -1}},
   {LibFunc_Znwj,                {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
   {LibFunc_ZnwjRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
@@ -103,7 +104,9 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
   {LibFunc_aligned_alloc,       {AlignedAllocLike, 2, 1,  -1}},
   {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
+  {LibFunc_vec_calloc,          {CallocLike,  2, 0,   1}},
   {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
+  {LibFunc_vec_realloc,         {ReallocLike, 2, 1,  -1}},
   {LibFunc_reallocf,            {ReallocLike, 2, 1,  -1}},
   {LibFunc_strdup,              {StrDupLike,  1, -1, -1}},
   {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}}

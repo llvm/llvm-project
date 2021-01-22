@@ -2831,80 +2831,7 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   // which will allow us to update live-out uses of bonus instructions.
   AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
 
-  // If we have bonus instructions, clone them into the predecessor block.
-  // Note that there may be multiple predecessor blocks, so we cannot move
-  // bonus instructions to a predecessor block.
-  ValueToValueMapTy VMap; // maps original values to cloned values
-  for (Instruction &BonusInst : *BB) {
-    if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
-      continue;
-
-    Instruction *NewBonusInst = BonusInst.clone();
-
-    if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
-    }
-
-    RemapInstruction(NewBonusInst, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    VMap[&BonusInst] = NewBonusInst;
-
-    // If we moved a load, we cannot any longer claim any knowledge about
-    // its potential value. The previous information might have been valid
-    // only given the branch precondition.
-    // For an analogous reason, we must also drop all the metadata whose
-    // semantics we don't understand. We *can* preserve !annotation, because
-    // it is tied to the instruction itself, not the value or position.
-    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
-
-    PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
-    NewBonusInst->takeName(&BonusInst);
-    BonusInst.setName(BonusInst.getName() + ".old");
-    BonusInst.replaceUsesWithIf(
-        NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
-          auto *User = cast<Instruction>(U.getUser());
-          // Ignore non-external uses of bonus instructions.
-          if (User->getParent() == BB) {
-            assert(!isa<PHINode>(User) &&
-                   "Non-external users are never PHI instructions.");
-            return false;
-          }
-          if (User->getParent() == PredBlock) {
-            // The "exteral" use is in the block into which we just cloned the
-            // bonus instruction. This means two things: 1. we are in an
-            // unreachable block 2. the instruction is self-referencing.
-            // So let's just rewrite it...
-            return true;
-          }
-          (void)BI;
-          assert(isa<PHINode>(User) && "All external users must be PHI's.");
-          auto *PN = cast<PHINode>(User);
-          assert(is_contained(successors(BB), User->getParent()) &&
-                 "All external users must be in successors of BB.");
-          assert((PN->getIncomingBlock(U) == BB ||
-                  PN->getIncomingBlock(U) == PredBlock) &&
-                 "The incoming block for that incoming value external use "
-                 "must be either the original block with bonus instructions, "
-                 "or the new predecessor block.");
-          // UniqueSucc is the block for which we change it's predecessors,
-          // so it is the only block in which we'll need to update PHI nodes.
-          if (User->getParent() != UniqueSucc)
-            return false;
-          // Update the incoming value for the new predecessor.
-          return PN->getIncomingBlock(U) == PredBlock;
-        });
-  }
-
-  // Now that the Cond was cloned into the predecessor basic block,
-  // or/and the two conditions together.
-  Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
-      Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
-  PBI->setCondition(NewCond);
-
+  // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
@@ -2944,6 +2871,7 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   } else
     PBI->setMetadata(LLVMContext::MD_prof, nullptr);
 
+  // Now, update the CFG.
   PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
 
   if (DTU)
@@ -2954,6 +2882,57 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   // We need to copy it to the new latch, that is, PBI.
   if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
     PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+
+  // If we have bonus instructions, clone them into the predecessor block.
+  // Note that there may be multiple predecessor blocks, so we cannot move
+  // bonus instructions to a predecessor block.
+  ValueToValueMapTy VMap; // maps original values to cloned values
+  for (Instruction &BonusInst : *BB) {
+    if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
+      continue;
+
+    Instruction *NewBonusInst = BonusInst.clone();
+
+    if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
+      // Unless the instruction has the same !dbg location as the original
+      // branch, drop it. When we fold the bonus instructions we want to make
+      // sure we reset their debug locations in order to avoid stepping on
+      // dead code caused by folding dead branches.
+      NewBonusInst->setDebugLoc(DebugLoc());
+    }
+
+    RemapInstruction(NewBonusInst, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    VMap[&BonusInst] = NewBonusInst;
+
+    // If we moved a load, we cannot any longer claim any knowledge about
+    // its potential value. The previous information might have been valid
+    // only given the branch precondition.
+    // For an analogous reason, we must also drop all the metadata whose
+    // semantics we don't understand. We *can* preserve !annotation, because
+    // it is tied to the instruction itself, not the value or position.
+    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
+
+    PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
+    NewBonusInst->takeName(&BonusInst);
+    BonusInst.setName(NewBonusInst->getName() + ".old");
+
+    // Update (liveout) uses of bonus instructions,
+    // now that the bonus instruction has been cloned into predecessor.
+    SSAUpdater SSAUpdate;
+    SSAUpdate.Initialize(BonusInst.getType(),
+                         (NewBonusInst->getName() + ".merge").str());
+    SSAUpdate.AddAvailableValue(BB, &BonusInst);
+    SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
+    for (Use &U : make_early_inc_range(BonusInst.uses()))
+      SSAUpdate.RewriteUseAfterInsertions(U);
+  }
+
+  // Now that the Cond was cloned into the predecessor basic block,
+  // or/and the two conditions together.
+  Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
+      Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
+  PBI->setCondition(NewCond);
 
   // Copy any debug value intrinsics into the end of PredBlock.
   for (Instruction &I : *BB) {
@@ -3022,22 +3001,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     if (NumBonusInsts > BonusInstThreshold)
       return Changed;
   }
-
-  // Also, for now, all liveout uses of bonus instructions must be in PHI nodes
-  // in successor blocks as incoming values from the bonus instructions's block,
-  // otherwise we'll fail to update them.
-  // FIXME: We could lift this restriction, but we need to form PHI nodes and
-  // rewrite offending uses, but we can't do that without having a domtree.
-  if (any_of(*BB, [BB](Instruction &I) {
-        return any_of(I.uses(), [BB](Use &U) {
-          auto *User = cast<Instruction>(U.getUser());
-          if (User->getParent() == BB)
-            return false; // Not an external use.
-          auto *PN = dyn_cast<PHINode>(User);
-          return !PN || PN->getIncomingBlock(U) != BB;
-        });
-      }))
-    return Changed;
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.

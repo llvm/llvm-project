@@ -391,6 +391,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
   case LibFunc_malloc:
+  case LibFunc_vec_malloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
@@ -473,6 +474,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_realloc:
+  case LibFunc_vec_realloc:
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
@@ -555,6 +557,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyWritesMemory(F, 0);
     return Changed;
   case LibFunc_calloc:
+  case LibFunc_vec_calloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
@@ -612,6 +615,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_free:
+  case LibFunc_vec_free:
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);

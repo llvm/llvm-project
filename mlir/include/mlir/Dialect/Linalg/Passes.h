@@ -72,6 +72,15 @@ void populateFoldReshapeOpsByExpansionPatterns(
 void populateFoldReshapeOpsByLinearizationPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns);
 
+/// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
+/// producer (consumer) generic/indexed_generic operation by linearizing the
+/// indexing map used to access the source (target) of the reshape operation in
+/// the generic/indexed_generic operation. The patterns are applied only when
+/// the tensor reshape involved is collapsing (introducing) unit-extent
+/// dimensions.
+void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns);
+
 /// Patterns for fusing linalg operation on tensors.
 void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
                                            OwningRewritePatternList &patterns);
