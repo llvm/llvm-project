@@ -2944,6 +2944,7 @@ foreach eew = EEWList in {
 
 // Vector Indexed Loads and Stores
 foreach eew = EEWList in {
+  defm PseudoVLUXEI # eew : VPseudoILoad;
   defm PseudoVLOXEI # eew : VPseudoILoad;
   defm PseudoVSOXEI # eew : VPseudoIStore;
   defm PseudoVSUXEI # eew : VPseudoIStore;
@@ -3517,6 +3518,10 @@ foreach eew = EEWList in {
        defvar elmul =!cast<LMULInfo>("V_" # elmul_str);
        defvar idx_vti = !cast<VTypeInfo>("VI" # eew # elmul_str);
 
+       defm : VPatILoad<"int_riscv_vluxei",
+                        "PseudoVLUXEI"#eew,
+                         vti.Vector, idx_vti.Vector, vti.Mask, vti.SEW,
+                         vlmul, elmul, vti.RegClass, idx_vti.RegClass>;
        defm : VPatILoad<"int_riscv_vloxei",
                         "PseudoVLOXEI"#eew,
                          vti.Vector, idx_vti.Vector, vti.Mask, vti.SEW,
