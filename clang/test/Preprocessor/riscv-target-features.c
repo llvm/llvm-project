@@ -49,9 +49,9 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-C-EXT %s
 // CHECK-C-EXT: __riscv_compressed 1
 
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32ib0p92 -x c -E -dM %s \
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32ib0p93 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv64ib0p92 -x c -E -dM %s \
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv64ib0p93 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-B-EXT %s
 // CHECK-B-EXT: __riscv_bitmanip 1
 
