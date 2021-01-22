@@ -1469,6 +1469,12 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
+  if (Opts.ConfigProvider) {
+    assert(!Opts.ContextProvider &&
+           "Only one of ConfigProvider and ContextProvider allowed!");
+    this->Opts.ContextProvider = ClangdServer::createConfiguredContextProvider(
+        Opts.ConfigProvider, this);
+  }
 
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);

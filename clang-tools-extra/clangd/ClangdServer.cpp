@@ -133,14 +133,14 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   Opts.StorePreamblesInMemory = StorePreamblesInMemory;
   Opts.UpdateDebounce = UpdateDebounce;
   Opts.AsyncPreambleBuilds = AsyncPreambleBuilds;
+  Opts.ContextProvider = ContextProvider;
   return Opts;
 }
 
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : ConfigProvider(Opts.ConfigProvider), CDB(CDB), TFS(TFS),
-      ServerCallbacks(Callbacks),
+    : CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
                                      Opts.CollectMainFileRefs)
@@ -153,14 +153,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
       WorkScheduler(
-          CDB,
-          [&, this] {
-            TUScheduler::Options O(Opts);
-            O.ContextProvider = [this](PathRef P) {
-              return createProcessingContext(P);
-            };
-            return O;
-          }(),
+          CDB, TUScheduler::Options(Opts),
           std::make_unique<UpdateIndexCallbacks>(
               DynamicIdx.get(), Callbacks, Opts.TheiaSemanticHighlighting)) {
   // Adds an index to the stack, at higher priority than existing indexes.
@@ -181,9 +174,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       if (Callbacks)
         Callbacks->onBackgroundIndexProgress(S);
     };
-    BGOpts.ContextProvider = [this](PathRef P) {
-      return createProcessingContext(P);
-    };
+    BGOpts.ContextProvider = Opts.ContextProvider;
     BGOpts.CollectMainFileRefs = Opts.CollectMainFileRefs;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
@@ -214,6 +205,83 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
     BackgroundIdx->boostRelated(File);
+}
+
+std::function<Context(PathRef)>
+ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
+                                              Callbacks *Publish) {
+  if (!Provider)
+    return [](llvm::StringRef) { return Context::current().clone(); };
+
+  struct Impl {
+    const config::Provider *Provider;
+    ClangdServer::Callbacks *Publish;
+    std::mutex PublishMu;
+
+    Impl(const config::Provider *Provider, ClangdServer::Callbacks *Publish)
+        : Provider(Provider), Publish(Publish) {}
+
+    Context operator()(llvm::StringRef File) {
+      config::Params Params;
+      // Don't reread config files excessively often.
+      // FIXME: when we see a config file change event, use the event timestamp?
+      Params.FreshTime =
+          std::chrono::steady_clock::now() - std::chrono::seconds(5);
+      llvm::SmallString<256> PosixPath;
+      if (!File.empty()) {
+        assert(llvm::sys::path::is_absolute(File));
+        llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
+        Params.Path = PosixPath.str();
+      }
+
+      llvm::StringMap<std::vector<Diag>> ReportableDiagnostics;
+      Config C = Provider->getConfig(Params, [&](const llvm::SMDiagnostic &D) {
+        // Create the map entry even for note diagnostics we don't report.
+        // This means that when the file is parsed with no warnings, we
+        // publish an empty set of diagnostics, clearing any the client has.
+        handleDiagnostic(D, !Publish || D.getFilename().empty()
+                                ? nullptr
+                                : &ReportableDiagnostics[D.getFilename()]);
+      });
+      // Blindly publish diagnostics for the (unopened) parsed config files.
+      // We must avoid reporting diagnostics for *the same file* concurrently.
+      // Source diags are published elsewhere, but those are different files.
+      if (!ReportableDiagnostics.empty()) {
+        std::lock_guard<std::mutex> Lock(PublishMu);
+        for (auto &Entry : ReportableDiagnostics)
+          Publish->onDiagnosticsReady(Entry.first(), /*Version=*/"",
+                                      std::move(Entry.second));
+      }
+      return Context::current().derive(Config::Key, std::move(C));
+    }
+
+    void handleDiagnostic(const llvm::SMDiagnostic &D,
+                          std::vector<Diag> *ClientDiagnostics) {
+      switch (D.getKind()) {
+      case llvm::SourceMgr::DK_Error:
+        elog("config error at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+             D.getColumnNo(), D.getMessage());
+        break;
+      case llvm::SourceMgr::DK_Warning:
+        log("config warning at {0}:{1}:{2}: {3}", D.getFilename(),
+            D.getLineNo(), D.getColumnNo(), D.getMessage());
+        break;
+      case llvm::SourceMgr::DK_Note:
+      case llvm::SourceMgr::DK_Remark:
+        vlog("config note at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+             D.getColumnNo(), D.getMessage());
+        ClientDiagnostics = nullptr; // Don't emit notes as LSP diagnostics.
+        break;
+      }
+      if (ClientDiagnostics)
+        ClientDiagnostics->push_back(toDiag(D, Diag::ClangdConfig));
+    }
+  };
+
+  // Copyable wrapper.
+  return [I(std::make_shared<Impl>(Provider, Publish))](llvm::StringRef Path) {
+    return (*I)(Path);
+  };
 }
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
@@ -800,62 +868,6 @@ void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
 
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
   return WorkScheduler.fileStats();
-}
-
-Context ClangdServer::createProcessingContext(PathRef File) const {
-  if (!ConfigProvider)
-    return Context::current().clone();
-
-  config::Params Params;
-  // Don't reread config files excessively often.
-  // FIXME: when we see a config file change event, use the event timestamp.
-  Params.FreshTime = std::chrono::steady_clock::now() - std::chrono::seconds(5);
-  llvm::SmallString<256> PosixPath;
-  if (!File.empty()) {
-    assert(llvm::sys::path::is_absolute(File));
-    llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
-    Params.Path = PosixPath.str();
-  }
-
-  llvm::StringMap<std::vector<Diag>> ReportableDiagnostics;
-  auto ConfigDiagnosticHandler = [&](const llvm::SMDiagnostic &D) {
-    // Ensure we create the map entry even for note diagnostics we don't report.
-    // This means that when the file is parsed with no warnings, we'll
-    // publish an empty set of diagnostics, clearing any the client has.
-    auto *Reportable = D.getFilename().empty()
-                           ? nullptr
-                           : &ReportableDiagnostics[D.getFilename()];
-    switch (D.getKind()) {
-    case llvm::SourceMgr::DK_Error:
-      elog("config error at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
-           D.getColumnNo(), D.getMessage());
-      if (Reportable)
-        Reportable->push_back(toDiag(D, Diag::ClangdConfig));
-      break;
-    case llvm::SourceMgr::DK_Warning:
-      log("config warning at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
-          D.getColumnNo(), D.getMessage());
-      if (Reportable)
-        Reportable->push_back(toDiag(D, Diag::ClangdConfig));
-      break;
-    case llvm::SourceMgr::DK_Note:
-    case llvm::SourceMgr::DK_Remark:
-      vlog("config note at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
-           D.getColumnNo(), D.getMessage());
-      break;
-    }
-  };
-  Config C = ConfigProvider->getConfig(Params, ConfigDiagnosticHandler);
-  // Blindly publish diagnostics for the (unopened) parsed config files.
-  // We must avoid reporting diagnostics for *the same file* concurrently.
-  // Source file diags are published elsewhere, but those are different files.
-  if (!ReportableDiagnostics.empty()) {
-    std::lock_guard<std::mutex> Lock(ConfigDiagnosticsMu);
-    for (auto &Entry : ReportableDiagnostics)
-      ServerCallbacks->onDiagnosticsReady(Entry.first(), /*Version=*/"",
-                                          std::move(Entry.second));
-  }
-  return Context::current().derive(Config::Key, std::move(C));
 }
 
 LLVM_NODISCARD bool
