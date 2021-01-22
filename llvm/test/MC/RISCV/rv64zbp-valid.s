@@ -42,3 +42,9 @@ shflw t0, t1, t2
 # CHECK-ASM-AND-OBJ: unshflw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x52,0x73,0x08]
 unshflw t0, t1, t2
+# CHECK-ASM-AND-OBJ: packw t0, t1, t2
+# CHECK-ASM: encoding: [0xbb,0x42,0x73,0x08]
+packw t0, t1, t2
+# CHECK-ASM-AND-OBJ: packuw t0, t1, t2
+# CHECK-ASM: encoding: [0xbb,0x42,0x73,0x48]
+packuw t0, t1, t2
