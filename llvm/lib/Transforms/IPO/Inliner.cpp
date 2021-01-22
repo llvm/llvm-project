@@ -761,12 +761,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
-    if (!Calls[I].first->getCalledFunction()->hasFnAttribute(
-            Attribute::AlwaysInline) &&
-        F.hasOptNone()) {
-      setInlineRemark(*Calls[I].first, "optnone attribute");
-      continue;
-    }
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
 
