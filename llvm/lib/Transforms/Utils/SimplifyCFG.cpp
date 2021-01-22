@@ -314,46 +314,6 @@ SafeToMergeTerminators(Instruction *SI1, Instruction *SI2,
   return !Fail;
 }
 
-/// Return true if it is safe and profitable to merge these two terminator
-/// instructions together, where SI1 is an unconditional branch. PhiNodes will
-/// store all PHI nodes in common successors.
-static bool
-isProfitableToFoldUnconditional(BranchInst *SI1, BranchInst *SI2,
-                                Instruction *Cond,
-                                SmallVectorImpl<PHINode *> &PhiNodes) {
-  if (SI1 == SI2)
-    return false; // Can't merge with self!
-  assert(SI1->isUnconditional() && SI2->isConditional());
-
-  // We fold the unconditional branch if we can easily update all PHI nodes in
-  // common successors:
-  // 1> We have a constant incoming value for the conditional branch;
-  // 2> We have "Cond" as the incoming value for the unconditional branch;
-  // 3> SI2->getCondition() and Cond have same operands.
-  CmpInst *Ci2 = dyn_cast<CmpInst>(SI2->getCondition());
-  if (!Ci2)
-    return false;
-  if (!(Cond->getOperand(0) == Ci2->getOperand(0) &&
-        Cond->getOperand(1) == Ci2->getOperand(1)) &&
-      !(Cond->getOperand(0) == Ci2->getOperand(1) &&
-        Cond->getOperand(1) == Ci2->getOperand(0)))
-    return false;
-
-  BasicBlock *SI1BB = SI1->getParent();
-  BasicBlock *SI2BB = SI2->getParent();
-  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
-  for (BasicBlock *Succ : successors(SI2BB))
-    if (SI1Succs.count(Succ))
-      for (BasicBlock::iterator BBI = Succ->begin(); isa<PHINode>(BBI); ++BBI) {
-        PHINode *PN = cast<PHINode>(BBI);
-        if (PN->getIncomingValueForBlock(SI1BB) != Cond ||
-            !isa<ConstantInt>(PN->getIncomingValueForBlock(SI2BB)))
-          return false;
-        PhiNodes.push_back(PN);
-      }
-  return true;
-}
-
 /// Update PHI nodes in Succ to indicate that there will now be entries in it
 /// from the 'NewPred' block. The values that will be flowing into the PHI nodes
 /// will be the same as those coming in from ExistPred, an existing predecessor
@@ -2783,23 +2743,6 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   return true;
 }
 
-/// Return true if the given instruction is available
-/// in its predecessor block. If yes, the instruction will be removed.
-static bool tryCSEWithPredecessor(Instruction *Inst, BasicBlock *PB) {
-  if (!isa<BinaryOperator>(Inst) && !isa<CmpInst>(Inst))
-    return false;
-  for (Instruction &I : *PB) {
-    Instruction *PBI = &I;
-    // Check whether Inst and PBI generate the same value.
-    if (Inst->isIdenticalTo(PBI)) {
-      Inst->replaceAllUsesWith(PBI);
-      Inst->eraseFromParent();
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Return true if either PBI or BI has branch weight available, and store
 /// the weights in {Pred|Succ}{True|False}Weight. If one of PBI and BI does
 /// not have branch weight, use 1:1 as its weight.
@@ -2830,6 +2773,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
                                   unsigned BonusInstThreshold) {
+  // If this block ends with an unconditional branch,
+  // let SpeculativelyExecuteBB() deal with it.
+  if (!BI->isConditional())
+    return false;
+
   BasicBlock *BB = BI->getParent();
 
   const unsigned PredCount = pred_size(BB);
@@ -2845,37 +2793,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     BB->getParent()->hasMinSize() ? TargetTransformInfo::TCK_CodeSize
                                   : TargetTransformInfo::TCK_SizeAndLatency;
 
-  Instruction *Cond = nullptr;
-  if (BI->isConditional())
-    Cond = dyn_cast<Instruction>(BI->getCondition());
-  else {
-    // For unconditional branch, check for a simple CFG pattern, where
-    // BB has a single predecessor and BB's successor is also its predecessor's
-    // successor. If such pattern exists, check for CSE between BB and its
-    // predecessor.
-    if (BasicBlock *PB = BB->getSinglePredecessor())
-      if (BranchInst *PBI = dyn_cast<BranchInst>(PB->getTerminator()))
-        if (PBI->isConditional() &&
-            (BI->getSuccessor(0) == PBI->getSuccessor(0) ||
-             BI->getSuccessor(0) == PBI->getSuccessor(1))) {
-          for (auto I = BB->instructionsWithoutDebug().begin(),
-                    E = BB->instructionsWithoutDebug().end();
-               I != E;) {
-            Instruction *Curr = &*I++;
-            if (isa<CmpInst>(Curr)) {
-              Cond = Curr;
-              break;
-            }
-            // Quit if we can't remove this instruction.
-            if (!tryCSEWithPredecessor(Curr, PB))
-              return Changed;
-            Changed = true;
-          }
-        }
-
-    if (!Cond)
-      return Changed;
-  }
+  Instruction *Cond = dyn_cast<Instruction>(BI->getCondition());
 
   if (!Cond || (!isa<CmpInst>(Cond) && !isa<BinaryOperator>(Cond)) ||
       Cond->getParent() != BB || !Cond->hasOneUse())
@@ -2934,7 +2852,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   // Finally, don't infinitely unroll conditional loops.
   BasicBlock *TrueDest = BI->getSuccessor(0);
-  BasicBlock *FalseDest = (BI->isConditional()) ? BI->getSuccessor(1) : nullptr;
+  BasicBlock *FalseDest = BI->getSuccessor(1);
   if (TrueDest == BB || FalseDest == BB)
     return Changed;
 
@@ -2945,39 +2863,30 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Check that we have two conditional branches.  If there is a PHI node in
     // the common successor, verify that the same value flows in from both
     // blocks.
-    SmallVector<PHINode *, 4> PHIs;
-    if (!PBI || PBI->isUnconditional() ||
-        (BI->isConditional() && !SafeToMergeTerminators(BI, PBI)) ||
-        (!BI->isConditional() &&
-         !isProfitableToFoldUnconditional(BI, PBI, Cond, PHIs)))
+    if (!PBI || PBI->isUnconditional() || !SafeToMergeTerminators(BI, PBI))
       continue;
 
     // Determine if the two branches share a common destination.
     Instruction::BinaryOps Opc = Instruction::BinaryOpsEnd;
     bool InvertPredCond = false;
 
-    if (BI->isConditional()) {
-      if (PBI->getSuccessor(0) == TrueDest) {
-        Opc = Instruction::Or;
-      } else if (PBI->getSuccessor(1) == FalseDest) {
-        Opc = Instruction::And;
-      } else if (PBI->getSuccessor(0) == FalseDest) {
-        Opc = Instruction::And;
-        InvertPredCond = true;
-      } else if (PBI->getSuccessor(1) == TrueDest) {
-        Opc = Instruction::Or;
-        InvertPredCond = true;
-      } else {
-        continue;
-      }
+    if (PBI->getSuccessor(0) == TrueDest) {
+      Opc = Instruction::Or;
+    } else if (PBI->getSuccessor(1) == FalseDest) {
+      Opc = Instruction::And;
+    } else if (PBI->getSuccessor(0) == FalseDest) {
+      Opc = Instruction::And;
+      InvertPredCond = true;
+    } else if (PBI->getSuccessor(1) == TrueDest) {
+      Opc = Instruction::Or;
+      InvertPredCond = true;
     } else {
-      if (PBI->getSuccessor(0) != TrueDest && PBI->getSuccessor(1) != TrueDest)
-        continue;
+      continue;
     }
 
     // Check the cost of inserting the necessary logic before performing the
     // transformation.
-    if (TTI && Opc != Instruction::BinaryOpsEnd) {
+    if (TTI) {
       Type *Ty = BI->getCondition()->getType();
       unsigned Cost = TTI->getArithmeticInstrCost(Opc, Ty, CostKind);
       if (InvertPredCond && (!PBI->getCondition()->hasOneUse() ||
@@ -2990,8 +2899,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
     LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
     Changed = true;
-
-    SmallVector<DominatorTree::UpdateType, 3> Updates;
 
     IRBuilder<> Builder(PBI);
     // The builder is used to create instructions to eliminate the branch in BB.
@@ -3015,16 +2922,12 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       PBI->swapSuccessors();
     }
 
-    BasicBlock *UniqueSucc =
-        BI->isConditional()
-            ? (PBI->getSuccessor(0) == BB ? TrueDest : FalseDest)
-            : TrueDest;
+    BasicBlock *UniqueSucc = PBI->getSuccessor(0) == BB ? TrueDest : FalseDest;
 
     // Before cloning instructions, notify the successor basic block that it
     // is about to have a new predecessor. This will update PHI nodes,
     // which will allow us to update live-out uses of bonus instructions.
-    if (BI->isConditional())
-      AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
+    AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
 
     // If we have bonus instructions, clone them into the predecessor block.
     // Note that there may be multiple predecessor blocks, so we cannot move
@@ -3094,120 +2997,64 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
             if (User->getParent() != UniqueSucc)
               return false;
             // Update the incoming value for the new predecessor.
-            return PN->getIncomingBlock(U) ==
-                   (BI->isConditional() ? PredBlock : BB);
+            return PN->getIncomingBlock(U) == PredBlock;
           });
     }
 
     // Now that the Cond was cloned into the predecessor basic block,
     // or/and the two conditions together.
-    if (BI->isConditional()) {
-      Instruction *NewCond = cast<Instruction>(
-          Builder.CreateBinOp(Opc, PBI->getCondition(), CondInPred, "or.cond"));
-      PBI->setCondition(NewCond);
+    Instruction *NewCond = cast<Instruction>(
+        Builder.CreateBinOp(Opc, PBI->getCondition(), CondInPred, "or.cond"));
+    PBI->setCondition(NewCond);
 
-      uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-      bool HasWeights =
-          extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
-                                 SuccTrueWeight, SuccFalseWeight);
-      SmallVector<uint64_t, 8> NewWeights;
+    uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+    bool HasWeights =
+        extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
+                               SuccTrueWeight, SuccFalseWeight);
+    SmallVector<uint64_t, 8> NewWeights;
 
-      if (PBI->getSuccessor(0) == BB) {
-        if (HasWeights) {
-          // PBI: br i1 %x, BB, FalseDest
-          // BI:  br i1 %y, UniqueSucc, FalseDest
-          // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
-          NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
-          // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
-          //               TrueWeight for PBI * FalseWeight for BI.
-          // We assume that total weights of a BranchInst can fit into 32 bits.
-          // Therefore, we will not have overflow using 64-bit arithmetic.
-          NewWeights.push_back(PredFalseWeight *
-                                   (SuccFalseWeight + SuccTrueWeight) +
-                               PredTrueWeight * SuccFalseWeight);
-        }
-        PBI->setSuccessor(0, UniqueSucc);
+    if (PBI->getSuccessor(0) == BB) {
+      if (HasWeights) {
+        // PBI: br i1 %x, BB, FalseDest
+        // BI:  br i1 %y, UniqueSucc, FalseDest
+        // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
+        NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
+        // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
+        //               TrueWeight for PBI * FalseWeight for BI.
+        // We assume that total weights of a BranchInst can fit into 32 bits.
+        // Therefore, we will not have overflow using 64-bit arithmetic.
+        NewWeights.push_back(PredFalseWeight *
+                                 (SuccFalseWeight + SuccTrueWeight) +
+                             PredTrueWeight * SuccFalseWeight);
       }
-      if (PBI->getSuccessor(1) == BB) {
-        if (HasWeights) {
-          // PBI: br i1 %x, TrueDest, BB
-          // BI:  br i1 %y, TrueDest, UniqueSucc
-          // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
-          //              FalseWeight for PBI * TrueWeight for BI.
-          NewWeights.push_back(PredTrueWeight *
-                                   (SuccFalseWeight + SuccTrueWeight) +
-                               PredFalseWeight * SuccTrueWeight);
-          // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
-          NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
-        }
-        PBI->setSuccessor(1, UniqueSucc);
-      }
-      if (NewWeights.size() == 2) {
-        // Halve the weights if any of them cannot fit in an uint32_t
-        FitWeights(NewWeights);
-
-        SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(),
-                                           NewWeights.end());
-        setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
-      } else
-        PBI->setMetadata(LLVMContext::MD_prof, nullptr);
-
-      Updates.push_back({DominatorTree::Insert, PredBlock, UniqueSucc});
-      Updates.push_back({DominatorTree::Delete, PredBlock, BB});
-    } else {
-      // Update PHI nodes in the common successors.
-      for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
-        ConstantInt *PBI_C = cast<ConstantInt>(
-            PHIs[i]->getIncomingValueForBlock(PBI->getParent()));
-        assert(PBI_C->getType()->isIntegerTy(1));
-        Instruction *MergedCond = nullptr;
-        if (PBI->getSuccessor(0) == UniqueSucc) {
-          Updates.push_back(
-              {DominatorTree::Delete, PredBlock, PBI->getSuccessor(1)});
-          // Create (PBI_Cond and PBI_C) or (!PBI_Cond and BI_Value)
-          // PBI_C is true: PBI_Cond or (!PBI_Cond and BI_Value)
-          //       is false: !PBI_Cond and BI_Value
-          Instruction *NotCond = cast<Instruction>(
-              Builder.CreateNot(PBI->getCondition(), "not.cond"));
-          MergedCond = cast<Instruction>(
-               Builder.CreateBinOp(Instruction::And, NotCond, CondInPred,
-                                   "and.cond"));
-          if (PBI_C->isOne())
-            MergedCond = cast<Instruction>(Builder.CreateBinOp(
-                Instruction::Or, PBI->getCondition(), MergedCond, "or.cond"));
-        } else {
-          assert(PBI->getSuccessor(1) == UniqueSucc && "Unexpected branch");
-          Updates.push_back(
-              {DominatorTree::Delete, PredBlock, PBI->getSuccessor(0)});
-          // Create (PBI_Cond and BI_Value) or (!PBI_Cond and PBI_C)
-          // PBI_C is true: (PBI_Cond and BI_Value) or (!PBI_Cond)
-          //       is false: PBI_Cond and BI_Value
-          MergedCond = cast<Instruction>(Builder.CreateBinOp(
-              Instruction::And, PBI->getCondition(), CondInPred, "and.cond"));
-          if (PBI_C->isOne()) {
-            Instruction *NotCond = cast<Instruction>(
-                Builder.CreateNot(PBI->getCondition(), "not.cond"));
-            MergedCond = cast<Instruction>(Builder.CreateBinOp(
-                Instruction::Or, NotCond, MergedCond, "or.cond"));
-          }
-        }
-        // Update PHI Node.
-        PHIs[i]->setIncomingValueForBlock(PBI->getParent(), MergedCond);
-      }
-
-      // PBI is changed to branch to UniqueSucc below. Remove itself from
-      // potential phis from all other successors.
-      if (MSSAU)
-        MSSAU->changeCondBranchToUnconditionalTo(PBI, UniqueSucc);
-
-      // Change PBI from Conditional to Unconditional.
-      BranchInst *New_PBI = BranchInst::Create(UniqueSucc, PBI);
-      EraseTerminatorAndDCECond(PBI, MSSAU);
-      PBI = New_PBI;
+      PBI->setSuccessor(0, UniqueSucc);
     }
+    if (PBI->getSuccessor(1) == BB) {
+      if (HasWeights) {
+        // PBI: br i1 %x, TrueDest, BB
+        // BI:  br i1 %y, TrueDest, UniqueSucc
+        // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
+        //              FalseWeight for PBI * TrueWeight for BI.
+        NewWeights.push_back(PredTrueWeight *
+                                 (SuccFalseWeight + SuccTrueWeight) +
+                             PredFalseWeight * SuccTrueWeight);
+        // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
+        NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
+      }
+      PBI->setSuccessor(1, UniqueSucc);
+    }
+    if (NewWeights.size() == 2) {
+      // Halve the weights if any of them cannot fit in an uint32_t
+      FitWeights(NewWeights);
+
+      SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+      setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+    } else
+      PBI->setMetadata(LLVMContext::MD_prof, nullptr);
 
     if (DTU)
-      DTU->applyUpdates(Updates);
+      DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
+                         {DominatorTree::Delete, PredBlock, BB}});
 
     // If BI was a loop latch, it may have had associated loop metadata.
     // We need to copy it to the new latch, that is, PBI.
