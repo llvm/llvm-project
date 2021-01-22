@@ -1581,13 +1581,13 @@ multiclass VPseudoTernaryV_VX_AAXA<bit IsFloat, string Constraint = ""> {
 
 multiclass VPseudoTernaryW_VV {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m in
+  foreach m = MxList.m[0-5] in
     defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoTernaryW_VX<bit IsFloat> {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m in
+  foreach m = MxList.m[0-5] in
     defm !if(IsFloat, "_VF", "_VX")  : VPseudoTernary<m.wvrclass,
                              !if(IsFloat, FPR32, GPR), m.vrclass, m, constraint>;
 }
