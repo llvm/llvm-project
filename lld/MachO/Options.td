@@ -862,8 +862,7 @@ def object_path_lto : Separate<["-"], "object_path_lto">,
      Group<grp_rare>;
 def lto_library : Separate<["-"], "lto_library">,
      MetaVarName<"<path>">,
-     HelpText<"Override the default ../lib/libLTO.dylib as <path>">,
-     Flags<[HelpHidden]>,
+     HelpText<"Deprecated & ignored. LLD supports LTO directly, without using an external dylib.">,
      Group<grp_rare>;
 def cache_path_lto : Separate<["-"], "cache_path_lto">,
      MetaVarName<"<path>">,
