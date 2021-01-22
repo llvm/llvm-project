@@ -1147,7 +1147,7 @@ def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
 defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], "Emit">, NegFlag<SetFalse, [], "Do not emit">,
-  BothFlags<[NoXarchOption, CC1Option], " pseudo probes for sample profiler">>;
+  BothFlags<[NoXarchOption, CC1Option], " pseudo probes for sample profiling">>;
 def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
