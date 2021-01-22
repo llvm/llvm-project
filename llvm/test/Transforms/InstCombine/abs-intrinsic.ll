@@ -292,3 +292,66 @@ define i1 @abs_ne_int_min_nopoison(i8 %x) {
   %cmp = icmp ne i8 %abs, -128
   ret i1 %cmp
 }
+
+define i32 @abs_sext(i8 %x) {
+; CHECK-LABEL: @abs_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 false)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %s = sext i8 %x to i32
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  ret i32 %a
+}
+
+define <3 x i82> @abs_nsw_sext(<3 x i7> %x) {
+; CHECK-LABEL: @abs_nsw_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext <3 x i7> [[X:%.*]] to <3 x i82>
+; CHECK-NEXT:    [[A:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[S]], i1 true)
+; CHECK-NEXT:    ret <3 x i82> [[A]]
+;
+  %s = sext <3 x i7> %x to <3 x i82>
+  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 1)
+  ret <3 x i82> %a
+}
+
+define i32 @abs_sext_extra_use(i8 %x, i32* %p) {
+; CHECK-LABEL: @abs_sext_extra_use(
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 false)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %s = sext i8 %x to i32
+  store i32 %s, i32* %p
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  ret i32 %a
+}
+
+; PR48816
+
+define i8 @trunc_abs_sext(i8 %x) {
+; CHECK-LABEL: @trunc_abs_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[A:%.*]] = tail call i32 @llvm.abs.i32(i32 [[S]], i1 true)
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    ret i8 [[T]]
+;
+  %s = sext i8 %x to i32
+  %a = tail call i32 @llvm.abs.i32(i32 %s, i1 true)
+  %t = trunc i32 %a to i8
+  ret i8 %t
+}
+
+define <4 x i8> @trunc_abs_sext_vec(<4 x i8> %x) {
+; CHECK-LABEL: @trunc_abs_sext_vec(
+; CHECK-NEXT:    [[S:%.*]] = sext <4 x i8> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[A:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[S]], i1 true)
+; CHECK-NEXT:    [[T:%.*]] = trunc <4 x i32> [[A]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[T]]
+;
+  %s = sext <4 x i8> %x to <4 x i32>
+  %a = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> %s, i1 true)
+  %t = trunc <4 x i32> %a to <4 x i8>
+  ret <4 x i8> %t
+}
