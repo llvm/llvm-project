@@ -27,3 +27,12 @@ sh2add.uw t0, t1, t2
 # CHECK-ASM-AND-OBJ: sh3add.uw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x62,0x73,0x20]
 sh3add.uw t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh1add t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x22,0x73,0x20]
+sh1add t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh2add t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x42,0x73,0x20]
+sh2add t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh3add t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x20]
+sh3add t0, t1, t2
