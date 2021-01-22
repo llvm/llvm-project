@@ -18,3 +18,12 @@ slli.uw t0, t1, 0
 # CHECK-ASM-AND-OBJ: add.uw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0x08]
 add.uw t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh1add.uw t0, t1, t2
+# CHECK-ASM: encoding: [0xbb,0x22,0x73,0x20]
+sh1add.uw t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh2add.uw t0, t1, t2
+# CHECK-ASM: encoding: [0xbb,0x42,0x73,0x20]
+sh2add.uw t0, t1, t2
+# CHECK-ASM-AND-OBJ: sh3add.uw t0, t1, t2
+# CHECK-ASM: encoding: [0xbb,0x62,0x73,0x20]
+sh3add.uw t0, t1, t2
