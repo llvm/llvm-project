@@ -64,11 +64,11 @@ __global__ static inline void foobar() {};
 
 __constant__ int global_constant;
 void host_fn() {
-  __constant__ int c; // expected-error {{__constant__ and __device__ are not allowed on non-static local variables}}
+  __constant__ int c; // expected-error {{__constant__, __device__, and __managed__ are not allowed on non-static local variables}}
   __shared__ int s; // expected-error {{__shared__ local variables not allowed in __host__ functions}}
 }
 __device__ void device_fn() {
-  __constant__ int c; // expected-error {{__constant__ and __device__ are not allowed on non-static local variables}}
+  __constant__ int c; // expected-error {{__constant__, __device__, and __managed__ are not allowed on non-static local variables}}
 }
 
 typedef __attribute__((device_builtin_surface_type)) unsigned long long s0_ty; // expected-warning {{'device_builtin_surface_type' attribute only applies to classes}}
