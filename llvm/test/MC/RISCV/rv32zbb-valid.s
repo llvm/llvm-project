@@ -42,3 +42,9 @@ maxu t0, t1, t2
 # CHECK-ASM-AND-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
 zext.h t0, t1
+# CHECK-ASM-AND-OBJ: rev8 t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x83,0x69]
+rev8 t0, t1
+# CHECK-ASM-AND-OBJ: orc.b t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x73,0x28]
+orc.b t0, t1

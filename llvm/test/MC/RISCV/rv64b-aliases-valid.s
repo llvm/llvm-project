@@ -95,7 +95,7 @@ rev32 x5, x6
 # CHECK-S-OBJ: rev16 t0, t1
 rev16 x5, x6
 
-# CHECK-S-OBJ-NOALIAS: grevi t0, t1, 56
+# CHECK-S-OBJ-NOALIAS: rev8 t0, t1
 # CHECK-S-OBJ: rev8 t0, t1
 rev8 x5, x6
 
@@ -251,7 +251,7 @@ orc4.b x5, x6
 # CHECK-S-OBJ: orc2.b t0, t1
 orc2.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: gorci t0, t1, 7
+# CHECK-S-OBJ-NOALIAS: orc.b t0, t1
 # CHECK-S-OBJ: orc.b t0, t1
 orc.b x5, x6
 

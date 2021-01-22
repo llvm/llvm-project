@@ -962,3 +962,81 @@ define i64 @zexth_i64(i64 %a) nounwind {
   %and = and i64 %a, 65535
   ret i64 %and
 }
+
+declare i32 @llvm.bswap.i32(i32)
+
+define i32 @bswap_i32(i32 %a) nounwind {
+; RV32I-LABEL: bswap_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a2, a2, -256
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    srli a2, a0, 24
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    slli a2, a0, 8
+; RV32I-NEXT:    lui a3, 4080
+; RV32I-NEXT:    and a2, a2, a3
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: bswap_i32:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev8 a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: bswap_i32:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    rev8 a0, a0
+; RV32IBB-NEXT:    ret
+  %1 = tail call i32 @llvm.bswap.i32(i32 %a)
+  ret i32 %1
+}
+
+declare i64 @llvm.bswap.i64(i64)
+
+define i64 @bswap_i64(i64 %a) {
+; RV32I-LABEL: bswap_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a2, a1, 8
+; RV32I-NEXT:    lui a3, 16
+; RV32I-NEXT:    addi a3, a3, -256
+; RV32I-NEXT:    and a2, a2, a3
+; RV32I-NEXT:    srli a4, a1, 24
+; RV32I-NEXT:    or a2, a2, a4
+; RV32I-NEXT:    slli a4, a1, 8
+; RV32I-NEXT:    lui a5, 4080
+; RV32I-NEXT:    and a4, a4, a5
+; RV32I-NEXT:    slli a1, a1, 24
+; RV32I-NEXT:    or a1, a1, a4
+; RV32I-NEXT:    or a2, a1, a2
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:    srli a3, a0, 24
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    slli a3, a0, 8
+; RV32I-NEXT:    and a3, a3, a5
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: bswap_i64:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    rev8 a2, a1
+; RV32IB-NEXT:    rev8 a1, a0
+; RV32IB-NEXT:    mv a0, a2
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: bswap_i64:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    rev8 a2, a1
+; RV32IBB-NEXT:    rev8 a1, a0
+; RV32IBB-NEXT:    mv a0, a2
+; RV32IBB-NEXT:    ret
+  %1 = call i64 @llvm.bswap.i64(i64 %a)
+  ret i64 %1
+}

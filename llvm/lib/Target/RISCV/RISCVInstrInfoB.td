@@ -481,6 +481,37 @@ def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
 }
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
+// We treat rev8 and orc.b as standalone instructions even though they use a
+// portion of the encodings for grevi and gorci. This allows us to support only
+// those encodings when only Zbb is enabled. We do this even when grevi and
+// gorci are available with Zbp. Trying to use 'HasStdExtZbb, NotHasStdExtZbp'
+// causes diagnostics to suggest that Zbp rather than Zbb is required for rev8
+// or gorci. Since Zbb is closer to being finalized than Zbp this will be
+// misleading to users.
+let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def REV8_RV32 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                        "rev8", "$rd, $rs1">, Sched<[]> {
+  let imm12 = { 0b01101, 0b0011000 };
+}
+} // Predicates = [HasStdExtZbbOrZbp, IsRV32]
+
+let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def REV8_RV64 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                        "rev8", "$rd, $rs1">, Sched<[]> {
+  let imm12 = { 0b01101, 0b0111000 };
+}
+} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+
+let Predicates = [HasStdExtZbbOrZbp] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   "orc.b", "$rd, $rs1">, Sched<[]> {
+  let imm12 = { 0b00101, 0b0000111 };
+}
+} // Predicates = [HasStdExtZbbOrZbp]
+
 //===----------------------------------------------------------------------===//
 // Future compressed instructions
 //===----------------------------------------------------------------------===//
@@ -552,7 +583,7 @@ def : InstAlias<"orc2.n $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b00010)>;
 def : InstAlias<"orc.n $rd, $rs",  (GORCI GPR:$rd, GPR:$rs, 0b00011)>;
 def : InstAlias<"orc4.b $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b00100)>;
 def : InstAlias<"orc2.b $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b00110)>;
-def : InstAlias<"orc.b $rd, $rs",  (GORCI GPR:$rd, GPR:$rs, 0b00111)>;
+// orc.b is considered an instruction rather than an alias.
 def : InstAlias<"orc8.h $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b01000)>;
 def : InstAlias<"orc4.h $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b01100)>;
 def : InstAlias<"orc2.h $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b01110)>;
@@ -561,7 +592,7 @@ def : InstAlias<"orc.h $rd, $rs",  (GORCI GPR:$rd, GPR:$rs, 0b01111)>;
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : InstAlias<"rev16 $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b10000)>;
-def : InstAlias<"rev8 $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b11000)>;
+// rev8 is considered an instruction rather than an alias.
 def : InstAlias<"rev4 $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b11100)>;
 def : InstAlias<"rev2 $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b11110)>;
 def : InstAlias<"rev $rd, $rs",   (GREVI GPR:$rd, GPR:$rs, 0b11111)>;
@@ -590,7 +621,7 @@ def : InstAlias<"rev2.w $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b011110)>;
 def : InstAlias<"rev.w $rd, $rs",   (GREVI GPR:$rd, GPR:$rs, 0b011111)>;
 def : InstAlias<"rev32 $rd, $rs",   (GREVI GPR:$rd, GPR:$rs, 0b100000)>;
 def : InstAlias<"rev16 $rd, $rs",   (GREVI GPR:$rd, GPR:$rs, 0b110000)>;
-def : InstAlias<"rev8 $rd, $rs",    (GREVI GPR:$rd, GPR:$rs, 0b111000)>;
+// rev8 is considered an instruction rather than an alias.
 def : InstAlias<"rev4 $rd, $rs",    (GREVI GPR:$rd, GPR:$rs, 0b111100)>;
 def : InstAlias<"rev2 $rd, $rs",    (GREVI GPR:$rd, GPR:$rs, 0b111110)>;
 def : InstAlias<"rev $rd, $rs",     (GREVI GPR:$rd, GPR:$rs, 0b111111)>;
@@ -716,12 +747,23 @@ def riscv_gorciw   : SDNode<"RISCVISD::GORCIW", SDTIntBinOp, []>;
 let Predicates = [HasStdExtZbp] in {
 def : Pat<(riscv_grevi GPR:$rs1, timm:$shamt), (GREVI GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
+
+// We treat orc.b as a separate instruction, so match it directly.
+def : Pat<(riscv_gorci GPR:$rs1, (XLenVT 7)), (ORCB GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : Pat<(rotr (riscv_grevi GPR:$rs1, (i32 24)), (i32 16)), (GREVI GPR:$rs1, 8)>;
 def : Pat<(rotl (riscv_grevi GPR:$rs1, (i32 24)), (i32 16)), (GREVI GPR:$rs1, 8)>;
+
+// We treat rev8 as a separate instruction, so match it directly.
+def : Pat<(riscv_grevi GPR:$rs1, (i32 24)), (REV8_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
+
+let Predicates = [HasStdExtZbp, IsRV64] in {
+// We treat rev8 as a separate instruction, so match it directly.
+def : Pat<(riscv_grevi GPR:$rs1, (i64 56)), (REV8_RV64 GPR:$rs1)>;
+} // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt] in {
 def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
@@ -795,6 +837,14 @@ def : Pat<(smax GPR:$rs1, GPR:$rs2), (MAX  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(umin GPR:$rs1, GPR:$rs2), (MINU GPR:$rs1, GPR:$rs2)>;
 def : Pat<(umax GPR:$rs1, GPR:$rs2), (MAXU GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbb]
+
+let Predicates = [HasStdExtZbb, IsRV32] in {
+def : Pat<(bswap GPR:$rs1), (REV8_RV32 GPR:$rs1)>;
+} // Predicates = [HasStdExtZbb, IsRV32]
+
+let Predicates = [HasStdExtZbb, IsRV64] in {
+def : Pat<(bswap GPR:$rs1), (REV8_RV64 GPR:$rs1)>;
+} // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV32] in
 def : Pat<(or (and GPR:$rs1, 0x0000FFFF), (shl GPR:$rs2, (i32 16))),
