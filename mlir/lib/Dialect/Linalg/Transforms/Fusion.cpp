@@ -258,11 +258,9 @@ static Range getRangeFromOperandShape(OpBuilder &b, Location loc,
 ///      `producer.getOutputBuffers()`.
 ///   2. Tensor case: `producerIdx` is the index of the tensor in
 ///      `producer.getResults()`.
-static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp,
-                     unsigned producerOutNumber, OpOperand &consumerOpOperand) {
-  AffineMap producerMap = producerOp.getOutputIndexingMap(producerOutNumber);
-  LLVM_DEBUG(llvm::dbgs() << "Producer Idx: " << producerOutNumber
-                          << ", producer map: " << producerMap << "\n");
+static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp, AffineMap producerMap,
+                     OpOperand &consumerOpOperand) {
+  LLVM_DEBUG(llvm::dbgs() << "Producer map: " << producerMap << "\n");
   DenseMap<unsigned, Range> fusedLoopsAndRanges;
   Value shapedOperand = consumerOpOperand.get();
   for (auto en : llvm::enumerate(producerMap.getResults())) {
@@ -354,6 +352,8 @@ static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
 findFusableProducer(OpOperand &consumerOpOperand,
                     const LinalgDependenceGraph &dependenceGraph) {
   LinalgOp consumerOp = cast<LinalgOp>(consumerOpOperand.getOwner());
+  // Note that buffer semantics implies that the dependence will only be from
+  // OpOperand -> OpOperand.
   assert(consumerOp.hasBufferSemantics() && "revisit usage of shaped operand");
 
   // Only consider RAW and WAW atm.
@@ -364,22 +364,24 @@ findFusableProducer(OpOperand &consumerOpOperand,
     for (auto dependence : llvm::make_filter_range(
              dependenceGraph.getDependencesInto(consumerOp, depType),
              [&](LinalgDependenceGraph::LinalgDependenceGraphElem elem) {
-               return elem.indexingOpView->get() == consumerOpOperand.get() &&
-                      elem.indexingOpView->getOperandNumber() ==
+               Value v = elem.getIndexingValue();
+               Optional<unsigned> operandNum =
+                   elem.getIndexingOpViewOperandNum();
+               return isa<LinalgOp>(elem.getDependentOp()) &&
+                      v == consumerOpOperand.get() && operandNum &&
+                      operandNum.getValue() ==
                           consumerOpOperand.getOperandNumber();
              })) {
-
       // Consumer consumes this view, `isStructurallyFusableProducer` also
       // checks whether it is a strict subview of the producer view.
-      auto producer = cast<LinalgOp>(dependence.dependentOpView->getOwner());
+      auto producer = cast<LinalgOp>(dependence.getDependentOp());
       LLVM_DEBUG(llvm::dbgs()
                  << "\n"
                  << LinalgDependenceGraph::getDependenceTypeStr(depType)
-                 << "producer: " << *dependence.dependentOpView->getOwner()
-                 << " view: " << dependence.dependentOpView->get()
-                 << " output index: "
-                 << dependence.dependentOpView->getOperandNumber() -
-                        producer.getNumInputs()
+                 << "producer: " << *dependence.getDependentOp() << " view: "
+                 << dependence.getDependentValue() << " output index: "
+                 << (dependence.getDependentOpViewOperandNum().getValue() -
+                     producer.getNumInputs())
                  << "\n");
 
       // Simple fusability checks.
@@ -399,18 +401,21 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   Optional<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependence =
       findFusableProducer(consumerOpOperand, graph);
   if (!fusableDependence)
-    return {};
+    return llvm::None;
 
-  LinalgOp producerOp =
-      cast<LinalgOp>(fusableDependence->dependentOpView->getOwner());
+  LinalgOp producerOp = dyn_cast<LinalgOp>(fusableDependence->getDependentOp());
+  if (!producerOp)
+    return llvm::None;
+
   // If producer is already in the same block as consumer, we are done.
   if (consumerOpOperand.get().getParentBlock() ==
-      fusableDependence->dependentOpView->get().getParentBlock())
-    return {};
+      fusableDependence->getDependentValue().getParentBlock())
+    return llvm::None;
 
-  unsigned producerIdx =
-      fusableDependence->dependentOpView->getOperandNumber() -
-      producerOp.getNumInputs();
+  Optional<AffineMap> producerMap =
+      fusableDependence->getDependentOpViewIndexingMap();
+  if (!producerMap)
+    return llvm::None;
 
   // Must be a subview or a slice to guarantee there are loops we can fuse
   // into.
@@ -418,7 +423,7 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   auto slice = consumerOpOperand.get().getDefiningOp<SliceOp>();
   if (!subView && !slice) {
     LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview or slice)");
-    return {};
+    return llvm::None;
   }
 
   // Fuse `producer` just before `consumer`.
@@ -428,7 +433,7 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: "
                           << *consumerOpOperand.getOwner() << "\n");
 
-  auto fusedProducer = fuse(b, producerOp, producerIdx, consumerOpOperand);
+  auto fusedProducer = fuse(b, producerOp, *producerMap, consumerOpOperand);
   return FusionInfo{producerOp, fusedProducer};
 }
 
@@ -474,8 +479,13 @@ Optional<FusionInfo>
 mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
                                    OpOperand &consumerOpOperand) {
   auto producerOp = dyn_cast<LinalgOp>(producerOpResult.getOwner());
-  assert(producerOp && "expected Linalg producer");
-  LinalgOp consumerOp = cast<LinalgOp>(consumerOpOperand.getOwner());
+  if (!producerOp)
+    return llvm::None;
+
+  LinalgOp consumerOp = dyn_cast<LinalgOp>(consumerOpOperand.getOwner());
+  if (!consumerOp)
+    return llvm::None;
+
   Value inputTensor = consumerOpOperand.get();
 
   // Must be a subtensor to guarantee there are loops we can fuse into.
@@ -496,8 +506,10 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   b.setInsertionPoint(consumerOp);
   ScopedContext scope(b, consumerOp->getLoc());
   LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: " << *consumerOp << "\n");
-  LinalgOp fusedProducer = fuse(
-      b, producerOp, producerOpResult.getResultNumber(), consumerOpOperand);
+  LinalgOp fusedProducer =
+      fuse(b, producerOp,
+           producerOp.getOutputIndexingMap(producerOpResult.getResultNumber()),
+           consumerOpOperand);
 
   // Replace use.
   // Canonicalizations are not guaranteed to have happened before constructing
@@ -531,30 +543,34 @@ static AffineMap pruneReductionDimsFromMap(ArrayRef<Attribute> iteratorTypes,
 ///       inverse(producerIndexMap).compose(consumerIndexMap)
 static Optional<AffineMap> getConsumerLoopToProducerLoopMap(
     LinalgDependenceGraph::LinalgDependenceGraphElem dependence) {
-  auto producer = cast<LinalgOp>(dependence.dependentOpView->getOwner());
-  AffineMap producerIndexingMap =
-      producer.getIndexingMap(dependence.dependentOpView->getOperandNumber());
-  auto consumer = cast<LinalgOp>(dependence.indexingOpView->getOwner());
-  AffineMap consumerIndexingMap =
-      consumer.getIndexingMap(dependence.indexingOpView->getOperandNumber());
+  auto producer = dyn_cast<LinalgOp>(dependence.getDependentOp());
+  if (!producer)
+    return None;
+
+  Optional<AffineMap> producerIndexingMap =
+      dependence.getDependentOpViewIndexingMap();
+  Optional<AffineMap> consumerIndexingMap =
+      dependence.getIndexingOpViewIndexingMap();
+  if (!producerIndexingMap || !consumerIndexingMap)
+    return None;
 
   AffineMap prunedProducerIndexingMap = pruneReductionDimsFromMap(
-      producer.iterator_types().getValue(), producerIndexingMap);
+      producer.iterator_types().getValue(), *producerIndexingMap);
   if (!prunedProducerIndexingMap.isPermutation())
     return None;
 
-  if (consumerIndexingMap.getNumResults() !=
+  if (consumerIndexingMap->getNumResults() !=
       prunedProducerIndexingMap.getNumResults())
     return None;
 
   LLVM_DEBUG({
     llvm::dbgs() << "\t producerMap : ";
-    producerIndexingMap.print(llvm::dbgs());
+    producerIndexingMap->print(llvm::dbgs());
     llvm::dbgs() << "  pruned : ";
     prunedProducerIndexingMap.print(llvm::dbgs());
     llvm::dbgs() << "\n";
     llvm::dbgs() << "\t consumerMap : ";
-    consumerIndexingMap.print(llvm::dbgs());
+    consumerIndexingMap->print(llvm::dbgs());
     llvm::dbgs() << "\n";
   });
 
@@ -562,7 +578,7 @@ static Optional<AffineMap> getConsumerLoopToProducerLoopMap(
   if (!invProducerIndexMap)
     return None;
 
-  return invProducerIndexMap.compose(consumerIndexingMap);
+  return invProducerIndexMap.compose(*consumerIndexingMap);
 }
 
 /// Given a projected permutation `map`, returns true if the map changes the
@@ -710,10 +726,7 @@ collectFusableLoops(ArrayRef<LinalgOp> ops,
 FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
     ArrayRef<LinalgOp> ops, const LinalgDependenceGraph &dependenceGraph) {
   FusableOpDependencesTy fusableDependences;
-  // TODO: Currently fusion would not be legal if the fusable dependence is to
-  // the same producer but different indexing map in the consumer. Fix this, but
-  // in the meanwhile disallow such a fusion.
-  DenseMap<Operation *, AffineMap> fusedProducerIndexingMap;
+  DenseMap<Operation *, SmallVector<AffineMap, 1>> fusedProducerIndexingMap;
   for (LinalgOp op : reverse(ops)) {
     for (OpOperand &opOperand : op.getShapedOpOperands()) {
       Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
@@ -721,52 +734,45 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
       if (!fusableDependence)
         continue;
       LinalgOp producerOp =
-          cast<LinalgOp>(fusableDependence->dependentOpView->getOwner());
+          dyn_cast<LinalgOp>(fusableDependence->getDependentOp());
+      if (!producerOp)
+        continue;
       // Do not fuse dependences that are to operations not in the same basic
       // block. This avoid moving fused operations across loops that might
       // themselves carry dependency making the fusion illegal.
-      if (producerOp->getBlock() != op->getBlock()) {
-        op.emitRemark("unhandled fusion of ops in different basic blocks");
-        return FusableOpDependencesTy{};
-      }
+      if (producerOp->getBlock() != op->getBlock())
+        continue;
+
       // Make sure that the indexing map of the view used for fusion in the
       // producer is a projected permutation.
-      unsigned producerIdx =
-          fusableDependence->dependentOpView->getOperandNumber();
-      AffineMap producerMap = producerOp.getIndexingMap(producerIdx);
-      if (!producerMap.isProjectedPermutation()) {
-        op.emitRemark(
-            "unhandled non permutation indexing map for fused view in "
-            "producer for operand at index ")
-            << opOperand.getOperandNumber();
-        return FusableOpDependencesTy{};
-      }
-
-      unsigned consumerIdx =
-          fusableDependence->indexingOpView->getOperandNumber();
-      AffineMap consumerMap = op.getIndexingMap(consumerIdx);
-      if (!consumerMap.isProjectedPermutation()) {
-        op.emitRemark(
-            "unhandled case where indexing map for fused view in the consumer "
-            "is not a projected permutation while fusing at index ")
-            << opOperand.getOperandNumber();
-        return FusableOpDependencesTy{};
-      }
-
-      // Check if the producer is already a fusion candidate. Cannot fuse this
-      // dependence if it has a different indexing map when used in the
-      // consumer.
-      if (fusedProducerIndexingMap.count(producerOp.getOperation()) &&
-          fusedProducerIndexingMap[producerOp.getOperation()] != consumerMap) {
-        op.emitRemark(
-            "unhandled fusion to the same producer but with different "
-            "indexing maps");
-        return FusableOpDependencesTy{};
-      }
-      fusedProducerIndexingMap[producerOp.getOperation()] = consumerMap;
+      Optional<AffineMap> producerMap =
+          fusableDependence->getDependentOpViewIndexingMap();
+      Optional<AffineMap> consumerMap =
+          fusableDependence->getIndexingOpViewIndexingMap();
+      assert(
+          consumerMap &&
+          "unable to find indexing map of operand/result of indexing OpView");
+      fusedProducerIndexingMap[producerOp.getOperation()].push_back(
+          *consumerMap);
+      if (!producerMap || !producerMap->isProjectedPermutation() ||
+          !consumerMap->isProjectedPermutation())
+        continue;
 
       fusableDependences[producerOp.getOperation()].push_back(
           *fusableDependence);
+    }
+  }
+  // TODO: Currently fusion would not be legal if the fusable dependence is to
+  // the same producer but different indexing map in the consumer. Fix this, but
+  // in the meanwhile disallow such a fusion.
+  for (auto useIndexingMapsList : fusedProducerIndexingMap) {
+    AffineMap map1 = useIndexingMapsList.second.front();
+    for (AffineMap map2 :
+         ArrayRef<AffineMap>(useIndexingMapsList.second).drop_front()) {
+      if (map1 != map2) {
+        fusableDependences.erase(useIndexingMapsList.first);
+        break;
+      }
     }
   }
   return fusableDependences;
@@ -819,7 +825,7 @@ static Optional<TiledAndFusedLinalgOps>
 tileAndFuseLinalgOpsImpl(OpBuilder &builder, ArrayRef<LinalgOp> ops,
                          const LinalgDependenceGraph &dependenceGraph,
                          const LinalgTilingOptions &tilingOptions) {
-  if (ops.empty())
+  if (ops.size() < 2)
     return llvm::None;
   LinalgOp rootOp = ops.back();
   for (auto op : enumerate(ops)) {
@@ -827,14 +833,14 @@ tileAndFuseLinalgOpsImpl(OpBuilder &builder, ArrayRef<LinalgOp> ops,
     // buffers. This check can be removed after it is tested on tensors.
     LinalgOp linalgOp = op.value();
     if (!linalgOp.hasBufferSemantics()) {
-      linalgOp.emitError("tile and fuse only tested for buffer operation");
+      linalgOp.emitRemark("tile and fuse only tested for buffer operation");
       return llvm::None;
     }
   }
   // TODO: Support interchange with tile + fuse. This might actually help do
   // better fusion.
   if (!tilingOptions.interchangeVector.empty()) {
-    rootOp.emitError("unable to handle tile and fuse with interchange");
+    rootOp.emitRemark("unable to handle tile and fuse with interchange");
     return llvm::None;
   }
 
@@ -864,7 +870,7 @@ tileAndFuseLinalgOpsImpl(OpBuilder &builder, ArrayRef<LinalgOp> ops,
   Optional<TiledLinalgOp> tiledRootOp = tileRootOperation(
       builder, rootOp, tileSizeVector, tilingOptions, ret.fusedLoopDims);
   if (!tiledRootOp) {
-    rootOp.emitError("failed to tile the fused loops");
+    rootOp.emitRemark("failed to tile the fused loops");
     return llvm::None;
   }
   ret.op = tiledRootOp->op;
