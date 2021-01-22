@@ -681,16 +681,22 @@ hasPartialIVCondition(Loop *L, MemorySSA &MSSA, AAResults *AA) {
     if (!isa<LoadInst>(I) && !isa<GetElementPtrInst>(I))
       return {};
 
-    // Do not duplicate volatile loads.
+    // Do not duplicate volatile and atomic loads.
     if (auto *LI = dyn_cast<LoadInst>(I))
-      if (LI->isVolatile())
+      if (LI->isVolatile() || LI->isAtomic())
         return {};
 
     ToDuplicate.push_back(I);
-    if (auto *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(I))) {
-      // Queue the defining access to check for alias checks.
-      AccessesToCheck.push_back(MemUse->getDefiningAccess());
-      AccessedLocs.push_back(MemoryLocation::get(I));
+    if (MemoryAccess *MA = MSSA.getMemoryAccess(I)) {
+      if (auto *MemUse = dyn_cast_or_null<MemoryUse>(MA)) {
+        // Queue the defining access to check for alias checks.
+        AccessesToCheck.push_back(MemUse->getDefiningAccess());
+        AccessedLocs.push_back(MemoryLocation::get(I));
+      } else {
+        // MemoryDefs may clobber the location or may be atomic memory
+        // operations. Bail out.
+        return {};
+      }
     }
     WorkList.append(I->op_begin(), I->op_end());
   }
@@ -972,6 +978,8 @@ bool LoopUnswitch::processCurrentLoop() {
       !findOptionMDForLoop(CurrentLoop, "llvm.loop.unswitch.partial.disable")) {
     auto ToDuplicate = hasPartialIVCondition(CurrentLoop, *MSSA, AA);
     if (!ToDuplicate.first.empty()) {
+      LLVM_DEBUG(dbgs() << "loop-unswitch: Found partially invariant condition "
+                        << *ToDuplicate.first[0] << "\n");
       ++NumBranches;
       unswitchIfProfitable(ToDuplicate.first[0], ToDuplicate.second,
                            CurrentLoop->getHeader()->getTerminator(),
