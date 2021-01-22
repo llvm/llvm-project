@@ -334,9 +334,19 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
-  // TODO-GFX11  SENDMSG_RTN
-  def S_SENDMSG_RTN_B32    : SOP1_32<"s_sendmsg_rtn_b32">; // If the message returns a 64 bit value then only the lower 32 bits are written to SDST.
-  def S_SENDMSG_RTN_B64    : SOP1_64_32<"s_sendmsg_rtn_b64">; // If the message returns a 32 bit value then this instruction fills the upper bits of SDST with zero
+  let hasSideEffects = 1 in {
+    // For s_sendmsg_rtn_* the src0 field encodes the message type directly; it
+    // is not an SGPR number.
+    def S_SENDMSG_RTN_B32 : SOP1_Pseudo<
+      "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsgImm:$src0),
+      "$sdst, $src0"
+    >;
+    def S_SENDMSG_RTN_B64 : SOP1_Pseudo<
+      "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsgImm:$src0),
+      "$sdst, $src0"
+    >;
+  }
+
   // ASIC_SCALAR_FLOAT
   // TODO-GFX11 scalar float
   /*def S_CEIL_F32           : SOP1_32<"s_ceil_f32">;*/
