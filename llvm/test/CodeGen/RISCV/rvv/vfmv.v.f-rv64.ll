@@ -8,7 +8,6 @@ declare <vscale x 1 x half> @llvm.riscv.vfmv.v.f.nxv1f16(
 define <vscale x 1 x half> @intrinsic_vfmv.v.f_f_nxv1f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -27,7 +26,6 @@ declare <vscale x 2 x half> @llvm.riscv.vfmv.v.f.nxv2f16(
 define <vscale x 2 x half> @intrinsic_vfmv.v.f_f_nxv2f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -46,7 +44,6 @@ declare <vscale x 4 x half> @llvm.riscv.vfmv.v.f.nxv4f16(
 define <vscale x 4 x half> @intrinsic_vfmv.v.f_f_nxv4f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -65,7 +62,6 @@ declare <vscale x 8 x half> @llvm.riscv.vfmv.v.f.nxv8f16(
 define <vscale x 8 x half> @intrinsic_vfmv.v.f_f_nxv8f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -84,7 +80,6 @@ declare <vscale x 16 x half> @llvm.riscv.vfmv.v.f.nxv16f16(
 define <vscale x 16 x half> @intrinsic_vfmv.v.f_f_nxv16f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -103,7 +98,6 @@ declare <vscale x 32 x half> @llvm.riscv.vfmv.v.f.nxv32f16(
 define <vscale x 32 x half> @intrinsic_vfmv.v.f_f_nxv32f16(half %0, i64 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfmv.v.f_f_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m8,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    jalr zero, 0(ra)
