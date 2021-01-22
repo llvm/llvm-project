@@ -1422,7 +1422,26 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
 
   return false;
 }
-  
+
+swift::Demangle::NodePointer
+StripPrivateIDs(swift::Demangle::Demangler &dem,
+                swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
+  return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
+    if (node->getKind() != Node::Kind::PrivateDeclName ||
+        node->getNumChildren() != 2)
+      return node;
+
+    assert(node->getFirstChild()->getKind() == Node::Kind::Identifier);
+    assert(node->getLastChild()->getKind() == Node::Kind::Identifier);
+    auto *new_node = dem.createNode(Node::Kind::PrivateDeclName);
+    auto *ident = dem.createNodeWithAllocatedText(
+        Node::Kind::Identifier, node->getLastChild()->getText());
+    new_node->addChild(ident, dem);
+    return new_node;
+  });
+}
+
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
@@ -1443,10 +1462,10 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   if (ContainsUnresolvedTypeAlias(r_node) ||
       ContainsGenericTypeParameter(r_node) || ContainsSugaredParen(r_node))
     return true;
-  if (swift::Demangle::mangleNode(
-          TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node)) ==
-      swift::Demangle::mangleNode(
-          TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node)))
+  if (swift::Demangle::mangleNode(StripPrivateIDs(
+          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node))) ==
+      swift::Demangle::mangleNode(StripPrivateIDs(
+          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node))))
     return true;
 
   // SwiftASTContext hardcodes some less-precise types.
@@ -2296,6 +2315,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
         child_bitfield_bit_offset, child_is_base_class,
         child_is_deref_of_parent, valobj, language_flags);
   };
+  auto ast_num_children = m_swift_ast_context->GetNumChildren(
+      ReconstructType(type), omit_empty_base_classes, exe_ctx);
   auto impl = [&]() -> CompilerType {
     ExecutionContextScope *exe_scope = nullptr;
     if (exe_ctx)
@@ -2315,9 +2336,15 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           if (llvm::StringRef(AsMangledName(type))
                   .endswith("sSo18NSNotificationNameaD"))
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
-          // FIXME: Private discriminators come out in a different format.
-          if (result.GetMangledTypeName().GetStringRef().count('$') > 1)
-            return fallback();
+          if (result.GetMangledTypeName().GetStringRef().count('$') > 1 &&
+              ast_num_children == runtime->GetNumChildren({this, type}, valobj))
+            // If available, prefer the AST for private types. Private
+            // identifiers are not ABI; the runtime returns anonymous private
+            // identifiers (using a '$' prefix) which cannot match identifiers
+            // in the AST. Because these private types can't be used in an AST
+            // context, prefer the AST type if available.
+            if (auto ast_type = fallback())
+              return ast_type;
           return result;
         }
     }
@@ -2416,8 +2443,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // Because the API deals out an index into a list of children we
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
-  if (m_swift_ast_context->GetNumChildren(ReconstructType(type),
-                                          omit_empty_base_classes, exe_ctx) <
+  if (ast_num_children <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
     return impl();
 
@@ -2436,9 +2462,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       ast_child_name = suffix.str();
     assert((llvm::StringRef(child_name).contains('.') ||
             Equivalent(child_name, ast_child_name)));
-    assert((Equivalent(llvm::Optional<uint64_t>(child_byte_size),
-                       llvm::Optional<uint64_t>(ast_child_byte_size)) ||
-            ast_language_flags));
+    assert(ast_language_flags ||
+           (Equivalent(llvm::Optional<uint64_t>(child_byte_size),
+                       llvm::Optional<uint64_t>(ast_child_byte_size))));
     assert(Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
                       llvm::Optional<uint64_t>(ast_child_byte_offset)));
     assert(
@@ -2778,37 +2804,14 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
-  if (!type)
-    return false;
-
-  using namespace swift::Demangle;
-  Demangler dem;
-  auto *node = DemangleCanonicalType(dem, type);
-  auto kind = node->getKind();
-
-  switch (kind) {
-  case Node::Kind::Structure: {
-    // TODO: Handle ObjC enums masquerading as structs.
-    // In rare instances, a Swift `Structure` wraps an ObjC enum. An example is
-    // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
-    // these enum structs.
-    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
-    auto clang_type = std::get<CompilerType>(resolved);
-    bool is_signed;
-    if (!clang_type.IsEnumerationType(is_signed))
-        break;
-    LLVM_FALLTHROUGH;
-  }
-  case Node::Kind::Enum:
-  case Node::Kind::BoundGenericEnum:
-    // TODO: Add support for Enums.
-    return m_swift_ast_context->DumpTypeValue(
-        ReconstructType(type), s, format, data, data_offset, data_byte_size,
-        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
-  }
-
   auto impl = [&]() -> bool {
-    switch (kind) {
+    if (!type)
+      return false;
+
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    switch (node->getKind()) {
     case Node::Kind::Class:
     case Node::Kind::BoundGenericClass:
       if (is_base_class)
@@ -2868,9 +2871,47 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           s, format, data, data_offset, data_byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope, is_base_class);
     }
-    case Node::Kind::Structure:
     case Node::Kind::BoundGenericStructure:
       return false;
+    case Node::Kind::Structure: {
+      // In some instances, a swift `structure` wraps an objc enum. The enum
+      // case needs to be handled, but structs are no-ops.
+      auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
+      auto clang_type = std::get<CompilerType>(resolved);
+      if (!clang_type)
+        return false;
+
+      bool is_signed;
+      if (!clang_type.IsEnumerationType(is_signed))
+        // The type is a clang struct, not an enum.
+        return false;
+
+      // The type is an enum imported from clang. Try Swift type metadata first,
+      // and failing that fallback to the AST.
+      LLVM_FALLTHROUGH;
+    }
+    case Node::Kind::Enum:
+    case Node::Kind::BoundGenericEnum: {
+      if (exe_scope)
+        if (auto runtime =
+                SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+          ExecutionContext exe_ctx;
+          exe_scope->CalculateExecutionContext(exe_ctx);
+          if (auto case_name =
+                  runtime->GetEnumCaseName({this, type}, data, &exe_ctx)) {
+            s->PutCString(*case_name);
+            return true;
+          }
+        }
+
+      // No result available from the runtime, fallback to the AST.
+      // This can happen in two cases:
+      // 1. MultiPayloadEnums not currently supported by Swift reflection
+      // 2. Some clang imported enums
+      return m_swift_ast_context->DumpTypeValue(
+          ReconstructType(type), s, format, data, data_offset, data_byte_size,
+          bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+    }
     default:
       assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
