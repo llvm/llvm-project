@@ -41,6 +41,11 @@ class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
                                        SameOperandsAndResultShape])> {
   let parser = [{ return ::parseLogicalUnaryOp(parser, result); }];
   let printer = [{ return ::printLogicalOp(getOperation(), p); }];
+
+  let builders = [
+    OpBuilderDAG<(ins "Value":$value),
+    [{::buildLogicalUnaryOp($_builder, $_state, value);}]>
+  ];
 }
 
 // -----
@@ -501,6 +506,70 @@ def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual",
     %4 = spv.INotEqual %0, %1 : i32
     %5 = spv.INotEqual %2, %3 : vector<4xi32>
 
+    ```
+  }];
+}
+
+// -----
+
+def SPV_IsInfOp : SPV_LogicalUnaryOp<"IsInf", SPV_Float, []> {
+  let summary = "Result is true if x is an IEEE Inf, otherwise result is false";
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+     Results are computed per component.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    isinf-op ::= ssa-id `=` `spv.IsInf` ssa-use
+                            `:` float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spv.IsInf %0: f32
+    %3 = spv.IsInf %1: vector<4xi32>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_IsNanOp : SPV_LogicalUnaryOp<"IsNan", SPV_Float, []> {
+  let summary = [{
+    Result is true if x is an IEEE NaN, otherwise result is false.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+     Results are computed per component.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    isnan-op ::= ssa-id `=` `spv.IsNan` ssa-use
+                            `:` float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spv.IsNan %0: f32
+    %3 = spv.IsNan %1: vector<4xi32>
     ```
   }];
 }

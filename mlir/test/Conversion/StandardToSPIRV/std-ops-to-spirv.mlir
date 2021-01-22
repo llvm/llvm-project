@@ -301,6 +301,7 @@ func @cmpf(%arg0 : f32, %arg1 : f32) {
 
 // -----
 
+// With Kernel capability, we can convert NaN check to spv.Ordered/spv.Unordered.
 module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, {}>
 } {
@@ -310,6 +311,31 @@ func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.Ordered
   %0 = cmpf ord, %arg0, %arg1 : f32
   // CHECK: spv.Unordered
+  %1 = cmpf uno, %arg0, %arg1 : f32
+  return
+}
+
+} // end module
+
+// -----
+
+// Without Kernel capability, we need to convert NaN check to spv.IsNan.
+module attributes {
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+} {
+
+// CHECK-LABEL: @cmpf
+// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
+func @cmpf(%arg0 : f32, %arg1 : f32) {
+  // CHECK:      %[[LHS_NAN:.+]] = spv.IsNan %[[LHS]] : f32
+  // CHECK-NEXT: %[[RHS_NAN:.+]] = spv.IsNan %[[RHS]] : f32
+  // CHECK-NEXT: %[[OR:.+]] = spv.LogicalOr %[[LHS_NAN]], %[[RHS_NAN]] : i1
+  // CHECK-NEXT: %{{.+}} = spv.LogicalNot %[[OR]] : i1
+  %0 = cmpf ord, %arg0, %arg1 : f32
+
+  // CHECK-NEXT: %[[LHS_NAN:.+]] = spv.IsNan %[[LHS]] : f32
+  // CHECK-NEXT: %[[RHS_NAN:.+]] = spv.IsNan %[[RHS]] : f32
+  // CHECK-NEXT: %{{.+}} = spv.LogicalOr %[[LHS_NAN]], %[[RHS_NAN]] : i1
   %1 = cmpf uno, %arg0, %arg1 : f32
   return
 }
