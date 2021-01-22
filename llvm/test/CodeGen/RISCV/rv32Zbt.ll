@@ -680,7 +680,7 @@ define i64 @fshr_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32IB-NEXT:    fsri a1, a0, a1, 31
 ; RV32IB-NEXT:    sll a1, a1, t3
 ; RV32IB-NEXT:    sub a5, a6, t4
-; RV32IB-NEXT:    sbclri a0, a0, 31
+; RV32IB-NEXT:    bclri a0, a0, 31
 ; RV32IB-NEXT:    srl a0, a0, a5
 ; RV32IB-NEXT:    or a0, a1, a0
 ; RV32IB-NEXT:    sll a1, t0, a2

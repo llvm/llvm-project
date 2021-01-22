@@ -2187,7 +2187,7 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
     classifyArgUse(U, F, IsFloat, SinCalls, CosCalls, SinCosCalls);
 
   // It's only worthwhile if both sinpi and cospi are actually used.
-  if (SinCosCalls.empty() && (SinCalls.empty() || CosCalls.empty()))
+  if (SinCalls.empty() || CosCalls.empty())
     return nullptr;
 
   Value *Sin, *Cos, *SinCos;
@@ -2213,7 +2213,7 @@ void LibCallSimplifier::classifyArgUse(
     SmallVectorImpl<CallInst *> &SinCosCalls) {
   CallInst *CI = dyn_cast<CallInst>(Val);
 
-  if (!CI)
+  if (!CI || CI->use_empty())
     return;
 
   // Don't consider calls in other functions.

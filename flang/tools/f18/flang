@@ -12,4 +12,9 @@ module_dir=$wd/include/flang
 if [[ ! -d $module_dir ]]; then
   module_dir=$wd/tools/flang/include/flang
 fi
-$wd/bin/f18 -module-suffix .f18.mod -intrinsic-module-directory $module_dir "$@"
+opts="-module-suffix .f18.mod -intrinsic-module-directory $module_dir"
+if ! $wd/bin/f18 $opts "$@"
+then status=$?
+     echo flang: in $PWD, f18 failed with exit status $status: $wd/bin/f18 $opts "$@" >&2
+     exit $status
+fi

@@ -224,6 +224,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZbp()) {
+    // Custom lower bswap/bitreverse so we can convert them to GREVI to enable
+    // more combining.
     setOperationAction(ISD::BITREVERSE, XLenVT, Custom);
     setOperationAction(ISD::BSWAP, XLenVT, Custom);
 
@@ -232,7 +234,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::i32, Custom);
     }
   } else {
-    setOperationAction(ISD::BSWAP, XLenVT, Expand);
+    // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
+    // pattern match it directly in isel.
+    setOperationAction(ISD::BSWAP, XLenVT,
+                       Subtarget.hasStdExtZbb() ? Legal : Expand);
   }
 
   if (Subtarget.hasStdExtZbb()) {

@@ -1,9 +1,9 @@
 ; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 declare float @roundf(float) #0
-declare float @llvm.round.f32(float) #0
+declare float @llvm.round.f32(float)
 declare double @round(double) #0
-declare double @llvm.round.f64(double) #0
+declare double @llvm.round.f64(double)
 
 ; CHECK-LABEL: @constant_fold_round_f32_01
 ; CHECK-NEXT: ret float 1.000000e+00
@@ -89,4 +89,4 @@ define double @constant_fold_round_f64_06() #0 {
   ret double %x
 }
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone willreturn }

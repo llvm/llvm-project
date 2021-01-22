@@ -8,4 +8,4 @@ RUN: rm foo
 RUN: mkdir foo
 RUN: not llvm-ar x test.a foo 2>&1 | FileCheck %s
 
-CHECK: foo: {{[Ii]}}s a directory
+CHECK: foo: {{.*}}{{[Ii]}}s a directory{{.*}}
