@@ -11,7 +11,7 @@ define void @intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i32(<vscale x 1 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i8.nxv1i32(
@@ -34,7 +34,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i32(<vscale x 1 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i8.nxv1i32(
@@ -57,7 +57,7 @@ define void @intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i32(<vscale x 2 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i8.nxv2i32(
@@ -80,7 +80,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i32(<vscale x 2 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i8.nxv2i32(
@@ -103,7 +103,7 @@ define void @intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i32(<vscale x 4 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i8.nxv4i32(
@@ -126,7 +126,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i32(<vscale x 4 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i8.nxv4i32(
@@ -149,7 +149,7 @@ define void @intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i32(<vscale x 8 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i8.nxv8i32(
@@ -172,7 +172,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i32(<vscale x 8 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i8.nxv8i32(
@@ -194,10 +194,8 @@ declare void @llvm.riscv.vsuxei.nxv16i8.nxv16i32(
 define void @intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i32(<vscale x 16 x i8> %0, <vscale x 16 x i8>* %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i8.nxv16i32(
@@ -219,10 +217,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16i8.nxv16i32(
 define void @intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i32(<vscale x 16 x i8> %0, <vscale x 16 x i8>* %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i8.nxv16i32(
@@ -245,7 +241,7 @@ define void @intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i32(<vscale x 1 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i16.nxv1i32(
@@ -268,7 +264,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i32(<vscale x 1 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i16.nxv1i32(
@@ -291,7 +287,7 @@ define void @intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i32(<vscale x 2 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i16.nxv2i32(
@@ -314,7 +310,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i32(<vscale x 2 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i16.nxv2i32(
@@ -337,7 +333,7 @@ define void @intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i32(<vscale x 4 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i16.nxv4i32(
@@ -360,7 +356,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i32(<vscale x 4 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i16.nxv4i32(
@@ -383,7 +379,7 @@ define void @intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i32(<vscale x 8 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i16.nxv8i32(
@@ -406,7 +402,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i32(<vscale x 8 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i16.nxv8i32(
@@ -428,10 +424,8 @@ declare void @llvm.riscv.vsuxei.nxv16i16.nxv16i32(
 define void @intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i32(<vscale x 16 x i16> %0, <vscale x 16 x i16>* %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i16.nxv16i32(
@@ -453,10 +447,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16i16.nxv16i32(
 define void @intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i32(<vscale x 16 x i16> %0, <vscale x 16 x i16>* %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i16.nxv16i32(
@@ -479,7 +471,7 @@ define void @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i32(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i32.nxv1i32(
@@ -502,7 +494,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i32(<vscale x 1 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i32.nxv1i32(
@@ -525,7 +517,7 @@ define void @intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i32(<vscale x 2 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i32.nxv2i32(
@@ -548,7 +540,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i32(<vscale x 2 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i32.nxv2i32(
@@ -571,7 +563,7 @@ define void @intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i32.nxv4i32(
@@ -594,7 +586,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i32(<vscale x 4 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i32(
@@ -617,7 +609,7 @@ define void @intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i32.nxv8i32(
@@ -640,7 +632,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i32(<vscale x 8 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i32.nxv8i32(
@@ -662,10 +654,8 @@ declare void @llvm.riscv.vsuxei.nxv16i32.nxv16i32(
 define void @intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i32.nxv16i32(
@@ -687,10 +677,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i32(
 define void @intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i32(
@@ -713,7 +701,7 @@ define void @intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i32(<vscale x 1 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f16.nxv1i32(
@@ -736,7 +724,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i32(<vscale x 1 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f16.nxv1i32(
@@ -759,7 +747,7 @@ define void @intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i32(<vscale x 2 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f16.nxv2i32(
@@ -782,7 +770,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i32(<vscale x 2 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f16.nxv2i32(
@@ -805,7 +793,7 @@ define void @intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i32(<vscale x 4 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f16.nxv4i32(
@@ -828,7 +816,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i32(<vscale x 4 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f16.nxv4i32(
@@ -851,7 +839,7 @@ define void @intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i32(<vscale x 8 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f16.nxv8i32(
@@ -874,7 +862,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i32(<vscale x 8 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f16.nxv8i32(
@@ -896,10 +884,8 @@ declare void @llvm.riscv.vsuxei.nxv16f16.nxv16i32(
 define void @intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i32(<vscale x 16 x half> %0, <vscale x 16 x half>* %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f16.nxv16i32(
@@ -921,10 +907,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16f16.nxv16i32(
 define void @intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i32(<vscale x 16 x half> %0, <vscale x 16 x half>* %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f16.nxv16i32(
@@ -947,7 +931,7 @@ define void @intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i32(<vscale x 1 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f32.nxv1i32(
@@ -970,7 +954,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i32(<vscale x 1 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f32.nxv1i32(
@@ -993,7 +977,7 @@ define void @intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i32(<vscale x 2 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f32.nxv2i32(
@@ -1016,7 +1000,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i32(<vscale x 2 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f32.nxv2i32(
@@ -1039,7 +1023,7 @@ define void @intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i32(<vscale x 4 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f32.nxv4i32(
@@ -1062,7 +1046,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i32(<vscale x 4 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f32.nxv4i32(
@@ -1085,7 +1069,7 @@ define void @intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i32(<vscale x 8 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f32.nxv8i32(
@@ -1108,7 +1092,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i32(<vscale x 8 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f32.nxv8i32(
@@ -1130,10 +1114,8 @@ declare void @llvm.riscv.vsuxei.nxv16f32.nxv16i32(
 define void @intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i32(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f32.nxv16i32(
@@ -1155,10 +1137,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i32(
 define void @intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i32(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i32(
@@ -1181,7 +1161,7 @@ define void @intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i32(<vscale x 1 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f64.nxv1i32(
@@ -1204,7 +1184,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i32(<vscale x 1 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f64.nxv1i32(
@@ -1227,7 +1207,7 @@ define void @intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i32(<vscale x 2 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f64.nxv2i32(
@@ -1250,7 +1230,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i32(<vscale x 2 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f64.nxv2i32(
@@ -1273,7 +1253,7 @@ define void @intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i32(<vscale x 4 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f64.nxv4i32(
@@ -1296,7 +1276,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i32(<vscale x 4 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f64.nxv4i32(
@@ -1318,10 +1298,8 @@ declare void @llvm.riscv.vsuxei.nxv8f64.nxv8i32(
 define void @intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i32(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m4,ta,mu
-; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v28
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f64.nxv8i32(
@@ -1343,10 +1321,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i32(
 define void @intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i32(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i32> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m4,ta,mu
-; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei32.v v16, (a0), v28, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei32.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i32(
@@ -1369,7 +1345,7 @@ define void @intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i16(<vscale x 1 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i8.nxv1i16(
@@ -1392,7 +1368,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i16(<vscale x 1 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i8.nxv1i16(
@@ -1415,7 +1391,7 @@ define void @intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i16(<vscale x 2 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i8.nxv2i16(
@@ -1438,7 +1414,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i16(<vscale x 2 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i8.nxv2i16(
@@ -1461,7 +1437,7 @@ define void @intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i16(<vscale x 4 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i8.nxv4i16(
@@ -1484,7 +1460,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i16(<vscale x 4 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i8.nxv4i16(
@@ -1507,7 +1483,7 @@ define void @intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i16(<vscale x 8 x i8> %0, <vsc
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i8.nxv8i16(
@@ -1530,7 +1506,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i16(<vscale x 8 x i8> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i8.nxv8i16(
@@ -1553,7 +1529,7 @@ define void @intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i16(<vscale x 16 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i8.nxv16i16(
@@ -1576,7 +1552,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i16(<vscale x 16 x i8>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i8.nxv16i16(
@@ -1598,10 +1574,8 @@ declare void @llvm.riscv.vsuxei.nxv32i8.nxv32i16(
 define void @intrinsic_vsuxei_v_nxv32i8_nxv32i8_nxv32i16(<vscale x 32 x i8> %0, <vscale x 32 x i8>* %1, <vscale x 32 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32i8_nxv32i8_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32i8.nxv32i16(
@@ -1623,10 +1597,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv32i8.nxv32i16(
 define void @intrinsic_vsuxei_mask_v_nxv32i8_nxv32i8_nxv32i16(<vscale x 32 x i8> %0, <vscale x 32 x i8>* %1, <vscale x 32 x i16> %2, <vscale x 32 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32i8_nxv32i8_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32i8.nxv32i16(
@@ -1649,7 +1621,7 @@ define void @intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i16(<vscale x 1 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i16.nxv1i16(
@@ -1672,7 +1644,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i16(<vscale x 1 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i16.nxv1i16(
@@ -1695,7 +1667,7 @@ define void @intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i16(<vscale x 2 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i16.nxv2i16(
@@ -1718,7 +1690,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i16(<vscale x 2 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i16.nxv2i16(
@@ -1741,7 +1713,7 @@ define void @intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i16(<vscale x 4 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i16.nxv4i16(
@@ -1764,7 +1736,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i16(<vscale x 4 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i16.nxv4i16(
@@ -1787,7 +1759,7 @@ define void @intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i16(<vscale x 8 x i16> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i16.nxv8i16(
@@ -1810,7 +1782,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i16(<vscale x 8 x i16> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i16.nxv8i16(
@@ -1833,7 +1805,7 @@ define void @intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i16(<vscale x 16 x i16> %
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i16.nxv16i16(
@@ -1856,7 +1828,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i16(<vscale x 16 x i
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i16.nxv16i16(
@@ -1878,10 +1850,8 @@ declare void @llvm.riscv.vsuxei.nxv32i16.nxv32i16(
 define void @intrinsic_vsuxei_v_nxv32i16_nxv32i16_nxv32i16(<vscale x 32 x i16> %0, <vscale x 32 x i16>* %1, <vscale x 32 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32i16_nxv32i16_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32i16.nxv32i16(
@@ -1903,10 +1873,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv32i16.nxv32i16(
 define void @intrinsic_vsuxei_mask_v_nxv32i16_nxv32i16_nxv32i16(<vscale x 32 x i16> %0, <vscale x 32 x i16>* %1, <vscale x 32 x i16> %2, <vscale x 32 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32i16_nxv32i16_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32i16.nxv32i16(
@@ -1929,7 +1897,7 @@ define void @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i32.nxv1i16(
@@ -1952,7 +1920,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i32.nxv1i16(
@@ -1975,7 +1943,7 @@ define void @intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i16(<vscale x 2 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i32.nxv2i16(
@@ -1998,7 +1966,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i16(<vscale x 2 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i32.nxv2i16(
@@ -2021,7 +1989,7 @@ define void @intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i16(<vscale x 4 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i32.nxv4i16(
@@ -2044,7 +2012,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i16(<vscale x 4 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i16(
@@ -2067,7 +2035,7 @@ define void @intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i16(<vscale x 8 x i32> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i32.nxv8i16(
@@ -2090,7 +2058,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i16(<vscale x 8 x i32> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i32.nxv8i16(
@@ -2112,10 +2080,8 @@ declare void @llvm.riscv.vsuxei.nxv16i32.nxv16i16(
 define void @intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i16(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v28
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i32.nxv16i16(
@@ -2137,10 +2103,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i16(
 define void @intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i16(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i16> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v28, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i16(
@@ -2163,7 +2127,7 @@ define void @intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i16(<vscale x 1 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f16.nxv1i16(
@@ -2186,7 +2150,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i16(<vscale x 1 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f16.nxv1i16(
@@ -2209,7 +2173,7 @@ define void @intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i16(<vscale x 2 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f16.nxv2i16(
@@ -2232,7 +2196,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i16(<vscale x 2 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f16.nxv2i16(
@@ -2255,7 +2219,7 @@ define void @intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i16(<vscale x 4 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f16.nxv4i16(
@@ -2278,7 +2242,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i16(<vscale x 4 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f16.nxv4i16(
@@ -2301,7 +2265,7 @@ define void @intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i16(<vscale x 8 x half> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f16.nxv8i16(
@@ -2324,7 +2288,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i16(<vscale x 8 x half>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f16.nxv8i16(
@@ -2347,7 +2311,7 @@ define void @intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i16(<vscale x 16 x half> 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f16.nxv16i16(
@@ -2370,7 +2334,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i16(<vscale x 16 x h
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f16.nxv16i16(
@@ -2392,10 +2356,8 @@ declare void @llvm.riscv.vsuxei.nxv32f16.nxv32i16(
 define void @intrinsic_vsuxei_v_nxv32f16_nxv32f16_nxv32i16(<vscale x 32 x half> %0, <vscale x 32 x half>* %1, <vscale x 32 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32f16_nxv32f16_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32f16.nxv32i16(
@@ -2417,10 +2379,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv32f16.nxv32i16(
 define void @intrinsic_vsuxei_mask_v_nxv32f16_nxv32f16_nxv32i16(<vscale x 32 x half> %0, <vscale x 32 x half>* %1, <vscale x 32 x i16> %2, <vscale x 32 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32f16_nxv32f16_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32f16.nxv32i16(
@@ -2443,7 +2403,7 @@ define void @intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i16(<vscale x 1 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f32.nxv1i16(
@@ -2466,7 +2426,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i16(<vscale x 1 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f32.nxv1i16(
@@ -2489,7 +2449,7 @@ define void @intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i16(<vscale x 2 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f32.nxv2i16(
@@ -2512,7 +2472,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i16(<vscale x 2 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f32.nxv2i16(
@@ -2535,7 +2495,7 @@ define void @intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i16(<vscale x 4 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f32.nxv4i16(
@@ -2558,7 +2518,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i16(<vscale x 4 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f32.nxv4i16(
@@ -2581,7 +2541,7 @@ define void @intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i16(<vscale x 8 x float> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f32.nxv8i16(
@@ -2604,7 +2564,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i16(<vscale x 8 x float
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f32.nxv8i16(
@@ -2626,10 +2586,8 @@ declare void @llvm.riscv.vsuxei.nxv16f32.nxv16i16(
 define void @intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i16(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v28
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f32.nxv16i16(
@@ -2651,10 +2609,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i16(
 define void @intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i16(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i16> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v28, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i16(
@@ -2677,7 +2633,7 @@ define void @intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i16(<vscale x 1 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f64.nxv1i16(
@@ -2700,7 +2656,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i16(<vscale x 1 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f64.nxv1i16(
@@ -2723,7 +2679,7 @@ define void @intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i16(<vscale x 2 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f64.nxv2i16(
@@ -2746,7 +2702,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i16(<vscale x 2 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f64.nxv2i16(
@@ -2769,7 +2725,7 @@ define void @intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i16(<vscale x 4 x double> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f64.nxv4i16(
@@ -2792,7 +2748,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i16(<vscale x 4 x doubl
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f64.nxv4i16(
@@ -2814,10 +2770,8 @@ declare void @llvm.riscv.vsuxei.nxv8f64.nxv8i16(
 define void @intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i16(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i16> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m2,ta,mu
-; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v26
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f64.nxv8i16(
@@ -2839,10 +2793,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i16(
 define void @intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i16(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i16> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m2,ta,mu
-; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei16.v v16, (a0), v26, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i16(
@@ -2865,7 +2817,7 @@ define void @intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vsca
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i8_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i8.nxv1i8(
@@ -2888,7 +2840,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i8_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i8.nxv1i8(
@@ -2911,7 +2863,7 @@ define void @intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, <vsca
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i8_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i8.nxv2i8(
@@ -2934,7 +2886,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i8_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i8.nxv2i8(
@@ -2957,7 +2909,7 @@ define void @intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, <vsca
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i8_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i8.nxv4i8(
@@ -2980,7 +2932,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i8_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i8.nxv4i8(
@@ -3003,7 +2955,7 @@ define void @intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, <vsca
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i8_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i8.nxv8i8(
@@ -3026,7 +2978,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i8_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i8.nxv8i8(
@@ -3049,7 +3001,7 @@ define void @intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i8(<vscale x 16 x i8> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i8_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i8.nxv16i8(
@@ -3072,7 +3024,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i8(<vscale x 16 x i8> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i8_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i8.nxv16i8(
@@ -3095,7 +3047,7 @@ define void @intrinsic_vsuxei_v_nxv32i8_nxv32i8_nxv32i8(<vscale x 32 x i8> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32i8_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32i8.nxv32i8(
@@ -3118,7 +3070,7 @@ define void @intrinsic_vsuxei_mask_v_nxv32i8_nxv32i8_nxv32i8(<vscale x 32 x i8> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32i8_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32i8.nxv32i8(
@@ -3140,10 +3092,8 @@ declare void @llvm.riscv.vsuxei.nxv64i8.nxv64i8(
 define void @intrinsic_vsuxei_v_nxv64i8_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i8>* %1, <vscale x 64 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv64i8_nxv64i8_nxv64i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m8,ta,mu
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v8
+; CHECK-NEXT:    vsetvli a1, a1, e8,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv64i8.nxv64i8(
@@ -3165,10 +3115,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv64i8.nxv64i8(
 define void @intrinsic_vsuxei_mask_v_nxv64i8_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i8>* %1, <vscale x 64 x i8> %2, <vscale x 64 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv64i8_nxv64i8_nxv64i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m8,ta,mu
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e8,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v8, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e8,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv64i8.nxv64i8(
@@ -3191,7 +3139,7 @@ define void @intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i8(<vscale x 1 x i16> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i16_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i16.nxv1i8(
@@ -3214,7 +3162,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i8(<vscale x 1 x i16> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i16_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i16.nxv1i8(
@@ -3237,7 +3185,7 @@ define void @intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i8(<vscale x 2 x i16> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i16_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i16.nxv2i8(
@@ -3260,7 +3208,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i8(<vscale x 2 x i16> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i16_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i16.nxv2i8(
@@ -3283,7 +3231,7 @@ define void @intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i8(<vscale x 4 x i16> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i16_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i16.nxv4i8(
@@ -3306,7 +3254,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i8(<vscale x 4 x i16> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i16_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i16.nxv4i8(
@@ -3329,7 +3277,7 @@ define void @intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i8(<vscale x 8 x i16> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i16_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i16.nxv8i8(
@@ -3352,7 +3300,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i8(<vscale x 8 x i16> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i16_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i16.nxv8i8(
@@ -3375,7 +3323,7 @@ define void @intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i8(<vscale x 16 x i16> %0
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i16_nxv16i16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i16.nxv16i8(
@@ -3398,7 +3346,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i8(<vscale x 16 x i1
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i16_nxv16i16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i16.nxv16i8(
@@ -3420,10 +3368,8 @@ declare void @llvm.riscv.vsuxei.nxv32i16.nxv32i8(
 define void @intrinsic_vsuxei_v_nxv32i16_nxv32i16_nxv32i8(<vscale x 32 x i16> %0, <vscale x 32 x i16>* %1, <vscale x 32 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32i16_nxv32i16_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m4,ta,mu
-; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v28
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32i16.nxv32i8(
@@ -3445,10 +3391,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv32i16.nxv32i8(
 define void @intrinsic_vsuxei_mask_v_nxv32i16_nxv32i16_nxv32i8(<vscale x 32 x i16> %0, <vscale x 32 x i16>* %1, <vscale x 32 x i8> %2, <vscale x 32 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32i16_nxv32i16_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m4,ta,mu
-; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v28, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32i16.nxv32i8(
@@ -3471,7 +3415,7 @@ define void @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i8(<vscale x 1 x i32> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1i32.nxv1i8(
@@ -3494,7 +3438,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i8(<vscale x 1 x i32> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1i32.nxv1i8(
@@ -3517,7 +3461,7 @@ define void @intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i8(<vscale x 2 x i32> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2i32_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2i32.nxv2i8(
@@ -3540,7 +3484,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i8(<vscale x 2 x i32> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2i32_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2i32.nxv2i8(
@@ -3563,7 +3507,7 @@ define void @intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i8(<vscale x 4 x i32> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4i32_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4i32.nxv4i8(
@@ -3586,7 +3530,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i8(<vscale x 4 x i32> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4i32_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4i32.nxv4i8(
@@ -3609,7 +3553,7 @@ define void @intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i8(<vscale x 8 x i32> %0, <v
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8i32_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8i32.nxv8i8(
@@ -3632,7 +3576,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i8(<vscale x 8 x i32> %
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8i32_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8i32.nxv8i8(
@@ -3654,10 +3598,8 @@ declare void @llvm.riscv.vsuxei.nxv16i32.nxv16i8(
 define void @intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i8(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16i32_nxv16i32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m2,ta,mu
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v26
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16i32.nxv16i8(
@@ -3679,10 +3621,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i8(
 define void @intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i8(<vscale x 16 x i32> %0, <vscale x 16 x i32>* %1, <vscale x 16 x i8> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16i32_nxv16i32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m2,ta,mu
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v26, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16i32.nxv16i8(
@@ -3705,7 +3645,7 @@ define void @intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i8(<vscale x 1 x half> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f16_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f16.nxv1i8(
@@ -3728,7 +3668,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i8(<vscale x 1 x half> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f16_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f16.nxv1i8(
@@ -3751,7 +3691,7 @@ define void @intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i8(<vscale x 2 x half> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f16_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f16.nxv2i8(
@@ -3774,7 +3714,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i8(<vscale x 2 x half> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f16_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f16.nxv2i8(
@@ -3797,7 +3737,7 @@ define void @intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i8(<vscale x 4 x half> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f16_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f16.nxv4i8(
@@ -3820,7 +3760,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i8(<vscale x 4 x half> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f16_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f16.nxv4i8(
@@ -3843,7 +3783,7 @@ define void @intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i8(<vscale x 8 x half> %0, <
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f16_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f16.nxv8i8(
@@ -3866,7 +3806,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i8(<vscale x 8 x half> 
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f16_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f16.nxv8i8(
@@ -3889,7 +3829,7 @@ define void @intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i8(<vscale x 16 x half> %
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f16_nxv16f16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f16.nxv16i8(
@@ -3912,7 +3852,7 @@ define void @intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i8(<vscale x 16 x ha
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f16_nxv16f16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f16.nxv16i8(
@@ -3934,10 +3874,8 @@ declare void @llvm.riscv.vsuxei.nxv32f16.nxv32i8(
 define void @intrinsic_vsuxei_v_nxv32f16_nxv32f16_nxv32i8(<vscale x 32 x half> %0, <vscale x 32 x half>* %1, <vscale x 32 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv32f16_nxv32f16_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m4,ta,mu
-; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v28
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv32f16.nxv32i8(
@@ -3959,10 +3897,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv32f16.nxv32i8(
 define void @intrinsic_vsuxei_mask_v_nxv32f16_nxv32f16_nxv32i8(<vscale x 32 x half> %0, <vscale x 32 x half>* %1, <vscale x 32 x i8> %2, <vscale x 32 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv32f16_nxv32f16_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m4,ta,mu
-; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e16,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v28, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e16,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv32f16.nxv32i8(
@@ -3985,7 +3921,7 @@ define void @intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i8(<vscale x 1 x float> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f32_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f32.nxv1i8(
@@ -4008,7 +3944,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i8(<vscale x 1 x float>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f32_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f32.nxv1i8(
@@ -4031,7 +3967,7 @@ define void @intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i8(<vscale x 2 x float> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f32_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f32.nxv2i8(
@@ -4054,7 +3990,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i8(<vscale x 2 x float>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f32_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f32.nxv2i8(
@@ -4077,7 +4013,7 @@ define void @intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i8(<vscale x 4 x float> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f32_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f32.nxv4i8(
@@ -4100,7 +4036,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i8(<vscale x 4 x float>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f32_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f32.nxv4i8(
@@ -4123,7 +4059,7 @@ define void @intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i8(<vscale x 8 x float> %0, 
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f32_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f32.nxv8i8(
@@ -4146,7 +4082,7 @@ define void @intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i8(<vscale x 8 x float>
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f32_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f32.nxv8i8(
@@ -4168,10 +4104,8 @@ declare void @llvm.riscv.vsuxei.nxv16f32.nxv16i8(
 define void @intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i8(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv16f32_nxv16f32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m2,ta,mu
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v26
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv16f32.nxv16i8(
@@ -4193,10 +4127,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i8(
 define void @intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i8(<vscale x 16 x float> %0, <vscale x 16 x float>* %1, <vscale x 16 x i8> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv16f32_nxv16f32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m2,ta,mu
-; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v26, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv16f32.nxv16i8(
@@ -4219,7 +4151,7 @@ define void @intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i8(<vscale x 1 x double> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv1f64_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv1f64.nxv1i8(
@@ -4242,7 +4174,7 @@ define void @intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i8(<vscale x 1 x double
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv1f64_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v17, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv1f64.nxv1i8(
@@ -4265,7 +4197,7 @@ define void @intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i8(<vscale x 2 x double> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv2f64_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv2f64.nxv2i8(
@@ -4288,7 +4220,7 @@ define void @intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i8(<vscale x 2 x double
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv2f64_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v18, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv2f64.nxv2i8(
@@ -4311,7 +4243,7 @@ define void @intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i8(<vscale x 4 x double> %0,
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv4f64_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv4f64.nxv4i8(
@@ -4334,7 +4266,7 @@ define void @intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i8(<vscale x 4 x double
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv4f64_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v20, v0.t
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv4f64.nxv4i8(
@@ -4356,10 +4288,8 @@ declare void @llvm.riscv.vsuxei.nxv8f64.nxv8i8(
 define void @intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i8(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i8> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_v_nxv8f64_nxv8f64_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m1,ta,mu
-; CHECK-NEXT:    vle8.v v25, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v25
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.nxv8f64.nxv8i8(
@@ -4381,10 +4311,8 @@ declare void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i8(
 define void @intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i8(<vscale x 8 x double> %0, <vscale x 8 x double>* %1, <vscale x 8 x i8> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsuxei_mask_v_nxv8f64_nxv8f64_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8,m1,ta,mu
-; CHECK-NEXT:    vle8.v v25, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vsuxei8.v v16, (a0), v25, v0.t
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsuxei8.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   call void @llvm.riscv.vsuxei.mask.nxv8f64.nxv8i8(
