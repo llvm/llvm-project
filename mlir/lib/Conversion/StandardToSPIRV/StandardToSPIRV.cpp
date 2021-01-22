@@ -386,6 +386,28 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts floating point NaN check to SPIR-V ops. This pattern requires
+/// Kernel capability.
+class CmpFOpNanKernelPattern final : public OpConversionPattern<CmpFOp> {
+public:
+  using OpConversionPattern<CmpFOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts floating point NaN check to SPIR-V ops. This pattern does not
+/// require additional capability.
+class CmpFOpNanNonePattern final : public OpConversionPattern<CmpFOp> {
+public:
+  using OpConversionPattern<CmpFOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts integer compare operation on i1 type operands to SPIR-V ops.
 class BoolCmpIOpPattern final : public OpConversionPattern<CmpIOp> {
 public:
@@ -730,7 +752,6 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     DISPATCH(CmpFPredicate::OLT, spirv::FOrdLessThanOp);
     DISPATCH(CmpFPredicate::OLE, spirv::FOrdLessThanEqualOp);
     DISPATCH(CmpFPredicate::ONE, spirv::FOrdNotEqualOp);
-    DISPATCH(CmpFPredicate::ORD, spirv::OrderedOp);
     // Unordered.
     DISPATCH(CmpFPredicate::UEQ, spirv::FUnordEqualOp);
     DISPATCH(CmpFPredicate::UGT, spirv::FUnordGreaterThanOp);
@@ -738,7 +759,6 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     DISPATCH(CmpFPredicate::ULT, spirv::FUnordLessThanOp);
     DISPATCH(CmpFPredicate::ULE, spirv::FUnordLessThanEqualOp);
     DISPATCH(CmpFPredicate::UNE, spirv::FUnordNotEqualOp);
-    DISPATCH(CmpFPredicate::UNO, spirv::UnorderedOp);
 
 #undef DISPATCH
 
@@ -746,6 +766,47 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     break;
   }
   return failure();
+}
+
+LogicalResult CmpFOpNanKernelPattern::matchAndRewrite(
+    CmpFOp cmpFOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  CmpFOpAdaptor cmpFOpOperands(operands);
+
+  if (cmpFOp.getPredicate() == CmpFPredicate::ORD) {
+    rewriter.replaceOpWithNewOp<spirv::OrderedOp>(cmpFOp, cmpFOpOperands.lhs(),
+                                                  cmpFOpOperands.rhs());
+    return success();
+  }
+
+  if (cmpFOp.getPredicate() == CmpFPredicate::UNO) {
+    rewriter.replaceOpWithNewOp<spirv::UnorderedOp>(
+        cmpFOp, cmpFOpOperands.lhs(), cmpFOpOperands.rhs());
+    return success();
+  }
+
+  return failure();
+}
+
+LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
+    CmpFOp cmpFOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  if (cmpFOp.getPredicate() != CmpFPredicate::ORD &&
+      cmpFOp.getPredicate() != CmpFPredicate::UNO)
+    return failure();
+
+  CmpFOpAdaptor cmpFOpOperands(operands);
+  Location loc = cmpFOp.getLoc();
+
+  Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, cmpFOpOperands.lhs());
+  Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, cmpFOpOperands.rhs());
+
+  Value replace = rewriter.create<spirv::LogicalOrOp>(loc, lhsIsNan, rhsIsNan);
+  if (cmpFOp.getPredicate() == CmpFPredicate::ORD)
+    replace = rewriter.create<spirv::LogicalNotOp>(loc, replace);
+
+  rewriter.replaceOp(cmpFOp, replace);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1102,7 +1163,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       SignedRemIOpPattern, XOrOpPattern,
 
       // Comparison patterns
-      BoolCmpIOpPattern, CmpFOpPattern, CmpIOpPattern,
+      BoolCmpIOpPattern, CmpFOpPattern, CmpFOpNanNonePattern, CmpIOpPattern,
 
       // Constant patterns
       ConstantCompositeOpPattern, ConstantScalarOpPattern,
@@ -1124,5 +1185,10 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
       TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>>(typeConverter,
                                                           context);
+
+  // Give CmpFOpNanKernelPattern a higher benefit so it can prevail when Kernel
+  // capability is available.
+  patterns.insert<CmpFOpNanKernelPattern>(typeConverter, context,
+                                          /*benefit=*/2);
 }
 } // namespace mlir
