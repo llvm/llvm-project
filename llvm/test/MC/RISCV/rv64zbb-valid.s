@@ -12,24 +12,12 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zbb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: addiwu t0, t1, 0
-# CHECK-ASM: encoding: [0x9b,0x42,0x03,0x00]
-addiwu t0, t1, 0
 # CHECK-ASM-AND-OBJ: slliu.w t0, t1, 0
 # CHECK-ASM: encoding: [0x9b,0x12,0x03,0x08]
 slliu.w t0, t1, 0
-# CHECK-ASM-AND-OBJ: addwu t0, t1, t2
-# CHECK-ASM: encoding: [0xbb,0x02,0x73,0x0a]
-addwu t0, t1, t2
-# CHECK-ASM-AND-OBJ: subwu t0, t1, t2
-# CHECK-ASM: encoding: [0xbb,0x02,0x73,0x4a]
-subwu t0, t1, t2
 # CHECK-ASM-AND-OBJ: addu.w t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x02,0x73,0x08]
 addu.w t0, t1, t2
-# CHECK-ASM-AND-OBJ: subu.w t0, t1, t2
-# CHECK-ASM: encoding: [0xbb,0x02,0x73,0x48]
-subu.w t0, t1, t2
 # CHECK-ASM-AND-OBJ: slow t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0x20]
 slow t0, t1, t2
