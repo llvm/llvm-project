@@ -1148,7 +1148,7 @@ public:
   /// \p Alignment - alignment of single element
   /// \p I - the optional original context instruction, if one exists, e.g. the
   ///        load/store to transform or the call to the gather/scatter intrinsic
-  int getGatherScatterOpCost(
+  InstructionCost getGatherScatterOpCost(
       unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
       Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
@@ -1596,11 +1596,11 @@ public:
   virtual int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind) = 0;
-  virtual int getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                     const Value *Ptr, bool VariableMask,
-                                     Align Alignment,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr) = 0;
+  virtual InstructionCost
+  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
+                         bool VariableMask, Align Alignment,
+                         TTI::TargetCostKind CostKind,
+                         const Instruction *I = nullptr) = 0;
 
   virtual int getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
@@ -2078,10 +2078,11 @@ public:
     return Impl.getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                       CostKind);
   }
-  int getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                             bool VariableMask, Align Alignment,
-                             TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) override {
+  InstructionCost
+  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
+                         bool VariableMask, Align Alignment,
+                         TTI::TargetCostKind CostKind,
+                         const Instruction *I = nullptr) override {
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
   }

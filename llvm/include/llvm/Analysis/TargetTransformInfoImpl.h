@@ -549,10 +549,11 @@ public:
     return 1;
   }
 
-  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                  const Value *Ptr, bool VariableMask,
-                                  Align Alignment, TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr) const {
+  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr) const {
     return 1;
   }
 

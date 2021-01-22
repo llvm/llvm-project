@@ -127,10 +127,11 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF);
 
-  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                  const Value *Ptr, bool VariableMask,
-                                  Align Alignment, TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr);
+  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr);
 
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
