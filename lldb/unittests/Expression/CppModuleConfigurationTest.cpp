@@ -20,11 +20,11 @@ using namespace lldb_private;
 
 namespace {
 struct CppModuleConfigurationTest : public testing::Test {
-  llvm::MemoryBufferRef m_empty_buffer;
+  std::unique_ptr<llvm::MemoryBuffer> m_empty_buffer;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> m_fs;
 
   CppModuleConfigurationTest()
-      : m_empty_buffer("", "<empty buffer>"),
+      : m_empty_buffer(llvm::MemoryBuffer::getMemBuffer("", "<empty buffer>")),
         m_fs(new llvm::vfs::InMemoryFileSystem()) {}
 
   void SetUp() override {
@@ -42,7 +42,7 @@ struct CppModuleConfigurationTest : public testing::Test {
     FileSpecList result;
     for (const std::string &path : paths) {
       result.Append(FileSpec(path, FileSpec::Style::posix));
-      if (!m_fs->addFileNoOwn(path, static_cast<time_t>(0), m_empty_buffer))
+      if (!m_fs->addFileNoOwn(path, static_cast<time_t>(0), m_empty_buffer.get()))
         llvm_unreachable("Invalid test configuration?");
     }
     return result;
