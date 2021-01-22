@@ -67,7 +67,7 @@ static cl::opt<std::string>
     AAPipeline("aa-pipeline",
                cl::desc("A textual description of the alias analysis "
                         "pipeline for handling managed aliasing queries"),
-               cl::Hidden);
+               cl::Hidden, cl::init("default"));
 
 /// {{@ These options accept textual pipeline descriptions which will be
 /// inserted into default pipelines at the respective extension points
@@ -348,9 +348,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
   AAManager AA;
-  if (!AAPipeline.empty()) {
-    assert(Passes.empty() &&
-           "--aa-pipeline and -foo-pass should not both be specified");
+  if (Passes.empty()) {
     if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
