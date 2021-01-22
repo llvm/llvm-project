@@ -369,7 +369,7 @@ def SHFLI   : RVBShfl_ri<0b000010, 0b001, OPC_OP_IMM, "shfli">, Sched<[]>;
 def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZba, IsRV64] in {
 def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slli.uw">, Sched<[]>;
 def ADDUW : ALUW_rr<0b0000100, 0b000, "add.uw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
@@ -838,13 +838,16 @@ def : Pat<(or (or (and (shl GPR:$rs1, (i64 1)), (i64 0x4444444444444444)),
           (SHFLI GPR:$rs1, (i64 1))>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(add GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
           (ADDUW GPR:$rs1, GPR:$rs2)>;
+}
+
+let Predicates = [HasStdExtZbb, IsRV64] in {
 def : Pat<(not (riscv_sllw (not GPR:$rs1), GPR:$rs2)),
           (SLOW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(not (riscv_srlw (not GPR:$rs1), GPR:$rs2)),

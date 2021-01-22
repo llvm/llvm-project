@@ -365,6 +365,10 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE %s
 // RV32-EXPERIMENTAL-ZBB-ZBP-UNDERSCORE: error: invalid arch name 'rv32izbb0p92zbp0p92', multi-character extensions must be separated by underscores
 
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izba0p92 -menable-experimental-extensions -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-ZBA %s
+// RV32-EXPERIMENTAL-ZBA: "-target-feature" "+experimental-zba"
+
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-NOFLAG %s
 // RV32-EXPERIMENTAL-V-NOFLAG: error: invalid arch name 'rv32iv'
