@@ -7334,10 +7334,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     const SCEV *CondSCEV = SE->getSCEV(SI->getCondition());
     bool ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
     Type *CondTy = SI->getCondition()->getType();
-    if (!ScalarCond) {
-      assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    if (!ScalarCond)
       CondTy = VectorType::get(CondTy, VF);
-    }
     return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy, CondTy,
                                   CmpInst::BAD_ICMP_PREDICATE, CostKind, I);
   }
