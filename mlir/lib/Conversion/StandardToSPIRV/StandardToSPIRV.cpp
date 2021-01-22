@@ -481,16 +481,32 @@ public:
     auto dstType =
         this->getTypeConverter()->convertType(op.getResult().getType());
     Location loc = op.getLoc();
-    Attribute zeroAttr, oneAttr;
-    if (auto vectorType = dstType.dyn_cast<VectorType>()) {
-      zeroAttr = DenseElementsAttr::get(vectorType, 0);
-      oneAttr = DenseElementsAttr::get(vectorType, 1);
-    } else {
-      zeroAttr = IntegerAttr::get(dstType, 0);
-      oneAttr = IntegerAttr::get(dstType, 1);
-    }
-    Value zero = rewriter.create<ConstantOp>(loc, zeroAttr);
-    Value one = rewriter.create<ConstantOp>(loc, oneAttr);
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+    rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
+        op, dstType, operands.front(), one, zero);
+    return success();
+  }
+};
+
+/// Converts std.uitofp to spv.Select if the type of source is i1 or vector of
+/// i1.
+class UIToFPI1Pattern final : public OpConversionPattern<UIToFPOp> {
+public:
+  using OpConversionPattern<UIToFPOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(UIToFPOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = operands.front().getType();
+    if (!isBoolScalarOrVector(srcType))
+      return failure();
+
+    auto dstType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    Location loc = op.getLoc();
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
         op, dstType, operands.front(), one, zero);
     return success();
@@ -1098,8 +1114,10 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       ReturnOpPattern, SelectOpPattern,
 
       // Type cast patterns
-      ZeroExtendI1Pattern, TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
+      UIToFPI1Pattern, ZeroExtendI1Pattern,
+      TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      TypeCastingOpPattern<UIToFPOp, spirv::ConvertUToFOp>,
       TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
       TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
       TypeCastingOpPattern<FPToSIOp, spirv::ConvertFToSOp>,
