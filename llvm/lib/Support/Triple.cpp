@@ -240,6 +240,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case GNUEABI: return "gnueabi";
   case GNUEABIHF: return "gnueabihf";
   case GNUX32: return "gnux32";
+  case GNUILP32: return "gnu_ilp32";
   case Itanium: return "itanium";
   case MSVC: return "msvc";
   case MacABI: return "macabi";
@@ -535,26 +536,27 @@ static Triple::OSType parseOS(StringRef OSName) {
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
-    .StartsWith("eabihf", Triple::EABIHF)
-    .StartsWith("eabi", Triple::EABI)
-    .StartsWith("gnuabin32", Triple::GNUABIN32)
-    .StartsWith("gnuabi64", Triple::GNUABI64)
-    .StartsWith("gnueabihf", Triple::GNUEABIHF)
-    .StartsWith("gnueabi", Triple::GNUEABI)
-    .StartsWith("gnux32", Triple::GNUX32)
-    .StartsWith("code16", Triple::CODE16)
-    .StartsWith("gnu", Triple::GNU)
-    .StartsWith("android", Triple::Android)
-    .StartsWith("musleabihf", Triple::MuslEABIHF)
-    .StartsWith("musleabi", Triple::MuslEABI)
-    .StartsWith("musl", Triple::Musl)
-    .StartsWith("msvc", Triple::MSVC)
-    .StartsWith("itanium", Triple::Itanium)
-    .StartsWith("cygnus", Triple::Cygnus)
-    .StartsWith("coreclr", Triple::CoreCLR)
-    .StartsWith("simulator", Triple::Simulator)
-    .StartsWith("macabi", Triple::MacABI)
-    .Default(Triple::UnknownEnvironment);
+      .StartsWith("eabihf", Triple::EABIHF)
+      .StartsWith("eabi", Triple::EABI)
+      .StartsWith("gnuabin32", Triple::GNUABIN32)
+      .StartsWith("gnuabi64", Triple::GNUABI64)
+      .StartsWith("gnueabihf", Triple::GNUEABIHF)
+      .StartsWith("gnueabi", Triple::GNUEABI)
+      .StartsWith("gnux32", Triple::GNUX32)
+      .StartsWith("gnu_ilp32", Triple::GNUILP32)
+      .StartsWith("code16", Triple::CODE16)
+      .StartsWith("gnu", Triple::GNU)
+      .StartsWith("android", Triple::Android)
+      .StartsWith("musleabihf", Triple::MuslEABIHF)
+      .StartsWith("musleabi", Triple::MuslEABI)
+      .StartsWith("musl", Triple::Musl)
+      .StartsWith("msvc", Triple::MSVC)
+      .StartsWith("itanium", Triple::Itanium)
+      .StartsWith("cygnus", Triple::Cygnus)
+      .StartsWith("coreclr", Triple::CoreCLR)
+      .StartsWith("simulator", Triple::Simulator)
+      .StartsWith("macabi", Triple::MacABI)
+      .Default(Triple::UnknownEnvironment);
 }
 
 static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {

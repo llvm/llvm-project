@@ -482,7 +482,10 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  bool isTargetILP32() const { return TargetTriple.isArch32Bit(); }
+  bool isTargetILP32() const {
+    return TargetTriple.isArch32Bit() ||
+           TargetTriple.getEnvironment() == Triple::GNUILP32;
+  }
 
   bool useAA() const override { return UseAA; }
 

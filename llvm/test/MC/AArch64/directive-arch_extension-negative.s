@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64 \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -124,3 +124,10 @@ ld64b x0, [x13]
 ld64b x0, [x13]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: ls64
 // CHECK-NEXT: ld64b x0, [x13]
+
+cfinv
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: flagm
+.arch_extension noflagm
+cfinv
+// CHECK: [[@LINE-1]]:1: error: instruction requires: flagm
+// CHECK-NEXT: cfinv

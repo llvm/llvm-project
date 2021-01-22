@@ -14,7 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "R600Subtarget.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

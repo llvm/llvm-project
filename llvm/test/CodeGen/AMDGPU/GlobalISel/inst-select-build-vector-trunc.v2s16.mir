@@ -579,10 +579,8 @@ body: |
   bb.0:
 
     ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_constant_anyext_constant
-    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-    ; GFX9: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[S_MOV_B32_1]]
-    ; GFX9: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 29884539
+    ; GFX9: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:sgpr(s16) = G_CONSTANT i16 123
     %1:sgpr(s16) = G_CONSTANT i16 456
     %2:sgpr(s32) = G_ANYEXT %0

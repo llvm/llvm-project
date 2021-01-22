@@ -44,27 +44,6 @@ using folded_std_view = FoldedValueBuilder<ViewOp>;
 
 #define DEBUG_TYPE "linalg-promotion"
 
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// Otherwise return size.
-static Value extractSmallestConstantBoundingSize(OpBuilder &b, Location loc,
-                                                 Value size) {
-  Optional<int64_t> boundingConst = {};
-  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
-    for (auto e : affineMinOp.getAffineMap().getResults())
-      if (auto cst = e.dyn_cast<AffineConstantExpr>())
-        boundingConst = boundingConst
-                            ? std::min(boundingConst.getValue(), cst.getValue())
-                            : cst.getValue();
-  } else if (auto constIndexOp = size.getDefiningOp<ConstantOp>()) {
-    if (constIndexOp.getType().isa<IndexType>())
-      boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
-  }
-  return boundingConst && *boundingConst >= 0
-             ? b.create<ConstantIndexOp>(loc, *boundingConst)
-             : size;
-}
-
 /// Alloc a new buffer of `size`. If `dynamicBuffers` is true allocate exactly
 /// the size needed, otherwise try to allocate a static bounding box.
 static Value allocBuffer(const LinalgPromotionOptions &options,
@@ -242,7 +221,9 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
-    Value size = extractSmallestConstantBoundingSize(b, loc, rangeValue.size);
+    IntegerAttr sizeAttr = getSmallestBoundingIndex(rangeValue.size);
+    Value size =
+        (!sizeAttr) ? rangeValue.size : b.create<ConstantOp>(loc, sizeAttr);
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(folded_std_dim(folder, subView, en.index()));

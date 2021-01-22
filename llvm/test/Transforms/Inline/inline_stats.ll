@@ -9,6 +9,9 @@
 ; RUN: opt -S -passes=inliner-wrapper-no-mandatory-first -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
 ; RUN: opt -S -passes=inliner-wrapper-no-mandatory-first -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
 
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-VERBOSE,CHECK
+
 ; CHECK: ------- Dumping inliner stats for [<stdin>] -------
 ; CHECK-BASIC-NOT: -- List of inlined functions:
 ; CHECK-BASIC-NOT: -- Inlined not imported function

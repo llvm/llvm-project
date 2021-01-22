@@ -25,6 +25,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <limits>
 #include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"
@@ -146,8 +147,9 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       return;
     }
     Relevance.merge(Sym);
-    auto Score = evaluateSymbolAndRelevance(Quality.evaluateHeuristics(),
-                                            Relevance.evaluateHeuristics());
+    auto QualScore = Quality.evaluateHeuristics();
+    auto RelScore = Relevance.evaluateHeuristics();
+    auto Score = evaluateSymbolAndRelevance(QualScore, RelScore);
     dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
          Quality, Relevance);
 
@@ -159,7 +161,9 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.containerName = Scope.str();
 
     // Exposed score excludes fuzzy-match component, for client-side re-ranking.
-    Info.score = Score / Relevance.NameMatch;
+    Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
+                     ? Score / Relevance.NameMatch
+                     : QualScore;
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())

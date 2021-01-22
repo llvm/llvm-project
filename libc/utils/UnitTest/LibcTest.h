@@ -134,7 +134,20 @@ private:
 } // namespace testing
 } // namespace __llvm_libc
 
+namespace __llvm_libc {
+namespace internal {
+constexpr bool same_prefix(char const *lhs, char const *rhs, int const len) {
+  for (int i = 0; (*lhs || *rhs) && (i < len); ++lhs, ++rhs, ++i)
+    if (*lhs != *rhs)
+      return false;
+  return true;
+}
+} // namespace internal
+} // namespace __llvm_libc
+
 #define TEST(SuiteName, TestName)                                              \
+  static_assert(__llvm_libc::internal::same_prefix(#SuiteName, "LlvmLibc", 8), \
+                "All LLVM-libc TEST suite names must start with 'LlvmLibc'."); \
   class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
   public:                                                                      \
     SuiteName##_##TestName() { addTest(this); }                                \
@@ -145,6 +158,9 @@ private:
   void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
+  static_assert(                                                               \
+      __llvm_libc::internal::same_prefix(#SuiteClass, "LlvmLibc", 8),          \
+      "All LLVM-libc TEST_F suite class names must start with 'LlvmLibc'.");   \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \
     SuiteClass##_##TestName() { addTest(this); }                               \

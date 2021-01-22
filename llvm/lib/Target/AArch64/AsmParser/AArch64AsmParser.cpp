@@ -271,7 +271,7 @@ public:
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI, MII) {
-    IsILP32 = Options.getABIName() == "ilp32";
+    IsILP32 = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32;
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
@@ -2915,6 +2915,8 @@ static const struct Extension {
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
+    {"pauth", {AArch64::FeaturePAuth}},
+    {"flagm", {AArch64::FeatureFlagM}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},

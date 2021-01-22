@@ -318,6 +318,22 @@ using namespace RISCV;
 #include "RISCVGenSearchableTables.inc"
 
 } // end namespace RISCVVIntrinsicsTable
+
+namespace RISCVZvlssegTable {
+
+struct RISCVZvlsseg {
+  unsigned int IntrinsicID;
+  unsigned int SEW;
+  unsigned int LMUL;
+  unsigned int Pseudo;
+};
+
+using namespace RISCV;
+
+#define GET_RISCVZvlssegTable_DECL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVZvlssegTable
 }
 
 #endif

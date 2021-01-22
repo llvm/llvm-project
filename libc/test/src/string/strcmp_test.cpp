@@ -9,7 +9,7 @@
 #include "src/string/strcmp.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrCmpTest, EmptyStringsShouldReturnZero) {
+TEST(LlvmLibcStrCmpTest, EmptyStringsShouldReturnZero) {
   const char *s1 = "";
   const char *s2 = "";
   int result = __llvm_libc::strcmp(s1, s2);
@@ -20,7 +20,7 @@ TEST(StrCmpTest, EmptyStringsShouldReturnZero) {
   ASSERT_EQ(result, 0);
 }
 
-TEST(StrCmpTest, EmptyStringShouldNotEqualNonEmptyString) {
+TEST(LlvmLibcStrCmpTest, EmptyStringShouldNotEqualNonEmptyString) {
   const char *empty = "";
   const char *s2 = "abc";
   int result = __llvm_libc::strcmp(empty, s2);
@@ -34,7 +34,7 @@ TEST(StrCmpTest, EmptyStringShouldNotEqualNonEmptyString) {
   ASSERT_EQ(result, 49);
 }
 
-TEST(StrCmpTest, EqualStringsShouldReturnZero) {
+TEST(LlvmLibcStrCmpTest, EqualStringsShouldReturnZero) {
   const char *s1 = "abc";
   const char *s2 = "abc";
   int result = __llvm_libc::strcmp(s1, s2);
@@ -45,7 +45,7 @@ TEST(StrCmpTest, EqualStringsShouldReturnZero) {
   ASSERT_EQ(result, 0);
 }
 
-TEST(StrCmpTest, ShouldReturnResultOfFirstDifference) {
+TEST(LlvmLibcStrCmpTest, ShouldReturnResultOfFirstDifference) {
   const char *s1 = "___B42__";
   const char *s2 = "___C55__";
   int result = __llvm_libc::strcmp(s1, s2);
@@ -58,7 +58,7 @@ TEST(StrCmpTest, ShouldReturnResultOfFirstDifference) {
   ASSERT_EQ(result, 1);
 }
 
-TEST(StrCmpTest, CapitalizedLetterShouldNotBeEqual) {
+TEST(LlvmLibcStrCmpTest, CapitalizedLetterShouldNotBeEqual) {
   const char *s1 = "abcd";
   const char *s2 = "abCd";
   int result = __llvm_libc::strcmp(s1, s2);
@@ -71,7 +71,7 @@ TEST(StrCmpTest, CapitalizedLetterShouldNotBeEqual) {
   ASSERT_EQ(result, -32);
 }
 
-TEST(StrCmpTest, UnequalLengthStringsShouldNotReturnZero) {
+TEST(LlvmLibcStrCmpTest, UnequalLengthStringsShouldNotReturnZero) {
   const char *s1 = "abc";
   const char *s2 = "abcd";
   int result = __llvm_libc::strcmp(s1, s2);
@@ -84,7 +84,7 @@ TEST(StrCmpTest, UnequalLengthStringsShouldNotReturnZero) {
   ASSERT_EQ(result, 100);
 }
 
-TEST(StrCmpTest, StringArgumentSwapChangesSign) {
+TEST(LlvmLibcStrCmpTest, StringArgumentSwapChangesSign) {
   const char *a = "a";
   const char *b = "b";
   int result = __llvm_libc::strcmp(b, a);

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "GCNRegPressure.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/InitializePasses.h"

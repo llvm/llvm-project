@@ -527,7 +527,7 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
 
     // Update the latency of opposite edge too.
     T.setSUnit(Src);
-    auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
+    auto F = find(Dst->Preds, T);
     assert(F != Dst->Preds.end());
     F->setLatency(I.getLatency());
   }
@@ -544,7 +544,7 @@ void HexagonSubtarget::changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat)
 
     // Update the latency of opposite edge too.
     T.setSUnit(Src);
-    auto F = std::find(Dst->Preds.begin(), Dst->Preds.end(), T);
+    auto F = find(Dst->Preds, T);
     assert(F != Dst->Preds.end());
     F->setLatency(Lat);
   }

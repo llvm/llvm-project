@@ -50,6 +50,34 @@ enum class DiagnosticSeverity {
 /// A variant type that holds a single argument for a diagnostic.
 class DiagnosticArgument {
 public:
+  /// Note: The constructors below are only exposed due to problems accessing
+  /// constructors from type traits, they should not be used directly by users.
+  // Construct from an Attribute.
+  explicit DiagnosticArgument(Attribute attr);
+  // Construct from a floating point number.
+  explicit DiagnosticArgument(double val)
+      : kind(DiagnosticArgumentKind::Double), doubleVal(val) {}
+  explicit DiagnosticArgument(float val) : DiagnosticArgument(double(val)) {}
+  // Construct from a signed integer.
+  template <typename T>
+  explicit DiagnosticArgument(
+      T val, typename std::enable_if<std::is_signed<T>::value &&
+                                     std::numeric_limits<T>::is_integer &&
+                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
+      : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
+  // Construct from an unsigned integer.
+  template <typename T>
+  explicit DiagnosticArgument(
+      T val, typename std::enable_if<std::is_unsigned<T>::value &&
+                                     std::numeric_limits<T>::is_integer &&
+                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
+      : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
+  // Construct from a string reference.
+  explicit DiagnosticArgument(StringRef val)
+      : kind(DiagnosticArgumentKind::String), stringVal(val) {}
+  // Construct from a Type.
+  explicit DiagnosticArgument(Type val);
+
   /// Enum that represents the different kinds of diagnostic arguments
   /// supported.
   enum class DiagnosticArgumentKind {
@@ -99,37 +127,6 @@ public:
 
 private:
   friend class Diagnostic;
-
-  // Construct from an Attribute.
-  explicit DiagnosticArgument(Attribute attr);
-
-  // Construct from a floating point number.
-  explicit DiagnosticArgument(double val)
-      : kind(DiagnosticArgumentKind::Double), doubleVal(val) {}
-  explicit DiagnosticArgument(float val) : DiagnosticArgument(double(val)) {}
-
-  // Construct from a signed integer.
-  template <typename T>
-  explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_signed<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
-      : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
-
-  // Construct from an unsigned integer.
-  template <typename T>
-  explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_unsigned<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
-      : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
-
-  // Construct from a string reference.
-  explicit DiagnosticArgument(StringRef val)
-      : kind(DiagnosticArgumentKind::String), stringVal(val) {}
-
-  // Construct from a Type.
-  explicit DiagnosticArgument(Type val);
 
   /// The kind of this argument.
   DiagnosticArgumentKind kind;
@@ -189,8 +186,10 @@ public:
 
   /// Stream operator for inserting new diagnostic arguments.
   template <typename Arg>
-  typename std::enable_if<!std::is_convertible<Arg, StringRef>::value,
-                          Diagnostic &>::type
+  typename std::enable_if<
+      !std::is_convertible<Arg, StringRef>::value &&
+          std::is_constructible<DiagnosticArgument, Arg>::value,
+      Diagnostic &>::type
   operator<<(Arg &&val) {
     arguments.push_back(DiagnosticArgument(std::forward<Arg>(val)));
     return *this;
@@ -220,17 +219,17 @@ public:
   }
 
   /// Stream in a range.
-  template <typename T> Diagnostic &operator<<(iterator_range<T> range) {
-    return appendRange(range);
-  }
-  template <typename T> Diagnostic &operator<<(ArrayRef<T> range) {
+  template <typename T, typename ValueT = llvm::detail::ValueOfRange<T>>
+  std::enable_if_t<!std::is_constructible<DiagnosticArgument, T>::value,
+                   Diagnostic &>
+  operator<<(T &&range) {
     return appendRange(range);
   }
 
   /// Append a range to the diagnostic. The default delimiter between elements
   /// is ','.
-  template <typename T, template <typename> class Container>
-  Diagnostic &appendRange(const Container<T> &c, const char *delim = ", ") {
+  template <typename T>
+  Diagnostic &appendRange(const T &c, const char *delim = ", ") {
     llvm::interleave(
         c, [this](const auto &a) { *this << a; }, [&]() { *this << delim; });
     return *this;

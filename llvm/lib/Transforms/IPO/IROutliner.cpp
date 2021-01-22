@@ -86,10 +86,10 @@ struct OutlinableGroup {
 
   /// The number of instructions that will be outlined by extracting \ref
   /// Regions.
-  unsigned Benefit = 0;
+  InstructionCost Benefit = 0;
   /// The number of added instructions needed for the outlining of the \ref
   /// Regions.
-  unsigned Cost = 0;
+  InstructionCost Cost = 0;
 
   /// The argument that needs to be marked with the swifterr attribute.  If not
   /// needed, there is no value.
@@ -243,8 +243,8 @@ constantMatches(Value *V, unsigned GVN,
   return false;
 }
 
-unsigned OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
-  InstructionCost Benefit(0);
+InstructionCost OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
+  InstructionCost Benefit = 0;
 
   // Estimate the benefit of outlining a specific sections of the program.  We
   // delegate mostly this task to the TargetTransformInfo so that if the target
@@ -274,7 +274,7 @@ unsigned OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
     }
   }
 
-  return *Benefit.getValue();
+  return Benefit;
 }
 
 /// Find whether \p Region matches the global value numbering to Constant
@@ -1287,8 +1287,9 @@ void IROutliner::pruneIncompatibleRegions(
   }
 }
 
-unsigned IROutliner::findBenefitFromAllRegions(OutlinableGroup &CurrentGroup) {
-  unsigned RegionBenefit = 0;
+InstructionCost
+IROutliner::findBenefitFromAllRegions(OutlinableGroup &CurrentGroup) {
+  InstructionCost RegionBenefit = 0;
   for (OutlinableRegion *Region : CurrentGroup.Regions) {
     TargetTransformInfo &TTI = getTTI(*Region->StartBB->getParent());
     // We add the number of instructions in the region to the benefit as an
@@ -1301,8 +1302,9 @@ unsigned IROutliner::findBenefitFromAllRegions(OutlinableGroup &CurrentGroup) {
   return RegionBenefit;
 }
 
-unsigned IROutliner::findCostOutputReloads(OutlinableGroup &CurrentGroup) {
-  unsigned OverallCost = 0;
+InstructionCost
+IROutliner::findCostOutputReloads(OutlinableGroup &CurrentGroup) {
+  InstructionCost OverallCost = 0;
   for (OutlinableRegion *Region : CurrentGroup.Regions) {
     TargetTransformInfo &TTI = getTTI(*Region->StartBB->getParent());
 
@@ -1311,7 +1313,7 @@ unsigned IROutliner::findCostOutputReloads(OutlinableGroup &CurrentGroup) {
       Optional<Value *> OV = Region->Candidate->fromGVN(OutputGVN);
       assert(OV.hasValue() && "Could not find value for GVN?");
       Value *V = OV.getValue();
-      unsigned LoadCost =
+      InstructionCost LoadCost =
           TTI.getMemoryOpCost(Instruction::Load, V->getType(), Align(1), 0,
                               TargetTransformInfo::TCK_CodeSize);
 
@@ -1333,10 +1335,10 @@ unsigned IROutliner::findCostOutputReloads(OutlinableGroup &CurrentGroup) {
 /// \param [in] TTI - The TargetTransformInfo used to collect information for
 /// new instruction costs.
 /// \returns the additional cost to handle the outputs.
-static unsigned findCostForOutputBlocks(Module &M,
-                                        OutlinableGroup &CurrentGroup,
-                                        TargetTransformInfo &TTI) {
-  unsigned OutputCost = 0;
+static InstructionCost findCostForOutputBlocks(Module &M,
+                                               OutlinableGroup &CurrentGroup,
+                                               TargetTransformInfo &TTI) {
+  InstructionCost OutputCost = 0;
 
   for (const ArrayRef<unsigned> &OutputUse :
        CurrentGroup.OutputGVNCombinations) {
@@ -1345,7 +1347,7 @@ static unsigned findCostForOutputBlocks(Module &M,
       Optional<Value *> OV = Candidate.fromGVN(GVN);
       assert(OV.hasValue() && "Could not find value for GVN?");
       Value *V = OV.getValue();
-      unsigned StoreCost =
+      InstructionCost StoreCost =
           TTI.getMemoryOpCost(Instruction::Load, V->getType(), Align(1), 0,
                               TargetTransformInfo::TCK_CodeSize);
 
@@ -1358,7 +1360,7 @@ static unsigned findCostForOutputBlocks(Module &M,
       OutputCost += StoreCost;
     }
 
-    unsigned BranchCost =
+    InstructionCost BranchCost =
         TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
     LLVM_DEBUG(dbgs() << "Adding " << BranchCost << " to the current cost for"
                       << " a branch instruction\n");
@@ -1368,15 +1370,15 @@ static unsigned findCostForOutputBlocks(Module &M,
   // If there is more than one output scheme, we must have a comparison and
   // branch for each different item in the switch statement.
   if (CurrentGroup.OutputGVNCombinations.size() > 1) {
-    unsigned ComparisonCost = TTI.getCmpSelInstrCost(
+    InstructionCost ComparisonCost = TTI.getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt32Ty(M.getContext()),
         Type::getInt32Ty(M.getContext()), CmpInst::BAD_ICMP_PREDICATE,
         TargetTransformInfo::TCK_CodeSize);
-    unsigned BranchCost =
+    InstructionCost BranchCost =
         TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
 
     unsigned DifferentBlocks = CurrentGroup.OutputGVNCombinations.size();
-    unsigned TotalCost = ComparisonCost * BranchCost * DifferentBlocks;
+    InstructionCost TotalCost = ComparisonCost * BranchCost * DifferentBlocks;
 
     LLVM_DEBUG(dbgs() << "Adding: " << TotalCost
                       << " instructions for each switch case for each different"
@@ -1388,15 +1390,16 @@ static unsigned findCostForOutputBlocks(Module &M,
 }
 
 void IROutliner::findCostBenefit(Module &M, OutlinableGroup &CurrentGroup) {
-  unsigned RegionBenefit = findBenefitFromAllRegions(CurrentGroup);
+  InstructionCost RegionBenefit = findBenefitFromAllRegions(CurrentGroup);
   CurrentGroup.Benefit += RegionBenefit;
   LLVM_DEBUG(dbgs() << "Current Benefit: " << CurrentGroup.Benefit << "\n");
 
-  unsigned OutputReloadCost = findCostOutputReloads(CurrentGroup);
+  InstructionCost OutputReloadCost = findCostOutputReloads(CurrentGroup);
   CurrentGroup.Cost += OutputReloadCost;
   LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
 
-  unsigned AverageRegionBenefit = RegionBenefit / CurrentGroup.Regions.size();
+  InstructionCost AverageRegionBenefit =
+      RegionBenefit / CurrentGroup.Regions.size();
   unsigned OverallArgumentNum = CurrentGroup.ArgumentTypes.size();
   unsigned NumRegions = CurrentGroup.Regions.size();
   TargetTransformInfo &TTI =
@@ -1609,8 +1612,7 @@ unsigned IROutliner::doOutline(Module &M) {
           << ore::NV(std::to_string(CurrentGroup.Regions.size()))
           << " regions due to estimated increase of "
           << ore::NV("InstructionIncrease",
-                     std::to_string(static_cast<int>(CurrentGroup.Cost -
-                                                     CurrentGroup.Benefit)))
+                     CurrentGroup.Cost - CurrentGroup.Benefit)
           << " instructions at locations ";
         interleave(
             CurrentGroup.Regions.begin(), CurrentGroup.Regions.end(),
@@ -1658,8 +1660,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OptimizationRemark R(DEBUG_TYPE, "Outlined", C->front()->Inst);
       R << "outlined " << ore::NV(std::to_string(CurrentGroup.Regions.size()))
         << " regions with decrease of "
-        << ore::NV("Benefit", std::to_string(static_cast<int>(
-                                  CurrentGroup.Benefit - CurrentGroup.Cost)))
+        << ore::NV("Benefit", CurrentGroup.Benefit - CurrentGroup.Cost)
         << " instructions at locations ";
       interleave(
           CurrentGroup.Regions.begin(), CurrentGroup.Regions.end(),

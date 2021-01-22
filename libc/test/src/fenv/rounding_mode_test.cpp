@@ -13,7 +13,7 @@
 
 #include <fenv.h>
 
-TEST(RoundingModeTest, SetAndGet) {
+TEST(LlvmLibcRoundingModeTest, SetAndGet) {
   int s = __llvm_libc::fesetround(FE_TONEAREST);
   EXPECT_EQ(s, 0);
   int rm = __llvm_libc::fegetround();

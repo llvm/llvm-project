@@ -116,18 +116,14 @@ define float @v_fdot2_inline_literal_a(<2 x half> %b, float %c) {
 ; GFX906-LABEL: v_fdot2_inline_literal_a:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_movk_i32 s4, 0x4000
-; GFX906-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
-; GFX906-NEXT:    v_dot2_f32_f16 v0, s4, v0, v1
+; GFX906-NEXT:    v_dot2_f32_f16 v0, 2.0, v0, v1 op_sel_hi:[0,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fdot2_inline_literal_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_movk_i32 s4, 0x4000
-; GFX10-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
-; GFX10-NEXT:    v_dot2_f32_f16 v0, s4, v0, v1
+; GFX10-NEXT:    v_dot2_f32_f16 v0, 2.0, v0, v1 op_sel_hi:[0,1,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> <half 2.0, half 2.0>, <2 x half> %b, float %c, i1 false)
   ret float %ret
@@ -137,18 +133,14 @@ define float @v_fdot2_inline_literal_b(<2 x half> %a, float %c) {
 ; GFX906-LABEL: v_fdot2_inline_literal_b:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_movk_i32 s4, 0x4000
-; GFX906-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
-; GFX906-NEXT:    v_dot2_f32_f16 v0, v0, s4, v1
+; GFX906-NEXT:    v_dot2_f32_f16 v0, v0, 2.0, v1 op_sel_hi:[1,0,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_fdot2_inline_literal_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_movk_i32 s4, 0x4000
-; GFX10-NEXT:    s_pack_ll_b32_b16 s4, s4, s4
-; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, s4, v1
+; GFX10-NEXT:    v_dot2_f32_f16 v0, v0, 2.0, v1 op_sel_hi:[1,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> <half 2.0, half 2.0>, float %c, i1 false)
   ret float %ret

@@ -25,6 +25,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -387,11 +388,11 @@ public:
                      int64_t LineDelta, uint64_t AddrDelta, raw_ostream &OS);
 
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas using
-  /// fixed length operands.
-  static bool FixedEncode(MCContext &Context,
-                          MCDwarfLineTableParams Params,
-                          int64_t LineDelta, uint64_t AddrDelta,
-                          raw_ostream &OS, uint32_t *Offset, uint32_t *Size);
+  /// fixed length operands. Returns (Offset, Size, SetDelta).
+  static std::tuple<uint32_t, uint32_t, bool> fixedEncode(MCContext &Context,
+                                                          int64_t LineDelta,
+                                                          uint64_t AddrDelta,
+                                                          raw_ostream &OS);
 
   /// Utility function to emit the encoding to a streamer.
   static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,

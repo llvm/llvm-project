@@ -304,9 +304,7 @@ Sections:
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x4
-    Info:         0x2
     Entries:
       - VersionNdx: 2
         Names:

@@ -62,8 +62,6 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   if (ClangTidyProvider)
     Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Index = ExternalIndex;
-  if (Inputs.Index)
-    Inputs.Opts.SuggestMissingIncludes = true;
   return Inputs;
 }
 

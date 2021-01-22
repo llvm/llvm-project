@@ -9,14 +9,14 @@
 #include "utils/CPP/Bitset.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(BitsetTest, SetBitForSizeEqualToOne) {
+TEST(LlvmLibcBitsetTest, SetBitForSizeEqualToOne) {
   __llvm_libc::cpp::Bitset<1> bitset;
   EXPECT_FALSE(bitset.test(0));
   bitset.set(0);
   EXPECT_TRUE(bitset.test(0));
 }
 
-TEST(BitsetTest, SetsBitsForSizeEqualToTwo) {
+TEST(LlvmLibcBitsetTest, SetsBitsForSizeEqualToTwo) {
   __llvm_libc::cpp::Bitset<2> bitset;
   bitset.set(0);
   EXPECT_TRUE(bitset.test(0));
@@ -24,7 +24,7 @@ TEST(BitsetTest, SetsBitsForSizeEqualToTwo) {
   EXPECT_TRUE(bitset.test(1));
 }
 
-TEST(BitsetTest, SetsAllBitsForSizeLessThanEight) {
+TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanEight) {
   __llvm_libc::cpp::Bitset<7> bitset;
   for (size_t i = 0; i < 7; ++i)
     bitset.set(i);
@@ -33,7 +33,7 @@ TEST(BitsetTest, SetsAllBitsForSizeLessThanEight) {
     EXPECT_TRUE(bitset.test(j));
 }
 
-TEST(BitsetTest, SetsAllBitsForSizeLessThanSixteen) {
+TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanSixteen) {
   __llvm_libc::cpp::Bitset<15> bitset;
   for (size_t i = 0; i < 15; ++i)
     bitset.set(i);
@@ -42,7 +42,7 @@ TEST(BitsetTest, SetsAllBitsForSizeLessThanSixteen) {
     EXPECT_TRUE(bitset.test(j));
 }
 
-TEST(BitsetTest, SetsAllBitsForSizeLessThanThirtyTwo) {
+TEST(LlvmLibcBitsetTest, SetsAllBitsForSizeLessThanThirtyTwo) {
   __llvm_libc::cpp::Bitset<31> bitset;
   for (size_t i = 0; i < 31; ++i)
     bitset.set(i);
@@ -51,7 +51,7 @@ TEST(BitsetTest, SetsAllBitsForSizeLessThanThirtyTwo) {
     EXPECT_TRUE(bitset.test(j));
 }
 
-TEST(BitsetTest, DefaultHasNoSetBits) {
+TEST(LlvmLibcBitsetTest, DefaultHasNoSetBits) {
   __llvm_libc::cpp::Bitset<64> bitset;
   for (size_t i = 0; i < 64; ++i) {
     EXPECT_FALSE(bitset.test(i));
@@ -63,7 +63,7 @@ TEST(BitsetTest, DefaultHasNoSetBits) {
   }
 }
 
-TEST(BitsetTest, SettingBitXDoesNotSetBitY) {
+TEST(LlvmLibcBitsetTest, SettingBitXDoesNotSetBitY) {
   for (size_t i = 0; i < 256; ++i) {
     // Initialize within the loop to start with a fresh Bitset.
     __llvm_libc::cpp::Bitset<256> bitset;
@@ -91,7 +91,7 @@ TEST(BitsetTest, SettingBitXDoesNotSetBitY) {
   }
 }
 
-TEST(BitsetTest, SettingBitXDoesNotResetBitY) {
+TEST(LlvmLibcBitsetTest, SettingBitXDoesNotResetBitY) {
   __llvm_libc::cpp::Bitset<128> bitset;
   for (size_t i = 0; i < 128; ++i)
     bitset.set(i);

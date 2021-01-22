@@ -9,16 +9,26 @@
 // ThinLTO.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
 using namespace llvm;
+
+cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
+    "inliner-function-import-stats",
+    cl::init(InlinerFunctionImportStatsOpts::No),
+    cl::values(clEnumValN(InlinerFunctionImportStatsOpts::Basic, "basic",
+                          "basic statistics"),
+               clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
+                          "printing of statistics for each inlined function")),
+    cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
 
 ImportedFunctionsInliningStatistics::InlineGraphNode &
 ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {
@@ -186,7 +196,7 @@ ImportedFunctionsInliningStatistics::SortedNodesTy
 ImportedFunctionsInliningStatistics::getSortedNodes() {
   SortedNodesTy SortedNodes;
   SortedNodes.reserve(NodesMap.size());
-  for (const NodesMapTy::value_type& Node : NodesMap)
+  for (const NodesMapTy::value_type &Node : NodesMap)
     SortedNodes.push_back(&Node);
 
   llvm::sort(SortedNodes, [&](const SortedNodesTy::value_type &Lhs,

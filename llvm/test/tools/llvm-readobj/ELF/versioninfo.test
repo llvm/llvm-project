@@ -16,16 +16,12 @@ Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynsym
     AddressAlign: 0x0000000000000002
-    EntSize:      0x0000000000000002
     Entries:      [ 0, 2, 3, 4, 5, 6]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x0000000000000004
-    Info:         0x0000000000000006
     Entries:
       - Names:
           - VERSION1
@@ -53,9 +49,7 @@ Sections:
   - Name:         .gnu.version_r
     Type:         SHT_GNU_verneed
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x0000000000000004
-    Info:         0x0000000000000002
     Dependencies:
       - Version: 1
         File:    verneed1.so.0

@@ -317,9 +317,7 @@ static bool FixIrreducibleImpl(Function &F, LoopInfo &LI, DominatorTree &DT) {
 
   // Any SCCs reduced are now already in the list of top-level loops, so simply
   // add them all to the worklist.
-  for (auto L : LI) {
-    WorkList.push_back(L);
-  }
+  append_range(WorkList, LI);
 
   while (!WorkList.empty()) {
     auto L = WorkList.back();

@@ -7009,8 +7009,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
 
   // Add all instructions used to generate the addresses.
   SmallVector<Instruction *, 4> Worklist;
-  for (auto *I : AddrDefs)
-    Worklist.push_back(I);
+  append_range(Worklist, AddrDefs);
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
     for (auto &Op : I->operands())

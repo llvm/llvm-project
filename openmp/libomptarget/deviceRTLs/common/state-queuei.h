@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "state-queue.h"
-#include "common/target_atomic.h"
 
 template <typename ElementType, uint32_t SIZE>
 INLINE uint32_t omptarget_nvptx_Queue<ElementType, SIZE>::ENQUEUE_TICKET() {

@@ -128,11 +128,11 @@ public:
 };
 
 #define LIST_RINT_TESTS(F, func)                                               \
-  using RIntTest = RIntTestTemplate<F>;                                        \
-  TEST_F(RIntTest, specialNumbers) { testSpecialNumbers(&func); }              \
-  TEST_F(RIntTest, RoundNumbers) { testRoundNumbers(&func); }                  \
-  TEST_F(RIntTest, Fractions) { testFractions(&func); }                        \
-  TEST_F(RIntTest, SubnormalRange) { testSubnormalRange(&func); }              \
-  TEST_F(RIntTest, NormalRange) { testNormalRange(&func); }
+  using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
+  TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }      \
+  TEST_F(LlvmLibcRIntTest, RoundNumbers) { testRoundNumbers(&func); }          \
+  TEST_F(LlvmLibcRIntTest, Fractions) { testFractions(&func); }                \
+  TEST_F(LlvmLibcRIntTest, SubnormalRange) { testSubnormalRange(&func); }      \
+  TEST_F(LlvmLibcRIntTest, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H

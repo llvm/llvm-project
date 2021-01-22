@@ -434,11 +434,7 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasOneUse() const {
-    const_use_iterator I = use_begin(), E = use_end();
-    if (I == E) return false;
-    return ++I == E;
-  }
+  bool hasOneUse() const { return hasSingleElement(uses()); }
 
   /// Return true if this Value has exactly N uses.
   bool hasNUses(unsigned N) const;

@@ -19,7 +19,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
-TEST(RoundTest, SpecialNumbers) {
+TEST(LlvmLibcRoundTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::round(zero));
   EXPECT_FP_EQ(negZero, __llvm_libc::round(negZero));
 
@@ -29,7 +29,7 @@ TEST(RoundTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::round(aNaN));
 }
 
-TEST(RoundTest, RoundedNumbers) {
+TEST(LlvmLibcRoundTest, RoundedNumbers) {
   EXPECT_FP_EQ(1.0, __llvm_libc::round(1.0));
   EXPECT_FP_EQ(-1.0, __llvm_libc::round(-1.0));
   EXPECT_FP_EQ(10.0, __llvm_libc::round(10.0));
@@ -38,7 +38,7 @@ TEST(RoundTest, RoundedNumbers) {
   EXPECT_FP_EQ(-1234.0, __llvm_libc::round(-1234.0));
 }
 
-TEST(RoundTest, Fractions) {
+TEST(LlvmLibcRoundTest, Fractions) {
   EXPECT_FP_EQ(1.0, __llvm_libc::round(0.5));
   EXPECT_FP_EQ(-1.0, __llvm_libc::round(-0.5));
   EXPECT_FP_EQ(0.0, __llvm_libc::round(0.115));
@@ -61,7 +61,7 @@ TEST(RoundTest, Fractions) {
   EXPECT_FP_EQ(-1235.0, __llvm_libc::round(-1234.96));
 }
 
-TEST(RoundTest, InDoubleRange) {
+TEST(LlvmLibcRoundTest, InDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;

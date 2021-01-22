@@ -17,6 +17,7 @@ include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -45,9 +46,10 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard cast operations. Requires single operand and result,
 // but does not constrain them to specific types.
 class CastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic,
-           !listconcat(traits, [NoSideEffect, SameOperandsAndResultShape])> {
-
+    Std_Op<mnemonic, traits # [
+      NoSideEffect, SameOperandsAndResultShape,
+      DeclareOpInterfaceMethods<CastOpInterface>
+    ]> {
   let results = (outs AnyType);
 
   let builders = [
@@ -62,9 +64,9 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{
     return printStandardCastOp(this->getOperation(), p);
   }];
-  let verifier = [{ return impl::verifyCastOp(*this, areCastCompatible); }];
 
-  let hasFolder = 1;
+  // Cast operations are fully verified by its traits.
+  let verifier = ?;
 }
 
 // Base class for arithmetic cast operations.
@@ -1643,14 +1645,6 @@ def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
     The destination type must to be strictly wider than the source type.
     Only scalars are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1663,14 +1657,6 @@ def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
     Cast from a value interpreted as floating-point to the nearest (rounding
     towards zero) signed integer value.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1683,14 +1669,6 @@ def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
     Cast from a value interpreted as floating-point to the nearest (rounding
     towards zero) unsigned integer value.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1705,14 +1683,6 @@ def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
     If the value cannot be exactly represented, it is rounded using the default
     rounding mode. Only scalars are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1849,12 +1819,6 @@ def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
     sign-extended. If casting to a narrower integer, the value is truncated.
   }];
 
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
   let hasFolder = 1;
 }
 
@@ -1942,9 +1906,38 @@ def LogOp : FloatUnaryOp<"log"> {
   let summary = "base-e logarithm of the specified value";
 }
 
+//===----------------------------------------------------------------------===//
+// Log10Op
+//===----------------------------------------------------------------------===//
+
 def Log10Op : FloatUnaryOp<"log10"> {
   let summary = "base-10 logarithm of the specified value";
 }
+
+//===----------------------------------------------------------------------===//
+// Log1pOp
+//===----------------------------------------------------------------------===//
+
+def Log1pOp : FloatUnaryOp<"log1p"> {
+  let summary = "Computes the natural logarithm of one plus the given value";
+
+  let description = [{
+    Computes the base-e logarithm of one plus the given value. It takes one
+    operand and returns one result of the same type.
+
+    log1p(x) := log(1 + x)
+
+    Example:
+
+    ```mlir
+    %y = log1p %x : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Log2Op
+//===----------------------------------------------------------------------===//
 
 def Log2Op : FloatUnaryOp<"log2"> {
   let summary = "base-2 logarithm of the specified value";
@@ -2016,14 +2009,7 @@ def MemRefCastOp : CastOp<"memref_cast", [
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source);
   let results = (outs AnyRankedOrUnrankedMemRef);
 
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-
-    /// The result of a memref_cast is always a memref.
-    Type getType() { return getResult().getType(); }
-  }];
+  let hasFolder = 1;
 }
 
 
@@ -2757,14 +2743,6 @@ def SIToFPOp : ArithmeticCastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
     exactly represented, it is rounded using the default rounding mode. Scalars
     and vector types are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3215,6 +3193,17 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
     // Build a SubTensorOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with mixed static and dynamic entries
+    // and custom result type.
+    OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<int64_t>":$staticOffsets, "ArrayRef<int64_t>":$staticSizes,
+      "ArrayRef<int64_t>":$staticStrides, "ValueRange":$offsets,
+      "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with all dynamic entries and custom result type.
+    OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -3320,7 +3309,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
       return source().getType().cast<RankedTensorType>();
     }
 
-    /// The result of a subtensor is always a tensor.
+    /// The result of a subtensor_insert is always a tensor.
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
@@ -3328,7 +3317,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrRanks() {
-      unsigned rank = getSourceType().getRank();
+      unsigned rank = getType().getRank();
       return {rank, rank, rank};
     }
 
@@ -3588,14 +3577,6 @@ def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
     value cannot be exactly represented, it is rounded using the default
     rounding mode. Scalars and vector types are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//

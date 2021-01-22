@@ -44,7 +44,6 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
     Entries: [ 0, 1 ]
 DynamicSymbols:
   - Name:    foo

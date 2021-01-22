@@ -35,7 +35,7 @@ int counter(void *arg) {
   return 0;
 }
 
-TEST(MutexTest, RelayCounter) {
+TEST(LlvmLibcMutexTest, RelayCounter) {
   ASSERT_EQ(__llvm_libc::mtx_init(&mutex, mtx_plain),
             static_cast<int>(thrd_success));
 
@@ -79,7 +79,7 @@ int stepper(void *arg) {
   return 0;
 }
 
-TEST(MutexTest, WaitAndStep) {
+TEST(LlvmLibcMutexTest, WaitAndStep) {
   ASSERT_EQ(__llvm_libc::mtx_init(&start_lock, mtx_plain),
             static_cast<int>(thrd_success));
   ASSERT_EQ(__llvm_libc::mtx_init(&step_lock, mtx_plain),

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNRegPressure.h"
-#include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;

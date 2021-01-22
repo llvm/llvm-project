@@ -93,13 +93,8 @@ DEVICE uint32_t __kmpc_impl_smid();
 DEVICE double __kmpc_impl_get_wtick();
 DEVICE double __kmpc_impl_get_wtime();
 
-INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
-
-INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
-
-template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
-  return min(x, y);
-}
+INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __builtin_ffs(x); }
+INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
 
 #ifndef CUDA_VERSION
 #error CUDA_VERSION macro is undefined, something wrong with cuda.
@@ -134,6 +129,27 @@ DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
+
+// Atomics
+template <typename T> INLINE T __kmpc_atomic_add(T *address, T val) {
+  return atomicAdd(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_inc(T *address, T val) {
+  return atomicInc(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_max(T *address, T val) {
+  return atomicMax(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_exchange(T *address, T val) {
+  return atomicExch(address, val);
+}
+
+template <typename T> INLINE T __kmpc_atomic_cas(T *address, T compare, T val) {
+  return atomicCAS(address, compare, val);
+}
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

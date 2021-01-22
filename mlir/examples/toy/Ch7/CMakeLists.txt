@@ -39,6 +39,7 @@ target_link_libraries(toyc-ch7
     ${conversion_libs}
     MLIRAnalysis
     MLIRCallInterfaces
+    MLIRCastInterfaces
     MLIRExecutionEngine
     MLIRIR
     MLIRParser

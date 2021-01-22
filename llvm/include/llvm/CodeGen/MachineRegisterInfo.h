@@ -442,10 +442,7 @@ public:
   /// Return true if there is exactly one operand defining the specified
   /// register.
   bool hasOneDef(Register RegNo) const {
-    def_iterator DI = def_begin(RegNo);
-    if (DI == def_end())
-      return false;
-    return ++DI == def_end();
+    return hasSingleElement(def_operands(RegNo));
   }
 
   /// Returns the defining operand if there is exactly one operand defining the
@@ -511,10 +508,7 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    use_iterator UI = use_begin(RegNo);
-    if (UI == use_end())
-      return false;
-    return ++UI == use_end();
+    return hasSingleElement(use_operands(RegNo));
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the

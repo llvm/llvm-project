@@ -304,13 +304,22 @@ public:
 };
 
 #define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, TestModes)              \
-  using RoundToIntegerTest = RoundToIntegerTestTemplate<F, I, TestModes>;      \
-  TEST_F(RoundToIntegerTest, InfinityAndNaN) { testInfinityAndNaN(&func); }    \
-  TEST_F(RoundToIntegerTest, RoundNumbers) { testRoundNumbers(&func); }        \
-  TEST_F(RoundToIntegerTest, Fractions) { testFractions(&func); }              \
-  TEST_F(RoundToIntegerTest, IntegerOverflow) { testIntegerOverflow(&func); }  \
-  TEST_F(RoundToIntegerTest, SubnormalRange) { testSubnormalRange(&func); }    \
-  TEST_F(RoundToIntegerTest, NormalRange) { testNormalRange(&func); }
+  using LlvmLibcRoundToIntegerTest =                                           \
+      RoundToIntegerTestTemplate<F, I, TestModes>;                             \
+  TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
+    testInfinityAndNaN(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, RoundNumbers) {                           \
+    testRoundNumbers(&func);                                                   \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, Fractions) { testFractions(&func); }      \
+  TEST_F(LlvmLibcRoundToIntegerTest, IntegerOverflow) {                        \
+    testIntegerOverflow(&func);                                                \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, SubnormalRange) {                         \
+    testSubnormalRange(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, NormalRange) { testNormalRange(&func); }
 
 #define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)

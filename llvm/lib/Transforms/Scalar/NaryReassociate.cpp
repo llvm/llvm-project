@@ -293,9 +293,7 @@ Instruction *NaryReassociatePass::tryReassociate(Instruction * I,
 
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
-  SmallVector<const Value*, 4> Indices;
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
-    Indices.push_back(*I);
+  SmallVector<const Value *, 4> Indices(GEP->indices());
   return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
                          Indices) == TargetTransformInfo::TCC_Free;
 }

@@ -1257,6 +1257,20 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
                       "extadd_pairwise_i16x8_u", 0xa6>;
 
 
+// Prototype f64x2 conversions
+defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_signed,
+                      "convert_low_i32x4_s", 0x53>;
+defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_unsigned,
+                      "convert_low_i32x4_u", 0x54>;
+defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_saturate_zero_signed,
+                      "trunc_sat_zero_f64x2_s", 0x55>;
+defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_saturate_zero_unsigned,
+                      "trunc_sat_zero_f64x2_u", 0x56>;
+defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
+                      "demote_zero_f64x2", 0x57>;
+defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
+                      "promote_low_f32x4", 0x69>;
+
 //===----------------------------------------------------------------------===//
 // Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
 //===----------------------------------------------------------------------===//

@@ -9,12 +9,29 @@
 // Definitions of target specific functions
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "target_impl.h"
 #include "common/debug.h"
-#include "common/target_atomic.h"
 
 #include <cuda.h>
+
+// Forward declaration of CUDA primitives which will be evetually transformed
+// into LLVM intrinsics.
+extern "C" {
+unsigned int __activemask();
+unsigned int __ballot(unsigned);
+// The default argument here is based on NVIDIA's website
+// https://developer.nvidia.com/blog/using-cuda-warp-level-primitives/
+int __shfl_sync(unsigned mask, int val, int src_line, int width = WARPSIZE);
+int __shfl(int val, int src_line, int width = WARPSIZE);
+int __shfl_down(int var, unsigned detla, int width);
+int __shfl_down_sync(unsigned mask, int var, unsigned detla, int width);
+void __syncwarp(int mask);
+void __threadfence();
+void __threadfence_block();
+void __threadfence_system();
+}
 
 DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
@@ -114,10 +131,12 @@ DEVICE void __kmpc_impl_threadfence_block() { __threadfence_block(); }
 DEVICE void __kmpc_impl_threadfence_system() { __threadfence_system(); }
 
 // Calls to the NVPTX layer (assuming 1D layout)
-DEVICE int GetThreadIdInBlock() { return threadIdx.x; }
-DEVICE int GetBlockIdInKernel() { return blockIdx.x; }
-DEVICE int GetNumberOfBlocksInKernel() { return gridDim.x; }
-DEVICE int GetNumberOfThreadsInBlock() { return blockDim.x; }
+DEVICE int GetThreadIdInBlock() { return __nvvm_read_ptx_sreg_tid_x(); }
+DEVICE int GetBlockIdInKernel() { return __nvvm_read_ptx_sreg_ctaid_x(); }
+DEVICE int GetNumberOfBlocksInKernel() {
+  return __nvvm_read_ptx_sreg_nctaid_x();
+}
+DEVICE int GetNumberOfThreadsInBlock() { return __nvvm_read_ptx_sreg_ntid_x(); }
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
@@ -158,3 +177,5 @@ DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock) {
 
 DEVICE void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
 DEVICE void __kmpc_impl_free(void *x) { free(x); }
+
+#pragma omp end declare target

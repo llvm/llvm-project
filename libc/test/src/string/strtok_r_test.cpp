@@ -9,7 +9,7 @@
 #include "src/string/strtok_r.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrTokReentrantTest, NoTokenFound) {
+TEST(LlvmLibcStrTokReentrantTest, NoTokenFound) {
   { // Empty source and delimiter string.
     char empty[] = "";
     char *reserve = nullptr;
@@ -44,7 +44,7 @@ TEST(StrTokReentrantTest, NoTokenFound) {
   }
 }
 
-TEST(StrTokReentrantTest, DelimiterAsFirstCharacterShouldBeIgnored) {
+TEST(LlvmLibcStrTokReentrantTest, DelimiterAsFirstCharacterShouldBeIgnored) {
   char src[] = ".123";
   char *reserve = nullptr;
   ASSERT_STREQ(__llvm_libc::strtok_r(src, ".", &reserve), "123");
@@ -53,7 +53,7 @@ TEST(StrTokReentrantTest, DelimiterAsFirstCharacterShouldBeIgnored) {
   ASSERT_STREQ(__llvm_libc::strtok_r(nullptr, ".", &reserve), nullptr);
 }
 
-TEST(StrTokReentrantTest, DelimiterIsMiddleCharacter) {
+TEST(LlvmLibcStrTokReentrantTest, DelimiterIsMiddleCharacter) {
   char src[] = "12,34";
   char *reserve = nullptr;
   ASSERT_STREQ(__llvm_libc::strtok_r(src, ",", &reserve), "12");
@@ -62,7 +62,7 @@ TEST(StrTokReentrantTest, DelimiterIsMiddleCharacter) {
   ASSERT_STREQ(__llvm_libc::strtok_r(nullptr, ",", &reserve), nullptr);
 }
 
-TEST(StrTokReentrantTest, DelimiterAsLastCharacterShouldBeIgnored) {
+TEST(LlvmLibcStrTokReentrantTest, DelimiterAsLastCharacterShouldBeIgnored) {
   char src[] = "1234:";
   char *reserve = nullptr;
   ASSERT_STREQ(__llvm_libc::strtok_r(src, ":", &reserve), "1234");
@@ -71,7 +71,7 @@ TEST(StrTokReentrantTest, DelimiterAsLastCharacterShouldBeIgnored) {
   ASSERT_STREQ(__llvm_libc::strtok_r(nullptr, ":", &reserve), nullptr);
 }
 
-TEST(StrTokReentrantTest, ShouldNotGoPastNullTerminator) {
+TEST(LlvmLibcStrTokReentrantTest, ShouldNotGoPastNullTerminator) {
   char src[] = {'1', '2', '\0', ',', '3'};
   char *reserve = nullptr;
   ASSERT_STREQ(__llvm_libc::strtok_r(src, ",", &reserve), "12");
@@ -80,7 +80,8 @@ TEST(StrTokReentrantTest, ShouldNotGoPastNullTerminator) {
   ASSERT_STREQ(__llvm_libc::strtok_r(nullptr, ",", &reserve), nullptr);
 }
 
-TEST(StrTokReentrantTest, SubsequentCallsShouldFindFollowingDelimiters) {
+TEST(LlvmLibcStrTokReentrantTest,
+     SubsequentCallsShouldFindFollowingDelimiters) {
   char src[] = "12,34.56";
   char *reserve = nullptr;
   char *token = __llvm_libc::strtok_r(src, ",.", &reserve);
@@ -97,7 +98,7 @@ TEST(StrTokReentrantTest, SubsequentCallsShouldFindFollowingDelimiters) {
   ASSERT_STREQ(token, nullptr);
 }
 
-TEST(StrTokReentrantTest, DelimitersShouldNotBeIncludedInToken) {
+TEST(LlvmLibcStrTokReentrantTest, DelimitersShouldNotBeIncludedInToken) {
   char src[] = "__ab__:_cd__:__ef__:__";
   char *reserve = nullptr;
   char *token = __llvm_libc::strtok_r(src, "_:", &reserve);

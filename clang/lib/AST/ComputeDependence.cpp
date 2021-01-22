@@ -64,7 +64,7 @@ ExprDependence clang::computeDependence(UnaryOperator *E,
       if (VD && VD->isTemplated()) {
         auto *VarD = dyn_cast<VarDecl>(VD);
         if (!VarD || !VarD->hasLocalStorage())
-          Dep |= ExprDependence::ValueInstantiation;
+          Dep |= ExprDependence::Value;
       }
     }
   }
@@ -443,21 +443,12 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   if (auto *FirstArg = E->getTemplateArgs()) {
     unsigned NumArgs = E->getNumTemplateArgs();
     for (auto *Arg = FirstArg, *End = FirstArg + NumArgs; Arg < End; ++Arg)
-      Deps |= toExprDependence(Arg->getArgument().getDependence() &
-                               ~TemplateArgumentDependence::Dependent);
+      Deps |= toExprDependence(Arg->getArgument().getDependence());
   }
 
   auto *Decl = E->getDecl();
-  auto *Found = E->getFoundDecl();
   auto Type = E->getType();
 
-  // FIXME: For a ParmVarDecl referenced in a function signature, we don't know
-  // its dependence yet!
-  if (!isa<ParmVarDecl>(Decl)) {
-    if (Decl->getDeclContext()->isDependentContext() ||
-        (Found && Found->getDeclContext()->isDependentContext()))
-      Deps |= ExprDependence::Instantiation;
-  }
   if (Decl->isParameterPack())
     Deps |= ExprDependence::UnexpandedPack;
   Deps |= toExprDependence(Type->getDependence()) & ExprDependence::Error;

@@ -13,11 +13,11 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
+#include "R600Subtarget.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 

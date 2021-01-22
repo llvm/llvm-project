@@ -82,6 +82,10 @@ struct TestSparsification
       return linalg::SparseIntType::kI64;
     case 2:
       return linalg::SparseIntType::kI32;
+    case 3:
+      return linalg::SparseIntType::kI16;
+    case 4:
+      return linalg::SparseIntType::kI8;
     }
   }
 

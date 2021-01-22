@@ -9,6 +9,7 @@
 // This file contains the initialization code for the GPU
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "target_impl.h"
@@ -157,3 +158,5 @@ EXTERN int8_t __kmpc_is_spmd_exec_mode() {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_is_spmd_exec_mode\n");
   return isSPMDMode();
 }
+
+#pragma omp end declare target

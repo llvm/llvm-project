@@ -9,6 +9,7 @@
 // This file contains the data objects used on the GPU device.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "common/device_environment.h"
@@ -66,3 +67,5 @@ DEVICE SHARED void *ReductionScratchpadPtr;
 // Data sharing related variables.
 ////////////////////////////////////////////////////////////////////////////////
 DEVICE SHARED omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
+
+#pragma omp end declare target
