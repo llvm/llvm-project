@@ -214,7 +214,10 @@ int64_t ShapedType::getNumElements() const {
   return num;
 }
 
-int64_t ShapedType::getRank() const { return getShape().size(); }
+int64_t ShapedType::getRank() const {
+  assert(hasRank() && "cannot query rank of unranked shaped type");
+  return getShape().size();
+}
 
 bool ShapedType::hasRank() const {
   return !isa<UnrankedMemRefType, UnrankedTensorType>();
