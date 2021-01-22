@@ -988,51 +988,6 @@ define i64 @abs_i64(i64 %x) {
   ret i64 %abs
 }
 
-; We select a i32 addi that zero-extends the result on RV64 as addiwu
-
-define zeroext i32 @zext_add_to_addiwu(i32 signext %a) nounwind {
-; RV64I-LABEL: zext_add_to_addiwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: zext_add_to_addiwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addiwu a0, a0, 1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: zext_add_to_addiwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addiwu a0, a0, 1
-; RV64IBB-NEXT:    ret
-  %add = add i32 %a, 1
-  ret i32 %add
-}
-
-define i64 @addiwu(i64 %a) nounwind {
-; RV64I-LABEL: addiwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: addiwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addiwu a0, a0, 1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: addiwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addiwu a0, a0, 1
-; RV64IBB-NEXT:    ret
-  %conv = add i64 %a, 1
-  %conv1 = and i64 %conv, 4294967295
-  ret i64 %conv1
-}
-
 define i64 @slliuw(i64 %a) nounwind {
 ; RV64I-LABEL: slliuw:
 ; RV64I:       # %bb.0:
@@ -1089,96 +1044,6 @@ define i128 @slliuw_2(i32 signext %0, i128* %1) {
   ret i128 %5
 }
 
-; We select a i32 add that zero-extends the result on RV64 as addwu
-
-define zeroext i32 @zext_add_to_addwu(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_add_to_addwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: zext_add_to_addwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addwu a0, a0, a1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: zext_add_to_addwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addwu a0, a0, a1
-; RV64IBB-NEXT:    ret
-  %add = add i32 %a, %b
-  ret i32 %add
-}
-
-define i64 @addwu(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: addwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: addwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addwu a0, a1, a0
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: addwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addwu a0, a1, a0
-; RV64IBB-NEXT:    ret
-  %add = add i64 %b, %a
-  %conv1 = and i64 %add, 4294967295
-  ret i64 %conv1
-}
-
-; We select a i32 sub that zero-extends the result on RV64 as subwu
-
-define zeroext i32 @zext_sub_to_subwu(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sub_to_subwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: zext_sub_to_subwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    subwu a0, a0, a1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: zext_sub_to_subwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    subwu a0, a0, a1
-; RV64IBB-NEXT:    ret
-  %sub = sub i32 %a, %b
-  ret i32 %sub
-}
-
-define i64 @subwu(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: subwu:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: subwu:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    subwu a0, a0, a1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: subwu:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    subwu a0, a0, a1
-; RV64IBB-NEXT:    ret
-  %sub = sub i64 %a, %b
-  %conv1 = and i64 %sub, 4294967295
-  ret i64 %conv1
-}
-
 define i64 @adduw(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: adduw:
 ; RV64I:       # %bb.0:
@@ -1225,26 +1090,4 @@ define signext i8 @adduw_2(i32 signext %0, i8* %1) {
   %4 = getelementptr inbounds i8, i8* %1, i64 %3
   %5 = load i8, i8* %4
   ret i8 %5
-}
-
-define i64 @subuw(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: subuw:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64IB-LABEL: subuw:
-; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    subu.w a0, a0, a1
-; RV64IB-NEXT:    ret
-;
-; RV64IBB-LABEL: subuw:
-; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    subu.w a0, a0, a1
-; RV64IBB-NEXT:    ret
-  %and = and i64 %b, 4294967295
-  %sub = sub i64 %a, %and
-  ret i64 %sub
 }
