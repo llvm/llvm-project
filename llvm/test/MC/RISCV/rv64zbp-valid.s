@@ -55,3 +55,17 @@ zext.h t0, t1
 # CHECK-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xbb,0x42,0x03,0x08]
 packw t0, t1, x0
+# CHECK-ASM-AND-OBJ: rev8 t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x83,0x6b]
+rev8 t0, t1
+# CHECK-ASM: grevi t0, t1, 56
+# CHECK-OBJ: rev8 t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x83,0x6b]
+grevi t0, t1, 56
+# CHECK-ASM-AND-OBJ: orc.b t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x73,0x28]
+orc.b t0, t1
+# CHECK-ASM: gorci t0, t1, 7
+# CHECK-OBJ: orc.b t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x73,0x28]
+gorci t0, t1, 7
