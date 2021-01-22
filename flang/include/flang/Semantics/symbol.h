@@ -356,7 +356,7 @@ private:
 };
 
 // Record the USE of a symbol: location is where (USE statement or renaming);
-// symbol is the USEd module.
+// symbol is in the USEd module.
 class UseDetails {
 public:
   UseDetails(const SourceName &location, const Symbol &symbol)
