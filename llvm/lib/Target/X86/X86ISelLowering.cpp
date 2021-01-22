@@ -37324,41 +37324,33 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (SDValue Res = canonicalizeLaneShuffleWithRepeatedOps(N, DAG, DL))
         return Res;
 
-    // If both 128-bit values were inserted into high halves of 256-bit values,
-    // the shuffle can be reduced to a concatenation of subvectors:
-    // vperm2x128 (ins ?, X, C1), (ins ?, Y, C2), 0x31 --> concat X, Y
-    // Note: We are only looking for the exact high/high shuffle mask because we
-    //       expect to fold other similar patterns before creating this opcode.
-    SDValue Ins0 = peekThroughBitcasts(N.getOperand(0));
-    SDValue Ins1 = peekThroughBitcasts(N.getOperand(1));
+    // Combine vperm2x128 subvector shuffle with an inner concat pattern.
+    // vperm2x128(concat(X,Y),concat(Z,W)) --> concat X,Y etc.
+    auto FindSubVector128 = [&](unsigned Idx) {
+      if (Idx > 3)
+        return SDValue();
+      SDValue Src = peekThroughBitcasts(N.getOperand(Idx < 2 ? 0 : 1));
+      SmallVector<SDValue> SubOps;
+      if (collectConcatOps(Src.getNode(), SubOps) && SubOps.size() == 2)
+        return SubOps[Idx & 1];
+      unsigned NumElts = Src.getValueType().getVectorNumElements();
+      if ((Idx & 1) == 1 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Src.getOperand(1).getValueSizeInBits() == 128 &&
+          Src.getConstantOperandAPInt(2) == (NumElts / 2)) {
+        return Src.getOperand(1);
+      }
+      return SDValue();
+    };
     unsigned Imm = N.getConstantOperandVal(2);
-
-    // Handle subvector splat by tweaking values to match binary concat.
-    // vperm2x128 (ins ?, X, C1), undef, 0x11 ->
-    // vperm2x128 (ins ?, X, C1), (ins ?, X, C1), 0x31 -> concat X, X
-    if (Imm == 0x11 && Ins1.isUndef()) {
-      Imm = 0x31;
-      Ins1 = Ins0;
+    if (SDValue SubLo = FindSubVector128(Imm & 0x0F)) {
+      if (SDValue SubHi = FindSubVector128((Imm & 0xF0) >> 4)) {
+        MVT SubVT = VT.getHalfNumVectorElementsVT();
+        SubLo = DAG.getBitcast(SubVT, SubLo);
+        SubHi = DAG.getBitcast(SubVT, SubHi);
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubLo, SubHi);
+      }
     }
-
-    if (!(Imm == 0x31 &&
-          Ins0.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Ins1.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Ins0.getValueType() == Ins1.getValueType()))
-      return SDValue();
-
-    SDValue X = Ins0.getOperand(1);
-    SDValue Y = Ins1.getOperand(1);
-    unsigned C1 = Ins0.getConstantOperandVal(2);
-    unsigned C2 = Ins1.getConstantOperandVal(2);
-    MVT SrcVT = X.getSimpleValueType();
-    unsigned SrcElts = SrcVT.getVectorNumElements();
-    if (SrcVT != Y.getSimpleValueType() || SrcVT.getSizeInBits() != 128 ||
-        C1 != SrcElts || C2 != SrcElts)
-      return SDValue();
-
-    return DAG.getBitcast(VT, DAG.getNode(ISD::CONCAT_VECTORS, DL,
-                                          Ins1.getValueType(), X, Y));
+    return SDValue();
   }
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:
