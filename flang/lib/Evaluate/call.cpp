@@ -117,9 +117,12 @@ int ProcedureDesignator::Rank() const {
 
 const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
   if (const Symbol * symbol{GetSymbol()}) {
-    if (const auto *details{
-            symbol->detailsIf<semantics::ProcEntityDetails>()}) {
-      return details->interface().symbol();
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (const auto *proc{ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
+      return proc->interface().symbol();
+    } else if (const auto *binding{
+                   ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
+      return &binding->symbol();
     }
   }
   return nullptr;

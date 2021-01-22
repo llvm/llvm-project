@@ -11,8 +11,8 @@ module m
     real, allocatable, codimension[:] :: allocatableField
     !ERROR: Component 'deferredfield' is a coarray and must have the ALLOCATABLE attribute
     real, codimension[:] :: deferredField
-    !ERROR: 'pointerfield' may not have the POINTER attribute because it is a coarray
     !ERROR: Component 'pointerfield' is a coarray and must have the ALLOCATABLE attribute
+    !ERROR: 'pointerfield' may not have the POINTER attribute because it is a coarray
     real, pointer, codimension[:] :: pointerField
     !ERROR: Component 'realfield' is a coarray and must have the ALLOCATABLE attribute and have a deferred coshape
     real, codimension[*] :: realField
