@@ -1,4 +1,4 @@
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s -aa-pipeline=default
 ; RUN: llvm-modextract -b -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=M1 %s
 
