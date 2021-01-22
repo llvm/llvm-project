@@ -68,7 +68,15 @@ define i16 @sat_base_16bit(i16 %x) #0 {
 ;
 ; V6T2-LABEL: sat_base_16bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    ssat r0, #12, r0
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    movw r2, #2047
+; V6T2-NEXT:    cmp r1, r2
+; V6T2-NEXT:    movlt r2, r0
+; V6T2-NEXT:    movw r0, #63488
+; V6T2-NEXT:    sxth r1, r2
+; V6T2-NEXT:    movt r0, #65535
+; V6T2-NEXT:    cmn r1, #2048
+; V6T2-NEXT:    movgt r0, r2
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i16 %x, 2047
@@ -95,7 +103,12 @@ define i8 @sat_base_8bit(i8 %x) #0 {
 ;
 ; V6T2-LABEL: sat_base_8bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    ssat r0, #6, r0
+; V6T2-NEXT:    sxtb r1, r0
+; V6T2-NEXT:    cmp r1, #31
+; V6T2-NEXT:    movge r0, #31
+; V6T2-NEXT:    sxtb r1, r0
+; V6T2-NEXT:    cmn r1, #32
+; V6T2-NEXT:    mvnle r0, #31
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i8 %x, 31
@@ -547,7 +560,12 @@ define void @extended(i32 %xx, i16 signext %y, i8* nocapture %z) {
 ; V6T2-LABEL: extended:
 ; V6T2:       @ %bb.0: @ %entry
 ; V6T2-NEXT:    add r0, r1, r0, lsr #16
-; V6T2-NEXT:    ssat r0, #8, r0
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmp r1, #127
+; V6T2-NEXT:    movge r0, #127
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmn r1, #128
+; V6T2-NEXT:    mvnle r0, #127
 ; V6T2-NEXT:    strb r0, [r2]
 ; V6T2-NEXT:    bx lr
 entry:
@@ -582,7 +600,12 @@ define i32 @formulated_valid(i32 %a) {
 ;
 ; V6T2-LABEL: formulated_valid:
 ; V6T2:       @ %bb.0:
-; V6T2-NEXT:    ssat r0, #8, r0
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmp r1, #127
+; V6T2-NEXT:    movge r0, #127
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmn r1, #128
+; V6T2-NEXT:    mvnle r0, #127
 ; V6T2-NEXT:    uxth r0, r0
 ; V6T2-NEXT:    bx lr
   %x1 = trunc i32 %a to i16
@@ -613,7 +636,12 @@ define i32 @formulated_invalid(i32 %a) {
 ;
 ; V6T2-LABEL: formulated_invalid:
 ; V6T2:       @ %bb.0:
-; V6T2-NEXT:    ssat r0, #8, r0
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmp r1, #127
+; V6T2-NEXT:    movge r0, #127
+; V6T2-NEXT:    sxth r1, r0
+; V6T2-NEXT:    cmn r1, #128
+; V6T2-NEXT:    mvnle r0, #127
 ; V6T2-NEXT:    bic r0, r0, #-16777216
 ; V6T2-NEXT:    bx lr
   %x1 = trunc i32 %a to i16

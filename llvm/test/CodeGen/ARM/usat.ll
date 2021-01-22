@@ -67,12 +67,27 @@ define i16 @unsigned_sat_base_16bit(i16 %x) #0 {
 ;
 ; V6-LABEL: unsigned_sat_base_16bit:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    usat r0, #11, r0
+; V6-NEXT:    mov r1, #255
+; V6-NEXT:    sxth r2, r0
+; V6-NEXT:    orr r1, r1, #1792
+; V6-NEXT:    cmp r2, r1
+; V6-NEXT:    movlt r1, r0
+; V6-NEXT:    sxth r0, r1
+; V6-NEXT:    cmp r0, #0
+; V6-NEXT:    movle r1, #0
+; V6-NEXT:    mov r0, r1
 ; V6-NEXT:    bx lr
 ;
 ; V6T2-LABEL: unsigned_sat_base_16bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    usat r0, #11, r0
+; V6T2-NEXT:    sxth r2, r0
+; V6T2-NEXT:    movw r1, #2047
+; V6T2-NEXT:    cmp r2, r1
+; V6T2-NEXT:    movlt r1, r0
+; V6T2-NEXT:    sxth r0, r1
+; V6T2-NEXT:    cmp r0, #0
+; V6T2-NEXT:    movle r1, #0
+; V6T2-NEXT:    mov r0, r1
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i16 %x, 2047
@@ -99,12 +114,22 @@ define i8 @unsigned_sat_base_8bit(i8 %x) #0 {
 ;
 ; V6-LABEL: unsigned_sat_base_8bit:
 ; V6:       @ %bb.0: @ %entry
-; V6-NEXT:    usat r0, #5, r0
+; V6-NEXT:    sxtb r1, r0
+; V6-NEXT:    cmp r1, #31
+; V6-NEXT:    movge r0, #31
+; V6-NEXT:    sxtb r1, r0
+; V6-NEXT:    cmp r1, #0
+; V6-NEXT:    movle r0, #0
 ; V6-NEXT:    bx lr
 ;
 ; V6T2-LABEL: unsigned_sat_base_8bit:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    usat r0, #5, r0
+; V6T2-NEXT:    sxtb r1, r0
+; V6T2-NEXT:    cmp r1, #31
+; V6T2-NEXT:    movge r0, #31
+; V6T2-NEXT:    sxtb r1, r0
+; V6T2-NEXT:    cmp r1, #0
+; V6T2-NEXT:    movle r0, #0
 ; V6T2-NEXT:    bx lr
 entry:
   %0 = icmp slt i8 %x, 31
