@@ -286,7 +286,7 @@ declare void @__kmpc_end_master(%struct.ident_t*, i32)
 
 define internal void @.omp_outlined..5(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..5
-; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (i32* noalias nocapture readonly [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* noundef nonnull [[GLOB0]]) [[ATTR12]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
