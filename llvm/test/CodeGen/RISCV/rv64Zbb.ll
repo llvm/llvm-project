@@ -777,3 +777,45 @@ define i64 @abs_i64(i64 %x) {
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   ret i64 %abs
 }
+
+define i32 @zexth_i32(i32 %a) nounwind {
+; RV64I-LABEL: zexth_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: zexth_i32:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.h a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: zexth_i32:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.h a0, a0
+; RV64IBB-NEXT:    ret
+  %and = and i32 %a, 65535
+  ret i32 %and
+}
+
+define i64 @zexth_i64(i64 %a) nounwind {
+; RV64I-LABEL: zexth_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: zexth_i64:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    zext.h a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBB-LABEL: zexth_i64:
+; RV64IBB:       # %bb.0:
+; RV64IBB-NEXT:    zext.h a0, a0
+; RV64IBB-NEXT:    ret
+  %and = and i64 %a, 65535
+  ret i64 %and
+}
