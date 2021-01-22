@@ -671,12 +671,12 @@ define i32 @ctpop_i32(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: ctpop_i32:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    pcnt a0, a0
+; RV32IB-NEXT:    cpop a0, a0
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: ctpop_i32:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    pcnt a0, a0
+; RV32IBB-NEXT:    cpop a0, a0
 ; RV32IBB-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
@@ -744,16 +744,16 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ;
 ; RV32IB-LABEL: ctpop_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    pcnt a1, a1
-; RV32IB-NEXT:    pcnt a0, a0
+; RV32IB-NEXT:    cpop a1, a1
+; RV32IB-NEXT:    cpop a0, a0
 ; RV32IB-NEXT:    add a0, a0, a1
 ; RV32IB-NEXT:    mv a1, zero
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBB-LABEL: ctpop_i64:
 ; RV32IBB:       # %bb.0:
-; RV32IBB-NEXT:    pcnt a1, a1
-; RV32IBB-NEXT:    pcnt a0, a0
+; RV32IBB-NEXT:    cpop a1, a1
+; RV32IBB-NEXT:    cpop a0, a0
 ; RV32IBB-NEXT:    add a0, a0, a1
 ; RV32IBB-NEXT:    mv a1, zero
 ; RV32IBB-NEXT:    ret

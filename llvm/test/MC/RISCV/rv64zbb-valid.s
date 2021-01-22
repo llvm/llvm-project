@@ -48,6 +48,6 @@ clzw t0, t1
 # CHECK-ASM-AND-OBJ: ctzw t0, t1
 # CHECK-ASM: encoding: [0x9b,0x12,0x13,0x60]
 ctzw t0, t1
-# CHECK-ASM-AND-OBJ: pcntw t0, t1
+# CHECK-ASM-AND-OBJ: cpopw t0, t1
 # CHECK-ASM: encoding: [0x9b,0x12,0x23,0x60]
-pcntw t0, t1
+cpopw t0, t1

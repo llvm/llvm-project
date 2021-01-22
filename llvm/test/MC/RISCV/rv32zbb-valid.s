@@ -30,9 +30,9 @@ clz t0, t1
 # CHECK-ASM-AND-OBJ: ctz t0, t1
 # CHECK-ASM: encoding: [0x93,0x12,0x13,0x60]
 ctz t0, t1
-# CHECK-ASM-AND-OBJ: pcnt t0, t1
+# CHECK-ASM-AND-OBJ: cpop t0, t1
 # CHECK-ASM: encoding: [0x93,0x12,0x23,0x60]
-pcnt t0, t1
+cpop t0, t1
 # CHECK-ASM-AND-OBJ: sext.b t0, t1
 # CHECK-ASM: encoding: [0x93,0x12,0x43,0x60]
 sext.b t0, t1
