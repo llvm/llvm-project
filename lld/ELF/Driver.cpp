@@ -1922,7 +1922,13 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;
-    if (sym->referenced)
+    // If sym is referenced in any object file, bitcode file or shared object,
+    // retain wrap which is the redirection target of sym. If the object file
+    // defining sym has sym references, we cannot easily distinguish the case
+    // from cases where sym is not referenced. Retain wrap because we choose to
+    // wrap sym references regardless of whether sym is defined
+    // (https://sourceware.org/bugzilla/show_bug.cgi?id=26358).
+    if (sym->referenced || sym->isDefined())
       wrap->isUsedInRegularObj = true;
   }
   return v;
