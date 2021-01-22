@@ -827,12 +827,11 @@ int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getMaskedMemoryOpCost(
+InstructionCost TargetTransformInfo::getMaskedMemoryOpCost(
     unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind) const {
-  int Cost =
-      TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                     CostKind);
+  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment,
+                                                        AddressSpace, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
