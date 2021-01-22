@@ -86,6 +86,12 @@ static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
   h->buckets = (kmp_dephash_entry **)(h + 1);
   h->generation = gen;
   h->nconflicts = 0;
+
+  // make sure buckets are properly initialized
+  for (size_t i = 0; i < new_size; i++) {
+    h->buckets[i] = NULL;
+  }
+
   // insert existing elements in the new table
   for (size_t i = 0; i < current_dephash->size; i++) {
     kmp_dephash_entry_t *next, *entry;
