@@ -870,6 +870,30 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   return SI;
 }
 
+/// Freely adapt every user of V as-if V was changed to !V.
+/// WARNING: only if canFreelyInvertAllUsersOf() said this can be done.
+void InstCombinerImpl::freelyInvertAllUsersOf(Value *I) {
+  for (User *U : I->users()) {
+    switch (cast<Instruction>(U)->getOpcode()) {
+    case Instruction::Select: {
+      auto *SI = cast<SelectInst>(U);
+      SI->swapValues();
+      SI->swapProfMetadata();
+      break;
+    }
+    case Instruction::Br:
+      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
+      break;
+    case Instruction::Xor:
+      replaceInstUsesWith(cast<Instruction>(*U), I);
+      break;
+    default:
+      llvm_unreachable("Got unexpected user - out of sync with "
+                       "canFreelyInvertAllUsersOf() ?");
+    }
+  }
+}
+
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
 /// constant zero (which is the 'negate' form).
 Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
