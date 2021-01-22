@@ -87,8 +87,8 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
     Target. Both operands must be non-void pointers and having the same <id>
     Type operand in their OpTypePointer type declaration.  Matching Storage
     Class is not required.  The amount of memory copied is the size of the
-    type pointed to. The copied type must have a fixed size; i.e., it cannot
-    be, nor include, any OpTypeRuntimeArray types.
+    type pointed to. The copied type must have a fixed size; i.e., it must
+    not be, nor include, any OpTypeRuntimeArray types.
   }];
 
   let description = [{
