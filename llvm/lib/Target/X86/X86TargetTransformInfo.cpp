@@ -3340,9 +3340,10 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
-int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                           bool IsPairwise,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                       bool IsPairwise,
+                                       TTI::TargetCostKind CostKind) {
   // Just use the default implementation for pair reductions.
   if (IsPairwise)
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise, CostKind);

@@ -1584,9 +1584,10 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
   return ScalarCost;
 }
 
-int ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                           bool IsPairwiseForm,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                       bool IsPairwiseForm,
+                                       TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD)
