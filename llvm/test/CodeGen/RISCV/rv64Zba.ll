@@ -72,12 +72,12 @@ define i64 @adduw(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: adduw:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    add.uw a0, a0, a1
+; RV64IB-NEXT:    add.uw a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: adduw:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    add.uw a0, a0, a1
+; RV64IBA-NEXT:    add.uw a0, a1, a0
 ; RV64IBA-NEXT:    ret
   %and = and i64 %b, 4294967295
   %add = add i64 %and, %a
@@ -95,13 +95,13 @@ define signext i8 @adduw_2(i32 signext %0, i8* %1) {
 ;
 ; RV64IB-LABEL: adduw_2:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    add.uw a0, a1, a0
+; RV64IB-NEXT:    add.uw a0, a0, a1
 ; RV64IB-NEXT:    lb a0, 0(a0)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBA-LABEL: adduw_2:
 ; RV64IBA:       # %bb.0:
-; RV64IBA-NEXT:    add.uw a0, a1, a0
+; RV64IBA-NEXT:    add.uw a0, a0, a1
 ; RV64IBA-NEXT:    lb a0, 0(a0)
 ; RV64IBA-NEXT:    ret
   %3 = zext i32 %0 to i64
