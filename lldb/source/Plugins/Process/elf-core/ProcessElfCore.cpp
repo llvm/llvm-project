@@ -261,8 +261,8 @@ lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
   return m_dyld_up.get();
 }
 
-bool ProcessElfCore::UpdateThreadList(ThreadList &old_thread_list,
-                                      ThreadList &new_thread_list) {
+bool ProcessElfCore::DoUpdateThreadList(ThreadList &old_thread_list,
+                                        ThreadList &new_thread_list) {
   const uint32_t num_threads = GetNumThreadContexts();
   if (!m_thread_data_valid)
     return false;

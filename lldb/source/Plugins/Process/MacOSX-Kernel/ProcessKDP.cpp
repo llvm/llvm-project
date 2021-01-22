@@ -508,8 +508,8 @@ lldb::ThreadSP ProcessKDP::GetKernelThread() {
   return thread_sp;
 }
 
-bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
-                                  ThreadList &new_thread_list) {
+bool ProcessKDP::DoUpdateThreadList(ThreadList &old_thread_list,
+                                    ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
   LLDB_LOGV(log, "pid = {0}", GetID());

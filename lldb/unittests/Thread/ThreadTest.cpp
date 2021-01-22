@@ -51,8 +51,8 @@ public:
                               Status &error) {
     return 0;
   }
-  virtual bool UpdateThreadList(ThreadList &old_thread_list,
-                                ThreadList &new_thread_list) {
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override {
     return false;
   }
   virtual ConstString GetPluginName() { return ConstString("Dummy"); }
