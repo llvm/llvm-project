@@ -234,7 +234,8 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 
       const char *IDStart = LastEmitted;
       const char *IDEnd = IDStart;
-      while (*IDEnd >= '0' && *IDEnd <= '9') ++IDEnd;
+      while (isDigit(*IDEnd))
+        ++IDEnd;
 
       unsigned Val;
       if (StringRef(IDStart, IDEnd-IDStart).getAsInteger(10, Val))
@@ -399,7 +400,8 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 
       const char *IDStart = LastEmitted;
       const char *IDEnd = IDStart;
-      while (*IDEnd >= '0' && *IDEnd <= '9') ++IDEnd;
+      while (isDigit(*IDEnd))
+        ++IDEnd;
 
       unsigned Val;
       if (StringRef(IDStart, IDEnd-IDStart).getAsInteger(10, Val))
