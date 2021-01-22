@@ -670,6 +670,17 @@ private:
     return getELFX86RelocationKindName(R);
   }
 
+  static Error targetOutOfRangeError(const Block &B, const Edge &E) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream ErrStream(ErrMsg);
+      ErrStream << "Relocation target out of range: ";
+      printEdge(ErrStream, B, E, getELFX86RelocationKindName(E.getKind()));
+      ErrStream << "\n";
+    }
+    return make_error<JITLinkError>(std::move(ErrMsg));
+  }
+
   Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
     using namespace ELF_x86_64_Edges;
     using namespace llvm::support;
@@ -681,12 +692,15 @@ private:
     case ELFX86RelocationKind::PCRel32:
     case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      endian::write32le(FixupPtr, Value);
+      if (Value < std::numeric_limits<int32_t>::min() ||
+          Value > std::numeric_limits<int32_t>::max())
+        return targetOutOfRangeError(B, E);
+      *(little32_t *)FixupPtr = Value;
       break;
     }
     case ELFX86RelocationKind::Pointer64: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend();
-      endian::write64le(FixupPtr, Value);
+      *(ulittle64_t *)FixupPtr = Value;
       break;
     }
     }
