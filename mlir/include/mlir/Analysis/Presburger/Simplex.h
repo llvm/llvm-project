@@ -218,7 +218,11 @@ public:
   /// tableau A and one in B.
   static Simplex makeProduct(const Simplex &a, const Simplex &b);
 
-  /// Returns the current sample point if it is integral. Otherwise, returns an
+  /// Returns a rational sample point. This should not be called when Simplex is
+  /// empty.
+  SmallVector<Fraction, 8> getRationalSample() const;
+
+  /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.
   Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
 
