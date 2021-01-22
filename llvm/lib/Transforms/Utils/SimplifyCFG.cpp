@@ -2934,15 +2934,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Note that there may be multiple predecessor blocks, so we cannot move
     // bonus instructions to a predecessor block.
     ValueToValueMapTy VMap; // maps original values to cloned values
-    Instruction *CondInPred;
     for (Instruction &BonusInst : *BB) {
       if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
         continue;
 
       Instruction *NewBonusInst = BonusInst.clone();
-
-      if (&BonusInst == Cond)
-        CondInPred = NewBonusInst;
 
       if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
         // Unless the instruction has the same !dbg location as the original
@@ -3004,8 +3000,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
     // Now that the Cond was cloned into the predecessor basic block,
     // or/and the two conditions together.
-    Instruction *NewCond = cast<Instruction>(
-        Builder.CreateBinOp(Opc, PBI->getCondition(), CondInPred, "or.cond"));
+    Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
+        Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
     PBI->setCondition(NewCond);
 
     uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
