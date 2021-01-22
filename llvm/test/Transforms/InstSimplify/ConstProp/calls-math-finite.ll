@@ -30,7 +30,7 @@ declare float @__powf_finite(float, float) #0
 declare double @__sinh_finite(double) #0
 declare float @__sinhf_finite(float) #0
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone willreturn }
 
 define void @T() {
 ; CHECK-LABEL: @T(
