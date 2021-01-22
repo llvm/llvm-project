@@ -14,9 +14,9 @@
 define void @foo(float* nocapture %data, float %d) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscvdpspn 0, 1
 ; CHECK-NEXT:    li 5, 83
 ; CHECK-NEXT:    addi 4, 3, 192
-; CHECK-NEXT:    xscvdpspn 0, 1
 ; CHECK-NEXT:    mtctr 5
 ; CHECK-NEXT:    xxspltw 0, 0, 0
 ; CHECK-NEXT:    .p2align 4
