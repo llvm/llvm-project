@@ -856,7 +856,7 @@ def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(add GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
+def : Pat<(add (and GPR:$rs1, (i64 0xFFFFFFFF)), GPR:$rs2),
           (ADDUW GPR:$rs1, GPR:$rs2)>;
 }
 
