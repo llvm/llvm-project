@@ -809,9 +809,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                               PP.getIdentifierTable(), PP.getSelectorTable(),
                               PP.getBuiltinInfo());
 
-  bool disableValid = false;
+  DisableValidationForModuleKind disableValid =
+      DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
-    disableValid = true;
+    disableValid = DisableValidationForModuleKind::All;
   AST->Reader = new ASTReader(
       PP, *AST->ModuleCache, AST->Ctx.get(), PCHContainerRdr, {},
       /*isysroot=*/"",
