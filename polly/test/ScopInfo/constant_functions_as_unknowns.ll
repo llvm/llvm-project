@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: [__global_id_0] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
 ; CHECK-NEXT: [__global_id_0] -> {  : false }
-; CHECK-NEXT: p0: %__global_id_0
+; CHECK:      p0: %__global_id_0
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     i64 MemRef_A[*]; // Element size 8
 ; CHECK-NEXT: }

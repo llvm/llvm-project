@@ -1,10 +1,10 @@
 ; RUN: opt %loadPolly -polly-scops -polly-delicm -analyze < %s | FileCheck %s
 ;
-; llvm.org/PR41656
-; 
-; This test case has an InvalidContext such that part of the predecessors
-; of for.body.us.i lie within the invalid context. This causes a
-; consistency check withing the invalid context of PR41656 to fail.
+; llvm.org/PR48783
+;
+; PHI predecessors of statement instances can only be reliably derived in defined behaviour situations. In this case, the inner loop's counter would overflow when its upper bound (%call24) is lower than its lower bound (2). However, due to the nsw flag, this would be undefined behavior and therefore not added to any runtime-check context, but to the defined-behaviour context.
+;
+; Dereived from test case pr41656.ll
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -44,6 +44,7 @@ for.body.us.i:                                    ; preds = %for.cond2.for.end_c
 for.body5.us.for.body5.us_crit_edge.i:            ; preds = %for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge, %for.body.us.i
   %indvars.iv.next.i66 = phi i64 [ 2, %for.body.us.i ], [ %indvars.iv.next.i, %for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge ]
   %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.next.i66, 1
+  udiv i64 1, %indvars.iv.next.i
   %exitcond.i = icmp eq i64 %indvars.iv.next.i, %wide.trip.count.i
   br i1 %exitcond.i, label %for.cond2.for.end_crit_edge.us.i, label %for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge
 
@@ -60,7 +61,7 @@ for.cond2.for.end_crit_edge.us.i:                 ; preds = %for.body5.us.for.bo
 fill_samples.exit:                                ; preds = %for.cond2.for.end_crit_edge.us.i, %for.body.us.i.us
   ret void
 }
-
+ 
 declare dso_local i32 @av_get_channel_layout_nb_channels() local_unnamed_addr #0
 
 ; Function Attrs: nounwind readnone speculatable
@@ -82,11 +83,11 @@ attributes #2 = { nounwind }
 
 
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [call24] -> {  : call24 <= 2 }
+; CHECK-NEXT: [call24] -> { : false }
 ; CHECK:      Defined Behavior Context:
 ; CHECK-NEXT: [call24] -> {  : 3 <= call24 <= 2147483647 }
 
-; Only write to scalar if call24 >= 3 (i.e. not in invalid context)
+; Only write to scalar if call24 >= 3 (i.e. has defined behavior)
 ; Since it should be never executed otherwise, the condition is not strictly necessary.
 ; CHECK-LABEL: DeLICM result:
 ; CHECK:          Stmt_for_body_us_preheader_i
