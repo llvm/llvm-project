@@ -253,6 +253,12 @@ def GREV : ALU_rr<0b0110100, 0b101, "grev">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp] in {
+def XPERMN : ALU_rr<0b0010100, 0b010, "xperm.n">, Sched<[]>;
+def XPERMB : ALU_rr<0b0010100, 0b100, "xperm.b">, Sched<[]>;
+def XPERMH : ALU_rr<0b0010100, 0b110, "xperm.h">, Sched<[]>;
+} // Predicates = [HasStdExtZbp]
+
+let Predicates = [HasStdExtZbp] in {
 def SLOI : RVBShift_ri<0b00100, 0b001, OPC_OP_IMM, "sloi">, Sched<[]>;
 def SROI : RVBShift_ri<0b00100, 0b101, OPC_OP_IMM, "sroi">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
@@ -403,6 +409,10 @@ def BEXTW : ALUW_rr<0b0100100, 0b101, "bextw">, Sched<[]>;
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def GORCW  : ALUW_rr<0b0010100, 0b101, "gorcw">, Sched<[]>;
 def GREVW  : ALUW_rr<0b0110100, 0b101, "grevw">, Sched<[]>;
+} // Predicates = [HasStdExtZbp, IsRV64]
+
+let Predicates = [HasStdExtZbp, IsRV64] in {
+def XPERMW : ALU_rr<0b0010100, 0b000, "xperm.w">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {

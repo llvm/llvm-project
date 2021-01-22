@@ -69,3 +69,6 @@ orc.b t0, t1
 # CHECK-OBJ: orc.b t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0x73,0x28]
 gorci t0, t1, 7
+# CHECK-ASM-AND-OBJ: xperm.w t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x02,0x73,0x28]
+xperm.w t0, t1, t2
