@@ -95,11 +95,15 @@ public:
   }
 
   bool haveSameType(QualType Ty1, QualType Ty2) {
+    const bool BothHaveSameCanonicalTypes =
+        Context.getCanonicalType(Ty1) == Context.getCanonicalType(Ty2);
+    const bool BothHaveIntegralOrUnscopedEnumerationType =
+        Ty1->isIntegralOrUnscopedEnumerationType() &&
+        Ty2->isIntegralOrUnscopedEnumerationType();
     // FIXME: Remove the second disjunct when we support symbolic
     // truncation/extension.
-    return (Context.getCanonicalType(Ty1) == Context.getCanonicalType(Ty2) ||
-            (Ty1->isIntegralOrEnumerationType() &&
-             Ty2->isIntegralOrEnumerationType()));
+    return BothHaveSameCanonicalTypes ||
+           BothHaveIntegralOrUnscopedEnumerationType;
   }
 
   SVal evalCast(SVal val, QualType castTy, QualType originalType);
