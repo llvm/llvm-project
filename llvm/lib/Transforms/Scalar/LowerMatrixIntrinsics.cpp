@@ -488,6 +488,7 @@ public:
     case Instruction::FAdd:
     case Instruction::FSub:
     case Instruction::FMul: // Scalar multiply.
+    case Instruction::FNeg:
     case Instruction::Add:
     case Instruction::Mul:
     case Instruction::Sub:
@@ -724,6 +725,8 @@ public:
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Changed |= VisitBinaryOperator(BinOp);
+      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+        Changed |= VisitUnaryOperator(UnOp);
       if (match(Inst, m_Load(m_Value(Op1))))
         Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -1491,6 +1494,40 @@ public:
 
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(A.getVector(I), B.getVector(I)));
+
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                             Result.getNumVectors()),
+                     Builder);
+    return true;
+  }
+
+  /// Lower unary operators, if shape information is available.
+  bool VisitUnaryOperator(UnaryOperator *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    Value *Op = Inst->getOperand(0);
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    MatrixTy Result;
+    MatrixTy M = getMatrix(Op, Shape, Builder);
+
+    // Helper to perform unary op on vectors.
+    auto BuildVectorOp = [&Builder, Inst](Value *Op) {
+      switch (Inst->getOpcode()) {
+      case Instruction::FNeg:
+        return Builder.CreateFNeg(Op);
+      default:
+        llvm_unreachable("Unsupported unary operator for matrix");
+      }
+    };
+
+    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+      Result.addVector(BuildVectorOp(M.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
