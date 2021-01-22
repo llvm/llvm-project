@@ -37964,23 +37964,24 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       return HAddSub;
 
     // Merge shuffles through binops if its likely we'll be able to merge it
-    // with other shuffles.
+    // with other shuffles (as long as they aren't splats).
     // shuffle(bop(shuffle(x,y),shuffle(z,w)),bop(shuffle(a,b),shuffle(c,d)))
     // TODO: We might be able to move this to DAGCombiner::visitVECTOR_SHUFFLE.
     if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N)) {
       unsigned SrcOpcode = N->getOperand(0).getOpcode();
       if (SrcOpcode == N->getOperand(1).getOpcode() && TLI.isBinOp(SrcOpcode) &&
           N->isOnlyUserOf(N->getOperand(0).getNode()) &&
-          N->isOnlyUserOf(N->getOperand(1).getNode()) &&
-          VT.getScalarSizeInBits() >= 32) {
+          N->isOnlyUserOf(N->getOperand(1).getNode())) {
         SDValue Op00 = N->getOperand(0).getOperand(0);
         SDValue Op10 = N->getOperand(1).getOperand(0);
         SDValue Op01 = N->getOperand(0).getOperand(1);
         SDValue Op11 = N->getOperand(1).getOperand(1);
-        if ((Op00.getOpcode() == ISD::VECTOR_SHUFFLE ||
-             Op10.getOpcode() == ISD::VECTOR_SHUFFLE) &&
-            (Op01.getOpcode() == ISD::VECTOR_SHUFFLE ||
-             Op11.getOpcode() == ISD::VECTOR_SHUFFLE)) {
+        auto *SVN00 = dyn_cast<ShuffleVectorSDNode>(Op00);
+        auto *SVN10 = dyn_cast<ShuffleVectorSDNode>(Op10);
+        auto *SVN01 = dyn_cast<ShuffleVectorSDNode>(Op01);
+        auto *SVN11 = dyn_cast<ShuffleVectorSDNode>(Op11);
+        if (((SVN00 && !SVN00->isSplat()) || (SVN10 && !SVN10->isSplat())) &&
+            ((SVN01 && !SVN01->isSplat()) || (SVN11 && !SVN11->isSplat()))) {
           SDLoc DL(N);
           ArrayRef<int> Mask = SVN->getMask();
           SDValue LHS = DAG.getVectorShuffle(VT, DL, Op00, Op10, Mask);
