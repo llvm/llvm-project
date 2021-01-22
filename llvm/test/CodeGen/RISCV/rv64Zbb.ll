@@ -1000,12 +1000,12 @@ define i64 @slliuw(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: slliuw:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slliu.w a0, a0, 1
+; RV64IB-NEXT:    slli.uw a0, a0, 1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: slliuw:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    slliu.w a0, a0, 1
+; RV64IBB-NEXT:    slli.uw a0, a0, 1
 ; RV64IBB-NEXT:    ret
   %conv1 = shl i64 %a, 1
   %shl = and i64 %conv1, 8589934590
@@ -1025,7 +1025,7 @@ define i128 @slliuw_2(i32 signext %0, i128* %1) {
 ;
 ; RV64IB-LABEL: slliuw_2:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slliu.w a0, a0, 4
+; RV64IB-NEXT:    slli.uw a0, a0, 4
 ; RV64IB-NEXT:    add a1, a1, a0
 ; RV64IB-NEXT:    ld a0, 0(a1)
 ; RV64IB-NEXT:    ld a1, 8(a1)
@@ -1033,7 +1033,7 @@ define i128 @slliuw_2(i32 signext %0, i128* %1) {
 ;
 ; RV64IBB-LABEL: slliuw_2:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    slliu.w a0, a0, 4
+; RV64IBB-NEXT:    slli.uw a0, a0, 4
 ; RV64IBB-NEXT:    add a1, a1, a0
 ; RV64IBB-NEXT:    ld a0, 0(a1)
 ; RV64IBB-NEXT:    ld a1, 8(a1)
@@ -1054,12 +1054,12 @@ define i64 @adduw(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: adduw:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addu.w a0, a0, a1
+; RV64IB-NEXT:    add.uw a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: adduw:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addu.w a0, a0, a1
+; RV64IBB-NEXT:    add.uw a0, a0, a1
 ; RV64IBB-NEXT:    ret
   %and = and i64 %b, 4294967295
   %add = add i64 %and, %a
@@ -1077,13 +1077,13 @@ define signext i8 @adduw_2(i32 signext %0, i8* %1) {
 ;
 ; RV64IB-LABEL: adduw_2:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addu.w a0, a1, a0
+; RV64IB-NEXT:    add.uw a0, a1, a0
 ; RV64IB-NEXT:    lb a0, 0(a0)
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: adduw_2:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    addu.w a0, a1, a0
+; RV64IBB-NEXT:    add.uw a0, a1, a0
 ; RV64IBB-NEXT:    lb a0, 0(a0)
 ; RV64IBB-NEXT:    ret
   %3 = zext i32 %0 to i64

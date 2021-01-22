@@ -370,8 +370,8 @@ def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slliu.w">, Sched<[]>;
-def ADDUW : ALUW_rr<0b0000100, 0b000, "addu.w">, Sched<[]>;
+def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slli.uw">, Sched<[]>;
+def ADDUW : ALUW_rr<0b0000100, 0b000, "add.uw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
