@@ -1749,6 +1749,33 @@ static void genEnumAttrPrinter(const NamedAttribute *var, OpMethodBody &body) {
           "  }\n";
 }
 
+/// Generate the check for the anchor of an optional group.
+static void genOptionalGroupPrinterAnchor(Element *anchor, OpMethodBody &body) {
+  TypeSwitch<Element *>(anchor)
+      .Case<OperandVariable, ResultVariable>([&](auto *element) {
+        const NamedTypeConstraint *var = element->getVar();
+        if (var->isOptional())
+          body << "  if (" << var->name << "()) {\n";
+        else if (var->isVariadic())
+          body << "  if (!" << var->name << "().empty()) {\n";
+      })
+      .Case<RegionVariable>([&](RegionVariable *element) {
+        const NamedRegion *var = element->getVar();
+        // TODO: Add a check for optional regions here when ODS supports it.
+        body << "  if (!" << var->name << "().empty()) {\n";
+      })
+      .Case<TypeDirective>([&](TypeDirective *element) {
+        genOptionalGroupPrinterAnchor(element->getOperand(), body);
+      })
+      .Case<FunctionalTypeDirective>([&](FunctionalTypeDirective *element) {
+        genOptionalGroupPrinterAnchor(element->getInputs(), body);
+      })
+      .Case<AttributeVariable>([&](AttributeVariable *attr) {
+        body << "  if ((*this)->getAttr(\"" << attr->getVar()->name
+             << "\")) {\n";
+      });
+}
+
 void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                                         Operator &op, bool &shouldEmitSpace,
                                         bool &lastWasPunctuation) {
@@ -1769,21 +1796,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   if (OptionalElement *optional = dyn_cast<OptionalElement>(element)) {
     // Emit the check for the presence of the anchor element.
     Element *anchor = optional->getAnchor();
-    if (auto *operand = dyn_cast<OperandVariable>(anchor)) {
-      const NamedTypeConstraint *var = operand->getVar();
-      if (var->isOptional())
-        body << "  if (" << var->name << "()) {\n";
-      else if (var->isVariadic())
-        body << "  if (!" << var->name << "().empty()) {\n";
-    } else if (auto *region = dyn_cast<RegionVariable>(anchor)) {
-      const NamedRegion *var = region->getVar();
-      // TODO: Add a check for optional here when ODS supports it.
-      body << "  if (!" << var->name << "().empty()) {\n";
-
-    } else {
-      body << "  if ((*this)->getAttr(\""
-           << cast<AttributeVariable>(anchor)->getVar()->name << "\")) {\n";
-    }
+    genOptionalGroupPrinterAnchor(anchor, body);
 
     // If the anchor is a unit attribute, we don't need to print it. When
     // parsing, we will add this attribute if this group is present.
@@ -2244,8 +2257,9 @@ private:
                               bool isTopLevel);
   LogicalResult parseOptionalChildElement(
       std::vector<std::unique_ptr<Element>> &childElements,
-      SmallPtrSetImpl<const NamedTypeConstraint *> &seenVariables,
       Optional<unsigned> &anchorIdx);
+  LogicalResult verifyOptionalChildElement(Element *element,
+                                           llvm::SMLoc childLoc, bool isAnchor);
 
   /// Parse the various different directives.
   LogicalResult parseAttrDictDirective(std::unique_ptr<Element> &element,
@@ -2315,7 +2329,6 @@ private:
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
-  llvm::DenseSet<const NamedTypeConstraint *> optionalVariables;
 };
 } // end anonymous namespace
 
@@ -2760,10 +2773,9 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
 
   // Parse the child elements for this optional group.
   std::vector<std::unique_ptr<Element>> elements;
-  SmallPtrSet<const NamedTypeConstraint *, 8> seenVariables;
   Optional<unsigned> anchorIdx;
   do {
-    if (failed(parseOptionalChildElement(elements, seenVariables, anchorIdx)))
+    if (failed(parseOptionalChildElement(elements, anchorIdx)))
       return ::mlir::failure();
   } while (curToken.getKind() != Token::r_paren);
   consumeToken();
@@ -2787,31 +2799,6 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
                      "first parsable element of an operand group must be "
                      "an attribute, literal, operand, or region");
 
-  // After parsing all of the elements, ensure that all type directives refer
-  // only to elements within the group.
-  auto checkTypeOperand = [&](Element *typeEle) {
-    auto *opVar = dyn_cast<OperandVariable>(typeEle);
-    const NamedTypeConstraint *var = opVar ? opVar->getVar() : nullptr;
-    if (!seenVariables.count(var))
-      return emitError(curLoc, "type directive can only refer to variables "
-                               "within the optional group");
-    return ::mlir::success();
-  };
-  for (auto &ele : elements) {
-    if (auto *typeEle = dyn_cast<TypeRefDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getOperand())))
-        return failure();
-    } else if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getOperand())))
-        return ::mlir::failure();
-    } else if (auto *typeEle = dyn_cast<FunctionalTypeDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getInputs())) ||
-          failed(checkTypeOperand(typeEle->getResults())))
-        return ::mlir::failure();
-    }
-  }
-
-  optionalVariables.insert(seenVariables.begin(), seenVariables.end());
   auto parseStart = parseBegin - elements.begin();
   element = std::make_unique<OptionalElement>(std::move(elements), *anchorIdx,
                                               parseStart);
@@ -2820,7 +2807,6 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
 
 LogicalResult FormatParser::parseOptionalChildElement(
     std::vector<std::unique_ptr<Element>> &childElements,
-    SmallPtrSetImpl<const NamedTypeConstraint *> &seenVariables,
     Optional<unsigned> &anchorIdx) {
   llvm::SMLoc childLoc = curToken.getLoc();
   childElements.push_back({});
@@ -2837,7 +2823,14 @@ LogicalResult FormatParser::parseOptionalChildElement(
     consumeToken();
   }
 
-  return TypeSwitch<Element *, LogicalResult>(childElements.back().get())
+  return verifyOptionalChildElement(childElements.back().get(), childLoc,
+                                    isAnchor);
+}
+
+LogicalResult FormatParser::verifyOptionalChildElement(Element *element,
+                                                       llvm::SMLoc childLoc,
+                                                       bool isAnchor) {
+  return TypeSwitch<Element *, LogicalResult>(element)
       // All attributes can be within the optional group, but only optional
       // attributes can be the anchor.
       .Case([&](AttributeVariable *attrEle) {
@@ -2852,7 +2845,14 @@ LogicalResult FormatParser::parseOptionalChildElement(
         if (!ele->getVar()->isVariableLength())
           return emitError(childLoc, "only variable length operands can be "
                                      "used within an optional group");
-        seenVariables.insert(ele->getVar());
+        return ::mlir::success();
+      })
+      // Only optional-like(i.e. variadic) results can be within an optional
+      // group.
+      .Case<ResultVariable>([&](ResultVariable *ele) {
+        if (!ele->getVar()->isVariableLength())
+          return emitError(childLoc, "only variable length results can be "
+                                     "used within an optional group");
         return ::mlir::success();
       })
       .Case<RegionVariable>([&](RegionVariable *) {
@@ -2860,16 +2860,27 @@ LogicalResult FormatParser::parseOptionalChildElement(
         // a check here.
         return ::mlir::success();
       })
-      // Literals, whitespace, custom directives, and type directives may be
-      // used, but they can't anchor the group.
-      .Case<LiteralElement, WhitespaceElement, CustomDirective,
-            FunctionalTypeDirective, OptionalElement, TypeRefDirective,
-            TypeDirective>([&](Element *) {
-        if (isAnchor)
-          return emitError(childLoc, "only variables can be used to anchor "
-                                     "an optional group");
-        return ::mlir::success();
+      .Case<TypeDirective>([&](TypeDirective *ele) {
+        return verifyOptionalChildElement(ele->getOperand(), childLoc,
+                                          /*isAnchor=*/false);
       })
+      .Case<FunctionalTypeDirective>([&](FunctionalTypeDirective *ele) {
+        if (failed(verifyOptionalChildElement(ele->getInputs(), childLoc,
+                                              /*isAnchor=*/false)))
+          return failure();
+        return verifyOptionalChildElement(ele->getResults(), childLoc,
+                                          /*isAnchor=*/false);
+      })
+      // Literals, whitespace, and custom directives may be used, but they can't
+      // anchor the group.
+      .Case<LiteralElement, WhitespaceElement, CustomDirective,
+            FunctionalTypeDirective, OptionalElement, TypeRefDirective>(
+          [&](Element *) {
+            if (isAnchor)
+              return emitError(childLoc, "only variables and types can be used "
+                                         "to anchor an optional group");
+            return ::mlir::success();
+          })
       .Default([&](Element *) {
         return emitError(childLoc, "only literals, types, and variables can be "
                                    "used within an optional group");

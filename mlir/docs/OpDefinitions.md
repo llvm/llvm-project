@@ -777,8 +777,8 @@ information. An optional group is defined by wrapping a set of elements within
 *   The first element of the group must either be a attribute, literal, operand,
     or region.
     -   This is because the first element must be optionally parsable.
-*   Exactly one argument variable within the group must be marked as the anchor
-    of the group.
+*   Exactly one argument variable or type directive within the group must be
+    marked as the anchor of the group.
     -   The anchor is the element whose presence controls whether the group
         should be printed/parsed.
     -   An element is marked as the anchor by adding a trailing `^`.
@@ -789,11 +789,9 @@ information. An optional group is defined by wrapping a set of elements within
     valid elements within the group.
     -   Any attribute variable may be used, but only optional attributes can be
         marked as the anchor.
-    -   Only variadic or optional operand arguments can be used.
+    -   Only variadic or optional results and operand arguments and can be used.
     -   All region variables can be used. When a non-variable length region is
         used, if the group is not present the region is empty.
-    -   The operands to a type directive must be defined within the optional
-        group.
 
 An example of an operation with an optional group is `std.return`, which has a
 variadic number of operands.

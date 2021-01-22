@@ -221,6 +221,25 @@ test.format_optional_operand_result_b_op( : ) : i64
 test.format_optional_operand_result_b_op : i64
 
 //===----------------------------------------------------------------------===//
+// Format optional results
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_optional_result_a_op
+test.format_optional_result_a_op
+
+// CHECK: test.format_optional_result_a_op : i64 -> i64, i64
+test.format_optional_result_a_op : i64 -> i64, i64
+
+// CHECK: test.format_optional_result_b_op
+test.format_optional_result_b_op
+
+// CHECK: test.format_optional_result_b_op : i64 -> i64, i64
+test.format_optional_result_b_op : i64 -> i64, i64
+
+// CHECK: test.format_optional_result_c_op : (i64) -> (i64, i64)
+test.format_optional_result_c_op : (i64) -> (i64, i64)
+
+//===----------------------------------------------------------------------===//
 // Format custom directives
 //===----------------------------------------------------------------------===//
 
