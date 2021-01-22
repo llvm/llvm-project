@@ -739,12 +739,12 @@ define void @pr48450() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i16 [ 128, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @gen1()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[DEC]] = add i16 [[COUNTDOWN]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
+; CHECK-NEXT:    [[DEC]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @gen1()
@@ -759,13 +759,13 @@ entry:
   br label %for.body
 
 for.body:
-  %countdown = phi i16 [ 128, %entry ], [ %dec, %for.bodythread-pre-split ]
+  %countdown = phi i8 [ 8, %entry ], [ %dec, %for.bodythread-pre-split ]
   %c = call i1 @gen1()
   br i1 %c, label %for.inc, label %if.then
 
 for.inc:
-  %dec = add i16 %countdown, -1
-  %cmp.not = icmp eq i16 %countdown, 0
+  %dec = add i8 %countdown, -1
+  %cmp.not = icmp eq i8 %countdown, 0
   br i1 %cmp.not, label %if.end.loopexit, label %for.bodythread-pre-split
 
 if.then:
@@ -785,12 +785,12 @@ define void @pr48450_2(i1 %enable_loopback) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i16 [ 128, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @gen1()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[DEC]] = add i16 [[COUNTDOWN]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
+; CHECK-NEXT:    [[DEC]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @gen1()
@@ -810,13 +810,13 @@ entry:
   br label %for.body
 
 for.body:
-  %countdown = phi i16 [ 128, %entry ], [ %dec, %for.bodythread-pre-split ]
+  %countdown = phi i8 [ 8, %entry ], [ %dec, %for.bodythread-pre-split ]
   %c = call i1 @gen1()
   br i1 %c, label %for.inc, label %if.then
 
 for.inc:
-  %dec = add i16 %countdown, -1
-  %cmp.not = icmp eq i16 %countdown, 0
+  %dec = add i8 %countdown, -1
+  %cmp.not = icmp eq i8 %countdown, 0
   br i1 %cmp.not, label %if.end.loopexit, label %for.bodythread-pre-split
 
 if.then:
@@ -837,14 +837,14 @@ if.end.loopexit:
   ret void
 }
 
-@f.b = external global i16, align 1
+@f.b = external global i8, align 1
 define void @pr48450_3() {
 ; CHECK-LABEL: @pr48450_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[V:%.*]] = load i16, i16* @f.b, align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[V]], 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* @f.b, align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[V]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br label [[FOR_COND1]]
 ;
@@ -852,15 +852,15 @@ entry:
   br label %for.cond1
 
 for.cond1:
-  %v = load i16, i16* @f.b, align 1
-  %cmp = icmp slt i16 %v, 1
+  %v = load i8, i8* @f.b, align 1
+  %cmp = icmp slt i8 %v, 1
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
   br label %for.cond1
 
 for.end:
-  %tobool = icmp ne i16 %v, 0
+  %tobool = icmp ne i8 %v, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
@@ -870,8 +870,8 @@ if.end:
   br label %for.cond2
 
 for.cond2:
-  %c.0 = phi i16 [ undef, %if.end ], [ %inc, %if.end7 ]
-  %cmp3 = icmp slt i16 %c.0, 1
+  %c.0 = phi i8 [ undef, %if.end ], [ %inc, %if.end7 ]
+  %cmp3 = icmp slt i8 %c.0, 1
   br i1 %cmp3, label %for.body4, label %for.cond.cleanup
 
 for.cond.cleanup:
@@ -884,7 +884,7 @@ if.then6:
   br label %cleanup
 
 if.end7:
-  %inc = add nsw i16 %c.0, 1
+  %inc = add nsw i8 %c.0, 1
   br label %for.cond2
 
 cleanup:
