@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 
+#include "AMDGPUMIRFormatter.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
@@ -39,6 +40,7 @@ private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
   TargetSchedModel SchedModel;
+  mutable std::unique_ptr<AMDGPUMIRFormatter> Formatter;
 
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -1075,6 +1077,12 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  const MIRFormatter *getMIRFormatter() const override {
+    if (!Formatter.get())
+      Formatter = std::make_unique<AMDGPUMIRFormatter>();
+    return Formatter.get();
+  }
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 };

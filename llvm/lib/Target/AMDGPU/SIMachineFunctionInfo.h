@@ -65,6 +65,8 @@ public:
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVBuffer;
   }
+
+  void printCustom(raw_ostream &OS) const override { OS << "BufferResource"; }
 };
 
 class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
@@ -76,6 +78,8 @@ public:
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVImage;
   }
+
+  void printCustom(raw_ostream &OS) const override { OS << "ImageResource"; }
 };
 
 class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
@@ -369,10 +373,8 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
-  DenseMap<const Value *,
-           std::unique_ptr<const AMDGPUBufferPseudoSourceValue>> BufferPSVs;
-  DenseMap<const Value *,
-           std::unique_ptr<const AMDGPUImagePseudoSourceValue>> ImagePSVs;
+  std::unique_ptr<const AMDGPUBufferPseudoSourceValue> BufferPSV;
+  std::unique_ptr<const AMDGPUImagePseudoSourceValue> ImagePSV;
   std::unique_ptr<const AMDGPUGWSResourcePseudoSourceValue> GWSResourcePSV;
 
 private:
@@ -883,22 +885,18 @@ public:
     return LDSWaveSpillSize;
   }
 
-  const AMDGPUBufferPseudoSourceValue *getBufferPSV(const SIInstrInfo &TII,
-                                                    const Value *BufferRsrc) {
-    assert(BufferRsrc);
-    auto PSV = BufferPSVs.try_emplace(
-      BufferRsrc,
-      std::make_unique<AMDGPUBufferPseudoSourceValue>(TII));
-    return PSV.first->second.get();
+  const AMDGPUBufferPseudoSourceValue *getBufferPSV(const SIInstrInfo &TII) {
+    if (!BufferPSV)
+      BufferPSV = std::make_unique<AMDGPUBufferPseudoSourceValue>(TII);
+
+    return BufferPSV.get();
   }
 
-  const AMDGPUImagePseudoSourceValue *getImagePSV(const SIInstrInfo &TII,
-                                                  const Value *ImgRsrc) {
-    assert(ImgRsrc);
-    auto PSV = ImagePSVs.try_emplace(
-      ImgRsrc,
-      std::make_unique<AMDGPUImagePseudoSourceValue>(TII));
-    return PSV.first->second.get();
+  const AMDGPUImagePseudoSourceValue *getImagePSV(const SIInstrInfo &TII) {
+    if (!ImagePSV)
+      ImagePSV = std::make_unique<AMDGPUImagePseudoSourceValue>(TII);
+
+    return ImagePSV.get();
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *getGWSPSV(const SIInstrInfo &TII) {
