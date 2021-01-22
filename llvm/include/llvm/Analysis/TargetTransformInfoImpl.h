@@ -558,8 +558,8 @@ public:
     return 1;
   }
 
-  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind) const {
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind) const {
     switch (ICA.getID()) {
     default:
       break;

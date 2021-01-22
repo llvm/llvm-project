@@ -252,8 +252,8 @@ public:
                                               Type *ResTy, VectorType *ValTy,
                                               TTI::TargetCostKind CostKind);
 
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind);
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
 
   bool maybeLoweredToCall(Instruction &I);
   bool isLoweredToCall(const Function *F);

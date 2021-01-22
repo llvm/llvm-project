@@ -1195,8 +1195,8 @@ public:
   }
 
   /// Get intrinsic cost based on arguments.
-  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind) {
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind) {
     // Check for generically free intrinsics.
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
@@ -1207,7 +1207,7 @@ public:
       return TargetTransformInfo::TCC_Basic;
 
     if (ICA.isTypeBasedOnly())
-      return *getTypeBasedIntrinsicInstrCost(ICA, CostKind).getValue();
+      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
     Type *RetTy = ICA.getReturnType();
 
@@ -1294,13 +1294,13 @@ public:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
-      return *getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
       IntrinsicCostAttributes Attrs(
           IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, I, 1);
-      return *getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
@@ -1365,7 +1365,7 @@ public:
 
     IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,
                                   ScalarizationCost);
-    return *thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
+    return thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
   }
 
   /// Get intrinsic cost based on argument types.

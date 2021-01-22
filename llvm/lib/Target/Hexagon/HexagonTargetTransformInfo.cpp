@@ -139,7 +139,7 @@ unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
   return BaseT::getCallInstrCost(F, RetTy, Tys, CostKind);
 }
 
-unsigned
+InstructionCost
 HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   if (ICA.getID() == Intrinsic::bswap) {
