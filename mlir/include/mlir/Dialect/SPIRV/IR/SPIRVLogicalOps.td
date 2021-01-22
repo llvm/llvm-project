@@ -719,6 +719,13 @@ def SPV_OrderedOp : SPV_LogicalBinaryOp<"Ordered", SPV_Float, [Commutative]> {
     %5 = spv.Ordered %2, %3 : vector<4xf32>
     ```
   }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Kernel]>
+  ];
 }
 
 // -----
@@ -1073,6 +1080,13 @@ def SPV_UnorderedOp : SPV_LogicalBinaryOp<"Unordered", SPV_Float, [Commutative]>
     %5 = spv.Unordered %2, %3 : vector<4xf32>
     ```
   }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Kernel]>
+  ];
 }
 
 // -----

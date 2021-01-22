@@ -256,9 +256,17 @@ func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   return
 }
 
+} // end module
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // std.cmpf
 //===----------------------------------------------------------------------===//
+
+module attributes {
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+} {
 
 // CHECK-LABEL: @cmpf
 func @cmpf(%arg0 : f32, %arg1 : f32) {
@@ -286,16 +294,37 @@ func @cmpf(%arg0 : f32, %arg1 : f32) {
   %11 = cmpf ule, %arg0, %arg1 : f32
   // CHECK: spv.FUnordNotEqual
   %12 = cmpf une, %arg0, %arg1 : f32
-  // CHECK: spv.Ordered
-  %13 = cmpf ord, %arg0, %arg1 : f32
-  // CHECK: spv.Unordered
-  %14 = cmpf uno, %arg0, %arg1 : f32
   return
 }
+
+} // end module
+
+// -----
+
+module attributes {
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, {}>
+} {
+
+// CHECK-LABEL: @cmpf
+func @cmpf(%arg0 : f32, %arg1 : f32) {
+  // CHECK: spv.Ordered
+  %0 = cmpf ord, %arg0, %arg1 : f32
+  // CHECK: spv.Unordered
+  %1 = cmpf uno, %arg0, %arg1 : f32
+  return
+}
+
+} // end module
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // std.cmpi
 //===----------------------------------------------------------------------===//
+
+module attributes {
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+} {
 
 // CHECK-LABEL: @cmpi
 func @cmpi(%arg0 : i32, %arg1 : i32) {

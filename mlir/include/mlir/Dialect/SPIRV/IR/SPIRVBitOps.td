@@ -92,13 +92,6 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
     %3 = spv.BitCount %1: vector<4xi32>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -341,13 +334,6 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
     %2 = spv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -383,13 +369,6 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
     %2 = spv.BitwiseOr %0, %1 : vector<4xi32>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -425,13 +404,6 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
     %2 = spv.BitwiseXor %0, %1 : vector<4xi32>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -440,7 +412,7 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base left by the number of bits specified in Shift.
-    The least-significant bits will be zero filled.
+    The least-significant bits are zero filled.
   }];
 
   let description = [{
@@ -477,13 +449,6 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
     %5 = spv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -492,7 +457,7 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
                                              [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
-    The most-significant bits will be filled with the sign bit from Base.
+    The most-significant bits are filled with the sign bit from Base.
   }];
 
   let description = [{
@@ -526,13 +491,6 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
     %5 = spv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -541,7 +499,7 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
                                           [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
-    The most-significant bits will be zero filled.
+    The most-significant bits are zero filled.
   }];
 
   let description = [{
@@ -576,13 +534,6 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
     %5 = spv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
-
-  let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[]>
-  ];
 }
 
 // -----
@@ -595,7 +546,7 @@ def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
 
     Result Type must be a scalar or vector of integer type.
 
-    Operand’s type  must be a scalar or vector of integer type.  It must
+    Operand's type  must be a scalar or vector of integer type.  It must
     have the same number of components as Result Type.  The component width
     must equal the component width in Result Type.
 
