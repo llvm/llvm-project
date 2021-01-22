@@ -190,17 +190,17 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   // Canonicalize src to a native path to avoid mixed separator styles.
   path::native(AbsoluteSrc);
   // Remove redundant leading "./" pieces and consecutive separators.
-  AbsoluteSrc = path::remove_leading_dotslash(AbsoluteSrc);
+  StringRef TrimmedAbsoluteSrc = path::remove_leading_dotslash(AbsoluteSrc);
 
   // Canonicalize the source path by removing "..", "." components.
-  SmallString<256> VirtualPath = AbsoluteSrc;
+  SmallString<256> VirtualPath = TrimmedAbsoluteSrc;
   path::remove_dots(VirtualPath, /*remove_dot_dot=*/true);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized
   // like that but make sure we always use the real path for the destination.
   SmallString<256> CopyFrom;
-  if (!getRealPath(AbsoluteSrc, CopyFrom))
+  if (!getRealPath(TrimmedAbsoluteSrc, CopyFrom))
     CopyFrom = VirtualPath;
   SmallString<256> CacheDst = getDest();
 
