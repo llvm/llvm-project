@@ -3213,6 +3213,16 @@ defm PseudoVFWNMSAC    : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
 defm PseudoVFSQRT      : VPseudoUnaryV_V;
 
 //===----------------------------------------------------------------------===//
+// 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFRSQRTE7   : VPseudoUnaryV_V;
+
+//===----------------------------------------------------------------------===//
+// 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFRECE7     : VPseudoUnaryV_V;
+
+//===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVFMIN       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
@@ -3870,6 +3880,16 @@ defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwnmsac", "PseudoVFWNMSAC", AllWidenabl
 // 14.8. Vector Floating-Point Square-Root Instruction
 //===----------------------------------------------------------------------===//
 defm "" : VPatUnaryV_V<"int_riscv_vfsqrt", "PseudoVFSQRT", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+//===----------------------------------------------------------------------===//
+defm "" : VPatUnaryV_V<"int_riscv_vfrsqrte7", "PseudoVFRSQRTE7", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+//===----------------------------------------------------------------------===//
+defm "" : VPatUnaryV_V<"int_riscv_vfrece7", "PseudoVFRECE7", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
