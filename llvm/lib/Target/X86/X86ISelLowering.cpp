@@ -36610,6 +36610,17 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
+  // Attempt to constant fold all of the constant source ops.
+  if (SDValue Cst = combineX86ShufflesConstants(
+          Ops, Mask, Root, HasVariableMask, DAG, Subtarget))
+    return Cst;
+
+  // Canonicalize the combined shuffle mask chain with horizontal ops.
+  // NOTE: This will update the Ops and Mask.
+  if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
+          Ops, Mask, RootSizeInBits, SDLoc(Root), DAG, Subtarget))
+    return DAG.getBitcast(Root.getValueType(), HOp);
+
   // Widen any subvector shuffle inputs we've collected.
   if (any_of(Ops, [RootSizeInBits](SDValue Op) {
         return Op.getValueSizeInBits() < RootSizeInBits;
@@ -36621,17 +36632,6 @@ static SDValue combineX86ShufflesRecursively(
     // Reresolve - we might have repeated subvector sources.
     resolveTargetShuffleInputsAndMask(Ops, Mask);
   }
-
-  // Attempt to constant fold all of the constant source ops.
-  if (SDValue Cst = combineX86ShufflesConstants(
-          Ops, Mask, Root, HasVariableMask, DAG, Subtarget))
-    return Cst;
-
-  // Canonicalize the combined shuffle mask chain with horizontal ops.
-  // NOTE: This will update the Ops and Mask.
-  if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
-          Ops, Mask, RootSizeInBits, SDLoc(Root), DAG, Subtarget))
-    return DAG.getBitcast(Root.getValueType(), HOp);
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
