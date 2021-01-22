@@ -95,4 +95,12 @@ void g2(int c = f2<int>()) {}
 template<typename T> int f3() { return T::error; } // expected-error {{no members}}
 void g3(int c = f3<int>()) {} // expected-note {{in instantiation of}}
 void use_g3() { g3(); }
+
+namespace PR47682 {
+  inline namespace A {
+    void f(int = 0);
+  }
+}
+void PR47682::f(int) {}
+void PR47682_test() { PR47682::f(); }
 #endif
