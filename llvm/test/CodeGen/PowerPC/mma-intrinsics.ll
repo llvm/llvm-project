@@ -400,9 +400,9 @@ define void @testcse4(<512 x i1>* %res, i32 %lim, <16 x i8>* %vc) {
 ; CHECK-NEXT:  .LBB9_2: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    rldic r7, r6, 4, 28
-; CHECK-NEXT:    addi r6, r6, 6
 ; CHECK-NEXT:    xxsetaccz acc2
 ; CHECK-NEXT:    xxsetaccz acc1
+; CHECK-NEXT:    addi r6, r6, 6
 ; CHECK-NEXT:    lxvx vs0, r5, r7
 ; CHECK-NEXT:    add r7, r5, r7
 ; CHECK-NEXT:    lxv vs1, 16(r7)
@@ -414,8 +414,8 @@ define void @testcse4(<512 x i1>* %res, i32 %lim, <16 x i8>* %vc) {
 ; CHECK-NEXT:    lxv vs12, 64(r7)
 ; CHECK-NEXT:    lxv vs13, 80(r7)
 ; CHECK-NEXT:    rldic r7, r4, 6, 26
-; CHECK-NEXT:    addi r4, r4, 3
 ; CHECK-NEXT:    xxsetaccz acc0
+; CHECK-NEXT:    addi r4, r4, 3
 ; CHECK-NEXT:    xxmfacc acc1
 ; CHECK-NEXT:    xvf32gernp acc0, vs12, vs13
 ; CHECK-NEXT:    stxvx vs11, r3, r7
@@ -449,9 +449,9 @@ define void @testcse4(<512 x i1>* %res, i32 %lim, <16 x i8>* %vc) {
 ; CHECK-BE-NEXT:  .LBB9_2: # %for.body
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    rldic r7, r6, 4, 28
-; CHECK-BE-NEXT:    addi r6, r6, 6
 ; CHECK-BE-NEXT:    xxsetaccz acc2
 ; CHECK-BE-NEXT:    xxsetaccz acc1
+; CHECK-BE-NEXT:    addi r6, r6, 6
 ; CHECK-BE-NEXT:    lxvx vs0, r5, r7
 ; CHECK-BE-NEXT:    add r7, r5, r7
 ; CHECK-BE-NEXT:    lxv vs1, 16(r7)
@@ -463,8 +463,8 @@ define void @testcse4(<512 x i1>* %res, i32 %lim, <16 x i8>* %vc) {
 ; CHECK-BE-NEXT:    lxv vs12, 64(r7)
 ; CHECK-BE-NEXT:    lxv vs13, 80(r7)
 ; CHECK-BE-NEXT:    rldic r7, r4, 6, 26
-; CHECK-BE-NEXT:    addi r4, r4, 3
 ; CHECK-BE-NEXT:    xxsetaccz acc0
+; CHECK-BE-NEXT:    addi r4, r4, 3
 ; CHECK-BE-NEXT:    xxmfacc acc1
 ; CHECK-BE-NEXT:    xvf32gernp acc0, vs12, vs13
 ; CHECK-BE-NEXT:    stxvx vs8, r3, r7
@@ -544,8 +544,7 @@ for.body:                                         ; preds = %for.body, %for.body
 declare i32 @testRedundantPrimeUnprimeF()
 define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind {
 ; CHECK-LABEL: testRedundantPrimeUnprime:
-; CHECK:         .localentry testRedundantPrimeUnprime, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)
