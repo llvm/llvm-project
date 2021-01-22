@@ -1727,7 +1727,7 @@ readSymbolVersionsELF(const ELFFile<ELFT> &Obj, StringRef FileName,
 
     bool IsDefault;
     Expected<StringRef> VerOrErr = Obj.getSymbolVersionByIndex(
-        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr);
+        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr, /*IsSymHidden=*/None);
     if (!VerOrErr)
       return createError("unable to get a version for entry " + Twine(I) +
                          " of " + describe(Obj, *SymVerSec) + ": " +
