@@ -728,3 +728,104 @@ loop.latch:
 exit:
   ret i32 10
 }
+
+; Do not unswitch if the condition depends on an atomic load. Duplicating such
+; loads is not safe.
+; TODO
+define i32 @no_partial_unswitch_atomic_load_unordered(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @no_partial_unswitch_atomic_load_unordered
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    load
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load atomic i32, i32* %ptr unordered, align 4
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %noclobber, label %clobber
+
+noclobber:
+  br label %loop.latch
+
+clobber:
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
+
+; Do not unswitch if the condition depends on an atomic load. Duplicating such
+; loads is not safe.
+; TODO
+define i32 @no_partial_unswitch_atomic_load_monotonic(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @no_partial_unswitch_atomic_load_monotonic
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    load
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load atomic i32, i32* %ptr monotonic, align 4
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %noclobber, label %clobber
+
+noclobber:
+  br label %loop.latch
+
+clobber:
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
+
+
+declare i32 @get_value()
+
+; Do not unswitch if the condition depends on a call, that may clobber memory.
+; Duplicating such a call is not safe.
+define i32 @no_partial_unswitch_cond_call(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @no_partial_unswitch_cond_call
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label %loop.header
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = call i32 @get_value()
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %noclobber, label %clobber
+
+noclobber:
+  br label %loop.latch
+
+clobber:
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
