@@ -356,18 +356,16 @@ def BDECOMPRESS : ALU_rr<0b0100100, 0b110, "bdecompress">, Sched<[]>;
 def BCOMPRESS   : ALU_rr<0b0000100, 0b110, "bcompress">, Sched<[]>;
 } // Predicates = [HasStdExtZbe]
 
-let Predicates = [HasStdExtZbbOrZbp] in {
+let Predicates = [HasStdExtZbp] in {
 def PACK  : ALU_rr<0b0000100, 0b100, "pack">, Sched<[]>;
 def PACKU : ALU_rr<0b0100100, 0b100, "packu">, Sched<[]>;
-} // Predicates = [HasStdExtZbbOrZbp]
+def PACKH : ALU_rr<0b0000100, 0b111, "packh">, Sched<[]>;
+} // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbm, IsRV64] in {
 def BMATOR   : ALU_rr<0b0000100, 0b011, "bmator">, Sched<[]>;
 def BMATXOR  : ALU_rr<0b0100100, 0b011, "bmatxor">, Sched<[]>;
 } // Predicates = [HasStdExtZbm, IsRV64]
-
-let Predicates = [HasStdExtZbbOrZbp] in
-def PACKH : ALU_rr<0b0000100, 0b111, "packh">, Sched<[]>;
 
 let Predicates = [HasStdExtZbf] in
 def BFP : ALU_rr<0b0100100, 0b111, "bfp">, Sched<[]>;
@@ -459,10 +457,10 @@ def BDECOMPRESSW : ALUW_rr<0b0100100, 0b110, "bdecompressw">, Sched<[]>;
 def BCOMPRESSW   : ALUW_rr<0b0000100, 0b110, "bcompressw">, Sched<[]>;
 } // Predicates = [HasStdExtZbe, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let Predicates = [HasStdExtZbp, IsRV64] in {
 def PACKW  : ALUW_rr<0b0000100, 0b100, "packw">, Sched<[]>;
 def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
-} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+} // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbf, IsRV64] in
 def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">, Sched<[]>;
@@ -502,11 +500,11 @@ def C_ZEXTW : RVBInstC<0b10, "c.zext.w">, Sched<[]>;
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZbb, IsRV32] in {
+let Predicates = [HasStdExtZbp, IsRV32] in {
 def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZbb, IsRV32]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZbp, IsRV64] in {
 def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
@@ -790,26 +788,26 @@ def : Pat<(umin GPR:$rs1, GPR:$rs2), (MINU GPR:$rs1, GPR:$rs2)>;
 def : Pat<(umax GPR:$rs1, GPR:$rs2), (MAXU GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
+let Predicates = [HasStdExtZbp, IsRV32] in
 def : Pat<(or (and GPR:$rs1, 0x0000FFFF), (shl GPR:$rs2, (i32 16))),
           (PACK GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
+let Predicates = [HasStdExtZbp, IsRV64] in
 def : Pat<(or (and GPR:$rs1, 0x00000000FFFFFFFF), (shl GPR:$rs2, (i64 32))),
           (PACK GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
+let Predicates = [HasStdExtZbp, IsRV32] in
 def : Pat<(or (and GPR:$rs2, 0xFFFF0000), (srl GPR:$rs1, (i32 16))),
           (PACKU GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
+let Predicates = [HasStdExtZbp, IsRV64] in
 def : Pat<(or (and GPR:$rs2, 0xFFFFFFFF00000000), (srl GPR:$rs1, (i64 32))),
           (PACKU GPR:$rs1, GPR:$rs2)>;
-let Predicates = [HasStdExtZbbOrZbp] in
+let Predicates = [HasStdExtZbp] in
 def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFF00),
               (and GPR:$rs1, 0x00FF)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
+let Predicates = [HasStdExtZbp, IsRV32] in
 def : Pat<(and GPR:$rs, 0x0000FFFF), (PACK GPR:$rs, X0)>;
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(and GPR:$rs, 0x000000000000FFFF), (PACKW GPR:$rs, X0)>;
 }
 
@@ -949,7 +947,7 @@ def : Pat<(cttz (or GPR:$rs1, (i64 0x100000000))),
 def : Pat<(ctpop (and GPR:$rs1, (i64 0xFFFFFFFF))), (CPOPW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(sext_inreg (or (shl GPR:$rs2, (i64 16)),
                           (and GPR:$rs1, 0x000000000000FFFF)),
                       i32),
@@ -958,4 +956,4 @@ def : Pat<(or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
               (srl (and GPR:$rs1, 0x00000000FFFF0000),
                    (i64 16))),
           (PACKUW GPR:$rs1, GPR:$rs2)>;
-} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+} // Predicates = [HasStdExtZbp, IsRV64]
