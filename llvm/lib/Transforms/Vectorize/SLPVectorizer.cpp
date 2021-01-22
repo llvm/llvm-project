@@ -987,6 +987,14 @@ public:
       std::array<std::pair<Value *, int>, 2> Values = {{LHS, RHS}};
       for (int Idx = 0, IdxE = Values.size(); Idx != IdxE; ++Idx) {
         Value *V = Values[Idx].first;
+        if (isa<Constant>(V)) {
+          // Since this is a function pass, it doesn't make semantic sense to
+          // walk the users of a subclass of Constant. The users could be in
+          // another function, or even another module that happens to be in
+          // the same LLVMContext.
+          continue;
+        }
+
         // Calculate the absolute lane, using the minimum relative lane of LHS
         // and RHS as base and Idx as the offset.
         int Ln = std::min(LHS.second, RHS.second) + Idx;
