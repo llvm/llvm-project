@@ -333,8 +333,8 @@ def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">, Sched<[]>;
 
 let Predicates = [HasStdExtZbb] in {
 def MIN  : ALU_rr<0b0000101, 0b100, "min">, Sched<[]>;
-def MAX  : ALU_rr<0b0000101, 0b101, "max">, Sched<[]>;
-def MINU : ALU_rr<0b0000101, 0b110, "minu">, Sched<[]>;
+def MINU : ALU_rr<0b0000101, 0b101, "minu">, Sched<[]>;
+def MAX  : ALU_rr<0b0000101, 0b110, "max">, Sched<[]>;
 def MAXU : ALU_rr<0b0000101, 0b111, "maxu">, Sched<[]>;
 } // Predicates = [HasStdExtZbb]
 

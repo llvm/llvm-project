@@ -42,12 +42,12 @@ sext.h t0, t1
 # CHECK-ASM-AND-OBJ: min t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x42,0x73,0x0a]
 min t0, t1, t2
-# CHECK-ASM-AND-OBJ: max t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x52,0x73,0x0a]
-max t0, t1, t2
 # CHECK-ASM-AND-OBJ: minu t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x0a]
+# CHECK-ASM: encoding: [0xb3,0x52,0x73,0x0a]
 minu t0, t1, t2
+# CHECK-ASM-AND-OBJ: max t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x0a]
+max t0, t1, t2
 # CHECK-ASM-AND-OBJ: maxu t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x72,0x73,0x0a]
 maxu t0, t1, t2
