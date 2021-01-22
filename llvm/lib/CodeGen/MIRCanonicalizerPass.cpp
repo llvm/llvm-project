@@ -85,9 +85,7 @@ static std::vector<MachineBasicBlock *> GetRPOList(MachineFunction &MF) {
     return {};
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
   std::vector<MachineBasicBlock *> RPOList;
-  for (auto MBB : RPOT) {
-    RPOList.push_back(MBB);
-  }
+  append_range(RPOList, RPOT);
 
   return RPOList;
 }
