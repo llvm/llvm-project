@@ -131,7 +131,9 @@ def HasStdExtZbt : Predicate<"Subtarget->hasStdExtZbt()">,
 // subextensions. They should be enabled if either has been specified.
 def HasStdExtZbbOrZbp
     : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp()">,
-                AssemblerPredicate<(any_of FeatureExtZbb, FeatureExtZbp)>;
+                AssemblerPredicate<(any_of FeatureExtZbb, FeatureExtZbp),
+                                   "'Zbb' (Base 'B' Instructions) or "
+                                   "'Zbp' (Permutation 'B' Instructions)">;
 
 def FeatureExtZbproposedc
     : SubtargetFeature<"experimental-zbproposedc", "HasStdExtZbproposedc", "true",
