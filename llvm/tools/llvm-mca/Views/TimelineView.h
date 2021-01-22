@@ -180,7 +180,7 @@ public:
     printAverageWaitTimes(OS);
   }
   StringRef getNameAsString() const override { return "TimelineView"; }
-  json::Value toJSON() const;
+  json::Value toJSON() const override;
 };
 } // namespace mca
 } // namespace llvm
