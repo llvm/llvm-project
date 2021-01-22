@@ -743,7 +743,7 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
-      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
+      return *getTypeBasedIntrinsicInstrCost(ICA, CostKind).getValue();
 
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
