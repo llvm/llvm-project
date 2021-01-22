@@ -590,12 +590,12 @@ define signext i32 @ctpop_i32(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: ctpop_i32:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    pcntw a0, a0
+; RV64IB-NEXT:    cpopw a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: ctpop_i32:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    pcntw a0, a0
+; RV64IBB-NEXT:    cpopw a0, a0
 ; RV64IBB-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
@@ -656,12 +656,12 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ;
 ; RV64IB-LABEL: ctpop_i64:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    pcnt a0, a0
+; RV64IB-NEXT:    cpop a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: ctpop_i64:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    pcnt a0, a0
+; RV64IBB-NEXT:    cpop a0, a0
 ; RV64IBB-NEXT:    ret
   %1 = call i64 @llvm.ctpop.i64(i64 %a)
   ret i64 %1

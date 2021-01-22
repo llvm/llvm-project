@@ -37,4 +37,4 @@ clzw t0, t1, t2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 # Too many operands
 ctzw t0, t1, t2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 # Too many operands
-pcntw t0, t1, t2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+cpopw t0, t1, t2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction

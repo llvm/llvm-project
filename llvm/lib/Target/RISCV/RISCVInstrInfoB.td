@@ -289,7 +289,7 @@ def CLZ  : RVBUnary<0b0110000, 0b00000, 0b001, RISCVOpcode<0b0010011>, "clz">,
            Sched<[]>;
 def CTZ  : RVBUnary<0b0110000, 0b00001, 0b001, RISCVOpcode<0b0010011>, "ctz">,
            Sched<[]>;
-def PCNT : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0010011>, "pcnt">,
+def CPOP : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0010011>, "cpop">,
            Sched<[]>;
 } // Predicates = [HasStdExtZbb]
 
@@ -441,8 +441,8 @@ def CLZW   : RVBUnary<0b0110000, 0b00000, 0b001, RISCVOpcode<0b0011011>,
                       "clzw">, Sched<[]>;
 def CTZW   : RVBUnary<0b0110000, 0b00001, 0b001, RISCVOpcode<0b0011011>,
                       "ctzw">, Sched<[]>;
-def PCNTW  : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0011011>,
-                      "pcntw">, Sched<[]>;
+def CPOPW  : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0011011>,
+                      "cpopw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbc, IsRV64] in {
@@ -772,7 +772,7 @@ def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
 let Predicates = [HasStdExtZbb] in {
 def : Pat<(ctlz GPR:$rs1), (CLZ GPR:$rs1)>;
 def : Pat<(cttz GPR:$rs1), (CTZ GPR:$rs1)>;
-def : Pat<(ctpop GPR:$rs1), (PCNT GPR:$rs1)>;
+def : Pat<(ctpop GPR:$rs1), (CPOP GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbb] in {
@@ -948,7 +948,7 @@ def : Pat<(and (add (ctlz (and GPR:$rs1, (i64 0xFFFFFFFF))), (i64 -32)),
           (CLZW GPR:$rs1)>;
 def : Pat<(cttz (or GPR:$rs1, (i64 0x100000000))),
           (CTZW GPR:$rs1)>;
-def : Pat<(ctpop (and GPR:$rs1, (i64 0xFFFFFFFF))), (PCNTW GPR:$rs1)>;
+def : Pat<(ctpop (and GPR:$rs1, (i64 0xFFFFFFFF))), (CPOPW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {

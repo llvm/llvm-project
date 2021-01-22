@@ -19,7 +19,7 @@ clz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 # Too many operands
 ctz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 # Too many operands
-pcnt t0, t1, t2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
+cpop t0, t1, t2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 # Too many operands
 sext.b t0, t1, t2 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
 # Too many operands
