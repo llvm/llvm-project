@@ -218,15 +218,14 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
   // TODO: we are not considering paths yet, just interleaved positions.
   for (auto dt : types) {
     for (auto dependence : getDependencesFrom(src, dt)) {
-      auto interimPos =
-          linalgOpPositions.lookup(dependence.dependentOpView->getOwner());
+      auto interimPos = linalgOpPositions.lookup(dependence.getDependentOp());
       // Skip if not interleaved.
       if (interimPos >= dstPos || interimPos <= srcPos)
         continue;
-      Value consumerView = dependence.indexingOpView->get();
+      Value consumerView = dependence.getIndexingValue();
       if (view && !aliases.alias(view, consumerView))
         continue;
-      auto *op = dependence.dependentOpView->getOwner();
+      auto *op = dependence.getDependentOp();
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
                         << getDependenceTypeStr(dt) << ": " << *src << " -> "
                         << *op << " on " << consumerView);
@@ -241,7 +240,7 @@ bool LinalgDependenceGraph::hasDependenceFrom(
     ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
   for (auto dep : depTypes)
     for (auto dependence : getDependencesInto(dstLinalgOp, dep))
-      if (dependence.dependentOpView->getOwner() == srcLinalgOp)
+      if (dependence.getDependentOp() == srcLinalgOp)
         return true;
   return false;
 }
