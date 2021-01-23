@@ -2831,6 +2831,58 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   // which will allow us to update live-out uses of bonus instructions.
   AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
 
+  // Try to update branch weights.
+  uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
+                             SuccTrueWeight, SuccFalseWeight)) {
+    SmallVector<uint64_t, 8> NewWeights;
+
+    if (PBI->getSuccessor(0) == BB) {
+      // PBI: br i1 %x, BB, FalseDest
+      // BI:  br i1 %y, UniqueSucc, FalseDest
+      // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
+      NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
+      // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
+      //               TrueWeight for PBI * FalseWeight for BI.
+      // We assume that total weights of a BranchInst can fit into 32 bits.
+      // Therefore, we will not have overflow using 64-bit arithmetic.
+      NewWeights.push_back(PredFalseWeight *
+                               (SuccFalseWeight + SuccTrueWeight) +
+                           PredTrueWeight * SuccFalseWeight);
+    } else {
+      // PBI: br i1 %x, TrueDest, BB
+      // BI:  br i1 %y, TrueDest, UniqueSucc
+      // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
+      //              FalseWeight for PBI * TrueWeight for BI.
+      NewWeights.push_back(PredTrueWeight * (SuccFalseWeight + SuccTrueWeight) +
+                           PredFalseWeight * SuccTrueWeight);
+      // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
+      NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
+    }
+
+    // Halve the weights if any of them cannot fit in an uint32_t
+    FitWeights(NewWeights);
+
+    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+
+    // TODO: If BB is reachable from all paths through PredBlock, then we
+    // could replace PBI's branch probabilities with BI's.
+  } else
+    PBI->setMetadata(LLVMContext::MD_prof, nullptr);
+
+  // Now, update the CFG.
+  PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
+
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
+                       {DominatorTree::Delete, PredBlock, BB}});
+
+  // If BI was a loop latch, it may have had associated loop metadata.
+  // We need to copy it to the new latch, that is, PBI.
+  if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
+    PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+
   // If we have bonus instructions, clone them into the predecessor block.
   // Note that there may be multiple predecessor blocks, so we cannot move
   // bonus instructions to a predecessor block.
@@ -2904,56 +2956,6 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
       Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
   PBI->setCondition(NewCond);
-
-  uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-  if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
-                             SuccTrueWeight, SuccFalseWeight)) {
-    SmallVector<uint64_t, 8> NewWeights;
-
-    if (PBI->getSuccessor(0) == BB) {
-      // PBI: br i1 %x, BB, FalseDest
-      // BI:  br i1 %y, UniqueSucc, FalseDest
-      // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
-      NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
-      // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
-      //               TrueWeight for PBI * FalseWeight for BI.
-      // We assume that total weights of a BranchInst can fit into 32 bits.
-      // Therefore, we will not have overflow using 64-bit arithmetic.
-      NewWeights.push_back(PredFalseWeight *
-                               (SuccFalseWeight + SuccTrueWeight) +
-                           PredTrueWeight * SuccFalseWeight);
-    } else {
-      // PBI: br i1 %x, TrueDest, BB
-      // BI:  br i1 %y, TrueDest, UniqueSucc
-      // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
-      //              FalseWeight for PBI * TrueWeight for BI.
-      NewWeights.push_back(PredTrueWeight * (SuccFalseWeight + SuccTrueWeight) +
-                           PredFalseWeight * SuccTrueWeight);
-      // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
-      NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
-    }
-
-    // Halve the weights if any of them cannot fit in an uint32_t
-    FitWeights(NewWeights);
-
-    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
-    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
-
-    // TODO: If BB is reachable from all paths through PredBlock, then we
-    // could replace PBI's branch probabilities with BI's.
-  } else
-    PBI->setMetadata(LLVMContext::MD_prof, nullptr);
-
-  PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
-
-  if (DTU)
-    DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
-                       {DominatorTree::Delete, PredBlock, BB}});
-
-  // If BI was a loop latch, it may have had associated loop metadata.
-  // We need to copy it to the new latch, that is, PBI.
-  if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
-    PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Copy any debug value intrinsics into the end of PredBlock.
   for (Instruction &I : *BB) {
