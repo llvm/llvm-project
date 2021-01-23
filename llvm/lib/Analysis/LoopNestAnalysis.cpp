@@ -42,8 +42,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
 
 LoopNest::LoopNest(Loop &Root, ScalarEvolution &SE)
     : MaxPerfectDepth(getMaxPerfectDepth(Root, SE)) {
-  for (Loop *L : breadth_first(&Root))
-    Loops.push_back(L);
+  append_range(Loops, breadth_first(&Root));
 }
 
 std::unique_ptr<LoopNest> LoopNest::getLoopNest(Loop &Root,
