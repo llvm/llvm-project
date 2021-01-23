@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Mangler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
@@ -186,8 +187,7 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
 
 // Check if the name needs quotes to be safe for the linker to interpret.
 static bool canBeUnquotedInDirective(char C) {
-  return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
-         (C >= '0' && C <= '9') || C == '_' || C == '$' || C == '.' || C == '@';
+  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '@';
 }
 
 static bool canBeUnquotedInDirective(StringRef Name) {
