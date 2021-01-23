@@ -38,7 +38,7 @@ class StringRef;
 class TrigramIndex {
  public:
   /// Inserts a new Regex into the index.
-  void insert(std::string Regex);
+  void insert(const std::string &Regex);
 
   /// Returns true, if special case list definitely does not have a line
   /// that matches the query. Returns false, if it's not sure.
