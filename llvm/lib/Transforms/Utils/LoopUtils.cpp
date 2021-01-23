@@ -761,13 +761,18 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   }
 }
 
+static Loop *getOutermostLoop(Loop *L) {
+  while (Loop *Parent = L->getParentLoop())
+    L = Parent;
+  return L;
+}
+
 void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
                              LoopInfo &LI, MemorySSA *MSSA) {
-
-  assert(L->isOutermost() && "Can't yet preserve LCSSA for this case");
   auto *Latch = L->getLoopLatch();
   assert(Latch && "multiple latches not yet supported");
   auto *Header = L->getHeader();
+  Loop *OutermostLoop = getOutermostLoop(L);
 
   SE.forgetLoop(L);
 
@@ -790,6 +795,14 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
   LI.erase(L);
+
+  // If the loop we broke had a parent, then changeToUnreachable might have
+  // caused a block to be removed from the parent loop (see loop_nest_lcssa
+  // test case in zero-btc.ll for an example), thus changing the parent's
+  // exit blocks.  If that happened, we need to rebuild LCSSA on the outermost
+  // loop which might have a had a block removed.
+  if (OutermostLoop != L)
+    formLCSSARecursively(*OutermostLoop, DT, &LI, &SE);
 }
 
 
