@@ -320,8 +320,7 @@ static bool FixIrreducibleImpl(Function &F, LoopInfo &LI, DominatorTree &DT) {
   append_range(WorkList, LI);
 
   while (!WorkList.empty()) {
-    auto L = WorkList.back();
-    WorkList.pop_back();
+    auto L = WorkList.pop_back_val();
     LLVM_DEBUG(dbgs() << "visiting loop with header "
                       << L->getHeader()->getName() << "\n");
     Changed |= makeReducible(LI, DT, *L);

@@ -5164,8 +5164,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   // cancelScheduling).
   while (!Bundle->isReady() && !ReadyInsts.empty()) {
 
-    ScheduleData *pickedSD = ReadyInsts.back();
-    ReadyInsts.pop_back();
+    ScheduleData *pickedSD = ReadyInsts.pop_back_val();
 
     if (pickedSD->isSchedulingEntity() && pickedSD->isReady()) {
       schedule(pickedSD, ReadyInsts);
@@ -5338,8 +5337,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
   WorkList.push_back(SD);
 
   while (!WorkList.empty()) {
-    ScheduleData *SD = WorkList.back();
-    WorkList.pop_back();
+    ScheduleData *SD = WorkList.pop_back_val();
 
     ScheduleData *BundleMember = SD;
     while (BundleMember) {
