@@ -23,7 +23,7 @@ define i32 @bar(%struct.A* noalias) {
 ; CHECK-LABEL: define i32 @foo(%struct.A* noalias
 define i32 @foo(%struct.A* noalias)  {
   ; CHECK-NOT: call i32 @bar(
-  ; CHECK-NOT: noalias
+  ; CHECK-NOT: !noalias
   %2 = tail call i32 @bar(%struct.A* %0)
   ret i32 %2
 }

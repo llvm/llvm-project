@@ -49,7 +49,9 @@ return:
   ret i32 0
 ; CHECK-NOT:  call i8* @CustomAlloc
 ; CHECK:      call void @print(i32 4)
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 5)
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 6)
 ; CHECK-NEXT: ret i32 0
 }

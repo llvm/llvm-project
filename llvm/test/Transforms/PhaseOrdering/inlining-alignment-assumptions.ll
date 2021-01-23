@@ -95,6 +95,7 @@ define internal void @callee2(i64* noalias sret(i64) align 32 %arg) {
 
 define amdgpu_kernel void @caller2() {
 ; CHECK-LABEL: @caller2(
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl([[META0:metadata !.*]])
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i64, align 8, addrspace(5)
