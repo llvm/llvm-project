@@ -29,6 +29,32 @@ define i32 @slo_i32(i32 %a, i32 %b) nounwind {
   ret i32 %neg1
 }
 
+define i32 @slo_i32_mask(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: slo_i32_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: slo_i32_mask:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a1, a1, 31
+; RV32IB-NEXT:    slo a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: slo_i32_mask:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    andi a1, a1, 31
+; RV32IBP-NEXT:    slo a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %neg = xor i32 %a, -1
+  %and = and i32 %b, 31
+  %shl = shl i32 %neg, %and
+  %neg1 = xor i32 %shl, -1
+  ret i32 %neg1
+}
+
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
 ; This test is presented here in case future expansions of the experimental-b
@@ -39,12 +65,12 @@ define i64 @slo_i64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a3, a2, -32
 ; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    bltz a3, .LBB1_2
+; RV32I-NEXT:    bltz a3, .LBB2_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a2, zero
 ; RV32I-NEXT:    sll a1, a0, a3
-; RV32I-NEXT:    j .LBB1_3
-; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:    j .LBB2_3
+; RV32I-NEXT:  .LBB2_2:
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    addi a3, zero, 31
@@ -53,7 +79,7 @@ define i64 @slo_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    srl a3, a4, a3
 ; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    sll a2, a0, a2
-; RV32I-NEXT:  .LBB1_3:
+; RV32I-NEXT:  .LBB2_3:
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    not a0, a2
 ; RV32I-NEXT:    ret
@@ -83,12 +109,12 @@ define i64 @slo_i64(i64 %a, i64 %b) nounwind {
 ; RV32IBP:       # %bb.0:
 ; RV32IBP-NEXT:    addi a3, a2, -32
 ; RV32IBP-NEXT:    not a0, a0
-; RV32IBP-NEXT:    bltz a3, .LBB1_2
+; RV32IBP-NEXT:    bltz a3, .LBB2_2
 ; RV32IBP-NEXT:  # %bb.1:
 ; RV32IBP-NEXT:    mv a2, zero
 ; RV32IBP-NEXT:    sll a1, a0, a3
-; RV32IBP-NEXT:    j .LBB1_3
-; RV32IBP-NEXT:  .LBB1_2:
+; RV32IBP-NEXT:    j .LBB2_3
+; RV32IBP-NEXT:  .LBB2_2:
 ; RV32IBP-NEXT:    not a1, a1
 ; RV32IBP-NEXT:    sll a1, a1, a2
 ; RV32IBP-NEXT:    addi a3, zero, 31
@@ -97,12 +123,89 @@ define i64 @slo_i64(i64 %a, i64 %b) nounwind {
 ; RV32IBP-NEXT:    srl a3, a4, a3
 ; RV32IBP-NEXT:    or a1, a1, a3
 ; RV32IBP-NEXT:    sll a2, a0, a2
-; RV32IBP-NEXT:  .LBB1_3:
+; RV32IBP-NEXT:  .LBB2_3:
 ; RV32IBP-NEXT:    not a1, a1
 ; RV32IBP-NEXT:    not a0, a2
 ; RV32IBP-NEXT:    ret
   %neg = xor i64 %a, -1
   %shl = shl i64 %neg, %b
+  %neg1 = xor i64 %shl, -1
+  ret i64 %neg1
+}
+
+define i64 @slo_i64_mask(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: slo_i64_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a3, a2, 63
+; RV32I-NEXT:    addi a4, a3, -32
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    bltz a4, .LBB3_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a2, zero
+; RV32I-NEXT:    sll a1, a0, a4
+; RV32I-NEXT:    j .LBB3_3
+; RV32I-NEXT:  .LBB3_2:
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    sll a1, a1, a2
+; RV32I-NEXT:    addi a4, zero, 31
+; RV32I-NEXT:    sub a3, a4, a3
+; RV32I-NEXT:    srli a4, a0, 1
+; RV32I-NEXT:    srl a3, a4, a3
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    sll a2, a0, a2
+; RV32I-NEXT:  .LBB3_3:
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    not a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: slo_i64_mask:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    not a0, a0
+; RV32IB-NEXT:    not a1, a1
+; RV32IB-NEXT:    sll a1, a1, a2
+; RV32IB-NEXT:    andi a3, a2, 63
+; RV32IB-NEXT:    addi a4, zero, 31
+; RV32IB-NEXT:    sub a4, a4, a3
+; RV32IB-NEXT:    srli a5, a0, 1
+; RV32IB-NEXT:    srl a4, a5, a4
+; RV32IB-NEXT:    or a1, a1, a4
+; RV32IB-NEXT:    addi a3, a3, -32
+; RV32IB-NEXT:    sll a4, a0, a3
+; RV32IB-NEXT:    slti a5, a3, 0
+; RV32IB-NEXT:    cmov a1, a5, a1, a4
+; RV32IB-NEXT:    sll a0, a0, a2
+; RV32IB-NEXT:    srai a2, a3, 31
+; RV32IB-NEXT:    and a0, a2, a0
+; RV32IB-NEXT:    not a1, a1
+; RV32IB-NEXT:    not a0, a0
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: slo_i64_mask:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    andi a3, a2, 63
+; RV32IBP-NEXT:    addi a4, a3, -32
+; RV32IBP-NEXT:    not a0, a0
+; RV32IBP-NEXT:    bltz a4, .LBB3_2
+; RV32IBP-NEXT:  # %bb.1:
+; RV32IBP-NEXT:    mv a2, zero
+; RV32IBP-NEXT:    sll a1, a0, a4
+; RV32IBP-NEXT:    j .LBB3_3
+; RV32IBP-NEXT:  .LBB3_2:
+; RV32IBP-NEXT:    not a1, a1
+; RV32IBP-NEXT:    sll a1, a1, a2
+; RV32IBP-NEXT:    addi a4, zero, 31
+; RV32IBP-NEXT:    sub a3, a4, a3
+; RV32IBP-NEXT:    srli a4, a0, 1
+; RV32IBP-NEXT:    srl a3, a4, a3
+; RV32IBP-NEXT:    or a1, a1, a3
+; RV32IBP-NEXT:    sll a2, a0, a2
+; RV32IBP-NEXT:  .LBB3_3:
+; RV32IBP-NEXT:    not a1, a1
+; RV32IBP-NEXT:    not a0, a2
+; RV32IBP-NEXT:    ret
+  %neg = xor i64 %a, -1
+  %and = and i64 %b, 63
+  %shl = shl i64 %neg, %and
   %neg1 = xor i64 %shl, -1
   ret i64 %neg1
 }
@@ -130,6 +233,32 @@ define i32 @sro_i32(i32 %a, i32 %b) nounwind {
   ret i32 %neg1
 }
 
+define i32 @sro_i32_mask(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: sro_i32_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    srl a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: sro_i32_mask:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a1, a1, 31
+; RV32IB-NEXT:    sro a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: sro_i32_mask:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    andi a1, a1, 31
+; RV32IBP-NEXT:    sro a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %neg = xor i32 %a, -1
+  %and = and i32 %b, 31
+  %shr = lshr i32 %neg, %and
+  %neg1 = xor i32 %shr, -1
+  ret i32 %neg1
+}
+
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
 ; This test is presented here in case future expansions of the experimental-b
@@ -140,12 +269,12 @@ define i64 @sro_i64(i64 %a, i64 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a3, a2, -32
 ; RV32I-NEXT:    not a1, a1
-; RV32I-NEXT:    bltz a3, .LBB3_2
+; RV32I-NEXT:    bltz a3, .LBB6_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    mv a2, zero
 ; RV32I-NEXT:    srl a0, a1, a3
-; RV32I-NEXT:    j .LBB3_3
-; RV32I-NEXT:  .LBB3_2:
+; RV32I-NEXT:    j .LBB6_3
+; RV32I-NEXT:  .LBB6_2:
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    srl a0, a0, a2
 ; RV32I-NEXT:    addi a3, zero, 31
@@ -154,7 +283,7 @@ define i64 @sro_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sll a3, a4, a3
 ; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:    srl a2, a1, a2
-; RV32I-NEXT:  .LBB3_3:
+; RV32I-NEXT:  .LBB6_3:
 ; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    not a1, a2
 ; RV32I-NEXT:    ret
@@ -184,12 +313,12 @@ define i64 @sro_i64(i64 %a, i64 %b) nounwind {
 ; RV32IBP:       # %bb.0:
 ; RV32IBP-NEXT:    addi a3, a2, -32
 ; RV32IBP-NEXT:    not a1, a1
-; RV32IBP-NEXT:    bltz a3, .LBB3_2
+; RV32IBP-NEXT:    bltz a3, .LBB6_2
 ; RV32IBP-NEXT:  # %bb.1:
 ; RV32IBP-NEXT:    mv a2, zero
 ; RV32IBP-NEXT:    srl a0, a1, a3
-; RV32IBP-NEXT:    j .LBB3_3
-; RV32IBP-NEXT:  .LBB3_2:
+; RV32IBP-NEXT:    j .LBB6_3
+; RV32IBP-NEXT:  .LBB6_2:
 ; RV32IBP-NEXT:    not a0, a0
 ; RV32IBP-NEXT:    srl a0, a0, a2
 ; RV32IBP-NEXT:    addi a3, zero, 31
@@ -198,12 +327,89 @@ define i64 @sro_i64(i64 %a, i64 %b) nounwind {
 ; RV32IBP-NEXT:    sll a3, a4, a3
 ; RV32IBP-NEXT:    or a0, a0, a3
 ; RV32IBP-NEXT:    srl a2, a1, a2
-; RV32IBP-NEXT:  .LBB3_3:
+; RV32IBP-NEXT:  .LBB6_3:
 ; RV32IBP-NEXT:    not a0, a0
 ; RV32IBP-NEXT:    not a1, a2
 ; RV32IBP-NEXT:    ret
   %neg = xor i64 %a, -1
   %shr = lshr i64 %neg, %b
+  %neg1 = xor i64 %shr, -1
+  ret i64 %neg1
+}
+
+define i64 @sro_i64_mask(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: sro_i64_mask:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a3, a2, 63
+; RV32I-NEXT:    addi a4, a3, -32
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    bltz a4, .LBB7_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a2, zero
+; RV32I-NEXT:    srl a0, a1, a4
+; RV32I-NEXT:    j .LBB7_3
+; RV32I-NEXT:  .LBB7_2:
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    srl a0, a0, a2
+; RV32I-NEXT:    addi a4, zero, 31
+; RV32I-NEXT:    sub a3, a4, a3
+; RV32I-NEXT:    slli a4, a1, 1
+; RV32I-NEXT:    sll a3, a4, a3
+; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    srl a2, a1, a2
+; RV32I-NEXT:  .LBB7_3:
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a2
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: sro_i64_mask:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    not a1, a1
+; RV32IB-NEXT:    not a0, a0
+; RV32IB-NEXT:    srl a0, a0, a2
+; RV32IB-NEXT:    andi a3, a2, 63
+; RV32IB-NEXT:    addi a4, zero, 31
+; RV32IB-NEXT:    sub a4, a4, a3
+; RV32IB-NEXT:    slli a5, a1, 1
+; RV32IB-NEXT:    sll a4, a5, a4
+; RV32IB-NEXT:    or a0, a0, a4
+; RV32IB-NEXT:    addi a3, a3, -32
+; RV32IB-NEXT:    srl a4, a1, a3
+; RV32IB-NEXT:    slti a5, a3, 0
+; RV32IB-NEXT:    cmov a0, a5, a0, a4
+; RV32IB-NEXT:    srl a1, a1, a2
+; RV32IB-NEXT:    srai a2, a3, 31
+; RV32IB-NEXT:    and a1, a2, a1
+; RV32IB-NEXT:    not a0, a0
+; RV32IB-NEXT:    not a1, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: sro_i64_mask:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    andi a3, a2, 63
+; RV32IBP-NEXT:    addi a4, a3, -32
+; RV32IBP-NEXT:    not a1, a1
+; RV32IBP-NEXT:    bltz a4, .LBB7_2
+; RV32IBP-NEXT:  # %bb.1:
+; RV32IBP-NEXT:    mv a2, zero
+; RV32IBP-NEXT:    srl a0, a1, a4
+; RV32IBP-NEXT:    j .LBB7_3
+; RV32IBP-NEXT:  .LBB7_2:
+; RV32IBP-NEXT:    not a0, a0
+; RV32IBP-NEXT:    srl a0, a0, a2
+; RV32IBP-NEXT:    addi a4, zero, 31
+; RV32IBP-NEXT:    sub a3, a4, a3
+; RV32IBP-NEXT:    slli a4, a1, 1
+; RV32IBP-NEXT:    sll a3, a4, a3
+; RV32IBP-NEXT:    or a0, a0, a3
+; RV32IBP-NEXT:    srl a2, a1, a2
+; RV32IBP-NEXT:  .LBB7_3:
+; RV32IBP-NEXT:    not a0, a0
+; RV32IBP-NEXT:    not a1, a2
+; RV32IBP-NEXT:    ret
+  %neg = xor i64 %a, -1
+  %and = and i64 %b, 63
+  %shr = lshr i64 %neg, %and
   %neg1 = xor i64 %shr, -1
   ret i64 %neg1
 }
