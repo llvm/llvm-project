@@ -840,5 +840,5 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
 
   FOREACH_OMPT_INQUIRY_FN(ompt_interface_fn)
 
-  return (ompt_interface_fn_t)0;
+  return NULL;
 }
