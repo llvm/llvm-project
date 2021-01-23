@@ -6208,12 +6208,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SmallVector<SDValue, 26> Ops;
   if (BaseOpcode->Store || BaseOpcode->Atomic)
     Ops.push_back(VData); // vdata
-  if (UseNSA) {
-    for (const SDValue &Addr : VAddrs)
-      Ops.push_back(Addr);
-  } else {
+  if (UseNSA)
+    append_range(Ops, VAddrs);
+  else
     Ops.push_back(VAddr);
-  }
   Ops.push_back(Op.getOperand(ArgOffset + Intr->RsrcIndex));
   if (BaseOpcode->Sampler)
     Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
