@@ -1977,28 +1977,15 @@ bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
 }
 
 bool Scop::hasFeasibleRuntimeContext() const {
-  auto PositiveContext = getAssumedContext();
-  auto NegativeContext = getInvalidContext();
-  PositiveContext = addNonEmptyDomainConstraints(PositiveContext);
-  // addNonEmptyDomainConstraints returns null if ScopStmts have a null domain
-  if (!PositiveContext)
+  if (Stmts.empty())
     return false;
 
-  bool IsFeasible = !(PositiveContext.is_empty() ||
-                      PositiveContext.is_subset(NegativeContext));
-  if (!IsFeasible)
-    return false;
-
-  auto DomainContext = getDomains().params();
-  IsFeasible = !DomainContext.is_subset(NegativeContext);
-  IsFeasible &= !getContext().is_subset(NegativeContext);
-
-  return IsFeasible;
-}
-
-isl::set Scop::addNonEmptyDomainConstraints(isl::set C) const {
-  isl::set DomainContext = getDomains().params();
-  return C.intersect_params(DomainContext);
+  isl::set PositiveContext = getAssumedContext();
+  isl::set NegativeContext = getInvalidContext();
+  PositiveContext = PositiveContext.intersect_params(Context);
+  PositiveContext = PositiveContext.intersect_params(getDomains().params());
+  return PositiveContext.is_empty().is_false() &&
+         PositiveContext.is_subset(NegativeContext).is_false();
 }
 
 MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
