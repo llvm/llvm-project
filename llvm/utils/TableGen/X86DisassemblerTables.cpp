@@ -763,7 +763,7 @@ void DisassemblerTables::emitOpcodeDecision(raw_ostream &o1, raw_ostream &o2,
   }
   if (index == 256) {
     // If all 256 entries are MODRM_ONEENTRY, omit output.
-    assert(MODRM_ONEENTRY == 0);
+    static_assert(MODRM_ONEENTRY == 0, "");
     --i2;
     o2 << "},\n";
   } else {

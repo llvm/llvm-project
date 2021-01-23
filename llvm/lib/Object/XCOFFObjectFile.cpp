@@ -655,7 +655,8 @@ XCOFFObjectFile::relocations(const XCOFFSectionHeader32 &Sec) const {
 
   uint32_t NumRelocEntries = NumRelocEntriesOrErr.get();
 
-  assert(sizeof(XCOFFRelocation32) == XCOFF::RelocationSerializationSize32);
+  static_assert(
+      sizeof(XCOFFRelocation32) == XCOFF::RelocationSerializationSize32, "");
   auto RelocationOrErr =
       getObject<XCOFFRelocation32>(Data, reinterpret_cast<void *>(RelocAddr),
                                    NumRelocEntries * sizeof(XCOFFRelocation32));
