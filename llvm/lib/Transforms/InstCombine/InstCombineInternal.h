@@ -399,6 +399,7 @@ public:
                       << "    with " << *V << '\n');
 
     I.replaceAllUsesWith(V);
+    MadeIRChange = true;
     return &I;
   }
 
