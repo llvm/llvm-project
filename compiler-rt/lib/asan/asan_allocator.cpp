@@ -1183,6 +1183,16 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   m->lsan_tag = __lsan::kIgnored;
   return kIgnoreObjectSuccess;
 }
+
+void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
+  // This function can be used to treat memory reachable from `tctx` as live.
+  // This is useful for threads that have been created but not yet started.
+
+  // This is currently a no-op because the ASan `pthread_create()` interceptor
+  // blocks until the child thread starts which keeps the thread's `arg` pointer
+  // live.
+}
+
 }  // namespace __lsan
 
 // ---------------------- Interface ---------------- {{{1
