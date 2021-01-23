@@ -151,14 +151,6 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (!BTC->isZero())
     return LoopDeletionResult::Unmodified;
 
-  // For non-outermost loops, the tricky case is that we can drop blocks
-  // out of both inner and outer loops at the same time.  This results in
-  // new exiting block for the outer loop appearing, and possibly needing
-  // an lcssa phi inserted.  (See loop_nest_lcssa test case in zero-btc.ll)
-  // TODO: We can handle a bunch of cases here without much work, revisit.
-  if (!L->isOutermost())
-    return LoopDeletionResult::Unmodified;
-
   breakLoopBackedge(L, DT, SE, LI, MSSA);
   return LoopDeletionResult::Deleted;
 }
