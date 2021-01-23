@@ -256,6 +256,12 @@ public:
   llvm::Optional<unsigned> GetNumChildren(CompilerType type,
                                           ValueObject *valobj);
 
+  /// Determine the enum case name for the \p data value of the enum \p type.
+  /// This is performed using Swift reflection.
+  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+                                              const DataExtractor &data,
+                                              ExecutionContext *exe_ctx);
+
   llvm::Optional<size_t> GetIndexOfChildMemberWithName(
       CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);

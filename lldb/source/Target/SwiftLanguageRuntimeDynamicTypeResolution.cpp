@@ -292,7 +292,7 @@ public:
       } else {
         *result = 0;
       }
-      break;
+      return true;
     }
     case DLQ_GetPointerSize: {
       auto result = static_cast<uint8_t *>(outBuffer);
@@ -302,6 +302,15 @@ public:
     case DLQ_GetSizeSize: {
       auto result = static_cast<uint8_t *>(outBuffer);
       *result = m_process.GetAddressByteSize(); // FIXME: sizeof(size_t)
+      return true;
+    }
+    case DLQ_GetLeastValidPointerValue: {
+      auto *result = (uint64_t *)outBuffer;
+      auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
+      if (triple.isOSDarwin() && triple.isArch64Bit())
+        *result = 0x100000000;
+      else
+        *result = 0x1000;
       return true;
     }
     }
@@ -381,8 +390,8 @@ public:
                  uint64_t size) override {
     if (m_local_buffer) {
       auto addr = address.getAddressData();
-      if (addr >= m_local_buffer &&
-          addr + size <= m_local_buffer + m_local_buffer_size) {
+      if (addr >= *m_local_buffer &&
+          addr + size <= *m_local_buffer + m_local_buffer_size) {
         // If this crashes, the assumptions stated in
         // GetDynamicTypeAndAddress_Protocol() most likely no longer
         // hold.
@@ -472,7 +481,7 @@ public:
 
   void popLocalBuffer() {
     lldbassert(m_local_buffer);
-    m_local_buffer = 0;
+    m_local_buffer.reset();
     m_local_buffer_size = 0;
   }
 
@@ -480,7 +489,7 @@ private:
   Process &m_process;
   size_t m_max_read_amount;
 
-  uint64_t m_local_buffer = 0;
+  llvm::Optional<uint64_t> m_local_buffer;
   uint64_t m_local_buffer_size = 0;
 };
 
@@ -1217,6 +1226,45 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
     return {};
   child_indexes.push_back(offset + index);
   return child_indexes.size();
+}
+
+static llvm::Optional<std::string>
+GetMultiPayloadEnumCaseName(const swift::reflection::EnumTypeInfo *eti,
+                            const DataExtractor &data) {
+  assert(eti->getEnumKind() == swift::reflection::EnumKind::MultiPayloadEnum);
+  auto payload_capacity = eti->getPayloadSize();
+  if (data.GetByteSize() == payload_capacity + 1) {
+    auto tag = data.GetDataStart()[payload_capacity];
+    const auto &cases = eti->getCases();
+    if (tag >= 0 && tag < cases.size())
+      return cases[tag].Name;
+  }
+  return {};
+}
+
+llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
+    CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
+  using namespace swift::reflection;
+  using namespace swift::remote;
+  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr());
+  if (ti->getKind() != TypeInfoKind::Enum)
+    return {};
+
+  auto *eti = llvm::cast<EnumTypeInfo>(ti);
+  PushLocalBuffer((int64_t)data.GetDataStart(), data.GetByteSize());
+  auto defer = llvm::make_scope_exit([&] { PopLocalBuffer(); });
+  RemoteAddress addr(data.GetDataStart());
+  int case_index;
+  if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
+    return eti->getCases()[case_index].Name;
+
+  // Temporary workaround.
+  if (eti->getEnumKind() == EnumKind::MultiPayloadEnum &&
+      type.GetMangledTypeName().GetStringRef().startswith(
+          "$s10Foundation9IndexPathV7Storage10"))
+    return GetMultiPayloadEnumCaseName(eti, data);
+
+  return {};
 }
 
 llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
