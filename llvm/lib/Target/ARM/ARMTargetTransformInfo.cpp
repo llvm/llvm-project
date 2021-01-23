@@ -1382,10 +1382,11 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   return BaseCost;
 }
 
-int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                MaybeAlign Alignment, unsigned AddressSpace,
-                                TTI::TargetCostKind CostKind,
-                                const Instruction *I) {
+InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                            MaybeAlign Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -1445,7 +1446,7 @@ ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
   return cast<FixedVectorType>(Src)->getNumElements() * 8;
 }
 
-int ARMTTIImpl::getInterleavedMemoryOpCost(
+InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {

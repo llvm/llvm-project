@@ -154,11 +154,11 @@ unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
   return 0;
 }
 
-unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                         MaybeAlign Alignment,
-                                         unsigned AddressSpace,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) {
+InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                                MaybeAlign Alignment,
+                                                unsigned AddressSpace,
+                                                TTI::TargetCostKind CostKind,
+                                                const Instruction *I) {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -231,7 +231,7 @@ InstructionCost HexagonTTIImpl::getGatherScatterOpCost(
                                        Alignment, CostKind, I);
 }
 
-unsigned HexagonTTIImpl::getInterleavedMemoryOpCost(
+InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {

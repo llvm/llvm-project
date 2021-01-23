@@ -176,10 +176,10 @@ public:
                                                     bool IsZeroCmp) const;
   bool useNeonVector(const Type *Ty) const;
 
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind,
-                      const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr);
 
   int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
@@ -258,7 +258,7 @@ public:
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
-  int getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,

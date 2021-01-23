@@ -1105,10 +1105,11 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return Cost;
 }
 
-int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                MaybeAlign Alignment, unsigned AddressSpace,
-                                TTI::TargetCostKind CostKind,
-                                const Instruction *I) {
+InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                            MaybeAlign Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) {
   if (TLI->getValueType(DL, Src,  true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
@@ -1117,8 +1118,8 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
          "Invalid Opcode");
 
-  int Cost = BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                    CostKind);
+  InstructionCost Cost =
+      BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
@@ -1185,7 +1186,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int PPCTTIImpl::getInterleavedMemoryOpCost(
+InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
@@ -1201,9 +1202,8 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VecTy);
 
   // Firstly, the cost of load/store operation.
-  int Cost =
-      getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment), AddressSpace,
-                      CostKind);
+  InstructionCost Cost = getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment),
+                                         AddressSpace, CostKind);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant

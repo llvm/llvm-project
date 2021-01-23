@@ -537,9 +537,10 @@ public:
     return 1;
   }
 
-  unsigned getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                           unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                           const Instruction *I) const {
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                  unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I) const {
     return 1;
   }
 
