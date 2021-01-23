@@ -6820,12 +6820,18 @@ public:
     if (NumReducedVals < 4)
       return false;
 
-    // FIXME: Fast-math-flags should be set based on the instructions in the
-    //        reduction (not all of 'fast' are required).
+    // Intersect the fast-math-flags from all reduction operations.
+    FastMathFlags RdxFMF;
+    RdxFMF.set();
+    for (ReductionOpsType &RdxOp : ReductionOps) {
+      for (Value *RdxVal : RdxOp) {
+        if (auto *FPMO = dyn_cast<FPMathOperator>(RdxVal))
+          RdxFMF &= FPMO->getFastMathFlags();
+      }
+    }
+
     IRBuilder<> Builder(cast<Instruction>(ReductionRoot));
-    FastMathFlags Unsafe;
-    Unsafe.setFast();
-    Builder.setFastMathFlags(Unsafe);
+    Builder.setFastMathFlags(RdxFMF);
 
     BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
     // The same extra argument may be used several times, so log each attempt
@@ -7071,9 +7077,6 @@ private:
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
 
-    // FIXME: The builder should use an FMF guard. It should not be hard-coded
-    //        to 'fast'.
-    assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
     return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind,
                                        ReductionOps.back());
   }
