@@ -2192,7 +2192,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   compileBitcodeFiles<ELFT>();
 
   // Handle --exclude-libs again because lto.tmp may reference additional
-  // libcalls symbols defined in an excluded archive.
+  // libcalls symbols defined in an excluded archive. This may override
+  // versionId set by scanVersionScript().
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(args);
 
