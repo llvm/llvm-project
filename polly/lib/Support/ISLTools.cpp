@@ -668,11 +668,11 @@ static int structureCompare(const isl::space &ASpace, const isl::space &BSpace,
   }
 
   std::string AName;
-  if (ASpace.has_tuple_name(isl::dim::set))
+  if (!ASpace.is_params() && ASpace.has_tuple_name(isl::dim::set))
     AName = ASpace.get_tuple_name(isl::dim::set);
 
   std::string BName;
-  if (BSpace.has_tuple_name(isl::dim::set))
+  if (!BSpace.is_params() && BSpace.has_tuple_name(isl::dim::set))
     BName = BSpace.get_tuple_name(isl::dim::set);
 
   int NameCompare = AName.compare(BName);
