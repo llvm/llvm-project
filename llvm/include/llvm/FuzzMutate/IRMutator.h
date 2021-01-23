@@ -102,6 +102,17 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+class InstModificationIRStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 4;
+  }
+
+  using IRMutationStrategy::mutate;
+  void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
+};
+
 } // end llvm namespace
 
 #endif // LLVM_FUZZMUTATE_IRMUTATOR_H
