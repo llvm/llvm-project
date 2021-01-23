@@ -28,12 +28,9 @@
 
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
-<<<<<<< HEAD
-=======
 #include "MemoryManager.h"
 
 // Utility for retrieving and printing CUDA error string.
->>>>>>> dd07d60ec33969ae4f1e37500bb852563e142dfb
 #ifdef OMPTARGET_DEBUG
 static int DebugLevel = 0;
 #define CUDA_ERR_STRING(err)                                                   \
@@ -58,10 +55,6 @@ static int DebugLevel = 0;
     }                                                                          \
   } while (false)
 #else // OMPTARGET_DEBUG
-<<<<<<< HEAD
-#define DP(...) {}
-#define CUDA_ERR_STRING(err) {}
-=======
 #define CUDA_ERR_STRING(err)                                                   \
   do {                                                                         \
     const char *errStr = nullptr;                                              \
@@ -69,7 +62,6 @@ static int DebugLevel = 0;
     if (errStr_status == CUDA_SUCCESS)                                         \
       REPORT("%s \n", errStr);                                                 \
   } while (false)
->>>>>>> dd07d60ec33969ae4f1e37500bb852563e142dfb
 #endif // OMPTARGET_DEBUG
 
 #include "elf_common.h"
