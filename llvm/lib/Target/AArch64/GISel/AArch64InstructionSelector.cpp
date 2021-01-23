@@ -2745,7 +2745,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_UADDO:
-  case TargetOpcode::G_SSUBO: {
+  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_USUBO: {
     // Emit the operation and get the correct condition code.
     MachineIRBuilder MIRBuilder(I);
     auto OpAndCC = emitOverflowOp(Opcode, I.getOperand(0).getReg(),
@@ -4376,6 +4377,8 @@ AArch64InstructionSelector::emitOverflowOp(unsigned Opcode, Register Dst,
     return std::make_pair(emitADDS(Dst, LHS, RHS, MIRBuilder), AArch64CC::HS);
   case TargetOpcode::G_SSUBO:
     return std::make_pair(emitSUBS(Dst, LHS, RHS, MIRBuilder), AArch64CC::VS);
+  case TargetOpcode::G_USUBO:
+    return std::make_pair(emitSUBS(Dst, LHS, RHS, MIRBuilder), AArch64CC::LO);
   }
 }
 
