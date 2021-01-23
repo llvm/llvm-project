@@ -69,8 +69,7 @@ class AsanThread {
   struct InitOptions;
   void Init(const InitOptions *options = nullptr);
 
-  thread_return_t ThreadStart(tid_t os_id,
-                              atomic_uintptr_t *signal_thread_is_registered);
+  thread_return_t ThreadStart(tid_t os_id);
 
   uptr stack_top();
   uptr stack_bottom();
@@ -131,6 +130,8 @@ class AsanThread {
   AsanStats &stats() { return stats_; }
 
   void *extra_spill_area() { return &extra_spill_area_; }
+
+  void *get_arg() { return arg_; }
 
  private:
   // NOTE: There is no AsanThread constructor. It is allocated
