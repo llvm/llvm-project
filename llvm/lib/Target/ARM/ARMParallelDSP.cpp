@@ -202,8 +202,7 @@ namespace {
   public:
     WidenedLoad(SmallVectorImpl<LoadInst*> &Lds, LoadInst *Wide)
       : NewLd(Wide) {
-      for (auto *I : Lds)
-        Loads.push_back(I);
+      append_range(Loads, Lds);
     }
     LoadInst *getLoad() {
       return NewLd;

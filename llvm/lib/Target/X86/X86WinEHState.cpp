@@ -704,8 +704,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     // enqueue it's successors to see if we can infer their states.
     InitialStates.insert({BB, PredState});
     FinalStates.insert({BB, PredState});
-    for (BasicBlock *SuccBB : successors(BB))
-      Worklist.push_back(SuccBB);
+    append_range(Worklist, successors(BB));
   }
 
   // Try to hoist stores from successors.
