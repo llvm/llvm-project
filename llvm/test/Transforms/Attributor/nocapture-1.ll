@@ -849,6 +849,8 @@ define void @ptr_uses(i8* %ptr, i8* %wptr) {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@ptr_uses
 ; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) [[ATTR13:#.*]] {
+; CHECK-NEXT:    [[CALL_PTR:%.*]] = call i8* @maybe_returned_ptr(i8* readonly [[PTR]]) [[ATTR4]]
+; CHECK-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(i8* readonly [[CALL_PTR]]) [[ATTR4]]
 ; CHECK-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; CHECK-NEXT:    ret void
 ;

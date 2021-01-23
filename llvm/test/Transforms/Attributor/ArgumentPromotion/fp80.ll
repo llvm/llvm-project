@@ -17,16 +17,32 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = internal global %struct.Foo { i32 1, i64 2 }, align 8
 
 define void @run() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@run
-; NOT_CGSCC_NPM-SAME: () [[ATTR0:#.*]] {
-; NOT_CGSCC_NPM-NEXT:  entry:
-; NOT_CGSCC_NPM-NEXT:    unreachable
+; IS________OPM: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@run
+; IS________OPM-SAME: () [[ATTR0:#.*]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nocapture nofree noundef nonnull readonly align 8 dereferenceable(16) @a) [[ATTR0]]
+; IS________OPM-NEXT:    unreachable
+;
+; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@run
+; IS__TUNIT_NPM-SAME: () [[ATTR0:#.*]] {
+; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[A_CAST:%.*]] = bitcast %struct.Foo* @a to i32*
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_CAST]], align 8
+; IS__TUNIT_NPM-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = call i64 @CaptureAStruct(i32 [[TMP0]], i64 [[TMP1]]) [[ATTR0]]
+; IS__TUNIT_NPM-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@run
 ; IS__CGSCC____-SAME: () [[ATTR0:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[A_CAST:%.*]] = bitcast %struct.Foo* @a to i32*
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_CAST]], align 8
+; IS__CGSCC____-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 1
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
 ; IS__CGSCC____-NEXT:    unreachable
 ;
 entry:
@@ -85,6 +101,37 @@ define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
 ; IS__CGSCC_OPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
 ; IS__CGSCC_OPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* [[A]], i64 0
 ; IS__CGSCC_OPM-NEXT:    br label [[LOOP]]
+;
+; IS________OPM: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS________OPM-LABEL: define {{[^@]+}}@CaptureAStruct
+; IS________OPM-SAME: (%struct.Foo* noalias nofree noundef nonnull byval(%struct.Foo) align 8 dereferenceable(16) [[A:%.*]]) [[ATTR0]] {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
+; IS________OPM-NEXT:    br label [[LOOP:%.*]]
+; IS________OPM:       loop:
+; IS________OPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
+; IS________OPM-NEXT:    [[TMP0:%.*]] = phi %struct.Foo* [ [[A]], [[ENTRY]] ], [ [[TMP0]], [[LOOP]] ]
+; IS________OPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
+; IS________OPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO:%.*]], %struct.Foo* [[A]], i64 0
+; IS________OPM-NEXT:    br label [[LOOP]]
+;
+; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@CaptureAStruct
+; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) [[ATTR0]] {
+; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
+; IS__TUNIT_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.Foo* [[A_PRIV]] to i32*
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV_CAST]], align 4
+; IS__TUNIT_NPM-NEXT:    [[A_PRIV_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    store i64 [[TMP1]], i64* [[A_PRIV_0_1]], align 8
+; IS__TUNIT_NPM-NEXT:    [[A_PTR:%.*]] = alloca %struct.Foo*, align 8
+; IS__TUNIT_NPM-NEXT:    br label [[LOOP:%.*]]
+; IS__TUNIT_NPM:       loop:
+; IS__TUNIT_NPM-NEXT:    [[PHI:%.*]] = phi %struct.Foo* [ null, [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = phi %struct.Foo* [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
+; IS__TUNIT_NPM-NEXT:    store %struct.Foo* [[PHI]], %struct.Foo** [[A_PTR]], align 8
+; IS__TUNIT_NPM-NEXT:    [[GEP]] = getelementptr [[STRUCT_FOO]], %struct.Foo* [[A_PRIV]], i64 0
+; IS__TUNIT_NPM-NEXT:    br label [[LOOP]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@CaptureAStruct

@@ -149,11 +149,13 @@ define i8* @test4_helper() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
 ; NOT_CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
+; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4()
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
 ; IS__CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
+; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4()
 ; IS__CGSCC_NPM-NEXT:    unreachable
 ;
   %ret = call i8* @test4()
@@ -164,11 +166,13 @@ define i8* @test4() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4
 ; NOT_CGSCC_NPM-SAME: () [[ATTR2]] {
+; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4_helper()
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4
 ; IS__CGSCC_NPM-SAME: () [[ATTR2]] {
+; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4_helper()
 ; IS__CGSCC_NPM-NEXT:    unreachable
 ;
   %ret = call i8* @test4_helper()
