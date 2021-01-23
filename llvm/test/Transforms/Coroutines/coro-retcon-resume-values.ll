@@ -1,5 +1,5 @@
 ; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck %s
-; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -passes='default<O2>' -aa-pipeline=default -S | FileCheck %s
 
 define i8* @f(i8* %buffer, i32 %n) {
 entry:
@@ -67,7 +67,10 @@ entry:
 ; CHECK-NEXT:  entry:
 ; CHECK:         [[BUFFER:%.*]] = alloca [8 x i8], align 4
 ; CHECK:         [[SLOT:%.*]] = bitcast [8 x i8]* [[BUFFER]] to i32*
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT:    store i32 7, i32* [[SLOT]], align 4
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT:    call void @print(i32 7)
 ; CHECK-NEXT:    ret i32 0
 

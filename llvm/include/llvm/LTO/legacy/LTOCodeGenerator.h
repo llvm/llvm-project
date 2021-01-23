@@ -93,7 +93,7 @@ struct LTOCodeGenerator {
   void setFileType(CodeGenFileType FT) { FileType = FT; }
 
   void setCpu(StringRef MCpu) { this->MCpu = std::string(MCpu); }
-  void setAttr(StringRef MAttr) { this->MAttr = std::string(MAttr); }
+  void setAttrs(std::vector<std::string> MAttrs) { this->MAttrs = MAttrs; }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
@@ -223,7 +223,7 @@ private:
   std::vector<std::string> CodegenOptions;
   std::string FeatureStr;
   std::string MCpu;
-  std::string MAttr;
+  std::vector<std::string> MAttrs;
   std::string NativeObjectPath;
   TargetOptions Options;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;

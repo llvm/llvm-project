@@ -70,6 +70,7 @@ define dso_local i32* @_Z3foo1S(%0* byval(%0) align 8 %arg) {
 ; CHECK-NEXT:    [[I2:%.*]] = alloca [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[I1_SROA_0_0_I5_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0]], %0* [[ARG:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[I1_SROA_0_0_COPYLOAD:%.*]] = load i32*, i32** [[I1_SROA_0_0_I5_SROA_IDX]], align 8
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl([[META0:metadata !.*]])
 ; CHECK-NEXT:    [[I_SROA_0_0_I6_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0]], %0* [[I2]], i64 0, i32 0
 ; CHECK-NEXT:    store i32* [[I1_SROA_0_0_COPYLOAD]], i32** [[I_SROA_0_0_I6_SROA_IDX]], align 8
 ; CHECK-NEXT:    tail call void @_Z7escape01S(%0* nonnull byval(%0) align 8 [[I2]])
@@ -109,6 +110,7 @@ define dso_local i32* @_Z3bar1S(%0* byval(%0) align 8 %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I1_SROA_0_0_I4_SROA_IDX:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[ARG:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[I1_SROA_0_0_COPYLOAD:%.*]] = load i32*, i32** [[I1_SROA_0_0_I4_SROA_IDX]], align 8
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl([[META3:metadata !.*]])
 ; CHECK-NEXT:    [[I5:%.*]] = tail call i32 @_Z4condv()
 ; CHECK-NEXT:    [[I6_NOT:%.*]] = icmp eq i32 [[I5]], 0
 ; CHECK-NEXT:    br i1 [[I6_NOT]], label [[BB10:%.*]], label [[BB7:%.*]]

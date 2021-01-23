@@ -146,11 +146,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LTOModule, lto_module_t)
 // Convert the subtarget features into a string to pass to LTOCodeGenerator.
 static void lto_add_attrs(lto_code_gen_t cg) {
   LTOCodeGenerator *CG = unwrap(cg);
-  auto MAttrs = codegen::getMAttrs();
-  if (!MAttrs.empty()) {
-    std::string attrs = join(MAttrs, ",");
-    CG->setAttr(attrs);
-  }
+  CG->setAttrs(codegen::getMAttrs());
 
   if (OptLevel < '0' || OptLevel > '3')
     report_fatal_error("Optimization level must be between 0 and 3");
