@@ -359,6 +359,67 @@ void RISCVDAGToDAGISel::selectVSSEGMask(SDNode *Node, unsigned IntNo,
   ReplaceNode(Node, Store);
 }
 
+void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned IntNo) {
+  SDLoc DL(Node);
+  unsigned NF = Node->getNumOperands() - 5;
+  EVT VT = Node->getOperand(2)->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
+  SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
+  SDValue Operands[] = {
+      StoreVal,
+      Node->getOperand(2 + NF), // Base pointer.
+      Node->getOperand(3 + NF), // Index.
+      Node->getOperand(4 + NF), // VL.
+      SEW,
+      Node->getOperand(0) // Chain.
+  };
+
+  EVT IndexVT = Node->getOperand(3 + NF)->getValueType(0);
+  RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
+  unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, IndexScalarSize, static_cast<unsigned>(LMUL),
+      static_cast<unsigned>(IndexLMUL));
+  SDNode *Store =
+      CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
+  ReplaceNode(Node, Store);
+}
+
+void RISCVDAGToDAGISel::selectVSXSEGMask(SDNode *Node, unsigned IntNo) {
+  SDLoc DL(Node);
+  unsigned NF = Node->getNumOperands() - 6;
+  EVT VT = Node->getOperand(2)->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
+  SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
+  SDValue Operands[] = {
+      StoreVal,
+      Node->getOperand(2 + NF), // Base pointer.
+      Node->getOperand(3 + NF), // Index.
+      Node->getOperand(4 + NF), // Mask.
+      Node->getOperand(5 + NF), // VL.
+      SEW,
+      Node->getOperand(0) // Chain.
+  };
+
+  EVT IndexVT = Node->getOperand(3 + NF)->getValueType(0);
+  RISCVVLMUL IndexLMUL = getLMUL(IndexVT);
+  unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, IndexScalarSize, static_cast<unsigned>(LMUL),
+      static_cast<unsigned>(IndexLMUL));
+  SDNode *Store =
+      CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
+  ReplaceNode(Node, Store);
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -599,6 +660,40 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vssseg7_mask:
     case Intrinsic::riscv_vssseg8_mask: {
       selectVSSEGMask(Node, IntNo, /*IsStrided=*/true);
+      return;
+    }
+    case Intrinsic::riscv_vsoxseg2:
+    case Intrinsic::riscv_vsoxseg3:
+    case Intrinsic::riscv_vsoxseg4:
+    case Intrinsic::riscv_vsoxseg5:
+    case Intrinsic::riscv_vsoxseg6:
+    case Intrinsic::riscv_vsoxseg7:
+    case Intrinsic::riscv_vsoxseg8:
+    case Intrinsic::riscv_vsuxseg2:
+    case Intrinsic::riscv_vsuxseg3:
+    case Intrinsic::riscv_vsuxseg4:
+    case Intrinsic::riscv_vsuxseg5:
+    case Intrinsic::riscv_vsuxseg6:
+    case Intrinsic::riscv_vsuxseg7:
+    case Intrinsic::riscv_vsuxseg8: {
+      selectVSXSEG(Node, IntNo);
+      return;
+    }
+    case Intrinsic::riscv_vsoxseg2_mask:
+    case Intrinsic::riscv_vsoxseg3_mask:
+    case Intrinsic::riscv_vsoxseg4_mask:
+    case Intrinsic::riscv_vsoxseg5_mask:
+    case Intrinsic::riscv_vsoxseg6_mask:
+    case Intrinsic::riscv_vsoxseg7_mask:
+    case Intrinsic::riscv_vsoxseg8_mask:
+    case Intrinsic::riscv_vsuxseg2_mask:
+    case Intrinsic::riscv_vsuxseg3_mask:
+    case Intrinsic::riscv_vsuxseg4_mask:
+    case Intrinsic::riscv_vsuxseg5_mask:
+    case Intrinsic::riscv_vsuxseg6_mask:
+    case Intrinsic::riscv_vsuxseg7_mask:
+    case Intrinsic::riscv_vsuxseg8_mask: {
+      selectVSXSEGMask(Node, IntNo);
       return;
     }
     }

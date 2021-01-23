@@ -601,6 +601,26 @@ let TargetPrefix = "riscv" in {
                                  LLVMMatchType<1>]),
                     [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic;
 
+  // For indexed segment store
+  // Input: (value, pointer, offset, vl)
+  class RISCVISegStore<int nf>
+        : Intrinsic<[],
+                    !listconcat([llvm_anyvector_ty],
+                                !listsplat(LLVMMatchType<0>, !add(nf, -1)),
+                                [LLVMPointerToElt<0>, llvm_anyvector_ty,
+                                 llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For indexed segment store with mask
+  // Input: (value, pointer, offset, mask, vl)
+  class RISCVISegStoreMask<int nf>
+        : Intrinsic<[],
+                    !listconcat([llvm_anyvector_ty],
+                                !listsplat(LLVMMatchType<0>, !add(nf, -1)),
+                                [LLVMPointerToElt<0>, llvm_anyvector_ty,
+                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                 llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic;
+
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
@@ -726,6 +746,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVSSegStore<int nf> {
     def "int_riscv_" # NAME : RISCVSSegStore<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVSSegStoreMask<nf>;
+  }
+  multiclass RISCVISegStore<int nf> {
+    def "int_riscv_" # NAME : RISCVISegStore<nf>;
+    def "int_riscv_" # NAME # "_mask" : RISCVISegStoreMask<nf>;
   }
 
   defm vle : RISCVUSLoad;
@@ -1029,6 +1053,8 @@ let TargetPrefix = "riscv" in {
     defm vluxseg # nf : RISCVISegLoad<nf>;
     defm vsseg # nf : RISCVUSSegStore<nf>;
     defm vssseg # nf : RISCVSSegStore<nf>;
+    defm vsoxseg # nf : RISCVISegStore<nf>;
+    defm vsuxseg # nf : RISCVISegStore<nf>;
   }
 
 } // TargetPrefix = "riscv"
