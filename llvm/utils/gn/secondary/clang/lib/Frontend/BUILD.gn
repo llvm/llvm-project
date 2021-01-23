@@ -21,7 +21,6 @@ static_library("Frontend") {
     "ASTConsumers.cpp",
     "ASTMerge.cpp",
     "ASTUnit.cpp",
-    "AssemblerInvocation.cpp",
     "ChainedDiagnosticConsumer.cpp",
     "ChainedIncludesSource.cpp",
     "CompilerInstance.cpp",
