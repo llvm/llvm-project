@@ -143,7 +143,8 @@ namespace {
       // Insert exit blocks.
       SmallVector<MachineBasicBlock*, 2> ExitBlocks;
       ML.getExitBlocks(ExitBlocks);
-      append_range(Order, ExitBlocks);
+      for (auto *MBB : ExitBlocks)
+        Order.push_back(MBB);
 
       // Then add the loop body.
       Search(ML.getHeader());
