@@ -485,6 +485,15 @@ TYPED_TEST(SmallVectorTest, AppendRepeatedNonForwardIterator) {
   this->assertValuesInOrder(this->theVector, 3u, 1, 7, 7);
 }
 
+TYPED_TEST(SmallVectorTest, AppendSmallVector) {
+  SCOPED_TRACE("AppendSmallVector");
+
+  SmallVector<Constructable, 3> otherVector = {7, 7};
+  this->theVector.push_back(Constructable(1));
+  this->theVector.append(otherVector);
+  this->assertValuesInOrder(this->theVector, 3u, 1, 7, 7);
+}
+
 // Assign test
 TYPED_TEST(SmallVectorTest, AssignTest) {
   SCOPED_TRACE("AssignTest");
@@ -510,6 +519,15 @@ TYPED_TEST(SmallVectorTest, AssignNonIterTest) {
 
   this->theVector.push_back(Constructable(1));
   this->theVector.assign(2, 7);
+  this->assertValuesInOrder(this->theVector, 2u, 7, 7);
+}
+
+TYPED_TEST(SmallVectorTest, AssignSmallVector) {
+  SCOPED_TRACE("AssignSmallVector");
+
+  SmallVector<Constructable, 3> otherVector = {7, 7};
+  this->theVector.push_back(Constructable(1));
+  this->theVector.assign(otherVector);
   this->assertValuesInOrder(this->theVector, 2u, 7, 7);
 }
 

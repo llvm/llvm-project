@@ -664,6 +664,8 @@ public:
     append(IL.begin(), IL.end());
   }
 
+  void append(const SmallVectorImpl &RHS) { append(RHS.begin(), RHS.end()); }
+
   void assign(size_type NumElts, ValueParamT Elt) {
     // Note that Elt could be an internal reference.
     if (NumElts > this->capacity()) {
@@ -697,6 +699,8 @@ public:
     clear();
     append(IL);
   }
+
+  void assign(const SmallVectorImpl &RHS) { assign(RHS.begin(), RHS.end()); }
 
   iterator erase(const_iterator CI) {
     // Just cast away constness because this is a non-const member function.
