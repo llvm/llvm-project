@@ -31,6 +31,10 @@ entry:
 define void @caller_may_not_return() ssp {
 ; CHECK-LABEL: @caller_may_not_return(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
+; CHECK:       while.body.i:
+; CHECK-NEXT:    br label [[WHILE_BODY_I]]
+; CHECK:       readnone_may_not_return.exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -41,13 +45,13 @@ entry:
 
 ; @caller_willreturn is marked as willreturn, so all called functions also must
 ; return. All calls are dead.
-define void @caller_willreturn() ssp willreturn {
+define void @caller_willreturn() ssp {
 ; CHECK-LABEL: @caller_willreturn(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @readnone_may_not_return()
+  call void @readnone_may_not_return() willreturn
   call void @readnone_willreturn()
   ret void
 }

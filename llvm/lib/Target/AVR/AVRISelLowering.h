@@ -56,6 +56,8 @@ enum NodeType {
   CMPC,
   /// Test for zero or minus instruction.
   TST,
+  /// Swap Rd[7:4] <-> Rd[3:0].
+  SWAP,
   /// Operand 0 and operand 1 are selection variable, operand 2
   /// is condition code and operand 3 is flag operand.
   SELECT_CC
@@ -136,6 +138,8 @@ public:
 private:
   SDValue getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &AVRcc,
                     SelectionDAG &DAG, SDLoc dl) const;
+  SDValue getAVRCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
+                    SDLoc dl) const;
   SDValue LowerShifts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
