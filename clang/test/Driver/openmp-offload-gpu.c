@@ -34,22 +34,6 @@
 
 /// ###########################################################################
 
-/// Check that -lomptarget-nvptx is passed to nvlink.
-// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp \
-// RUN:          -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-NVLINK %s
-/// Check that the value of --libomptarget-nvptx-path is forwarded to nvlink.
-// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp \
-// RUN:          --libomptarget-nvptx-path=/path/to/libomptarget/ \
-// RUN:          -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-NVLINK,CHK-LIBOMPTARGET-NVPTX-PATH %s
-
-// CHK-NVLINK: nvlink
-// CHK-LIBOMPTARGET-NVPTX-PATH-SAME: "-L/path/to/libomptarget/"
-// CHK-NVLINK-SAME: "-lomptarget-nvptx"
-
-/// ###########################################################################
-
 /// Check cubin file generation and usage by nvlink
 // RUN:   %clang -### -no-canonical-prefixes -target powerpc64le-unknown-linux-gnu -fopenmp=libomp \
 // RUN:          -fopenmp-targets=nvptx64-nvidia-cuda -save-temps %s 2>&1 \
@@ -173,13 +157,15 @@
 // RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
-/// The user can override default detection using --libomptarget-nvptx-path=.
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --libomptarget-nvptx-path=%S/Inputs/libomptarget \
+/// The user can override default detection using --libomptarget-nvptx-bc-path=.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB-USER %s
 
 // CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-sm_20.bc
+// CHK-BCLIB-USER: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-test.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
 
 /// ###########################################################################
@@ -191,7 +177,18 @@
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
 
-// CHK-BCLIB-WARN: No library 'libomptarget-nvptx-sm_20.bc' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.
+// CHK-BCLIB-WARN: No library 'libomptarget-nvptx-sm_20.bc' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-nvptx-bc-path to specify nvptx bitcode library.
+
+/// ###########################################################################
+
+/// Check that the error is thrown when the libomptarget bitcode library does not exist.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
+// RUN:   --libomptarget-nvptx-bc-path=not-exist.bc \
+// RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB-ERROR %s
+
+// CHK-BCLIB-ERROR: Bitcode library 'not-exist.bc' does not exist.
 
 /// Check that debug info is emitted in dwarf-2
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 %s -g -O1 --no-cuda-noopt-device-debug 2>&1 \
