@@ -133,7 +133,7 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
 };
 
-// public variables -- TODO(ashwinma) move these to a runtime object?
+// global variables. TODO: Get rid of these
 atmi_machine_t g_atmi_machine;
 ATLMachine g_atl_machine;
 
@@ -210,8 +210,6 @@ atmi_status_t Runtime::Initialize() {
 }
 
 atmi_status_t Runtime::Finalize() {
-  // TODO(ashwinma): Finalize all processors, queues, signals, kernarg memory
-  // regions
   hsa_status_t err;
 
   for (uint32_t i = 0; i < g_executables.size(); i++) {
@@ -874,8 +872,6 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
         msgpackErrorCheck(iterate args map in kernel args metadata,
                           msgpack_errors);
 
-        // TODO(ashwinma): should the below population actions be done only for
-        // non-implicit args?
         // populate info with sizes and offsets
         info.arg_sizes.push_back(lcArg.size_);
         // v3 has offset field and not align field
