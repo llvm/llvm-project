@@ -267,8 +267,8 @@ define i32 addrspace(1)* @test13_addrspacecast() {
   ret i32 addrspace(1)* %P
 }
 
-declare noalias i8* @malloc(i32)
-declare noalias i8* @calloc(i32, i32)
+declare noalias i8* @malloc(i32) willreturn
+declare noalias i8* @calloc(i32, i32) willreturn
 declare noalias i8* @aligned_alloc(i32, i32)
 declare void @free(i8*)
 

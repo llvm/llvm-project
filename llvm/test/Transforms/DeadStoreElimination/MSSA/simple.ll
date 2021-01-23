@@ -234,8 +234,8 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 }
 
 
-declare noalias i8* @malloc(i32)
-declare noalias i8* @calloc(i32, i32)
+declare noalias i8* @malloc(i32) willreturn
+declare noalias i8* @calloc(i32, i32) willreturn
 
 define void @test14(i32* %Q) {
 ; CHECK-LABEL: @test14(

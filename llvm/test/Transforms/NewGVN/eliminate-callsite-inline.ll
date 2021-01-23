@@ -14,4 +14,4 @@ entry:
   ret void
 }
 
-attributes #1 = { noinline nounwind readnone }
+attributes #1 = { noinline nounwind readnone willreturn }

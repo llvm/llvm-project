@@ -21,7 +21,7 @@ entry:
 
 if.end:
   %gep = getelementptr i8, i8* %d, i32 42
-  %call = call i64 @foo(i8* %gep) nounwind readonly
+  %call = call i64 @foo(i8* %gep) nounwind readonly willreturn
   %cmp2 = icmp ne i64 %call, 0
   call void @llvm.assume(i1 %cmp2)
   br label %exit
@@ -31,5 +31,5 @@ exit:
   ret i32 %conv
 }
 
-declare i64 @foo(i8*) nounwind readonly
+declare i64 @foo(i8*) nounwind readonly willreturn
 declare void @llvm.assume(i1 noundef) nounwind willreturn
