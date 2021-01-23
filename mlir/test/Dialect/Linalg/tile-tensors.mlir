@@ -41,7 +41,7 @@ func @generic_op_tensors(
   %4 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
-		      affine_map<(d0, d1, d2) -> (d2, d1, d0)>],
+                      affine_map<(d0, d1, d2) -> (d2, d1, d0)>],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
     outs(%3 : tensor<?x?x?xf32>) {
@@ -88,7 +88,7 @@ func @indexed_generic_op_tensors(
   %4 = linalg.indexed_generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
-		      affine_map<(d0, d1, d2) -> (d2, d1, d0)>],
+                      affine_map<(d0, d1, d2) -> (d2, d1, d0)>],
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
     outs(%3 : tensor<?x?x?xf32>) {
@@ -120,3 +120,26 @@ func @indexed_generic_op_tensors(
 //       CHECK:   scf.yield %[[TD1]]
 //       CHECK: }
 //       CHECK: return %[[TD0]]
+
+// -----
+
+func @fill_tensors(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
+  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+  %1 = linalg.fill(%0, %arg2) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+//       CHECK: func @fill_tensors
+//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//       CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-z0-9_]+]]
+//  CHECK-SAME:     iter_args(%[[ARG4:.+]] = %[[INIT]]) -> (tensor<?x?xf32>) {
+//       CHECK:     %[[YIELD_1:.+]] = scf.for %[[IV1:[a-zA-Z0-9_]+]]
+//  CHECK-SAME:       iter_args(%[[ARG6:.+]] = %[[ARG4]]) -> (tensor<?x?xf32>) {
+//       CHECK:       %[[FILL_TILE:.+]] = subtensor %[[ARG6]][%[[IV0]], %[[IV1]]]
+//       CHECK:       %[[RESULT_TILE:.+]] = linalg.fill(%[[FILL_TILE]], %{{.+}})
+//       CHECK:       %[[YIELD_2:.+]] = subtensor_insert %[[RESULT_TILE]]
+//  CHECK-SAME:         into %[[ARG6]][%[[IV0]], %[[IV1]]]
+//       CHECK:       scf.yield %[[YIELD_2]]
+//       CHECK:     }
+//       CHECK:     scf.yield %[[YIELD_1]]
+//       CHECK:   }
+//       CHECK:   return %[[RESULT]]

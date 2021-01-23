@@ -221,6 +221,16 @@ static LogicalResult foldMemRefCast(Operation *op) {
 // parse`className` function.
 
 //===----------------------------------------------------------------------===//
+// FillOp
+//===----------------------------------------------------------------------===//
+
+void FillOp::build(OpBuilder &builder, OperationState &result, Value output,
+                   Value value) {
+  build(builder, result, output.getType().dyn_cast<RankedTensorType>(), output,
+        value);
+}
+
+//===----------------------------------------------------------------------===//
 // GenericOps
 //===----------------------------------------------------------------------===//
 void GenericOp::build(
@@ -1726,6 +1736,10 @@ static LogicalResult verify(FillOp op) {
   auto fillType = op.value().getType();
   if (viewType.getElementType() != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
+  if (!op.getNumResults() && !viewType.isa<MemRefType>()) {
+    return op.emitOpError(
+        "expected fill op with no result value to use memref type");
+  }
   return success();
 }
 
