@@ -868,6 +868,11 @@ private:
 
     // { DomainRead[] -> DomainWrite[] }
     auto PerPHIWrites = computePerPHI(SAI);
+    if (!PerPHIWrites) {
+      LLVM_DEBUG(
+          dbgs() << "    Reject because cannot determine incoming values\n");
+      return false;
+    }
 
     // { DomainWrite[] -> Element[] }
     auto WritesTarget = PerPHIWrites.apply_domain(PHITarget).reverse();

@@ -12,7 +12,7 @@
 ; CHECK-NEXT: {  : false }
 ; CHECK-NEXT: Invalid Context:
 ; CHECK-NEXT: {  : false }
-; CHECK-NEXT: Arrays {
+; CHECK:      Arrays {
 ; CHECK-NEXT:     i8 MemRef_arg[*][0]; // Element size 1
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Arrays (Bounds as pw_affs) {
