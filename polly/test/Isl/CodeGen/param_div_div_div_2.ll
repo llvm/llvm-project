@@ -6,7 +6,7 @@
 ;
 ; CHECK:         Invalid Context:
 ; CHECK-NEXT:    [p_0] -> {  : false }
-; CHECK-NEXT:    p0: (((zext i32 %a to i64) /u (zext i32 %b to i64)) /u ((zext i32 %c to i64) /u (zext i32 %d to i64)))
+; CHECK:         p0: (((zext i32 %a to i64) /u (zext i32 %b to i64)) /u ((zext i32 %c to i64) /u (zext i32 %d to i64)))
 ;
 ;    void f(unsigned *A, unsigned a, unsigned b, unsigned c, unsigned d) {
 ;      for (unsigned i; i < 100; i++)

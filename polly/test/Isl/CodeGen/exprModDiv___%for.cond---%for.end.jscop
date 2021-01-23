@@ -18,7 +18,7 @@
             },
             {
                "kind" : "read",
-               "relation" : "[N, p] -> { Stmt_for_body[i0] -> MemRef_B[p / 127] }"
+               "relation" : "[N, p] -> { Stmt_for_body[i0] -> MemRef_B[floor(p / 127)] }"
             },
             {
                "kind" : "read",
