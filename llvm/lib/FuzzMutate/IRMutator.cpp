@@ -197,3 +197,46 @@ void InstDeleterIRStrategy::mutate(Instruction &Inst, RandomIRBuilder &IB) {
   Inst.replaceAllUsesWith(RS.getSelection());
   Inst.eraseFromParent();
 }
+
+void InstModificationIRStrategy::mutate(Instruction &Inst,
+                                        RandomIRBuilder &IB) {
+  SmallVector<std::function<void()>, 8> Modifications;
+  CmpInst *CI = nullptr;
+  GetElementPtrInst *GEP = nullptr;
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case Instruction::Add:
+  case Instruction::Mul:
+  case Instruction::Sub:
+  case Instruction::Shl:
+    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); }),
+        Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(true); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(false); });
+
+    break;
+  case Instruction::ICmp:
+    CI = cast<ICmpInst>(&Inst);
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_EQ); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_NE); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_UGT); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_UGE); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_ULT); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_ULE); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SGT); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SGE); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SLT); });
+    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SLE); });
+    break;
+  case Instruction::GetElementPtr:
+    GEP = cast<GetElementPtrInst>(&Inst);
+    Modifications.push_back([GEP]() { GEP->setIsInBounds(true); });
+    Modifications.push_back([GEP]() { GEP->setIsInBounds(false); });
+    break;
+  }
+
+  auto RS = makeSampler(IB.Rand, Modifications);
+  if (RS)
+    RS.getSelection()();
+}
