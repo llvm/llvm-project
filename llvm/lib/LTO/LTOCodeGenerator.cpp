@@ -361,7 +361,7 @@ bool LTOCodeGenerator::determineTarget() {
 
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
-  SubtargetFeatures Features(MAttr);
+  SubtargetFeatures Features(join(MAttrs, ""));
   Features.getDefaultSubtargetFeatures(Triple);
   FeatureStr = Features.getString();
   // Set a default CPU for Darwin triples.
