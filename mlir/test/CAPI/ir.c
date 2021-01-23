@@ -553,6 +553,35 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // clang-format on
 }
 
+/// Creates operations with type inference and tests various failure modes.
+static int createOperationWithTypeInference(MlirContext ctx) {
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirAttribute iAttr = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 4);
+
+  // The shape.const_size op implements result type inference and is only used
+  // for that reason.
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("shape.const_size"), loc);
+  MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), iAttr);
+  mlirOperationStateAddAttributes(&state, 1, &valueAttr);
+  mlirOperationStateEnableResultTypeInference(&state);
+
+  // Expect result type inference to succeed.
+  MlirOperation op = mlirOperationCreate(&state);
+  if (mlirOperationIsNull(op)) {
+    fprintf(stderr, "ERROR: Result type inference unexpectedly failed");
+    return 1;
+  }
+
+  // CHECK: RESULT_TYPE_INFERENCE: !shape.size
+  fprintf(stderr, "RESULT_TYPE_INFERENCE: ");
+  mlirTypeDump(mlirValueGetType(mlirOperationGetResult(op, 0)));
+  fprintf(stderr, "\n");
+  mlirOperationDestroy(op);
+  return 0;
+}
+
 /// Dumps instances of all builtin types to check that C API works correctly.
 /// Additionally, performs simple identity checks that a builtin type
 /// constructed with C API can be inspected and has the expected type. The
@@ -957,14 +986,12 @@ int printBuiltinAttributes(MlirContext ctx) {
       (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
   int64_t *int64RawData =
       (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  float *floatRawData =
-      (float *)mlirDenseElementsAttrGetRawData(floatElements);
+  float *floatRawData = (float *)mlirDenseElementsAttrGetRawData(floatElements);
   double *doubleRawData =
       (double *)mlirDenseElementsAttrGetRawData(doubleElements);
   if (uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
-      int32RawData[0] != 0 || int32RawData[1] != 1 ||
-      uint64RawData[0] != 0u || uint64RawData[1] != 1u ||
-      int64RawData[0] != 0 || int64RawData[1] != 1 ||
+      int32RawData[0] != 0 || int32RawData[1] != 1 || uint64RawData[0] != 0u ||
+      uint64RawData[1] != 1u || int64RawData[0] != 0 || int64RawData[1] != 1 ||
       floatRawData[0] != 0.0f || floatRawData[1] != 1.0f ||
       doubleRawData[0] != 0.0 || doubleRawData[1] != 1.0)
     return 18;
@@ -1389,19 +1416,21 @@ int main() {
   if (constructAndTraverseIr(ctx))
     return 1;
   buildWithInsertionsAndPrint(ctx);
+  if (createOperationWithTypeInference(ctx))
+    return 2;
 
   if (printBuiltinTypes(ctx))
-    return 2;
-  if (printBuiltinAttributes(ctx))
     return 3;
-  if (printAffineMap(ctx))
+  if (printBuiltinAttributes(ctx))
     return 4;
-  if (printAffineExpr(ctx))
+  if (printAffineMap(ctx))
     return 5;
-  if (affineMapFromExprs(ctx))
+  if (printAffineExpr(ctx))
     return 6;
-  if (registerOnlyStd())
+  if (affineMapFromExprs(ctx))
     return 7;
+  if (registerOnlyStd())
+    return 8;
 
   mlirContextDestroy(ctx);
 
