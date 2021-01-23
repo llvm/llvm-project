@@ -989,6 +989,24 @@ public:
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
   }
 };
+
+class NoAliasScopeDeclInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  MDNode *getScopeList() const {
+    auto *MV =
+        cast<MetadataAsValue>(getOperand(Intrinsic::NoAliasScopeDeclScopeArg));
+    return cast<MDNode>(MV->getMetadata());
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H
