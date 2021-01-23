@@ -253,12 +253,9 @@ void AsanThread::Init(const InitOptions *options) {
 // SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
-thread_return_t AsanThread::ThreadStart(
-    tid_t os_id, atomic_uintptr_t *signal_thread_is_registered) {
+thread_return_t AsanThread::ThreadStart(tid_t os_id) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
-  if (signal_thread_is_registered)
-    atomic_store(signal_thread_is_registered, 1, memory_order_release);
 
   if (common_flags()->use_sigaltstack) SetAlternateSignalStack();
 
@@ -288,8 +285,7 @@ AsanThread *CreateMainThread() {
       /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ 0,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart(internal_getpid(),
-                           /* signal_thread_is_registered */ nullptr);
+  main_thread->ThreadStart(internal_getpid());
   return main_thread;
 }
 
