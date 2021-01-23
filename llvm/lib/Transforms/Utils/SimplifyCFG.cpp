@@ -1273,24 +1273,27 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
   SmallSetVector<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
   while (!Preds.empty()) {
     BasicBlock *Pred = Preds.pop_back_val();
+    Instruction *PTI = Pred->getTerminator();
+
+    // Don't try to fold into itself.
+    if (Pred == BB)
+      continue;
 
     // See if the predecessor is a comparison with the same value.
-    Instruction *PTI = Pred->getTerminator();
     Value *PCV = isValueEqualityComparison(PTI); // PredCondVal
+    if (PCV != CV)
+      continue;
 
-    if (PCV == CV && TI != PTI) {
-      SmallSetVector<BasicBlock*, 4> FailBlocks;
-      if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
-        for (auto *Succ : FailBlocks) {
-          if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split",
-                                      DTU))
-            return false;
-        }
+    SmallSetVector<BasicBlock *, 4> FailBlocks;
+    if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
+      for (auto *Succ : FailBlocks) {
+        if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split", DTU))
+          return false;
       }
-
-      PerformValueComparisonIntoPredecessorFolding(TI, CV, PTI, Builder);
-      Changed = true;
     }
+
+    PerformValueComparisonIntoPredecessorFolding(TI, CV, PTI, Builder);
+    Changed = true;
   }
   return Changed;
 }
