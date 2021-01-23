@@ -302,7 +302,9 @@ define void @test_live_outer() {
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    br i1 false, label [[INNER]], label [[LATCH]]
+; CHECK-NEXT:    br i1 false, label [[INNER_INNER_CRIT_EDGE:%.*]], label [[LATCH]]
+; CHECK:       inner.inner_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 [[IV]], i32* @G, align 4
 ; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
@@ -346,11 +348,14 @@ define void @loop_nest_lcssa() {
 ; CHECK:       inner_header:
 ; CHECK-NEXT:    br i1 false, label [[INNER_LATCH:%.*]], label [[OUTER_LATCH:%.*]]
 ; CHECK:       inner_latch:
-; CHECK-NEXT:    br i1 false, label [[INNER_HEADER]], label [[LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP0]], [[INNER_HEADER]] ]
+; CHECK-NEXT:    br i1 false, label [[INNER_LATCH_INNER_HEADER_CRIT_EDGE:%.*]], label [[LOOPEXIT:%.*]]
+; CHECK:       inner_latch.inner_header_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       outer_latch:
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       loopexit:
-; CHECK-NEXT:    [[DOTLCSSA32:%.*]] = phi i32 [ [[TMP0]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[DOTLCSSA32:%.*]] = phi i32 [ [[DOTLCSSA]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
