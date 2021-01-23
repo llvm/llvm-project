@@ -2882,10 +2882,9 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPUser &User,
 
   // llvm.experimental.noalias.scope.decl intrinsics must only be duplicated for
   // the first lane and part.
-  if (auto *II = dyn_cast<IntrinsicInst>(Instr))
+  if (isa<NoAliasScopeDeclInst>(Instr))
     if (Instance.Lane != 0 || Instance.Part != 0)
-      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
-        return;
+      return;
 
   setDebugLocFromInst(Builder, Instr);
 
