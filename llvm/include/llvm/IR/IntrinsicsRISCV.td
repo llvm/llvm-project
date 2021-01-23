@@ -543,6 +543,25 @@ let TargetPrefix = "riscv" in {
                                  LLVMMatchType<1>]),
                     [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic;
 
+  // For indexed segment load
+  // Input: (pointer, index, vl)
+  class RISCVISegLoad<int nf>
+        : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
+                                !add(nf, -1))),
+                    [LLVMPointerToElt<0>, llvm_anyvector_ty, llvm_anyint_ty],
+                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For indexed segment load with mask
+  // Input: (maskedoff, pointer, index, mask, vl)
+  class RISCVISegLoadMask<int nf>
+        : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
+                                !add(nf, -1))),
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                                [LLVMPointerToElt<0>,
+                                 llvm_anyvector_ty,
+                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                 llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic;
+
   // For unit stride segment store
   // Input: (value, pointer, vl)
   class RISCVUSSegStore<int nf>
@@ -695,6 +714,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVSSegLoad<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVSSegLoadMask<nf>;
+  }
+  multiclass RISCVISegLoad<int nf> {
+    def "int_riscv_" # NAME : RISCVISegLoad<nf>;
+    def "int_riscv_" # NAME # "_mask" : RISCVISegLoadMask<nf>;
   }
   multiclass RISCVUSSegStore<int nf> {
     def "int_riscv_" # NAME : RISCVUSSegStore<nf>;
@@ -1002,6 +1025,8 @@ let TargetPrefix = "riscv" in {
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
     defm vlseg # nf : RISCVUSSegLoad<nf>;
     defm vlsseg # nf : RISCVSSegLoad<nf>;
+    defm vloxseg # nf : RISCVISegLoad<nf>;
+    defm vluxseg # nf : RISCVISegLoad<nf>;
     defm vsseg # nf : RISCVUSSegStore<nf>;
     defm vssseg # nf : RISCVSSegStore<nf>;
   }
