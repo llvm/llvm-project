@@ -728,7 +728,7 @@ define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r
 ; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
 ; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) [[ATTR8]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) [[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) [[ATTR8]]
 ; CHECK-NEXT:    ret i32* [[CALL]]
 ;
 entry:
