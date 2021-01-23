@@ -1143,9 +1143,9 @@ Set directory to include search path with prefix
 
 Add directory to SYSTEM include search path, absolute paths are relative to -isysroot
 
-.. option:: --libomptarget-nvptx-path=<arg>
+.. option:: --libomptarget-nvptx-bc-path=<arg>
 
-Path to libomptarget-nvptx libraries
+Path to libomptarget-nvptx bitcode library
 
 .. option:: --ptxas-path=<arg>
 
