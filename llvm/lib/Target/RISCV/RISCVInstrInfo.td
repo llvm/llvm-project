@@ -885,6 +885,10 @@ class shiftop<SDPatternOperator operator>
     : PatFrags<(ops node:$val, node:$count),
                [(operator node:$val, node:$count),
                 (operator node:$val, (and node:$count, immbottomxlenset))]>;
+class shiftopw<SDPatternOperator operator>
+    : PatFrags<(ops node:$val, node:$count),
+               [(operator node:$val, node:$count),
+                (operator node:$val, (and node:$count, (XLenVT 31)))]>;
 
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;
@@ -1186,9 +1190,9 @@ def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 def : Pat<(sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt),
           (SRAIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 
-def : PatGprGpr<riscv_sllw, SLLW>;
-def : PatGprGpr<riscv_srlw, SRLW>;
-def : PatGprGpr<riscv_sraw, SRAW>;
+def : PatGprGpr<shiftopw<riscv_sllw>, SLLW>;
+def : PatGprGpr<shiftopw<riscv_srlw>, SRLW>;
+def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 
 /// Loads
 
