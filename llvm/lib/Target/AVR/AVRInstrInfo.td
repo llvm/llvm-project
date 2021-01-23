@@ -67,6 +67,9 @@ def AVRrolLoop : SDNode<"AVRISD::ROLLOOP", SDTIntShiftOp>;
 def AVRrorLoop : SDNode<"AVRISD::RORLOOP", SDTIntShiftOp>;
 def AVRasrLoop : SDNode<"AVRISD::ASRLOOP", SDTIntShiftOp>;
 
+// SWAP node.
+def AVRSwap : SDNode<"AVRISD::SWAP", SDTIntUnaryOp>;
+
 //===----------------------------------------------------------------------===//
 // AVR Operands, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
@@ -1729,7 +1732,7 @@ def SWAPRd : FRd<0b1001,
                  (outs GPR8:$rd),
                  (ins GPR8:$src),
                  "swap\t$rd",
-                 [(set i8:$rd, (bswap i8:$src))]>;
+                 [(set i8:$rd, (AVRSwap i8:$src))]>;
 
 // IO register bit set/clear operations.
 //:TODO: add patterns when popcount(imm)==2 to be expanded with 2 sbi/cbi

@@ -56,6 +56,8 @@ enum NodeType {
   CMPC,
   /// Test for zero or minus instruction.
   TST,
+  /// Swap Rd[7:4] <-> Rd[3:0].
+  SWAP,
   /// Operand 0 and operand 1 are selection variable, operand 2
   /// is condition code and operand 3 is flag operand.
   SELECT_CC
