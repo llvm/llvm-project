@@ -1758,34 +1758,6 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::widenScalarAddoSubo(MachineInstr &MI, unsigned TypeIdx,
-                                     LLT WideTy) {
-  if (TypeIdx == 1)
-    return UnableToLegalize; // TODO
-  unsigned Op = MI.getOpcode();
-  unsigned Opcode = Op == TargetOpcode::G_UADDO || Op == TargetOpcode::G_SADDO
-                        ? TargetOpcode::G_ADD
-                        : TargetOpcode::G_SUB;
-  unsigned ExtOpcode =
-      Op == TargetOpcode::G_UADDO || Op == TargetOpcode::G_USUBO
-          ? TargetOpcode::G_ZEXT
-          : TargetOpcode::G_SEXT;
-  auto LHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(2)});
-  auto RHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(3)});
-  // Do the arithmetic in the larger type.
-  auto NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSExt, RHSExt});
-  LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
-  auto TruncOp = MIRBuilder.buildTrunc(OrigTy, NewOp);
-  auto ExtOp = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {TruncOp});
-  // There is no overflow if the ExtOp is the same as NewOp.
-  MIRBuilder.buildICmp(CmpInst::ICMP_NE, MI.getOperand(1), NewOp, ExtOp);
-  // Now trunc the NewOp to the original result.
-  MIRBuilder.buildTrunc(MI.getOperand(0), NewOp);
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
                                          LLT WideTy) {
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SADDSAT ||
@@ -1843,10 +1815,48 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_UNMERGE_VALUES:
     return widenScalarUnmergeValues(MI, TypeIdx, WideTy);
   case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_SSUBO: {
+    if (TypeIdx == 1)
+      return UnableToLegalize; // TODO
+    auto LHSExt = MIRBuilder.buildSExt(WideTy, MI.getOperand(2));
+    auto RHSExt = MIRBuilder.buildSExt(WideTy, MI.getOperand(3));
+    unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SADDO
+                          ? TargetOpcode::G_ADD
+                          : TargetOpcode::G_SUB;
+    auto NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSExt, RHSExt});
+    LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
+    auto TruncOp = MIRBuilder.buildTrunc(OrigTy, NewOp);
+    auto ExtOp = MIRBuilder.buildSExt(WideTy, TruncOp);
+    // There is no overflow if the re-extended result is the same as NewOp.
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, MI.getOperand(1), NewOp, ExtOp);
+    // Now trunc the NewOp to the original result.
+    MIRBuilder.buildTrunc(MI.getOperand(0), NewOp);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_UADDO:
-  case TargetOpcode::G_USUBO:
-    return widenScalarAddoSubo(MI, TypeIdx, WideTy);
+  case TargetOpcode::G_USUBO: {
+    if (TypeIdx == 1)
+      return UnableToLegalize; // TODO
+    auto LHSZext = MIRBuilder.buildZExt(WideTy, MI.getOperand(2));
+    auto RHSZext = MIRBuilder.buildZExt(WideTy, MI.getOperand(3));
+    unsigned Opcode = MI.getOpcode() == TargetOpcode::G_UADDO
+                          ? TargetOpcode::G_ADD
+                          : TargetOpcode::G_SUB;
+    // Do the arithmetic in the larger type.
+    auto NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSZext, RHSZext});
+    LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
+    APInt Mask =
+        APInt::getLowBitsSet(WideTy.getSizeInBits(), OrigTy.getSizeInBits());
+    auto AndOp = MIRBuilder.buildAnd(
+        WideTy, NewOp, MIRBuilder.buildConstant(WideTy, Mask));
+    // There is no overflow if the AndOp is the same as NewOp.
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, MI.getOperand(1), NewOp, AndOp);
+    // Now trunc the NewOp to the original result.
+    MIRBuilder.buildTrunc(MI.getOperand(0), NewOp);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_SADDSAT:
   case TargetOpcode::G_SSUBSAT:
   case TargetOpcode::G_SSHLSAT:
