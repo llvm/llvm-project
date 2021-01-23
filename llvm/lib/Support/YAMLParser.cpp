@@ -981,17 +981,9 @@ void Scanner::advanceWhile(SkipWhileFunc Func) {
   Current = Final;
 }
 
-static bool is_ns_hex_digit(const char C) {
-  return    (C >= '0' && C <= '9')
-         || (C >= 'a' && C <= 'z')
-         || (C >= 'A' && C <= 'Z');
-}
+static bool is_ns_hex_digit(const char C) { return isAlnum(C); }
 
-static bool is_ns_word_char(const char C) {
-  return    C == '-'
-         || (C >= 'a' && C <= 'z')
-         || (C >= 'A' && C <= 'Z');
-}
+static bool is_ns_word_char(const char C) { return C == '-' || isAlpha(C); }
 
 void Scanner::scan_ns_uri_char() {
   while (true) {
