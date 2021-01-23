@@ -420,10 +420,9 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   return TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
 }
 
-void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                  Register BaseReg,
-                                                  int FrameIdx,
-                                                  int64_t Offset) const {
+Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                      int FrameIdx,
+                                                      int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
   DebugLoc DL; // Defaults to "unknown"
 
@@ -432,16 +431,20 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   MachineFunction *MF = MBB->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned MovOpc = ST.enableFlatScratch() ? AMDGPU::S_MOV_B32
                                            : AMDGPU::V_MOV_B32_e32;
+
+  Register BaseReg = MRI.createVirtualRegister(
+      ST.enableFlatScratch() ? &AMDGPU::SReg_32_XEXEC_HIRegClass
+                             : &AMDGPU::VGPR_32RegClass);
 
   if (Offset == 0) {
     BuildMI(*MBB, Ins, DL, TII->get(MovOpc), BaseReg)
       .addFrameIndex(FrameIdx);
-    return;
+    return BaseReg;
   }
 
-  MachineRegisterInfo &MRI = MF->getRegInfo();
   Register OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   Register FIReg = MRI.createVirtualRegister(
@@ -457,13 +460,15 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_U32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
         .addReg(FIReg);
-    return;
+    return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
     .addReg(OffsetReg, RegState::Kill)
     .addReg(FIReg)
     .addImm(0); // clamp bit
+
+  return BaseReg;
 }
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
