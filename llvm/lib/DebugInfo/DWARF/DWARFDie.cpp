@@ -377,8 +377,7 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
   Seen.insert(*this);
 
   while (!Worklist.empty()) {
-    DWARFDie Die = Worklist.back();
-    Worklist.pop_back();
+    DWARFDie Die = Worklist.pop_back_val();
 
     if (!Die.isValid())
       continue;
