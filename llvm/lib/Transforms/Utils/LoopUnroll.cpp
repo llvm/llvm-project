@@ -590,6 +590,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                          << DIL->getFilename() << " Line: " << DIL->getLine());
           }
 
+  // Identify what noalias metadata is inside the loop: if it is inside the
+  // loop, the associated metadata must be cloned for each iteration.
+  SmallVector<MetadataAsValue *, 6> LoopLocalNoAliasDeclScopes;
+  identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
+
   for (unsigned It = 1; It != ULO.Count; ++It) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -682,6 +687,15 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (II->getIntrinsicID() == Intrinsic::assume)
             AC->registerAssumption(II);
       }
+    }
+
+    {
+      // Identify what other metadata depends on the cloned version. After
+      // cloning, replace the metadata with the corrected version for both
+      // memory instructions and noalias intrinsics.
+      std::string ext = (Twine("It") + Twine(It)).str();
+      cloneAndAdaptNoAliasScopes(LoopLocalNoAliasDeclScopes, NewBlocks,
+                                 Header->getContext(), ext);
     }
   }
 

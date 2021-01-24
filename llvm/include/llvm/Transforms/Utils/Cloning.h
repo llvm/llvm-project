@@ -268,6 +268,40 @@ void updateProfileCallee(
     Function *Callee, int64_t entryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
 
+/// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
+/// basic blocks and extract their scope. These are candidates for duplication
+/// when cloning.
+void identifyNoAliasScopesToClone(
+    ArrayRef<BasicBlock *> BBs,
+    SmallVectorImpl<MetadataAsValue *> &NoAliasDeclScopes);
+
+/// Duplicate the specified list of noalias decl scopes.
+/// The 'Ext' string is added as an extension to the name.
+/// Afterwards, the ClonedMVScopes contains a mapping of the original MV onto
+/// the cloned version.
+/// The ClonedScopes contains the mapping of the original scope MDNode onto the
+/// cloned scope.
+/// Be aware that the cloned scopes are still part of the original scope domain.
+void cloneNoAliasScopes(
+    ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
+    DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    DenseMap<MetadataAsValue *, MetadataAsValue *> &ClonedMVScopes,
+    StringRef Ext, LLVMContext &Context);
+
+/// Adapt the metadata for the specified instruction according to the
+/// provided mapping. This is normally used after cloning an instruction, when
+/// some noalias scopes needed to be cloned.
+void adaptNoAliasScopes(
+    llvm::Instruction *I, const DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    const DenseMap<MetadataAsValue *, MetadataAsValue *> &ClonedMVScopes,
+    LLVMContext &Context);
+
+/// Clone the specified noalias decl scopes. Then adapt all instructions in the
+/// NewBlocks basicblocks to the cloned versions.
+/// 'Ext' will be added to the duplicate scope names.
+void cloneAndAdaptNoAliasScopes(ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
+                                ArrayRef<BasicBlock *> NewBlocks,
+                                LLVMContext &Context, StringRef Ext);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H
