@@ -1228,9 +1228,9 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
 std::vector<CanonicalLoopInfo *>
 OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
                            ArrayRef<Value *> TileSizes) {
-  int NumLoops = Loops.size();
-  assert(TileSizes.size() == NumLoops &&
+  assert(TileSizes.size() == Loops.size() &&
          "Must pass as many tile sizes as there are loops");
+  int NumLoops = Loops.size();
   assert(NumLoops >= 1 && "At least one loop to tile required");
 
   CanonicalLoopInfo *OutermostLoop = Loops.front();
