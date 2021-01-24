@@ -40,8 +40,8 @@ private:
 /// edges.
 class EHFrameEdgeFixer {
 public:
-  EHFrameEdgeFixer(StringRef EHFrameSectionName, Edge::Kind FDEToCIE,
-                   Edge::Kind FDEToPCBegin, Edge::Kind FDEToLSDA);
+  EHFrameEdgeFixer(StringRef EHFrameSectionName, Edge::Kind Delta64,
+                   Edge::Kind NegDelta32);
   Error operator()(LinkGraph &G);
 
 private:
@@ -101,9 +101,8 @@ private:
   Expected<Symbol &> getOrCreateSymbol(ParseContext &PC, JITTargetAddress Addr);
 
   StringRef EHFrameSectionName;
-  Edge::Kind FDEToCIE;
-  Edge::Kind FDEToPCBegin;
-  Edge::Kind FDEToLSDA;
+  Edge::Kind Delta64;
+  Edge::Kind NegDelta32;
 };
 
 } // end namespace jitlink
