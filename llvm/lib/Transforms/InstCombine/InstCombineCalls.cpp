@@ -830,6 +830,30 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::umax:
+  case Intrinsic::umin: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    Value *X, *Y;
+    if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_ZExt(m_Value(Y))) &&
+        (I0->hasOneUse() || I1->hasOneUse()) && X->getType() == Y->getType()) {
+      Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
+      return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
+    }
+    // If both operands of unsigned min/max are sign-extended, it is still ok
+    // to narrow the operation.
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::smax:
+  case Intrinsic::smin: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    Value *X, *Y;
+    if (match(I0, m_SExt(m_Value(X))) && match(I1, m_SExt(m_Value(Y))) &&
+        (I0->hasOneUse() || I1->hasOneUse()) && X->getType() == Y->getType()) {
+      Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
+      return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
+    }
+    break;
+  }
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
