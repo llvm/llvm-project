@@ -6422,9 +6422,7 @@ class HorizontalReduction {
       // FP min/max are associative except for NaN and -0.0. We do not
       // have to rule out -0.0 here because the intrinsic semantics do not
       // specify a fixed result for it.
-      // TODO: This is artificially restricted to fast because the code that
-      //       creates reductions assumes/produces fast ops.
-      return I->getFastMathFlags().isFast();
+      return I->getFastMathFlags().noNaNs();
     }
 
     return I->isAssociative();
