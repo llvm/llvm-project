@@ -152,6 +152,7 @@ static void lto_add_attrs(lto_code_gen_t cg) {
     report_fatal_error("Optimization level must be between 0 and 3");
   CG->setOptLevel(OptLevel - '0');
   CG->setFreestanding(EnableFreestanding);
+  CG->setDisableVerify(DisableVerify);
 }
 
 extern const char* lto_get_version() {
@@ -432,7 +433,7 @@ bool lto_codegen_write_merged_modules(lto_code_gen_t cg, const char *path) {
 const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
   maybeParseOptions(cg);
   LibLTOCodeGenerator *CG = unwrap(cg);
-  CG->NativeObjectFile = CG->compile(DisableVerify);
+  CG->NativeObjectFile = CG->compile();
   if (!CG->NativeObjectFile)
     return nullptr;
   *length = CG->NativeObjectFile->getBufferSize();
@@ -441,7 +442,7 @@ const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
 
 bool lto_codegen_optimize(lto_code_gen_t cg) {
   maybeParseOptions(cg);
-  return !unwrap(cg)->optimize(DisableVerify);
+  return !unwrap(cg)->optimize();
 }
 
 const void *lto_codegen_compile_optimized(lto_code_gen_t cg, size_t *length) {
@@ -456,7 +457,7 @@ const void *lto_codegen_compile_optimized(lto_code_gen_t cg, size_t *length) {
 
 bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
   maybeParseOptions(cg);
-  return !unwrap(cg)->compile_to_file(name, DisableVerify);
+  return !unwrap(cg)->compile_to_file(name);
 }
 
 void lto_codegen_debug_options(lto_code_gen_t cg, const char *opt) {
