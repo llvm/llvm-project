@@ -281,7 +281,7 @@ define double @fcvt_d_w_i8(i8 signext %a) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_d_w_i8:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0
+; RV64IFD-NEXT:    fcvt.d.w ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = sitofp i8 %a to double
@@ -301,7 +301,7 @@ define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_d_wu_i8:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.lu ft0, a0
+; RV64IFD-NEXT:    fcvt.d.wu ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = uitofp i8 %a to double
@@ -321,7 +321,7 @@ define double @fcvt_d_w_i16(i16 signext %a) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_d_w_i16:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0
+; RV64IFD-NEXT:    fcvt.d.w ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = sitofp i16 %a to double
@@ -341,7 +341,7 @@ define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_d_wu_i16:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fcvt.d.lu ft0, a0
+; RV64IFD-NEXT:    fcvt.d.wu ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = uitofp i16 %a to double
