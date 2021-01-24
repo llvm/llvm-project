@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -13,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -3557,6 +3559,108 @@ bool CombinerHelper::matchLoadOrCombine(
     if (NeedsBSwap)
       MIB.buildBSwap(Dst, LoadDst);
   };
+  return true;
+}
+
+bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
+                                            MachineInstr *&ExtMI) {
+  assert(MI.getOpcode() == TargetOpcode::G_PHI);
+
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // TODO: Extending a vector may be expensive, don't do this until heuristics
+  // are better.
+  if (MRI.getType(DstReg).isVector())
+    return false;
+
+  // Try to match a phi, whose only use is an extend.
+  if (!MRI.hasOneNonDBGUse(DstReg))
+    return false;
+  ExtMI = &*MRI.use_instr_nodbg_begin(DstReg);
+  switch (ExtMI->getOpcode()) {
+  case TargetOpcode::G_ANYEXT:
+    return true; // G_ANYEXT is usually free.
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT:
+    break;
+  default:
+    return false;
+  }
+
+  // If the target is likely to fold this extend away, don't propagate.
+  if (Builder.getTII().isExtendLikelyToBeFolded(*ExtMI, MRI))
+    return false;
+
+  // We don't want to propagate the extends unless there's a good chance that
+  // they'll be optimized in some way.
+  // Collect the unique incoming values.
+  SmallPtrSet<MachineInstr *, 4> InSrcs;
+  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
+    auto *DefMI = getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI);
+    switch (DefMI->getOpcode()) {
+    case TargetOpcode::G_LOAD:
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_CONSTANT:
+      InSrcs.insert(getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI));
+      // Don't try to propagate if there are too many places to create new
+      // extends, chances are it'll increase code size.
+      if (InSrcs.size() > 2)
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
+bool CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
+                                            MachineInstr *&ExtMI) {
+  assert(MI.getOpcode() == TargetOpcode::G_PHI);
+  Register DstReg = ExtMI->getOperand(0).getReg();
+  LLT ExtTy = MRI.getType(DstReg);
+
+  // Propagate the extension into the block of each incoming reg's block.
+  // Use a SetVector here because PHIs can have duplicate edges, and we want
+  // deterministic iteration order.
+  SmallSetVector<MachineInstr *, 8> SrcMIs;
+  SmallDenseMap<MachineInstr *, MachineInstr *, 8> OldToNewSrcMap;
+  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); SrcIdx += 2) {
+    auto *SrcMI = MRI.getVRegDef(MI.getOperand(SrcIdx).getReg());
+    if (!SrcMIs.insert(SrcMI))
+      continue;
+
+    // Build an extend after each src inst.
+    auto *MBB = SrcMI->getParent();
+    MachineBasicBlock::iterator InsertPt = ++SrcMI->getIterator();
+    if (InsertPt != MBB->end() && InsertPt->isPHI())
+      InsertPt = MBB->getFirstNonPHI();
+
+    Builder.setInsertPt(*SrcMI->getParent(), InsertPt);
+    Builder.setDebugLoc(MI.getDebugLoc());
+    auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy,
+                                          SrcMI->getOperand(0).getReg());
+    OldToNewSrcMap[SrcMI] = NewExt;
+  }
+
+  // Create a new phi with the extended inputs.
+  Builder.setInstrAndDebugLoc(MI);
+  auto NewPhi = Builder.buildInstrNoInsert(TargetOpcode::G_PHI);
+  NewPhi.addDef(DstReg);
+  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); ++SrcIdx) {
+    auto &MO = MI.getOperand(SrcIdx);
+    if (!MO.isReg()) {
+      NewPhi.addMBB(MO.getMBB());
+      continue;
+    }
+    auto *NewSrc = OldToNewSrcMap[MRI.getVRegDef(MO.getReg())];
+    NewPhi.addUse(NewSrc->getOperand(0).getReg());
+  }
+  Builder.insertInstr(NewPhi);
+  ExtMI->eraseFromParent();
   return true;
 }
 
