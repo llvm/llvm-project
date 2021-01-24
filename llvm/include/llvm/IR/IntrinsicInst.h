@@ -1005,6 +1005,11 @@ public:
         cast<MetadataAsValue>(getOperand(Intrinsic::NoAliasScopeDeclScopeArg));
     return cast<MDNode>(MV->getMetadata());
   }
+
+  void setScopeList(MDNode *ScopeList) {
+    setOperand(Intrinsic::NoAliasScopeDeclScopeArg,
+               MetadataAsValue::get(getContext(), ScopeList));
+  }
 };
 
 } // end namespace llvm
