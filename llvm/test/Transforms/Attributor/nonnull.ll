@@ -146,34 +146,22 @@ define i8* @test3(i1 %c) {
 ; nonnull if neither can ever return null.  (In this case, they
 ; just never return period.)
 define i8* @test4_helper() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; NOT_CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4()
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; IS__CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
-; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4()
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4_helper
+; CHECK-SAME: () [[ATTR2:#.*]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; NOT_CGSCC_NPM-SAME: () [[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4_helper()
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; IS__CGSCC_NPM-SAME: () [[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8* @test4_helper()
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4
+; CHECK-SAME: () [[ATTR2]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4_helper() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4_helper()
   ret i8* %ret
@@ -802,7 +790,7 @@ declare void @use1nonnull(i8* nonnull %x);
 declare void @use2nonnull(i8* nonnull %x, i8* nonnull %y);
 declare void @use3nonnull(i8* nonnull %x, i8* nonnull %y, i8* nonnull %z);
 
-declare i8 @use1safecall(i8* %x) readonly nounwind ; readonly+nounwind guarantees that execution continues to successor
+declare i8 @use1safecall(i8* %x) readonly nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
 ; Can't extend non-null to parent for any argument because the 2nd call is not guaranteed to execute.
 
@@ -1524,7 +1512,7 @@ define i8* @mybasename(i8* nofree readonly %str) {
 ; NOT_CGSCC_OPM: Function Attrs: nofree nounwind readonly willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR11:#.*]] {
-; NOT_CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR15:#.*]]
+; NOT_CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR14]]
 ; NOT_CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
 ; NOT_CGSCC_OPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
 ; NOT_CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
@@ -1533,7 +1521,7 @@ define i8* @mybasename(i8* nofree readonly %str) {
 ; IS__CGSCC_OPM: Function Attrs: nofree nounwind readonly willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; IS__CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR12:#.*]] {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR16:#.*]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR15]]
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
 ; IS__CGSCC_OPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
 ; IS__CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]

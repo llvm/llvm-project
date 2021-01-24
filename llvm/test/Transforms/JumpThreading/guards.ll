@@ -206,7 +206,7 @@ BB2:
   ret void
 }
 
-declare void @dummy(i1) nounwind argmemonly
+declare void @dummy(i1) nounwind willreturn
 ; same as dont_fold_guard1 but there's a use immediately after guard and before
 ; branch. We can fold that use.
 define void @dont_fold_guard2(i8* %addr, i32 %i, i32 %length) {
