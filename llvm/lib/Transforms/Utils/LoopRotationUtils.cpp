@@ -35,6 +35,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
@@ -400,6 +401,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         break;
     }
 
+    // Remember the local noalias scope declarations in the header. After the
+    // rotation, they must be duplicated and the scope must be cloned. This
+    // avoids unwanted interaction across iterations.
+    SmallVector<Instruction *, 6> NoAliasDeclInstructions;
+    for (Instruction &I : *OrigHeader)
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        NoAliasDeclInstructions.push_back(Decl);
+
     while (I != E) {
       Instruction *Inst = &*I++;
 
@@ -457,6 +466,70 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         // not whether it can be remapped to a simplified value.
         if (MSSAU)
           InsertNewValueIntoMap(ValueMapMSSA, Inst, C);
+      }
+    }
+
+    if (!NoAliasDeclInstructions.empty()) {
+      // There are noalias scope declarations:
+      // (general):
+      // Original:    OrigPre              { OrigHeader NewHeader ... Latch }
+      // after:      (OrigPre+OrigHeader') { NewHeader ... Latch OrigHeader }
+      //
+      // with D: llvm.experimental.noalias.scope.decl,
+      //      U: !noalias or !alias.scope depending on D
+      //       ... { D U1 U2 }   can transform into:
+      // (0) : ... { D U1 U2 }        // no relevant rotation for this part
+      // (1) : ... D' { U1 U2 D }     // D is part of OrigHeader
+      // (2) : ... D' U1' { U2 D U1 } // D, U1 are part of OrigHeader
+      //
+      // We now want to transform:
+      // (1) -> : ... D' { D U1 U2 D'' }
+      // (2) -> : ... D' U1' { D U2 D'' U1'' }
+      // D: original llvm.experimental.noalias.scope.decl
+      // D', U1': duplicate with replaced scopes
+      // D'', U1'': different duplicate with replaced scopes
+      // This ensures a safe fallback to 'may_alias' introduced by the rotate,
+      // as U1'' and U1' scopes will not be compatible wrt to the local restrict
+
+      // Clone the llvm.experimental.noalias.decl again for the NewHeader.
+      Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
+      for (Instruction *NAD : NoAliasDeclInstructions) {
+        LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
+                          << *NAD << "\n");
+        Instruction *NewNAD = NAD->clone();
+        NewNAD->insertBefore(NewHeaderInsertionPoint);
+      }
+
+      // Scopes must now be duplicated, once for OrigHeader and once for
+      // OrigPreHeader'.
+      {
+        auto &Context = NewHeader->getContext();
+
+        SmallVector<MetadataAsValue *, 8> NoAliasDeclScopes;
+        for (Instruction *NAD : NoAliasDeclInstructions)
+          NoAliasDeclScopes.push_back(cast<MetadataAsValue>(
+              NAD->getOperand(Intrinsic::NoAliasScopeDeclScopeArg)));
+
+        LLVM_DEBUG(dbgs() << "  Updating OrigHeader scopes\n");
+        cloneAndAdaptNoAliasScopes(NoAliasDeclScopes, {OrigHeader}, Context,
+                                   "h.rot");
+        LLVM_DEBUG(OrigHeader->dump());
+
+        // Keep the compile time impact low by only adapting the inserted block
+        // of instructions in the OrigPreHeader. This might result in slightly
+        // more aliasing between these instructions and those that were already
+        // present, but it will be much faster when the original PreHeader is
+        // large.
+        LLVM_DEBUG(dbgs() << "  Updating part of OrigPreheader scopes\n");
+        auto *FirstDecl =
+            cast<Instruction>(ValueMap[*NoAliasDeclInstructions.begin()]);
+        auto *LastInst = &OrigPreheader->back();
+        cloneAndAdaptNoAliasScopes(NoAliasDeclScopes, FirstDecl, LastInst,
+                                   Context, "pre.rot");
+        LLVM_DEBUG(OrigPreheader->dump());
+
+        LLVM_DEBUG(dbgs() << "  Updated NewHeader:\n");
+        LLVM_DEBUG(NewHeader->dump());
       }
     }
 
