@@ -58,7 +58,7 @@ def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
 
 def FeatureExtZba
     : SubtargetFeature<"experimental-zba", "HasStdExtZba", "true",
-                       "'Zba' (Base 'B' Instructions)">;
+                       "'Zba' (Address calculation 'B' Instructions)">;
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                              AssemblerPredicate<(all_of FeatureExtZba),
                              "'Zba' (Address calculation 'B' Instructions)">;
