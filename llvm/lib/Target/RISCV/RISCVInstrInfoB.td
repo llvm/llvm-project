@@ -694,9 +694,9 @@ def : Pat<(xor GPR:$rs1, (not GPR:$rs2)), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbp] in {
-def : Pat<(not (shl (not GPR:$rs1), GPR:$rs2)),
+def : Pat<(not (shiftop<shl> (not GPR:$rs1), GPR:$rs2)),
           (SLO GPR:$rs1, GPR:$rs2)>;
-def : Pat<(not (srl (not GPR:$rs1), GPR:$rs2)),
+def : Pat<(not (shiftop<srl> (not GPR:$rs1), GPR:$rs2)),
           (SRO GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbp]
 
@@ -960,9 +960,9 @@ def : Pat<(add (SLLIUWPat GPR:$rs1, (XLenVT 3)), GPR:$rs2),
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(not (riscv_sllw (not GPR:$rs1), GPR:$rs2)),
+def : Pat<(not (shiftopw<riscv_sllw> (not GPR:$rs1), GPR:$rs2)),
           (SLOW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(not (riscv_srlw (not GPR:$rs1), GPR:$rs2)),
+def : Pat<(not (shiftopw<riscv_srlw> (not GPR:$rs1), GPR:$rs2)),
           (SROW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 

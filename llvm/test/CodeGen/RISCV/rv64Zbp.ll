@@ -86,13 +86,11 @@ define i64 @slo_i64_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: slo_i64_mask:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    andi a1, a1, 63
 ; RV64IB-NEXT:    slo a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: slo_i64_mask:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    andi a1, a1, 63
 ; RV64IBP-NEXT:    slo a0, a0, a1
 ; RV64IBP-NEXT:    ret
   %neg = xor i64 %a, -1
@@ -182,13 +180,11 @@ define i64 @sro_i64_mask(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IB-LABEL: sro_i64_mask:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    andi a1, a1, 63
 ; RV64IB-NEXT:    sro a0, a0, a1
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: sro_i64_mask:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    andi a1, a1, 63
 ; RV64IBP-NEXT:    sro a0, a0, a1
 ; RV64IBP-NEXT:    ret
   %neg = xor i64 %a, -1
