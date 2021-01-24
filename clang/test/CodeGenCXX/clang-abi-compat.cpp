@@ -130,4 +130,9 @@ template void test7<A>(A::Int<1>);
 template<int N> using matrix1xN = int __attribute__((matrix_type(1, N)));
 template<int N> void test8(matrix1xN<N> a) {}
 template void test8<2>(matrix1xN<2> a);
+
+// PRE12: @_ZN12expr_primary5test9EUa9enable_ifIXLi1EEEv
+// V12:   @_ZN12expr_primary5test9EUa9enable_ifILi1EEv
+void test9(void) __attribute__((enable_if(1, ""))) {}
+
 }
