@@ -3766,6 +3766,55 @@ bool InstCombinerImpl::run() {
   return MadeIRChange;
 }
 
+// Track the scopes used by !alias.scope and !noalias. In a function, a
+// @llvm.experimental.noalias.scope.decl is only useful if that scope is used
+// by both sets. If not, the declaration of the scope can be safely omitted.
+// The MDNode of the scope can be omitted as well for the instructions that are
+// part of this function. We do not do that at this point, as this might become
+// too time consuming to do.
+class AliasScopeTracker {
+  SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
+  SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+
+public:
+  void analyse(Instruction *I) {
+    // This seems to be faster than checking 'mayReadOrWriteMemory()'.
+    if (!I->hasMetadataOtherThanDebugLoc())
+      return;
+
+    auto Track = [](Metadata *ScopeList, auto &Container) {
+      const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
+      if (!MDScopeList || !Container.insert(MDScopeList).second)
+        return;
+      for (auto &MDOperand : MDScopeList->operands())
+        if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
+          Container.insert(MDScope);
+    };
+
+    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
+  }
+
+  bool isNoAliasScopeDeclDead(Instruction *Inst) {
+    NoAliasScopeDeclInst *Decl = dyn_cast<NoAliasScopeDeclInst>(Inst);
+    if (!Decl)
+      return false;
+
+    assert(Decl->use_empty() &&
+           "llvm.experimental.noalias.scope.decl in use ?");
+    const MDNode *MDSL = Decl->getScopeList();
+    assert(MDSL->getNumOperands() == 1 &&
+           "llvm.experimental.noalias.scope should refer to a single scope");
+    auto &MDOperand = MDSL->getOperand(0);
+    if (auto *MD = dyn_cast<MDNode>(MDOperand))
+      return !UsedAliasScopesAndLists.contains(MD) ||
+             !UsedNoAliasScopesAndLists.contains(MD);
+
+    // Not an MDNode ? throw away.
+    return true;
+  }
+};
+
 /// Populate the IC worklist from a function, by walking it in depth-first
 /// order and adding all reachable code to the worklist.
 ///
@@ -3784,6 +3833,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
 
   SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
+  AliasScopeTracker SeenAliasScopes;
 
   do {
     BasicBlock *BB = Worklist.pop_back_val();
@@ -3830,8 +3880,10 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
 
       // Skip processing debug intrinsics in InstCombine. Processing these call instructions
       // consumes non-trivial amount of time and provides no value for the optimization.
-      if (!isa<DbgInfoIntrinsic>(Inst))
+      if (!isa<DbgInfoIntrinsic>(Inst)) {
         InstrsForInstCombineWorklist.push_back(Inst);
+        SeenAliasScopes.analyse(Inst);
+      }
     }
 
     // Recursively visit successors.  If this is a branch or switch on a
@@ -3879,7 +3931,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   for (Instruction *Inst : reverse(InstrsForInstCombineWorklist)) {
     // DCE instruction if trivially dead. As we iterate in reverse program
     // order here, we will clean up whole chains of dead instructions.
-    if (isInstructionTriviallyDead(Inst, TLI)) {
+    if (isInstructionTriviallyDead(Inst, TLI) ||
+        SeenAliasScopes.isNoAliasScopeDeclDead(Inst)) {
       ++NumDeadInst;
       LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
       salvageDebugInfo(*Inst);

@@ -302,6 +302,13 @@ void adaptNoAliasScopes(
 void cloneAndAdaptNoAliasScopes(ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
                                 ArrayRef<BasicBlock *> NewBlocks,
                                 LLVMContext &Context, StringRef Ext);
+
+/// Clone the specified noalias decl scopes. Then adapt all instructions in the
+/// [IStart, IEnd] (IEnd included !) range to the cloned versions. 'Ext' will be
+/// added to the duplicate scope names.
+void cloneAndAdaptNoAliasScopes(ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
+                                Instruction *IStart, Instruction *IEnd,
+                                LLVMContext &Context, StringRef Ext);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

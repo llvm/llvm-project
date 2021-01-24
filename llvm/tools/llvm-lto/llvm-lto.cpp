@@ -953,6 +953,7 @@ int main(int argc, char **argv) {
                                true);
 
   LTOCodeGenerator CodeGen(Context);
+  CodeGen.setDisableVerify(DisableVerify);
 
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
@@ -1026,7 +1027,7 @@ int main(int argc, char **argv) {
         error("writing linked module failed.");
     }
 
-    if (!CodeGen.optimize(DisableVerify)) {
+    if (!CodeGen.optimize()) {
       // Diagnostic messages should have been printed by the handler.
       error("error optimizing the code");
     }
@@ -1067,7 +1068,7 @@ int main(int argc, char **argv) {
       error(": -save-merged-module must be specified with -o");
 
     const char *OutputName = nullptr;
-    if (!CodeGen.compile_to_file(&OutputName, DisableVerify))
+    if (!CodeGen.compile_to_file(&OutputName))
       error("error compiling the code");
       // Diagnostic messages should have been printed by the handler.
 
