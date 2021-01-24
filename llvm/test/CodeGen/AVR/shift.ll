@@ -152,3 +152,29 @@ define i8 @lsr_i8_6(i8 %a) {
   %res = lshr i8 %a, 6
   ret i8 %res
 }
+
+define i8 @lsl_i8_7(i8 %a) {
+; CHECK-LABEL: lsl_i8_7
+; CHECK:      ror r24
+; CHECK-NEXT: clr r24
+; CHECK-NEXT: ror r24
+  %result = shl i8 %a, 7
+  ret i8 %result
+}
+
+define i8 @lsr_i8_7(i8 %a) {
+; CHECK-LABEL: lsr_i8_7
+; CHECK:      rol r24
+; CHECK-NEXT: clr r24
+; CHECK-NEXT: rol r24
+  %result = lshr i8 %a, 7
+  ret i8 %result
+}
+
+define i8 @asr_i8_7(i8 %a) {
+; CHECK-LABEL: asr_i8_7
+; CHECK:      lsl r24
+; CHECK-NEXT: sbc r24, r24
+  %result = ashr i8 %a, 7
+  ret i8 %result
+}
