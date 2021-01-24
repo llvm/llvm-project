@@ -1046,7 +1046,6 @@ def : Pat<(sext_inreg (or (shl GPR:$rs2, (i64 16)),
                       i32),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
-              (srl (and GPR:$rs1, 0x00000000FFFF0000),
-                   (i64 16))),
+              (SRLIWPat GPR:$rs1, (i64 16))),
           (PACKUW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
