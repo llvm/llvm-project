@@ -766,8 +766,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
 
   // Iterate while we still have blocks to update.
   while (!DirtyBlocks.empty()) {
-    BasicBlock *DirtyBB = DirtyBlocks.back();
-    DirtyBlocks.pop_back();
+    BasicBlock *DirtyBB = DirtyBlocks.pop_back_val();
 
     // Already processed this block?
     if (!Visited.insert(DirtyBB).second)

@@ -163,6 +163,12 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_vAttachWait,
       &GDBRemoteCommunicationServerLLGS::Handle_vAttachWait);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qVAttachOrWaitSupported,
+      &GDBRemoteCommunicationServerLLGS::Handle_qVAttachOrWaitSupported);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vAttachOrWait,
+      &GDBRemoteCommunicationServerLLGS::Handle_vAttachOrWait);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vCont,
       &GDBRemoteCommunicationServerLLGS::Handle_vCont);
   RegisterMemberFunctionHandler(
@@ -338,7 +344,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
 }
 
 Status GDBRemoteCommunicationServerLLGS::AttachWaitProcess(
-    llvm::StringRef process_name) {
+    llvm::StringRef process_name, bool include_existing) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   std::chrono::milliseconds polling_interval = std::chrono::milliseconds(1);
@@ -347,13 +353,17 @@ Status GDBRemoteCommunicationServerLLGS::AttachWaitProcess(
   ProcessInstanceInfoList exclusion_list;
   ProcessInstanceInfoMatch match_info;
   match_info.GetProcessInfo().GetExecutableFile().SetFile(
-      process_name, llvm::sys::path::Style::posix);
-  match_info.SetNameMatchType(NameMatch::EndsWith);
+      process_name, llvm::sys::path::Style::native);
+  match_info.SetNameMatchType(NameMatch::Equals);
 
-  // Create the excluded process list before polling begins.
-  Host::FindProcesses(match_info, exclusion_list);
-  LLDB_LOG(log, "placed '{0}' processes in the exclusion list.",
-           exclusion_list.size());
+  if (include_existing) {
+    LLDB_LOG(log, "including existing processes in search");
+  } else {
+    // Create the excluded process list before polling begins.
+    Host::FindProcesses(match_info, exclusion_list);
+    LLDB_LOG(log, "placed '{0}' processes in the exclusion list.",
+             exclusion_list.size());
+  }
 
   LLDB_LOG(log, "waiting for '{0}' to appear", process_name);
 
@@ -3275,7 +3285,43 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachWait(
 
   LLDB_LOG(log, "attempting to attach to process named '{0}'", process_name);
 
-  Status error = AttachWaitProcess(process_name);
+  Status error = AttachWaitProcess(process_name, false);
+  if (error.Fail()) {
+    LLDB_LOG(log, "failed to attach to process named '{0}': {1}", process_name,
+             error);
+    return SendErrorResponse(error);
+  }
+
+  // Notify we attached by sending a stop packet.
+  return SendStopReasonForState(m_debugged_process_up->GetState());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_qVAttachOrWaitSupported(
+    StringExtractorGDBRemote &packet) {
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vAttachOrWait(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // Consume the ';' after the identifier.
+  packet.SetFilePos(strlen("vAttachOrWait"));
+
+  if (!packet.GetBytesLeft() || packet.GetChar() != ';')
+    return SendIllFormedResponse(packet, "vAttachOrWait missing expected ';'");
+
+  // Allocate the buffer for the process name from vAttachWait.
+  std::string process_name;
+  if (!packet.GetHexByteString(process_name))
+    return SendIllFormedResponse(packet,
+                                 "vAttachOrWait failed to parse process name");
+
+  LLDB_LOG(log, "attempting to attach to process named '{0}'", process_name);
+
+  Status error = AttachWaitProcess(process_name, true);
   if (error.Fail()) {
     LLDB_LOG(log, "failed to attach to process named '{0}': {1}", process_name,
              error);

@@ -2114,8 +2114,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       unsigned NumExtras = TargetAlign.value() / 4;
       SmallVector<unsigned, 2> Extras;
       while (NumExtras && !UnspilledCS1GPRs.empty()) {
-        unsigned Reg = UnspilledCS1GPRs.back();
-        UnspilledCS1GPRs.pop_back();
+        unsigned Reg = UnspilledCS1GPRs.pop_back_val();
         if (!MRI.isReserved(Reg) &&
             (!AFI->isThumb1OnlyFunction() || isARMLowRegister(Reg))) {
           Extras.push_back(Reg);
@@ -2125,8 +2124,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // For non-Thumb1 functions, also check for hi-reg CS registers
       if (!AFI->isThumb1OnlyFunction()) {
         while (NumExtras && !UnspilledCS2GPRs.empty()) {
-          unsigned Reg = UnspilledCS2GPRs.back();
-          UnspilledCS2GPRs.pop_back();
+          unsigned Reg = UnspilledCS2GPRs.pop_back_val();
           if (!MRI.isReserved(Reg)) {
             Extras.push_back(Reg);
             NumExtras--;

@@ -279,11 +279,6 @@ CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
-ifneq (,$(LLVM_LIBS_DIR))
-	ifeq ($(OS),NetBSD)
-		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LLVM_LIBS_DIR)
-	endif
-endif
 ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
@@ -393,20 +388,17 @@ endif
 
 ifeq (1,$(USE_LIBCPP))
 	CXXFLAGS += -DLLDB_USING_LIBCPP
-	ifeq "$(OS)" "Linux"
-		ifneq (,$(findstring clang,$(CC)))
-			CXXFLAGS += -stdlib=libc++
-			LDFLAGS += -stdlib=libc++
-		else
-			CXXFLAGS += -isystem /usr/include/c++/v1
-			LDFLAGS += -lc++
-		endif
-	else ifeq "$(OS)" "Android"
+	ifeq "$(OS)" "Android"
 		# Nothing to do, this is already handled in
 		# Android.rules.
 	else
 		CXXFLAGS += -stdlib=libc++
 		LDFLAGS += -stdlib=libc++
+	endif
+	ifneq (,$(filter $(OS), FreeBSD Linux NetBSD))
+		ifneq (,$(LLVM_LIBS_DIR))
+			LDFLAGS += -Wl,-rpath,$(LLVM_LIBS_DIR)
+		endif
 	endif
 endif
 

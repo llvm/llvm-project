@@ -148,9 +148,7 @@ queue_preds:
       return false;
     }
 
-    for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-         PIE = MBB->pred_end(); PI != PIE; ++PI)
-      Preds.push_back(*PI);
+    append_range(Preds, MBB->predecessors());
   }
 
   do {
