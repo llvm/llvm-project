@@ -732,8 +732,7 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
   Worklist.emplace_back(Die, Cu, Flags);
 
   while (!Worklist.empty()) {
-    WorklistItem Current = Worklist.back();
-    Worklist.pop_back();
+    WorklistItem Current = Worklist.pop_back_val();
 
     // Look at the worklist type to decide what kind of work to perform.
     switch (Current.Type) {

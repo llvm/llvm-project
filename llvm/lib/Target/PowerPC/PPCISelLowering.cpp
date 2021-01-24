@@ -12605,8 +12605,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
   // Visit all inputs, collect all binary operations (and, or, xor and
   // select) that are all fed by extensions.
   while (!BinOps.empty()) {
-    SDValue BinOp = BinOps.back();
-    BinOps.pop_back();
+    SDValue BinOp = BinOps.pop_back_val();
 
     if (!Visited.insert(BinOp.getNode()).second)
       continue;
@@ -12821,8 +12820,7 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
   // Visit all inputs, collect all binary operations (and, or, xor and
   // select) that are all fed by truncations.
   while (!BinOps.empty()) {
-    SDValue BinOp = BinOps.back();
-    BinOps.pop_back();
+    SDValue BinOp = BinOps.pop_back_val();
 
     if (!Visited.insert(BinOp.getNode()).second)
       continue;
