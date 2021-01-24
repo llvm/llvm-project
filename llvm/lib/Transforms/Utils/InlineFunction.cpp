@@ -927,11 +927,8 @@ void ScopedAliasMetadataDeepCloner::remap(ValueToValueMapTy &VMap) {
     if (MDNode *M = I->getMetadata(LLVMContext::MD_noalias))
       I->setMetadata(LLVMContext::MD_noalias, MDMap[M]);
 
-    if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
-      auto *NewMV =
-          MetadataAsValue::get(Decl->getContext(), MDMap[Decl->getScopeList()]);
-      Decl->setOperand(Intrinsic::NoAliasScopeDeclScopeArg, NewMV);
-    }
+    if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I))
+      Decl->setScopeList(MDMap[Decl->getScopeList()]);
   }
 }
 

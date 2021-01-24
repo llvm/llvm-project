@@ -404,7 +404,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
     // avoids unwanted interaction across iterations.
-    SmallVector<Instruction *, 6> NoAliasDeclInstructions;
+    SmallVector<NoAliasScopeDeclInst *, 6> NoAliasDeclInstructions;
     for (Instruction &I : *OrigHeader)
       if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
         NoAliasDeclInstructions.push_back(Decl);
@@ -493,7 +493,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
       Instruction *NewHeaderInsertionPoint = &(*NewHeader->getFirstNonPHI());
-      for (Instruction *NAD : NoAliasDeclInstructions) {
+      for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
         Instruction *NewNAD = NAD->clone();
@@ -505,10 +505,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       {
         auto &Context = NewHeader->getContext();
 
-        SmallVector<MetadataAsValue *, 8> NoAliasDeclScopes;
-        for (Instruction *NAD : NoAliasDeclInstructions)
-          NoAliasDeclScopes.push_back(cast<MetadataAsValue>(
-              NAD->getOperand(Intrinsic::NoAliasScopeDeclScopeArg)));
+        SmallVector<MDNode *, 8> NoAliasDeclScopes;
+        for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions)
+          NoAliasDeclScopes.push_back(NAD->getScopeList());
 
         LLVM_DEBUG(dbgs() << "  Updating OrigHeader scopes\n");
         cloneAndAdaptNoAliasScopes(NoAliasDeclScopes, {OrigHeader}, Context,
