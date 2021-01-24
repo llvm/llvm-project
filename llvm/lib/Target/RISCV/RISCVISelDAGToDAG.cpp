@@ -871,7 +871,7 @@ bool RISCVDAGToDAGISel::MatchSLLIUW(SDNode *N) const {
 
   // Immediate range should be enforced by uimm5 predicate.
   assert(VC2 < 32 && "Unexpected immediate");
-  return VC1 == ((uint64_t)0xFFFFFFFF << VC2);
+  return (VC1 >> VC2) == UINT64_C(0xFFFFFFFF);
 }
 
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
