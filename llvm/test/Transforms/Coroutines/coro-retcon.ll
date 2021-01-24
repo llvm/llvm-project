@@ -78,7 +78,6 @@ entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[SLOT]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LOAD]], 1
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT:    ret i32 0
 
 define hidden { i8*, i8* } @g(i8* %buffer, i16* %ptr) {
