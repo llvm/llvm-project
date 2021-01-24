@@ -27,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -35,6 +36,8 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <map>
 using namespace llvm;
+
+#define DEBUG_TYPE "clone-function"
 
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
@@ -880,4 +883,97 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
   }
 
   return NewBB;
+}
+
+void llvm::cloneNoAliasScopes(
+    ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
+    DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    DenseMap<MetadataAsValue *, MetadataAsValue *> &ClonedMVScopes,
+    StringRef Ext, LLVMContext &Context) {
+  MDBuilder MDB(Context);
+
+  for (auto *MV : NoAliasDeclScopes) {
+    SmallVector<Metadata *, 4> ScopeList;
+    for (auto &MDOperand : cast<MDNode>(MV->getMetadata())->operands()) {
+      if (MDNode *MD = dyn_cast<MDNode>(MDOperand)) {
+        AliasScopeNode SNANode(MD);
+
+        std::string Name;
+        auto ScopeName = SNANode.getName();
+        if (!ScopeName.empty())
+          Name = (Twine(ScopeName) + ":" + Ext).str();
+        else
+          Name = std::string(Ext);
+
+        MDNode *NewScope = MDB.createAnonymousAliasScope(
+            const_cast<MDNode *>(SNANode.getDomain()), Name);
+        ClonedScopes.insert(std::make_pair(MD, NewScope));
+        ScopeList.push_back(NewScope);
+      }
+    }
+    MDNode *NewScopeList = MDNode::get(Context, ScopeList);
+    ClonedMVScopes.insert(
+        std::make_pair(MV, MetadataAsValue::get(Context, NewScopeList)));
+  }
+}
+
+void llvm::adaptNoAliasScopes(
+    Instruction *I, const DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    const DenseMap<MetadataAsValue *, MetadataAsValue *> &ClonedMVScopes,
+    LLVMContext &Context) {
+  // MetadataAsValue will always be replaced !
+  for (Use &U : I->operands())
+    if (MetadataAsValue *MV = dyn_cast<MetadataAsValue>(U))
+      if (auto *NewMV = ClonedMVScopes.lookup(MV))
+        U.set(NewMV);
+
+  auto replaceWhenNeeded = [&](unsigned MD_ID) {
+    if (const MDNode *CSNoAlias = I->getMetadata(MD_ID)) {
+      bool NeedsReplacement = false;
+      SmallVector<Metadata *, 8> NewScopeList;
+      for (auto &MDOp : CSNoAlias->operands()) {
+        if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
+          if (auto *NewMD = ClonedScopes.lookup(MD)) {
+            NewScopeList.push_back(NewMD);
+            NeedsReplacement = true;
+            continue;
+          }
+          NewScopeList.push_back(MD);
+        }
+      }
+      if (NeedsReplacement)
+        I->setMetadata(MD_ID, MDNode::get(Context, NewScopeList));
+    }
+  };
+  replaceWhenNeeded(LLVMContext::MD_noalias);
+  replaceWhenNeeded(LLVMContext::MD_alias_scope);
+}
+
+void llvm::cloneAndAdaptNoAliasScopes(
+    ArrayRef<MetadataAsValue *> NoAliasDeclScopes,
+    ArrayRef<BasicBlock *> NewBlocks, LLVMContext &Context, StringRef Ext) {
+  if (NoAliasDeclScopes.empty())
+    return;
+
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<MetadataAsValue *, MetadataAsValue *> ClonedMVScopes;
+  LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
+                    << NoAliasDeclScopes.size() << " node(s)\n");
+
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, ClonedMVScopes, Ext,
+                     Context);
+  // Identify instructions using metadata that needs adaptation
+  for (BasicBlock *NewBlock : NewBlocks)
+    for (Instruction &I : *NewBlock)
+      adaptNoAliasScopes(&I, ClonedScopes, ClonedMVScopes, Context);
+}
+
+void llvm::identifyNoAliasScopesToClone(
+    ArrayRef<BasicBlock *> BBs,
+    SmallVectorImpl<MetadataAsValue *> &NoAliasDeclScopes) {
+  for (BasicBlock *BB : BBs)
+    for (Instruction &I : *BB)
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        NoAliasDeclScopes.push_back(cast<MetadataAsValue>(
+            Decl->getOperand(Intrinsic::NoAliasScopeDeclScopeArg)));
 }
