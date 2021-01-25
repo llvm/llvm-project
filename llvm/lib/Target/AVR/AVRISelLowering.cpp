@@ -455,6 +455,36 @@ static AVRCC::CondCodes intCCToAVRCC(ISD::CondCode CC) {
   }
 }
 
+/// Returns appropriate CP/CPI/CPC nodes code for the given 8/16-bit operands.
+SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
+                                     SelectionDAG &DAG, SDLoc DL) const {
+  assert((LHS.getSimpleValueType() == RHS.getSimpleValueType()) &&
+         "LHS and RHS have different types");
+  assert(((LHS.getSimpleValueType() == MVT::i16) ||
+          (LHS.getSimpleValueType() == MVT::i8)) && "invalid comparison type");
+
+  SDValue Cmp;
+
+  if (LHS.getSimpleValueType() == MVT::i16 && dyn_cast<ConstantSDNode>(RHS)) {
+    // Generate a CPI/CPC pair if RHS is a 16-bit constant.
+    SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                DAG.getIntPtrConstant(0, DL));
+    SDValue LHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                DAG.getIntPtrConstant(1, DL));
+    SDValue RHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                DAG.getIntPtrConstant(0, DL));
+    SDValue RHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                DAG.getIntPtrConstant(1, DL));
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+    Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
+  } else {
+    // Generate ordinary 16-bit comparison.
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS, RHS);
+  }
+
+  return Cmp;
+}
+
 /// Returns appropriate AVR CMP/CMPC nodes and corresponding condition code for
 /// the given operands.
 SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -567,7 +597,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                 DAG.getIntPtrConstant(1, DL));
       Cmp = DAG.getNode(AVRISD::TST, DL, MVT::Glue, Top);
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+      Cmp = getAVRCmp(LHSlo, RHSlo, DAG, DL);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
     }
   } else if (VT == MVT::i64) {
@@ -605,7 +635,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                 DAG.getIntPtrConstant(1, DL));
       Cmp = DAG.getNode(AVRISD::TST, DL, MVT::Glue, Top);
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS0, RHS0);
+      Cmp = getAVRCmp(LHS0, RHS0, DAG, DL);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS1, RHS1, Cmp);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS2, RHS2, Cmp);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS3, RHS3, Cmp);
@@ -619,7 +649,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                             : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8,
                                           LHS, DAG.getIntPtrConstant(1, DL)));
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS, RHS);
+      Cmp = getAVRCmp(LHS, RHS, DAG, DL);
     }
   } else {
     llvm_unreachable("Invalid comparison size");
