@@ -214,7 +214,7 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
-def save_temps: F<"save-temps">;
+def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;

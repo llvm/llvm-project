@@ -2282,6 +2282,26 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
+**IncludeSortAlphabetically** (``bool``)
+  Specify if sorting should be done in an alphabetical and
+  case sensitive fashion.
+
+  When ``false``, includes are sorted in an ASCIIbetical
+  fashion.
+  When ``true``, includes are sorted in an alphabetical
+  fashion with case used as a tie-breaker.
+
+  .. code-block:: c++
+
+     false:                                   true:
+     #include "A/B.h"               vs.       #include "A/B.h"
+     #include "A/b.h"                         #include "A/b.h"
+     #include "B/A.h"                         #include "a/b.h"
+     #include "B/a.h"                         #include "B/A.h"
+     #include "a/b.h"                         #include "B/a.h"
+
+  This option is off by default.
+
 **IndentCaseBlocks** (``bool``)
   Indent case label blocks one level from the case label.
 

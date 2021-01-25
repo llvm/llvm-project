@@ -990,6 +990,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         {std::string(Split.first), std::string(Split.second)});
   }
 
+  for (const auto &Arg : Args.getAllArgValues(OPT_fprofile_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    Opts.ProfilePrefixMap.insert(
+        {std::string(Split.first), std::string(Split.second)});
+  }
+
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
       llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
       llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,

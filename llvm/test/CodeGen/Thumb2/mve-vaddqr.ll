@@ -86,14 +86,13 @@ entry:
   ret <4 x float> %c
 }
 
-define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16(<8 x half> %src, half *%src2p, <8 x half> %a, <8 x half> %b) {
+define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16(<8 x half> %src, half %src2, <8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: vaddqr_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %src2 = load half, half *%src2p, align 2
   %i = insertelement <8 x half> undef, half %src2, i32 0
   %sp = shufflevector <8 x half> %i, <8 x half> undef, <8 x i32> zeroinitializer
   %c = fadd <8 x half> %src, %sp
@@ -113,14 +112,13 @@ entry:
   ret <4 x float> %c
 }
 
-define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_2(<8 x half> %src, half *%src2p, <8 x half> %a, <8 x half> %b) {
+define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_2(<8 x half> %src, half %src2, <8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: vaddqr_v8f16_2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %src2 = load half, half *%src2p, align 2
   %i = insertelement <8 x half> undef, half %src2, i32 0
   %sp = shufflevector <8 x half> %i, <8 x half> undef, <8 x i32> zeroinitializer
   %c = fadd <8 x half> %sp, %src
@@ -142,14 +140,13 @@ entry:
   ret <4 x float> %c
 }
 
-define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_3(<8 x half> %src, half *%src2p, <8 x half> %a, <8 x half> %b) {
+define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_3(<8 x half> %src, half %src2, <8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: vaddqr_v8f16_3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %src2 = load half, half *%src2p, align 2
   %src2bc = bitcast half %src2 to i16
   %i = insertelement <8 x i16> undef, i16 %src2bc, i32 0
   %spbc = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -173,14 +170,13 @@ entry:
   ret <4 x float> %c
 }
 
-define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_4(<8 x half> %src, half *%src2p, <8 x half> %a, <8 x half> %b) {
+define arm_aapcs_vfpcc <8 x half> @vaddqr_v8f16_4(<8 x half> %src, half %src2, <8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: vaddqr_v8f16_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %src2 = load half, half *%src2p, align 2
   %src2bc = bitcast half %src2 to i16
   %i = insertelement <8 x i16> undef, i16 %src2bc, i32 0
   %spbc = shufflevector <8 x i16> %i, <8 x i16> undef, <8 x i32> zeroinitializer

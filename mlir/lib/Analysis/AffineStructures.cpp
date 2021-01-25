@@ -709,6 +709,70 @@ LogicalResult FlatAffineConstraints::addAffineForOpDomain(AffineForOp forOp) {
                               /*eq=*/false, /*lower=*/false);
 }
 
+/// Adds constraints (lower and upper bounds) for each loop in the loop nest
+/// described by the bound maps 'lbMaps' and 'ubMaps' of a computation slice.
+/// Every pair ('lbMaps[i]', 'ubMaps[i]') describes the bounds of a loop in
+/// the nest, sorted outer-to-inner. 'operands' contains the bound operands
+/// for a single bound map. All the bound maps will use the same bound
+/// operands. Note that some loops described by a computation slice might not
+/// exist yet in the IR so the Value attached to those dimension identifiers
+/// might be empty. For that reason, this method doesn't perform Value
+/// look-ups to retrieve the dimension identifier positions. Instead, it
+/// assumes the position of the dim identifiers in the constraint system is
+/// the same as the position of the loop in the loop nest.
+LogicalResult
+FlatAffineConstraints::addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
+                                              ArrayRef<AffineMap> ubMaps,
+                                              ArrayRef<Value> operands) {
+  assert(lbMaps.size() == ubMaps.size());
+  assert(lbMaps.size() <= getNumDimIds());
+
+  for (unsigned i = 0, e = lbMaps.size(); i < e; ++i) {
+    AffineMap lbMap = lbMaps[i];
+    AffineMap ubMap = ubMaps[i];
+    assert(!lbMap || lbMap.getNumInputs() == operands.size());
+    assert(!ubMap || ubMap.getNumInputs() == operands.size());
+
+    // Check if this slice is just an equality along this dimension. If so,
+    // retrieve the existing loop it equates to and add it to the system.
+    if (lbMap && ubMap && lbMap.getNumResults() == 1 &&
+        ubMap.getNumResults() == 1 &&
+        lbMap.getResult(0) + 1 == ubMap.getResult(0) &&
+        // The condition above will be true for maps describing a single
+        // iteration (e.g., lbMap.getResult(0) = 0, ubMap.getResult(0) = 1).
+        // Make sure we skip those cases by checking that the lb result is not
+        // just a constant.
+        !lbMap.getResult(0).isa<AffineConstantExpr>()) {
+      // Limited support: we expect the lb result to be just a loop dimension.
+      // Not supported otherwise for now.
+      AffineDimExpr result = lbMap.getResult(0).dyn_cast<AffineDimExpr>();
+      if (!result)
+        return failure();
+
+      AffineForOp loop =
+          getForInductionVarOwner(operands[result.getPosition()]);
+      if (!loop)
+        return failure();
+
+      if (failed(addAffineForOpDomain(loop)))
+        return failure();
+      continue;
+    }
+
+    // This slice refers to a loop that doesn't exist in the IR yet. Add its
+    // bounds to the system assuming its dimension identifier position is the
+    // same as the position of the loop in the loop nest.
+    if (lbMap && failed(addLowerOrUpperBound(i, lbMap, operands, /*eq=*/false,
+                                             /*lower=*/true)))
+      return failure();
+
+    if (ubMap && failed(addLowerOrUpperBound(i, ubMap, operands, /*eq=*/false,
+                                             /*lower=*/false)))
+      return failure();
+  }
+  return success();
+}
+
 void FlatAffineConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
   // Create the base constraints from the integer set attached to ifOp.
   FlatAffineConstraints cst(ifOp.getIntegerSet());
