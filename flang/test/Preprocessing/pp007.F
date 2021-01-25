@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: res=kwm
 * KWM split across continuation, clipped after column 72
       integer, parameter :: KWM = 666

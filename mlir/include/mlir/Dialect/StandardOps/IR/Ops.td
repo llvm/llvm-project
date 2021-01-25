@@ -3058,6 +3058,17 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
     // Build a SubTensorOp with all dynamic entries and custom result type.
     OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with mixed static and dynamic entries and inferred
+    // result type.
+    OpBuilderDAG<(ins "Value":$source, "ArrayRef<OpFoldResult>":$offsets,
+      "ArrayRef<OpFoldResult>":$sizes, "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorOp with mixed static and dynamic entries and custom
+    // result type. If the type passed is nullptr, it is inferred.
+    OpBuilderDAG<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
+      "ArrayRef<OpFoldResult>":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -3154,6 +3165,11 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     // Build a SubTensorInsertOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "Value":$dest, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a SubTensorInsertOp with mixed static and dynamic entries.
+    OpBuilderDAG<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
+      "ArrayRef<OpFoldResult>":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 

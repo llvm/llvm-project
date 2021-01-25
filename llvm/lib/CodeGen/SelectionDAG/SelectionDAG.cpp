@@ -306,7 +306,8 @@ bool ISD::matchUnaryPredicate(SDValue Op,
     return Match(Cst);
 
   // FIXME: Add support for vector UNDEF cases?
-  if (ISD::BUILD_VECTOR != Op.getOpcode())
+  if (ISD::BUILD_VECTOR != Op.getOpcode() &&
+      ISD::SPLAT_VECTOR != Op.getOpcode())
     return false;
 
   EVT SVT = Op.getValueType().getScalarType();

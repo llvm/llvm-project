@@ -696,6 +696,14 @@ static int error(const Twine &Error, const Twine &Context) {
   return 1;
 }
 
+static Expected<Triple> readTargetTriple(StringRef FileName) {
+  auto ErrOrObj = object::ObjectFile::createObjectFile(FileName);
+  if (!ErrOrObj)
+    return ErrOrObj.takeError();
+
+  return ErrOrObj->getBinary()->makeTriple();
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -706,17 +714,36 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
 
+  std::vector<std::string> DWOFilenames = InputFiles;
+  for (const auto &ExecFilename : ExecFilenames) {
+    auto DWOs = getDWOFilenames(ExecFilename);
+    if (!DWOs) {
+      logAllUnhandledErrors(DWOs.takeError(), WithColor::error());
+      return 1;
+    }
+    DWOFilenames.insert(DWOFilenames.end(),
+                        std::make_move_iterator(DWOs->begin()),
+                        std::make_move_iterator(DWOs->end()));
+  }
+
+  if (DWOFilenames.empty())
+    return 0;
+
   std::string ErrorStr;
   StringRef Context = "dwarf streamer init";
 
-  Triple TheTriple("x86_64-linux-gnu");
+  auto ErrOrTriple = readTargetTriple(DWOFilenames.front());
+  if (!ErrOrTriple) {
+    logAllUnhandledErrors(ErrOrTriple.takeError(), WithColor::error());
+    return 1;
+  }
 
   // Get the target.
   const Target *TheTarget =
-      TargetRegistry::lookupTarget("", TheTriple, ErrorStr);
+      TargetRegistry::lookupTarget("", *ErrOrTriple, ErrorStr);
   if (!TheTarget)
     return error(ErrorStr, Context);
-  std::string TripleName = TheTriple.getTriple();
+  std::string TripleName = ErrOrTriple->getTriple();
 
   // Create all the MC Objects.
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
@@ -731,7 +758,7 @@ int main(int argc, char **argv) {
 
   MCObjectFileInfo MOFI;
   MCContext MC(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, MC);
+  MOFI.InitMCObjectFileInfo(*ErrOrTriple, /*PIC*/ false, MC);
 
   std::unique_ptr<MCSubtargetInfo> MSTI(
       TheTarget->createMCSubtargetInfo(TripleName, "", ""));
@@ -766,24 +793,12 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
-      TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
+      *ErrOrTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
       MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,
       MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
-
-  std::vector<std::string> DWOFilenames = InputFiles;
-  for (const auto &ExecFilename : ExecFilenames) {
-    auto DWOs = getDWOFilenames(ExecFilename);
-    if (!DWOs) {
-      logAllUnhandledErrors(DWOs.takeError(), WithColor::error());
-      return 1;
-    }
-    DWOFilenames.insert(DWOFilenames.end(),
-                        std::make_move_iterator(DWOs->begin()),
-                        std::make_move_iterator(DWOs->end()));
-  }
 
   if (auto Err = write(*MS, DWOFilenames)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
