@@ -2863,7 +2863,7 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
     PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
     NewBonusInst->takeName(&BonusInst);
-    BonusInst.setName(BonusInst.getName() + ".old");
+    BonusInst.setName(NewBonusInst->getName() + ".old");
     BonusInst.replaceUsesWithIf(
         NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
           auto *User = cast<Instruction>(U.getUser());
