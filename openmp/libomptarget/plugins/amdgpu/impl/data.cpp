@@ -51,7 +51,6 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
 void register_allocation(void *ptr, size_t size, atmi_mem_place_t place) {
   if (place.dev_type == ATMI_DEVTYPE_CPU)
     allow_access_to_all_gpu_agents(ptr);
-  // TODO(ashwinma): what if one GPU wants to access another GPU?
 }
 
 atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
