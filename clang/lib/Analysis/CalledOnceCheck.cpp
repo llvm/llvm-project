@@ -936,8 +936,9 @@ private:
 
   /// Return true if the only parameter of the function is conventional.
   static bool isOnlyParameterConventional(const FunctionDecl *Function) {
-    return Function->getNumParams() == 1 &&
-           hasConventionalSuffix(Function->getName());
+    IdentifierInfo *II = Function->getIdentifier();
+    return Function->getNumParams() == 1 && II &&
+           hasConventionalSuffix(II->getName());
   }
 
   /// Return true/false if 'swift_async' attribute states that the given
