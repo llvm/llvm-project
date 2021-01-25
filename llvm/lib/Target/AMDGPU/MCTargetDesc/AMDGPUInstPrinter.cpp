@@ -1309,10 +1309,10 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   if (isValidMsgId(MsgId, STI) &&
       isValidMsgOp(MsgId, OpId, STI) &&
       isValidMsgStream(MsgId, OpId, StreamId, STI)) {
-    O << "sendmsg(" << getMsgName(MsgId);
-    if (msgRequiresOp(MsgId)) {
-      O << ", " << getMsgOpName(MsgId, OpId);
-      if (msgSupportsStream(MsgId, OpId)) {
+    O << "sendmsg(" << getMsgName(MsgId, STI);
+    if (msgRequiresOp(MsgId, STI)) {
+      O << ", " << getMsgOpName(MsgId, OpId, STI);
+      if (msgSupportsStream(MsgId, OpId, STI)) {
         O << ", " << StreamId;
       }
     }

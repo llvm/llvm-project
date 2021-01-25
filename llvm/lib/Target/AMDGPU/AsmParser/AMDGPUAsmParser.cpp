@@ -6170,7 +6170,8 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
   using namespace llvm::AMDGPU::SendMsg;
 
   Msg.Loc = getLoc();
-  if (isToken(AsmToken::Identifier) && (Msg.Id = getMsgId(getTokenStr())) >= 0) {
+  if (isToken(AsmToken::Identifier) &&
+      (Msg.Id = getMsgId(getTokenStr(), getSTI())) >= 0) {
     Msg.IsSymbolic = true;
     lex(); // skip message name
   } else if (!parseExpr(Msg.Id, "a message name")) {
@@ -6213,7 +6214,7 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     Error(Msg.Loc, "invalid message id");
     return false;
   }
-  if (Strict && (msgRequiresOp(Msg.Id) != Op.IsDefined)) {
+  if (Strict && (msgRequiresOp(Msg.Id, getSTI()) != Op.IsDefined)) {
     if (Op.IsDefined) {
       Error(Op.Loc, "message does not support operations");
     } else {
@@ -6225,7 +6226,8 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     Error(Op.Loc, "invalid operation id");
     return false;
   }
-  if (Strict && !msgSupportsStream(Msg.Id, Op.Id) && Stream.IsDefined) {
+  if (Strict && !msgSupportsStream(Msg.Id, Op.Id, getSTI()) &&
+      Stream.IsDefined) {
     Error(Stream.Loc, "message operation does not support streams");
     return false;
   }

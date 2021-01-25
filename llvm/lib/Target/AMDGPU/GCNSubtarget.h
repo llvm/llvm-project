@@ -999,6 +999,9 @@ public:
     return getGeneration() >= GFX9;
   }
 
+  // \returns true if the target supports the pre-NGG legacy geometry path.
+  bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

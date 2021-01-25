@@ -1103,10 +1103,17 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI) {
 
 namespace SendMsg {
 
-int64_t getMsgId(const StringRef Name) {
-  for (int i = ID_GAPS_FIRST_; i < ID_GAPS_LAST_; ++i) {
-    if (IdSymbolic[i] && Name == IdSymbolic[i])
-      return i;
+int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX11Plus(STI)) {
+    for (int i = 0; i < ID_GAPS_LAST_; ++i) {
+      if (Name == IdSymbolic_GFX11Plus[i])
+        return i;
+    }
+  } else {
+    for (int i = 0; i < ID_GAPS_LAST_; ++i) {
+      if (Name == IdSymbolic_PreGFX11[i])
+        return i;
+    }
   }
   return ID_UNKNOWN_;
 }
@@ -1115,28 +1122,30 @@ bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
   if (Strict) {
     switch (MsgId) {
     case ID_SAVEWAVE:
-      return isVI(STI) || isGFX9Plus(STI);
+      return isVI(STI) || isGFX9(STI) || isGFX10(STI);
     case ID_STALL_WAVE_GEN:
     case ID_HALT_WAVES:
     case ID_ORDERED_PS_DONE:
     case ID_GS_ALLOC_REQ:
-    case ID_GET_DOORBELL:
       return isGFX9Plus(STI);
     case ID_EARLY_PRIM_DEALLOC:
       return isGFX9(STI);
+    case ID_GET_DOORBELL:
+      return isGFX9(STI) || isGFX10(STI);
     case ID_GET_DDID:
-      return isGFX10Plus(STI);
+      return isGFX10(STI);
     default:
-      return 0 <= MsgId && MsgId < ID_GAPS_LAST_ && IdSymbolic[MsgId];
+      return 0 <= MsgId && MsgId < ID_GAPS_LAST_ &&
+          (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
     }
   } else {
     return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
   }
 }
 
-StringRef getMsgName(int64_t MsgId) {
+StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI) {
   assert(0 <= MsgId && MsgId < ID_GAPS_LAST_);
-  return IdSymbolic[MsgId];
+  return (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
 }
 
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
@@ -1158,21 +1167,22 @@ bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
 
-  switch(MsgId)
-  {
-  case ID_GS:
-    return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
-  case ID_GS_DONE:
-    return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
-  case ID_SYSMSG:
+  if (MsgId == ID_SYSMSG)
     return OP_SYS_FIRST_ <= OpId && OpId < OP_SYS_LAST_;
-  default:
-    return OpId == OP_NONE_;
+  if (!isGFX11Plus(STI)) {
+    switch (MsgId) {
+    case ID_GS_PreGFX11:
+      return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
+    case ID_GS_DONE_PreGFX11:
+      return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
+    }
   }
+  return OpId == OP_NONE_;
 }
 
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId) {
-  assert(msgRequiresOp(MsgId));
+StringRef getMsgOpName(int64_t MsgId, int64_t OpId,
+                       const MCSubtargetInfo &STI) {
+  assert(msgRequiresOp(MsgId, STI));
   return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
 }
 
@@ -1183,25 +1193,30 @@ bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
   if (!Strict)
     return 0 <= StreamId && isUInt<STREAM_ID_WIDTH_>(StreamId);
 
-  switch(MsgId)
-  {
-  case ID_GS:
-    return STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_;
-  case ID_GS_DONE:
-    return (OpId == OP_GS_NOP)?
-           (StreamId == STREAM_ID_NONE_) :
-           (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_);
-  default:
-    return StreamId == STREAM_ID_NONE_;
+  if (!isGFX11Plus(STI)) {
+    switch (MsgId) {
+    case ID_GS_PreGFX11:
+      return STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_;
+    case ID_GS_DONE_PreGFX11:
+      return (OpId == OP_GS_NOP) ?
+          (StreamId == STREAM_ID_NONE_) :
+          (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_);
+    }
   }
+  return StreamId == STREAM_ID_NONE_;
 }
 
-bool msgRequiresOp(int64_t MsgId) {
-  return MsgId == ID_GS || MsgId == ID_GS_DONE || MsgId == ID_SYSMSG;
+bool msgRequiresOp(int64_t MsgId, const MCSubtargetInfo &STI) {
+  return MsgId == ID_SYSMSG ||
+      (!isGFX11Plus(STI) &&
+       (MsgId == ID_GS_PreGFX11 || MsgId == ID_GS_DONE_PreGFX11));
 }
 
-bool msgSupportsStream(int64_t MsgId, int64_t OpId) {
-  return (MsgId == ID_GS || MsgId == ID_GS_DONE) && OpId != OP_GS_NOP;
+bool msgSupportsStream(int64_t MsgId, int64_t OpId,
+                       const MCSubtargetInfo &STI) {
+  return !isGFX11Plus(STI) &&
+      (MsgId == ID_GS_PreGFX11 || MsgId == ID_GS_DONE_PreGFX11) &&
+      OpId != OP_GS_NOP;
 }
 
 void decodeMsg(unsigned Val,

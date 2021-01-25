@@ -287,16 +287,21 @@ namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 enum Id { // Message ID, width(4) [3:0].
   ID_UNKNOWN_ = -1,
   ID_INTERRUPT = 1,
-  ID_GS = 2,
-  ID_GS_DONE = 3,
-  ID_SAVEWAVE = 4,           // added in GFX8
+
+  ID_GS_PreGFX11 = 2,      // replaced in GFX11
+  ID_GS_DONE_PreGFX11 = 3, // replaced in GFX11
+
+  ID_HS_TESSFACTOR_GFX11Plus = 2, // reused in GFX11
+  ID_DEALLOC_VGPRS_GFX11Plus = 3, // reused in GFX11
+
+  ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
   ID_STALL_WAVE_GEN = 5,     // added in GFX9
   ID_HALT_WAVES = 6,         // added in GFX9
   ID_ORDERED_PS_DONE = 7,    // added in GFX9
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
-  ID_GET_DOORBELL = 10,      // added in GFX9
-  ID_GET_DDID = 11,          // added in GFX10
+  ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+  ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
   ID_GAPS_LAST_, // Indicate that sequence has gaps.
   ID_GAPS_FIRST_ = ID_INTERRUPT,

@@ -15,7 +15,7 @@ namespace AMDGPU {
 namespace SendMsg {
 
 // This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
-const char *const IdSymbolic[ID_GAPS_LAST_] = {
+const char *const IdSymbolic_PreGFX11[ID_GAPS_LAST_] = {
   nullptr,
   "MSG_INTERRUPT",
   "MSG_GS",
@@ -28,6 +28,26 @@ const char *const IdSymbolic[ID_GAPS_LAST_] = {
   "MSG_GS_ALLOC_REQ",
   "MSG_GET_DOORBELL",
   "MSG_GET_DDID",
+  nullptr,
+  nullptr,
+  nullptr,
+  "MSG_SYSMSG"
+};
+
+// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
+const char *const IdSymbolic_GFX11Plus[ID_GAPS_LAST_] = {
+  nullptr,
+  "MSG_INTERRUPT",
+  "MSG_HS_TESSFACTOR",
+  "MSG_DEALLOC_VGPRS",
+  nullptr,
+  "MSG_STALL_WAVE_GEN",
+  "MSG_HALT_WAVES",
+  "MSG_ORDERED_PS_DONE",
+  nullptr,
+  "MSG_GS_ALLOC_REQ",
+  nullptr,
+  nullptr,
   nullptr,
   nullptr,
   nullptr,
