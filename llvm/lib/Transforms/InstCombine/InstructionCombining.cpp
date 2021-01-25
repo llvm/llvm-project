@@ -2196,7 +2196,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         // GEP (bitcast i8* X to [0 x i8]*), i32 0, ... ?
         if (CATy->getElementType() == StrippedPtrEltTy) {
           // -> GEP i8* X, ...
-          SmallVector<Value*, 8> Idx(GEP.idx_begin()+1, GEP.idx_end());
+          SmallVector<Value *, 8> Idx(drop_begin(GEP.indices()));
           GetElementPtrInst *Res = GetElementPtrInst::Create(
               StrippedPtrEltTy, StrippedPtr, Idx, GEP.getName());
           Res->setIsInBounds(GEP.isInBounds());

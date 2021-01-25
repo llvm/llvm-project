@@ -353,8 +353,7 @@ bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
     BuildMI(*EHPad, InsertPos, Call->getDebugLoc(),
             TII.get(WebAssembly::UNREACHABLE));
     EHPad->erase(InsertPos, EHPad->end());
-    SmallVector<MachineBasicBlock *, 8> Succs(EHPad->succ_begin(),
-                                              EHPad->succ_end());
+    SmallVector<MachineBasicBlock *, 8> Succs(EHPad->successors());
     for (auto *Succ : Succs)
       EHPad->removeSuccessor(Succ);
     eraseDeadBBsAndChildren(Succs);
