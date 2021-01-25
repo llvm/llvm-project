@@ -60,7 +60,7 @@
 # RUN: not llvm-ar qc %t/missing.a %t/missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
 
-# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
+# MISSING-FILE: error: [[FILE]]: {{.*}}{{[nN]}}o such file or directory
 
 ## Create and append members to a thin archive:
 # RUN: llvm-ar qcT %t/thin-multiple.a %t/1.o
