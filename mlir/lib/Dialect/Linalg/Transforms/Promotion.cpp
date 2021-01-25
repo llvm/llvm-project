@@ -214,7 +214,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   ScopedContext scopedContext(b, loc);
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
-  SmallVector<Value, 4> fullSizes, partialSizes;
+  SmallVector<Value, 4> fullSizes;
+  SmallVector<OpFoldResult> partialSizes;
   fullSizes.reserve(rank);
   partialSizes.reserve(rank);
   for (auto en : llvm::enumerate(subView.getOrCreateRanges(b, loc))) {
@@ -226,7 +227,7 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
         (!sizeAttr) ? rangeValue.size : b.create<ConstantOp>(loc, sizeAttr);
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
-    partialSizes.push_back(folded_std_dim(folder, subView, en.index()));
+    partialSizes.push_back(folded_std_dim(folder, subView, en.index()).value);
   }
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
   // If a callback is not specified, then use the default implementation for
@@ -234,10 +235,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, folder);
   if (!fullLocalView)
     return {};
-  auto zero = folded_std_constant_index(folder, 0);
-  auto one = folded_std_constant_index(folder, 1);
-  SmallVector<Value, 4> zeros(fullSizes.size(), zero);
-  SmallVector<Value, 4> ones(fullSizes.size(), one);
+  SmallVector<OpFoldResult, 4> zeros(fullSizes.size(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult, 4> ones(fullSizes.size(), b.getIndexAttr(1));
   auto partialLocalView =
       folded_std_subview(folder, *fullLocalView, zeros, partialSizes, ones);
   return PromotionInfo{*fullLocalView, partialLocalView};
