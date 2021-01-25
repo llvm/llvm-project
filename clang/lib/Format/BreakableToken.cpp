@@ -25,7 +25,7 @@
 namespace clang {
 namespace format {
 
-static const char *const Blanks = " \t\v\f\r";
+static constexpr StringRef Blanks = " \t\v\f\r";
 static bool IsBlank(char C) {
   switch (C) {
   case ' ':
@@ -41,11 +41,11 @@ static bool IsBlank(char C) {
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
-  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///",
-                                                    "//",   "//!",  "//:"};
-  static const char *const KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
-                                                       "####"};
-  ArrayRef<const char *> KnownPrefixes(KnownCStylePrefixes);
+  static constexpr StringRef KnownCStylePrefixes[] = {"///<", "//!<", "///",
+                                                      "//",   "//!",  "//:"};
+  static constexpr StringRef KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
+                                                         "####"};
+  ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
