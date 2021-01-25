@@ -48,3 +48,9 @@ pack t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 packu t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Too few operands
 packh t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+# Too few operands
+xperm.n t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+# Too few operands
+xperm.b t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+# Too few operands
+xperm.h t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
