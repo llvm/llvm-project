@@ -161,11 +161,14 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // Look for the CPU implementer line.
   StringRef Implementer;
   StringRef Hardware;
+  StringRef Part;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
     if (Lines[I].startswith("CPU implementer"))
       Implementer = Lines[I].substr(15).ltrim("\t :");
     if (Lines[I].startswith("Hardware"))
       Hardware = Lines[I].substr(8).ltrim("\t :");
+    if (Lines[I].startswith("CPU part"))
+      Part = Lines[I].substr(8).ltrim("\t :");
   }
 
   if (Implementer == "0x41") { // ARM Ltd.
@@ -175,111 +178,89 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
       return "cortex-a53";
 
 
-    // Look for the CPU part line.
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-      if (Lines[I].startswith("CPU part"))
-        // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
-        // values correspond to the "Part number" in the CP15/c0 register. The
-        // contents are specified in the various processor manuals.
-        // This corresponds to the Main ID Register in Technical Reference Manuals.
-        // and is used in programs like sys-utils
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-            .Case("0x926", "arm926ej-s")
-            .Case("0xb02", "mpcore")
-            .Case("0xb36", "arm1136j-s")
-            .Case("0xb56", "arm1156t2-s")
-            .Case("0xb76", "arm1176jz-s")
-            .Case("0xc08", "cortex-a8")
-            .Case("0xc09", "cortex-a9")
-            .Case("0xc0f", "cortex-a15")
-            .Case("0xc20", "cortex-m0")
-            .Case("0xc23", "cortex-m3")
-            .Case("0xc24", "cortex-m4")
-            .Case("0xd22", "cortex-m55")
-            .Case("0xd02", "cortex-a34")
-            .Case("0xd04", "cortex-a35")
-            .Case("0xd03", "cortex-a53")
-            .Case("0xd07", "cortex-a57")
-            .Case("0xd08", "cortex-a72")
-            .Case("0xd09", "cortex-a73")
-            .Case("0xd0a", "cortex-a75")
-            .Case("0xd0b", "cortex-a76")
-            .Case("0xd0d", "cortex-a77")
-            .Case("0xd41", "cortex-a78")
-            .Case("0xd44", "cortex-x1")
-            .Case("0xd0c", "neoverse-n1")
-            .Case("0xd49", "neoverse-n2")
-            .Default("generic");
+    // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
+    // values correspond to the "Part number" in the CP15/c0 register. The
+    // contents are specified in the various processor manuals.
+    // This corresponds to the Main ID Register in Technical Reference Manuals.
+    // and is used in programs like sys-utils
+    return StringSwitch<const char *>(Part)
+        .Case("0x926", "arm926ej-s")
+        .Case("0xb02", "mpcore")
+        .Case("0xb36", "arm1136j-s")
+        .Case("0xb56", "arm1156t2-s")
+        .Case("0xb76", "arm1176jz-s")
+        .Case("0xc08", "cortex-a8")
+        .Case("0xc09", "cortex-a9")
+        .Case("0xc0f", "cortex-a15")
+        .Case("0xc20", "cortex-m0")
+        .Case("0xc23", "cortex-m3")
+        .Case("0xc24", "cortex-m4")
+        .Case("0xd22", "cortex-m55")
+        .Case("0xd02", "cortex-a34")
+        .Case("0xd04", "cortex-a35")
+        .Case("0xd03", "cortex-a53")
+        .Case("0xd07", "cortex-a57")
+        .Case("0xd08", "cortex-a72")
+        .Case("0xd09", "cortex-a73")
+        .Case("0xd0a", "cortex-a75")
+        .Case("0xd0b", "cortex-a76")
+        .Case("0xd0d", "cortex-a77")
+        .Case("0xd41", "cortex-a78")
+        .Case("0xd44", "cortex-x1")
+        .Case("0xd0c", "neoverse-n1")
+        .Case("0xd49", "neoverse-n2")
+        .Default("generic");
   }
 
   if (Implementer == "0x42" || Implementer == "0x43") { // Broadcom | Cavium.
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-      if (Lines[I].startswith("CPU part")) {
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-          .Case("0x516", "thunderx2t99")
-          .Case("0x0516", "thunderx2t99")
-          .Case("0xaf", "thunderx2t99")
-          .Case("0x0af", "thunderx2t99")
-          .Case("0xa1", "thunderxt88")
-          .Case("0x0a1", "thunderxt88")
-          .Default("generic");
-      }
-    }
+    return StringSwitch<const char *>(Part)
+      .Case("0x516", "thunderx2t99")
+      .Case("0x0516", "thunderx2t99")
+      .Case("0xaf", "thunderx2t99")
+      .Case("0x0af", "thunderx2t99")
+      .Case("0xa1", "thunderxt88")
+      .Case("0x0a1", "thunderxt88")
+      .Default("generic");
   }
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-      if (Lines[I].startswith("CPU part")) {
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-          .Case("0x001", "a64fx")
-          .Default("generic");
-      }
-    }
+    return StringSwitch<const char *>(Part)
+      .Case("0x001", "a64fx")
+      .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-      if (Lines[I].startswith("CPU part")) {
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-            .Case("0x004", "carmel")
-            .Default("generic");
-      }
-    }
+    return StringSwitch<const char *>(Part)
+        .Case("0x004", "carmel")
+        .Default("generic");
   }
 
   if (Implementer == "0x48") // HiSilicon Technologies, Inc.
-    // Look for the CPU part line.
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-      if (Lines[I].startswith("CPU part"))
-        // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
-        // values correspond to the "Part number" in the CP15/c0 register. The
-        // contents are specified in the various processor manuals.
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-          .Case("0xd01", "tsv110")
-          .Default("generic");
+    // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
+    // values correspond to the "Part number" in the CP15/c0 register. The
+    // contents are specified in the various processor manuals.
+    return StringSwitch<const char *>(Part)
+      .Case("0xd01", "tsv110")
+      .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
-    // Look for the CPU part line.
-    for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-      if (Lines[I].startswith("CPU part"))
-        // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
-        // values correspond to the "Part number" in the CP15/c0 register. The
-        // contents are specified in the various processor manuals.
-        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
-            .Case("0x06f", "krait") // APQ8064
-            .Case("0x201", "kryo")
-            .Case("0x205", "kryo")
-            .Case("0x211", "kryo")
-            .Case("0x800", "cortex-a73")
-            .Case("0x801", "cortex-a73")
-            .Case("0x802", "cortex-a73")
-            .Case("0x803", "cortex-a73")
-            .Case("0x804", "cortex-a73")
-            .Case("0x805", "cortex-a73")
-            .Case("0xc00", "falkor")
-            .Case("0xc01", "saphira")
-            .Default("generic");
-
+    // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
+    // values correspond to the "Part number" in the CP15/c0 register. The
+    // contents are specified in the various processor manuals.
+    return StringSwitch<const char *>(Part)
+        .Case("0x06f", "krait") // APQ8064
+        .Case("0x201", "kryo")
+        .Case("0x205", "kryo")
+        .Case("0x211", "kryo")
+        .Case("0x800", "cortex-a73") // Kryo 2xx Gold
+        .Case("0x801", "cortex-a73") // Kryo 2xx Silver
+        .Case("0x802", "cortex-a75") // Kryo 3xx Gold
+        .Case("0x803", "cortex-a75") // Kryo 3xx Silver
+        .Case("0x804", "cortex-a76") // Kryo 4xx Gold
+        .Case("0x805", "cortex-a76") // Kryo 4xx/5xx Silver
+        .Case("0xc00", "falkor")
+        .Case("0xc01", "saphira")
+        .Default("generic");
   if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
     // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
     // any predictive pattern across variants and parts.
