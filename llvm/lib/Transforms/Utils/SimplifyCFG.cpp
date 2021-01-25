@@ -2787,6 +2787,188 @@ CheckIfCondBranchesShareCommonDestination(BranchInst *BI, BranchInst *PBI) {
   return None;
 }
 
+static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
+                                             DomTreeUpdater *DTU,
+                                             MemorySSAUpdater *MSSAU) {
+  BasicBlock *BB = BI->getParent();
+  BasicBlock *PredBlock = PBI->getParent();
+
+  // Determine if the two branches share a common destination.
+  Instruction::BinaryOps Opc;
+  bool InvertPredCond;
+  std::tie(Opc, InvertPredCond) =
+      *CheckIfCondBranchesShareCommonDestination(BI, PBI);
+
+  LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
+
+  IRBuilder<> Builder(PBI);
+  // The builder is used to create instructions to eliminate the branch in BB.
+  // If BB's terminator has !annotation metadata, add it to the new
+  // instructions.
+  Builder.CollectMetadataToCopy(BB->getTerminator(),
+                                {LLVMContext::MD_annotation});
+
+  // If we need to invert the condition in the pred block to match, do so now.
+  if (InvertPredCond) {
+    Value *NewCond = PBI->getCondition();
+    if (NewCond->hasOneUse() && isa<CmpInst>(NewCond)) {
+      CmpInst *CI = cast<CmpInst>(NewCond);
+      CI->setPredicate(CI->getInversePredicate());
+    } else {
+      NewCond =
+          Builder.CreateNot(NewCond, PBI->getCondition()->getName() + ".not");
+    }
+
+    PBI->setCondition(NewCond);
+    PBI->swapSuccessors();
+  }
+
+  BasicBlock *UniqueSucc =
+      PBI->getSuccessor(0) == BB ? BI->getSuccessor(0) : BI->getSuccessor(1);
+
+  // Before cloning instructions, notify the successor basic block that it
+  // is about to have a new predecessor. This will update PHI nodes,
+  // which will allow us to update live-out uses of bonus instructions.
+  AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
+
+  // If we have bonus instructions, clone them into the predecessor block.
+  // Note that there may be multiple predecessor blocks, so we cannot move
+  // bonus instructions to a predecessor block.
+  ValueToValueMapTy VMap; // maps original values to cloned values
+  for (Instruction &BonusInst : *BB) {
+    if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
+      continue;
+
+    Instruction *NewBonusInst = BonusInst.clone();
+
+    if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
+      // Unless the instruction has the same !dbg location as the original
+      // branch, drop it. When we fold the bonus instructions we want to make
+      // sure we reset their debug locations in order to avoid stepping on
+      // dead code caused by folding dead branches.
+      NewBonusInst->setDebugLoc(DebugLoc());
+    }
+
+    RemapInstruction(NewBonusInst, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    VMap[&BonusInst] = NewBonusInst;
+
+    // If we moved a load, we cannot any longer claim any knowledge about
+    // its potential value. The previous information might have been valid
+    // only given the branch precondition.
+    // For an analogous reason, we must also drop all the metadata whose
+    // semantics we don't understand. We *can* preserve !annotation, because
+    // it is tied to the instruction itself, not the value or position.
+    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
+
+    PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
+    NewBonusInst->takeName(&BonusInst);
+    BonusInst.setName(BonusInst.getName() + ".old");
+    BonusInst.replaceUsesWithIf(
+        NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
+          auto *User = cast<Instruction>(U.getUser());
+          // Ignore non-external uses of bonus instructions.
+          if (User->getParent() == BB) {
+            assert(!isa<PHINode>(User) &&
+                   "Non-external users are never PHI instructions.");
+            return false;
+          }
+          if (User->getParent() == PredBlock) {
+            // The "exteral" use is in the block into which we just cloned the
+            // bonus instruction. This means two things: 1. we are in an
+            // unreachable block 2. the instruction is self-referencing.
+            // So let's just rewrite it...
+            return true;
+          }
+          (void)BI;
+          assert(isa<PHINode>(User) && "All external users must be PHI's.");
+          auto *PN = cast<PHINode>(User);
+          assert(is_contained(successors(BB), User->getParent()) &&
+                 "All external users must be in successors of BB.");
+          assert((PN->getIncomingBlock(U) == BB ||
+                  PN->getIncomingBlock(U) == PredBlock) &&
+                 "The incoming block for that incoming value external use "
+                 "must be either the original block with bonus instructions, "
+                 "or the new predecessor block.");
+          // UniqueSucc is the block for which we change it's predecessors,
+          // so it is the only block in which we'll need to update PHI nodes.
+          if (User->getParent() != UniqueSucc)
+            return false;
+          // Update the incoming value for the new predecessor.
+          return PN->getIncomingBlock(U) == PredBlock;
+        });
+  }
+
+  // Now that the Cond was cloned into the predecessor basic block,
+  // or/and the two conditions together.
+  Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
+      Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
+  PBI->setCondition(NewCond);
+
+  uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
+                             SuccTrueWeight, SuccFalseWeight)) {
+    SmallVector<uint64_t, 8> NewWeights;
+
+    if (PBI->getSuccessor(0) == BB) {
+      // PBI: br i1 %x, BB, FalseDest
+      // BI:  br i1 %y, UniqueSucc, FalseDest
+      // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
+      NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
+      // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
+      //               TrueWeight for PBI * FalseWeight for BI.
+      // We assume that total weights of a BranchInst can fit into 32 bits.
+      // Therefore, we will not have overflow using 64-bit arithmetic.
+      NewWeights.push_back(PredFalseWeight *
+                               (SuccFalseWeight + SuccTrueWeight) +
+                           PredTrueWeight * SuccFalseWeight);
+    } else {
+      // PBI: br i1 %x, TrueDest, BB
+      // BI:  br i1 %y, TrueDest, UniqueSucc
+      // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
+      //              FalseWeight for PBI * TrueWeight for BI.
+      NewWeights.push_back(PredTrueWeight * (SuccFalseWeight + SuccTrueWeight) +
+                           PredFalseWeight * SuccTrueWeight);
+      // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
+      NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
+    }
+
+    // Halve the weights if any of them cannot fit in an uint32_t
+    FitWeights(NewWeights);
+
+    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+
+    // TODO: If BB is reachable from all paths through PredBlock, then we
+    // could replace PBI's branch probabilities with BI's.
+  } else
+    PBI->setMetadata(LLVMContext::MD_prof, nullptr);
+
+  PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
+
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
+                       {DominatorTree::Delete, PredBlock, BB}});
+
+  // If BI was a loop latch, it may have had associated loop metadata.
+  // We need to copy it to the new latch, that is, PBI.
+  if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
+    PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+
+  // Copy any debug value intrinsics into the end of PredBlock.
+  for (Instruction &I : *BB) {
+    if (isa<DbgInfoIntrinsic>(I)) {
+      Instruction *NewI = I.clone();
+      RemapInstruction(NewI, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      NewI->insertBefore(PBI);
+    }
+  }
+
+  ++NumFoldBranchToCommonDest;
+  return true;
+}
+
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
@@ -2804,11 +2986,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   const unsigned PredCount = pred_size(BB);
 
   bool Changed = false;
-
-  auto _ = make_scope_exit([&]() {
-    if (Changed)
-      ++NumFoldBranchToCommonDest;
-  });
 
   TargetTransformInfo::TargetCostKind CostKind =
     BB->getParent()->hasMinSize() ? TargetTransformInfo::TCK_CodeSize
@@ -2872,9 +3049,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       return Changed;
 
   // Finally, don't infinitely unroll conditional loops.
-  BasicBlock *TrueDest = BI->getSuccessor(0);
-  BasicBlock *FalseDest = BI->getSuccessor(1);
-  if (TrueDest == BB || FalseDest == BB)
+  if (is_contained(successors(BB), BB))
     return Changed;
 
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
@@ -2909,174 +3084,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         continue;
     }
 
-    LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
-    Changed = true;
-
-    IRBuilder<> Builder(PBI);
-    // The builder is used to create instructions to eliminate the branch in BB.
-    // If BB's terminator has !annotation metadata, add it to the new
-    // instructions.
-    Builder.CollectMetadataToCopy(BB->getTerminator(),
-                                  {LLVMContext::MD_annotation});
-
-    // If we need to invert the condition in the pred block to match, do so now.
-    if (InvertPredCond) {
-      Value *NewCond = PBI->getCondition();
-      if (NewCond->hasOneUse() && isa<CmpInst>(NewCond)) {
-        CmpInst *CI = cast<CmpInst>(NewCond);
-        CI->setPredicate(CI->getInversePredicate());
-      } else {
-        NewCond =
-            Builder.CreateNot(NewCond, PBI->getCondition()->getName() + ".not");
-      }
-
-      PBI->setCondition(NewCond);
-      PBI->swapSuccessors();
-    }
-
-    BasicBlock *UniqueSucc = PBI->getSuccessor(0) == BB ? TrueDest : FalseDest;
-
-    // Before cloning instructions, notify the successor basic block that it
-    // is about to have a new predecessor. This will update PHI nodes,
-    // which will allow us to update live-out uses of bonus instructions.
-    AddPredecessorToBlock(UniqueSucc, PredBlock, BB, MSSAU);
-
-    // If we have bonus instructions, clone them into the predecessor block.
-    // Note that there may be multiple predecessor blocks, so we cannot move
-    // bonus instructions to a predecessor block.
-    ValueToValueMapTy VMap; // maps original values to cloned values
-    for (Instruction &BonusInst : *BB) {
-      if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
-        continue;
-
-      Instruction *NewBonusInst = BonusInst.clone();
-
-      if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-        // Unless the instruction has the same !dbg location as the original
-        // branch, drop it. When we fold the bonus instructions we want to make
-        // sure we reset their debug locations in order to avoid stepping on
-        // dead code caused by folding dead branches.
-        NewBonusInst->setDebugLoc(DebugLoc());
-      }
-
-      RemapInstruction(NewBonusInst, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      VMap[&BonusInst] = NewBonusInst;
-
-      // If we moved a load, we cannot any longer claim any knowledge about
-      // its potential value. The previous information might have been valid
-      // only given the branch precondition.
-      // For an analogous reason, we must also drop all the metadata whose
-      // semantics we don't understand. We *can* preserve !annotation, because
-      // it is tied to the instruction itself, not the value or position.
-      NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
-
-      PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
-      NewBonusInst->takeName(&BonusInst);
-      BonusInst.setName(BonusInst.getName() + ".old");
-      BonusInst.replaceUsesWithIf(
-          NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
-            auto *User = cast<Instruction>(U.getUser());
-            // Ignore non-external uses of bonus instructions.
-            if (User->getParent() == BB) {
-              assert(!isa<PHINode>(User) &&
-                     "Non-external users are never PHI instructions.");
-              return false;
-            }
-            if (User->getParent() == PredBlock) {
-              // The "exteral" use is in the block into which we just cloned the
-              // bonus instruction. This means two things: 1. we are in an
-              // unreachable block 2. the instruction is self-referencing.
-              // So let's just rewrite it...
-              return true;
-            }
-            (void)BI;
-            assert(isa<PHINode>(User) && "All external users must be PHI's.");
-            auto *PN = cast<PHINode>(User);
-            assert(is_contained(successors(BB), User->getParent()) &&
-                   "All external users must be in successors of BB.");
-            assert((PN->getIncomingBlock(U) == BB ||
-                    PN->getIncomingBlock(U) == PredBlock) &&
-                   "The incoming block for that incoming value external use "
-                   "must be either the original block with bonus instructions, "
-                   "or the new predecessor block.");
-            // UniqueSucc is the block for which we change it's predecessors,
-            // so it is the only block in which we'll need to update PHI nodes.
-            if (User->getParent() != UniqueSucc)
-              return false;
-            // Update the incoming value for the new predecessor.
-            return PN->getIncomingBlock(U) == PredBlock;
-          });
-    }
-
-    // Now that the Cond was cloned into the predecessor basic block,
-    // or/and the two conditions together.
-    Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
-        Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
-    PBI->setCondition(NewCond);
-
-    uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-    if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
-                               SuccTrueWeight, SuccFalseWeight)) {
-      SmallVector<uint64_t, 8> NewWeights;
-
-      if (PBI->getSuccessor(0) == BB) {
-        // PBI: br i1 %x, BB, FalseDest
-        // BI:  br i1 %y, UniqueSucc, FalseDest
-        // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
-        NewWeights.push_back(PredTrueWeight * SuccTrueWeight);
-        // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
-        //               TrueWeight for PBI * FalseWeight for BI.
-        // We assume that total weights of a BranchInst can fit into 32 bits.
-        // Therefore, we will not have overflow using 64-bit arithmetic.
-        NewWeights.push_back(PredFalseWeight *
-                                 (SuccFalseWeight + SuccTrueWeight) +
-                             PredTrueWeight * SuccFalseWeight);
-      } else {
-        // PBI: br i1 %x, TrueDest, BB
-        // BI:  br i1 %y, TrueDest, UniqueSucc
-        // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
-        //              FalseWeight for PBI * TrueWeight for BI.
-        NewWeights.push_back(PredTrueWeight *
-                                 (SuccFalseWeight + SuccTrueWeight) +
-                             PredFalseWeight * SuccTrueWeight);
-        // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
-        NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
-      }
-
-      // Halve the weights if any of them cannot fit in an uint32_t
-      FitWeights(NewWeights);
-
-      SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
-      setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
-
-      // TODO: If BB is reachable from all paths through PredBlock, then we
-      // could replace PBI's branch probabilities with BI's.
-    } else
-      PBI->setMetadata(LLVMContext::MD_prof, nullptr);
-
-    PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
-
-    if (DTU)
-      DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
-                         {DominatorTree::Delete, PredBlock, BB}});
-
-    // If BI was a loop latch, it may have had associated loop metadata.
-    // We need to copy it to the new latch, that is, PBI.
-    if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
-      PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
-
-    // Copy any debug value intrinsics into the end of PredBlock.
-    for (Instruction &I : *BB) {
-      if (isa<DbgInfoIntrinsic>(I)) {
-        Instruction *NewI = I.clone();
-        RemapInstruction(NewI, VMap,
-                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-        NewI->insertBefore(PBI);
-      }
-    }
-
-    return Changed;
+    return PerformBranchToCommonDestFolding(BI, PBI, DTU, MSSAU);
   }
   return Changed;
 }
