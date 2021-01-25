@@ -1,6 +1,8 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mattr=-fuse-literals | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKDONT
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mattr=+fuse-literals | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a57      | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a65      | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a72      | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5       | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
