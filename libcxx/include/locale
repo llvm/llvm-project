@@ -1577,7 +1577,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
         else
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-        if (__nb == nullptr)
+        if (__nc == -1)
             __throw_bad_alloc();
         __nbh.reset(__nb);
     }
@@ -1628,7 +1628,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
         else
             __nc = __libcpp_asprintf_l(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
-        if (__nb == nullptr)
+        if (__nc == -1)
             __throw_bad_alloc();
         __nbh.reset(__nb);
     }
@@ -3402,17 +3402,17 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     char* __bb = __buf;
     char_type __digits[__bs];
     char_type* __db = __digits;
-    size_t __n = static_cast<size_t>(snprintf(__bb, __bs, "%.0Lf", __units));
+    int __n = snprintf(__bb, __bs, "%.0Lf", __units);
     unique_ptr<char, void(*)(void*)> __hn(nullptr, free);
     unique_ptr<char_type, void(*)(void*)> __hd(0, free);
     // secure memory for digit storage
-    if (__n > __bs-1)
+    if (static_cast<size_t>(__n) > __bs-1)
     {
-        __n = static_cast<size_t>(__libcpp_asprintf_l(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units));
-        if (__bb == nullptr)
+        __n = __libcpp_asprintf_l(&__bb, _LIBCPP_GET_C_LOCALE, "%.0Lf", __units);
+        if (__n == -1)
             __throw_bad_alloc();
         __hn.reset(__bb);
-        __hd.reset((char_type*)malloc(__n * sizeof(char_type)));
+        __hd.reset((char_type*)malloc(static_cast<size_t>(__n) * sizeof(char_type)));
         if (__hd == nullptr)
             __throw_bad_alloc();
         __db = __hd.get();
@@ -3434,9 +3434,9 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     char_type __mbuf[__bs];
     char_type* __mb = __mbuf;
     unique_ptr<char_type, void(*)(void*)> __hw(0, free);
-    size_t __exn = static_cast<int>(__n) > __fd ?
-                   (__n - static_cast<size_t>(__fd)) * 2 + __sn.size() +
-                    __sym.size() + static_cast<size_t>(__fd) + 1
+    size_t __exn = __n > __fd ?
+                   (static_cast<size_t>(__n) - static_cast<size_t>(__fd)) * 2 +
+                    __sn.size() + __sym.size() + static_cast<size_t>(__fd) + 1
                  : __sn.size() + __sym.size() + static_cast<size_t>(__fd) + 2;
     if (__exn > __bs)
     {
