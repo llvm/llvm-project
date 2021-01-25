@@ -213,10 +213,24 @@ inline bool operator!=(OpState lhs, OpState rhs) {
   return lhs.getOperation() != rhs.getOperation();
 }
 
+raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr);
+
 /// This class represents a single result from folding an operation.
 class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
+
+public:
+  void dump() { llvm::errs() << *this << "\n"; }
 };
+
+/// Allow printing to a stream.
+inline raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr) {
+  if (Value value = ofr.dyn_cast<Value>())
+    value.print(os);
+  else
+    ofr.dyn_cast<Attribute>().print(os);
+  return os;
+}
 
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpState &op) {

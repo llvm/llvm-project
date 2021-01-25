@@ -110,28 +110,6 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return a vector of all the static or dynamic sizes of the op.
-      }],
-      /*retTy=*/"SmallVector<OpFoldResult, 4>",
-      /*methodName=*/"getMixedSizes",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        SmallVector<OpFoldResult, 4> res;
-        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
-        unsigned numDynamic = 0;
-        unsigned count = ranks[getOffsetOperandGroupPosition()];
-        for (unsigned idx = 0; idx < count; ++idx) {
-          if (isDynamicSize(idx))
-            res.push_back($_op.sizes()[numDynamic++]);
-          else
-            res.push_back($_op.static_sizes()[idx]);
-        }
-        return res;
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Return the dynamic stride operands.
       }],
       /*retTy=*/"OperandRange",
@@ -176,6 +154,72 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return $_op.static_strides();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return a vector of all the static or dynamic sizes of the op.
+      }],
+      /*retTy=*/"SmallVector<OpFoldResult, 4>",
+      /*methodName=*/"getMixedOffsets",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<OpFoldResult, 4> res;
+        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
+        unsigned numDynamic = 0;
+        unsigned count = ranks[getOffsetOperandGroupPosition()];
+        for (unsigned idx = 0; idx < count; ++idx) {
+          if (isDynamicOffset(idx))
+            res.push_back($_op.offsets()[numDynamic++]);
+          else
+            res.push_back($_op.static_offsets()[idx]);
+        }
+        return res;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return a vector of all the static or dynamic sizes of the op.
+      }],
+      /*retTy=*/"SmallVector<OpFoldResult, 4>",
+      /*methodName=*/"getMixedSizes",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<OpFoldResult, 4> res;
+        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
+        unsigned numDynamic = 0;
+        unsigned count = ranks[getSizeOperandGroupPosition()];
+        for (unsigned idx = 0; idx < count; ++idx) {
+          if (isDynamicSize(idx))
+            res.push_back($_op.sizes()[numDynamic++]);
+          else
+            res.push_back($_op.static_sizes()[idx]);
+        }
+        return res;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return a vector of all the static or dynamic strides of the op.
+      }],
+      /*retTy=*/"SmallVector<OpFoldResult, 4>",
+      /*methodName=*/"getMixedStrides",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<OpFoldResult, 4> res;
+        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
+        unsigned numDynamic = 0;
+        unsigned count = ranks[getStrideOperandGroupPosition()];
+        for (unsigned idx = 0; idx < count; ++idx) {
+          if (isDynamicStride(idx))
+            res.push_back($_op.strides()[numDynamic++]);
+          else
+            res.push_back($_op.static_strides()[idx]);
+        }
+        return res;
       }]
     >,
 
