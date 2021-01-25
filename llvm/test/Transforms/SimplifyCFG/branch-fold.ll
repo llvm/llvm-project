@@ -39,12 +39,16 @@ define zeroext i1 @test2(i64 %i0, i64 %i1) nounwind uwtable readonly ssp {
 ; CHECK-NEXT:    [[SHR_I_I:%.*]] = lshr i64 [[I1]], 48
 ; CHECK-NEXT:    [[AND_I2_I:%.*]] = and i64 [[SHR_I_I]], 32767
 ; CHECK-NEXT:    [[CMP9_I:%.*]] = icmp ult i64 [[AND_I5_I]], [[AND_I2_I]]
-; CHECK-NEXT:    [[PHITMP:%.*]] = icmp uge i64 [[AND_I2_I]], [[AND_I5_I]]
-; CHECK-NEXT:    [[NOT_COND:%.*]] = xor i1 [[CMP9_I]], true
-; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[NOT_COND]], [[PHITMP]]
+; CHECK-NEXT:    br i1 [[CMP9_I]], label [[C]], label [[B:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[SHR_I13_I9:%.*]] = lshr i64 [[I1]], 48
+; CHECK-NEXT:    [[AND_I14_I10:%.*]] = and i64 [[SHR_I13_I9]], 32767
+; CHECK-NEXT:    [[SHR_I_I11:%.*]] = lshr i64 [[I0]], 48
+; CHECK-NEXT:    [[AND_I11_I12:%.*]] = and i64 [[SHR_I_I11]], 32767
+; CHECK-NEXT:    [[PHITMP:%.*]] = icmp uge i64 [[AND_I14_I10]], [[AND_I11_I12]]
 ; CHECK-NEXT:    br label [[C]]
 ; CHECK:       c:
-; CHECK-NEXT:    [[O2:%.*]] = phi i1 [ [[AND_COND]], [[A]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[O2:%.*]] = phi i1 [ false, [[A]] ], [ [[PHITMP]], [[B]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[O2]]
 ;
 entry:
