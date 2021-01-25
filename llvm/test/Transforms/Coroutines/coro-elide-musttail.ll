@@ -17,7 +17,7 @@ declare dso_local fastcc void @"bar.resume"(%"bar.Frame"*) align 2
 define internal fastcc void @foo.resume_musttail(%"foo.Frame"* %FramePtr) {
 ; CHECK-LABEL: @foo.resume_musttail(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.coro.alloc(token [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8* @llvm.coro.begin(token [[TMP0]], i8* null)
 ; CHECK-NEXT:    [[CALL34:%.*]] = call i8* undef()
@@ -39,9 +39,9 @@ define internal fastcc void @foo.resume_no_musttail(%"foo.Frame"* %FramePtr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [24 x i8], align 8
 ; CHECK-NEXT:    [[VFRAME:%.*]] = bitcast [24 x i8]* [[TMP0]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = call token @llvm.coro.id
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call token @llvm.coro.id(i32 16, i8* null, i8* bitcast (void ()* @bar to i8*), i8* bitcast ([3 x void (%bar.Frame*)*]* @bar.resumers to i8*))
 ; CHECK-NEXT:    [[CALL34:%.*]] = call i8* undef()
-; CHECK-NEXT:    call fastcc void undef(i8* [[CALL34]])
+; CHECK-NEXT:    tail call fastcc void undef(i8* [[CALL34]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
