@@ -116,7 +116,7 @@
 using namespace llvm;
 
 static cl::opt<bool> VerifyNoAliasScopeDomination(
-    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
+    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(true),
     cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
              "scopes are not dominating"));
 
@@ -5587,18 +5587,17 @@ void Verifier::verifyNoAliasScopeDecl() {
     } while (ItNext != NoAliasScopeDecls.end() &&
              GetScope(*ItNext) == CurScope);
 
-    // [ItCurrent, ItNext[ represents the declarations for the same scope.
-    // Ensure they are not dominating each other
-    for (auto *I : llvm::make_range(ItCurrent, ItNext)) {
-      for (auto *J : llvm::make_range(ItCurrent, ItNext)) {
-        if (I != J) {
-          Assert(!DT.dominates(I, J),
-                 "llvm.experimental.noalias.scope.decl dominates another one "
-                 "with the same scope",
-                 I);
-        }
-      }
-    }
+    // [ItCurrent, ItNext) represents the declarations for the same scope.
+    // Ensure they are not dominating each other.. but only if it is not too
+    // expensive.
+    if (ItNext - ItCurrent < 32)
+      for (auto *I : llvm::make_range(ItCurrent, ItNext))
+        for (auto *J : llvm::make_range(ItCurrent, ItNext))
+          if (I != J)
+            Assert(!DT.dominates(I, J),
+                   "llvm.experimental.noalias.scope.decl dominates another one "
+                   "with the same scope",
+                   I);
     ItCurrent = ItNext;
   }
 }
