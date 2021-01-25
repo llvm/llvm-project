@@ -9,7 +9,7 @@ define <vscale x 1 x half> @intrinsic_vfsqrt_v_nxv1f16_nxv1f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x half> %0,
   i64 %1) nounwind {
@@ -31,7 +31,7 @@ define <vscale x 1 x half> @intrinsic_vfsqrt_mask_v_nxv1f16_nxv1f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x half> %0,
   <vscale x 1 x half> %1,
@@ -55,7 +55,7 @@ define <vscale x 2 x half> @intrinsic_vfsqrt_v_nxv2f16_nxv2f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv2f16_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x half> %0,
   i64 %1) nounwind {
@@ -77,7 +77,7 @@ define <vscale x 2 x half> @intrinsic_vfsqrt_mask_v_nxv2f16_nxv2f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv2f16_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x half> %0,
   <vscale x 2 x half> %1,
@@ -101,7 +101,7 @@ define <vscale x 4 x half> @intrinsic_vfsqrt_v_nxv4f16_nxv4f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv4f16_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x half> %0,
   i64 %1) nounwind {
@@ -123,7 +123,7 @@ define <vscale x 4 x half> @intrinsic_vfsqrt_mask_v_nxv4f16_nxv4f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv4f16_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m1,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x half> %0,
   <vscale x 4 x half> %1,
@@ -147,7 +147,7 @@ define <vscale x 8 x half> @intrinsic_vfsqrt_v_nxv8f16_nxv8f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv8f16_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m2,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x half> %0,
   i64 %1) nounwind {
@@ -169,7 +169,7 @@ define <vscale x 8 x half> @intrinsic_vfsqrt_mask_v_nxv8f16_nxv8f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv8f16_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m2,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v18, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x half> %0,
   <vscale x 8 x half> %1,
@@ -193,7 +193,7 @@ define <vscale x 16 x half> @intrinsic_vfsqrt_v_nxv16f16_nxv16f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv16f16_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m4,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 16 x half> %0,
   i64 %1) nounwind {
@@ -215,7 +215,7 @@ define <vscale x 16 x half> @intrinsic_vfsqrt_mask_v_nxv16f16_nxv16f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv16f16_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m4,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v20, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 16 x half> %0,
   <vscale x 16 x half> %1,
@@ -239,7 +239,7 @@ define <vscale x 32 x half> @intrinsic_vfsqrt_v_nxv32f16_nxv32f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m8,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 32 x half> %0,
   i64 %1) nounwind {
@@ -260,10 +260,8 @@ declare <vscale x 32 x half> @llvm.riscv.vfsqrt.mask.nxv32f16(
 define <vscale x 32 x half> @intrinsic_vfsqrt_mask_v_nxv32f16_nxv32f16(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e16,m8,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v8, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e16,m8,tu,mu
+; CHECK-NEXT:    vfsqrt.v v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 32 x half> %0,
   <vscale x 32 x half> %1,
@@ -287,7 +285,7 @@ define <vscale x 1 x float> @intrinsic_vfsqrt_v_nxv1f32_nxv1f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv1f32_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x float> %0,
   i64 %1) nounwind {
@@ -309,7 +307,7 @@ define <vscale x 1 x float> @intrinsic_vfsqrt_mask_v_nxv1f32_nxv1f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv1f32_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x float> %0,
   <vscale x 1 x float> %1,
@@ -333,7 +331,7 @@ define <vscale x 2 x float> @intrinsic_vfsqrt_v_nxv2f32_nxv2f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv2f32_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x float> %0,
   i64 %1) nounwind {
@@ -355,7 +353,7 @@ define <vscale x 2 x float> @intrinsic_vfsqrt_mask_v_nxv2f32_nxv2f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv2f32_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x float> %0,
   <vscale x 2 x float> %1,
@@ -379,7 +377,7 @@ define <vscale x 4 x float> @intrinsic_vfsqrt_v_nxv4f32_nxv4f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv4f32_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x float> %0,
   i64 %1) nounwind {
@@ -401,7 +399,7 @@ define <vscale x 4 x float> @intrinsic_vfsqrt_mask_v_nxv4f32_nxv4f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv4f32_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v18, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x float> %0,
   <vscale x 4 x float> %1,
@@ -425,7 +423,7 @@ define <vscale x 8 x float> @intrinsic_vfsqrt_v_nxv8f32_nxv8f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv8f32_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x float> %0,
   i64 %1) nounwind {
@@ -447,7 +445,7 @@ define <vscale x 8 x float> @intrinsic_vfsqrt_mask_v_nxv8f32_nxv8f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv8f32_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v20, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x float> %0,
   <vscale x 8 x float> %1,
@@ -471,7 +469,7 @@ define <vscale x 16 x float> @intrinsic_vfsqrt_v_nxv16f32_nxv16f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 16 x float> %0,
   i64 %1) nounwind {
@@ -492,10 +490,8 @@ declare <vscale x 16 x float> @llvm.riscv.vfsqrt.mask.nxv16f32(
 define <vscale x 16 x float> @intrinsic_vfsqrt_mask_v_nxv16f32_nxv16f32(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e32,m8,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v8, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e32,m8,tu,mu
+; CHECK-NEXT:    vfsqrt.v v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 16 x float> %0,
   <vscale x 16 x float> %1,
@@ -519,7 +515,7 @@ define <vscale x 1 x double> @intrinsic_vfsqrt_v_nxv1f64_nxv1f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv1f64_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x double> %0,
   i64 %1) nounwind {
@@ -541,7 +537,7 @@ define <vscale x 1 x double> @intrinsic_vfsqrt_mask_v_nxv1f64_nxv1f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv1f64_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v17, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 1 x double> %0,
   <vscale x 1 x double> %1,
@@ -565,7 +561,7 @@ define <vscale x 2 x double> @intrinsic_vfsqrt_v_nxv2f64_nxv2f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv2f64_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x double> %0,
   i64 %1) nounwind {
@@ -587,7 +583,7 @@ define <vscale x 2 x double> @intrinsic_vfsqrt_mask_v_nxv2f64_nxv2f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv2f64_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v18, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 2 x double> %0,
   <vscale x 2 x double> %1,
@@ -611,7 +607,7 @@ define <vscale x 4 x double> @intrinsic_vfsqrt_v_nxv4f64_nxv4f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv4f64_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x double> %0,
   i64 %1) nounwind {
@@ -633,7 +629,7 @@ define <vscale x 4 x double> @intrinsic_vfsqrt_mask_v_nxv4f64_nxv4f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv4f64_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v20, v0.t
+; CHECK-NEXT:    vfsqrt.v v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 4 x double> %0,
   <vscale x 4 x double> %1,
@@ -657,7 +653,7 @@ define <vscale x 8 x double> @intrinsic_vfsqrt_v_nxv8f64_nxv8f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_v_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
-; CHECK-NEXT:    vfsqrt.v v16, v16
+; CHECK-NEXT:    vfsqrt.v v8, v8
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x double> %0,
   i64 %1) nounwind {
@@ -678,10 +674,8 @@ declare <vscale x 8 x double> @llvm.riscv.vfsqrt.mask.nxv8f64(
 define <vscale x 8 x double> @intrinsic_vfsqrt_mask_v_nxv8f64_nxv8f64(
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
-; CHECK-NEXT:    vfsqrt.v v16, v8, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vfsqrt.v v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
   <vscale x 8 x double> %0,
   <vscale x 8 x double> %1,
