@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-obj -fms-compatibility %s -o -
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -fms-compatibility %s -o -
 // CHECK that we don't crash.
 
 struct Base {
