@@ -37,8 +37,31 @@ What's New in Libc++ 12.0.0?
 
 New Features
 ------------
+- Random device support has been made optional. It's enabled by default and can
+  be disabled by building libc++ with ``-DLIBCXX_ENABLE_RANDOM_DEVICE=OFF``.
+  Disabling random device support can be useful when building the library for
+  platforms that don't have a source of randomness, such as some embedded
+  platforms. When this is not supported, most of ``<random>`` will still be
+  available, but ``std::random_device`` will not.
+- Localization support has been made optional. It's enabled by default and can
+  be disabled by building libc++ with ``-DLIBCXX_ENABLE_LOCALIZATION=OFF``.
+  Disabling localization can be useful when porting to platforms that don't
+  support the C locale API (e.g. embedded). When localization is not
+  supported, several parts of the library will be disabled: ``<iostream>``,
+  ``<regex>``, ``<locale>`` will be completely unusable, and other parts may be
+  only partly available.
+- If libc++ is compiled with a C++20 capable compiler it will be compiled in
+  C++20 mode. Else libc++ will be compiled in C++17 mode.
+- Several unqualified lookups in libc++ have been changed to qualified lookups.
+  This makes libc++ more ADL-proof.
+- The libc++ implementation status pages have been overhauled. Like other parts
+  documentation they now use restructured text instead of html. Starting with
+  libc++12 the status pages are part of libc++'s documentation.
+- More C++20 features have been implemented. :doc:`Cxx2aStatus` has the full
+  overview of libc++'s C++20 implementation status.
+- Work has started to implement new C++2b features. :doc:`Cxx2bStatus` has the
+  full overview of libc++'s C++2b implementation status.
 
-- ...
 
 API Changes
 -----------
