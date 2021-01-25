@@ -194,10 +194,10 @@ Sections:
     Type: SHT_GNU_versym
   - Name: .dynsym
     Type: SHT_DYNSYM
-SectionHeaderTable:
-  Sections:
-    - Name: .gnu.version
-    - Name: .strtab
-    - Name: .shstrtab
-  Excluded:
-    - Name: .dynsym
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .gnu.version
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynsym

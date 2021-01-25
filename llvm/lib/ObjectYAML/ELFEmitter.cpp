@@ -124,6 +124,11 @@ public:
     if (checkLimit(sizeof(T)))
       support::endian::write<T>(OS, Val, E);
   }
+
+  void updateDataAt(uint64_t Pos, void *Data, size_t Size) {
+    assert(Pos >= InitialOffset && Pos + Size <= getOffset());
+    memcpy(&Buf[Pos - InitialOffset], Data, Size);
+  }
 };
 
 // Used to keep track of section and symbol names, so that in the YAML file
@@ -224,7 +229,7 @@ template <class ELFT> class ELFState {
                    ArrayRef<typename ELFT::Shdr> SHeaders);
 
   void finalizeStrings();
-  void writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff);
+  void writeELFHeader(raw_ostream &OS);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::NoBitsSection &Section,
                            ContiguousBlobAccumulator &CBA);
@@ -330,12 +335,22 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
         std::make_unique<ELFYAML::Section>(
             ELFYAML::Chunk::ChunkKind::RawContent, /*IsImplicit=*/true));
 
-  // We add a technical suffix for each unnamed section/fill. It does not affect
-  // the output, but allows us to map them by name in the code and report better
-  // error messages.
   StringSet<> DocSections;
+  ELFYAML::SectionHeaderTable *SecHdrTable = nullptr;
   for (size_t I = 0; I < Doc.Chunks.size(); ++I) {
     const std::unique_ptr<ELFYAML::Chunk> &C = Doc.Chunks[I];
+
+    // We might have an explicit section header table declaration.
+    if (auto S = dyn_cast<ELFYAML::SectionHeaderTable>(C.get())) {
+      if (SecHdrTable)
+        reportError("multiple section header tables are not allowed");
+      SecHdrTable = S;
+      continue;
+    }
+
+    // We add a technical suffix for each unnamed section/fill. It does not
+    // affect the output, but allows us to map them by name in the code and
+    // report better error messages.
     if (C->Name.empty()) {
       std::string NewName = ELFYAML::appendUniqueSuffix(
           /*Name=*/"", "index " + Twine(I));
@@ -359,7 +374,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
       ImplicitSections.push_back(StringRef(SecName).copy(StringAlloc));
     }
   ImplicitSections.insert(ImplicitSections.end(), {".strtab"});
-  if (!Doc.SectionHeaders || !Doc.SectionHeaders->NoHeaders.getValueOr(false))
+  if (!SecHdrTable || !SecHdrTable->NoHeaders.getValueOr(false))
     ImplicitSections.insert(ImplicitSections.end(), {".shstrtab"});
 
   // Insert placeholders for implicit sections that are not
@@ -371,12 +386,27 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     std::unique_ptr<ELFYAML::Chunk> Sec = std::make_unique<ELFYAML::Section>(
         ELFYAML::Chunk::ChunkKind::RawContent, true /*IsImplicit*/);
     Sec->Name = SecName;
-    Doc.Chunks.push_back(std::move(Sec));
+
+    // When the section header table is explicitly defined at the end of the
+    // sections list, it is reasonable to assume that the user wants to reorder
+    // section headers, but still wants to place the section header table after
+    // all sections, like it normally happens. In this case we want to insert
+    // other implicit sections right before the section header table.
+    if (Doc.Chunks.back().get() == SecHdrTable)
+      Doc.Chunks.insert(Doc.Chunks.end() - 1, std::move(Sec));
+    else
+      Doc.Chunks.push_back(std::move(Sec));
   }
+
+  // Insert the section header table implicitly at the end, when it is not
+  // explicitly defined.
+  if (!SecHdrTable)
+    Doc.Chunks.push_back(
+        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true));
 }
 
 template <class ELFT>
-void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff) {
+void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
   using namespace llvm::ELF;
 
   Elf_Ehdr Header;
@@ -426,29 +456,24 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, Optional<uint64_t> SHOff) {
   Header.e_shentsize = Doc.Header.EShEntSize ? (uint16_t)*Doc.Header.EShEntSize
                                              : sizeof(Elf_Shdr);
 
+  const ELFYAML::SectionHeaderTable &SectionHeaders =
+      Doc.getSectionHeaderTable();
+
   if (Doc.Header.EShOff)
     Header.e_shoff = *Doc.Header.EShOff;
-  else if (SHOff)
-    Header.e_shoff = *SHOff;
+  else if (SectionHeaders.Offset)
+    Header.e_shoff = *SectionHeaders.Offset;
   else
     Header.e_shoff = 0;
 
   if (Doc.Header.EShNum)
     Header.e_shnum = *Doc.Header.EShNum;
-  else if (!Doc.SectionHeaders ||
-           (Doc.SectionHeaders->NoHeaders && !*Doc.SectionHeaders->NoHeaders))
-    Header.e_shnum = Doc.getSections().size();
-  else if (!SHOff)
-    Header.e_shnum = 0;
   else
-    Header.e_shnum =
-        (Doc.SectionHeaders->Sections ? Doc.SectionHeaders->Sections->size()
-                                      : 0) +
-        /*Null section*/ 1;
+    Header.e_shnum = SectionHeaders.getNumHeaders(Doc.getSections().size());
 
   if (Doc.Header.EShStrNdx)
     Header.e_shstrndx = *Doc.Header.EShStrNdx;
-  else if (SHOff && !ExcludedSectionHeaders.count(".shstrtab"))
+  else if (SectionHeaders.Offset && !ExcludedSectionHeaders.count(".shstrtab"))
     Header.e_shstrndx = SN2I.get(".shstrtab");
   else
     Header.e_shstrndx = 0;
@@ -520,14 +545,16 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
     return 0;
   }
 
-  if (!Doc.SectionHeaders || (Doc.SectionHeaders->NoHeaders &&
-                              !Doc.SectionHeaders->NoHeaders.getValue()))
+  const ELFYAML::SectionHeaderTable &SectionHeaders =
+      Doc.getSectionHeaderTable();
+  if (SectionHeaders.IsImplicit ||
+      (SectionHeaders.NoHeaders && !SectionHeaders.NoHeaders.getValue()))
     return Index;
 
-  assert(!Doc.SectionHeaders->NoHeaders.getValueOr(false) ||
-         !Doc.SectionHeaders->Sections);
+  assert(!SectionHeaders.NoHeaders.getValueOr(false) ||
+         !SectionHeaders.Sections);
   size_t FirstExcluded =
-      Doc.SectionHeaders->Sections ? Doc.SectionHeaders->Sections->size() : 0;
+      SectionHeaders.Sections ? SectionHeaders.Sections->size() : 0;
   if (Index >= FirstExcluded) {
     if (LocSym.empty())
       reportError("unable to link '" + LocSec + "' to excluded section '" + S +
@@ -670,8 +697,27 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       continue;
     }
 
+    if (ELFYAML::SectionHeaderTable *S =
+            dyn_cast<ELFYAML::SectionHeaderTable>(D.get())) {
+      if (S->NoHeaders.getValueOr(false))
+        continue;
+
+      if (!S->Offset)
+        S->Offset = alignToOffset(CBA, sizeof(typename ELFT::uint),
+                                  /*Offset=*/None);
+      else
+        S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
+
+      uint64_t Size = S->getNumHeaders(SHeaders.size()) * sizeof(Elf_Shdr);
+      // The full section header information might be not available here, so
+      // fill the space with zeroes as a placeholder.
+      CBA.writeZeros(Size);
+      LocationCounter += Size;
+      continue;
+    }
+
     ELFYAML::Section *Sec = cast<ELFYAML::Section>(D.get());
-    bool IsFirstUndefSection = D == Doc.Chunks.front();
+    bool IsFirstUndefSection = Sec == Doc.getSections().front();
     if (IsFirstUndefSection && Sec->IsImplicit)
       continue;
 
@@ -1742,7 +1788,9 @@ void ELFState<ELFT>::writeFill(ELFYAML::Fill &Fill,
 
 template <class ELFT>
 DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
-  if (!Doc.SectionHeaders || Doc.SectionHeaders->NoHeaders)
+  const ELFYAML::SectionHeaderTable &SectionHeaders =
+      Doc.getSectionHeaderTable();
+  if (SectionHeaders.IsImplicit || SectionHeaders.NoHeaders)
     return DenseMap<StringRef, size_t>();
 
   DenseMap<StringRef, size_t> Ret;
@@ -1756,12 +1804,12 @@ DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
     Seen.insert(Hdr.Name);
   };
 
-  if (Doc.SectionHeaders->Sections)
-    for (const ELFYAML::SectionHeader &Hdr : *Doc.SectionHeaders->Sections)
+  if (SectionHeaders.Sections)
+    for (const ELFYAML::SectionHeader &Hdr : *SectionHeaders.Sections)
       AddSection(Hdr);
 
-  if (Doc.SectionHeaders->Excluded)
-    for (const ELFYAML::SectionHeader &Hdr : *Doc.SectionHeaders->Excluded)
+  if (SectionHeaders.Excluded)
+    for (const ELFYAML::SectionHeader &Hdr : *SectionHeaders.Excluded)
       AddSection(Hdr);
 
   for (const ELFYAML::Section *S : Doc.getSections()) {
@@ -1790,17 +1838,17 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
 
   // Build excluded section headers map.
   std::vector<ELFYAML::Section *> Sections = Doc.getSections();
-  if (Doc.SectionHeaders) {
-    if (Doc.SectionHeaders->Excluded)
-      for (const ELFYAML::SectionHeader &Hdr : *Doc.SectionHeaders->Excluded)
-        if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
-          llvm_unreachable("buildSectionIndex() failed");
+  const ELFYAML::SectionHeaderTable &SectionHeaders =
+      Doc.getSectionHeaderTable();
+  if (SectionHeaders.Excluded)
+    for (const ELFYAML::SectionHeader &Hdr : *SectionHeaders.Excluded)
+      if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
+        llvm_unreachable("buildSectionIndex() failed");
 
-    if (Doc.SectionHeaders->NoHeaders.getValueOr(false))
-      for (const ELFYAML::Section *S : Sections)
-        if (!ExcludedSectionHeaders.insert(S->Name).second)
-          llvm_unreachable("buildSectionIndex() failed");
-  }
+  if (SectionHeaders.NoHeaders.getValueOr(false))
+    for (const ELFYAML::Section *S : Sections)
+      if (!ExcludedSectionHeaders.insert(S->Name).second)
+        llvm_unreachable("buildSectionIndex() failed");
 
   size_t SecNdx = -1;
   for (const ELFYAML::Section *S : Sections) {
@@ -1903,17 +1951,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
-  // If needed, align the start of the section header table, which is written
-  // after all section data.
-  const bool HasSectionHeaders =
-      !Doc.SectionHeaders || !Doc.SectionHeaders->NoHeaders.getValueOr(false);
-  Optional<uint64_t> SHOff;
-  if (HasSectionHeaders)
-    SHOff = State.alignToOffset(CBA, sizeof(typename ELFT::uint),
-                                /*Offset=*/None);
-  bool ReachedLimit = SHOff.getValueOr(CBA.getOffset()) +
-                          arrayDataSize(makeArrayRef(SHeaders)) >
-                      MaxSize;
+  bool ReachedLimit = CBA.getOffset() > MaxSize;
   if (Error E = CBA.takeLimitError()) {
     // We report a custom error message instead below.
     consumeError(std::move(E));
@@ -1928,11 +1966,15 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   if (State.HasError)
     return false;
 
-  State.writeELFHeader(OS, SHOff);
+  State.writeELFHeader(OS);
   writeArrayData(OS, makeArrayRef(PHeaders));
+
+  const ELFYAML::SectionHeaderTable &SHT = Doc.getSectionHeaderTable();
+  if (!SHT.NoHeaders.getValueOr(false))
+    CBA.updateDataAt(*SHT.Offset, SHeaders.data(),
+                     SHT.getNumHeaders(SHeaders.size()) * sizeof(Elf_Shdr));
+
   CBA.writeBlobToStream(OS);
-  if (HasSectionHeaders)
-    writeArrayData(OS, makeArrayRef(SHeaders));
   return true;
 }
 

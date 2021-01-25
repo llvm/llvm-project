@@ -860,23 +860,6 @@ void MappingTraits<ELFYAML::SectionHeader>::mapping(
   IO.mapRequired("Name", SHdr.Name);
 }
 
-void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
-    IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
-  IO.mapOptional("Sections", SectionHeader.Sections);
-  IO.mapOptional("Excluded", SectionHeader.Excluded);
-  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders);
-}
-
-std::string MappingTraits<ELFYAML::SectionHeaderTable>::validate(
-    IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable) {
-  if (SecHdrTable.NoHeaders && (SecHdrTable.Sections || SecHdrTable.Excluded))
-    return "NoHeaders can't be used together with Sections/Excluded";
-  if (!SecHdrTable.NoHeaders && !SecHdrTable.Sections && !SecHdrTable.Excluded)
-    return "SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the "
-           "section header table";
-  return "";
-}
-
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
                                                  ELFYAML::FileHeader &FileHdr) {
   IO.mapRequired("Class", FileHdr.Class);
@@ -1252,6 +1235,14 @@ static void fillMapping(IO &IO, ELFYAML::Fill &Fill) {
   IO.mapRequired("Size", Fill.Size);
 }
 
+static void sectionHeaderTableMapping(IO &IO,
+                                      ELFYAML::SectionHeaderTable &SHT) {
+  IO.mapOptional("Offset", SHT.Offset);
+  IO.mapOptional("Sections", SHT.Sections);
+  IO.mapOptional("Excluded", SHT.Excluded);
+  IO.mapOptional("NoHeaders", SHT.NoHeaders);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::LinkerOptionsSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Options", Section.Options);
@@ -1304,22 +1295,48 @@ static StringRef getStringValue(IO &IO, const char *Key) {
   return Val;
 }
 
+static void setStringValue(IO &IO, const char *Key, StringRef Val) {
+  IO.mapRequired(Key, Val);
+}
+
+static bool isInteger(StringRef Val) {
+  APInt Tmp;
+  return !Val.getAsInteger(0, Tmp);
+}
+
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
   ELFYAML::ELF_SHT Type;
+  StringRef TypeStr;
   if (IO.outputting()) {
-    Type = cast<ELFYAML::Section>(Section.get())->Type;
+    if (auto *S = dyn_cast<ELFYAML::Section>(Section.get()))
+      Type = S->Type;
+    else if (auto *SHT = dyn_cast<ELFYAML::SectionHeaderTable>(Section.get()))
+      TypeStr = SHT->TypeStr;
   } else {
     // When the Type string does not have a "SHT_" prefix, we know it is not a
-    // description of a regular ELF output section. Currently, we have one
-    // special type named "Fill". See comments for Fill.
-    if (getStringValue(IO, "Type") == "Fill") {
-      Section.reset(new ELFYAML::Fill());
-      fillMapping(IO, *cast<ELFYAML::Fill>(Section.get()));
-      return;
-    }
+    // description of a regular ELF output section.
+    TypeStr = getStringValue(IO, "Type");
+    if (TypeStr.startswith("SHT_") || isInteger(TypeStr))
+      IO.mapRequired("Type", Type);
+  }
 
-    IO.mapRequired("Type", Type);
+  if (TypeStr == "Fill") {
+    assert(!IO.outputting()); // We don't dump fills currently.
+    Section.reset(new ELFYAML::Fill());
+    fillMapping(IO, *cast<ELFYAML::Fill>(Section.get()));
+    return;
+  }
+
+  if (TypeStr == ELFYAML::SectionHeaderTable::TypeStr) {
+    if (IO.outputting())
+      setStringValue(IO, "Type", TypeStr);
+    else
+      Section.reset(new ELFYAML::SectionHeaderTable(/*IsImplicit=*/false));
+
+    sectionHeaderTableMapping(
+        IO, *cast<ELFYAML::SectionHeaderTable>(Section.get()));
+    return;
   }
 
   const auto &Obj = *static_cast<ELFYAML::Object *>(IO.getContext());
@@ -1449,6 +1466,15 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
     if (F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
+    return "";
+  }
+
+  if (const auto *SHT = dyn_cast<ELFYAML::SectionHeaderTable>(C.get())) {
+    if (SHT->NoHeaders && (SHT->Sections || SHT->Excluded || SHT->Offset))
+      return "NoHeaders can't be used together with Offset/Sections/Excluded";
+    if (!SHT->NoHeaders && !SHT->Sections && !SHT->Excluded)
+      return "SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop "
+             "the section header table";
     return "";
   }
 
@@ -1656,7 +1682,6 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.mapOptional("DWARF", Object.DWARF);
-  IO.mapOptional("SectionHeaderTable", Object.SectionHeaders);
   if (Object.DWARF) {
     Object.DWARF->IsLittleEndian =
         Object.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
