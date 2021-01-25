@@ -240,6 +240,14 @@ bool AMDGPUPropagateAttributes::process() {
       if (F.isDeclaration())
         continue;
 
+      // Skip propagating attributes and features to
+      // address taken functions.
+      if (F.hasAddressTaken()) {
+        if (!Roots.count(&F))
+          NewRoots.insert(&F);
+        continue;
+      }
+
       const FnProperties CalleeProps(*TM, F);
       SmallVector<std::pair<CallBase *, Function *>, 32> ToReplace;
       SmallSet<CallBase *, 32> Visited;
@@ -259,7 +267,11 @@ bool AMDGPUPropagateAttributes::process() {
 
         const FnProperties CallerProps(*TM, *Caller);
 
-        if (CalleeProps == CallerProps) {
+        // Convergence is allowed if the caller has its
+        // address taken because all callee's (attributes + features)
+        // may not agree as the callee may be the target of
+        // more than one function (called directly or indirectly).
+        if (Caller->hasAddressTaken() || CalleeProps == CallerProps) {
           if (!Roots.count(&F))
             NewRoots.insert(&F);
           continue;
