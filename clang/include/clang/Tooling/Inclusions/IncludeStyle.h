@@ -147,6 +147,26 @@ struct IncludeStyle {
   /// ``ClassImpl.hpp`` would not have the main include file put on top
   /// before any other include.
   std::string IncludeIsMainSourceRegex;
+
+  /// Specify if sorting should be done in an alphabetical and
+  /// case sensitive fashion.
+  ///
+  /// When ``false``, includes are sorted in an ASCIIbetical
+  /// fashion.
+  /// When ``true``, includes are sorted in an alphabetical
+  /// fashion with case used as a tie-breaker.
+  ///
+  /// \code
+  ///   false:                                   true:
+  ///   #include "A/B.h"               vs.       #include "A/B.h"
+  ///   #include "A/b.h"                         #include "A/b.h"
+  ///   #include "B/A.h"                         #include "a/b.h"
+  ///   #include "B/a.h"                         #include "B/A.h"
+  ///   #include "a/b.h"                         #include "B/a.h"
+  /// \endcode
+  ///
+  /// This option is off by default.
+  bool IncludeSortAlphabetically;
 };
 
 } // namespace tooling
