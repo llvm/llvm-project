@@ -18,11 +18,8 @@ body:             |
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[AND]], [[C1]]
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[ADD]](s32), [[AND1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s16) = COPY [[TRUNC1]](s16)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
     ; CHECK: [[AND2:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C2]]
