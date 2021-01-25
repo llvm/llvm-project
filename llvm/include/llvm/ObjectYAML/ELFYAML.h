@@ -78,6 +78,9 @@ unsigned getDefaultShEntSize(unsigned EMachine, ELF_SHT SecType,
     return sizeof(object::Elf_Mips_ABIFlags<ELFT>);
 
   switch (SecType) {
+  case ELF::SHT_SYMTAB:
+  case ELF::SHT_DYNSYM:
+    return sizeof(typename ELFT::Sym);
   case ELF::SHT_GROUP:
     return sizeof(typename ELFT::Word);
   case ELF::SHT_REL:
