@@ -2360,14 +2360,15 @@ the configuration (without a prefix: ``Auto``).
   When ``true``, includes are sorted in an alphabetical
   fashion with case used as a tie-breaker.
 
+
   .. code-block:: c++
 
-     false:                                   true:
-     #include "A/B.h"               vs.       #include "A/B.h"
-     #include "A/b.h"                         #include "A/b.h"
-     #include "B/A.h"                         #include "a/b.h"
-     #include "B/a.h"                         #include "B/A.h"
-     #include "a/b.h"                         #include "B/a.h"
+    false:                                   true:
+    #include "A/B.h"               vs.       #include "A/B.h"
+    #include "A/b.h"                         #include "A/b.h"
+    #include "B/A.h"                         #include "a/b.h"
+    #include "B/a.h"                         #include "B/A.h"
+    #include "a/b.h"                         #include "B/a.h"
 
   This option is off by default.
 
