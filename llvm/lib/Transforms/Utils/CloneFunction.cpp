@@ -968,6 +968,28 @@ void llvm::cloneAndAdaptNoAliasScopes(
       adaptNoAliasScopes(&I, ClonedScopes, ClonedMVScopes, Context);
 }
 
+void llvm::cloneAndAdaptNoAliasScopes(
+    ArrayRef<MetadataAsValue *> NoAliasDeclScopes, Instruction *IStart,
+    Instruction *IEnd, LLVMContext &Context, StringRef Ext) {
+  if (NoAliasDeclScopes.empty())
+    return;
+
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<MetadataAsValue *, MetadataAsValue *> ClonedMVScopes;
+  LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
+                    << NoAliasDeclScopes.size() << " node(s)\n");
+
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, ClonedMVScopes, Ext,
+                     Context);
+  // Identify instructions using metadata that needs adaptation
+  assert(IStart->getParent() == IEnd->getParent() && "different basic block ?");
+  auto ItStart = IStart->getIterator();
+  auto ItEnd = IEnd->getIterator();
+  ++ItEnd; // IEnd is included, increment ItEnd to get the end of the range
+  for (auto &I : llvm::make_range(ItStart, ItEnd))
+    adaptNoAliasScopes(&I, ClonedScopes, ClonedMVScopes, Context);
+}
+
 void llvm::identifyNoAliasScopesToClone(
     ArrayRef<BasicBlock *> BBs,
     SmallVectorImpl<MetadataAsValue *> &NoAliasDeclScopes) {
