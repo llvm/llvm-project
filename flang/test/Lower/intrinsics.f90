@@ -80,7 +80,7 @@ subroutine dim_testi(i, j, k)
   ! CHECK-DAG: %[[j:.*]] = fir.load %arg1
   ! CHECK-DAG: %[[zero:.*]] = constant 0
   ! CHECK-DAG: %[[diff:.*]] = subi %[[i]], %[[j]]
-  ! CHECK: %[[cmp:.*]] = cmpi "sgt", %[[diff]], %[[zero]]
+  ! CHECK: %[[cmp:.*]] = cmpi sgt, %[[diff]], %[[zero]]
   ! CHECK: %[[res:.*]] = select %[[cmp]], %[[diff]], %[[zero]]
   ! CHECK: fir.store %[[res]] to %arg2
   k = dim(i, j)
@@ -239,7 +239,7 @@ integer function len_trim_test(c)
     ! CHECK: %[[addr:.*]] = fir.coordinate_of {{.*}}, %[[index]]
     ! CHECK: %[[char:.*]] = fir.load %[[addr]]
     ! CHECK: %[[code:.*]] = fir.convert %[[char]]
-    ! CHECK: %[[bool:.*]] = cmpi "eq"
+    ! CHECK: %[[bool:.*]] = cmpi eq
     ! CHECK: fir.result %[[bool]], %[[index]]
   ! CHECK: }
   ! CHECK: %[[len:.*]] = addi %[[iterateResult]]#1, %[[c1]]
@@ -272,7 +272,7 @@ subroutine sign_testi(a, b, c)
   ! CHECK: xor
   ! CHECK: subi
   ! CHECK-DAG: subi
-  ! CHECK-DAG: cmpi "slt"
+  ! CHECK-DAG: cmpi slt
   ! CHECK: select
   c = sign(a, b)
 end subroutine

@@ -32,7 +32,7 @@ namespace fir {
 //
 //===----------------------------------------------------------------------===//
 
-using TypeBuilderFunc = mlir::LLVM::LLVMType (*)(mlir::MLIRContext *);
+using TypeBuilderFunc = mlir::Type (*)(mlir::MLIRContext *);
 
 /// Get the LLVM IR dialect model for building a particular C++ type, `T`.
 template <typename T>
@@ -40,66 +40,64 @@ TypeBuilderFunc getModel();
 
 template <>
 TypeBuilderFunc getModel<void *>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMPointerType::get(
-        mlir::LLVM::LLVMIntegerType::get(context, 8));
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::LLVM::LLVMPointerType::get(mlir::IntegerType::get(context, 8));
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(unsigned) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, sizeof(unsigned) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<int>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(int) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, sizeof(int) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned long>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(unsigned long) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, sizeof(unsigned long) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned long long>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(context,
-                                            sizeof(unsigned long long) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, sizeof(unsigned long long) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<long long>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(long long) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, sizeof(long long) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_rank_t>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(
-        context, sizeof(Fortran::ISO::CFI_rank_t) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context,
+                                  sizeof(Fortran::ISO::CFI_rank_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_type_t>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(
-        context, sizeof(Fortran::ISO::CFI_type_t) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context,
+                                  sizeof(Fortran::ISO::CFI_type_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_index_t>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
-    return mlir::LLVM::LLVMIntegerType::get(
-        context, sizeof(Fortran::ISO::CFI_index_t) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context,
+                                  sizeof(Fortran::ISO::CFI_index_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_dim_t>() {
-  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
     auto indexTy = getModel<Fortran::ISO::CFI_index_t>()(context);
     return mlir::LLVM::LLVMArrayType::get(indexTy, 3);
   };

@@ -291,8 +291,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
 
-  loopOp.setAttr(mlir::acc::LoopOp::getExecutionMappingAttrName(),
-                 firOpBuilder.getI64IntegerAttr(executionMapping));
+  loopOp->setAttr(mlir::acc::LoopOp::getExecutionMappingAttrName(),
+                  firOpBuilder.getI64IntegerAttr(executionMapping));
 
   // Lower clauses mapped to attributes
   for (const auto &clause : accClauseList.v) {
@@ -301,19 +301,19 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
       const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
       const auto collapseValue = Fortran::evaluate::ToInt64(*expr);
       if (collapseValue) {
-        loopOp.setAttr(mlir::acc::LoopOp::getCollapseAttrName(),
-                       firOpBuilder.getI64IntegerAttr(*collapseValue));
+        loopOp->setAttr(mlir::acc::LoopOp::getCollapseAttrName(),
+                        firOpBuilder.getI64IntegerAttr(*collapseValue));
       }
     } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      loopOp.setAttr(mlir::acc::LoopOp::getSeqAttrName(),
-                     firOpBuilder.getUnitAttr());
+      loopOp->setAttr(mlir::acc::LoopOp::getSeqAttrName(),
+                      firOpBuilder.getUnitAttr());
     } else if (std::get_if<Fortran::parser::AccClause::Independent>(
                    &clause.u)) {
-      loopOp.setAttr(mlir::acc::LoopOp::getIndependentAttrName(),
-                     firOpBuilder.getUnitAttr());
+      loopOp->setAttr(mlir::acc::LoopOp::getIndependentAttrName(),
+                      firOpBuilder.getUnitAttr());
     } else if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
-      loopOp.setAttr(mlir::acc::LoopOp::getAutoAttrName(),
-                     firOpBuilder.getUnitAttr());
+      loopOp->setAttr(mlir::acc::LoopOp::getAutoAttrName(),
+                      firOpBuilder.getUnitAttr());
     }
   }
   return loopOp;
@@ -413,12 +413,12 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
         // TODO This would be nicer to be done in canonicalization step.
         if (accClauseList->v.size() == 1) {
           const auto &accObject = accClauseList->v.front();
-          if (const auto *designator = std::get_if<Fortran::parser::Designator>(
-                  &accObject.u)) {
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
             if (const auto *name = getDesignatorNameIfDataRef(*designator)) {
               auto cond = converter.getSymbolAddress(*name->symbol);
-              selfCond = firOpBuilder.createConvert(currentLocation,
-                                                firOpBuilder.getI1Type(), cond);
+              selfCond = firOpBuilder.createConvert(
+                  currentLocation, firOpBuilder.getI1Type(), cond);
             }
           }
         }

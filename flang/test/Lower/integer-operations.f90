@@ -8,7 +8,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "eq", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi eq, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 eq0_test = x0 .EQ. x1
 END FUNCTION
@@ -19,7 +19,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "ne", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi ne, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 ne1_test = x0 .NE. x1
 END FUNCTION
@@ -30,7 +30,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "slt", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi slt, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 lt2_test = x0 .LT. x1
 END FUNCTION
@@ -41,7 +41,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "sle", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi sle, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 le3_test = x0 .LE. x1
 END FUNCTION
@@ -52,7 +52,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "sgt", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi sgt, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 gt4_test = x0 .GT. x1
 END FUNCTION
@@ -63,7 +63,7 @@ INTEGER(4) :: x0
 INTEGER(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:[[reg3:%[0-9]+]] = cmpi "sge", [[reg1]], [[reg2]] : i32
+! CHECK:[[reg3:%[0-9]+]] = cmpi sge, [[reg1]], [[reg2]] : i32
 ! CHECK:fir.convert [[reg3]] {{.*}} -> !fir.logical<4>
 ge5_test = x0 .GE. x1
 END FUNCTION

@@ -23,7 +23,7 @@ public:
                                         *getKindMapping(module))) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
-    // Each conversion should return a value of type mlir::LLVM::LLVMType.
+    // Each conversion should return a value of type mlir::Type.
     addConversion([&](BoxType box) { return convertBoxType(box); });
     addConversion([&](BoxCharType boxchar) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << boxchar << '\n');
@@ -41,18 +41,18 @@ public:
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion([&](fir::FieldType field) {
-      return mlir::LLVM::LLVMIntegerType::get(field.getContext(), 32);
+      return mlir::IntegerType::get(field.getContext(), 32);
     });
     addConversion([&](HeapType heap) { return convertPointerLike(heap); });
     addConversion([&](fir::IntegerType intTy) {
-      return mlir::LLVM::LLVMIntegerType::get(
+      return mlir::IntegerType::get(
           &getContext(), kindMapping.getIntegerBitsize(intTy.getFKind()));
     });
     addConversion([&](LenType field) {
-      return mlir::LLVM::LLVMIntegerType::get(field.getContext(), 32);
+      return mlir::IntegerType::get(field.getContext(), 32);
     });
     addConversion([&](fir::LogicalType boolTy) {
-      return mlir::LLVM::LLVMIntegerType::get(
+      return mlir::IntegerType::get(
           &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
     });
     addConversion(
@@ -67,16 +67,16 @@ public:
       return convertTypeDescType(tdesc.getContext());
     });
     addConversion([&](fir::VectorType vecTy) {
-      return mlir::LLVM::LLVMFixedVectorType::get(
-          unwrap(convertType(vecTy.getEleTy())), vecTy.getLen());
+      return mlir::VectorType::get(llvm::ArrayRef<int64_t>(vecTy.getLen()),
+                                   unwrap(convertType(vecTy.getEleTy())));
     });
     addConversion([&](mlir::TupleType tuple) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
       llvm::SmallVector<mlir::Type, 8> inMembers;
       tuple.getFlattenedTypes(inMembers);
-      llvm::SmallVector<mlir::LLVM::LLVMType, 8> members;
+      llvm::SmallVector<mlir::Type, 8> members;
       for (auto mem : inMembers)
-        members.push_back(convertType(mem).cast<mlir::LLVM::LLVMType>());
+        members.push_back(convertType(mem).cast<mlir::Type>());
       return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                     /*isPacked=*/false);
     });
@@ -112,14 +112,10 @@ public:
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.
-  mlir::LLVM::LLVMType offsetType() {
-    return mlir::LLVM::LLVMIntegerType::get(&getContext(), 32);
-  }
+  mlir::Type offsetType() { return mlir::IntegerType::get(&getContext(), 32); }
 
   // i64 can be used to index into aggregates like arrays
-  mlir::LLVM::LLVMType indexType() {
-    return mlir::LLVM::LLVMIntegerType::get(&getContext(), 64);
-  }
+  mlir::Type indexType() { return mlir::IntegerType::get(&getContext(), 64); }
 
   // TODO
   bool requiresExtendedDesc() { return false; }
@@ -129,9 +125,9 @@ public:
   static constexpr int unknownRank() { return -1; }
   // This corresponds to the descriptor as defined ISO_Fortran_binding.h and the
   // addendum defined in descriptor.h.
-  mlir::LLVM::LLVMType convertBoxType(BoxType box, int rank = unknownRank()) {
+  mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
     // (buffer*, ele-size, rank, type-descriptor, attribute, [dims])
-    SmallVector<mlir::LLVM::LLVMType, 6> parts;
+    SmallVector<mlir::Type, 6> parts;
     mlir::Type ele = box.getEleTy();
     // remove fir.heap/fir.ref/fir.ptr
     if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
@@ -173,12 +169,12 @@ public:
   }
 
   // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
-  mlir::LLVM::LLVMType convertBoxProcType(BoxProcType boxproc) {
+  mlir::Type convertBoxProcType(BoxProcType boxproc) {
     auto funcTy = convertType(boxproc.getEleTy());
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(unwrap(funcTy));
     auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(
-        mlir::LLVM::LLVMIntegerType::get(&getContext(), 8));
-    llvm::SmallVector<mlir::LLVM::LLVMType, 2> tuple = {ptrTy, i8PtrTy};
+        mlir::IntegerType::get(&getContext(), 8));
+    llvm::SmallVector<mlir::Type, 2> tuple = {ptrTy, i8PtrTy};
     return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), tuple,
                                                   /*isPacked=*/false);
   }
@@ -188,16 +184,15 @@ public:
   }
 
   // fir.char<n>  -->  llvm<"ix*">   where ix is scaled by kind mapping
-  mlir::LLVM::LLVMType convertCharType(fir::CharacterType charTy) {
-    auto iTy = mlir::LLVM::LLVMIntegerType::get(&getContext(),
-                                                characterBitsize(charTy));
+  mlir::Type convertCharType(fir::CharacterType charTy) {
+    auto iTy = mlir::IntegerType::get(&getContext(), characterBitsize(charTy));
     if (charTy.getLen() == fir::CharacterType::unknownLen())
       return iTy;
     return mlir::LLVM::LLVMArrayType::get(iTy, charTy.getLen());
   }
 
   // Convert a complex value's element type based on its Fortran kind.
-  mlir::LLVM::LLVMType convertComplexPartType(fir::KindTy kind) {
+  mlir::Type convertComplexPartType(fir::KindTy kind) {
     auto realID = kindMapping.getComplexTypeID(kind);
     return fromRealTypeID(realID, kind);
   }
@@ -208,7 +203,7 @@ public:
   //
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
   template <typename C>
-  mlir::LLVM::LLVMType convertComplexType(C cmplx) {
+  mlir::Type convertComplexType(C cmplx) {
     LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
     auto eleTy = cmplx.getElementType();
     return unwrap(convertType(specifics->complexMemoryType(eleTy)));
@@ -216,8 +211,8 @@ public:
 
   // Get the default size of INTEGER. (The default size might have been set on
   // the command line.)
-  mlir::LLVM::LLVMType getDefaultInt() {
-    return mlir::LLVM::LLVMIntegerType::get(
+  mlir::Type getDefaultInt() {
+    return mlir::IntegerType::get(
         &getContext(),
         kindMapping.getIntegerBitsize(kindMapping.defaultIntegerKind()));
   }
@@ -229,7 +224,7 @@ public:
   }
 
   template <typename A>
-  mlir::LLVM::LLVMType convertPointerLike(A &ty) {
+  mlir::Type convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
     // A sequence type is a special case. A sequence of runtime size on its
     // interior dimensions lowers to a memory reference. In that case, we
@@ -256,12 +251,12 @@ public:
 
   // convert a front-end kind value to either a std or LLVM IR dialect type
   // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::LLVM::LLVMType convertRealType(fir::KindTy kind) {
+  mlir::Type convertRealType(fir::KindTy kind) {
     return fromRealTypeID(kindMapping.getRealTypeID(kind), kind);
   }
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  mlir::LLVM::LLVMType convertRecordType(fir::RecordType derived) {
+  mlir::Type convertRecordType(fir::RecordType derived) {
     auto name = derived.getName();
     // The cache is needed to keep a unique mapping from name -> StructType
     auto iter = identStructCache.find(name);
@@ -269,15 +264,15 @@ public:
       return iter->second;
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     identStructCache[name] = st;
-    llvm::SmallVector<mlir::LLVM::LLVMType, 8> members;
+    llvm::SmallVector<mlir::Type, 8> members;
     for (auto mem : derived.getTypeList())
-      members.push_back(convertType(mem.second).cast<mlir::LLVM::LLVMType>());
+      members.push_back(convertType(mem.second).cast<mlir::Type>());
     st.setBody(members, /*isPacked=*/false);
     return st;
   }
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
-  mlir::LLVM::LLVMType convertSequenceType(SequenceType seq) {
+  mlir::Type convertSequenceType(SequenceType seq) {
     auto baseTy = unwrap(convertType(seq.getEleTy()));
     if (hasDynamicSize(seq.getEleTy()))
       return mlir::LLVM::LLVMPointerType::get(baseTy);
@@ -299,25 +294,24 @@ public:
   // fir.tdesc<any>  -->  llvm<"i8*">
   // FIXME: for now use a void*, however pointer identity is not sufficient for
   // the f18 object v. class distinction
-  mlir::LLVM::LLVMType convertTypeDescType(mlir::MLIRContext *ctx) {
+  mlir::Type convertTypeDescType(mlir::MLIRContext *ctx) {
     return mlir::LLVM::LLVMPointerType::get(
-        mlir::LLVM::LLVMIntegerType::get(&getContext(), 8));
+        mlir::IntegerType::get(&getContext(), 8));
   }
 
-  /// Convert llvm::Type::TypeID to mlir::LLVM::LLVMType
-  mlir::LLVM::LLVMType fromRealTypeID(llvm::Type::TypeID typeID,
-                                      fir::KindTy kind) {
+  /// Convert llvm::Type::TypeID to mlir::Type
+  mlir::Type fromRealTypeID(llvm::Type::TypeID typeID, fir::KindTy kind) {
     switch (typeID) {
     case llvm::Type::TypeID::HalfTyID:
-      return mlir::LLVM::LLVMHalfType::get(&getContext());
+      return mlir::FloatType::getF16(&getContext());
     case llvm::Type::TypeID::FloatTyID:
-      return mlir::LLVM::LLVMFloatType::get(&getContext());
+      return mlir::FloatType::getF32(&getContext());
     case llvm::Type::TypeID::DoubleTyID:
-      return mlir::LLVM::LLVMDoubleType::get(&getContext());
+      return mlir::FloatType::getF64(&getContext());
     case llvm::Type::TypeID::X86_FP80TyID:
-      return mlir::LLVM::LLVMX86FP80Type::get(&getContext());
+      return mlir::FloatType::getF80(&getContext());
     case llvm::Type::TypeID::FP128TyID:
-      return mlir::LLVM::LLVMFP128Type::get(&getContext());
+      return mlir::FloatType::getF128(&getContext());
     default:
       emitError(UnknownLoc::get(&getContext()))
           << "unsupported type: !fir.real<" << kind << ">";
@@ -326,11 +320,11 @@ public:
   }
 
   /// HACK: cloned from LLVMTypeConverter since this is private there
-  mlir::LLVM::LLVMType unwrap(mlir::Type type) {
+  mlir::Type unwrap(mlir::Type type) {
     if (!type)
       return nullptr;
     auto *mlirContext = type.getContext();
-    auto wrappedLLVMType = type.dyn_cast<mlir::LLVM::LLVMType>();
+    auto wrappedLLVMType = type.dyn_cast<mlir::Type>();
     if (!wrappedLLVMType)
       emitError(UnknownLoc::get(mlirContext),
                 "conversion resulted in a non-LLVM type");
@@ -381,7 +375,7 @@ private:
   KindMapping kindMapping;
   NameUniquer &uniquer;
   std::unique_ptr<CodeGenSpecifics> specifics;
-  static StringMap<mlir::LLVM::LLVMType> identStructCache;
+  static StringMap<mlir::Type> identStructCache;
 };
 
 } // namespace fir

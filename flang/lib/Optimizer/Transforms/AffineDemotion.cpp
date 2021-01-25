@@ -91,9 +91,9 @@ public:
           rewriter.replaceOpWithNewOp<fir::ConvertOp>(op, flatTy, op.value());
           return success();
         }
-      rewriter.startRootUpdate(op.getParentOp());
+      rewriter.startRootUpdate(op->getParentOp());
       op.getResult().replaceAllUsesWith(op.value());
-      rewriter.finalizeRootUpdate(op.getParentOp());
+      rewriter.finalizeRootUpdate(op->getParentOp());
       rewriter.eraseOp(op);
     }
     return success();

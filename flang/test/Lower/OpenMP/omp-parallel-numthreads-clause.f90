@@ -37,7 +37,7 @@ program parallel
 !FIRDialect-NEXT: omp.terminator
 !FIRDialect-NEXT: }
 
-!LLVMIRDialect: omp.parallel num_threads(%{{.*}} : !llvm.i32) {
+!LLVMIRDialect: omp.parallel num_threads(%{{.*}} : i32) {
 !LLVMIRDialect-NEXT: omp.terminator
 !LLVMIRDialect-NEXT: }
 

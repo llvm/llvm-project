@@ -17,10 +17,10 @@
 !FIRDialect:  }
 
 !LLVMDialect: llvm.func @_QPcopyin_clause(%[[ARG1:.*]]: !llvm.ptr<i32>, %[[ARG2:.*]]: !llvm.ptr<array<10 x i32>>) {
-!LLVMIRDialect-DAG:  %[[ALPHA:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ealpha"} : (!llvm.i64) -> !llvm.ptr<i32>
-!LLVMIRDialect-DAG:  %[[BETA:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ebeta"} : (!llvm.i64) -> !llvm.ptr<i32>
-!LLVMIRDialect-DAG:  %[[GAMA:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Egama"} : (!llvm.i64) -> !llvm.ptr<i32>
-!LLVMIRDialect-DAG: %[[ALPHA_ARRAY:.*]] = llvm.alloca %{{.*}} x !llvm.array<10 x i32> {in_type = !fir.array<10xi32>, name = "{{.*}}Ealpha_array"} : (!llvm.i64) -> !llvm.ptr<array<10 x i32>>
+!LLVMIRDialect-DAG:  %[[ALPHA:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ealpha"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect-DAG:  %[[BETA:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ebeta"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect-DAG:  %[[GAMA:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Egama"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect-DAG: %[[ALPHA_ARRAY:.*]] = llvm.alloca %{{.*}} x !llvm.array<10 x i32> {in_type = !fir.array<10xi32>, name = "{{.*}}Ealpha_array"} : (i64) -> !llvm.ptr<array<10 x i32>>
 !LLVMIRDialect:  omp.parallel copyin(%[[ALPHA]] : !llvm.ptr<i32>, %[[BETA]] : !llvm.ptr<i32>, %[[GAMA]] : !llvm.ptr<i32>,
 !%[[ALPHA_ARRAY]] : !llvm.ptr<array<10 x i32>>, %[[ARG1]] : !llvm.ptr<i32>, %[[ARG2]] : !llvm.ptr<array<10 x i32>>) {
 !LLVMIRDialect:    omp.terminator
