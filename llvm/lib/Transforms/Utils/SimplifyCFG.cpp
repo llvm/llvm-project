@@ -3005,13 +3005,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     PBI->setCondition(NewCond);
 
     uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-    bool HasWeights =
-        extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
-                               SuccTrueWeight, SuccFalseWeight);
-    SmallVector<uint64_t, 8> NewWeights;
+    if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
+                               SuccTrueWeight, SuccFalseWeight)) {
+      SmallVector<uint64_t, 8> NewWeights;
 
-    if (PBI->getSuccessor(0) == BB) {
-      if (HasWeights) {
+      if (PBI->getSuccessor(0) == BB) {
         // PBI: br i1 %x, BB, FalseDest
         // BI:  br i1 %y, UniqueSucc, FalseDest
         // TrueWeight is TrueWeight for PBI * TrueWeight for BI.
@@ -3023,11 +3021,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         NewWeights.push_back(PredFalseWeight *
                                  (SuccFalseWeight + SuccTrueWeight) +
                              PredTrueWeight * SuccFalseWeight);
-      }
-      PBI->setSuccessor(0, UniqueSucc);
-    }
-    if (PBI->getSuccessor(1) == BB) {
-      if (HasWeights) {
+      } else {
         // PBI: br i1 %x, TrueDest, BB
         // BI:  br i1 %y, TrueDest, UniqueSucc
         // TrueWeight is TrueWeight for PBI * TotalWeight for BI +
@@ -3038,16 +3032,19 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         // FalseWeight is FalseWeight for PBI * FalseWeight for BI.
         NewWeights.push_back(PredFalseWeight * SuccFalseWeight);
       }
-      PBI->setSuccessor(1, UniqueSucc);
-    }
-    if (NewWeights.size() == 2) {
+
       // Halve the weights if any of them cannot fit in an uint32_t
       FitWeights(NewWeights);
 
       SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
       setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+
+      // TODO: If BB is reachable from all paths through PredBlock, then we
+      // could replace PBI's branch probabilities with BI's.
     } else
       PBI->setMetadata(LLVMContext::MD_prof, nullptr);
+
+    PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
 
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, PredBlock, UniqueSucc},
@@ -3057,9 +3054,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // We need to copy it to the new latch, that is, PBI.
     if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
       PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
-
-    // TODO: If BB is reachable from all paths through PredBlock, then we
-    // could replace PBI's branch probabilities with BI's.
 
     // Copy any debug value intrinsics into the end of PredBlock.
     for (Instruction &I : *BB) {
