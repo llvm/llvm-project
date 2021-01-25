@@ -103,7 +103,10 @@ public:
     // (This is more expensive to check frequently, as we check many locations).
     std::chrono::steady_clock::duration RevalidateMissingAfter =
         std::chrono::seconds(30);
+    // Used to provide per-file configuration.
+    std::function<Context(llvm::StringRef)> ContextProvider;
     // Only look for a compilation database in this one fixed directory.
+    // FIXME: fold this into config/context mechanism.
     llvm::Optional<Path> CompileCommandsDir;
   };
 
@@ -126,14 +129,9 @@ private:
   Options Opts;
 
   class DirectoryCache;
-  // If there's an explicit CompileCommandsDir, cache of the CDB found there.
-  mutable std::unique_ptr<DirectoryCache> OnlyDirCache;
-
   // Keyed by possibly-case-folded directory path.
   // We can hand out pointers as they're stable and entries are never removed.
-  // Empty if CompileCommandsDir is given (OnlyDirCache is used instead).
   mutable llvm::StringMap<DirectoryCache> DirCaches;
-  // DirCaches access must be locked (unlike OnlyDirCache, which is threadsafe).
   mutable std::mutex DirCachesMutex;
 
   std::vector<DirectoryCache *>

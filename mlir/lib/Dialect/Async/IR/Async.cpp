@@ -19,9 +19,8 @@ void AsyncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
       >();
-  addTypes<TokenType>();
-  addTypes<ValueType>();
-  addTypes<GroupType>();
+  addTypes<TokenType, ValueType, GroupType>();           // async types
+  addTypes<CoroIdType, CoroHandleType, CoroStateType>(); // coro types
 }
 
 /// Parse a type registered to this dialect.
@@ -33,6 +32,9 @@ Type AsyncDialect::parseType(DialectAsmParser &parser) const {
   if (keyword == "token")
     return TokenType::get(getContext());
 
+  if (keyword == "group")
+    return GroupType::get(getContext());
+
   if (keyword == "value") {
     Type ty;
     if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater()) {
@@ -41,6 +43,15 @@ Type AsyncDialect::parseType(DialectAsmParser &parser) const {
     }
     return ValueType::get(ty);
   }
+
+  if (keyword == "coro.id")
+    return CoroIdType::get(getContext());
+
+  if (keyword == "coro.handle")
+    return CoroHandleType::get(getContext());
+
+  if (keyword == "coro.state")
+    return CoroStateType::get(getContext());
 
   parser.emitError(parser.getNameLoc(), "unknown async type: ") << keyword;
   return Type();
@@ -56,6 +67,9 @@ void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
         os << '>';
       })
       .Case<GroupType>([&](GroupType) { os << "group"; })
+      .Case<CoroIdType>([&](CoroIdType) { os << "coro.id"; })
+      .Case<CoroHandleType>([&](CoroHandleType) { os << "coro.handle"; })
+      .Case<CoroStateType>([&](CoroStateType) { os << "coro.state"; })
       .Default([](Type) { llvm_unreachable("unexpected 'async' type kind"); });
 }
 

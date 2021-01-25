@@ -228,8 +228,218 @@ def Async_AwaitAllOp : Async_Op<"await_all", []> {
 }
 
 //===----------------------------------------------------------------------===//
-// Async Dialect Automatic Reference Counting Operations.
+// Async Dialect LLVM Coroutines Operations.
 //===----------------------------------------------------------------------===//
+
+// Async to LLVM dialect lowering converts async tasks (regions inside async
+// execute operations) to LLVM coroutines [1], and relies on switched-resume
+// lowering [2] to produce an asynchronous executable.
+//
+// We define LLVM coro intrinsics in the async dialect to facilitate progressive
+// lowering with verifiable and type-safe IR during the multi-step lowering
+// pipeline. First we convert from high level async operations (e.g. execute) to
+// the explicit calls to coro intrinsics and runtime API, and then finalize
+// lowering to LLVM with a simple dialect conversion pass.
+//
+// [1] https://llvm.org/docs/Coroutines.html
+// [2] https://llvm.org/docs/Coroutines.html#switched-resume-lowering
+
+def Async_CoroIdOp : Async_Op<"coro.id"> {
+  let summary = "returns a switched-resume coroutine identifier";
+  let description = [{
+    The `async.coro.id` returns a switched-resume coroutine identifier.
+  }];
+
+  let arguments = (ins );
+  let results = (outs Async_CoroIdType:$id);
+  let assemblyFormat = "attr-dict";
+}
+
+def Async_CoroBeginOp : Async_Op<"coro.begin"> {
+  let summary = "returns a handle to the coroutine";
+  let description = [{
+    The `async.coro.begin` allocates a coroutine frame and returns a handle to
+    the coroutine.
+  }];
+
+  let arguments = (ins Async_CoroIdType:$id);
+  let results = (outs Async_CoroHandleType:$handle);
+  let assemblyFormat = "$id attr-dict";
+}
+
+def Async_CoroFreeOp : Async_Op<"coro.free"> {
+  let summary = "deallocates the coroutine frame";
+  let description = [{
+    The `async.coro.free` deallocates the coroutine frame created by the
+    async.coro.begin operation.
+  }];
+
+  let arguments = (ins Async_CoroIdType:$id,
+                       Async_CoroHandleType:$handle);
+  let results = (outs );
+  let assemblyFormat = "$id `,` $handle attr-dict";
+}
+
+def Async_CoroEndOp : Async_Op<"coro.end"> {
+  let summary = "marks the end of the coroutine in the suspend block";
+  let description = [{
+    The `async.coro.end` marks the point where a coroutine needs to return
+    control back to the caller if it is not an initial invocation of the
+    coroutine. It the start part of the coroutine is is no-op.
+  }];
+
+  let arguments = (ins Async_CoroHandleType:$handle);
+  let results = (outs );
+  let assemblyFormat = "$handle attr-dict";
+}
+
+def Async_CoroSaveOp : Async_Op<"coro.save"> {
+  let summary = "saves the coroutine state";
+  let description = [{
+    The `async.coro.saves` saves the coroutine state.
+  }];
+
+  let arguments = (ins Async_CoroHandleType:$handle);
+  let results = (outs Async_CoroStateType:$state);
+  let assemblyFormat = "$handle attr-dict";
+}
+
+def Async_CoroSuspendOp : Async_Op<"coro.suspend", [Terminator]> {
+  let summary = "suspends the coroutine";
+  let description = [{
+    The `async.coro.suspend` suspends the coroutine and transfers control to the
+    `suspend` successor. If suspended coroutine later resumed it will transfer
+    control to the `resume` successor. If it destroyed it will transfer control
+    to the the `cleanup` successor.
+
+    In switched-resume lowering coroutine can be already in resumed state when
+    suspend operation is called, in this case control will be transferred to the
+    `resume` successor skipping the `suspend` successor.
+  }];
+
+  let arguments = (ins Async_CoroStateType:$state);
+  let successors = (successor AnySuccessor:$suspendDest,
+                              AnySuccessor:$resumeDest,
+                              AnySuccessor:$cleanupDest);
+  let assemblyFormat =
+    "$state `,` $suspendDest `,` $resumeDest  `,` $cleanupDest attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// Async Dialect Runtime Operations.
+//===----------------------------------------------------------------------===//
+
+// The following operations are intermediate async dialect operations to help
+// lowering from high level async operation like `async.execute` to the Async
+// Runtime API defined in the `ExecutionEngine/AsyncRuntime.h`.
+
+def Async_RuntimeCreateOp : Async_Op<"runtime.create"> {
+  let summary = "creates and async runtime value (token, value or group)";
+  let description = [{
+    The `async.runtime.create` operation creates an async dialect value
+    (token, value or group). Tokens and values are created in non-ready state.
+    Groups are created in empty state.
+  }];
+
+  let arguments = (ins );
+  let results = (outs Async_AnyAsyncType:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
+}
+
+def Async_RuntimeSetAvailableOp : Async_Op<"runtime.set_available"> {
+  let summary = "switches token or value available state";
+  let description = [{
+    The `async.runtime.set_available` operation switches async token or value
+    state to available.
+  }];
+
+  let arguments = (ins Async_AnyValueOrTokenType:$operand);
+  let results = (outs );
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
+def Async_RuntimeAwaitOp : Async_Op<"runtime.await"> {
+  let summary = "blocks the caller thread until the operand becomes available";
+  let description = [{
+    The `async.runtime.await` operation blocks the caller thread until the
+    operand becomes available.
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand);
+  let results = (outs );
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
+def Async_RuntimeResumeOp : Async_Op<"runtime.resume"> {
+  let summary = "resumes the coroutine on a thread managed by the runtime";
+  let description = [{
+    The `async.runtime.resume` operation resumes the coroutine on a thread
+    managed by the runtime.
+  }];
+
+  let arguments = (ins Async_CoroHandleType:$handle);
+  let results = (outs );
+  let assemblyFormat = "$handle attr-dict";
+}
+
+def Async_RuntimeAwaitAndResumeOp : Async_Op<"runtime.await_and_resume"> {
+  let summary = "awaits the async operand and resumes the coroutine";
+  let description = [{
+    The `async.runtime.await_and_resume` operation awaits for the operand to
+    become available and resumes the coroutine on a thread managed by the
+    runtime.
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand,
+                       Async_CoroHandleType:$handle);
+  let results = (outs );
+  let assemblyFormat = "$operand `,` $handle attr-dict `:` type($operand)";
+}
+
+def Async_RuntimeStoreOp : Async_Op<"runtime.store",
+      [TypesMatchWith<"type of 'value' matches element type of 'storage'",
+                     "storage", "value",
+                     "$_self.cast<ValueType>().getValueType()">]> {
+  let summary = "stores the value into the runtime async.value";
+  let description = [{
+    The `async.runtime.store` operation stores the value into the runtime
+    async.value storage.
+  }];
+
+  let arguments = (ins AnyType:$value,
+                       Async_AnyValueType:$storage);
+  let results = (outs );
+  let assemblyFormat = "$value `,` $storage attr-dict `:` type($storage)";
+}
+
+def Async_RuntimeLoadOp : Async_Op<"runtime.load",
+      [TypesMatchWith<"type of 'value' matches element type of 'storage'",
+                     "storage", "result",
+                     "$_self.cast<ValueType>().getValueType()">]> {
+  let summary = "loads the value from the runtime async.value";
+  let description = [{
+    The `async.runtime.load` operation loads the value from the runtime
+    async.value storage.
+  }];
+
+  let arguments = (ins Async_AnyValueType:$storage);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$storage attr-dict `:` type($storage)";
+}
+
+def Async_RuntimeAddToGroupOp : Async_Op<"runtime.add_to_group", []> {
+  let summary = "adds and async token or value to the group";
+  let description = [{
+    The `async.runtime.add_to_group` adds an async token or value to the async
+    group. Returns the rank of the added element in the group.
+  }];
+
+  let arguments = (ins Async_AnyValueOrTokenType:$operand,
+                       Async_GroupType:$group);
+  let results = (outs Index:$rank);
+
+  let assemblyFormat = "$operand `,` $group attr-dict `:` type($operand)";
+}
 
 // All async values (values, tokens, groups) are reference counted at runtime
 // and automatically destructed when reference count drops to 0.
@@ -253,11 +463,11 @@ def Async_AwaitAllOp : Async_Op<"await_all", []> {
 //
 // See `AsyncRefCountingPass` documentation for the implementation details.
 
-def Async_AddRefOp : Async_Op<"add_ref"> {
+def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
   let summary = "adds a reference to async value";
   let description = [{
-    The `async.add_ref` operation adds a reference(s) to async value (token,
-    value or group).
+    The `async.runtime.add_ref` operation adds a reference(s) to async value
+    (token, value or group).
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,
@@ -269,11 +479,11 @@ def Async_AddRefOp : Async_Op<"add_ref"> {
   }];
 }
 
-def Async_DropRefOp : Async_Op<"drop_ref"> {
+def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
   let summary = "drops a reference to async value";
   let description = [{
-    The `async.drop_ref` operation drops a reference(s) to async value (token,
-    value or group).
+    The `async.runtime.drop_ref` operation drops a reference(s) to async value
+    (token, value or group).
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,

@@ -29,7 +29,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/ObjCARCRVAttr.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -5648,11 +5647,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   unsigned CallOpc = AArch64ISD::CALL;
-  // Calls marked with "clang.arc.rv" are special. They should be expanded to
-  // the call, directly followed by a special marker sequence. Use the
-  // CALL_RVMARKER to do that.
-  if (CLI.CB && CLI.CB->hasRetAttr(objcarc::getRVAttrKeyStr())) {
-    assert(!IsTailCall && "tail calls cannot be marked with clang.arc.rv");
+  // Calls marked with "rv_marker" are special. They should be expanded to the
+  // call, directly followed by a special marker sequence. Use the CALL_RVMARKER
+  // to do that.
+  if (CLI.CB && CLI.CB->hasRetAttr("rv_marker")) {
+    assert(!IsTailCall && "tail calls cannot be marked with rv_marker");
     CallOpc = AArch64ISD::CALL_RVMARKER;
   }
 

@@ -103,7 +103,7 @@ public:
   /// \return
   ///     A future indicated whether the runInTerminal launcher received the
   ///     message correctly or not.
-  std::future<llvm::Error> NotifyDidAttach();
+  std::future<lldb::SBError> NotifyDidAttach();
 
   /// Fetch the pid of the runInTerminal launcher.
   ///

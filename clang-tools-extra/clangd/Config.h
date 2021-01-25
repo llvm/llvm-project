@@ -52,11 +52,19 @@ struct Config {
   Config(Config &&) = default;
   Config &operator=(Config &&) = default;
 
+  struct CDBSearchSpec {
+    enum { Ancestors, FixedDir, NoCDBSearch } Policy = Ancestors;
+    // Absolute, native slashes, no trailing slash.
+    llvm::Optional<std::string> FixedCDBPath;
+  };
+
   /// Controls how the compile command for the current file is determined.
   struct {
-    // Edits to apply to the compile command, in sequence.
+    /// Edits to apply to the compile command, in sequence.
     std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
         Edits;
+    /// Where to search for compilation databases for this file's flags.
+    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, llvm::None};
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };

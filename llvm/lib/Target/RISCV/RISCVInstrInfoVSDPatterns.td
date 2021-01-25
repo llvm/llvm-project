@@ -32,6 +32,15 @@ def riscv_trunc_vector : SDNode<"RISCVISD::TRUNCATE_VECTOR",
                                 SDTypeProfile<1, 1,
                                  [SDTCisVec<0>, SDTCisVec<1>]>>;
 
+class FromFPR32<DAGOperand operand, dag input_dag> {
+  dag ret = !cond(!eq(!cast<string>(operand), !cast<string>(FPR64)):
+                     (INSERT_SUBREG (IMPLICIT_DEF), input_dag, sub_32),
+                  !eq(!cast<string>(operand), !cast<string>(FPR16)):
+                      (EXTRACT_SUBREG input_dag, sub_16),
+                  !eq(1, 1):
+                    input_dag);
+}
+
 // Penalize the generic form with Complexity=1 to give the simm5/uimm5 variants
 // precedence
 def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
@@ -538,3 +547,101 @@ foreach fvti = AllFloatVectors in {
               0, fvti.AVL, fvti.SEW)>;
 }
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// Vector Element Inserts/Extracts
+//===----------------------------------------------------------------------===//
+
+// The built-in TableGen 'extractelt' and 'insertelt' nodes must return the
+// same type as the vector element type. On RISC-V, XLenVT is the only legal
+// integer type, so for integer inserts/extracts we use a custom node which
+// returns XLenVT.
+def riscv_insert_vector_elt
+    : SDNode<"ISD::INSERT_VECTOR_ELT",
+             SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, XLenVT>,
+                                  SDTCisPtrTy<3>]>, []>;
+def riscv_extract_vector_elt
+    : SDNode<"ISD::EXTRACT_VECTOR_ELT",
+             SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>, SDTCisPtrTy<2>]>, []>;
+
+multiclass VPatInsertExtractElt_XI_Idx<bit IsFloat> {
+  defvar vtilist = !if(IsFloat, AllFloatVectors, AllIntegerVectors);
+  defvar insertelt_node = !if(IsFloat, insertelt, riscv_insert_vector_elt);
+  defvar extractelt_node = !if(IsFloat, extractelt, riscv_extract_vector_elt);
+  foreach vti = vtilist in {
+    defvar MX = vti.LMul.MX;
+    defvar vmv_xf_s_inst = !cast<Instruction>(!if(IsFloat, "PseudoVFMV_F_S_",
+                                                           "PseudoVMV_X_S_")#MX);
+    defvar vmv_s_xf_inst = !cast<Instruction>(!if(IsFloat, "PseudoVFMV_S_F_",
+                                                           "PseudoVMV_S_X_")#MX);
+    // Only pattern-match insert/extract-element operations where the index is
+    // 0. Any other index will have been custom-lowered to slide the vector
+    // correctly into place (and, in the case of insert, slide it back again
+    // afterwards).
+    def : Pat<(vti.Scalar (extractelt_node (vti.Vector vti.RegClass:$rs2), 0)),
+              FromFPR32<vti.ScalarRegClass,
+                       (vmv_xf_s_inst vti.RegClass:$rs2, vti.SEW)>.ret>;
+
+    def : Pat<(vti.Vector (insertelt_node (vti.Vector vti.RegClass:$merge),
+                                          vti.ScalarRegClass:$rs1, 0)),
+              (vmv_s_xf_inst vti.RegClass:$merge,
+                      ToFPR32<vti.Scalar, vti.ScalarRegClass, "rs1">.ret,
+                      vti.AVL, vti.SEW)>;
+  }
+}
+
+let Predicates = [HasStdExtV] in
+defm "" : VPatInsertExtractElt_XI_Idx</*IsFloat*/0>;
+let Predicates = [HasStdExtV, HasStdExtF] in
+defm "" : VPatInsertExtractElt_XI_Idx</*IsFloat*/1>;
+
+//===----------------------------------------------------------------------===//
+// Miscellaneous RISCVISD SDNodes
+//===----------------------------------------------------------------------===//
+
+def riscv_vid
+    : SDNode<"RISCVISD::VID", SDTypeProfile<1, 0, [SDTCisVec<0>]>, []>;
+
+def SDTRVVSlide : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>
+]>;
+
+def riscv_slideup : SDNode<"RISCVISD::VSLIDEUP", SDTRVVSlide, []>;
+def riscv_slidedown : SDNode<"RISCVISD::VSLIDEDOWN", SDTRVVSlide, []>;
+
+let Predicates = [HasStdExtV] in {
+
+foreach vti = AllIntegerVectors in
+  def : Pat<(vti.Vector riscv_vid),
+            (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) vti.AVL, vti.SEW)>;
+
+foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
+    def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),
+                                         (vti.Vector vti.RegClass:$rs1),
+                                         uimm5:$rs2)),
+              (!cast<Instruction>("PseudoVSLIDEUP_VI_"#vti.LMul.MX)
+                  vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
+                  vti.AVL, vti.SEW)>;
+
+    def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),
+                                         (vti.Vector vti.RegClass:$rs1),
+                                         GPR:$rs2)),
+              (!cast<Instruction>("PseudoVSLIDEUP_VX_"#vti.LMul.MX)
+                  vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
+                  vti.AVL, vti.SEW)>;
+
+    def : Pat<(vti.Vector (riscv_slidedown (vti.Vector vti.RegClass:$rs3),
+                                           (vti.Vector vti.RegClass:$rs1),
+                                           uimm5:$rs2)),
+              (!cast<Instruction>("PseudoVSLIDEDOWN_VI_"#vti.LMul.MX)
+                  vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
+                  vti.AVL, vti.SEW)>;
+
+    def : Pat<(vti.Vector (riscv_slidedown (vti.Vector vti.RegClass:$rs3),
+                                           (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$rs2)),
+              (!cast<Instruction>("PseudoVSLIDEDOWN_VX_"#vti.LMul.MX)
+                  vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
+                  vti.AVL, vti.SEW)>;
+}
+} // Predicates = [HasStdExtV]
