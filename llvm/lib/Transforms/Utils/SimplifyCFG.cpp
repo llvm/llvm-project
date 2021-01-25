@@ -2916,39 +2916,16 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
-    BonusInst.replaceUsesWithIf(
-        NewBonusInst, [BB, BI, UniqueSucc, PredBlock](Use &U) {
-          auto *User = cast<Instruction>(U.getUser());
-          // Ignore non-external uses of bonus instructions.
-          if (User->getParent() == BB) {
-            assert(!isa<PHINode>(User) &&
-                   "Non-external users are never PHI instructions.");
-            return false;
-          }
-          if (User->getParent() == PredBlock) {
-            // The "exteral" use is in the block into which we just cloned the
-            // bonus instruction. This means two things: 1. we are in an
-            // unreachable block 2. the instruction is self-referencing.
-            // So let's just rewrite it...
-            return true;
-          }
-          (void)BI;
-          assert(isa<PHINode>(User) && "All external users must be PHI's.");
-          auto *PN = cast<PHINode>(User);
-          assert(is_contained(successors(BB), User->getParent()) &&
-                 "All external users must be in successors of BB.");
-          assert((PN->getIncomingBlock(U) == BB ||
-                  PN->getIncomingBlock(U) == PredBlock) &&
-                 "The incoming block for that incoming value external use "
-                 "must be either the original block with bonus instructions, "
-                 "or the new predecessor block.");
-          // UniqueSucc is the block for which we change it's predecessors,
-          // so it is the only block in which we'll need to update PHI nodes.
-          if (User->getParent() != UniqueSucc)
-            return false;
-          // Update the incoming value for the new predecessor.
-          return PN->getIncomingBlock(U) == PredBlock;
-        });
+
+    // Update (liveout) uses of bonus instructions,
+    // now that the bonus instruction has been cloned into predecessor.
+    SSAUpdater SSAUpdate;
+    SSAUpdate.Initialize(BonusInst.getType(),
+                         (NewBonusInst->getName() + ".merge").str());
+    SSAUpdate.AddAvailableValue(BB, &BonusInst);
+    SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
+    for (Use &U : make_early_inc_range(BonusInst.uses()))
+      SSAUpdate.RewriteUseAfterInsertions(U);
   }
 
   // Now that the Cond was cloned into the predecessor basic block,
@@ -3024,22 +3001,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     if (NumBonusInsts > BonusInstThreshold)
       return Changed;
   }
-
-  // Also, for now, all liveout uses of bonus instructions must be in PHI nodes
-  // in successor blocks as incoming values from the bonus instructions's block,
-  // otherwise we'll fail to update them.
-  // FIXME: We could lift this restriction, but we need to form PHI nodes and
-  // rewrite offending uses, but we can't do that without having a domtree.
-  if (any_of(*BB, [BB](Instruction &I) {
-        return any_of(I.uses(), [BB](Use &U) {
-          auto *User = cast<Instruction>(U.getUser());
-          if (User->getParent() == BB)
-            return false; // Not an external use.
-          auto *PN = dyn_cast<PHINode>(User);
-          return !PN || PN->getIncomingBlock(U) != BB;
-        });
-      }))
-    return Changed;
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.
