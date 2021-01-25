@@ -93,3 +93,12 @@ __host__ __device__ void tests_hd(void *t) {
   test_hd<H1H2D2>(t);
   test_hd<H1H2D1D2>(t);
 }
+
+// This should produce no errors.  Defaulted destructor should be treated as HD,
+// which allows referencing host-only `operator delete` with a deferred
+// diagnostics that would fire if we ever attempt to codegen it on device..
+struct H {
+  virtual ~H() = default;
+  static void operator delete(void *) {}
+};
+H h;
