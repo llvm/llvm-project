@@ -195,23 +195,84 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**AlignConsecutiveAssignments** (``bool``)
-  If ``true``, aligns consecutive assignments.
+**AlignConsecutiveAssignments** (``AlignConsecutiveStyle``)
+  Style of aligning consecutive assignments.
 
-  This will align the assignment operators of consecutive lines. This
-  will result in formattings like
+  ``Consecutive`` will result in formattings like:
 
   .. code-block:: c++
 
-    int aaaa = 12;
-    int b    = 23;
-    int ccc  = 23;
+    int a            = 1;
+    int somelongname = 2;
+    double c         = 3;
 
-**AlignConsecutiveBitFields** (``bool``)
-  If ``true``, aligns consecutive bitfield members.
+  Possible values:
 
-  This will align the bitfield separators of consecutive lines. This
-  will result in formattings like
+  * ``ACS_None`` (in configuration: ``None``)
+     Do not align assignments on consecutive lines.
+
+  * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+     Align assignments on consecutive lines. This will result in
+     formattings like:
+
+     .. code-block:: c++
+
+       int a            = 1;
+       int somelongname = 2;
+       double c         = 3;
+
+       int d = 3;
+       /* A comment. */
+       double e = 4;
+
+  * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+     Same as ACS_Consecutive, but also spans over empty lines, e.g.
+
+     .. code-block:: c++
+
+       int a            = 1;
+       int somelongname = 2;
+       double c         = 3;
+
+       int d            = 3;
+       /* A comment. */
+       double e = 4;
+
+  * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments, e.g.
+
+     .. code-block:: c++
+
+       int a            = 1;
+       int somelongname = 2;
+       double c         = 3;
+
+       int d    = 3;
+       /* A comment. */
+       double e = 4;
+
+  * ``ACS_AcrossEmptyLinesAndComments``
+    (in configuration: ``AcrossEmptyLinesAndComments``)
+
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments and empty lines, e.g.
+
+     .. code-block:: c++
+
+       int a            = 1;
+       int somelongname = 2;
+       double c         = 3;
+
+       int d            = 3;
+       /* A comment. */
+       double e         = 4;
+
+**AlignConsecutiveBitFields** (``AlignConsecutiveStyle``)
+  Style of aligning consecutive bit field.
+
+  ``Consecutive`` will align the bitfield separators of consecutive lines.
+  This will result in formattings like:
 
   .. code-block:: c++
 
@@ -219,23 +280,146 @@ the configuration (without a prefix: ``Auto``).
     int b    : 12;
     int ccc  : 8;
 
-**AlignConsecutiveDeclarations** (``bool``)
-  If ``true``, aligns consecutive declarations.
+  Possible values:
 
-  This will align the declaration names of consecutive lines. This
-  will result in formattings like
+  * ``ACS_None`` (in configuration: ``None``)
+     Do not align bit fields on consecutive lines.
+
+  * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+     Align bit fields on consecutive lines. This will result in
+     formattings like:
+
+     .. code-block:: c++
+
+       int aaaa : 1;
+       int b    : 12;
+       int ccc  : 8;
+
+       int d : 2;
+       /* A comment. */
+       int ee : 3;
+
+  * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+     Same as ACS_Consecutive, but also spans over empty lines, e.g.
+
+     .. code-block:: c++
+
+       int aaaa : 1;
+       int b    : 12;
+       int ccc  : 8;
+
+       int d    : 2;
+       /* A comment. */
+       int ee : 3;
+
+  * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments, e.g.
+
+     .. code-block:: c++
+
+       int aaaa : 1;
+       int b    : 12;
+       int ccc  : 8;
+
+       int d  : 2;
+       /* A comment. */
+       int ee : 3;
+
+  * ``ACS_AcrossEmptyLinesAndComments``
+  (in configuration: ``AcrossEmptyLinesAndComments``)
+
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments and empty lines, e.g.
+
+     .. code-block:: c++
+
+       int aaaa : 1;
+       int b    : 12;
+       int ccc  : 8;
+
+       int d    : 2;
+       /* A comment. */
+       int ee   : 3;
+
+**AlignConsecutiveDeclarations** (``AlignConsecutiveStyle``)
+  Style of aligning consecutive declarations.
+
+  ``Consecutive`` will align the declaration names of consecutive lines.
+  This will result in formattings like:
 
   .. code-block:: c++
 
     int         aaaa = 12;
     float       b = 23;
-    std::string ccc = 23;
+    std::string ccc;
 
-**AlignConsecutiveMacros** (``bool``)
-  If ``true``, aligns consecutive C/C++ preprocessor macros.
+  Possible values:
 
-  This will align C/C++ preprocessor macros of consecutive lines.
-  Will result in formattings like
+  * ``ACS_None`` (in configuration: ``None``)
+     Do not align bit declarations on consecutive lines.
+
+  * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+     Align declarations on consecutive lines. This will result in
+     formattings like:
+
+     .. code-block:: c++
+
+       int         aaaa = 12;
+       float       b = 23;
+       std::string ccc;
+
+       int a = 42;
+       /* A comment. */
+       bool c = false;
+
+  * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+     Same as ACS_Consecutive, but also spans over empty lines, e.g.
+
+     .. code-block:: c++
+
+       int         aaaa = 12;
+       float       b = 23;
+       std::string ccc;
+
+       int         a = 42;
+       /* A comment. */
+       bool c = false;
+
+  * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments, e.g.
+
+     .. code-block:: c++
+
+       int         aaaa = 12;
+       float       b = 23;
+       std::string ccc;
+
+       int  a = 42;
+       /* A comment. */
+       bool c = false;
+
+  * ``ACS_AcrossEmptyLinesAndComments``
+  (in configuration: ``AcrossEmptyLinesAndComments``)
+
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments and empty lines, e.g.
+
+     .. code-block:: c++
+
+       int         aaaa = 12;
+       float       b = 23;
+       std::string ccc;
+
+       int         a = 42;
+       /* A comment. */
+       bool        c = false;
+
+**AlignConsecutiveMacros** (``AlignConsecutiveStyle``)
+  Style of aligning consecutive macro definitions.
+
+  ``Consecutive`` will result in formattings like:
 
   .. code-block:: c++
 
@@ -244,6 +428,68 @@ the configuration (without a prefix: ``Auto``).
     #define EVEN_LONGER_NAME (2)
     #define foo(x)           (x * x)
     #define bar(y, z)        (y + z)
+
+  Possible values:
+
+  * ``ACS_None`` (in configuration: ``None``)
+     Do not align macro definitions on consecutive lines.
+
+  * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+     Align macro definitions on consecutive lines. This will result in
+     formattings like:
+
+     .. code-block:: c++
+
+       #define SHORT_NAME       42
+       #define LONGER_NAME      0x007f
+       #define EVEN_LONGER_NAME (2)
+
+       #define foo(x) (x * x)
+       /* some comment */
+       #define bar(y, z) (y + z)
+
+  * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+     Same as ACS_Consecutive, but also spans over empty lines, e.g.
+
+     .. code-block:: c++
+
+       #define SHORT_NAME       42
+       #define LONGER_NAME      0x007f
+       #define EVEN_LONGER_NAME (2)
+
+       #define foo(x)           (x * x)
+       /* some comment */
+       #define bar(y, z) (y + z)
+
+  * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments, e.g.
+
+     .. code-block:: c++
+
+       #define SHORT_NAME       42
+       #define LONGER_NAME      0x007f
+       #define EVEN_LONGER_NAME (2)
+
+       #define foo(x)    (x * x)
+       /* some comment */
+       #define bar(y, z) (y + z)
+
+  * ``ACS_AcrossEmptyLinesAndComments``
+  (in configuration: ``AcrossEmptyLinesAndComments``)
+
+     Same as ACS_Consecutive, but also spans over lines only containing
+     comments and empty lines, e.g.
+
+     .. code-block:: c++
+
+       #define SHORT_NAME       42
+       #define LONGER_NAME      0x007f
+       #define EVEN_LONGER_NAME (2)
+
+       #define foo(x)           (x * x)
+       /* some comment */
+       #define bar(y, z)        (y + z)
 
 **AlignEscapedNewlines** (``EscapedNewlineAlignmentStyle``)
   Options for aligning backslashes in escaped newlines.
