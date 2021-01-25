@@ -1411,13 +1411,20 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return Value{*dynExtents};
   }
 
+  // The size at the given index is now known to be a dynamic size.
+  unsigned unsignedIndex = index.getValue().getZExtValue();
+
+  if (auto subtensor = dyn_cast_or_null<SubTensorOp>(definingOp)) {
+    assert(subtensor.isDynamicSize(unsignedIndex) &&
+           "Expected dynamic subtensor size");
+    return subtensor.getDynamicSize(unsignedIndex);
+  }
+
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
   auto memrefType = argTy.dyn_cast<MemRefType>();
   if (!memrefType)
     return {};
 
-  // The size at the given index is now known to be a dynamic size of a memref.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
   if (auto alloc = dyn_cast_or_null<AllocOp>(definingOp))
     return *(alloc.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
