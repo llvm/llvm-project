@@ -2443,7 +2443,7 @@ public:
         TODO(loc, "use fir.rebox for array section of fir.box");
       mlir::Value embox = builder.create<fir::EmboxOp>(
           loc, boxTy, memref, shape, slice, /*lenParams=*/llvm::None);
-      return [=](IterSpace) -> ExtValue { return embox; };
+      return [=](IterSpace) -> ExtValue { return fir::IrBoxValue(embox); };
     }
     mlir::Value arrLd = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, /*lenParams=*/llvm::None);

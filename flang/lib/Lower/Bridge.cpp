@@ -134,6 +134,13 @@ getCharacterLiteralCopy(const std::optional<A> &x) {
   return llvm::None;
 }
 
+/// Clone subexpression and wrap it as a generic `Fortran::evaluate::Expr`.
+template <typename A>
+static Fortran::evaluate::Expr<Fortran::evaluate::SomeType>
+toEvExpr(const A &x) {
+  return Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x));
+}
+
 //===----------------------------------------------------------------------===//
 // FirConverter
 //===----------------------------------------------------------------------===//
@@ -1548,6 +1555,13 @@ private:
     localSymbols.popScope();
   }
 
+  static bool isArraySectionWithoutVectorSubscript(
+      const Fortran::semantics::SomeExpr &expr) {
+    return Fortran::evaluate::IsVariable(expr) &&
+           !Fortran::evaluate::UnwrapWholeSymbolDataRef(expr) &&
+           !Fortran::evaluate::HasVectorSubscript(expr);
+  }
+
   /// Shared for both assignments and pointer assignments.
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     Fortran::lower::StatementContext stmtCtx;
@@ -1622,13 +1636,63 @@ private:
               Fortran::semantics::SomeExpr expr{procRef};
               createFIRExpr(toLocation(), &expr, stmtCtx);
             },
-            [&](const Fortran::evaluate::Assignment::BoundsSpec &) {
+            [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
               // Pointer assignment with possibly empty bounds-spec
-              TODO(loc, "pointer assignment lowering");
+              auto lhs = genExprMutableBox(loc, assign.lhs);
+              if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(
+                      assign.rhs.u)) {
+                Fortran::lower::disassociateMutableBox(*builder, loc, lhs);
+                return;
+              }
+              auto lhsType = assign.lhs.GetType();
+              auto rhsType = assign.rhs.GetType();
+              // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
+              if ((lhsType && lhsType->IsPolymorphic()) ||
+                  (rhsType && rhsType->IsPolymorphic()))
+                TODO(loc, "pointer assignment involving polymorphic entity");
+              llvm::SmallVector<mlir::Value, 4> lbounds;
+              for (const auto &lbExpr : lbExprs)
+                lbounds.push_back(
+                    fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
+
+              // Do not generate a temp in case rhs is an array section.
+              auto rhs = isArraySectionWithoutVectorSubscript(assign.rhs)
+                             ? Fortran::lower::createSomeArrayBox(
+                                   *this, assign.rhs, localSymbols, stmtCtx)
+                             : genExprAddr(assign.rhs, stmtCtx);
+              Fortran::lower::associateMutableBox(*builder, loc, lhs, rhs,
+                                                  lbounds);
             },
-            [&](const Fortran::evaluate::Assignment::BoundsRemapping &) {
+            [&](const Fortran::evaluate::Assignment::BoundsRemapping
+                    &boundExprs) {
               // Pointer assignment with bounds-remapping
-              TODO(loc, "bounds-remapping pointer assignment lowering");
+              auto lhs = genExprMutableBox(loc, assign.lhs);
+              if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(
+                      assign.rhs.u)) {
+                Fortran::lower::disassociateMutableBox(*builder, loc, lhs);
+                return;
+              }
+              auto lhsType = assign.lhs.GetType();
+              auto rhsType = assign.rhs.GetType();
+              // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
+              if ((lhsType && lhsType->IsPolymorphic()) ||
+                  (rhsType && rhsType->IsPolymorphic()))
+                TODO(loc, "pointer assignment involving polymorphic entity");
+              llvm::SmallVector<mlir::Value, 4> lbounds;
+              llvm::SmallVector<mlir::Value, 4> ubounds;
+              for (const auto &[lbExpr, ubExpr] : boundExprs) {
+                lbounds.push_back(
+                    fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
+                ubounds.push_back(
+                    fir::getBase(genExprValue(toEvExpr(ubExpr), stmtCtx)));
+              }
+              // Do not generate a temp in case rhs is an array section.
+              auto rhs = isArraySectionWithoutVectorSubscript(assign.rhs)
+                             ? Fortran::lower::createSomeArrayBox(
+                                   *this, assign.rhs, localSymbols, stmtCtx)
+                             : genExprAddr(assign.rhs, stmtCtx);
+              Fortran::lower::associateMutableBoxWithRemap(
+                  *builder, loc, lhs, rhs, lbounds, ubounds);
             },
         },
         assign.u);
