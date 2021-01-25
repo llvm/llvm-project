@@ -11395,8 +11395,8 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    "*/\n"
                    "}",
                    Tab));
-  Tab.AlignConsecutiveAssignments = true;
-  Tab.AlignConsecutiveDeclarations = true;
+  Tab.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Tab.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   Tab.TabWidth = 4;
   Tab.IndentWidth = 4;
   verifyFormat("class Assign {\n"
@@ -11634,8 +11634,8 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    "*/\n"
                    "}",
                    Tab));
-  Tab.AlignConsecutiveAssignments = true;
-  Tab.AlignConsecutiveDeclarations = true;
+  Tab.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Tab.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   Tab.TabWidth = 4;
   Tab.IndentWidth = 4;
   verifyFormat("class Assign {\n"
@@ -12470,9 +12470,9 @@ TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
 
 TEST_F(FormatTest, AlignConsecutiveMacros) {
   FormatStyle Style = getLLVMStyle();
-  Style.AlignConsecutiveAssignments = true;
-  Style.AlignConsecutiveDeclarations = true;
-  Style.AlignConsecutiveMacros = false;
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_None;
 
   verifyFormat("#define a 3\n"
                "#define bbbb 4\n"
@@ -12496,7 +12496,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define ffff(x, y) (x - y)",
                Style);
 
-  Style.AlignConsecutiveMacros = true;
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
   verifyFormat("#define a    3\n"
                "#define bbbb 4\n"
                "#define ccc  (5)",
@@ -12536,7 +12536,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "};",
                Style);
 
-  Style.AlignConsecutiveMacros = false;
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_None;
   Style.ColumnLimit = 20;
 
   verifyFormat("#define a          \\\n"
@@ -12550,7 +12550,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "  \"LLLLLLLL\"\n",
                Style);
 
-  Style.AlignConsecutiveMacros = true;
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
   verifyFormat("#define a          \\\n"
                "  \"aabbbbbbbbbbbb\"\n"
                "#define D          \\\n"
@@ -12561,12 +12561,766 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "  \"FFFFFFFFFFFFF\"  \\\n"
                "  \"LLLLLLLL\"\n",
                Style);
+
+  // Test across comments
+  Style.MaxEmptyLinesToKeep = 10;
+  Style.ReflowComments = false;
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_AcrossComments;
+  EXPECT_EQ("#define a    3\n"
+            "// line comment\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a 3\n"
+                   "// line comment\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a    3\n"
+            "/* block comment */\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a  3\n"
+                   "/* block comment */\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a    3\n"
+            "/* multi-line *\n"
+            " * block comment */\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a 3\n"
+                   "/* multi-line *\n"
+                   " * block comment */\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a    3\n"
+            "// multi-line line comment\n"
+            "//\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a  3\n"
+                   "// multi-line line comment\n"
+                   "//\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a 3\n"
+            "// empty lines still break.\n"
+            "\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a     3\n"
+                   "// empty lines still break.\n"
+                   "\n"
+                   "#define bbbb     4\n"
+                   "#define ccc  (5)",
+                   Style));
+
+  // Test across empty lines
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_AcrossEmptyLines;
+  EXPECT_EQ("#define a    3\n"
+            "\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a 3\n"
+                   "\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a    3\n"
+            "\n"
+            "\n"
+            "\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a        3\n"
+                   "\n"
+                   "\n"
+                   "\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a 3\n"
+            "// comments should break alignment\n"
+            "//\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a        3\n"
+                   "// comments should break alignment\n"
+                   "//\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  // Test across empty lines and comments
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_AcrossEmptyLinesAndComments;
+  verifyFormat("#define a    3\n"
+               "\n"
+               "// line comment\n"
+               "#define bbbb 4\n"
+               "#define ccc  (5)",
+               Style);
+
+  EXPECT_EQ("#define a    3\n"
+            "\n"
+            "\n"
+            "/* multi-line *\n"
+            " * block comment */\n"
+            "\n"
+            "\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a 3\n"
+                   "\n"
+                   "\n"
+                   "/* multi-line *\n"
+                   " * block comment */\n"
+                   "\n"
+                   "\n"
+                   "#define bbbb 4\n"
+                   "#define ccc (5)",
+                   Style));
+
+  EXPECT_EQ("#define a    3\n"
+            "\n"
+            "\n"
+            "/* multi-line *\n"
+            " * block comment */\n"
+            "\n"
+            "\n"
+            "#define bbbb 4\n"
+            "#define ccc  (5)",
+            format("#define a 3\n"
+                   "\n"
+                   "\n"
+                   "/* multi-line *\n"
+                   " * block comment */\n"
+                   "\n"
+                   "\n"
+                   "#define bbbb 4\n"
+                   "#define ccc       (5)",
+                   Style));
+}
+
+TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLines) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_AcrossEmptyLines;
+
+  Alignment.MaxEmptyLinesToKeep = 10;
+  /* Test alignment across empty lines */
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a       = 5;\n"
+                   "\n"
+                   "int oneTwoThree= 123;",
+                   Alignment));
+  EXPECT_EQ("int a           = 5;\n"
+            "int one         = 1;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "int one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;",
+                   Alignment));
+  EXPECT_EQ("int a           = 5;\n"
+            "int one         = 1;\n"
+            "\n"
+            "int oneTwoThree = 123;\n"
+            "int oneTwo      = 12;",
+            format("int a = 5;\n"
+                   "int one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;\n"
+                   "int oneTwo = 12;",
+                   Alignment));
+
+  /* Test across comments */
+  EXPECT_EQ("int a = 5;\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a = 5;\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  /* Test across comments and newlines */
+  EXPECT_EQ("int a = 5;\n"
+            "\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a = 5;\n"
+            "\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+}
+
+TEST_F(FormatTest, AlignConsecutiveDeclarationsAcrossEmptyLinesAndComments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveDeclarations =
+      FormatStyle::ACS_AcrossEmptyLinesAndComments;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
+
+  Alignment.MaxEmptyLinesToKeep = 10;
+  /* Test alignment across empty lines */
+  EXPECT_EQ("int         a = 5;\n"
+            "\n"
+            "float const oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "float const oneTwoThree = 123;",
+                   Alignment));
+  EXPECT_EQ("int         a = 5;\n"
+            "float const one = 1;\n"
+            "\n"
+            "int         oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "float const one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;",
+                   Alignment));
+
+  /* Test across comments */
+  EXPECT_EQ("float const a = 5;\n"
+            "/* block comment */\n"
+            "int         oneTwoThree = 123;",
+            format("float const a = 5;\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("float const a = 5;\n"
+            "// line comment\n"
+            "int         oneTwoThree = 123;",
+            format("float const a = 5;\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  /* Test across comments and newlines */
+  EXPECT_EQ("float const a = 5;\n"
+            "\n"
+            "/* block comment */\n"
+            "int         oneTwoThree = 123;",
+            format("float const a = 5;\n"
+                   "\n"
+                   "/* block comment */\n"
+                   "int         oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("float const a = 5;\n"
+            "\n"
+            "// line comment\n"
+            "int         oneTwoThree = 123;",
+            format("float const a = 5;\n"
+                   "\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+}
+
+TEST_F(FormatTest, AlignConsecutiveBitFieldsAcrossEmptyLinesAndComments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveBitFields =
+      FormatStyle::ACS_AcrossEmptyLinesAndComments;
+
+  Alignment.MaxEmptyLinesToKeep = 10;
+  /* Test alignment across empty lines */
+  EXPECT_EQ("int a            : 5;\n"
+            "\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+  EXPECT_EQ("int a            : 5;\n"
+            "int one          : 1;\n"
+            "\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "int one : 1;\n"
+                   "\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+
+  /* Test across comments */
+  EXPECT_EQ("int a            : 5;\n"
+            "/* block comment */\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "/* block comment */\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+  EXPECT_EQ("int a            : 5;\n"
+            "int one          : 1;\n"
+            "// line comment\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "int one : 1;\n"
+                   "// line comment\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+
+  /* Test across comments and newlines */
+  EXPECT_EQ("int a            : 5;\n"
+            "/* block comment */\n"
+            "\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "/* block comment */\n"
+                   "\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+  EXPECT_EQ("int a            : 5;\n"
+            "int one          : 1;\n"
+            "\n"
+            "// line comment\n"
+            "\n"
+            "int longbitfield : 6;",
+            format("int a : 5;\n"
+                   "int one : 1;\n"
+                   "\n"
+                   "// line comment \n"
+                   "\n"
+                   "int longbitfield : 6;",
+                   Alignment));
+}
+
+TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossComments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_AcrossComments;
+
+  Alignment.MaxEmptyLinesToKeep = 10;
+  /* Test alignment across empty lines */
+  EXPECT_EQ("int a = 5;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a       = 5;\n"
+                   "\n"
+                   "int oneTwoThree= 123;",
+                   Alignment));
+  EXPECT_EQ("int a   = 5;\n"
+            "int one = 1;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "int one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;",
+                   Alignment));
+
+  /* Test across comments */
+  EXPECT_EQ("int a           = 5;\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "/*\n"
+            " * multi-line block comment\n"
+            " */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "/*\n"
+                   " * multi-line block comment\n"
+                   " */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "//\n"
+            "// multi-line line comment\n"
+            "//\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "//\n"
+                   "// multi-line line comment\n"
+                   "//\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  /* Test across comments and newlines */
+  EXPECT_EQ("int a = 5;\n"
+            "\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a = 5;\n"
+            "\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+}
+
+TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
+  FormatStyle Alignment = getLLVMStyle();
+  Alignment.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  Alignment.AlignConsecutiveAssignments =
+      FormatStyle::ACS_AcrossEmptyLinesAndComments;
+  verifyFormat("int a           = 5;\n"
+               "int oneTwoThree = 123;",
+               Alignment);
+  verifyFormat("int a           = method();\n"
+               "int oneTwoThree = 133;",
+               Alignment);
+  verifyFormat("a &= 5;\n"
+               "bcd *= 5;\n"
+               "ghtyf += 5;\n"
+               "dvfvdb -= 5;\n"
+               "a /= 5;\n"
+               "vdsvsv %= 5;\n"
+               "sfdbddfbdfbb ^= 5;\n"
+               "dvsdsv |= 5;\n"
+               "int dsvvdvsdvvv = 123;",
+               Alignment);
+  verifyFormat("int i = 1, j = 10;\n"
+               "something = 2000;",
+               Alignment);
+  verifyFormat("something = 2000;\n"
+               "int i = 1, j = 10;\n",
+               Alignment);
+  verifyFormat("something = 2000;\n"
+               "another   = 911;\n"
+               "int i = 1, j = 10;\n"
+               "oneMore = 1;\n"
+               "i       = 2;",
+               Alignment);
+  verifyFormat("int a   = 5;\n"
+               "int one = 1;\n"
+               "method();\n"
+               "int oneTwoThree = 123;\n"
+               "int oneTwo      = 12;",
+               Alignment);
+  verifyFormat("int oneTwoThree = 123;\n"
+               "int oneTwo      = 12;\n"
+               "method();\n",
+               Alignment);
+  verifyFormat("int oneTwoThree = 123; // comment\n"
+               "int oneTwo      = 12;  // comment",
+               Alignment);
+
+  // Bug 25167
+  /* Uncomment when fixed
+    verifyFormat("#if A\n"
+                 "#else\n"
+                 "int aaaaaaaa = 12;\n"
+                 "#endif\n"
+                 "#if B\n"
+                 "#else\n"
+                 "int a = 12;\n"
+                 "#endif\n",
+                 Alignment);
+    verifyFormat("enum foo {\n"
+                 "#if A\n"
+                 "#else\n"
+                 "  aaaaaaaa = 12;\n"
+                 "#endif\n"
+                 "#if B\n"
+                 "#else\n"
+                 "  a = 12;\n"
+                 "#endif\n"
+                 "};\n",
+                 Alignment);
+  */
+
+  Alignment.MaxEmptyLinesToKeep = 10;
+  /* Test alignment across empty lines */
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a       = 5;\n"
+                   "\n"
+                   "int oneTwoThree= 123;",
+                   Alignment));
+  EXPECT_EQ("int a           = 5;\n"
+            "int one         = 1;\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "int one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;",
+                   Alignment));
+  EXPECT_EQ("int a           = 5;\n"
+            "int one         = 1;\n"
+            "\n"
+            "int oneTwoThree = 123;\n"
+            "int oneTwo      = 12;",
+            format("int a = 5;\n"
+                   "int one = 1;\n"
+                   "\n"
+                   "int oneTwoThree = 123;\n"
+                   "int oneTwo = 12;",
+                   Alignment));
+
+  /* Test across comments */
+  EXPECT_EQ("int a           = 5;\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  /* Test across comments and newlines */
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "/* block comment */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "/* block comment */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "// line comment\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "// line comment\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "//\n"
+            "// multi-line line comment\n"
+            "//\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "//\n"
+                   "// multi-line line comment\n"
+                   "//\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "/*\n"
+            " *  multi-line block comment\n"
+            " */\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "/*\n"
+                   " *  multi-line block comment\n"
+                   " */\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "/* block comment */\n"
+            "\n"
+            "\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "/* block comment */\n"
+                   "\n"
+                   "\n"
+                   "\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  EXPECT_EQ("int a           = 5;\n"
+            "\n"
+            "// line comment\n"
+            "\n"
+            "\n"
+            "\n"
+            "int oneTwoThree = 123;",
+            format("int a = 5;\n"
+                   "\n"
+                   "// line comment\n"
+                   "\n"
+                   "\n"
+                   "\n"
+                   "int oneTwoThree=123;",
+                   Alignment));
+
+  Alignment.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat("#define A \\\n"
+               "  int aaaa       = 12; \\\n"
+               "  int b          = 23; \\\n"
+               "  int ccc        = 234; \\\n"
+               "  int dddddddddd = 2345;",
+               Alignment);
+  Alignment.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyFormat("#define A               \\\n"
+               "  int aaaa       = 12;  \\\n"
+               "  int b          = 23;  \\\n"
+               "  int ccc        = 234; \\\n"
+               "  int dddddddddd = 2345;",
+               Alignment);
+  Alignment.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  verifyFormat("#define A                                                      "
+               "                \\\n"
+               "  int aaaa       = 12;                                         "
+               "                \\\n"
+               "  int b          = 23;                                         "
+               "                \\\n"
+               "  int ccc        = 234;                                        "
+               "                \\\n"
+               "  int dddddddddd = 2345;",
+               Alignment);
+  verifyFormat("void SomeFunction(int parameter = 1, int i = 2, int j = 3, int "
+               "k = 4, int l = 5,\n"
+               "                  int m = 6) {\n"
+               "  int j      = 10;\n"
+               "  otherThing = 1;\n"
+               "}",
+               Alignment);
+  verifyFormat("void SomeFunction(int parameter = 0) {\n"
+               "  int i   = 1;\n"
+               "  int j   = 2;\n"
+               "  int big = 10000;\n"
+               "}",
+               Alignment);
+  verifyFormat("class C {\n"
+               "public:\n"
+               "  int i            = 1;\n"
+               "  virtual void f() = 0;\n"
+               "};",
+               Alignment);
+  verifyFormat("int i = 1;\n"
+               "if (SomeType t = getSomething()) {\n"
+               "}\n"
+               "int j   = 2;\n"
+               "int big = 10000;",
+               Alignment);
+  verifyFormat("int j = 7;\n"
+               "for (int k = 0; k < N; ++k) {\n"
+               "}\n"
+               "int j   = 2;\n"
+               "int big = 10000;\n"
+               "}",
+               Alignment);
+  Alignment.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("int i = 1;\n"
+               "LooooooooooongType loooooooooooooooooooooongVariable\n"
+               "    = someLooooooooooooooooongFunction();\n"
+               "int j = 2;",
+               Alignment);
+  Alignment.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
+  verifyFormat("int i = 1;\n"
+               "LooooooooooongType loooooooooooooooooooooongVariable =\n"
+               "    someLooooooooooooooooongFunction();\n"
+               "int j = 2;",
+               Alignment);
+
+  verifyFormat("auto lambda = []() {\n"
+               "  auto i = 0;\n"
+               "  return 0;\n"
+               "};\n"
+               "int i  = 0;\n"
+               "auto v = type{\n"
+               "    i = 1,   //\n"
+               "    (i = 2), //\n"
+               "    i = 3    //\n"
+               "};",
+               Alignment);
+
+  verifyFormat(
+      "int i      = 1;\n"
+      "SomeType a = SomeFunction(looooooooooooooooooooooongParameterA,\n"
+      "                          loooooooooooooooooooooongParameterB);\n"
+      "int j      = 2;",
+      Alignment);
+
+  verifyFormat("template <typename T, typename T_0 = very_long_type_name_0,\n"
+               "          typename B   = very_long_type_name_1,\n"
+               "          typename T_2 = very_long_type_name_2>\n"
+               "auto foo() {}\n",
+               Alignment);
+  verifyFormat("int a, b = 1;\n"
+               "int c  = 2;\n"
+               "int dd = 3;\n",
+               Alignment);
+  verifyFormat("int aa       = ((1 > 2) ? 3 : 4);\n"
+               "float b[1][] = {{3.f}};\n",
+               Alignment);
+  verifyFormat("for (int i = 0; i < 1; i++)\n"
+               "  int x = 1;\n",
+               Alignment);
+  verifyFormat("for (i = 0; i < 1; i++)\n"
+               "  x = 1;\n"
+               "y = 1;\n",
+               Alignment);
+
+  Alignment.ReflowComments = true;
+  Alignment.ColumnLimit = 50;
+  EXPECT_EQ("int x   = 0;\n"
+            "int yy  = 1; /// specificlennospace\n"
+            "int zzz = 2;\n",
+            format("int x   = 0;\n"
+                   "int yy  = 1; ///specificlennospace\n"
+                   "int zzz = 2;\n",
+                   Alignment));
 }
 
 TEST_F(FormatTest, AlignConsecutiveAssignments) {
   FormatStyle Alignment = getLLVMStyle();
-  Alignment.AlignConsecutiveMacros = true;
-  Alignment.AlignConsecutiveAssignments = false;
+  Alignment.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
   verifyFormat("int a = 5;\n"
                "int oneTwoThree = 123;",
                Alignment);
@@ -12574,7 +13328,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "int oneTwoThree = 123;",
                Alignment);
 
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   verifyFormat("int a           = 5;\n"
                "int oneTwoThree = 123;",
                Alignment);
@@ -12790,7 +13544,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
 
 TEST_F(FormatTest, AlignConsecutiveBitFields) {
   FormatStyle Alignment = getLLVMStyle();
-  Alignment.AlignConsecutiveBitFields = true;
+  Alignment.AlignConsecutiveBitFields = FormatStyle::ACS_Consecutive;
   verifyFormat("int const a     : 5;\n"
                "int oneTwoThree : 23;",
                Alignment);
@@ -12800,7 +13554,7 @@ TEST_F(FormatTest, AlignConsecutiveBitFields) {
                "int oneTwoThree : 23 = 0;",
                Alignment);
 
-  Alignment.AlignConsecutiveDeclarations = true;
+  Alignment.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   verifyFormat("int const a           : 5;\n"
                "int       oneTwoThree : 23;",
                Alignment);
@@ -12813,7 +13567,7 @@ TEST_F(FormatTest, AlignConsecutiveBitFields) {
                "int       oneTwoThree : 23 = 0;",
                Alignment);
 
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   verifyFormat("int const a           : 5  = 1;\n"
                "int       oneTwoThree : 23 = 0;",
                Alignment);
@@ -12847,8 +13601,8 @@ TEST_F(FormatTest, AlignConsecutiveBitFields) {
 
 TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   FormatStyle Alignment = getLLVMStyle();
-  Alignment.AlignConsecutiveMacros = true;
-  Alignment.AlignConsecutiveDeclarations = false;
+  Alignment.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  Alignment.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
   verifyFormat("float const a = 5;\n"
                "int oneTwoThree = 123;",
                Alignment);
@@ -12856,7 +13610,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "float const oneTwoThree = 123;",
                Alignment);
 
-  Alignment.AlignConsecutiveDeclarations = true;
+  Alignment.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   verifyFormat("float const a = 5;\n"
                "int         oneTwoThree = 123;",
                Alignment);
@@ -12953,7 +13707,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int    a(int x, void (*fp)(int y));\n"
                "double b();",
                Alignment);
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   // Ensure recursive alignment is broken by function braces, so that the
   // "a = 1" does not align with subsequent assignments inside the function
   // body.
@@ -13016,7 +13770,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                    "int ll=10000;\n"
                    "}",
                    Alignment));
-  Alignment.AlignConsecutiveAssignments = false;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
   Alignment.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat("#define A \\\n"
                "  int       aaaa = 12; \\\n"
@@ -13085,7 +13839,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "int j = 2;",
                Alignment);
 
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   verifyFormat("auto lambda = []() {\n"
                "  auto  ii = 0;\n"
                "  float j  = 0;\n"
@@ -13099,7 +13853,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "    i = 3    //\n"
                "};",
                Alignment);
-  Alignment.AlignConsecutiveAssignments = false;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
 
   verifyFormat(
       "int      i = 1;\n"
@@ -13112,7 +13866,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   // We expect declarations and assignments to align, as long as it doesn't
   // exceed the column limit, starting a new alignment sequence whenever it
   // happens.
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   Alignment.ColumnLimit = 30;
   verifyFormat("float    ii              = 1;\n"
                "unsigned j               = 2;\n"
@@ -13122,7 +13876,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "int              myvar = 1;",
                Alignment);
   Alignment.ColumnLimit = 80;
-  Alignment.AlignConsecutiveAssignments = false;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
 
   verifyFormat(
       "template <typename LongTemplate, typename VeryLongTemplateTypeName,\n"
@@ -13136,7 +13890,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int   aa = ((1 > 2) ? 3 : 4);\n"
                "float b[1][] = {{3.f}};\n",
                Alignment);
-  Alignment.AlignConsecutiveAssignments = true;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   verifyFormat("float a, b = 1;\n"
                "int   c  = 2;\n"
                "int   dd = 3;\n",
@@ -13144,7 +13898,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int   aa     = ((1 > 2) ? 3 : 4);\n"
                "float b[1][] = {{3.f}};\n",
                Alignment);
-  Alignment.AlignConsecutiveAssignments = false;
+  Alignment.AlignConsecutiveAssignments = FormatStyle::ACS_None;
 
   Alignment.ColumnLimit = 30;
   Alignment.BinPackParameters = false;
@@ -13175,7 +13929,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   Alignment.PointerAlignment = FormatStyle::PAS_Right;
 
   // See llvm.org/PR35641
-  Alignment.AlignConsecutiveDeclarations = true;
+  Alignment.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   verifyFormat("int func() { //\n"
                "  int      b;\n"
                "  unsigned c;\n"
@@ -13184,7 +13938,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
 
   // See PR37175
   FormatStyle Style = getMozillaStyle();
-  Style.AlignConsecutiveDeclarations = true;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   EXPECT_EQ("DECOR1 /**/ int8_t /**/ DECOR2 /**/\n"
             "foo(int a);",
             format("DECOR1 /**/ int8_t /**/ DECOR2 /**/ foo (int a);", Style));
@@ -14374,10 +15128,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE_BOOL(AlignTrailingComments);
-  CHECK_PARSE_BOOL(AlignConsecutiveAssignments);
-  CHECK_PARSE_BOOL(AlignConsecutiveBitFields);
-  CHECK_PARSE_BOOL(AlignConsecutiveDeclarations);
-  CHECK_PARSE_BOOL(AlignConsecutiveMacros);
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllConstructorInitializersOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
@@ -14471,6 +15221,70 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("IndentWidth: 32", IndentWidth, 32u);
   CHECK_PARSE("ContinuationIndentWidth: 11", ContinuationIndentWidth, 11u);
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  CHECK_PARSE("AlignConsecutiveAssignments: None", AlignConsecutiveAssignments,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveAssignments: Consecutive",
+              AlignConsecutiveAssignments, FormatStyle::ACS_Consecutive);
+  CHECK_PARSE("AlignConsecutiveAssignments: AcrossEmptyLines",
+              AlignConsecutiveAssignments, FormatStyle::ACS_AcrossEmptyLines);
+  CHECK_PARSE("AlignConsecutiveAssignments: AcrossEmptyLinesAndComments",
+              AlignConsecutiveAssignments,
+              FormatStyle::ACS_AcrossEmptyLinesAndComments);
+  // For backwards compability, false / true should still parse
+  CHECK_PARSE("AlignConsecutiveAssignments: false", AlignConsecutiveAssignments,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveAssignments: true", AlignConsecutiveAssignments,
+              FormatStyle::ACS_Consecutive);
+
+  Style.AlignConsecutiveBitFields = FormatStyle::ACS_Consecutive;
+  CHECK_PARSE("AlignConsecutiveBitFields: None", AlignConsecutiveBitFields,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveBitFields: Consecutive",
+              AlignConsecutiveBitFields, FormatStyle::ACS_Consecutive);
+  CHECK_PARSE("AlignConsecutiveBitFields: AcrossEmptyLines",
+              AlignConsecutiveBitFields, FormatStyle::ACS_AcrossEmptyLines);
+  CHECK_PARSE("AlignConsecutiveBitFields: AcrossEmptyLinesAndComments",
+              AlignConsecutiveBitFields,
+              FormatStyle::ACS_AcrossEmptyLinesAndComments);
+  // For backwards compability, false / true should still parse
+  CHECK_PARSE("AlignConsecutiveBitFields: false", AlignConsecutiveBitFields,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveBitFields: true", AlignConsecutiveBitFields,
+              FormatStyle::ACS_Consecutive);
+
+  Style.AlignConsecutiveMacros = FormatStyle::ACS_Consecutive;
+  CHECK_PARSE("AlignConsecutiveMacros: None", AlignConsecutiveMacros,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveMacros: Consecutive", AlignConsecutiveMacros,
+              FormatStyle::ACS_Consecutive);
+  CHECK_PARSE("AlignConsecutiveMacros: AcrossEmptyLines",
+              AlignConsecutiveMacros, FormatStyle::ACS_AcrossEmptyLines);
+  CHECK_PARSE("AlignConsecutiveMacros: AcrossEmptyLinesAndComments",
+              AlignConsecutiveMacros,
+              FormatStyle::ACS_AcrossEmptyLinesAndComments);
+  // For backwards compability, false / true should still parse
+  CHECK_PARSE("AlignConsecutiveMacros: false", AlignConsecutiveMacros,
+              FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveMacros: true", AlignConsecutiveMacros,
+              FormatStyle::ACS_Consecutive);
+
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  CHECK_PARSE("AlignConsecutiveDeclarations: None",
+              AlignConsecutiveDeclarations, FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveDeclarations: Consecutive",
+              AlignConsecutiveDeclarations, FormatStyle::ACS_Consecutive);
+  CHECK_PARSE("AlignConsecutiveDeclarations: AcrossEmptyLines",
+              AlignConsecutiveDeclarations, FormatStyle::ACS_AcrossEmptyLines);
+  CHECK_PARSE("AlignConsecutiveDeclarations: AcrossEmptyLinesAndComments",
+              AlignConsecutiveDeclarations,
+              FormatStyle::ACS_AcrossEmptyLinesAndComments);
+  // For backwards compability, false / true should still parse
+  CHECK_PARSE("AlignConsecutiveDeclarations: false",
+              AlignConsecutiveDeclarations, FormatStyle::ACS_None);
+  CHECK_PARSE("AlignConsecutiveDeclarations: true",
+              AlignConsecutiveDeclarations, FormatStyle::ACS_Consecutive);
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
   CHECK_PARSE("PointerAlignment: Left", PointerAlignment,
@@ -17400,7 +18214,7 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
             format("FOO(String-ized&Messy+But,: :\n"
                    "       Still=Intentional);",
                    Style));
-  Style.AlignConsecutiveAssignments = true;
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
   EXPECT_EQ("FOO(String-ized=&Messy+But,: :\n"
             "       Still=Intentional);",
             format("FOO(String-ized=&Messy+But,: :\n"
@@ -17871,7 +18685,7 @@ TEST_F(FormatTest, StatementAttributeLikeMacros) {
 
   EXPECT_EQ(Source, format(Source, Style));
 
-  Style.AlignConsecutiveDeclarations = true;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
   EXPECT_EQ("void Foo::slot() {\n"
             "  unsigned char MyChar = 'x';\n"
             "  emit          signal(MyChar);\n"
