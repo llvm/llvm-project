@@ -657,7 +657,7 @@ declare void @__tgt_target_data_update_nowait_mapper(%struct.ident_t*, i64, i32,
 
 declare i64 @__tgt_mapper_num_components(i8*)
 
-declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64)
+declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 declare i8* @__kmpc_task_allow_completion_event(%struct.ident_t*, i32, i8*)
 
@@ -1189,7 +1189,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK-NEXT: declare i64 @__tgt_mapper_num_components(i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64)
+; CHECK-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare i8* @__kmpc_task_allow_completion_event(%struct.ident_t*, i32, i8*)
@@ -1714,7 +1714,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC-NEXT: declare i64 @__tgt_mapper_num_components(i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64)
+; OPTIMISTIC-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare noalias i8* @__kmpc_task_allow_completion_event(%struct.ident_t* nocapture nofree readonly, i32, i8*)
