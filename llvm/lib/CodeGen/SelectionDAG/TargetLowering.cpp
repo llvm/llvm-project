@@ -3745,7 +3745,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       // If the constant doesn't fit into the number of bits for the source of
       // the sign extension, it is impossible for both sides to be equal.
       if (C1.getMinSignedBits() > ExtSrcTyBits)
-        return DAG.getConstant(Cond == ISD::SETNE, dl, VT);
+        return DAG.getBoolConstant(Cond == ISD::SETNE, dl, VT, OpVT);
 
       assert(ExtDstTy == N0.getOperand(0).getValueType() &&
              ExtDstTy != ExtSrcTy && "Unexpected types!");
