@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
-#include "BasicGOTAndStubsBuilder.h"
-#include "JITLinkGeneric.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
+
+#include "BasicGOTAndStubsBuilder.h"
+#include "EHFrameSupportImpl.h"
+#include "JITLinkGeneric.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -238,6 +240,8 @@ private:
     switch (Type) {
     case ELF::R_X86_64_PC32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
+    case ELF::R_X86_64_PC64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::Delta64;
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
@@ -404,9 +408,6 @@ private:
       LLVM_DEBUG({
         dbgs() << "Adding relocations from section " << *RelSectName << "\n";
       });
-      // Deal with .eh_frame later
-      if (*RelSectName == StringRef(".rela.eh_frame"))
-        continue;
 
       auto UpdateSection = Obj.getSection(SecRef.sh_info);
       if (!UpdateSection)
@@ -734,6 +735,11 @@ private:
       *(ulittle64_t *)FixupPtr = Value;
       break;
     }
+    case ELFX86RelocationKind::Delta64: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      *(little64_t *)FixupPtr = Value;
+      break;
+    }
     }
     return Error::success();
   }
@@ -760,21 +766,28 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
                      std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
 
-  // Construct a JITLinker and run the link function.
-  // Add a mark-live pass.
-  if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
-    Config.PrePrunePasses.push_back(std::move(MarkLive));
-  else
-    Config.PrePrunePasses.push_back(markAllSymbolsLive);
+  if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
 
-  // Add an in-place GOT/Stubs pass.
-  Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
-    ELF_x86_64_GOTAndStubsBuilder(G).run();
-    return Error::success();
-  });
+    Config.PrePrunePasses.push_back(EHFrameSplitter(".eh_frame"));
+    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
+        ".eh_frame", G->getPointerSize(), Delta64, Delta32, NegDelta32));
 
-  // Add GOT/Stubs optimizer pass.
-  Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+    // Construct a JITLinker and run the link function.
+    // Add a mark-live pass.
+    if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
+      Config.PrePrunePasses.push_back(std::move(MarkLive));
+    else
+      Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Add an in-place GOT/Stubs pass.
+    Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
+      ELF_x86_64_GOTAndStubsBuilder(G).run();
+      return Error::success();
+    });
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+  }
 
   if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
     return Ctx->notifyFailed(std::move(Err));

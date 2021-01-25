@@ -108,9 +108,8 @@ constexpr const char *opSingleAfterVariableTemplate = R"Py(
 ///   {3} is the position of the current group in the group list.
 constexpr const char *opOneOptionalTemplate = R"Py(
   @property
-  def {0}(self);
-    return self.operation.{1}s[{3}] if len(self.operation.{1}s) > {2}
-                                    else None
+  def {0}(self):
+    return self.operation.{1}s[{3}] if len(self.operation.{1}s) > {2} else None
 )Py";
 
 /// Template for the variadic group accessor in the single variadic group case:
@@ -277,7 +276,7 @@ static bool isPythonKeyword(StringRef str) {
 static bool isODSReserved(StringRef str) {
   static llvm::StringSet<> reserved(
       {"attributes", "create", "context", "ip", "operands", "print", "get_asm",
-       "loc", "verify", "regions", "result", "results", "self", "operation",
+       "loc", "verify", "regions", "results", "self", "operation",
        "DIALECT_NAMESPACE", "OPERATION_NAME"});
   return str.startswith("_ods_") || str.endswith("_ods") ||
          reserved.contains(str);
@@ -481,8 +480,8 @@ constexpr const char *initTemplate = R"Py(
     results = []
     attributes = {{}
     {1}
-    super().__init__(self._ods_build_default(
-      attributes=attributes, operands=operands, results=results,
+    super().__init__(self.build_generic(
+      attributes=attributes, results=results, operands=operands,
       loc=loc, ip=ip))
 )Py";
 
@@ -528,8 +527,15 @@ populateBuilderArgs(const Operator &op,
                     llvm::SmallVectorImpl<std::string> &operandNames) {
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     std::string name = op.getResultName(i).str();
-    if (name.empty())
-      name = llvm::formatv("_gen_res_{0}", i);
+    if (name.empty()) {
+      if (op.getNumResults() == 1) {
+        // Special case for one result, make the default name be 'result'
+        // to properly match the built-in result accessor.
+        name = "result";
+      } else {
+        name = llvm::formatv("_gen_res_{0}", i);
+      }
+    }
     name = sanitizeName(name);
     builderArgs.push_back(name);
   }
@@ -637,6 +643,7 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
       op, llvm::makeArrayRef(builderArgs).drop_front(op.getNumResults()),
       builderLines);
 
+  builderArgs.push_back("*");
   builderArgs.push_back("loc=None");
   builderArgs.push_back("ip=None");
   os << llvm::formatv(initTemplate, llvm::join(builderArgs, ", "),

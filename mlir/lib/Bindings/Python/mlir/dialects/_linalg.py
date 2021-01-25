@@ -11,11 +11,10 @@ class StructuredOpMixin:
       raise ValueError(
           "Structured ops must have outputs or results, but not both.")
     super().__init__(
-        self._ods_build_default(operands=[list(inputs),
-                                          list(outputs)],
-                                results=list(results),
-                                loc=loc,
-                                ip=ip))
+        self.build_generic(results=list(results),
+                           operands=[list(inputs), list(outputs)],
+                           loc=loc,
+                           ip=ip))
 
 
 def select_opview_mixin(parent_opview_cls):
