@@ -3505,6 +3505,69 @@ void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
+/// Dispatch `ofr` into either `dynamicVec` if it is a Value or into `staticVec`
+/// otherwise.  In the dynamic case, `sentinel` is appended to `staticVec` to
+/// represent the dynamic value `?`.
+static void unpackOpFoldResult(OpFoldResult ofr,
+                               SmallVectorImpl<Value> &dynamicVec,
+                               SmallVectorImpl<int64_t> &staticVec,
+                               int64_t sentinel) {
+  Value v = ofr.dyn_cast<Value>();
+  if (v) {
+    dynamicVec.push_back(v);
+    staticVec.push_back(sentinel);
+  } else {
+    APInt apInt = ofr.dyn_cast<Attribute>().cast<IntegerAttr>().getValue();
+    staticVec.push_back(apInt.getSExtValue());
+  }
+}
+
+static void unpackOpFoldResults(ArrayRef<OpFoldResult> ofrs,
+                                SmallVector<Value> &dynamicVec,
+                                SmallVector<int64_t> &staticVec,
+                                int64_t sentinel) {
+  for (auto ofr : ofrs)
+    unpackOpFoldResult(ofr, dynamicVec, staticVec, sentinel);
+}
+
+// Build a SubTensorOp with mixed static and dynamic entries and custom result
+// type. If the type passed is nullptr, it is inferred.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              RankedTensorType resultType, Value source,
+                              ArrayRef<OpFoldResult> offsets,
+                              ArrayRef<OpFoldResult> sizes,
+                              ArrayRef<OpFoldResult> strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  unpackOpFoldResults(offsets, dynamicOffsets, staticOffsets,
+                      ShapedType::kDynamicStrideOrOffset);
+  unpackOpFoldResults(sizes, dynamicSizes, staticSizes,
+                      ShapedType::kDynamicSize);
+  unpackOpFoldResults(strides, dynamicStrides, staticStrides,
+                      ShapedType::kDynamicStrideOrOffset);
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  // Structuring implementation this way avoids duplication between builders.
+  if (!resultType) {
+    resultType =
+        SubTensorOp::inferResultType(sourceRankedTensorType, staticOffsets,
+                                     staticSizes, staticStrides)
+            .cast<RankedTensorType>();
+  }
+  build(b, result, resultType, source, staticOffsets, staticSizes,
+        staticStrides, dynamicOffsets, dynamicSizes, dynamicStrides, attrs);
+}
+
+// Build a SubTensorOp with mixed static and dynamic entries and inferred result
+// type.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              Value source, ArrayRef<OpFoldResult> offsets,
+                              ArrayRef<OpFoldResult> sizes,
+                              ArrayRef<OpFoldResult> strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  build(b, result, RankedTensorType(), source, offsets, sizes, strides, attrs);
+}
+
 /// Verifier for SubTensorOp.
 static LogicalResult verify(SubTensorOp op) {
   // Verify result type against inferred type.
@@ -3598,6 +3661,25 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
       rank, ShapedType::kDynamicStrideOrOffset);
   build(b, result, source, dest, staticOffsetsVector, staticSizesVector,
         staticStridesVector, offsets, sizes, strides, attrs);
+}
+
+// Build a SubTensorInsertOp with mixed static and dynamic entries.
+void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
+                                    Value source, Value dest,
+                                    ArrayRef<OpFoldResult> offsets,
+                                    ArrayRef<OpFoldResult> sizes,
+                                    ArrayRef<OpFoldResult> strides,
+                                    ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  unpackOpFoldResults(offsets, dynamicOffsets, staticOffsets,
+                      ShapedType::kDynamicStrideOrOffset);
+  unpackOpFoldResults(sizes, dynamicSizes, staticSizes,
+                      ShapedType::kDynamicSize);
+  unpackOpFoldResults(strides, dynamicStrides, staticStrides,
+                      ShapedType::kDynamicStrideOrOffset);
+  build(b, result, source, dest, staticOffsets, staticSizes, staticStrides,
+        dynamicOffsets, dynamicSizes, dynamicStrides, attrs);
 }
 
 /// Verifier for SubViewOp.
