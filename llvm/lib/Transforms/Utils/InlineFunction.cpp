@@ -859,13 +859,8 @@ ScopedAliasMetadataDeepCloner::ScopedAliasMetadataDeepCloner(
         MD.insert(M);
 
       // We also need to clone the metadata in noalias intrinsics.
-      if (const auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
-          if (const auto *M = dyn_cast<MDNode>(
-                  cast<MetadataAsValue>(
-                      II->getOperand(Intrinsic::NoAliasScopeDeclScopeArg))
-                      ->getMetadata()))
-            MD.insert(M);
+      if (const auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        MD.insert(Decl->getScopeList());
     }
   }
   addRecursiveMetadataUses();
@@ -932,14 +927,11 @@ void ScopedAliasMetadataDeepCloner::remap(ValueToValueMapTy &VMap) {
     if (MDNode *M = I->getMetadata(LLVMContext::MD_noalias))
       I->setMetadata(LLVMContext::MD_noalias, MDMap[M]);
 
-    if (auto *II = dyn_cast<IntrinsicInst>(I))
-      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl) {
-        auto *MV = cast<MetadataAsValue>(
-            II->getOperand(Intrinsic::NoAliasScopeDeclScopeArg));
-        auto *NewMV = MetadataAsValue::get(
-            II->getContext(), MDMap[cast<MDNode>(MV->getMetadata())]);
-        II->setOperand(Intrinsic::NoAliasScopeDeclScopeArg, NewMV);
-      }
+    if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
+      auto *NewMV =
+          MetadataAsValue::get(Decl->getContext(), MDMap[Decl->getScopeList()]);
+      Decl->setOperand(Intrinsic::NoAliasScopeDeclScopeArg, NewMV);
+    }
   }
 }
 
