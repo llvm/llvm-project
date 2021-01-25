@@ -238,7 +238,7 @@ module {
 //  CHECK-SAME:         ins(%[[T1]], %[[ARG5]]
 //  CHECK-SAME:         ) outs(%[[STARG6]] : tensor<?x?xf32>)
 //       CHECK:       %[[R1:.+]] = subtensor_insert %[[T2]]
-//  CHECK-SAME:         into %[[ARG8]][%[[IV0]], %[[C0]]]
+//  CHECK-SAME:         into %[[ARG8]][%[[IV0]], 0]
 //       CHECK:       scf.yield %[[R1]]
 //       CHECK:     }
 //       CHECK:     return %[[R0]]

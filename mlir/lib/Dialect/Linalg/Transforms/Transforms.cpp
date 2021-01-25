@@ -192,19 +192,17 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
-  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
   llvm::SetVector<Operation *> newUsersOfOpToPad;
   for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
     auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
-    SmallVector<Value> offsets(rank, zero);
-    auto sizes = llvm::to_vector<4>(
-        llvm::map_range(llvm::seq<unsigned>(0, rank), [&](unsigned d) -> Value {
+    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
+    auto sizes = llvm::to_vector<4>(llvm::map_range(
+        llvm::seq<unsigned>(0, rank), [&](unsigned d) -> OpFoldResult {
           auto dimOp = rewriter.create<DimOp>(loc, std::get<0>(it), d);
           newUsersOfOpToPad.insert(dimOp);
-          return dimOp;
+          return dimOp.getResult();
         }));
-    SmallVector<Value> strides(rank, one);
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
     paddedSubviewResults.push_back(rewriter.create<SubTensorOp>(
         loc, std::get<1>(it), offsets, sizes, strides));
   }

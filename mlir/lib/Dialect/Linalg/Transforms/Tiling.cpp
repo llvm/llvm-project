@@ -255,15 +255,15 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
     }
 
     // Construct a new subview / subtensor for the tile.
-    SmallVector<Value, 4> offsets, sizes, strides;
+    SmallVector<OpFoldResult, 4> offsets, sizes, strides;
     offsets.reserve(rank);
     sizes.reserve(rank);
     strides.reserve(rank);
     for (unsigned r = 0; r < rank; ++r) {
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
-        offsets.push_back(std_constant_index(0));
-        sizes.push_back(std_dim(shapedOp, r));
-        strides.push_back(std_constant_index(1));
+        offsets.push_back(b.getIndexAttr(0));
+        sizes.push_back(std_dim(shapedOp, r).value);
+        strides.push_back(b.getIndexAttr(1));
         continue;
       }
 
@@ -297,7 +297,7 @@ makeTiledShapes(OpBuilder &b, Location loc, LinalgOp linalgOp,
       }
 
       sizes.push_back(size);
-      strides.push_back(std_constant_index(1));
+      strides.push_back(b.getIndexAttr(1));
     }
 
     if (shapedType.isa<MemRefType>())
