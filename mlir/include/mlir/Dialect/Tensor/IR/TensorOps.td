@@ -10,6 +10,7 @@
 #define TENSOR_OPS
 
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -24,7 +25,9 @@ class Tensor_Op<string mnemonic, list<OpTrait> traits = []>
 // CastOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_CastOp : Tensor_Op<"cast", [NoSideEffect]> {
+def Tensor_CastOp : Tensor_Op<"cast", [
+    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+  ]> {
   let summary = "tensor cast operation";
   let description = [{
     Convert a tensor from one type to an equivalent type without changing any
@@ -51,19 +54,9 @@ def Tensor_CastOp : Tensor_Op<"cast", [NoSideEffect]> {
   let arguments = (ins AnyTensor:$source);
   let results = (outs AnyTensor:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
-  let verifier = "return impl::verifyCastOp(*this, areCastCompatible);";
 
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-
-    /// The result of a tensor.cast is always a tensor.
-    TensorType getType() { return getResult().getType().cast<TensorType>(); }
-  }];
-
-  let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//

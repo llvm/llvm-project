@@ -1,4 +1,5 @@
 add_mlir_interface(CallInterfaces)
+add_mlir_interface(CastInterfaces)
 add_mlir_interface(ControlFlowInterfaces)
 add_mlir_interface(CopyOpInterface)
 add_mlir_interface(DerivedAttributeOpInterface)

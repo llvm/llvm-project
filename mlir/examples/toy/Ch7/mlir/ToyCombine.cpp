@@ -23,11 +23,6 @@ namespace {
 #include "ToyCombine.inc"
 } // end anonymous namespace
 
-/// Fold simple cast operations that return the same type as the input.
-OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  return mlir::impl::foldCastOp(*this);
-}
-
 /// Fold constants.
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) { return value(); }
 

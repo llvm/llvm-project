@@ -17,6 +17,7 @@ include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -45,9 +46,10 @@ class Std_Op<string mnemonic, list<OpTrait> traits = []> :
 // Base class for standard cast operations. Requires single operand and result,
 // but does not constrain them to specific types.
 class CastOp<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic,
-           !listconcat(traits, [NoSideEffect, SameOperandsAndResultShape])> {
-
+    Std_Op<mnemonic, traits # [
+      NoSideEffect, SameOperandsAndResultShape,
+      DeclareOpInterfaceMethods<CastOpInterface>
+    ]> {
   let results = (outs AnyType);
 
   let builders = [
@@ -62,9 +64,9 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
   let printer = [{
     return printStandardCastOp(this->getOperation(), p);
   }];
-  let verifier = [{ return impl::verifyCastOp(*this, areCastCompatible); }];
 
-  let hasFolder = 1;
+  // Cast operations are fully verified by its traits.
+  let verifier = ?;
 }
 
 // Base class for arithmetic cast operations.
@@ -1643,14 +1645,6 @@ def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
     The destination type must to be strictly wider than the source type.
     Only scalars are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1663,14 +1657,6 @@ def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
     Cast from a value interpreted as floating-point to the nearest (rounding
     towards zero) signed integer value.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1683,14 +1669,6 @@ def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
     Cast from a value interpreted as floating-point to the nearest (rounding
     towards zero) unsigned integer value.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1705,14 +1683,6 @@ def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
     If the value cannot be exactly represented, it is rounded using the default
     rounding mode. Only scalars are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1847,12 +1817,6 @@ def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
     Casts between integer scalars and 'index' scalars. Index is an integer of
     platform-specific bit width. If casting to a wider integer, the value is
     sign-extended. If casting to a narrower integer, the value is truncated.
-  }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
   }];
 
   let hasFolder = 1;
@@ -2045,14 +2009,7 @@ def MemRefCastOp : CastOp<"memref_cast", [
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source);
   let results = (outs AnyRankedOrUnrankedMemRef);
 
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-
-    /// The result of a memref_cast is always a memref.
-    Type getType() { return getResult().getType(); }
-  }];
+  let hasFolder = 1;
 }
 
 
@@ -2786,14 +2743,6 @@ def SIToFPOp : ArithmeticCastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
     exactly represented, it is rounded using the default rounding mode. Scalars
     and vector types are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3628,14 +3577,6 @@ def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
     value cannot be exactly represented, it is rounded using the default
     rounding mode. Scalars and vector types are currently supported.
   }];
-
-  let extraClassDeclaration = [{
-    /// Return true if `a` and `b` are valid operand and result pairs for
-    /// the operation.
-    static bool areCastCompatible(Type a, Type b);
-  }];
-
-  let hasFolder = 0;
 }
 
 //===----------------------------------------------------------------------===//
