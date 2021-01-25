@@ -224,6 +224,12 @@ def ORN   : ALU_rr<0b0100000, 0b110, "orn">, Sched<[]>;
 def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">, Sched<[]>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
+let Predicates = [HasStdExtZba] in {
+def SH1ADD : ALU_rr<0b0010000, 0b010, "sh1add">, Sched<[]>;
+def SH2ADD : ALU_rr<0b0010000, 0b100, "sh2add">, Sched<[]>;
+def SH3ADD : ALU_rr<0b0010000, 0b110, "sh3add">, Sched<[]>;
+} // Predicates = [HasStdExtZba]
+
 let Predicates = [HasStdExtZbb] in {
 def SLO  : ALU_rr<0b0010000, 0b001, "slo">, Sched<[]>;
 def SRO  : ALU_rr<0b0010000, 0b101, "sro">, Sched<[]>;
@@ -372,6 +378,9 @@ def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 let Predicates = [HasStdExtZba, IsRV64] in {
 def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slli.uw">, Sched<[]>;
 def ADDUW : ALUW_rr<0b0000100, 0b000, "add.uw">, Sched<[]>;
+def SH1ADDUW : ALUW_rr<0b0010000, 0b010, "sh1add.uw">, Sched<[]>;
+def SH2ADDUW : ALUW_rr<0b0010000, 0b100, "sh2add.uw">, Sched<[]>;
+def SH3ADDUW : ALUW_rr<0b0010000, 0b110, "sh3add.uw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
