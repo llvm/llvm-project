@@ -447,6 +447,8 @@ Sections:
     Flags:   [ SHF_ALLOC ]
     Address: 0x300
     Offset:  0x300
+  - Type: SectionHeaderTable
+    NoHeaders: true
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
@@ -457,5 +459,3 @@ ProgramHeaders:
   - Type:     PT_DYNAMIC
     FirstSec: .dynamic
     LastSec:  .dynamic
-SectionHeaderTable:
-  NoHeaders: true
