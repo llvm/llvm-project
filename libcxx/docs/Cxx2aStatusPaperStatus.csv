@@ -59,7 +59,7 @@
 "`P0595R2 <https://wg21.link/P0595R2>`__","CWG","P0595R2 std::is_constant_evaluated()","San Diego","|Complete|","9.0"
 "`P0602R4 <https://wg21.link/P0602R4>`__","LWG","variant and optional should propagate copy/move triviality","San Diego","|Complete|","8.0"
 "`P0608R3 <https://wg21.link/P0608R3>`__","LWG","A sane variant converting constructor","San Diego","|Complete|","9.0"
-"`P0655R1 <https://wg21.link/P0655R1>`__","LWG","visit<R>: Explicit Return Type for visit","San Diego","* *",""
+"`P0655R1 <https://wg21.link/P0655R1>`__","LWG","visit<R>: Explicit Return Type for visit","San Diego","|Complete|","12.0"
 "`P0771R1 <https://wg21.link/P0771R1>`__","LWG","std::function move constructor should be noexcept","San Diego","|Complete|","6.0"
 "`P0896R4 <https://wg21.link/P0896R4>`__","LWG","The One Ranges Proposal","San Diego","* *",""
 "`P0899R1 <https://wg21.link/P0899R1>`__","LWG","P0899R1 - LWG 3016 is not a defect","San Diego","|Nothing To Do|",""
