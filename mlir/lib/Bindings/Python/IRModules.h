@@ -16,6 +16,7 @@
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/IntegerSet.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
@@ -724,6 +725,26 @@ public:
 
 private:
   MlirAffineMap affineMap;
+};
+
+class PyIntegerSet : public BaseContextObject {
+public:
+  PyIntegerSet(PyMlirContextRef contextRef, MlirIntegerSet integerSet)
+      : BaseContextObject(std::move(contextRef)), integerSet(integerSet) {}
+  bool operator==(const PyIntegerSet &other);
+  operator MlirIntegerSet() const { return integerSet; }
+  MlirIntegerSet get() const { return integerSet; }
+
+  /// Gets a capsule wrapping the void* within the MlirIntegerSet.
+  pybind11::object getCapsule();
+
+  /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
+  /// Note that PyIntegerSet instances may be uniqued, so the returned object
+  /// may be a pre-existing object. Integer sets are owned by the context.
+  static PyIntegerSet createFromCapsule(pybind11::object capsule);
+
+private:
+  MlirIntegerSet integerSet;
 };
 
 void populateIRSubmodule(pybind11::module &m);
