@@ -169,3 +169,15 @@ define void @test_no_simplify2() {
   call i8* @strncpy(i8* %dst, i8* %src, i32 8)
   ret void
 }
+
+define void @test_no_incompatible_attr() {
+; CHECK-LABEL: @test_no_incompatible_attr(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(6) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
+  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
+
+  call i8* @strncpy(i8* %dst, i8* %src, i32 6)
+  ret void
+}

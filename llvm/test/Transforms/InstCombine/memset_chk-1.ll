@@ -141,6 +141,17 @@ cleanup:
 
 }
 
+define i8* @test_no_incompatible_attr(i8* %mem, i32 %val, i32 %size) {
+; CHECK-LABEL: @test_no_incompatible_attr(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(1824) bitcast (%struct.T* @t to i8*), i8 0, i64 1824, i1 false)
+; CHECK-NEXT:    ret i8* bitcast (%struct.T* @t to i8*)
+;
+  %dst = bitcast %struct.T* @t to i8*
+
+  %ret = call dereferenceable(1) i8* @__memset_chk(i8* %dst, i32 0, i64 1824, i64 1824)
+  ret i8* %ret
+}
+
 declare noalias i8* @malloc(i64) #1
 
 attributes #0 = { nounwind ssp uwtable }
