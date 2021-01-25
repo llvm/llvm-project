@@ -1179,16 +1179,41 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, AppendRange) {
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Assign) {
+  // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
   (void)V;
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  // Regardless of capacity, assign should never reference an internal element.
-  EXPECT_DEATH(V.assign(1, V.back()), this->AssertionMessage);
-  EXPECT_DEATH(V.assign(this->NumBuiltinElts(V), V.back()),
-               this->AssertionMessage);
-  EXPECT_DEATH(V.assign(this->NumBuiltinElts(V) + 1, V.back()),
-               this->AssertionMessage);
-#endif
+  int N = this->NumBuiltinElts(V);
+  ASSERT_EQ(unsigned(N), V.size());
+  ASSERT_EQ(unsigned(N), V.capacity());
+
+  // Check assign that shrinks in small mode.
+  V.assign(1, V.back());
+  EXPECT_EQ(1u, V.size());
+  EXPECT_EQ(N, V[0]);
+
+  // Check assign that grows within small mode.
+  ASSERT_LT(V.size(), V.capacity());
+  V.assign(V.capacity(), V.back());
+  for (int I = 0, E = V.size(); I != E; ++I) {
+    EXPECT_EQ(N, V[I]);
+
+    // Reset to [1, 2, ...].
+    V[I] = I + 1;
+  }
+
+  // Check assign that grows to large mode.
+  ASSERT_EQ(2, V[1]);
+  V.assign(V.capacity() + 1, V[1]);
+  for (int I = 0, E = V.size(); I != E; ++I) {
+    EXPECT_EQ(2, V[I]);
+
+    // Reset to [1, 2, ...].
+    V[I] = I + 1;
+  }
+
+  // Check assign that shrinks in large mode.
+  V.assign(1, V[1]);
+  EXPECT_EQ(2, V[0]);
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, AssignRange) {
@@ -1289,11 +1314,25 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertRange) {
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, EmplaceBack) {
+  // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  (void)V;
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.emplace_back(V.back()), this->AssertionMessage);
-#endif
+  int N = this->NumBuiltinElts(V);
+
+  // Push back a reference to last element when growing from small storage.
+  V.emplace_back(V.back());
+  EXPECT_EQ(N, V.back());
+
+  // Check that the old value is still there (not moved away).
+  EXPECT_EQ(N, V[V.size() - 2]);
+
+  // Fill storage again.
+  V.back() = V.size();
+  while (V.size() < V.capacity())
+    V.push_back(V.size() + 1);
+
+  // Push back a reference to last element when growing from large storage.
+  V.emplace_back(V.back());
+  EXPECT_EQ(int(V.size()) - 1, V.back());
 }
 
 template <class VectorT>
@@ -1315,25 +1354,42 @@ protected:
     SmallVectorTestBase::SetUp();
 
     // Fill up the small size so that insertions move the elements.
-    V.push_back(std::make_pair(0, 0));
+    for (int I = 0, E = NumBuiltinElts(V); I != E; ++I)
+      V.emplace_back(I + 1, I + 1);
   }
 };
 
 // Test pairs of the same types from SmallVectorReferenceInvalidationTestTypes.
 using SmallVectorInternalReferenceInvalidationTestTypes =
-    ::testing::Types<SmallVector<std::pair<int, int>, 1>,
-                     SmallVector<std::pair<Constructable, Constructable>, 1>>;
+    ::testing::Types<SmallVector<std::pair<int, int>, 3>,
+                     SmallVector<std::pair<Constructable, Constructable>, 3>>;
 
 TYPED_TEST_CASE(SmallVectorInternalReferenceInvalidationTest,
                 SmallVectorInternalReferenceInvalidationTestTypes);
 
 TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
+  // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  (void)V;
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.emplace_back(V.back().first, 0), this->AssertionMessage);
-  EXPECT_DEATH(V.emplace_back(0, V.back().second), this->AssertionMessage);
-#endif
+  int N = this->NumBuiltinElts(V);
+
+  // Push back a reference to last element when growing from small storage.
+  V.emplace_back(V.back().first, V.back().second);
+  EXPECT_EQ(N, V.back().first);
+  EXPECT_EQ(N, V.back().second);
+
+  // Check that the old value is still there (not moved away).
+  EXPECT_EQ(N, V[V.size() - 2].first);
+  EXPECT_EQ(N, V[V.size() - 2].second);
+
+  // Fill storage again.
+  V.back().first = V.back().second = V.size();
+  while (V.size() < V.capacity())
+    V.emplace_back(V.size() + 1, V.size() + 1);
+
+  // Push back a reference to last element when growing from large storage.
+  V.emplace_back(V.back().first, V.back().second);
+  EXPECT_EQ(int(V.size()) - 1, V.back().first);
+  EXPECT_EQ(int(V.size()) - 1, V.back().second);
 }
 
 } // end namespace
