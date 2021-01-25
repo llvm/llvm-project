@@ -50,9 +50,8 @@ define i8 @smax_known_bits(i8 %x, i8 %y) {
 
 define i8 @smax_sext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @smax_sext(
-; CHECK-NEXT:    [[SX:%.*]] = sext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[SY:%.*]] = sext i5 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[SX]], i8 [[SY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smax.i5(i5 [[X:%.*]], i5 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %sx = sext i5 %x to i8
@@ -61,12 +60,14 @@ define i8 @smax_sext(i5 %x, i5 %y) {
   ret i8 %m
 }
 
+; Extra use is ok.
+
 define i8 @smin_sext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @smin_sext(
-; CHECK-NEXT:    [[SX:%.*]] = sext i5 [[X:%.*]] to i8
 ; CHECK-NEXT:    [[SY:%.*]] = sext i5 [[Y:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[SX]], i8 [[SY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smin.i5(i5 [[X:%.*]], i5 [[Y]])
+; CHECK-NEXT:    [[M:%.*]] = sext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %sx = sext i5 %x to i8
@@ -76,12 +77,14 @@ define i8 @smin_sext(i5 %x, i5 %y) {
   ret i8 %m
 }
 
+; Sext doesn't change unsigned min/max comparison of narrow values.
+
 define i8 @umax_sext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @umax_sext(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i5 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SX]])
-; CHECK-NEXT:    [[SY:%.*]] = sext i5 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[SX]], i8 [[SY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umax.i5(i5 [[X]], i5 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %sx = sext i5 %x to i8
@@ -93,9 +96,8 @@ define i8 @umax_sext(i5 %x, i5 %y) {
 
 define <3 x i8> @umin_sext(<3 x i5> %x, <3 x i5> %y) {
 ; CHECK-LABEL: @umin_sext(
-; CHECK-NEXT:    [[SX:%.*]] = sext <3 x i5> [[X:%.*]] to <3 x i8>
-; CHECK-NEXT:    [[SY:%.*]] = sext <3 x i5> [[Y:%.*]] to <3 x i8>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.umin.v3i5(<3 x i5> [[X:%.*]], <3 x i5> [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = sext <3 x i5> [[TMP1]] to <3 x i8>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %sx = sext <3 x i5> %x to <3 x i8>
@@ -103,6 +105,8 @@ define <3 x i8> @umin_sext(<3 x i5> %x, <3 x i5> %y) {
   %m = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %sx, <3 x i8> %sy)
   ret <3 x i8> %m
 }
+
+; Negative test - zext may change sign of inputs
 
 define i8 @smax_zext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @smax_zext(
@@ -116,6 +120,8 @@ define i8 @smax_zext(i5 %x, i5 %y) {
   %m = call i8 @llvm.smax.i8(i8 %zx, i8 %zy)
   ret i8 %m
 }
+
+; Negative test - zext may change sign of inputs
 
 define i8 @smin_zext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @smin_zext(
@@ -132,9 +138,8 @@ define i8 @smin_zext(i5 %x, i5 %y) {
 
 define i8 @umax_zext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @umax_zext(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[ZY:%.*]] = zext i5 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[ZX]], i8 [[ZY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umax.i5(i5 [[X:%.*]], i5 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %zx = zext i5 %x to i8
@@ -145,9 +150,8 @@ define i8 @umax_zext(i5 %x, i5 %y) {
 
 define i8 @umin_zext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @umin_zext(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[ZY:%.*]] = zext i5 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[ZX]], i8 [[ZY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 [[Y:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %zx = zext i5 %x to i8
@@ -155,6 +159,8 @@ define i8 @umin_zext(i5 %x, i5 %y) {
   %m = call i8 @llvm.umin.i8(i8 %zx, i8 %zy)
   ret i8 %m
 }
+
+; Negative test - mismatched types
 
 define i8 @umin_zext_types(i6 %x, i5 %y) {
 ; CHECK-LABEL: @umin_zext_types(
@@ -169,6 +175,8 @@ define i8 @umin_zext_types(i6 %x, i5 %y) {
   ret i8 %m
 }
 
+; Negative test - mismatched extends
+
 define i8 @umin_ext(i5 %x, i5 %y) {
 ; CHECK-LABEL: @umin_ext(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i5 [[X:%.*]] to i8
@@ -181,6 +189,8 @@ define i8 @umin_ext(i5 %x, i5 %y) {
   %m = call i8 @llvm.umin.i8(i8 %sx, i8 %zy)
   ret i8 %m
 }
+
+; Negative test - too many uses.
 
 define i8 @umin_zext_uses(i5 %x, i5 %y) {
 ; CHECK-LABEL: @umin_zext_uses(
