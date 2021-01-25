@@ -607,7 +607,10 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
   let autogenSerialization = 0;
 }
 
-def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [InModuleScope, Symbol]> {
+// -----
+
+def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [
+    InModuleScope, Symbol]> {
   let summary = "Declare a new composite specialization constant.";
 
   let description = [{
@@ -658,43 +661,7 @@ def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [InModuleScope
   let autogenSerialization = 0;
 }
 
-def SPV_YieldOp : SPV_Op<"mlir.yield", [
-    HasParent<"SpecConstantOperationOp">, NoSideEffect, Terminator]> {
-  let summary = [{
-    Yields the result computed in `spv.SpecConstantOperation`'s
-    region back to the parent op.
-  }];
-
-  let description = [{
-    This op is a special terminator whose only purpose is to terminate
-    an `spv.SpecConstantOperation`'s enclosed region. It accepts a
-    single operand produced by the preceeding (and only other) instruction
-    in its parent block (see SPV_SpecConstantOperation for further
-    details). This op has no corresponding SPIR-V instruction.
-
-    ```
-    spv.mlir.yield ::= `spv.mlir.yield` ssa-id : spirv-type
-    ```
-
-    #### Example:
-    ```mlir
-    %0 = ... (some op supported by SPIR-V OpSpecConstantOp)
-    spv.mlir.yield %0
-    ```
-  }];
-
-  let arguments = (ins AnyType:$operand);
-
-  let results = (outs);
-
-  let hasOpcode = 0;
-
-  let autogenSerialization = 0;
-
-  let assemblyFormat = "attr-dict $operand `:` type($operand)";
-
-  let verifier = [{ return success(); }];
-}
+// -----
 
 def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
        NoSideEffect, InFunctionScope,
@@ -780,6 +747,46 @@ def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+}
+
+// -----
+
+def SPV_YieldOp : SPV_Op<"mlir.yield", [
+    HasParent<"SpecConstantOperationOp">, NoSideEffect, Terminator]> {
+  let summary = [{
+    Yields the result computed in `spv.SpecConstantOperation`'s
+    region back to the parent op.
+  }];
+
+  let description = [{
+    This op is a special terminator whose only purpose is to terminate
+    an `spv.SpecConstantOperation`'s enclosed region. It accepts a
+    single operand produced by the preceeding (and only other) instruction
+    in its parent block (see SPV_SpecConstantOperation for further
+    details). This op has no corresponding SPIR-V instruction.
+
+    ```
+    spv.mlir.yield ::= `spv.mlir.yield` ssa-id : spirv-type
+    ```
+
+    #### Example:
+    ```mlir
+    %0 = ... (some op supported by SPIR-V OpSpecConstantOp)
+    spv.mlir.yield %0
+    ```
+  }];
+
+  let arguments = (ins AnyType:$operand);
+
+  let results = (outs);
+
+  let hasOpcode = 0;
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = "attr-dict $operand `:` type($operand)";
+
+  let verifier = [{ return success(); }];
 }
 
 // -----
