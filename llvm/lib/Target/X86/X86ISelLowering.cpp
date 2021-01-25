@@ -35357,8 +35357,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Handle 128/256-bit lane shuffles of 512-bit vectors.
   if (RootVT.is512BitVector() &&
       (NumBaseMaskElts == 2 || NumBaseMaskElts == 4)) {
-    MVT ShuffleVT = (FloatDomain ? MVT::v8f64 : MVT::v8i64);
-
     // If the upper subvectors are zeroable, then an extract+insert is more
     // optimal than using X86ISD::SHUF128. The insertion is free, even if it has
     // to zero the upper subvectors.
@@ -35367,12 +35365,11 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         return SDValue(); // Nothing to do!
       assert(isInRange(BaseMask[0], 0, NumBaseMaskElts) &&
              "Unexpected lane shuffle");
-      Res = CanonicalizeShuffleInput(ShuffleVT, V1);
-      unsigned SubIdx = BaseMask[0] * (8 / NumBaseMaskElts);
+      Res = CanonicalizeShuffleInput(RootVT, V1);
+      unsigned SubIdx = BaseMask[0] * (NumRootElts / NumBaseMaskElts);
       bool UseZero = isAnyZero(BaseMask);
       Res = extractSubVector(Res, SubIdx, DAG, DL, BaseMaskEltSizeInBits);
-      Res = widenSubVector(Res, UseZero, Subtarget, DAG, DL, RootSizeInBits);
-      return DAG.getBitcast(RootVT, Res);
+      return widenSubVector(Res, UseZero, Subtarget, DAG, DL, RootSizeInBits);
     }
 
     // Narrow shuffle mask to v4x128.
@@ -35423,6 +35420,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (!isAnyZero(Mask) && !PreferPERMQ) {
       if (Depth == 0 && Root.getOpcode() == X86ISD::SHUF128)
         return SDValue(); // Nothing to do!
+      MVT ShuffleVT = (FloatDomain ? MVT::v8f64 : MVT::v8i64);
       if (SDValue V = MatchSHUF128(ShuffleVT, DL, Mask, V1, V2, DAG))
         return DAG.getBitcast(RootVT, V);
     }
@@ -35430,8 +35428,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
   if (RootVT.is256BitVector() && NumBaseMaskElts == 2) {
-    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
-
     // If the upper half is zeroable, then an extract+insert is more optimal
     // than using X86ISD::VPERM2X128. The insertion is free, even if it has to
     // zero the upper half.
@@ -35439,13 +35435,13 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (Depth == 0 && Root.getOpcode() == ISD::INSERT_SUBVECTOR)
         return SDValue(); // Nothing to do!
       assert(isInRange(BaseMask[0], 0, 2) && "Unexpected lane shuffle");
-      Res = CanonicalizeShuffleInput(ShuffleVT, V1);
-      Res = extract128BitVector(Res, BaseMask[0] * 2, DAG, DL);
-      Res = widenSubVector(Res, BaseMask[1] == SM_SentinelZero, Subtarget, DAG,
-                           DL, 256);
-      return DAG.getBitcast(RootVT, Res);
+      Res = CanonicalizeShuffleInput(RootVT, V1);
+      Res = extract128BitVector(Res, BaseMask[0] * (NumRootElts / 2), DAG, DL);
+      return widenSubVector(Res, BaseMask[1] == SM_SentinelZero, Subtarget, DAG,
+                            DL, 256);
     }
 
+    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
     if (Depth == 0 && Root.getOpcode() == X86ISD::VPERM2X128)
       return SDValue(); // Nothing to do!
 
