@@ -88,6 +88,7 @@ public:
                                        raw_string_ostream &KdStream) const;
 
   DecodeStatus convertEXPInst(MCInst &MI) const;
+  DecodeStatus convertVINTERPInst(MCInst &MI) const;
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
   DecodeStatus convertMIMGInst(MCInst &MI) const;

@@ -31,7 +31,7 @@ class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : Enc64 {
   let Inst{12}    = !if(P.HasOpSel, src1_modifiers{2}, 0); // op_sel(1)
   let Inst{13}    = !if(P.HasOpSel, src2_modifiers{2}, 0); // op_sel(2)
   let Inst{14}    = !if(P.HasOpSel, src0_modifiers{3}, 0); // op_sel(3)
-  let Inst{15}    = !if(P.HasClamp, clamp, 0);
+  let Inst{15}    = clamp;
   let Inst{22-16} = op;
   let Inst{40-32} = src0;
   let Inst{49-41} = src1;
@@ -66,7 +66,6 @@ class VINTERP_Real <VOP_Pseudo ps, int EncodingFamily> :
 }
 
 def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
-  let HasClamp = 1;
   let HasOpSel = 0;
   let HasModifiers = 1;
 
@@ -81,7 +80,6 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
 }
 
 class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
-  let HasClamp = 1;
   let HasOpSel = 1;
   let HasModifiers = 1;
 
