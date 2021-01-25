@@ -1,6 +1,3 @@
-// xfailing this while it's being invested in rdar://72434219
-// XFAIL: *
-
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
@@ -36,7 +33,8 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK-NEXT:         "-remove-preceeding-explicit-module-build-incompatible-options",
 // CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps",
+// CHECK-NEXT:         "-emit-module",
+// CHECK-NEXT:         "-fmodule-name=header1",
 // CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
 // CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
