@@ -355,12 +355,12 @@ beginning of the block. :)
 Once the insertion point is set, we recursively codegen the "then"
 expression from the AST. To finish off the "then" block, we create an
 unconditional branch to the merge block. One interesting (and very
-important) aspect of the LLVM IR is that it `requires all basic blocks
-to be "terminated" <../LangRef.html#functionstructure>`_ with a `control
-flow instruction <../LangRef.html#terminators>`_ such as return or
-branch. This means that all control flow, *including fall throughs* must
-be made explicit in the LLVM IR. If you violate this rule, the verifier
-will emit an error.
+important) aspect of the LLVM IR is that it :ref:`requires all basic
+blocks to be "terminated" <functionstructure>` with a :ref:`control
+flow instruction <terminators>`  such as return or branch. This means
+that all control flow, *including fall throughs* must be made explicit
+in the LLVM IR. If you violate this rule, the verifier will emit an
+error.
 
 The final line here is quite subtle, but is very important. The basic
 issue is that when we create the Phi node in the merge block, we need to
@@ -801,7 +801,7 @@ the if/then/else and for expressions. To build this example, use:
 .. code-block:: bash
 
     # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core mcjit native` -O3 -o toy
+    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
     # Run
     ./toy
 
