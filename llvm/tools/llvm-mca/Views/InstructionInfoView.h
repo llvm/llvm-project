@@ -78,7 +78,7 @@ public:
 
   void printView(llvm::raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "InstructionInfoView"; }
-  json::Value toJSON() const;
+  json::Value toJSON() const override;
   json::Object toJSON(const InstructionInfoViewData &IIVD) const;
 };
 } // namespace mca

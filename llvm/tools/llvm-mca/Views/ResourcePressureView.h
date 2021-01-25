@@ -95,7 +95,7 @@ public:
     printResourcePressurePerInst(OS);
   }
   StringRef getNameAsString() const override { return "ResourcePressureView"; }
-  json::Value toJSON() const;
+  json::Value toJSON() const override;
 };
 } // namespace mca
 } // namespace llvm

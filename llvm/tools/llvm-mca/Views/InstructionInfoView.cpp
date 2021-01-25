@@ -141,7 +141,7 @@ json::Value InstructionInfoView::toJSON() const {
   collectData(IIVD);
 
   json::Array InstInfo;
-  for (const auto I : enumerate(IIVD)) {
+  for (const auto &I : enumerate(IIVD)) {
     const InstructionInfoViewData &IIVDEntry = I.value();
     json::Object JO = toJSON(IIVDEntry);
     JO.try_emplace("Instruction", (unsigned)I.index());
