@@ -3411,21 +3411,21 @@ bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
          });
 }
 
-static std::pair<unsigned, unsigned>
+static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
                    TargetTransformInfo *TTI, TargetLibraryInfo *TLI) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
   IntrinsicCostAttributes CostAttrs(ID, *CI, VecTy->getElementCount());
-  int IntrinsicCost =
+  auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
   auto Shape = VFShape::get(*CI, ElementCount::getFixed(static_cast<unsigned>(
                                      VecTy->getNumElements())),
                             false /*HasGlobalPred*/);
   Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  int LibCost = IntrinsicCost;
+  auto LibCost = IntrinsicCost;
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
     SmallVector<Type *, 4> VecTys;
@@ -5994,7 +5994,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   InstructionCost Cost = R.getTreeCost();
 
   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF =" << VF << "\n");
-  if (Cost.isValid() && Cost < -SLPCostThreshold) {
+  if (Cost < -SLPCostThreshold) {
     LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
     using namespace ore;
@@ -6295,7 +6295,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       MinCost = std::min(MinCost, Cost);
 
-      if (Cost.isValid() && Cost < -SLPCostThreshold) {
+      if (Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
                                                     cast<Instruction>(Ops[0]))
@@ -7007,11 +7007,12 @@ public:
 
 private:
   /// Calculate the cost of a reduction.
-  int getReductionCost(TargetTransformInfo *TTI, Value *FirstReducedVal,
-                       unsigned ReduxWidth) {
+  InstructionCost getReductionCost(TargetTransformInfo *TTI,
+                                   Value *FirstReducedVal,
+                                   unsigned ReduxWidth) {
     Type *ScalarTy = FirstReducedVal->getType();
     FixedVectorType *VectorTy = FixedVectorType::get(ScalarTy, ReduxWidth);
-    int VectorCost, ScalarCost;
+    InstructionCost VectorCost, ScalarCost;
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
