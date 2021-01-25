@@ -696,7 +696,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 }
 
 
-define dso_local void @test_nested(float* noalias nocapture %pInT1, float* noalias nocapture readonly %pOutT1, float* noalias nocapture readonly %pPRT_in, float* noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l, float %in) local_unnamed_addr #0 {
+define dso_local void @test_nested(float* noalias nocapture %pInT1, float* noalias nocapture readonly %pOutT1, float* noalias nocapture readonly %pPRT_in, float* noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_nested:
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
