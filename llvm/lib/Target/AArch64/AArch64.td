@@ -218,6 +218,10 @@ def FeatureArithmeticCbzFusion : SubtargetFeature<
     "arith-cbz-fusion", "HasArithmeticCbzFusion", "true",
     "CPU fuses arithmetic + cbz/cbnz operations">;
 
+def FeatureCmpBccFusion : SubtargetFeature<
+    "cmp-bcc-fusion", "HasCmpBccFusion", "true",
+    "CPU fuses cmp+bcc operations">;
+
 def FeatureFuseAddress : SubtargetFeature<
     "fuse-address", "HasFuseAddress", "true",
     "CPU fuses address generation and memory operations">;
@@ -615,6 +619,9 @@ def ProcA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
                                    FeatureDotProd,
                                    FeatureFPARMv8,
                                    FeatureFullFP16,
+                                   FeatureFuseAddress,
+                                   FeatureFuseAES,
+                                   FeatureFuseLiterals,
                                    FeatureNEON,
                                    FeatureRAS,
                                    FeatureRCPC,
@@ -627,6 +634,7 @@ def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
                                    FeatureCrypto,
                                    FeatureFPARMv8,
                                    FeatureFuseAES,
+                                   FeatureFuseLiterals,
                                    FeatureNEON,
                                    FeaturePerfMon
                                    ]>;
@@ -658,6 +666,7 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    "Cortex-A76 ARM processors", [
                                     HasV8_2aOps,
                                     FeatureFPARMv8,
+                                    FeatureFuseAES,
                                     FeatureNEON,
                                     FeatureRCPC,
                                     FeatureCrypto,
@@ -669,7 +678,9 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
 def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", [
                                     HasV8_2aOps,
+                                    FeatureCmpBccFusion,
                                     FeatureFPARMv8,
+                                    FeatureFuseAES,
                                     FeatureNEON, FeatureRCPC,
                                     FeatureCrypto,
                                     FeatureFullFP16,
@@ -680,6 +691,7 @@ def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
                                "CortexA78",
                                "Cortex-A78 ARM processors", [
                                HasV8_2aOps,
+                               FeatureCmpBccFusion,
                                FeatureCrypto,
                                FeatureFPARMv8,
                                FeatureFuseAES,
@@ -696,6 +708,7 @@ def ProcA78C : SubtargetFeature<"cortex-a78c", "ARMProcFamily",
                                 "CortexA78C",
                                 "Cortex-A78C ARM processors", [
                                 HasV8_2aOps,
+                                FeatureCmpBccFusion,
                                 FeatureCrypto,
                                 FeatureDotProd,
                                 FeatureFlagM,
@@ -723,6 +736,7 @@ def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
 def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
                                   HasV8_2aOps,
+                                  FeatureCmpBccFusion,
                                   FeatureCrypto,
                                   FeatureFPARMv8,
                                   FeatureFuseAES,

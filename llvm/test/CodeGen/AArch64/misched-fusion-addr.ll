@@ -1,4 +1,5 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mattr=fuse-address | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a65    | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5     | FileCheck %s
