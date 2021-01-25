@@ -653,8 +653,8 @@ private:
   static constexpr auto __make_value_visitor(_Visitor&& __visitor) {
     return __value_visitor_return_type<_Rp, _Visitor>{_VSTD::forward<_Visitor>(__visitor)};
   }
-};
 #endif
+};
 
 } // namespace __visitation
 
