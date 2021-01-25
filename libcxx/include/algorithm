@@ -301,6 +301,16 @@ template<class RandomAccessIterator, class UniformRandomNumberGenerator>
     void shuffle(RandomAccessIterator first, RandomAccessIterator last,
                  UniformRandomNumberGenerator&& g);
 
+template<class ForwardIterator>
+  constexpr ForwardIterator
+    shift_left(ForwardIterator first, ForwardIterator last,
+               typename iterator_traits<ForwardIterator>::difference_type n); // C++20
+
+template<class ForwardIterator>
+  constexpr ForwardIterator
+    shift_right(ForwardIterator first, ForwardIterator last,
+                typename iterator_traits<ForwardIterator>::difference_type n); // C++20
+
 template <class InputIterator, class Predicate>
     constexpr bool  // constexpr in C++20
     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
@@ -3258,6 +3268,111 @@ template<class _RandomAccessIterator, class _UniformRandomNumberGenerator>
         }
     }
 }
+
+#if _LIBCPP_STD_VER > 17
+
+// shift_left, shift_right
+
+template <class _ForwardIterator>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+_ForwardIterator
+shift_left(_ForwardIterator __first, _ForwardIterator __last,
+           typename iterator_traits<_ForwardIterator>::difference_type __n)
+{
+    if (__n == 0) {
+        return __last;
+    }
+
+    _ForwardIterator __m = __first;
+    if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
+        if (__n >= __last - __first) {
+            return __first;
+        }
+        __m += __n;
+    } else {
+        for (; __n > 0; --__n) {
+            if (__m == __last) {
+                return __first;
+            }
+            ++__m;
+        }
+    }
+    return _VSTD::move(__m, __last, __first);
+}
+
+template <class _ForwardIterator>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+_ForwardIterator
+shift_right(_ForwardIterator __first, _ForwardIterator __last,
+            typename iterator_traits<_ForwardIterator>::difference_type __n)
+{
+    if (__n == 0) {
+        return __first;
+    }
+
+    if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
+        decltype(__n) __d = __last - __first;
+        if (__n >= __d) {
+            return __last;
+        }
+        _ForwardIterator __m = __first + (__d - __n);
+        return _VSTD::move_backward(__first, __m, __last);
+    } else if constexpr (__is_cpp17_bidirectional_iterator<_ForwardIterator>::value) {
+        _ForwardIterator __m = __last;
+        for (; __n > 0; --__n) {
+            if (__m == __first) {
+                return __last;
+            }
+            --__m;
+        }
+        return _VSTD::move_backward(__first, __m, __last);
+    } else {
+        _ForwardIterator __ret = __first;
+        for (; __n > 0; --__n) {
+            if (__ret == __last) {
+                return __last;
+            }
+            ++__ret;
+        }
+
+        // We have an __n-element scratch space from __first to __ret.
+        // Slide an __n-element window [__trail, __lead) from left to right.
+        // We're essentially doing swap_ranges(__first, __ret, __trail, __lead)
+        // over and over; but once __lead reaches __last we needn't bother
+        // to save the values of elements [__trail, __last).
+
+        auto __trail = __first;
+        auto __lead = __ret;
+        while (__trail != __ret) {
+            if (__lead == __last) {
+                _VSTD::move(__first, __trail, __ret);
+                return __ret;
+            }
+            ++__trail;
+            ++__lead;
+        }
+
+        _ForwardIterator __mid = __first;
+        while (true) {
+            if (__lead == __last) {
+                __trail = _VSTD::move(__mid, __ret, __trail);
+                _VSTD::move(__first, __mid, __trail);
+                return __ret;
+            }
+            swap(*__mid, *__trail);
+            ++__mid;
+            ++__trail;
+            ++__lead;
+            if (__mid == __ret) {
+                __mid = __first;
+            }
+        }
+    }
+}
+
+#endif // _LIBCPP_STD_VER > 17
+
+// is_partitioned
 
 template <class _InputIterator, class _Predicate>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX17 bool

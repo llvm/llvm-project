@@ -38,7 +38,7 @@
 "`P0722R3 <https://wg21.link/P0722R3>`__","CWG","Efficient sized delete for variable sized classes","Rapperswil","|Complete|","9.0"
 "`P0758R1 <https://wg21.link/P0758R1>`__","LWG","Implicit conversion traits and utility functions","Rapperswil","|Complete|",""
 "`P0759R1 <https://wg21.link/P0759R1>`__","LWG","fpos Requirements","Rapperswil","|Complete|","11.0"
-"`P0769R2 <https://wg21.link/P0769R2>`__","LWG","Add shift to <algorithm>","Rapperswil","",""
+"`P0769R2 <https://wg21.link/P0769R2>`__","LWG","Add shift to <algorithm>","Rapperswil","|Complete|","12.0"
 "`P0788R3 <https://wg21.link/P0788R3>`__","LWG","Standard Library Specification in a Concepts and Contracts World","Rapperswil","*Removed in Cologne*","n/a"
 "`P0879R0 <https://wg21.link/P0879R0>`__","LWG","Constexpr for swap and swap related functions Also resolves LWG issue 2800.","Rapperswil","",""
 "`P0887R1 <https://wg21.link/P0887R1>`__","LWG","The identity metafunction","Rapperswil","|Complete|","8.0"
