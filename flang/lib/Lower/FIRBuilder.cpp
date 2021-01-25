@@ -122,8 +122,9 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
   });
   llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
   if (asTarget)
-    attrs.emplace_back(mlir::Identifier::get("target", getContext()),
-                       getUnitAttr());
+    attrs.emplace_back(
+        mlir::Identifier::get(fir::getTargetAttrName(), getContext()),
+        getUnitAttr());
   return create<fir::AllocaOp>(loc, ty, nm, llvm::None, indices, attrs);
 }
 

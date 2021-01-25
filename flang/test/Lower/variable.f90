@@ -6,7 +6,7 @@ subroutine s
   integer, allocatable :: ally
   ! CHECK-DAG: fir.alloca !fir.box<!fir.ptr<i32>> {name = "{{.*}}Epointy"} 
   integer, pointer :: pointy
-  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ebullseye", target}
+  ! CHECK-DAG: fir.alloca i32 {fir.target, name = "{{.*}}Ebullseye"}
   integer, target :: bullseye
   ! CHECK: return
 end subroutine s
