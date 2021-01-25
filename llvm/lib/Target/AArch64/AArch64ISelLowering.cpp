@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/ObjCARCRVAttr.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -5690,6 +5691,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
+  }
+
+  // Calls marked with "clang.arc.rv" are special. They should be expanded to
+  // the call, directly followed by a special marker sequence. Use the
+  // CALL_RVMARKER to do that.
+  if (CLI.CB && CLI.CB->hasRetAttr(objcarc::getRVAttrKeyStr())) {
+    assert(!IsTailCall && "tail calls cannot be marked with clang.arc.rv");
+    Opc = AArch64ISD::CALL_RVMARKER;
   }
 
   // Returns a chain and a flag for retval copy to use.

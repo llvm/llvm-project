@@ -1,4 +1,8 @@
-; RUN: opt < %s -deadargelim -S | not grep DEAD
+; RUN: opt < %s -deadargelim -S | FileCheck %s
+
+@g0 = global i8 0, align 8
+
+; CHECK-NOT: DEAD
 
 ; Dead arg only used by dead retval
 define internal i32 @test(i32 %DEADARG) {
@@ -16,3 +20,19 @@ define i32 @test3() {
         ret i32 %Y
 }
 
+; The callee function's return type shouldn't be changed if there is a call
+; annotated with "clang.arc.rv"="retain" or "clang.arc.rv"="claim".
+
+; CHECK-LABEL: define internal i8* @callee4()
+
+define internal i8* @callee4(i8* %a0) {
+  ret i8* @g0;
+}
+
+; CHECK-LABEL: define i8* @test4(
+; CHECK: tail call "clang.arc.rv"="retain" i8* @callee4()
+
+define i8* @test4() {
+  %call = tail call "clang.arc.rv"="retain" i8* @callee4(i8* @g0)
+  ret i8* @g0
+}
