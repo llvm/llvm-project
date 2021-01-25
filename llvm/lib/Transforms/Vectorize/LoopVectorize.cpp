@@ -7718,9 +7718,15 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
 
   assert(BestVF.hasValue() && "Vectorization Factor is missing");
 
-  VPTransformState State{*BestVF, BestUF,      LI,
-                         DT,      ILV.Builder, ILV.VectorLoopValueMap,
-                         &ILV,    CallbackILV};
+  VPTransformState State{*BestVF,
+                         BestUF,
+                         OrigLoop,
+                         LI,
+                         DT,
+                         ILV.Builder,
+                         ILV.VectorLoopValueMap,
+                         &ILV,
+                         CallbackILV};
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   State.TripCount = ILV.getOrCreateTripCount(nullptr);
   State.CanonicalIV = ILV.Induction;
