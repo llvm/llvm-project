@@ -180,7 +180,6 @@ TEST_F(ImmutableSetTest, IterLongSetTest) {
 
   int i = 0;
   for (ImmutableSet<long>::iterator I = S.begin(), E = S.end(); I != E; ++I) {
-    ASSERT_EQ(i, *I);
     i++;
   }
   ASSERT_EQ(0, i);
