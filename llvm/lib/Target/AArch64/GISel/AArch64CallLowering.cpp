@@ -623,64 +623,25 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
   const uint32_t *CallerPreservedMask = TRI->getCallPreservedMask(MF, CallerCC);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  for (unsigned i = 0; i < OutLocs.size(); ++i) {
-    auto &ArgLoc = OutLocs[i];
-    // If it's not a register, it's fine.
-    if (!ArgLoc.isRegLoc()) {
-      if (Info.IsVarArg) {
-        // Be conservative and disallow variadic memory operands to match SDAG's
-        // behaviour.
-        // FIXME: If the caller's calling convention is C, then we can
-        // potentially use its argument area. However, for cases like fastcc,
-        // we can't do anything.
-        LLVM_DEBUG(
-            dbgs()
-            << "... Cannot tail call vararg function with stack arguments\n");
-        return false;
-      }
-      continue;
-    }
+  if (Info.IsVarArg) {
+    // Be conservative and disallow variadic memory operands to match SDAG's
+    // behaviour.
+    // FIXME: If the caller's calling convention is C, then we can
+    // potentially use its argument area. However, for cases like fastcc,
+    // we can't do anything.
+    for (unsigned i = 0; i < OutLocs.size(); ++i) {
+      auto &ArgLoc = OutLocs[i];
+      if (ArgLoc.isRegLoc())
+        continue;
 
-    Register Reg = ArgLoc.getLocReg();
-
-    // Only look at callee-saved registers.
-    if (MachineOperand::clobbersPhysReg(CallerPreservedMask, Reg))
-      continue;
-
-    LLVM_DEBUG(
-        dbgs()
-        << "... Call has an argument passed in a callee-saved register.\n");
-
-    // Check if it was copied from.
-    ArgInfo &OutInfo = OutArgs[i];
-
-    if (OutInfo.Regs.size() > 1) {
-      LLVM_DEBUG(
-          dbgs() << "... Cannot handle arguments in multiple registers.\n");
-      return false;
-    }
-
-    // Check if we copy the register, walking through copies from virtual
-    // registers. Note that getDefIgnoringCopies does not ignore copies from
-    // physical registers.
-    MachineInstr *RegDef = getDefIgnoringCopies(OutInfo.Regs[0], MRI);
-    if (!RegDef || RegDef->getOpcode() != TargetOpcode::COPY) {
       LLVM_DEBUG(
           dbgs()
-          << "... Parameter was not copied into a VReg, cannot tail call.\n");
-      return false;
-    }
-
-    // Got a copy. Verify that it's the same as the register we want.
-    Register CopyRHS = RegDef->getOperand(1).getReg();
-    if (CopyRHS != Reg) {
-      LLVM_DEBUG(dbgs() << "... Callee-saved register was not copied into "
-                           "VReg, cannot tail call.\n");
+          << "... Cannot tail call vararg function with stack arguments\n");
       return false;
     }
   }
 
-  return true;
+  return parametersInCSRMatch(MRI, CallerPreservedMask, OutLocs, OutArgs);
 }
 
 bool AArch64CallLowering::isEligibleForTailCallOptimization(
