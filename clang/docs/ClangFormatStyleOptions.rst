@@ -327,7 +327,7 @@ the configuration (without a prefix: ``Auto``).
        int ee : 3;
 
   * ``ACS_AcrossEmptyLinesAndComments``
-  (in configuration: ``AcrossEmptyLinesAndComments``)
+    (in configuration: ``AcrossEmptyLinesAndComments``)
 
      Same as ACS_Consecutive, but also spans over lines only containing
      comments and empty lines, e.g.
@@ -401,7 +401,7 @@ the configuration (without a prefix: ``Auto``).
        bool c = false;
 
   * ``ACS_AcrossEmptyLinesAndComments``
-  (in configuration: ``AcrossEmptyLinesAndComments``)
+    (in configuration: ``AcrossEmptyLinesAndComments``)
 
      Same as ACS_Consecutive, but also spans over lines only containing
      comments and empty lines, e.g.
@@ -476,7 +476,7 @@ the configuration (without a prefix: ``Auto``).
        #define bar(y, z) (y + z)
 
   * ``ACS_AcrossEmptyLinesAndComments``
-  (in configuration: ``AcrossEmptyLinesAndComments``)
+    (in configuration: ``AcrossEmptyLinesAndComments``)
 
      Same as ACS_Consecutive, but also spans over lines only containing
      comments and empty lines, e.g.
