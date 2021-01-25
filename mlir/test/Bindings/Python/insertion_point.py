@@ -125,6 +125,21 @@ def test_insert_at_block_terminator_missing():
 run(test_insert_at_block_terminator_missing)
 
 
+# CHECK-LABEL: TEST: test_insert_at_end_with_terminator_errors
+def test_insert_at_end_with_terminator_errors():
+  with Context() as ctx, Location.unknown():
+    ctx.allow_unregistered_dialects = True
+    m = Module.create()  # Module is created with a terminator.
+    with InsertionPoint(m.body):
+      try:
+        Operation.create("custom.op1", results=[], operands=[])
+      except IndexError as e:
+        # CHECK: ERROR: Cannot insert operation at the end of a block that already has a terminator.
+        print(f"ERROR: {e}")
+
+run(test_insert_at_end_with_terminator_errors)
+
+
 # CHECK-LABEL: TEST: test_insertion_point_context
 def test_insertion_point_context():
   ctx = Context()

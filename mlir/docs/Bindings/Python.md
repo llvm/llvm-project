@@ -439,8 +439,9 @@ defaults on `OpView`):
 #### Builders
 
 Presently, only a single, default builder is mapped to the `__init__` method.
-Generalizing this facility is under active development. It currently accepts
-arguments:
+The intent is that this `__init__` method represents the *most specific* of
+the builders typically generated for C++; however currently it is just the
+generic form below.
 
 * One argument for each declared result:
   * For single-valued results: Each will accept an `mlir.ir.Type`.
@@ -453,7 +454,11 @@ arguments:
   * `loc`: An explicit `mlir.ir.Location` to use. Defaults to the location
     bound to the thread (i.e. `with Location.unknown():`) or an error if none
     is bound nor specified.
-  * `context`: An explicit `mlir.ir.Context` to use. Default to the context
-    bound to the thread (i.e. `with Context():` or implicitly via `Location` or
-    `InsertionPoint` context managers) or an error if none is bound nor
-    specified.
+  * `ip`: An explicit `mlir.ir.InsertionPoint` to use. Default to the insertion
+    point bound to the thread (i.e. `with InsertionPoint(...):`).
+
+In addition, each `OpView` inherits a `build_generic` method which allows
+construction via a (nested in the case of variadic) sequence of `results` and
+`operands`. This can be used to get some default construction semantics for
+operations that are otherwise unsupported in Python, at the expense of having
+a very generic signature.
