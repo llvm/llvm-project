@@ -568,6 +568,58 @@ func @sitofp2(%arg0 : i64) -> f64 {
   return %0 : f64
 }
 
+// CHECK-LABEL: @uitofp_i16_f32
+func @uitofp_i16_f32(%arg0: i16) -> f32 {
+  // CHECK: spv.ConvertUToF %{{.*}} : i16 to f32
+  %0 = std.uitofp %arg0 : i16 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @uitofp_i32_f32
+func @uitofp_i32_f32(%arg0 : i32) -> f32 {
+  // CHECK: spv.ConvertUToF %{{.*}} : i32 to f32
+  %0 = std.uitofp %arg0 : i32 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @uitofp_i1_f32
+func @uitofp_i1_f32(%arg0 : i1) -> f32 {
+  // CHECK: %[[ZERO:.+]] = spv.constant 0.000000e+00 : f32
+  // CHECK: %[[ONE:.+]] = spv.constant 1.000000e+00 : f32
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f32
+  %0 = std.uitofp %arg0 : i1 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @uitofp_i1_f64
+func @uitofp_i1_f64(%arg0 : i1) -> f64 {
+  // CHECK: %[[ZERO:.+]] = spv.constant 0.000000e+00 : f64
+  // CHECK: %[[ONE:.+]] = spv.constant 1.000000e+00 : f64
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f64
+  %0 = std.uitofp %arg0 : i1 to f64
+  return %0 : f64
+}
+
+// CHECK-LABEL: @uitofp_vec_i1_f32
+func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
+  // CHECK: %[[ZERO:.+]] = spv.constant dense<0.000000e+00> : vector<4xf32>
+  // CHECK: %[[ONE:.+]] = spv.constant dense<1.000000e+00> : vector<4xf32>
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf32>
+  %0 = std.uitofp %arg0 : vector<4xi1> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: @uitofp_vec_i1_f64
+spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
+  // CHECK: %[[ZERO:.+]] = spv.constant dense<0.000000e+00> : vector<4xf64>
+  // CHECK: %[[ONE:.+]] = spv.constant dense<1.000000e+00> : vector<4xf64>
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf64>
+  %0 = spv.constant dense<0.000000e+00> : vector<4xf64>
+  %1 = spv.constant dense<1.000000e+00> : vector<4xf64>
+  %2 = spv.Select %arg0, %1, %0 : vector<4xi1>, vector<4xf64>
+  spv.ReturnValue %2 : vector<4xf64>
+}
+
 // CHECK-LABEL: @zexti1
 func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i16 to i64
@@ -598,6 +650,15 @@ func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi32>
   %0 = std.zexti %arg0 : vector<4xi1> to vector<4xi32>
   return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: @zexti5
+func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
+  // CHECK: %[[ZERO:.+]] = spv.constant dense<0> : vector<4xi64>
+  // CHECK: %[[ONE:.+]] = spv.constant dense<1> : vector<4xi64>
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi64>
+  %0 = std.zexti %arg0 : vector<4xi1> to vector<4xi64>
+  return %0 : vector<4xi64>
 }
 
 // CHECK-LABEL: @trunci1
