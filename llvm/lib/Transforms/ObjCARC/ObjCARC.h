@@ -22,10 +22,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
-#include "ARCRuntimeEntryPoints.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
-#include "llvm/Analysis/ObjCARCRVAttr.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 namespace llvm {
@@ -89,63 +86,6 @@ void getEquivalentPHIs(PHINodeTy &PN, VectorTy &PHIList) {
       PHIList.push_back(&P);
   }
 }
-
-static inline MDString *getRVInstMarker(Module &M) {
-  const char *MarkerKey = getRVMarkerModuleFlagStr();
-  return dyn_cast_or_null<MDString>(M.getModuleFlag(MarkerKey));
-}
-
-/// Create a call instruction with the correct funclet token. This should be
-/// called instead of calling CallInst::Create directly unless the call is
-/// going to be removed from the IR before WinEHPrepare.
-CallInst *createCallInstWithColors(
-    FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
-    Instruction *InsertBefore,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors);
-
-class BundledRetainClaimRVs {
-public:
-  BundledRetainClaimRVs(ARCRuntimeEntryPoints &P, bool ContractPass)
-      : EP(P), ContractPass(ContractPass) {}
-  ~BundledRetainClaimRVs();
-
-  /// Insert a retainRV/claimRV call to the normal destination blocks of invokes
-  /// annotated with retainRV/claimRV. If the edge to the normal destination
-  /// block is a critical edge, split it.
-  std::pair<bool, bool> insertAfterInvokes(Function &F, DominatorTree *DT);
-
-  /// Insert a retainRV/claimRV call.
-  CallInst *insertRVCall(Instruction *InsertPt, CallBase *AnnotatedCall);
-
-  /// Insert a retainRV/claimRV call with colors.
-  CallInst *insertRVCallWithColors(
-      Instruction *InsertPt, CallBase *AnnotatedCall,
-      const DenseMap<BasicBlock *, ColorVector> &BlockColors);
-
-  /// See if an instruction is a bundled retainRV/claimRV call.
-  bool contains(const Instruction *I) const {
-    if (auto *CI = dyn_cast<CallInst>(I))
-      return RVCalls.count(CI);
-    return false;
-  }
-
-  /// Remove a retainRV/claimRV call entirely.
-  void eraseInst(CallInst *CI) {
-    auto It = RVCalls.find(CI);
-    if (It != RVCalls.end()) {
-      objcarc::removeRetainRVOrClaimRVAttr(It->second);
-      RVCalls.erase(It);
-    }
-    EraseInstruction(CI);
-  }
-
-private:
-  /// A map of inserted retainRV/claimRV calls to annotated calls/invokes.
-  DenseMap<CallInst *, CallBase *> RVCalls;
-
-  ARCRuntimeEntryPoints &EP;
-  bool ContractPass;
-};
 
 } // end namespace objcarc
 } // end namespace llvm

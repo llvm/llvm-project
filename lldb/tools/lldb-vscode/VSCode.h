@@ -47,6 +47,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
+#include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
 #include "SourceReference.h"
 
@@ -77,6 +78,7 @@ enum class PacketStatus {
 };
 
 struct VSCode {
+  std::string debug_adaptor_path;
   InputStream input;
   OutputStream output;
   lldb::SBDebugger debugger;
@@ -104,7 +106,6 @@ struct VSCode {
   bool is_attach;
   uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
-  std::condition_variable request_in_terminal_cv;
   bool waiting_for_run_in_terminal;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
