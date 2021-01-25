@@ -53,9 +53,7 @@ return:
   ret i32 0
 ; CHECK-NOT:  i8* @malloc
 ; CHECK:      call void @print(i32 4)
-; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 -5)
-; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 5)
 ; CHECK:      ret i32 0
 }
