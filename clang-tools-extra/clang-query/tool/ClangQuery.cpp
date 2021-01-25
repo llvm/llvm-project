@@ -49,6 +49,14 @@ using namespace llvm;
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static cl::OptionCategory ClangQueryCategory("clang-query options");
 
+static cl::opt<bool>
+    UseColor("use-color",
+             cl::desc(
+                 R"(Use colors in detailed AST output. If not set, colors
+will be used if the terminal connected to
+standard output supports colors.)"),
+             cl::init(false), cl::cat(ClangQueryCategory));
+
 static cl::list<std::string> Commands("c", cl::desc("Specify command to run"),
                                       cl::value_desc("command"),
                                       cl::cat(ClangQueryCategory));
@@ -109,6 +117,19 @@ int main(int argc, const char **argv) {
 
   ClangTool Tool(OptionsParser->getCompilations(),
                  OptionsParser->getSourcePathList());
+
+  if (UseColor.getNumOccurrences() > 0) {
+    ArgumentsAdjuster colorAdjustor = [](const CommandLineArguments &Args, StringRef /*unused*/) {
+      CommandLineArguments AdjustedArgs = Args;
+      if (UseColor)
+        AdjustedArgs.push_back("-fdiagnostics-color");
+      else
+        AdjustedArgs.push_back("-fno-diagnostics-color");
+      return AdjustedArgs;
+    };
+    Tool.appendArgumentsAdjuster(colorAdjustor);
+  }
+
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   int ASTStatus = 0;
   switch (Tool.buildASTs(ASTs)) {
