@@ -10,7 +10,7 @@
 
 #include "src/math/hypot.h"
 
-using HypotTest = HypotTestTemplate<double>;
+using LlvmLibcHypotTest = HypotTestTemplate<double>;
 
 TEST_F(LlvmLibcHypotTest, SpecialNumbers) {
   testSpecialNumbers(&__llvm_libc::hypot);
