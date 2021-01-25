@@ -22275,43 +22275,21 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
                           Reciprocal)) {
     AddToWorklist(Est.getNode());
 
-    if (Iterations) {
+    if (Iterations)
       Est = UseOneConstNR
             ? buildSqrtNROneConst(Op, Est, Iterations, Flags, Reciprocal)
             : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
+    if (!Reciprocal) {
+      SDLoc DL(Op);
+      // Try the target specific test first.
+      SDValue Test = TLI.getSqrtInputTest(Op, DAG, DAG.getDenormalMode(VT));
 
-      if (!Reciprocal) {
-        SDLoc DL(Op);
-        EVT CCVT = getSetCCResultType(VT);
-        SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-        DenormalMode DenormMode = DAG.getDenormalMode(VT);
-        // Try the target specific test first.
-        SDValue Test = TLI.getSqrtInputTest(Op, DAG, DenormMode);
-        if (!Test) {
-          // If no test provided by target, testing it with denormal inputs to
-          // avoid wrong estimate.
-          if (DenormMode.Input == DenormalMode::IEEE) {
-            // This is specifically a check for the handling of denormal inputs,
-            // not the result.
-
-            // Test = fabs(X) < SmallestNormal
-            const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
-            APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
-            SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
-            SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
-            Test = DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
-          } else
-            // Test = X == 0.0
-            Test = DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
-        }
-
-        // The estimate is now completely wrong if the input was exactly 0.0 or
-        // possibly a denormal. Force the answer to 0.0 or value provided by
-        // target for those cases.
-        Est = DAG.getNode(
-            Test.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
-            Test, TLI.getSqrtResultForDenormInput(Op, DAG), Est);
-      }
+      // The estimate is now completely wrong if the input was exactly 0.0 or
+      // possibly a denormal. Force the answer to 0.0 or value provided by
+      // target for those cases.
+      Est = DAG.getNode(
+          Test.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
+          Test, TLI.getSqrtResultForDenormInput(Op, DAG), Est);
     }
     return Est;
   }
