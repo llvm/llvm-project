@@ -128,6 +128,21 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::AlignConsecutiveStyle> {
+  static void enumeration(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::ACS_None);
+    IO.enumCase(Value, "Consecutive", FormatStyle::ACS_Consecutive);
+    IO.enumCase(Value, "AcrossEmptyLines", FormatStyle::ACS_AcrossEmptyLines);
+    IO.enumCase(Value, "AcrossComments", FormatStyle::ACS_AcrossComments);
+    IO.enumCase(Value, "AcrossEmptyLinesAndComments",
+                FormatStyle::ACS_AcrossEmptyLinesAndComments);
+
+    // For backward compability.
+    IO.enumCase(Value, "true", FormatStyle::ACS_Consecutive);
+    IO.enumCase(Value, "false", FormatStyle::ACS_None);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::ShortIfStyle> {
   static void enumeration(IO &IO, FormatStyle::ShortIfStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SIS_Never);
@@ -857,10 +872,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = true;
-  LLVMStyle.AlignConsecutiveAssignments = false;
-  LLVMStyle.AlignConsecutiveBitFields = false;
-  LLVMStyle.AlignConsecutiveDeclarations = false;
-  LLVMStyle.AlignConsecutiveMacros = false;
+  LLVMStyle.AlignConsecutiveAssignments = FormatStyle::ACS_None;
+  LLVMStyle.AlignConsecutiveBitFields = FormatStyle::ACS_None;
+  LLVMStyle.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
+  LLVMStyle.AlignConsecutiveMacros = FormatStyle::ACS_None;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllConstructorInitializersOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
