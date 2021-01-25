@@ -342,6 +342,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
 ///   3. There exists an op with a region that is dominated by
 ///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface or a
 ///    LinalgOp.
+///   3. There exists an op with side effects that is dominated by
+///    `outermostEnclosingForOp` and that isn't a LoopLikeInterface.
 ///
 /// While ensuring prerequisites:
 ///   1. Fill the `backwardSlice` to contain the topologically sorted ops
@@ -383,12 +385,29 @@ hoistPaddingOnTensorsPrerequisites(linalg::SimplePadOp simplePadOp, int nLevels,
     return domInfo.dominates(outermostEnclosingForOp, op);
   });
 
+  #if 0
+
+  // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
+  // Bail on any op with side effects that is not a LoopLikeInterface.
+  if (llvm::any_of(backwardSlice, [](Operation *op) {
+        if (isa<LoopLikeOpInterface>(op))
+          return false;
+        if (!MemoryEffectOpInterface::hasNoEffect(op))
+          return true;
+        return op->getNumRegions() > 0 && !isa<LinalgOp>(op);
+      }))
+    return failure();
+
+  #else
+
   // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
   if (llvm::any_of(backwardSlice, [](Operation *op) {
         return op->getNumRegions() > 0 && !isa<LoopLikeOpInterface>(op) &&
                !isa<LinalgOp>(op);
       }))
     return failure();
+
+  #endif
 
   // Filter out the loops whose induction variable is not used to compute the
   // padded result. As a first approximation, just look for IVs that have no use
