@@ -364,8 +364,8 @@ func @should_fuse_and_move_to_preserve_war_dep() {
 
 // -----
 
-// CHECK-LABEL: func @should_fuse_with_private_memref_if_top_level_access() {
-func @should_fuse_with_private_memref_if_top_level_access() {
+// CHECK-LABEL: func @should_fuse_if_top_level_access() {
+func @should_fuse_if_top_level_access() {
   %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
 
@@ -378,14 +378,45 @@ func @should_fuse_with_private_memref_if_top_level_access() {
 
   %c0 = constant 4 : index
   %v1 = affine.load %m[%c0] : memref<10xf32>
-  // Top-level load to '%{{.*}}' should prevent fusion.
-  // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // Top-level load to '%m' should prevent creating a private memref but
+  // loop nests should be fused and '%i0' should be removed.
+  // CHECK:      %[[m:.*]] = alloc() : memref<10xf32>
+  // CHECK-NOT:  alloc
+
+  // CHECK:      affine.for %[[i1:.*]] = 0 to 10 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %[[m]][%[[i1]]] : memref<10xf32>
+  // CHECK-NEXT:   affine.load %[[m]][%[[i1]]] : memref<10xf32>
   // CHECK-NEXT: }
-  // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
+  // CHECK:      affine.load %[[m]][%{{.*}}] : memref<10xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @should_fuse_but_not_remove_src() {
+func @should_fuse_but_not_remove_src() {
+  %m = alloc() : memref<100xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 100 {
+    affine.store %cf7, %m[%i0] : memref<100xf32>
+  }
+  affine.for %i1 = 0 to 17 {
+    %v0 = affine.load %m[%i1] : memref<100xf32>
+  }
+  %v1 = affine.load %m[99] : memref<100xf32>
+
+  // Loop '%i0' and '%i1' should be fused but '%i0' shouldn't be removed to
+  // preserve the dependence with the top-level access.
+  // CHECK:      affine.for %{{.*}} = 0 to 100 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<100xf32>
+  // CHECK-NEXT: }
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to 17 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
+  // CHECK-NEXT: affine.load %{{.*}}[99] : memref<100xf32>
+  // CHECK-NEXT: return
   return
 }
 
@@ -1110,8 +1141,8 @@ func @should_fuse_with_private_memrefs_with_diff_shapes() {
 
 // -----
 
-// CHECK-LABEL: func @should_not_fuse_live_out_arg(%{{.*}}: memref<10xf32>) {
-func @should_not_fuse_live_out_arg(%arg0: memref<10xf32>) {
+// CHECK-LABEL: func @should_fuse_live_out_arg_but_preserve_src_loop(%{{.*}}: memref<10xf32>) {
+func @should_fuse_live_out_arg_but_preserve_src_loop(%arg0: memref<10xf32>) {
   %cf7 = constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
@@ -1129,6 +1160,7 @@ func @should_not_fuse_live_out_arg(%arg0: memref<10xf32>) {
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 9 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
@@ -1160,8 +1192,8 @@ func @should_fuse_live_out_arg(%arg0: memref<10xf32>) {
 
 // -----
 
-// CHECK-LABEL: func @should_not_fuse_escaping_memref() -> memref<10xf32>
-func @should_not_fuse_escaping_memref() -> memref<10xf32> {
+// CHECK-LABEL: func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32>
+func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32> {
   %cf7 = constant 7.0 : f32
   %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
@@ -1170,19 +1202,21 @@ func @should_not_fuse_escaping_memref() -> memref<10xf32> {
   affine.for %i1 = 0 to 9 {
     %v0 = affine.load %m[%i1] : memref<10xf32>
   }
-  // This tests that the loop nest '%{{.*}}' should not be removed after fusion
-  // because it writes to memref '%{{.*}}' which is returned by the function.
+  // This tests that the loop nest '%i0' should not be removed after fusion
+  // because it writes to memref '%m', which is returned by the function, and
+  // the '%i1' memory region does not cover '%i0' memory region.
+
   // CHECK-DAG:   alloc() : memref<10xf32>
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 9 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return %{{.*}} : memref<10xf32>
   return %m : memref<10xf32>
 }
-
 // -----
 
 // This should fuse with the %in becoming a 1x1x1.
@@ -1230,7 +1264,7 @@ func @R3_to_R2_reshape() {
 
 // -----
 
-func @should_not_fuse_multi_output_producer() {
+func @should_fuse_multi_output_producer() {
   %a = alloc() : memref<10xf32>
   %b = alloc() : memref<10xf32>
 
@@ -1246,12 +1280,10 @@ func @should_not_fuse_multi_output_producer() {
   }
 
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:  }
-  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
   return
@@ -1504,8 +1536,8 @@ func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>
 
 // -----
 
-// CHECK-LABEL: func @should_fuse_after_private_memref_creation() {
-func @should_fuse_after_private_memref_creation() {
+// CHECK-LABEL: func @should_fuse_only_two_loops_and_remove_producer() {
+func @should_fuse_only_two_loops_and_remove_producer() {
   %a = alloc() : memref<10xf32>
   %b = alloc() : memref<10xf32>
 
@@ -1525,18 +1557,21 @@ func @should_fuse_after_private_memref_creation() {
 
   // On the first visit to '%i2', the fusion algorithm can not fuse loop nest
   // '%i0' into '%i2' because of the dependences '%i0' and '%i2' each have on
-  // '%i1'. However, once the loop nest '%i0' is fused into '%i1' with a
-  // private memref, the dependence between '%i0' and '%i1' on memref '%a' no
-  // longer exists, so '%i0' can now be fused into '%i2'.
-
+  // '%i1'. Then, '%i0' is fused into '%i1' and no private memref is created for
+  // memref '%a' to be able to remove '%i0' and still preserve the depencence on
+  // '%a' with '%i2'.
+  // TODO: Alternatively, we could fuse '%i0' into '%i1' with a private memref,
+  // the dependence between '%i0' and '%i1' on memref '%a' would no longer exist,
+  // and '%i0' could be fused into '%i2' as well. Note that this approach would
+  // duplicate the computation in loop nest '%i0' to loop nests '%i1' and '%i2',
+  // which would limit its profitability.
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
-  // CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
-  // CHECK-NEXT:    affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:  }
   // CHECK-NEXT:   return
@@ -2220,7 +2255,7 @@ func @affine_2_dependent_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<10
     }
   }
 
-  // CHECK:  affine.for %{{.*}} = 0 to 1024 {
+  // CHECK:        affine.for %{{.*}} = 0 to 1024 {
   // CHECK-NEXT:     affine.for %{{.*}} = 0 to 1024 {
   // CHECK-NEXT:       affine.for %{{.*}} = 0 to 1024 {
   // CHECK-NEXT:         affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<1024x1024xf32>
@@ -2311,8 +2346,8 @@ func @should_fuse_function_live_out_multi_store_producer(%live_in_out_m : memref
   }
   // CHECK:      affine.for %[[i0:.*]] = 0 to 10 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%[[i0]]] : memref<10xf32>
-  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%[[i0]]] : memref<10xf32>
-  // CHECK-NEXT:   affine.load %{{.*}}[%[[i0]]] : memref<10xf32>
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   return
@@ -2373,12 +2408,11 @@ func @mul_add_0(%arg0: memref<3x4xf32>, %arg1: memref<4x3xf32>, %arg2: memref<3x
 
 // -----
 
-// Verify that 'fuseProducerConsumerNodes' doesn't fuse a producer loop with
-// a store that has multiple outgoing edges. Sibling loop fusion should not fuse
-// any of these loops due to dependencies on external memref '%a'.
+// Verify that 'fuseProducerConsumerNodes' fuse a producer loop with a store
+// that has multiple outgoing edges.
 
-// CHECK-LABEL: func @should_not_fuse_multi_outgoing_edge_store_producer1
-func @should_not_fuse_multi_outgoing_edge_store_producer1(%a : memref<1xf32>) {
+// CHECK-LABEL: func @should_fuse_multi_outgoing_edge_store_producer
+func @should_fuse_multi_outgoing_edge_store_producer(%a : memref<1xf32>) {
   %cst = constant 0.000000e+00 : f32
   affine.for %arg0 = 0 to 1 {
     affine.store %cst, %a[%arg0] : memref<1xf32>
@@ -2391,9 +2425,12 @@ func @should_not_fuse_multi_outgoing_edge_store_producer1(%a : memref<1xf32>) {
   affine.for %arg0 = 0 to 1 {
     %0 = affine.load %a[%arg0] : memref<1xf32>
   }
-  // CHECK: affine.for %{{.*}} = 0 to 1
-  // CHECK: affine.for %{{.*}} = 0 to 1
-  // CHECK: affine.for %{{.*}} = 0 to 1
+  // CHECK:      affine.for %{{.*}} = 0 to 1 {
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT: }
+
   return
 }
 
@@ -2663,3 +2700,109 @@ func @fuse_minor_affine_map(%in: memref<128xf32>, %out: memref<20x512xf32>) {
 // MAXIMAL:       affine.for
 // MAXIMAL-NEXT:    affine.for
 // MAXIMAL-NOT:   affine.for
+// MAXIMAL:       return
+
+// -----
+
+// CHECK-LABEL: func @should_fuse_multi_store_producer_and_privatize_memfefs
+func @should_fuse_multi_store_producer_and_privatize_memfefs() {
+  %a = alloc() : memref<10xf32>
+  %b = alloc() : memref<10xf32>
+  %c = alloc() : memref<10xf32>
+  %cst = constant 0.000000e+00 : f32
+  affine.for %arg0 = 0 to 10 {
+    affine.store %cst, %a[%arg0] : memref<10xf32>
+    affine.store %cst, %b[%arg0] : memref<10xf32>
+    affine.store %cst, %c[%arg0] : memref<10xf32>
+    %0 = affine.load %c[%arg0] : memref<10xf32>
+  }
+
+  affine.for %arg0 = 0 to 10 {
+    %0 = affine.load %a[%arg0] : memref<10xf32>
+  }
+
+  affine.for %arg0 = 0 to 10 {
+    %0 = affine.load %b[%arg0] : memref<10xf32>
+  }
+
+	// All the memrefs should be privatized except '%c', which is not involved in
+  // the producer-consumer fusion.
+  // CHECK:      affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func @should_fuse_multi_store_producer_with_scaping_memrefs_and_remove_src(
+    %a : memref<10xf32>, %b : memref<10xf32>) {
+  %cst = constant 0.000000e+00 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %a[%i0] : memref<10xf32>
+    affine.store %cst, %b[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 10 {
+    %0 = affine.load %a[%i1] : memref<10xf32>
+  }
+
+  affine.for %i2 = 0 to 10 {
+    %0 = affine.load %b[%i2] : memref<10xf32>
+  }
+
+	// Producer loop '%i0' should be removed after fusion since fusion is maximal.
+  // No memref should be privatized since they escape the function.
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
+
+// -----
+
+func @should_fuse_multi_store_producer_with_scaping_memrefs_and_preserve_src(
+    %a : memref<10xf32>, %b : memref<10xf32>) {
+  %cst = constant 0.000000e+00 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %a[%i0] : memref<10xf32>
+    affine.store %cst, %b[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 5 {
+    %0 = affine.load %a[%i1] : memref<10xf32>
+  }
+
+  affine.for %i2 = 0 to 10 {
+    %0 = affine.load %b[%i2] : memref<10xf32>
+  }
+
+	// Loops '%i0' and '%i2' should be fused first and '%i0' should be removed
+  // since fusion is maximal. Then the fused loop and '%i1' should be fused
+  // and the fused loop shouldn't be removed since fusion is not maximal.
+  // CHECK:       affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK:       affine.for %{{.*}} = 0 to 5 {
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
