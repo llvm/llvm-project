@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'B' Bitmanip
-// extension, version 0.92.
+// extension, version 0.93.
 // This version is still experimental as the 'B' extension hasn't been
 // ratified yet.
 //
@@ -734,8 +734,8 @@ def : Pat<(SROIPat GPR:$rs1, uimmlog2xlen:$shamt),
           (SROI GPR:$rs1, uimmlog2xlen:$shamt)>;
 } // Predicates = [HasStdExtZbp]
 
-// There's no encoding for roli in the current version of the 'B' extension
-// (v0.92) as it can be implemented with rori by negating the immediate.
+// There's no encoding for roli in the the 'B' extension as it can be
+// implemented with rori by negating the immediate.
 let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, uimmlog2xlen:$shamt)>;
