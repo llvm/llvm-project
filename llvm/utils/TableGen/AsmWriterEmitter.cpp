@@ -713,9 +713,7 @@ public:
         ++Next;
     } else {
       // $name, just eat the usual suspects.
-      while (I != End &&
-             ((*I >= 'a' && *I <= 'z') || (*I >= 'A' && *I <= 'Z') ||
-              (*I >= '0' && *I <= '9') || *I == '_'))
+      while (I != End && (isAlnum(*I) || *I == '_'))
         ++I;
       Next = I;
     }
