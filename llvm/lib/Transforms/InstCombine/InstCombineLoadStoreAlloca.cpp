@@ -753,8 +753,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     }
 
     if (PHINode *PN = dyn_cast<PHINode>(P)) {
-      for (Value *IncValue : PN->incoming_values())
-        Worklist.push_back(IncValue);
+      append_range(Worklist, PN->incoming_values());
       continue;
     }
 

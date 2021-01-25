@@ -3827,8 +3827,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       }
     }
 
-    for (BasicBlock *SuccBB : successors(TI))
-      Worklist.push_back(SuccBB);
+    append_range(Worklist, successors(TI));
   } while (!Worklist.empty());
 
   // Remove instructions inside unreachable blocks. This prevents the
