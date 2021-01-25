@@ -495,7 +495,7 @@ def C_NOT : RVBInstC<0b00, "c.not">, Sched<[]>;
 def C_NEG : RVBInstC<0b01, "c.neg">, Sched<[]>;
 } // DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtC]
 
-let DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtZbbOrZbp, HasStdExtC, IsRV64] in
+let DecoderNamespace = "RVBC", Predicates = [HasStdExtZbproposedc, HasStdExtZba, HasStdExtC, IsRV64] in
 def C_ZEXTW : RVBInstC<0b10, "c.zext.w">, Sched<[]>;
 
 //===----------------------------------------------------------------------===//
@@ -508,8 +508,13 @@ def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
 def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
-def : InstAlias<"zext.w $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
+
+let Predicates = [HasStdExtZba, IsRV64] in {
+// NOTE: The 0.93 spec shows zext.w as an alias of pack/packw. It has been
+// changed to add.uw in a draft after 0.94.
+def : InstAlias<"zext.w $rd, $rs", (ADDUW GPR:$rd, GPR:$rs, X0)>;
+}
 
 let Predicates = [HasStdExtZbp] in {
 def : InstAlias<"rev.p $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b00001)>;
@@ -626,8 +631,8 @@ def : CompressPat<(SUB GPRC:$rs1, X0, GPRC:$rs1),
                   (C_NEG GPRC:$rs1)>;
 } // Predicates = [HasStdExtZbproposedc, HasStdExtC]
 
-let Predicates = [HasStdExtZbproposedc, HasStdExtZbbOrZbp, HasStdExtC, IsRV64] in {
-def : CompressPat<(PACK GPRC:$rs1, GPRC:$rs1, X0),
+let Predicates = [HasStdExtZbproposedc, HasStdExtZba, HasStdExtC, IsRV64] in {
+def : CompressPat<(ADDUW GPRC:$rs1, GPRC:$rs1, X0),
                   (C_ZEXTW GPRC:$rs1)>;
 } // Predicates = [HasStdExtZbproposedc, HasStdExtC, IsRV64]
 
@@ -806,7 +811,6 @@ let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
 def : Pat<(and GPR:$rs, 0x0000FFFF), (PACK GPR:$rs, X0)>;
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 def : Pat<(and GPR:$rs, 0x000000000000FFFF), (PACKW GPR:$rs, X0)>;
-def : Pat<(and GPR:$rs, 0x00000000FFFFFFFF), (PACK GPR:$rs, X0)>;
 }
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
@@ -858,6 +862,7 @@ def : Pat<(shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(add (and GPR:$rs1, (i64 0xFFFFFFFF)), GPR:$rs2),
           (ADDUW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(and GPR:$rs, 0x00000000FFFFFFFF), (ADDUW GPR:$rs, X0)>;
 }
 
 let Predicates = [HasStdExtZbp, IsRV64] in {

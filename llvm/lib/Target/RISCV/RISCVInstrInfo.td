@@ -1158,7 +1158,7 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-let Predicates = [IsRV64, NotHasStdExtZbbOrZbp] in
+let Predicates = [IsRV64, NotHasStdExtZba] in
 def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 
 let Predicates = [IsRV64] in {
