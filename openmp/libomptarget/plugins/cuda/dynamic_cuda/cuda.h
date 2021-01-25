@@ -48,6 +48,18 @@ typedef enum CUctx_flags_enum {
   CU_CTX_SCHED_MASK = 0x07,
 } CUctx_flags;
 
+#define cuMemFree cuMemFree_v2
+#define cuMemAlloc cuMemAlloc_v2
+#define cuMemcpyDtoH cuMemcpyDtoH_v2
+#define cuMemcpyHtoD cuMemcpyHtoD_v2
+#define cuStreamDestroy cuStreamDestroy_v2
+#define cuModuleGetGlobal cuModuleGetGlobal_v2
+#define cuMemcpyDtoHAsync cuMemcpyDtoHAsync_v2
+#define cuMemcpyDtoDAsync cuMemcpyDtoDAsync_v2
+#define cuMemcpyHtoDAsync cuMemcpyHtoDAsync_v2
+#define cuDevicePrimaryCtxRelease cuDevicePrimaryCtxRelease_v2
+#define cuDevicePrimaryCtxSetFlags cuDevicePrimaryCtxSetFlags_v2
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
@@ -60,26 +72,26 @@ CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
                         unsigned, unsigned, unsigned, CUstream, void **,
                         void **);
 
-CUresult cuMemAlloc_v2(CUdeviceptr *, size_t);
-CUresult cuMemcpyDtoDAsync_v2(CUdeviceptr, CUdeviceptr, size_t, CUstream);
+CUresult cuMemAlloc(CUdeviceptr *, size_t);
+CUresult cuMemcpyDtoDAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
 
-CUresult cuMemcpyDtoH_v2(void *, CUdeviceptr, size_t);
-CUresult cuMemcpyDtoHAsync_v2(void *, CUdeviceptr, size_t, CUstream);
-CUresult cuMemcpyHtoD_v2(CUdeviceptr, const void *, size_t);
-CUresult cuMemcpyHtoDAsync_v2(CUdeviceptr, const void *, size_t, CUstream);
+CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
+CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
+CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
+CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
 
-CUresult cuMemFree_v2(CUdeviceptr);
+CUresult cuMemFree(CUdeviceptr);
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
-CUresult cuModuleGetGlobal_v2(CUdeviceptr *, size_t *, CUmodule, const char *);
+CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);
 
 CUresult cuModuleUnload(CUmodule);
 CUresult cuStreamCreate(CUstream *, unsigned);
-CUresult cuStreamDestroy_v2(CUstream);
+CUresult cuStreamDestroy(CUstream);
 CUresult cuStreamSynchronize(CUstream);
 CUresult cuCtxSetCurrent(CUcontext);
-CUresult cuDevicePrimaryCtxRelease_v2(CUdevice);
+CUresult cuDevicePrimaryCtxRelease(CUdevice);
 CUresult cuDevicePrimaryCtxGetState(CUdevice, unsigned *, int *);
-CUresult cuDevicePrimaryCtxSetFlags_v2(CUdevice, unsigned);
+CUresult cuDevicePrimaryCtxSetFlags(CUdevice, unsigned);
 CUresult cuDevicePrimaryCtxRetain(CUcontext *, CUdevice);
 CUresult cuModuleLoadDataEx(CUmodule *, const void *, unsigned, void *,
                             void **);

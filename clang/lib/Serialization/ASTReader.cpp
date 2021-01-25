@@ -3609,11 +3609,12 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
-        auto &Opt = OpenCLExtensions.OptMap[Name];
-        Opt.Supported = Record[I++] != 0;
-        Opt.Enabled = Record[I++] != 0;
-        Opt.Avail = Record[I++];
-        Opt.Core = Record[I++];
+        auto &OptInfo = OpenCLExtensions.OptMap[Name];
+        OptInfo.Supported = Record[I++] != 0;
+        OptInfo.Enabled = Record[I++] != 0;
+        OptInfo.Avail = Record[I++];
+        OptInfo.Core = Record[I++];
+        OptInfo.Opt = Record[I++];
       }
       break;
 
@@ -7868,7 +7869,7 @@ void ASTReader::InitializeSema(Sema &S) {
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
   }
 
-  SemaObj->OpenCLFeatures.copy(OpenCLExtensions);
+  SemaObj->OpenCLFeatures = OpenCLExtensions;
   SemaObj->OpenCLTypeExtMap = OpenCLTypeExtMap;
   SemaObj->OpenCLDeclExtMap = OpenCLDeclExtMap;
 

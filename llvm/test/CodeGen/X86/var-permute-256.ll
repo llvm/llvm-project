@@ -626,16 +626,14 @@ define <8 x i32> @var_shuffle_v8i32_from_v4i32(<4 x i32> %v, <8 x i32> %indices)
 ; XOP-LABEL: var_shuffle_v8i32_from_v4i32:
 ; XOP:       # %bb.0: # %entry
 ; XOP-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; XOP-NEXT:    vpermil2ps $0, %ymm1, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpermil2ps $0, %ymm1, %ymm0, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_v8i32_from_v4i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vpermilps %ymm1, %ymm2, %ymm2
+; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm1, %xmm3
@@ -1049,16 +1047,14 @@ define <8 x float> @var_shuffle_v8f32_from_v4f32(<4 x float> %v, <8 x i32> %indi
 ; XOP-LABEL: var_shuffle_v8f32_from_v4f32:
 ; XOP:       # %bb.0: # %entry
 ; XOP-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; XOP-NEXT:    vpermil2ps $0, %ymm1, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpermil2ps $0, %ymm1, %ymm0, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: var_shuffle_v8f32_from_v4f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vpermilps %ymm1, %ymm2, %ymm2
+; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm1, %xmm3

@@ -28,26 +28,26 @@ DLWRAP(cuFuncGetAttribute, 3);
 DLWRAP(cuGetErrorString, 2);
 DLWRAP(cuLaunchKernel, 11);
 
-DLWRAP(cuMemAlloc_v2, 2);
-DLWRAP(cuMemcpyDtoDAsync_v2, 4);
+DLWRAP(cuMemAlloc, 2);
+DLWRAP(cuMemcpyDtoDAsync, 4);
 
-DLWRAP(cuMemcpyDtoH_v2, 3);
-DLWRAP(cuMemcpyDtoHAsync_v2, 4);
-DLWRAP(cuMemcpyHtoD_v2, 3);
-DLWRAP(cuMemcpyHtoDAsync_v2, 4);
+DLWRAP(cuMemcpyDtoH, 3);
+DLWRAP(cuMemcpyDtoHAsync, 4);
+DLWRAP(cuMemcpyHtoD, 3);
+DLWRAP(cuMemcpyHtoDAsync, 4);
 
-DLWRAP(cuMemFree_v2, 1);
+DLWRAP(cuMemFree, 1);
 DLWRAP(cuModuleGetFunction, 3);
-DLWRAP(cuModuleGetGlobal_v2, 4);
+DLWRAP(cuModuleGetGlobal, 4);
 
 DLWRAP(cuModuleUnload, 1);
 DLWRAP(cuStreamCreate, 2);
-DLWRAP(cuStreamDestroy_v2, 1);
+DLWRAP(cuStreamDestroy, 1);
 DLWRAP(cuStreamSynchronize, 1);
 DLWRAP(cuCtxSetCurrent, 1);
-DLWRAP(cuDevicePrimaryCtxRelease_v2, 1);
+DLWRAP(cuDevicePrimaryCtxRelease, 1);
 DLWRAP(cuDevicePrimaryCtxGetState, 3);
-DLWRAP(cuDevicePrimaryCtxSetFlags_v2, 2);
+DLWRAP(cuDevicePrimaryCtxSetFlags, 2);
 DLWRAP(cuDevicePrimaryCtxRetain, 2);
 DLWRAP(cuModuleLoadDataEx, 5);
 

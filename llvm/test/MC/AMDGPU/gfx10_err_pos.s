@@ -484,6 +484,24 @@ v_mov_b32_sdwa v1, sext(u)
 // CHECK-NEXT:{{^}}                        ^
 
 //==============================================================================
+// expected an identifier
+
+v_mov_b32_sdwa v5, v1 dst_sel:
+// CHECK: error: expected an identifier
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:
+// CHECK-NEXT:{{^}}                              ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:0
+// CHECK: error: expected an identifier
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:0
+// CHECK-NEXT:{{^}}                              ^
+
+v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
+// CHECK: error: expected an identifier
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
+// CHECK-NEXT:{{^}}                                               ^
+
+//==============================================================================
 // expected an opening square bracket
 
 v_mov_b32_dpp v5, v1 dpp8:(0,1,2,3,4,5,6,7)
@@ -622,6 +640,22 @@ s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK: error: invalid counter name x
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
+// invalid dst_sel value
+
+v_mov_b32_sdwa v5, v1 dst_sel:WORD
+// CHECK: error: invalid dst_sel value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:WORD
+// CHECK-NEXT:{{^}}                              ^
+
+//==============================================================================
+// invalid dst_unused value
+
+v_mov_b32_sdwa v5, v1 dst_unused:UNUSED
+// CHECK: error: invalid dst_unused value
+// CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_unused:UNUSED
+// CHECK-NEXT:{{^}}                                 ^
 
 //==============================================================================
 // invalid exp target
