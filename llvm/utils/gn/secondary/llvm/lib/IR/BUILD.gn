@@ -63,6 +63,7 @@ static_library("IR") {
     "PrintPasses.cpp",
     "ProfileSummary.cpp",
     "PseudoProbe.cpp",
+    "ReplaceConstant.cpp",
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",
     "StructuralHash.cpp",
