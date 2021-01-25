@@ -1327,8 +1327,8 @@ def VPMSUMW : VX1_Int_Ty<1160, "vpmsumw",
                          int_ppc_altivec_crypto_vpmsumw, v4i32>;
 def VPMSUMD : VX1_Int_Ty<1224, "vpmsumd",
                          int_ppc_altivec_crypto_vpmsumd, v2i64>;
-def VPERMXOR : VA1a_Int_Ty<45, "vpermxor",
-                         int_ppc_altivec_crypto_vpermxor, v16i8>;
+def VPERMXOR : VAForm_1<45, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB, vrrc:$VC),
+                        "vpermxor $VD, $VA, $VB, $VC", IIC_VecFP, []>;
 
 // Vector doubleword integer pack and unpack.
 let hasSideEffects = 1 in {
