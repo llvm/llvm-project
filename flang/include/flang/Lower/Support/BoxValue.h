@@ -277,6 +277,7 @@ public:
 /// for the entity.
 class IrBoxValue : public AbstractIrBox {
 public:
+  IrBoxValue(mlir::Value addr) : AbstractIrBox{addr} { assert(verify()); }
   IrBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> lbounds,
              llvm::ArrayRef<mlir::Value> explicitParams,
              llvm::ArrayRef<mlir::Value> explicitExtents = {})

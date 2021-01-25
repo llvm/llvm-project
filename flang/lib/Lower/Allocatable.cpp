@@ -308,6 +308,14 @@ public:
     else
       updateIRBox(addr, lbounds, extents, lengths);
   }
+
+  /// Update MutableBoxValue with a new fir.box. This requires that the mutable
+  /// box is not described by a set of variables, since they could not describe
+  /// all that can be describe in the new fir.box (e.g. non contiguous entity).
+  void updateWithIrBox(mlir::Value newBox) {
+    assert(!box.isDescribedByVariables());
+    builder.create<fir::StoreOp>(loc, newBox, box.getAddr());
+  }
   /// Set unallocated/disassociated status for the entity described by
   /// MutableBoxValue. Deallocation is not performed by this helper.
   void setUnallocatedStatus() {
@@ -999,6 +1007,157 @@ mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
   auto c0 = builder.createIntegerConstant(loc, intPtrTy, 0);
   return builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::ne, ptrToInt,
                                       c0);
+}
+
+//===----------------------------------------------------------------------===//
+// MutableBoxValue writing interface implementation
+//===----------------------------------------------------------------------===//
+
+void Fortran::lower::associateMutableBox(Fortran::lower::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         const fir::MutableBoxValue &box,
+                                         const fir::ExtendedValue &source,
+                                         mlir::ValueRange lbounds) {
+  MutablePropertyWriter writer(builder, loc, box);
+  source.match(
+      [&](const fir::UnboxedValue &addr) {
+        writer.updateMutableBox(addr, /*lbounds=*/llvm::None,
+                                /*extents=*/llvm::None, /*lengths=*/llvm::None);
+      },
+      [&](const fir::CharBoxValue &ch) {
+        writer.updateMutableBox(ch.getAddr(), /*lbounds=*/llvm::None,
+                                /*extents=*/llvm::None, {ch.getLen()});
+      },
+      [&](const fir::ArrayBoxValue &arr) {
+        writer.updateMutableBox(arr.getAddr(),
+                                lbounds.empty() ? arr.getLBounds() : lbounds,
+                                arr.getExtents(), /*lengths=*/llvm::None);
+      },
+      [&](const fir::CharArrayBoxValue &arr) {
+        writer.updateMutableBox(arr.getAddr(),
+                                lbounds.empty() ? arr.getLBounds() : lbounds,
+                                arr.getExtents(), {arr.getLen()});
+      },
+      [&](const fir::BoxValue &arr) {
+        writer.updateMutableBox(arr.getAddr(),
+                                lbounds.empty() ? arr.getLBounds() : lbounds,
+                                arr.getExtents(), arr.getLenTypeParams());
+      },
+      [&](const fir::IrBoxValue &arr) {
+        // Rebox array fir.box to the pointer type and apply potential new lower
+        // bounds.
+        mlir::Value shift;
+        if (!lbounds.empty()) {
+          auto shiftType =
+              fir::ShiftType::get(builder.getContext(), lbounds.size());
+          shift = builder.create<fir::ShiftOp>(loc, shiftType, lbounds);
+        } else if (const auto &lbs = arr.getLBounds(); !lbs.empty()) {
+          auto shiftType =
+              fir::ShiftType::get(builder.getContext(), lbs.size());
+          shift = builder.create<fir::ShiftOp>(loc, shiftType, lbs);
+        }
+        auto reboxed = builder.create<fir::ReboxOp>(
+            loc, box.getBoxTy(), arr.getAddr(), shift, /*slice=*/mlir::Value());
+        writer.updateWithIrBox(reboxed);
+      },
+      [&](const fir::MutableBoxValue &) {
+        // No point implementing this, if right-hand side is a
+        // pointer/allocatable, the related MutableBoxValue has been read into
+        // another ExtendedValue category.
+        fir::emitFatalError(loc,
+                            "Cannot write MutableBox to another MutableBox");
+      },
+      [&](const fir::ProcBoxValue &) {
+        TODO(loc, "Procedure pointer assignment");
+      });
+}
+
+void Fortran::lower::associateMutableBoxWithRemap(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box, const fir::ExtendedValue &source,
+    mlir::ValueRange lbounds, mlir::ValueRange ubounds) {
+
+  // Compute new extents
+  llvm::SmallVector<mlir::Value, 4> extents;
+  if (!lbounds.empty()) {
+    auto idxTy = builder.getIndexType();
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    for (auto [lb, ub] : llvm::zip(lbounds, ubounds)) {
+      auto lbi = builder.createConvert(loc, idxTy, lb);
+      auto ubi = builder.createConvert(loc, idxTy, ub);
+      auto diff = builder.create<mlir::SubIOp>(loc, idxTy, ubi, lbi);
+      extents.emplace_back(builder.create<mlir::AddIOp>(loc, idxTy, diff, one));
+    }
+  } else {
+    // lbounds are default. Upper bounds and extents are the same.
+    extents.append(ubounds.begin(), ubounds.end());
+  }
+  const auto newRank = extents.size();
+  auto cast = [&](mlir::Value addr) -> mlir::Value {
+    // Cast base addr to new sequence type.
+    auto ty = fir::dyn_cast_ptrEleTy(addr.getType());
+    if (auto seqTy = ty.dyn_cast<fir::SequenceType>()) {
+      fir::SequenceType::Shape shape(newRank,
+                                     fir::SequenceType::getUnknownExtent());
+      ty = fir::SequenceType::get(shape, seqTy.getEleTy());
+    }
+    return builder.createConvert(loc, builder.getRefType(ty), addr);
+  };
+  MutablePropertyWriter writer(builder, loc, box);
+  source.match(
+      [&](const fir::UnboxedValue &addr) {
+        writer.updateMutableBox(cast(addr), lbounds, extents,
+                                /*lengths=*/llvm::None);
+      },
+      [&](const fir::CharBoxValue &ch) {
+        writer.updateMutableBox(cast(ch.getAddr()), lbounds, extents,
+                                {ch.getLen()});
+      },
+      [&](const fir::ArrayBoxValue &arr) {
+        writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
+                                /*lengths=*/llvm::None);
+      },
+      [&](const fir::CharArrayBoxValue &arr) {
+        writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
+                                {arr.getLen()});
+      },
+      [&](const fir::BoxValue &arr) {
+        writer.updateMutableBox(cast(arr.getAddr()), lbounds, extents,
+                                arr.getLenTypeParams());
+      },
+      [&](const fir::IrBoxValue &arr) {
+        // Rebox right-hand side fir.box with a new shape and type.
+        auto shapeType =
+            fir::ShapeShiftType::get(builder.getContext(), extents.size());
+        SmallVector<mlir::Value, 8> shapeArgs;
+        auto idxTy = builder.getIndexType();
+        for (auto [lbnd, ext] : llvm::zip(lbounds, extents)) {
+          auto lb = builder.createConvert(loc, idxTy, lbnd);
+          shapeArgs.push_back(lb);
+          shapeArgs.push_back(ext);
+        }
+        auto shape =
+            builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+        auto reboxed = builder.create<fir::ReboxOp>(
+            loc, box.getBoxTy(), arr.getAddr(), shape, /*slice=*/mlir::Value());
+        writer.updateWithIrBox(reboxed);
+      },
+      [&](const fir::MutableBoxValue &) {
+        // No point implementing this, if right-hand side is a pointer or
+        // allocatable, the related MutableBoxValue has already been read into
+        // another ExtendedValue category.
+        fir::emitFatalError(loc,
+                            "Cannot write MutableBox to another MutableBox");
+      },
+      [&](const fir::ProcBoxValue &) {
+        TODO(loc, "Procedure pointer assignment");
+      });
+}
+
+void Fortran::lower::disassociateMutableBox(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box) {
+  MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
 
 //===----------------------------------------------------------------------===//
