@@ -110,8 +110,8 @@ bool checkResult(CUresult Err, const char *ErrMsg) {
 
 int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
                CUstream Stream) {
-  CUresult Err = cuMemcpyDtoDAsync_v2((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr,
-                                      Size, Stream);
+  CUresult Err =
+      cuMemcpyDtoDAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
 
   if (Err != CUDA_SUCCESS) {
     REPORT("Error when copying data from device to device. Pointers: src "
@@ -207,8 +207,8 @@ public:
 
       for (CUstream &S : StreamPool[I]) {
         if (S)
-          checkResult(cuStreamDestroy_v2(S),
-                      "Error returned from cuStreamDestroy_v2\n");
+          checkResult(cuStreamDestroy(S),
+                      "Error returned from cuStreamDestroy\n");
       }
     }
   }
@@ -311,8 +311,8 @@ class DeviceRTLTy {
         return nullptr;
 
       CUdeviceptr DevicePtr;
-      Err = cuMemAlloc_v2(&DevicePtr, Size);
-      if (!checkResult(Err, "Error returned from cuMemAlloc_v2\n"))
+      Err = cuMemAlloc(&DevicePtr, Size);
+      if (!checkResult(Err, "Error returned from cuMemAlloc\n"))
         return nullptr;
 
       return (void *)DevicePtr;
@@ -323,8 +323,8 @@ class DeviceRTLTy {
       if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
         return OFFLOAD_FAIL;
 
-      Err = cuMemFree_v2((CUdeviceptr)TgtPtr);
-      if (!checkResult(Err, "Error returned from cuMemFree_v2\n"))
+      Err = cuMemFree((CUdeviceptr)TgtPtr);
+      if (!checkResult(Err, "Error returned from cuMemFree\n"))
         return OFFLOAD_FAIL;
 
       return OFFLOAD_SUCCESS;
@@ -466,8 +466,8 @@ public:
         CUdevice Device;
         checkResult(cuCtxGetDevice(&Device),
                     "Error returned from cuCtxGetDevice\n");
-        checkResult(cuDevicePrimaryCtxRelease_v2(Device),
-                    "Error returned from cuDevicePrimaryCtxRelease_v2\n");
+        checkResult(cuDevicePrimaryCtxRelease(Device),
+                    "Error returned from cuDevicePrimaryCtxRelease\n");
       }
     }
   }
@@ -506,9 +506,8 @@ public:
     } else {
       DP("The primary context is inactive, set its flags to "
          "CU_CTX_SCHED_BLOCKING_SYNC\n");
-      Err = cuDevicePrimaryCtxSetFlags_v2(Device, CU_CTX_SCHED_BLOCKING_SYNC);
-      if (!checkResult(Err,
-                       "Error returned from cuDevicePrimaryCtxSetFlags_v2\n"))
+      Err = cuDevicePrimaryCtxSetFlags(Device, CU_CTX_SCHED_BLOCKING_SYNC);
+      if (!checkResult(Err, "Error returned from cuDevicePrimaryCtxSetFlags\n"))
         return OFFLOAD_FAIL;
     }
 
@@ -657,7 +656,7 @@ public:
         __tgt_offload_entry Entry = *E;
         CUdeviceptr CUPtr;
         size_t CUSize;
-        Err = cuModuleGetGlobal_v2(&CUPtr, &CUSize, Module, E->name);
+        Err = cuModuleGetGlobal(&CUPtr, &CUSize, Module, E->name);
         // We keep this style here because we need the name
         if (Err != CUDA_SUCCESS) {
           REPORT("Loading global '%s' Failed\n", E->name);
@@ -689,7 +688,7 @@ public:
           // If unified memory is present any target link or to variables
           // can access host addresses directly. There is no longer a
           // need for device copies.
-          cuMemcpyHtoD_v2(CUPtr, E->addr, sizeof(void *));
+          cuMemcpyHtoD(CUPtr, E->addr, sizeof(void *));
           DP("Copy linked variable host address (" DPxMOD
              ") to device address (" DPxMOD ")\n",
              DPxPTR(*((void **)E->addr)), DPxPTR(CUPtr));
@@ -720,7 +719,7 @@ public:
 
       CUdeviceptr ExecModePtr;
       size_t CUSize;
-      Err = cuModuleGetGlobal_v2(&ExecModePtr, &CUSize, Module, ExecModeName);
+      Err = cuModuleGetGlobal(&ExecModePtr, &CUSize, Module, ExecModeName);
       if (Err == CUDA_SUCCESS) {
         if (CUSize != sizeof(int8_t)) {
           DP("Loading global exec_mode '%s' - size mismatch (%zd != %zd)\n",
@@ -728,7 +727,7 @@ public:
           return nullptr;
         }
 
-        Err = cuMemcpyDtoH_v2(&ExecModeVal, ExecModePtr, CUSize);
+        Err = cuMemcpyDtoH(&ExecModeVal, ExecModePtr, CUSize);
         if (Err != CUDA_SUCCESS) {
           REPORT("Error when copying data from device to host. Pointers: "
                  "host = " DPxMOD ", device = " DPxMOD ", size = %zd\n",
@@ -769,7 +768,7 @@ public:
       CUdeviceptr DeviceEnvPtr;
       size_t CUSize;
 
-      Err = cuModuleGetGlobal_v2(&DeviceEnvPtr, &CUSize, Module, DeviceEnvName);
+      Err = cuModuleGetGlobal(&DeviceEnvPtr, &CUSize, Module, DeviceEnvName);
       if (Err == CUDA_SUCCESS) {
         if (CUSize != sizeof(DeviceEnv)) {
           REPORT(
@@ -779,7 +778,7 @@ public:
           return nullptr;
         }
 
-        Err = cuMemcpyHtoD_v2(DeviceEnvPtr, &DeviceEnv, CUSize);
+        Err = cuMemcpyHtoD(DeviceEnvPtr, &DeviceEnv, CUSize);
         if (Err != CUDA_SUCCESS) {
           REPORT("Error when copying data from host to device. Pointers: "
                  "host = " DPxMOD ", device = " DPxMOD ", size = %zu\n",
@@ -817,7 +816,7 @@ public:
 
     CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
 
-    Err = cuMemcpyHtoDAsync_v2((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
+    Err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
       REPORT("Error when copying data from host to device. Pointers: host "
              "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
@@ -839,7 +838,7 @@ public:
 
     CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
 
-    Err = cuMemcpyDtoHAsync_v2(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
+    Err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
       REPORT("Error when copying data from device to host. Pointers: host "
              "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
