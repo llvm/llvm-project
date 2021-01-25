@@ -267,7 +267,7 @@ template <class InputIterator, class OutputIterator, class BinaryPredicate>
     unique_copy(InputIterator first, InputIterator last, OutputIterator result, BinaryPredicate pred);
 
 template <class BidirectionalIterator>
-    void
+    constexpr void               // constexpr in C++20
     reverse(BidirectionalIterator first, BidirectionalIterator last);
 
 template <class BidirectionalIterator, class OutputIterator>
@@ -316,7 +316,7 @@ template <class InputIterator, class Predicate>
     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
 template <class ForwardIterator, class Predicate>
-    ForwardIterator
+    constexpr ForwardIterator  // constexpr in C++20
     partition(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 template <class InputIterator, class OutputIterator1,
@@ -626,19 +626,19 @@ template <class InputIterator1, class InputIterator2, class Compare>
                             InputIterator2 first2, InputIterator2 last2, Compare comp);
 
 template <class BidirectionalIterator>
-    bool
+    constexpr bool     // constexpr in C++20
     next_permutation(BidirectionalIterator first, BidirectionalIterator last);
 
 template <class BidirectionalIterator, class Compare>
-    bool
+    constexpr bool     // constexpr in C++20
     next_permutation(BidirectionalIterator first, BidirectionalIterator last, Compare comp);
 
 template <class BidirectionalIterator>
-    bool
+    constexpr bool     // constexpr in C++20
     prev_permutation(BidirectionalIterator first, BidirectionalIterator last);
 
 template <class BidirectionalIterator, class Compare>
-    bool
+    constexpr bool     // constexpr in C++20
     prev_permutation(BidirectionalIterator first, BidirectionalIterator last, Compare comp);
 
 }  // std
@@ -2321,7 +2321,7 @@ unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 // reverse
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 __reverse(_BidirectionalIterator __first, _BidirectionalIterator __last, bidirectional_iterator_tag)
 {
@@ -2335,7 +2335,7 @@ __reverse(_BidirectionalIterator __first, _BidirectionalIterator __last, bidirec
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 __reverse(_RandomAccessIterator __first, _RandomAccessIterator __last, random_access_iterator_tag)
 {
@@ -2345,7 +2345,7 @@ __reverse(_RandomAccessIterator __first, _RandomAccessIterator __last, random_ac
 }
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 reverse(_BidirectionalIterator __first, _BidirectionalIterator __last)
 {
@@ -3393,7 +3393,7 @@ is_partitioned(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 // partition
 
 template <class _Predicate, class _ForwardIterator>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 __partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred, forward_iterator_tag)
 {
     while (true)
@@ -3416,7 +3416,7 @@ __partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred
 }
 
 template <class _Predicate, class _BidirectionalIterator>
-_BidirectionalIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _BidirectionalIterator
 __partition(_BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred,
             bidirectional_iterator_tag)
 {
@@ -3441,7 +3441,7 @@ __partition(_BidirectionalIterator __first, _BidirectionalIterator __last, _Pred
 }
 
 template <class _ForwardIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
@@ -5760,7 +5760,7 @@ lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
 // next_permutation
 
 template <class _Compare, class _BidirectionalIterator>
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 __next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
     _BidirectionalIterator __i = __last;
@@ -5787,7 +5787,7 @@ __next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last
 }
 
 template <class _BidirectionalIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
@@ -5796,7 +5796,7 @@ next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, 
 }
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 {
@@ -5807,7 +5807,7 @@ next_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 // prev_permutation
 
 template <class _Compare, class _BidirectionalIterator>
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 __prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
     _BidirectionalIterator __i = __last;
@@ -5834,7 +5834,7 @@ __prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last
 }
 
 template <class _BidirectionalIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
@@ -5843,7 +5843,7 @@ prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last, 
 }
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
 {
