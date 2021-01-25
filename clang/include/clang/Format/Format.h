@@ -153,7 +153,7 @@ struct FormatStyle {
   ///    \endcode
   ///
   /// * ``ACS_AcrossEmptyLinesAndComments``
-  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
   ///
   ///    Same as ACS_Consecutive, but also spans over lines only containing
   ///    comments and empty lines, e.g.
@@ -290,7 +290,7 @@ struct FormatStyle {
   ///    \endcode
   ///
   /// * ``ACS_AcrossEmptyLinesAndComments``
-  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
   ///
   ///    Same as ACS_Consecutive, but also spans over lines only containing
   ///    comments and empty lines, e.g.
@@ -359,7 +359,7 @@ struct FormatStyle {
   ///    \endcode
   ///
   /// * ``ACS_AcrossEmptyLinesAndComments``
-  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
   ///
   ///    Same as ACS_Consecutive, but also spans over lines only containing
   ///    comments and empty lines, e.g.
