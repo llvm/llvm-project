@@ -44,7 +44,8 @@ enum NodeType : unsigned {
   SRAW,
   SRLW,
   // 32-bit operations from RV64M that can't be simply matched with a pattern
-  // at instruction selection time.
+  // at instruction selection time. These have undefined behavior for division
+  // by 0 or overflow (divw) like their target independent counterparts.
   DIVW,
   DIVUW,
   REMUW,
