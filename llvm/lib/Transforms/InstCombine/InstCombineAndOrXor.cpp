@@ -1983,6 +1983,10 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(NewICmpInst, X, ConstantInt::getNullValue(Ty));
   }
 
+  // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
+  if (sinkNotIntoOtherHandOfAnd(I))
+    return &I;
+
   return nullptr;
 }
 
@@ -3087,6 +3091,45 @@ static Instruction *sinkNotIntoXor(BinaryOperator &I,
 
   Value *NotX = Builder.CreateNot(X, X->getName() + ".not");
   return BinaryOperator::CreateXor(NotX, Y, I.getName() + ".demorgan");
+}
+
+// Transform
+//   z = (~x) & y
+// into:
+//   z = ~(x | (~y))
+// iff y is free to invert and all uses of z can be freely updated.
+bool InstCombinerImpl::sinkNotIntoOtherHandOfAnd(BinaryOperator &I) {
+  Instruction::BinaryOps NewOpc;
+  switch (I.getOpcode()) {
+  case Instruction::And:
+    NewOpc = Instruction::Or;
+    break;
+  default:
+    return false;
+  };
+
+  Value *X, *Y;
+  if (!match(&I, m_c_BinOp(m_Not(m_Value(X)), m_Value(Y))))
+    return false;
+
+  // Will we be able to fold the `not` into Y eventually?
+  if (!InstCombiner::isFreeToInvert(Y, Y->hasOneUse()))
+    return false;
+
+  // And can our users be adapted?
+  if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
+    return false;
+
+  Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
+  Value *NewBinOp =
+      BinaryOperator::Create(NewOpc, X, NotY, I.getName() + ".not");
+  Builder.Insert(NewBinOp);
+  replaceInstUsesWith(I, NewBinOp);
+  // We can not just create an outer `not`, it will most likely be immediately
+  // folded back, reconstructing our initial pattern, and causing an
+  // infinite combine loop, so immediately manually fold it away.
+  freelyInvertAllUsersOf(NewBinOp);
+  return true;
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
