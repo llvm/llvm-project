@@ -20,6 +20,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1866,8 +1867,6 @@ struct LessRecordFieldName {
 };
 
 struct LessRecordRegister {
-  static bool ascii_isdigit(char x) { return x >= '0' && x <= '9'; }
-
   struct RecordParts {
     SmallVector<std::pair< bool, StringRef>, 4> Parts;
 
@@ -1878,18 +1877,18 @@ struct LessRecordRegister {
       size_t Len = 0;
       const char *Start = Rec.data();
       const char *Curr = Start;
-      bool isDigitPart = ascii_isdigit(Curr[0]);
+      bool IsDigitPart = isDigit(Curr[0]);
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
-        bool isDigit = ascii_isdigit(Curr[I]);
-        if (isDigit != isDigitPart) {
-          Parts.push_back(std::make_pair(isDigitPart, StringRef(Start, Len)));
+        bool IsDigit = isDigit(Curr[I]);
+        if (IsDigit != IsDigitPart) {
+          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
           Len = 0;
           Start = &Curr[I];
-          isDigitPart = ascii_isdigit(Curr[I]);
+          IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(isDigitPart, StringRef(Start, Len)));
+      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
     }
 
     size_t size() { return Parts.size(); }
