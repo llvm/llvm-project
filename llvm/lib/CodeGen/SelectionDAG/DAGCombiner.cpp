@@ -959,13 +959,13 @@ static bool isConstantSplatVectorMaskForType(SDNode *N, EVT ScalarTy) {
   return false;
 }
 
-// Determines if it is a constant integer or a build vector of constant
+// Determines if it is a constant integer or a splat/build vector of constant
 // integers (and undefs).
 // Do not permit build vector implicit truncation.
 static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false) {
   if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N))
     return !(Const->isOpaque() && NoOpaques);
-  if (N.getOpcode() != ISD::BUILD_VECTOR)
+  if (N.getOpcode() != ISD::BUILD_VECTOR && N.getOpcode() != ISD::SPLAT_VECTOR)
     return false;
   unsigned BitWidth = N.getScalarValueSizeInBits();
   for (const SDValue &Op : N->op_values()) {
