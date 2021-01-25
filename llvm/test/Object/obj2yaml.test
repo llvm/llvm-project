@@ -415,6 +415,19 @@
 # ELF-MIPSEL-NEXT:       - Offset:          0x2C
 # ELF-MIPSEL-NEXT:         Symbol:          SomeOtherFunction
 # ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
+# ELF-MIPSEL-NEXT:   - Type: SectionHeaderTable
+# ELF-MIPSEL-NEXT:     Sections:
+# ELF-MIPSEL-NEXT:       - Name: .text
+# ELF-MIPSEL-NEXT:       - Name: .rel.text
+# ELF-MIPSEL-NEXT:       - Name: .data
+# ELF-MIPSEL-NEXT:       - Name: .bss
+# ELF-MIPSEL-NEXT:       - Name: .mdebug.abi32
+# ELF-MIPSEL-NEXT:       - Name: .rodata.str1.1
+# ELF-MIPSEL-NEXT:       - Name: .reginfo
+# ELF-MIPSEL-NEXT:       - Name: .MIPS.abiflags
+# ELF-MIPSEL-NEXT:       - Name: .shstrtab
+# ELF-MIPSEL-NEXT:       - Name: .symtab
+# ELF-MIPSEL-NEXT:       - Name: .strtab
 # ELF-MIPSEL-NEXT: Symbols:
 # ELF-MIPSEL-NEXT:     - Name:            trivial.ll
 # ELF-MIPSEL-NEXT:       Type:            STT_FILE
@@ -460,19 +473,6 @@
 # ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
 # ELF-MIPSEL-NEXT:     - Name:            puts
 # ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
-# ELF-MIPSEL-NEXT: SectionHeaderTable:
-# ELF-MIPSEL-NEXT:   Sections:
-# ELF-MIPSEL-NEXT:     - Name: .text
-# ELF-MIPSEL-NEXT:     - Name: .rel.text
-# ELF-MIPSEL-NEXT:     - Name: .data
-# ELF-MIPSEL-NEXT:     - Name: .bss
-# ELF-MIPSEL-NEXT:     - Name: .mdebug.abi32
-# ELF-MIPSEL-NEXT:     - Name: .rodata.str1.1
-# ELF-MIPSEL-NEXT:     - Name: .reginfo
-# ELF-MIPSEL-NEXT:     - Name: .MIPS.abiflags
-# ELF-MIPSEL-NEXT:     - Name: .shstrtab
-# ELF-MIPSEL-NEXT:     - Name: .symtab
-# ELF-MIPSEL-NEXT:     - Name: .strtab
 # ELF-MIPSEL-NEXT: ...
 
 # RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mips64el | FileCheck %s --check-prefix ELF-MIPS64EL
@@ -514,6 +514,17 @@
 # ELF-MIPS64EL-NEXT:     Relocations:
 # ELF-MIPS64EL-NEXT:       - Symbol:          zed
 # ELF-MIPS64EL-NEXT:         Type:            R_MIPS_64
+# ELF-MIPS64EL-NEXT:   - Type: SectionHeaderTable
+# ELF-MIPS64EL-NEXT:     Sections:
+# ELF-MIPS64EL-NEXT:       - Name: .text
+# ELF-MIPS64EL-NEXT:       - Name: .data
+# ELF-MIPS64EL-NEXT:       - Name: .rela.data
+# ELF-MIPS64EL-NEXT:       - Name: .bss
+# ELF-MIPS64EL-NEXT:       - Name: .MIPS.options
+# ELF-MIPS64EL-NEXT:       - Name: .pdr
+# ELF-MIPS64EL-NEXT:       - Name: .shstrtab
+# ELF-MIPS64EL-NEXT:       - Name: .symtab
+# ELF-MIPS64EL-NEXT:       - Name: .strtab
 # ELF-MIPS64EL-NEXT: Symbols:
 # ELF-MIPS64EL-NEXT:     - Name:            .text
 # ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
@@ -534,17 +545,6 @@
 # ELF-MIPS64EL-NEXT:       Section:         .pdr
 # ELF-MIPS64EL-NEXT:     - Name:            zed
 # ELF-MIPS64EL-NEXT:       Binding:         STB_GLOBAL
-# ELF-MIPS64EL-NEXT: SectionHeaderTable:
-# ELF-MIPS64EL-NEXT:   Sections:
-# ELF-MIPS64EL-NEXT:     - Name: .text
-# ELF-MIPS64EL-NEXT:     - Name: .data
-# ELF-MIPS64EL-NEXT:     - Name: .rela.data
-# ELF-MIPS64EL-NEXT:     - Name: .bss
-# ELF-MIPS64EL-NEXT:     - Name: .MIPS.options
-# ELF-MIPS64EL-NEXT:     - Name: .pdr
-# ELF-MIPS64EL-NEXT:     - Name: .shstrtab
-# ELF-MIPS64EL-NEXT:     - Name: .symtab
-# ELF-MIPS64EL-NEXT:     - Name: .strtab
 # ELF-MIPS64EL-NEXT: ...
 
 # RUN: yaml2obj %s -o %t-x86-64

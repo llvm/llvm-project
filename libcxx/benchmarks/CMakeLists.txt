@@ -5,6 +5,8 @@ include(CheckCXXCompilerFlag)
 # Build Google Benchmark for libc++
 #==============================================================================
 
+set(CMAKE_FOLDER "${CMAKE_FOLDER}/Benchmarks")
+
 set(BENCHMARK_LIBCXX_COMPILE_FLAGS
     -Wno-unused-command-line-argument
     -nostdinc++
