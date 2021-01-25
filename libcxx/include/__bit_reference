@@ -11,7 +11,7 @@
 #define _LIBCPP___BIT_REFERENCE
 
 #include <__config>
-#include <bit>
+#include <__bits>
 #include <algorithm>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
