@@ -112,6 +112,28 @@ Feel free to contact us on `cfe-dev
 <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
 <https://bugs.llvm.org/>`__.
 
+Fast builtin function declarations
+----------------------------------
+
+In addition to regular header includes with builtin types and functions using
+``-finclude-default-header`` explained in :doc:`UsersManual`, clang
+supports a fast mechanism to declare builtin functions with
+``-fdeclare-opencl-builtins``. This does not declare the builtin types and
+therefore it has to be used in combination with ``-finclude-default-header``
+if full functionality is required.
+
+**Example of Use**:
+
+    .. code-block:: console
+ 
+      $ clang -Xclang -finclude-default-header test.cl
+
+Note that this is a frontend-only flag and therefore it requires the use of
+flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.
+
+As this feature is still in experimental phase some changes might still occur
+on the command line interface side.
+
 C++ libraries for OpenCL
 ------------------------
 
