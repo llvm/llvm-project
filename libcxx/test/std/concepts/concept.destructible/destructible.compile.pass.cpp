@@ -34,12 +34,6 @@ struct NoexceptFalse {
   ~NoexceptFalse() noexcept(false);
 };
 
-// Since C++17 dynamic exception specifications are no longer
-// part of the standard.
-struct Throw {
-  ~Throw() throw();
-};
-
 struct Protected {
 protected:
   ~Protected() = default;
@@ -68,8 +62,6 @@ void test() {
   test<Noexcept>();
   test<NoexceptTrue>();
   test<NoexceptFalse>();
-
-  test<Throw>();
 
   test<Protected>();
   test<Private>();
