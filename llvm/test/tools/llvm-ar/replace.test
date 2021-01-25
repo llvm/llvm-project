@@ -91,7 +91,7 @@
 # RUN: not llvm-ar r %t/missing.a %t/missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
 
-# MISSING-FILE: error: [[FILE]]: {{.*}}{{[Nn]}}o such file or directory
+# MISSING-FILE: error: [[FILE]]: {{[Nn]}}o such file or directory
 
 ## Create and Replace member of thin archive:
 # RUN: llvm-ar rcT %t/thin.a %t/1.o %t/2.o %t/3.o

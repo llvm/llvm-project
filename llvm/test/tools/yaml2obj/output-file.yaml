@@ -9,7 +9,7 @@
 
 # RUN: not yaml2obj -o %p/path/does/not/exist 2>&1 | FileCheck %s
 
-# CHECK: yaml2obj: error: failed to open '{{.*}}/path/does/not/exist': {{.*}}{{[Nn]}}o such file or directory
+# CHECK: yaml2obj: error: failed to open '{{.*}}/path/does/not/exist': {{[Nn]}}o such file or directory
 
 !ELF
 FileHeader:

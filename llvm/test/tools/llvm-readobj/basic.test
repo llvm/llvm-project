@@ -2,7 +2,7 @@
 RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj %s
 RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf %s
 
-ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{.*}}{{[Nn]}}o such file or directory
+ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{[Nn]}}o such file or directory
 
 # Test case with no input file.
 RUN: not llvm-readobj 2>&1 | FileCheck %s --check-prefix=NO-FILE
