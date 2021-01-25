@@ -93,8 +93,8 @@ private:
   // Calls have signature void(const Params&, Callback<Response>).
   void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
   void onInitialized(const InitializedParams &);
-  void onShutdown(Callback<std::nullptr_t>);
-  void onSync(Callback<std::nullptr_t>);
+  void onShutdown(const ShutdownParams &, Callback<std::nullptr_t>);
+  void onSync(const NoParams &, Callback<std::nullptr_t>);
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
@@ -161,7 +161,7 @@ private:
                              Callback<SemanticTokensOrDelta>);
   /// This is a clangd extension. Provides a json tree representing memory usage
   /// hierarchy.
-  void onMemoryUsage(Callback<MemoryTree>);
+  void onMemoryUsage(const NoParams &, Callback<MemoryTree>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
