@@ -17681,8 +17681,7 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
   // We walk up the chains to find stores.
   SmallVector<SDValue, 8> Chains = {N->getOperand(0)};
   while (!Chains.empty()) {
-    SDValue Chain = Chains.back();
-    Chains.pop_back();
+    SDValue Chain = Chains.pop_back_val();
     if (!Chain.hasOneUse())
       continue;
     switch (Chain.getOpcode()) {
