@@ -595,11 +595,14 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(SimplePadOp &simplePadOp,
       b.create<SubTensorOp>(loc, simplePadOp.getResultType(), packedTensor,
                             offsets, sizes, strides)
           ->getResult(0));
-  simplePadOp.erase();
+
+  Operation *toErase = simplePadOp;
 
   // Make the newly cloned `simplePadOp` available to the caller.
   simplePadOp =
       cast<SimplePadOp>(bvm.lookup(simplePadOp.result()).getDefiningOp());
+
+  toErase->erase();
 
   return success();
 }
