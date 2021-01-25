@@ -99,3 +99,35 @@ void mlir::impl::eraseFunctionResults(Operation *op,
       op->removeAttr(nameAttr);
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Function type signature.
+//===----------------------------------------------------------------------===//
+
+FunctionType mlir::impl::getFunctionType(Operation *op) {
+  assert(op->hasTrait<OpTrait::FunctionLike>());
+  return op->getAttrOfType<TypeAttr>(mlir::impl::getTypeAttrName())
+      .getValue()
+      .cast<FunctionType>();
+}
+
+void mlir::impl::setFunctionType(Operation *op, FunctionType newType) {
+  assert(op->hasTrait<OpTrait::FunctionLike>());
+  SmallVector<char, 16> nameBuf;
+  FunctionType oldType = getFunctionType(op);
+
+  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
+    op->removeAttr(getArgAttrName(i, nameBuf));
+  for (int i = newType.getNumResults(), e = oldType.getNumResults(); i < e; i++)
+    op->removeAttr(getResultAttrName(i, nameBuf));
+  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+}
+
+//===----------------------------------------------------------------------===//
+// Function body.
+//===----------------------------------------------------------------------===//
+
+Region &mlir::impl::getFunctionBody(Operation *op) {
+  assert(op->hasTrait<OpTrait::FunctionLike>());
+  return op->getRegion(0);
+}
