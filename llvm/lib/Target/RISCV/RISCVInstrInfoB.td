@@ -725,6 +725,9 @@ def : Pat<(or GPR:$rs1, BSETINVMask:$mask),
           (BSETI GPR:$rs1, (BSETINVXForm imm:$mask))>;
 def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
           (BINVI GPR:$rs1, (BSETINVXForm imm:$mask))>;
+
+def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
+          (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 }
 
 let Predicates = [HasStdExtZbp] in {
@@ -742,12 +745,6 @@ def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, (ImmROTL2R uimmlog2xlen:$shamt))>;
 }
-
-// We don't pattern-match sbclri[w], sbseti[w], sbinvi[w] because they are
-// pattern-matched by simple andi, ori, and xori.
-let Predicates = [HasStdExtZbs] in
-def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
-          (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 
 def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDTIntBinOp, []>;
 def riscv_greviw   : SDNode<"RISCVISD::GREVIW", SDTIntBinOp, []>;
