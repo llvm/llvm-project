@@ -101,6 +101,16 @@ let TargetPrefix = "riscv" in {
                     [LLVMPointerType<LLVMMatchType<0>>,
                      llvm_anyint_ty],
                     [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For unit stride fault-only-first load
+  // Input: (pointer, vl)
+  // Output: (data, vl)
+  // NOTE: We model this with default memory properties since we model writing
+  // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
+  class RISCVUSLoadFF
+        : Intrinsic<[llvm_anyvector_ty, llvm_anyint_ty],
+                    [LLVMPointerType<LLVMMatchType<0>>, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<0>>]>,
+                    RISCVVIntrinsic;
   // For unit stride load with mask
   // Input: (maskedoff, pointer, mask, vl)
   class RISCVUSLoadMask
@@ -110,6 +120,18 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For unit stride fault-only-first load with mask
+  // Input: (maskedoff, pointer, mask, vl)
+  // Output: (data, vl)
+  // NOTE: We model this with default memory properties since we model writing
+  // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
+  class RISCVUSLoadFFMask
+        : Intrinsic<[llvm_anyvector_ty, llvm_anyint_ty],
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<1>>]>, RISCVVIntrinsic;
   // For strided load
   // Input: (pointer, stride, vl)
   class RISCVSLoad
@@ -564,6 +586,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
   }
+  multiclass RISCVUSLoadFF {
+    def "int_riscv_" # NAME : RISCVUSLoadFF;
+    def "int_riscv_" # NAME # "_mask" : RISCVUSLoadFFMask;
+  }
   multiclass RISCVSLoad {
     def "int_riscv_" # NAME : RISCVSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVSLoadMask;
@@ -680,7 +706,7 @@ let TargetPrefix = "riscv" in {
   }
 
   defm vle : RISCVUSLoad;
-  defm vleff : RISCVUSLoad;
+  defm vleff : RISCVUSLoadFF;
   defm vse : RISCVUSStore;
   defm vlse: RISCVSLoad;
   defm vsse: RISCVSStore;

@@ -362,6 +362,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
 
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
+
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
       setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
@@ -1367,7 +1369,29 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
   }
 
-  return SDValue();
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::riscv_vleff: {
+    SDLoc DL(Op);
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
+    SDValue Load = DAG.getNode(RISCVISD::VLEFF, DL, VTs, Op.getOperand(0),
+                               Op.getOperand(2), Op.getOperand(3));
+    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
+    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
+  }
+  case Intrinsic::riscv_vleff_mask: {
+    SDLoc DL(Op);
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
+    SDValue Load = DAG.getNode(RISCVISD::VLEFF_MASK, DL, VTs, Op.getOperand(0),
+                               Op.getOperand(2), Op.getOperand(3),
+                               Op.getOperand(4), Op.getOperand(5));
+    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
+    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
+  }
+  }
 }
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
@@ -3815,6 +3839,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR)
+  NODE_NAME_CASE(VLEFF)
+  NODE_NAME_CASE(VLEFF_MASK)
+  NODE_NAME_CASE(READ_VL)
   }
   // clang-format on
   return nullptr;
