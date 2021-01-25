@@ -7287,16 +7287,12 @@ let ExeDomain = SSEPackedSingle in {
 let isCommutable = 1 in
 def VPERM2F128rr : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
-          "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (v4f64 (X86VPerm2x128 VR256:$src1, VR256:$src2,
-                              (i8 timm:$src3))))]>, VEX_4V, VEX_L,
-          Sched<[WriteFShuffle256]>;
+          "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
+          VEX_4V, VEX_L, Sched<[WriteFShuffle256]>;
 def VPERM2F128rm : AVXAIi8<0x06, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
-          "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (X86VPerm2x128 VR256:$src1, (loadv4f64 addr:$src2),
-                             (i8 timm:$src3)))]>, VEX_4V, VEX_L,
-          Sched<[WriteFShuffle256.Folded, WriteFShuffle256.ReadAfterFold]>;
+          "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
+          VEX_4V, VEX_L, Sched<[WriteFShuffle256.Folded, WriteFShuffle256.ReadAfterFold]>;
 }
 
 // Immediate transform to help with commuting.
@@ -7304,23 +7300,27 @@ def Perm2XCommuteImm : SDNodeXForm<timm, [{
   return getI8Imm(N->getZExtValue() ^ 0x22, SDLoc(N));
 }]>;
 
+multiclass vperm2x128_lowering<string InstrStr, ValueType VT, PatFrag memop_frag> {
+  def : Pat<(VT (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 timm:$imm))),
+            (!cast<Instruction>(InstrStr#rr) VR256:$src1, VR256:$src2, timm:$imm)>;
+  def : Pat<(VT (X86VPerm2x128 VR256:$src1, (memop_frag addr:$src2), (i8 timm:$imm))),
+            (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2, timm:$imm)>;
+  // Pattern with load in other operand.
+  def : Pat<(VT (X86VPerm2x128 (memop_frag addr:$src2), VR256:$src1, (i8 timm:$imm))),
+            (!cast<Instruction>(InstrStr#rm) VR256:$src1, addr:$src2,
+                                             (Perm2XCommuteImm timm:$imm))>;
+}
+
 let Predicates = [HasAVX] in {
-// Pattern with load in other operand.
-def : Pat<(v4f64 (X86VPerm2x128 (loadv4f64 addr:$src2),
-                                VR256:$src1, (i8 timm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm timm:$imm))>;
+  defm : vperm2x128_lowering<"VPERM2F128", v4f64, loadv4f64>;
+  defm : vperm2x128_lowering<"VPERM2F128", v8f32, loadv8f32>;
 }
 
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 timm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, timm:$imm)>;
-def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1,
-                  (loadv4i64 addr:$src2), (i8 timm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, timm:$imm)>;
-// Pattern with load in other operand.
-def : Pat<(v4i64 (X86VPerm2x128 (loadv4i64 addr:$src2),
-                                VR256:$src1, (i8 timm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm timm:$imm))>;
+  defm : vperm2x128_lowering<"VPERM2F128", v4i64,  loadv4i64>;
+  defm : vperm2x128_lowering<"VPERM2F128", v8i32,  loadv8i32>;
+  defm : vperm2x128_lowering<"VPERM2F128", v16i16, loadv16i16>;
+  defm : vperm2x128_lowering<"VPERM2F128", v32i8,  loadv32i8>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7689,27 +7689,24 @@ defm VPERMPD : avx2_perm_imm<0x01, "vpermpd", loadv4f64, v4f64,
                              WriteFShuffle256, f256mem>, VEX_W;
 
 //===----------------------------------------------------------------------===//
-// VPERM2I128 - Permute Floating-Point Values in 128-bit chunks
+// VPERM2I128 - Permute Integer vector Values in 128-bit chunks
 //
 let isCommutable = 1 in
 def VPERM2I128rr : AVX2AIi8<0x46, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
-          "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (v4i64 (X86VPerm2x128 VR256:$src1, VR256:$src2,
-                            (i8 timm:$src3))))]>, Sched<[WriteShuffle256]>,
-          VEX_4V, VEX_L;
+          "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
+          Sched<[WriteShuffle256]>, VEX_4V, VEX_L;
 def VPERM2I128rm : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
-          "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (X86VPerm2x128 VR256:$src1, (loadv4i64 addr:$src2),
-                             (i8 timm:$src3)))]>,
+          "vperm2i128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}", []>,
           Sched<[WriteShuffle256.Folded, WriteShuffle256.ReadAfterFold]>, VEX_4V, VEX_L;
 
-let Predicates = [HasAVX2] in
-def : Pat<(v4i64 (X86VPerm2x128 (loadv4i64 addr:$src2),
-                                VR256:$src1, (i8 timm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm timm:$imm))>;
-
+let Predicates = [HasAVX2] in {
+  defm : vperm2x128_lowering<"VPERM2I128", v4i64,  loadv4i64>;
+  defm : vperm2x128_lowering<"VPERM2I128", v8i32,  loadv8i32>;
+  defm : vperm2x128_lowering<"VPERM2I128", v16i16, loadv16i16>;
+  defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
+}
 
 //===----------------------------------------------------------------------===//
 // VINSERTI128 - Insert packed integer values
