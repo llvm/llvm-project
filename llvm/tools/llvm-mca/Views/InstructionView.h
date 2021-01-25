@@ -34,16 +34,19 @@ class InstructionView : public View {
   mutable raw_string_ostream InstrStream;
 
 public:
-  void printView(llvm::raw_ostream &) const {}
+  void printView(llvm::raw_ostream &) const override {}
   InstructionView(const llvm::MCSubtargetInfo &STI,
                   llvm::MCInstPrinter &Printer,
                   llvm::ArrayRef<llvm::MCInst> S,
                   StringRef MCPU = StringRef())
-      : STI(STI), MCIP(Printer), Source(S), MCPU(MCPU), InstrStream(InstructionString) {}
+      : STI(STI), MCIP(Printer), Source(S), MCPU(MCPU),
+        InstrStream(InstructionString) {}
 
   virtual ~InstructionView() = default;
 
-  StringRef getNameAsString() const { return "Instructions and CPU resources"; }
+  StringRef getNameAsString() const override {
+    return "Instructions and CPU resources";
+  }
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
   // printInstructionString() as it will overwrite the previous result.
