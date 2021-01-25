@@ -39,13 +39,11 @@ define i32 @slo_i32_mask(i32 %a, i32 %b) nounwind {
 ;
 ; RV32IB-LABEL: slo_i32_mask:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    andi a1, a1, 31
 ; RV32IB-NEXT:    slo a0, a0, a1
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: slo_i32_mask:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    andi a1, a1, 31
 ; RV32IBP-NEXT:    slo a0, a0, a1
 ; RV32IBP-NEXT:    ret
   %neg = xor i32 %a, -1
@@ -243,13 +241,11 @@ define i32 @sro_i32_mask(i32 %a, i32 %b) nounwind {
 ;
 ; RV32IB-LABEL: sro_i32_mask:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    andi a1, a1, 31
 ; RV32IB-NEXT:    sro a0, a0, a1
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: sro_i32_mask:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    andi a1, a1, 31
 ; RV32IBP-NEXT:    sro a0, a0, a1
 ; RV32IBP-NEXT:    ret
   %neg = xor i32 %a, -1
