@@ -325,6 +325,12 @@ public:
 
   const Target &GetTarget() const;
 
+  /// Clear the Thread* cache.
+  ///
+  /// This is useful in situations like when a new Thread list is being
+  /// generated.
+  void ClearThreadCache();
+
   /// Print a description of this thread to the stream \a s.
   /// \a thread.  Don't expect that the result of GetThread is valid in
   /// the description method.  This might get called when the underlying

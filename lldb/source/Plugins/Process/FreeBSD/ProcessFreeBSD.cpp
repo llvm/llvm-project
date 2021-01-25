@@ -166,8 +166,8 @@ Status ProcessFreeBSD::DoResume() {
   return Status();
 }
 
-bool ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list,
-                                      ThreadList &new_thread_list) {
+bool ProcessFreeBSD::DoUpdateThreadList(ThreadList &old_thread_list,
+                                        ThreadList &new_thread_list) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOGF(log, "ProcessFreeBSD::%s (pid = %" PRIu64 ")", __FUNCTION__,
             GetID());

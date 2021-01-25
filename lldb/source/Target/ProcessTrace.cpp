@@ -78,8 +78,8 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   Process::DidAttach(process_arch);
 }
 
-bool ProcessTrace::UpdateThreadList(ThreadList &old_thread_list,
-                                    ThreadList &new_thread_list) {
+bool ProcessTrace::DoUpdateThreadList(ThreadList &old_thread_list,
+                                      ThreadList &new_thread_list) {
   return false;
 }
 

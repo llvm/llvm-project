@@ -95,6 +95,12 @@ public:
 
   void WillResume();
 
+  /// Clear the Thread* cache that each ThreadPlan contains.
+  ///
+  /// This is useful in situations like when a new Thread list is being
+  /// generated.
+  void ClearThreadCache();
+
 private:
   const PlanStack &GetStackOfKind(ThreadPlanStack::StackKind kind) const;
 
@@ -143,6 +149,15 @@ public:
       return nullptr;
     else
       return &result->second;
+  }
+
+  /// Clear the Thread* cache that each ThreadPlan contains.
+  ///
+  /// This is useful in situations like when a new Thread list is being
+  /// generated.
+  void ClearThreadCache() {
+    for (auto &plan_list : m_plans_list)
+      plan_list.second.ClearThreadCache();
   }
 
   void Clear() {

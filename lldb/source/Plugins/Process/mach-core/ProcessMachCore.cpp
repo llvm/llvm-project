@@ -536,8 +536,8 @@ lldb_private::DynamicLoader *ProcessMachCore::GetDynamicLoader() {
   return m_dyld_up.get();
 }
 
-bool ProcessMachCore::UpdateThreadList(ThreadList &old_thread_list,
-                                       ThreadList &new_thread_list) {
+bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
+                                         ThreadList &new_thread_list) {
   if (old_thread_list.GetSize(false) == 0) {
     // Make up the thread the first time this is called so we can setup our one
     // and only core thread state.
