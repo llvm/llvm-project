@@ -50,3 +50,105 @@ define i64 @shift_i64_i64(i64 %a, i64 %b) {
   %result = shl i64 %a, %b
   ret i64 %result
 }
+
+define i8 @lsl_i8_1(i8 %a) {
+; CHECK-LABEL: lsl_i8_1:
+; CHECK:       lsl r24
+  %res = shl i8 %a, 1
+  ret i8 %res
+}
+
+define i8 @lsl_i8_2(i8 %a) {
+; CHECK-LABEL: lsl_i8_2:
+; CHECK:       lsl r24
+; CHECK-NEXT:  lsl r24
+  %res = shl i8 %a, 2
+  ret i8 %res
+}
+
+define i8 @lsl_i8_3(i8 %a) {
+; CHECK-LABEL: lsl_i8_3:
+; CHECK:       lsl r24
+; CHECK-NEXT:  lsl r24
+; CHECK-NEXT:  lsl r24
+  %res = shl i8 %a, 3
+  ret i8 %res
+}
+
+define i8 @lsl_i8_4(i8 %a) {
+; CHECK-LABEL: lsl_i8_4:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, -16
+  %res = shl i8 %a, 4
+  ret i8 %res
+}
+
+define i8 @lsl_i8_5(i8 %a) {
+; CHECK-LABEL: lsl_i8_5:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, -16
+; CHECK-NEXT:  lsl r24
+  %res = shl i8 %a, 5
+  ret i8 %res
+}
+
+define i8 @lsl_i8_6(i8 %a) {
+; CHECK-LABEL: lsl_i8_6:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, -16
+; CHECK-NEXT:  lsl r24
+; CHECK-NEXT:  lsl r24
+  %res = shl i8 %a, 6
+  ret i8 %res
+}
+
+define i8 @lsr_i8_1(i8 %a) {
+; CHECK-LABEL: lsr_i8_1:
+; CHECK:       lsr r24
+  %res = lshr i8 %a, 1
+  ret i8 %res
+}
+
+define i8 @lsr_i8_2(i8 %a) {
+; CHECK-LABEL: lsr_i8_2:
+; CHECK:       lsr r24
+; CHECK-NEXT:  lsr r24
+  %res = lshr i8 %a, 2
+  ret i8 %res
+}
+
+define i8 @lsr_i8_3(i8 %a) {
+; CHECK-LABEL: lsr_i8_3:
+; CHECK:       lsr r24
+; CHECK-NEXT:  lsr r24
+; CHECK-NEXT:  lsr r24
+  %res = lshr i8 %a, 3
+  ret i8 %res
+}
+
+define i8 @lsr_i8_4(i8 %a) {
+; CHECK-LABEL: lsr_i8_4:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, 15
+  %res = lshr i8 %a, 4
+  ret i8 %res
+}
+
+define i8 @lsr_i8_5(i8 %a) {
+; CHECK-LABEL: lsr_i8_5:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, 15
+; CHECK-NEXT:  lsr r24
+  %res = lshr i8 %a, 5
+  ret i8 %res
+}
+
+define i8 @lsr_i8_6(i8 %a) {
+; CHECK-LABEL: lsr_i8_6:
+; CHECK:       swap r24
+; CHECK-NEXT:  andi r24, 15
+; CHECK-NEXT:  lsr r24
+; CHECK-NEXT:  lsr r24
+  %res = lshr i8 %a, 6
+  ret i8 %res
+}
