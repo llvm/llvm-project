@@ -752,8 +752,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
   } else {
     // Seed DirtyBlocks with each of the preds of QueryInst's block.
     BasicBlock *QueryBB = QueryCall->getParent();
-    for (BasicBlock *Pred : PredCache.get(QueryBB))
-      DirtyBlocks.push_back(Pred);
+    append_range(DirtyBlocks, PredCache.get(QueryBB));
     ++NumUncacheNonLocal;
   }
 
@@ -838,8 +837,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
 
       // If the block *is* completely transparent to the load, we need to check
       // the predecessors of this block.  Add them to our worklist.
-      for (BasicBlock *Pred : PredCache.get(DirtyBB))
-        DirtyBlocks.push_back(Pred);
+      append_range(DirtyBlocks, PredCache.get(DirtyBB));
     }
   }
 
