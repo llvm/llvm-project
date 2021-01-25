@@ -275,6 +275,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool HasSpilledVGPRs = false;
   uint32_t HighBitsOf32BitAddress = 0;
 
+  // TODO: 10 may be a better default since it's the maximum.
+  unsigned Occupancy = 0;
+
   StringValue ScratchRSrcReg = "$private_rsrc_reg";
   StringValue FrameOffsetReg = "$fp_reg";
   StringValue StackPtrOffsetReg = "$sp_reg";
@@ -313,6 +316,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
+    YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
   }
 };
 
