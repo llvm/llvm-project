@@ -361,9 +361,10 @@ AlignTokenSequence(unsigned Start, unsigned End, unsigned Column, F &&Matches,
 // that are split across multiple lines. See the test case in FormatTest.cpp
 // that mentions "split function parameter alignment" for an example of this.
 template <typename F>
-static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
-                            SmallVector<WhitespaceManager::Change, 16> &Changes,
-                            unsigned StartAt) {
+static unsigned AlignTokens(
+    const FormatStyle &Style, F &&Matches,
+    SmallVector<WhitespaceManager::Change, 16> &Changes, unsigned StartAt,
+    const FormatStyle::AlignConsecutiveStyle &ACS = FormatStyle::ACS_None) {
   unsigned MinColumn = 0;
   unsigned MaxColumn = UINT_MAX;
 
@@ -385,6 +386,9 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   // Whether a matching token has been found on the current line.
   bool FoundMatchOnLine = false;
+
+  // Whether the current line consists purely of comments.
+  bool LineIsComment = true;
 
   // Aligns a sequence of matching tokens, on the MinColumn column.
   //
@@ -411,19 +415,38 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     if (Changes[i].NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
       EndOfSequence = i;
-      // If there is a blank line, or if the last line didn't contain any
-      // matching token, the sequence ends here.
-      if (Changes[i].NewlinesBefore > 1 || !FoundMatchOnLine)
+
+      // Whether to break the alignment sequence because of an empty line.
+      bool EmptyLineBreak =
+          (Changes[i].NewlinesBefore > 1) &&
+          (ACS != FormatStyle::ACS_AcrossEmptyLines) &&
+          (ACS != FormatStyle::ACS_AcrossEmptyLinesAndComments);
+
+      // Whether to break the alignment sequence because of a line without a
+      // match.
+      bool NoMatchBreak =
+          !FoundMatchOnLine &&
+          !(LineIsComment &&
+            ((ACS == FormatStyle::ACS_AcrossComments) ||
+             (ACS == FormatStyle::ACS_AcrossEmptyLinesAndComments)));
+
+      if (EmptyLineBreak || NoMatchBreak)
         AlignCurrentSequence();
 
+      // A new line starts, re-initialize line status tracking bools.
       FoundMatchOnLine = false;
+      LineIsComment = true;
+    }
+
+    if (!Changes[i].Tok->is(tok::comment)) {
+      LineIsComment = false;
     }
 
     if (Changes[i].Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
     } else if (Changes[i].indentAndNestingLevel() > IndentAndNestingLevel) {
       // Call AlignTokens recursively, skipping over this scope block.
-      unsigned StoppedAt = AlignTokens(Style, Matches, Changes, i);
+      unsigned StoppedAt = AlignTokens(Style, Matches, Changes, i, ACS);
       i = StoppedAt - 1;
       continue;
     }
@@ -518,7 +541,7 @@ static void AlignMacroSequence(
 }
 
 void WhitespaceManager::alignConsecutiveMacros() {
-  if (!Style.AlignConsecutiveMacros)
+  if (Style.AlignConsecutiveMacros == FormatStyle::ACS_None)
     return;
 
   auto AlignMacrosMatches = [](const Change &C) {
@@ -560,17 +583,41 @@ void WhitespaceManager::alignConsecutiveMacros() {
   // Whether a matching token has been found on the current line.
   bool FoundMatchOnLine = false;
 
+  // Whether the current line consists only of comments
+  bool LineIsComment = true;
+
   unsigned I = 0;
   for (unsigned E = Changes.size(); I != E; ++I) {
     if (Changes[I].NewlinesBefore != 0) {
       EndOfSequence = I;
-      // If there is a blank line, or if the last line didn't contain any
-      // matching token, the sequence ends here.
-      if (Changes[I].NewlinesBefore > 1 || !FoundMatchOnLine)
+
+      // Whether to break the alignment sequence because of an empty line.
+      bool EmptyLineBreak =
+          (Changes[I].NewlinesBefore > 1) &&
+          (Style.AlignConsecutiveMacros != FormatStyle::ACS_AcrossEmptyLines) &&
+          (Style.AlignConsecutiveMacros !=
+           FormatStyle::ACS_AcrossEmptyLinesAndComments);
+
+      // Whether to break the alignment sequence because of a line without a
+      // match.
+      bool NoMatchBreak =
+          !FoundMatchOnLine &&
+          !(LineIsComment && ((Style.AlignConsecutiveMacros ==
+                               FormatStyle::ACS_AcrossComments) ||
+                              (Style.AlignConsecutiveMacros ==
+                               FormatStyle::ACS_AcrossEmptyLinesAndComments)));
+
+      if (EmptyLineBreak || NoMatchBreak)
         AlignMacroSequence(StartOfSequence, EndOfSequence, MinColumn, MaxColumn,
                            FoundMatchOnLine, AlignMacrosMatches, Changes);
 
+      // A new line starts, re-initialize line status tracking bools.
       FoundMatchOnLine = false;
+      LineIsComment = true;
+    }
+
+    if (!Changes[I].Tok->is(tok::comment)) {
+      LineIsComment = false;
     }
 
     if (!AlignMacrosMatches(Changes[I]))
@@ -597,7 +644,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
 }
 
 void WhitespaceManager::alignConsecutiveAssignments() {
-  if (!Style.AlignConsecutiveAssignments)
+  if (Style.AlignConsecutiveAssignments == FormatStyle::ACS_None)
     return;
 
   AlignTokens(
@@ -613,11 +660,11 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 
         return C.Tok->is(tok::equal);
       },
-      Changes, /*StartAt=*/0);
+      Changes, /*StartAt=*/0, Style.AlignConsecutiveAssignments);
 }
 
 void WhitespaceManager::alignConsecutiveBitFields() {
-  if (!Style.AlignConsecutiveBitFields)
+  if (Style.AlignConsecutiveBitFields == FormatStyle::ACS_None)
     return;
 
   AlignTokens(
@@ -633,11 +680,11 @@ void WhitespaceManager::alignConsecutiveBitFields() {
 
         return C.Tok->is(TT_BitFieldColon);
       },
-      Changes, /*StartAt=*/0);
+      Changes, /*StartAt=*/0, Style.AlignConsecutiveBitFields);
 }
 
 void WhitespaceManager::alignConsecutiveDeclarations() {
-  if (!Style.AlignConsecutiveDeclarations)
+  if (Style.AlignConsecutiveDeclarations == FormatStyle::ACS_None)
     return;
 
   // FIXME: Currently we don't handle properly the PointerAlignment: Right
@@ -670,7 +717,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
         }
         return true;
       },
-      Changes, /*StartAt=*/0);
+      Changes, /*StartAt=*/0, Style.AlignConsecutiveDeclarations);
 }
 
 void WhitespaceManager::alignChainedConditionals() {
