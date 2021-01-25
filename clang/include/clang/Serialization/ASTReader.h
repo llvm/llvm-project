@@ -23,6 +23,7 @@
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PreprocessingRecord.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/Sema.h"
@@ -440,6 +441,9 @@ private:
   /// The location where the module file will be considered as
   /// imported from. For non-module AST types it should be invalid.
   SourceLocation CurrentImportLoc;
+
+  /// The module kind that is currently deserializing.
+  Optional<ModuleKind> CurrentDeserializingModuleKind;
 
   /// The global module index, if loaded.
   std::unique_ptr<GlobalModuleIndex> GlobalIndex;
@@ -931,8 +935,8 @@ private:
   std::string isysroot;
 
   /// Whether to disable the normal validation performed on precompiled
-  /// headers when they are loaded.
-  bool DisableValidation;
+  /// headers and module files when they are loaded.
+  DisableValidationForModuleKind DisableValidationKind;
 
   /// Whether to accept an AST file with compiler errors.
   bool AllowASTWithCompilerErrors;
@@ -1215,6 +1219,8 @@ private:
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
+  bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
+
   /// Reads a statement from the specified cursor.
   Stmt *ReadStmtFromStream(ModuleFile &F);
 
@@ -1473,9 +1479,9 @@ public:
   /// user. This is only used with relocatable PCH files. If non-NULL,
   /// a relocatable PCH file will use the default path "/".
   ///
-  /// \param DisableValidation If true, the AST reader will suppress most
+  /// \param DisableValidationKind If set, the AST reader will suppress most
   /// of its regular consistency checking, allowing the use of precompiled
-  /// headers that cannot be determined to be compatible.
+  /// headers and module files that cannot be determined to be compatible.
   ///
   /// \param AllowASTWithCompilerErrors If true, the AST reader will accept an
   /// AST file the was created out of an AST with compiler errors,
@@ -1496,7 +1502,9 @@ public:
   ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
             ASTContext *Context, const PCHContainerReader &PCHContainerRdr,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            StringRef isysroot = "", bool DisableValidation = false,
+            StringRef isysroot = "",
+            DisableValidationForModuleKind DisableValidationKind =
+                DisableValidationForModuleKind::None,
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,

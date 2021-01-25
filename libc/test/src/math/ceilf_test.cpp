@@ -19,7 +19,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
-TEST(CeilfTest, SpecialNumbers) {
+TEST(LlvmLibcCeilfTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::ceilf(zero));
   EXPECT_FP_EQ(negZero, __llvm_libc::ceilf(negZero));
 
@@ -29,7 +29,7 @@ TEST(CeilfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::ceilf(aNaN));
 }
 
-TEST(CeilfTest, RoundedNumbers) {
+TEST(LlvmLibcCeilfTest, RoundedNumbers) {
   EXPECT_FP_EQ(1.0f, __llvm_libc::ceilf(1.0f));
   EXPECT_FP_EQ(-1.0f, __llvm_libc::ceilf(-1.0f));
   EXPECT_FP_EQ(10.0f, __llvm_libc::ceilf(10.0f));
@@ -38,7 +38,7 @@ TEST(CeilfTest, RoundedNumbers) {
   EXPECT_FP_EQ(-1234.0f, __llvm_libc::ceilf(-1234.0f));
 }
 
-TEST(CeilfTest, Fractions) {
+TEST(LlvmLibcCeilfTest, Fractions) {
   EXPECT_FP_EQ(1.0f, __llvm_libc::ceilf(0.5f));
   EXPECT_FP_EQ(-0.0f, __llvm_libc::ceilf(-0.5f));
   EXPECT_FP_EQ(1.0f, __llvm_libc::ceilf(0.115f));
@@ -61,7 +61,7 @@ TEST(CeilfTest, Fractions) {
   EXPECT_FP_EQ(-1234.0f, __llvm_libc::ceilf(-1234.96f));
 }
 
-TEST(CeilfTest, InFloatRange) {
+TEST(LlvmLibcCeilfTest, InFloatRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 1000000;
   constexpr UIntType step = UIntType(-1) / count;

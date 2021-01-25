@@ -455,8 +455,8 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
-  create(std::string name, llvm::Optional<std::vector<PyValue *>> operands,
-         llvm::Optional<std::vector<PyType *>> results,
+  create(std::string name, llvm::Optional<std::vector<PyType *>> results,
+         llvm::Optional<std::vector<PyValue *>> operands,
          llvm::Optional<pybind11::dict> attributes,
          llvm::Optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, pybind11::object ip);
@@ -498,12 +498,12 @@ public:
   pybind11::object getOperationObject() { return operationObject; }
 
   static pybind11::object
-  odsBuildDefault(pybind11::object cls, pybind11::list operandList,
-                  pybind11::list resultTypeList,
-                  llvm::Optional<pybind11::dict> attributes,
-                  llvm::Optional<std::vector<PyBlock *>> successors,
-                  llvm::Optional<int> regions, DefaultingPyLocation location,
-                  pybind11::object maybeIp);
+  buildGeneric(pybind11::object cls, pybind11::list resultTypeList,
+               pybind11::list operandList,
+               llvm::Optional<pybind11::dict> attributes,
+               llvm::Optional<std::vector<PyBlock *>> successors,
+               llvm::Optional<int> regions, DefaultingPyLocation location,
+               pybind11::object maybeIp);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++

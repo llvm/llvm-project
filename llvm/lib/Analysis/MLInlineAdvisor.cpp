@@ -66,8 +66,8 @@ CallBase *getInlinableCS(Instruction &I) {
 MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
                                  std::unique_ptr<MLModelRunner> Runner)
     : InlineAdvisor(
-          MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      M(M), ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
+          M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
+      ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
 

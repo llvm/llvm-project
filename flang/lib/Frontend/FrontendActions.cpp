@@ -61,6 +61,9 @@ void PrintPreprocessedAction::ExecuteAction() {
     return;
   }
 
+  // Print diagnostics from the preprocessor
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
   // Create a file and save the preprocessed output there
   if (auto os{ci.CreateDefaultOutputFile(
           /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName())}) {

@@ -1140,5 +1140,69 @@ for.end:
   ret void
 }
 
+; Invoke is not a conditional branch that we can optimize,
+; so this shouldn't be peeled at all.  This is a reproducer
+; for a bug where evaluating the loop would fail an assertion.
+define void @test17() personality i8* undef{
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:  body:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CONST:%.*]] = phi i64 [ -33, [[LOOP]] ], [ -20, [[BODY:%.*]] ]
+; CHECK-NEXT:    invoke void @f1()
+; CHECK-NEXT:    to label [[LOOP]] unwind label [[EH_UNW_LOOPEXIT:%.*]]
+; CHECK:       eh.Unw.loopexit:
+; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    ret void
+;
+body:
+  br label %loop
+
+loop:
+  %const = phi i64 [ -33, %loop ], [ -20, %body ]
+  invoke void @f1()
+  to label %loop unwind label %eh.Unw.loopexit
+
+eh.Unw.loopexit:
+  %lpad.loopexit = landingpad { i8*, i32 }
+  catch i8* null
+  ret void
+}
+
+; Testcase reduced from PR48812.  We expect no peeling
+; because the latch terminator is a switch.
+define void @test18(i32* %p) {
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:  init:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CONST:%.*]] = phi i32 [ 40, [[INIT:%.*]] ], [ 0, [[LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[CONTROL:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    switch i32 [[CONTROL]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 2, label [[LOOP]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+init:
+  br label %loop
+
+loop:
+  %const = phi i32 [ 40, %init ], [ 0, %latch ]
+  br label %latch
+
+latch:
+  %control = load volatile i32, i32* %p
+  switch i32 %control, label %exit [
+  i32 2, label %loop
+  ]
+
+exit:
+  ret void
+}
+
 declare void @init()
 declare void @sink()

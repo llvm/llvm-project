@@ -28,7 +28,6 @@ add_llvm_component_library(LLVMTransformUtils
   GlobalStatus.cpp
   GuardUtils.cpp
   InlineFunction.cpp
-  ImportedFunctionsInliningStatistics.cpp
   InjectTLIMappings.cpp
   InstructionNamer.cpp
   IntegerDivision.cpp

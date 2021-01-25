@@ -102,30 +102,34 @@ define i32* @test5_2() {
 ; TEST 6
 ; SCC
 define i32* @test6_1() #0 {
-; NOT_CGSCC_NPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test6_1
-; NOT_CGSCC_NPM-SAME: () [[ATTR1:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
+; NOT_CGSCC_OPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
+; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test6_1
+; NOT_CGSCC_OPM-SAME: () [[ATTR1:#.*]] {
+; NOT_CGSCC_OPM-NEXT:    [[RET:%.*]] = tail call i32* @test6_2() [[ATTR11:#.*]]
+; NOT_CGSCC_OPM-NEXT:    unreachable
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test6_1
-; IS__CGSCC_NPM-SAME: () [[ATTR1:#.*]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_OPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test6_1
+; IS__CGSCC_OPM-SAME: () [[ATTR1:#.*]] {
+; IS__CGSCC_OPM-NEXT:    [[RET:%.*]] = tail call i32* @test6_2() [[ATTR12:#.*]]
+; IS__CGSCC_OPM-NEXT:    unreachable
 ;
   %ret = tail call i32* @test6_2()
   ret i32* %ret
 }
 
 define i32* @test6_2() #0 {
-; NOT_CGSCC_NPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test6_2
-; NOT_CGSCC_NPM-SAME: () [[ATTR1]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
+; NOT_CGSCC_OPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
+; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test6_2
+; NOT_CGSCC_OPM-SAME: () [[ATTR1]] {
+; NOT_CGSCC_OPM-NEXT:    [[RET:%.*]] = tail call i32* @test6_1() [[ATTR11]]
+; NOT_CGSCC_OPM-NEXT:    unreachable
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test6_2
-; IS__CGSCC_NPM-SAME: () [[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_OPM: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test6_2
+; IS__CGSCC_OPM-SAME: () [[ATTR1]] {
+; IS__CGSCC_OPM-NEXT:    [[RET:%.*]] = tail call i32* @test6_1() [[ATTR12]]
+; IS__CGSCC_OPM-NEXT:    unreachable
 ;
   %ret = tail call i32* @test6_1()
   ret i32* %ret
@@ -967,7 +971,7 @@ define i32 @musttail_caller_1(i32* %p) {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = load i1, i1* @cnd, align 1
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[MT:%.*]], label [[EXIT:%.*]]
 ; IS__CGSCC_OPM:       mt:
-; IS__CGSCC_OPM-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]]) [[ATTR12:#.*]]
+; IS__CGSCC_OPM-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]]) [[ATTR13:#.*]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[V]]
 ; IS__CGSCC_OPM:       exit:
 ; IS__CGSCC_OPM-NEXT:    ret i32 0
@@ -978,7 +982,7 @@ define i32 @musttail_caller_1(i32* %p) {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = load i1, i1* @cnd, align 1
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[MT:%.*]], label [[EXIT:%.*]]
 ; IS__CGSCC_NPM:       mt:
-; IS__CGSCC_NPM-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]]) [[ATTR11:#.*]]
+; IS__CGSCC_NPM-NEXT:    [[V:%.*]] = musttail call i32 @musttail_callee_1(i32* nocapture nofree nonnull readonly dereferenceable(4) [[P]]) [[ATTR12:#.*]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[V]]
 ; IS__CGSCC_NPM:       exit:
 ; IS__CGSCC_NPM-NEXT:    ret i32 0
@@ -1040,6 +1044,19 @@ return:                                           ; preds = %entry, %if.then
   call void @user_i32_ptr(i32* %retval.0)
   ret i32* %retval.0
 }
+
+; FIXME: align 4 should not be propagated to the caller's p unless there is noundef
+define void @align4_caller(i8* %p) {
+; CHECK-LABEL: define {{[^@]+}}@align4_caller
+; CHECK-SAME: (i8* align 4 [[P:%.*]]) {
+; CHECK-NEXT:    call void @align4_callee(i8* align 4 [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @align4_callee(i8* %p)
+  ret void
+}
+
+declare void @align4_callee(i8* align(4) %p)
 
 
 attributes #0 = { nounwind uwtable noinline }

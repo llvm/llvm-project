@@ -115,6 +115,31 @@ Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
   return invertedMap.compose(viewSizes);
 }
 
+/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
+/// is a constant then return a new value set to the smallest such constant.
+/// Otherwise returngetSmallestBoundingIndex nullptr.
+IntegerAttr getSmallestBoundingIndex(Value size) {
+  Optional<int64_t> boundingConst = {};
+  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
+    for (auto e : affineMinOp.getAffineMap().getResults())
+      if (auto cst = e.dyn_cast<AffineConstantExpr>())
+        boundingConst = boundingConst
+                            ? std::min(boundingConst.getValue(), cst.getValue())
+                            : cst.getValue();
+  } else if (auto constIndexOp = size.getDefiningOp<ConstantOp>()) {
+    if (constIndexOp.getType().isa<IndexType>())
+      boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
+  } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
+    if (auto cExpr = affineApplyOp.getAffineMap()
+                         .getResult(0)
+                         .dyn_cast<AffineConstantExpr>())
+      boundingConst = cExpr.getValue();
+  }
+  if (boundingConst && *boundingConst >= 0)
+    return Builder(size.getContext()).getIndexAttr(*boundingConst);
+  return nullptr;
+}
+
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(

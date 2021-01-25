@@ -133,12 +133,12 @@ public:
 };
 
 #define LIST_REMQUO_TESTS(T, func)                                             \
-  using RemQuoTest = RemQuoTestTemplate<T>;                                    \
-  TEST_F(RemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }            \
-  TEST_F(RemQuoTest, EqualNumeratorAndDenominator) {                           \
+  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
+  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
+  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
     testEqualNumeratorAndDenominator(&func);                                   \
   }                                                                            \
-  TEST_F(RemQuoTest, SubnormalRange) { testSubnormalRange(&func); }            \
-  TEST_F(RemQuoTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibcRemQuoTest, SubnormalRange) { testSubnormalRange(&func); }    \
+  TEST_F(LlvmLibcRemQuoTest, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H

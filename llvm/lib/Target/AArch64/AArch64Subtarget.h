@@ -221,6 +221,7 @@ protected:
   bool UseAlternateSExtLoadCVTF32Pattern = false;
   bool HasArithmeticBccFusion = false;
   bool HasArithmeticCbzFusion = false;
+  bool HasCmpBccFusion = false;
   bool HasFuseAddress = false;
   bool HasFuseAES = false;
   bool HasFuseArithmeticLogic = false;
@@ -377,6 +378,7 @@ public:
   }
   bool hasArithmeticBccFusion() const { return HasArithmeticBccFusion; }
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
+  bool hasCmpBccFusion() const { return HasCmpBccFusion; }
   bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseArithmeticLogic() const { return HasFuseArithmeticLogic; }
@@ -482,7 +484,10 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  bool isTargetILP32() const { return TargetTriple.isArch32Bit(); }
+  bool isTargetILP32() const {
+    return TargetTriple.isArch32Bit() ||
+           TargetTriple.getEnvironment() == Triple::GNUILP32;
+  }
 
   bool useAA() const override { return UseAA; }
 

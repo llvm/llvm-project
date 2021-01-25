@@ -1,0 +1,9 @@
+#include "stdio.h"
+
+namespace std {
+  inline namespace __1 {
+    template<typename T>
+    struct vector {
+    };
+  }
+}

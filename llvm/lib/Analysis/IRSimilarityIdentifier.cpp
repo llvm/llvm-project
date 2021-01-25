@@ -124,15 +124,13 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
 
     auto ZippedOperands = zip(GEP->indices(), OtherGEP->indices());
 
-    auto ZIt = ZippedOperands.begin();
-
     // We increment here since we do not care about the first instruction,
     // we only care about the following operands since they must be the
     // exact same to be considered similar.
-    return std::all_of(++ZIt, ZippedOperands.end(),
-                       [](std::tuple<llvm::Use &, llvm::Use &> R) {
-                         return std::get<0>(R) == std::get<1>(R);
-                       });
+    return all_of(drop_begin(ZippedOperands),
+                  [](std::tuple<llvm::Use &, llvm::Use &> R) {
+                    return std::get<0>(R) == std::get<1>(R);
+                  });
   }
 
   // If the instructions are functions, we make sure that the function name is

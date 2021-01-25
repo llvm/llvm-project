@@ -112,6 +112,7 @@ static lto::Config createConfig() {
     }
   }
 
+  c.Options.PseudoProbeForProfiling = config->ltoPseudoProbeForProfiling;
   c.Options.UniqueBasicBlockSectionNames =
       config->ltoUniqueBasicBlockSectionNames;
 

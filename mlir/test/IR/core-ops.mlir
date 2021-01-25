@@ -89,24 +89,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %[[F7:.*]] = powf %[[F2]], %[[F2]] : f32
   %f7 = powf %f2, %f2 : f32
 
-  // CHECK: %[[C0:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
-  %c0 = "std.create_complex"(%f2, %f2) : (f32, f32) -> complex<f32>
-
-  // CHECK: %[[C1:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
-  %c1 = create_complex %f2, %f2 : complex<f32>
-
-  // CHECK: %[[REAL0:.*]] = re %[[CPLX0:.*]] : complex<f32>
-  %real0 = "std.re"(%c0) : (complex<f32>) -> f32
-
-  // CHECK: %[[REAL1:.*]] = re %[[CPLX0]] : complex<f32>
-  %real1 = re %c0 : complex<f32>
-
-  // CHECK: %[[IMAG0:.*]] = im %[[CPLX0]] : complex<f32>
-  %imag0 = "std.im"(%c0) : (complex<f32>) -> f32
-
-  // CHECK: %[[IMAG1:.*]] = im %[[CPLX0]] : complex<f32>
-  %imag1 = im %c0 : complex<f32>
-
   // CHECK: %c42_i32 = constant 42 : i32
   %x = "std.constant"(){value = 42 : i32} : () -> i32
 
@@ -596,6 +578,9 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_4, %cst_4 : tensor<42xi32>
   %174 = ceildivi_signed %tci32, %tci32 : tensor<42 x i32>
 
+  // CHECK: %{{[0-9]+}} = log1p %arg1 : f32
+  %175 = log1p %f : f32
+
   return
 }
 
@@ -905,7 +890,11 @@ func @subtensor(%t: tensor<8x16x4xf32>, %idx : index) {
 }
 
 // CHECK-LABEL: func @subtensor_insert({{.*}}) {
-func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : index) {
+func @subtensor_insert(
+    %t: tensor<8x16x4xf32>, 
+    %t2: tensor<16x32x8xf32>, 
+    %t3: tensor<4x4xf32>, 
+    %idx : index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
 
@@ -918,6 +907,11 @@ func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : 
   // CHECK-SAME: tensor<8x16x4xf32> into tensor<16x32x8xf32>
   %2 = subtensor_insert %t into %t2[%c0, %idx, %c0][%idx, 4, %idx][%c1, 1, %c1]
     : tensor<8x16x4xf32> into tensor<16x32x8xf32>
+
+  // CHECK: subtensor_insert
+  // CHECK-SAME: tensor<4x4xf32> into tensor<8x16x4xf32>
+  %3 = subtensor_insert %t3 into %t[0, 2, 0][4, 1, 4][1, 1, 1]
+    : tensor<4x4xf32> into tensor<8x16x4xf32>
 
   return
 }

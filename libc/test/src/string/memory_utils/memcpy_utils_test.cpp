@@ -79,7 +79,7 @@ extern "C" void LLVM_LIBC_MEMCPY_MONITOR(char *__restrict dst,
 
 char *I(uintptr_t offset) { return reinterpret_cast<char *>(offset); }
 
-TEST(MemcpyUtilsTest, CopyTrivial) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyTrivial) {
   auto &trace = GetTrace();
 
   trace.Clear();
@@ -122,7 +122,7 @@ TEST(MemcpyUtilsTest, CopyTrivial) {
       "1111111111111111111111111111111111111111111111111111111111111111");
 }
 
-TEST(MemcpyUtilsTest, CopyOffset) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyOffset) {
   auto &trace = GetTrace();
 
   trace.Clear();
@@ -136,7 +136,7 @@ TEST(MemcpyUtilsTest, CopyOffset) {
   EXPECT_STREQ(trace.Read(), "01");
 }
 
-TEST(MemcpyUtilsTest, CopyBlockOverlap) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyBlockOverlap) {
   auto &trace = GetTrace();
 
   trace.Clear();
@@ -160,7 +160,7 @@ TEST(MemcpyUtilsTest, CopyBlockOverlap) {
   EXPECT_STREQ(trace.Read(), "01112111");
 }
 
-TEST(MemcpyUtilsTest, CopyAlignedBlocks) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
   auto &trace = GetTrace();
   // Source is aligned and multiple of alignment.
   //   "1111"
@@ -211,7 +211,7 @@ TEST(MemcpyUtilsTest, CopyAlignedBlocks) {
   EXPECT_STREQ(trace.Read(), "011121111111");
 }
 
-TEST(MemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
   auto &trace = GetTrace();
   // Source is aligned and multiple of alignment.
   //   "11111111"
@@ -228,7 +228,7 @@ TEST(MemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
   EXPECT_STREQ(trace.Read(), "122211111");
 }
 
-TEST(MemcpyUtilsTest, CopyAlignedBlocksMaxReloads) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksMaxReloads) {
   auto &trace = GetTrace();
   for (size_t alignment = 0; alignment < 32; ++alignment) {
     for (size_t count = 64; count < 768; ++count) {
@@ -248,7 +248,7 @@ TEST(MemcpyUtilsTest, CopyAlignedBlocksMaxReloads) {
   }
 }
 
-TEST(MemcpyUtilsTest, CopyAlignedBlocksWithAlignmentMaxReloads) {
+TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksWithAlignmentMaxReloads) {
   auto &trace = GetTrace();
   for (size_t alignment = 0; alignment < 32; ++alignment) {
     for (size_t count = 64; count < 768; ++count) {

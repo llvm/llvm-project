@@ -1527,9 +1527,24 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
 bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   // [CUDA] Ignore this function, if we can't call it.
   const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
-  if (getLangOpts().CUDA &&
-      IdentifyCUDAPreference(Caller, Method) <= CFP_WrongSide)
-    return false;
+  if (getLangOpts().CUDA) {
+    auto CallPreference = IdentifyCUDAPreference(Caller, Method);
+    // If it's not callable at all, it's not the right function.
+    if (CallPreference < CFP_WrongSide)
+      return false;
+    if (CallPreference == CFP_WrongSide) {
+      // Maybe. We have to check if there are better alternatives.
+      DeclContext::lookup_result R =
+          Method->getDeclContext()->lookup(Method->getDeclName());
+      for (const auto *D : R) {
+        if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+          if (IdentifyCUDAPreference(Caller, FD) > CFP_WrongSide)
+            return false;
+        }
+      }
+      // We've found no better variants.
+    }
+  }
 
   SmallVector<const FunctionDecl*, 4> PreventedBy;
   bool Result = Method->isUsualDeallocationFunction(PreventedBy);

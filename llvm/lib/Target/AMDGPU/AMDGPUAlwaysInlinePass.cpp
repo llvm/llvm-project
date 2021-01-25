@@ -81,8 +81,7 @@ recursivelyVisitUsers(GlobalValue &GV,
       continue;
     }
 
-    for (User *UU : U->users())
-      Stack.push_back(UU);
+    append_range(Stack, U->users());
   }
 }
 

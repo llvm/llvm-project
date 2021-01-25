@@ -1842,12 +1842,15 @@ bool X86AsmParser::ParseMasmNamedOperator(StringRef Name,
 
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
   StringRef ErrMsg;
 
   AsmToken::TokenKind PrevTK = AsmToken::Error;
   bool Done = false;
   while (!Done) {
+    // Get a fresh reference on each loop iteration in case the previous
+    // iteration moved the token storage during UnLex().
+    const AsmToken &Tok = Parser.getTok();
+
     bool UpdateLocLex = true;
     AsmToken::TokenKind TK = getLexer().getKind();
 
@@ -3260,11 +3263,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // repz repnz <insn>    ; GAS errors for the use of two similar prefixes
   // lock addq %rax, %rbx ; Destination operand must be of memory type
   // xacquire <insn>      ; xacquire must be accompanied by 'lock'
-  bool isPrefix = StringSwitch<bool>(Name)
-                      .Cases("rex64", "data32", "data16", true)
-                      .Cases("xacquire", "xrelease", true)
-                      .Cases("acquire", "release", isParsingIntelSyntax())
-                      .Default(false);
+  bool IsPrefix =
+      StringSwitch<bool>(Name)
+          .Cases("cs", "ds", "es", "fs", "gs", "ss", true)
+          .Cases("rex64", "data32", "data16", "addr32", "addr16", true)
+          .Cases("xacquire", "xrelease", true)
+          .Cases("acquire", "release", isParsingIntelSyntax())
+          .Default(false);
 
   auto isLockRepeatNtPrefix = [](StringRef N) {
     return StringSwitch<bool>(N)
@@ -3333,7 +3338,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       Name = Next;
       PatchedName = Name;
       ForcedDataPrefix = X86::Mode32Bit;
-      isPrefix = false;
+      IsPrefix = false;
     }
   }
 
@@ -3350,7 +3355,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
   // just want to parse the "lock" as the first instruction and the "incl" as
   // the next one.
-  if (getLexer().isNot(AsmToken::EndOfStatement) && !isPrefix) {
+  if (getLexer().isNot(AsmToken::EndOfStatement) && !IsPrefix) {
     // Parse '*' modifier.
     if (getLexer().is(AsmToken::Star))
       Operands.push_back(X86Operand::CreateToken("*", consumeToken()));
@@ -3387,7 +3392,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Consume the EndOfStatement or the prefix separator Slash
   if (getLexer().is(AsmToken::EndOfStatement) ||
-      (isPrefix && getLexer().is(AsmToken::Slash)))
+      (IsPrefix && getLexer().is(AsmToken::Slash)))
     Parser.Lex();
   else if (CurlyAsEndOfStatement)
     // Add an actual EndOfStatement before the curly brace

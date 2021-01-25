@@ -347,6 +347,64 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @coro_id
+llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr<i8>) {
+  // CHECK: call token @llvm.coro.id
+  llvm.intr.coro.id %arg0, %arg1, %arg1, %arg1 : !llvm.token
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_begin
+llvm.func @coro_begin(%arg0: !llvm.token, %arg1: !llvm.ptr<i8>) {
+  // CHECK: call i8* @llvm.coro.begin
+  llvm.intr.coro.begin %arg0, %arg1 : !llvm.ptr<i8>
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_size
+llvm.func @coro_size() {
+  // CHECK: call i64 @llvm.coro.size.i64
+  %0 = llvm.intr.coro.size : i64
+  // CHECK: call i32 @llvm.coro.size.i32
+  %1 = llvm.intr.coro.size : i32
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_save
+llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
+  // CHECK: call token @llvm.coro.save
+  %0 = llvm.intr.coro.save %arg0 : !llvm.token
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_suspend
+llvm.func @coro_suspend(%arg0: !llvm.token, %arg1 : i1) {
+  // CHECK: call i8 @llvm.coro.suspend
+  %0 = llvm.intr.coro.suspend %arg0, %arg1 : !llvm.i8
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_end
+llvm.func @coro_end(%arg0: !llvm.ptr<i8>, %arg1 : i1) {
+  // CHECK: call i1 @llvm.coro.end
+  %0 = llvm.intr.coro.end %arg0, %arg1 : !llvm.i1
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_free
+llvm.func @coro_free(%arg0: !llvm.token, %arg1 : !llvm.ptr<i8>) {
+  // CHECK: call i8* @llvm.coro.free
+  %0 = llvm.intr.coro.free %arg0, %arg1 : !llvm.ptr<i8>
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_resume
+llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
+  // CHECK: call void @llvm.coro.resume
+  llvm.intr.coro.resume %arg0
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -393,3 +451,12 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
 // CHECK-DAG: declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>) #0
+// CHECK-DAG: declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+// CHECK-DAG: declare i8* @llvm.coro.begin(token, i8* writeonly)
+// CHECK-DAG: declare i64 @llvm.coro.size.i64()
+// CHECK-DAG: declare i32 @llvm.coro.size.i32()
+// CHECK-DAG: declare token @llvm.coro.save(i8*)
+// CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
+// CHECK-DAG: declare i1 @llvm.coro.end(i8*, i1)
+// CHECK-DAG: declare i8* @llvm.coro.free(token, i8* nocapture readonly)
+// CHECK-DAG: declare void @llvm.coro.resume(i8*)

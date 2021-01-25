@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Core.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"

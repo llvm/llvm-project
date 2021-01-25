@@ -29,8 +29,6 @@
 #define SHARED __attribute__((shared))
 #define ALIGN(N) __attribute__((aligned(N)))
 
-#include "hip_atomics.h"
-
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
 ////////////////////////////////////////////////////////////////////////////////
@@ -65,6 +63,10 @@ enum DATA_SHARING_SIZES {
   DS_Max_Warp_Number = 16,
 };
 
+enum : __kmpc_impl_lanemask_t {
+  __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
+};
+
 INLINE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
   hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
@@ -74,27 +76,14 @@ INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
   return (((uint64_t)hi) << 32) | (uint64_t)lo;
 }
 
-enum : __kmpc_impl_lanemask_t {
-  __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
-};
-
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt();
-
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt();
-
 DEVICE uint32_t __kmpc_impl_smid();
-
 DEVICE double __kmpc_impl_get_wtick();
-
 DEVICE double __kmpc_impl_get_wtime();
 
 INLINE uint64_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
-
 INLINE uint64_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
-
-template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
-  return x < y ? x : y;
-}
 
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask();
 
@@ -135,6 +124,19 @@ DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
+
+// Atomics
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *, uint32_t, uint32_t);
+
+static_assert(sizeof(unsigned long long) == sizeof(uint64_t), "");
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *,
+                                                 unsigned long long);
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *,
+                                            unsigned long long);
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

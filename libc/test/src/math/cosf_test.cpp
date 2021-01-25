@@ -32,7 +32,7 @@ using __llvm_libc::testing::sdcomp26094Values;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(CosfTest, SpecialNumbers) {
+TEST(LlvmLibcCosfTest, SpecialNumbers) {
   llvmlibc_errno = 0;
 
   EXPECT_TRUE(
@@ -69,7 +69,7 @@ TEST(CosfTest, SpecialNumbers) {
   EXPECT_EQ(llvmlibc_errno, EDOM);
 }
 
-TEST(CosfTest, InFloatRange) {
+TEST(LlvmLibcCosfTest, InFloatRange) {
   constexpr uint32_t count = 1000000;
   constexpr uint32_t step = UINT32_MAX / count;
   for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
@@ -81,7 +81,7 @@ TEST(CosfTest, InFloatRange) {
 }
 
 // For small values, cos(x) is 1.
-TEST(CosfTest, SmallValues) {
+TEST(LlvmLibcCosfTest, SmallValues) {
   float x = valueFromBits(0x17800000U);
   float result = __llvm_libc::cosf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result, 1.0);
@@ -95,7 +95,7 @@ TEST(CosfTest, SmallValues) {
 
 // SDCOMP-26094: check cosf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(CosfTest, SDCOMP_26094) {
+TEST(LlvmLibcCosfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
     float x = valueFromBits(v);
     ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), 1.0);

@@ -2752,9 +2752,6 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   LLT S32 = LLT::scalar(32);
   LLT S64 = LLT::scalar(64);
 
-  if (legalizeFastUnsafeFDIV(MI, MRI, B))
-    return true;
-
   if (DstTy == S16)
     return legalizeFDIV16(MI, MRI, B);
   if (DstTy == S32)
@@ -3092,9 +3089,49 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineIRBuilder &B) const {
+  Register Res = MI.getOperand(0).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
+  uint16_t Flags = MI.getFlags();
+  LLT ResTy = MRI.getType(Res);
+
+  const MachineFunction &MF = B.getMF();
+  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
+                            MI.getFlag(MachineInstr::FmAfn);
+
+  if (!AllowInaccurateRcp)
+    return false;
+
+  auto NegY = B.buildFNeg(ResTy, Y);
+  auto One = B.buildFConstant(ResTy, 1.0);
+
+  auto R = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy}, false)
+    .addUse(Y)
+    .setMIFlags(Flags);
+
+  auto Tmp0 = B.buildFMA(ResTy, NegY, R, One);
+  R = B.buildFMA(ResTy, Tmp0, R, R);
+
+  auto Tmp1 = B.buildFMA(ResTy, NegY, R, One);
+  R = B.buildFMA(ResTy, Tmp1, R, R);
+
+  auto Ret = B.buildFMul(ResTy, X, R);
+  auto Tmp2 = B.buildFMA(ResTy, NegY, Ret, X);
+
+  B.buildFMA(Res, Tmp2, R, Ret);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &B) const {
+  if (legalizeFastUnsafeFDIV(MI, MRI, B))
+    return true;
+
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
@@ -3157,6 +3194,9 @@ static void toggleSPDenormMode(bool Enable,
 bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &B) const {
+  if (legalizeFastUnsafeFDIV(MI, MRI, B))
+    return true;
+
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
@@ -3223,6 +3263,9 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &B) const {
+  if (legalizeFastUnsafeFDIV64(MI, MRI, B))
+    return true;
+
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();

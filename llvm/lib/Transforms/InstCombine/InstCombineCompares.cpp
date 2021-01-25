@@ -5328,26 +5328,8 @@ CmpInst *InstCombinerImpl::canonicalizeICmpPredicate(CmpInst &I) {
   I.setPredicate(CmpInst::getInversePredicate(Pred));
   I.setName(I.getName() + ".not");
 
-  // And now let's adjust every user.
-  for (User *U : I.users()) {
-    switch (cast<Instruction>(U)->getOpcode()) {
-    case Instruction::Select: {
-      auto *SI = cast<SelectInst>(U);
-      SI->swapValues();
-      SI->swapProfMetadata();
-      break;
-    }
-    case Instruction::Br:
-      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
-      break;
-    case Instruction::Xor:
-      replaceInstUsesWith(cast<Instruction>(*U), &I);
-      break;
-    default:
-      llvm_unreachable("Got unexpected user - out of sync with "
-                       "canFreelyInvertAllUsersOf() ?");
-    }
-  }
+  // And, adapt users.
+  freelyInvertAllUsersOf(&I);
 
   return &I;
 }

@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "gtest/gtest.h"
 
 using namespace Fortran::frontend;
 
@@ -78,6 +79,31 @@ protected:
     compInst_.ClearOutputFiles(/*EraseFiles=*/false);
   }
 };
+
+TEST_F(FrontendActionTest, TestInputOutput) {
+  // Populate the input file with the pre-defined input and flush it.
+  *(inputFileOs_) << "End Program arithmetic";
+  inputFileOs_.reset();
+
+  // Set-up the action kind.
+  compInst_.invocation().frontendOpts().programAction_ = InputOutputTest;
+
+  // Set-up the output stream. Using output buffer wrapped as an output
+  // stream, as opposed to an actual file (or a file descriptor).
+  llvm::SmallVector<char, 256> outputFileBuffer;
+  std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
+      new llvm::raw_svector_ostream(outputFileBuffer));
+  compInst_.set_outputStream(std::move(outputFileStream));
+
+  // Execute the action.
+  bool success = ExecuteCompilerInvocation(&compInst_);
+
+  // Validate the expected output.
+  EXPECT_TRUE(success);
+  EXPECT_TRUE(!outputFileBuffer.empty());
+  EXPECT_TRUE(llvm::StringRef(outputFileBuffer.data())
+                  .startswith("End Program arithmetic"));
+}
 
 TEST_F(FrontendActionTest, PrintPreprocessedInput) {
   // Populate the input file with the pre-defined input and flush it.

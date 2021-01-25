@@ -115,12 +115,14 @@ function(_check_defined_cpu_feature output_var)
     COMPILE_DEFINITIONS ${flags}
     COMPILE_OUTPUT_VARIABLE compile_output
     RUN_OUTPUT_VARIABLE run_output)
-  if(${compile_result} AND ("${run_result}" EQUAL 0))
+  if("${run_result}" EQUAL 0)
     set(${output_var}
         "${run_output}"
         PARENT_SCOPE)
+  elseif(NOT ${compile_result})
+    message(FATAL_ERROR "Failed to compile: ${compile_output}")
   else()
-    message(FATAL_ERROR "${compile_output}")
+    message(FATAL_ERROR "Failed to run: ${run_output}")
   endif()
 endfunction()
 

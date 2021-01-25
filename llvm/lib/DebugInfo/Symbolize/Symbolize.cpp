@@ -589,10 +589,8 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
   if (Front != '?') {
     size_t AtPos = SymbolName.rfind('@');
     if (AtPos != StringRef::npos &&
-        std::all_of(SymbolName.begin() + AtPos + 1, SymbolName.end(),
-                    [](char C) { return C >= '0' && C <= '9'; })) {
+        all_of(drop_begin(SymbolName, AtPos + 1), isDigit))
       SymbolName = SymbolName.substr(0, AtPos);
-    }
   }
 
   // Remove any ending '@' for vectorcall.

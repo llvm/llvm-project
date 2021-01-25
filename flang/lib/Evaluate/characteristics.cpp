@@ -100,6 +100,9 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
           [&](const semantics::AssocEntityDetails &assoc) {
             return Characterize(assoc, context);
           },
+          [&](const semantics::ProcBindingDetails &binding) {
+            return Characterize(binding.symbol(), context);
+          },
           [](const auto &) { return std::optional<TypeAndShape>{}; },
       },
       // GetUltimate() used here, not ResolveAssociations(), because
@@ -178,6 +181,12 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
   if (auto elements{GetSize(Shape{shape_})}) {
     // Sizes of arrays (even with single elements) are multiples of
     // their alignments.
+    if (LEN_) {
+      CHECK(type_.category() == TypeCategory::Character);
+      return Fold(foldingContext,
+          std::move(*elements) * Expr<SubscriptInteger>{type_.kind()} *
+              Expr<SubscriptInteger>{*LEN_});
+    }
     if (auto elementBytes{
             type_.MeasureSizeInBytes(foldingContext, GetRank(shape_) > 0)}) {
       return Fold(

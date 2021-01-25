@@ -36,6 +36,22 @@ if.end:
   ret void
 }
 
+define void @cmpimm16(i16 %a) {
+; CHECK-LABEL: cmpimm16:
+; CHECK: cpi
+; CHECK-NEXT: cpc
+  %cmp = icmp eq i16 %a, 4567
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  tail call void @f3(i16 %a)
+  br label %if.end
+if.else:
+  tail call void @f4(i16 %a)
+  br label %if.end
+if.end:
+  ret void
+}
+
 declare void @f5(i32)
 declare void @f6(i32)
 define void @cmp32(i32 %a, i32 %b) {
@@ -51,6 +67,24 @@ if.then:
   br label %if.end
 if.else:
   tail call void @f6(i32 %b)
+  br label %if.end
+if.end:
+  ret void
+}
+
+define void @cmpimm32(i32 %a) {
+; CHECK-LABEL: cmpimm32:
+; CHECK: cpi
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+  %cmp = icmp eq i32 %a, 6789343
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  tail call void @f5(i32 %a)
+  br label %if.end
+if.else:
+  tail call void @f6(i32 %a)
   br label %if.end
 if.end:
   ret void
@@ -75,6 +109,28 @@ if.then:
   br label %if.end
 if.else:
   tail call void @f8(i64 %b)
+  br label %if.end
+if.end:
+  ret void
+}
+
+define void @cmpimm64(i64 %a) {
+; CHECK-LABEL: cmpimm64:
+; CHECK: cpi
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+; CHECK-NEXT: cpc
+  %cmp = icmp eq i64 %a, 234566452
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  tail call void @f7(i64 %a)
+  br label %if.end
+if.else:
+  tail call void @f8(i64 %a)
   br label %if.end
 if.end:
   ret void

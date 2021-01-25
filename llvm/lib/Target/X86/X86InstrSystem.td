@@ -172,6 +172,17 @@ def GS_PREFIX : I<0x65, PrefixByte, (outs), (ins), "gs", []>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
+// Address-size override prefixes.
+//
+
+let SchedRW = [WriteNop] in {
+def ADDR16_PREFIX : I<0x67, PrefixByte, (outs), (ins), "addr16", []>,
+                      Requires<[In32BitMode]>;
+def ADDR32_PREFIX : I<0x67, PrefixByte, (outs), (ins), "addr32", []>,
+                      Requires<[In64BitMode]>;
+} // SchedRW
+
+//===----------------------------------------------------------------------===//
 // Moves to and from segment registers.
 //
 

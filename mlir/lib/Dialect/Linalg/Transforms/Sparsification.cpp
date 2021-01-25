@@ -512,6 +512,10 @@ static Type genIntType(PatternRewriter &rewriter, linalg::SparseIntType tp) {
     return rewriter.getIntegerType(64);
   case linalg::SparseIntType::kI32:
     return rewriter.getIntegerType(32);
+  case linalg::SparseIntType::kI16:
+    return rewriter.getIntegerType(16);
+  case linalg::SparseIntType::kI8:
+    return rewriter.getIntegerType(8);
   }
   llvm_unreachable("unexpected SparseIntType");
 }

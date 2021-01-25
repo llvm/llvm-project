@@ -3714,8 +3714,7 @@ private:
             PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi);
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
-        for (Value *P : CurrentPhi->incoming_values())
-          Worklist.push_back(P);
+        append_range(Worklist, CurrentPhi->incoming_values());
       }
     }
   }
@@ -4969,8 +4968,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     // For a PHI node, push all of its incoming values.
     if (PHINode *P = dyn_cast<PHINode>(V)) {
-      for (Value *IncValue : P->incoming_values())
-        worklist.push_back(IncValue);
+      append_range(worklist, P->incoming_values());
       PhiOrSelectSeen = true;
       continue;
     }

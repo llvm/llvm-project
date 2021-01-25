@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -739,6 +738,11 @@ static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
 bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Type *Ty = FDiv.getType()->getScalarType();
+
+  // The f64 rcp/rsq approximations are pretty inaccurate. We can do an
+  // expansion around them in codegen.
+  if (Ty->isDoubleTy())
+    return false;
 
   // No intrinsic for fdiv16 if target does not support f16.
   if (Ty->isHalfTy() && !ST->has16BitInsts())

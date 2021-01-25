@@ -36,17 +36,17 @@
 #   BASIC-NEXT:     Type:         SHT_PROGBITS
 #   BASIC-NEXT:     AddressAlign: 0x100000000
 #   BASIC-NEXT:     Offset:       0x210
-# HEADERS-NEXT: SectionHeaderTable:
-# HEADERS-NEXT:   Sections:
-# HEADERS-NEXT:     - Name:            .bar4
-# HEADERS-NEXT:     - Name:            .bar3
-# HEADERS-NEXT:     - Name:            .bar2
-# HEADERS-NEXT:     - Name:            .bar1
-# HEADERS-NEXT:     - Name:            .foo3
-# HEADERS-NEXT:     - Name:            .foo2
-# HEADERS-NEXT:     - Name:            .foo1
-# HEADERS-NEXT:     - Name:            .strtab
-# HEADERS-NEXT:     - Name:            .shstrtab
+# HEADERS-NEXT:   - Type: SectionHeaderTable
+# HEADERS-NEXT:     Sections:
+# HEADERS-NEXT:       - Name: .bar4
+# HEADERS-NEXT:       - Name: .bar3
+# HEADERS-NEXT:       - Name: .bar2
+# HEADERS-NEXT:       - Name: .bar1
+# HEADERS-NEXT:       - Name: .foo3
+# HEADERS-NEXT:       - Name: .foo2
+# HEADERS-NEXT:       - Name: .foo1
+# HEADERS-NEXT:       - Name: .strtab
+# HEADERS-NEXT:       - Name: .shstrtab
 # BASIC-NEXT: ...
 
 --- !ELF
@@ -103,18 +103,18 @@ Sections:
     Type:         SHT_PROGBITS
     AddressAlign: 0x100000000
     Offset:       0x210
-SectionHeaderTable:
-  Sections:
+  - Type: SectionHeaderTable
+    Sections:
 ## By default we have the same order of sections as defined by the "Sections" key.
-    - Name: [[SEC1=.foo1]]
-    - Name: [[SEC2=.foo2]]
-    - Name: [[SEC3=.foo3]]
-    - Name: [[SEC4=.bar1]]
-    - Name: [[SEC5=.bar2]]
-    - Name: [[SEC6=.bar3]]
-    - Name: [[SEC7=.bar4]]
-    - Name: .strtab
-    - Name: .shstrtab
+      - Name: [[SEC1=.foo1]]
+      - Name: [[SEC2=.foo2]]
+      - Name: [[SEC3=.foo3]]
+      - Name: [[SEC4=.bar1]]
+      - Name: [[SEC5=.bar2]]
+      - Name: [[SEC6=.bar3]]
+      - Name: [[SEC7=.bar4]]
+      - Name: .strtab
+      - Name: .shstrtab
 
 ## In this case we change the order of sections in the section header table.
 ## Check that we still dump offsets correctly.

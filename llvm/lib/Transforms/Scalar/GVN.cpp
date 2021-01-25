@@ -366,9 +366,7 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
        OI != OE; ++OI)
     e.varargs.push_back(lookupOrAdd(*OI));
 
-  for (ExtractValueInst::idx_iterator II = EI->idx_begin(), IE = EI->idx_end();
-         II != IE; ++II)
-    e.varargs.push_back(*II);
+  append_range(e.varargs, EI->indices());
 
   return e;
 }

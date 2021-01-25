@@ -342,10 +342,6 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       LV.merge(getTypeLinkageAndVisibility(Arg.getNullPtrType()));
       continue;
 
-    case TemplateArgument::UncommonValue:
-      LV.merge(getLVForValue(Arg.getAsUncommonValue(), computation));
-      continue;
-
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
@@ -1827,8 +1823,7 @@ template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
   if (decl->getNumTemplateParameterLists() > 0)
     return decl->getTemplateParameterList(0)->getTemplateLoc();
-  else
-    return decl->getInnerLocStart();
+  return decl->getInnerLocStart();
 }
 
 SourceLocation DeclaratorDecl::getTypeSpecStartLoc() const {
@@ -2136,10 +2131,9 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    else if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && isInline())
       return Definition;
-    else
-      return DeclarationOnly;
+    return DeclarationOnly;
   }
   // C99 6.7p5:
   //   A definition of an identifier is a declaration for that identifier that
@@ -2202,7 +2196,7 @@ VarDecl *VarDecl::getActingDefinition() {
     Kind = I->isThisDeclarationADefinition();
     if (Kind == Definition)
       return nullptr;
-    else if (Kind == TentativeDefinition)
+    if (Kind == TentativeDefinition)
       LastTentative = I;
   }
   return LastTentative;
@@ -2274,8 +2268,7 @@ VarDecl *VarDecl::getInitializingDeclaration() {
     if (I->isThisDeclarationADefinition()) {
       if (isStaticDataMember())
         return I;
-      else
-        Def = I;
+      Def = I;
     }
   }
   return Def;
@@ -3599,8 +3592,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
 OverloadedOperatorKind FunctionDecl::getOverloadedOperator() const {
   if (getDeclName().getNameKind() == DeclarationName::CXXOperatorName)
     return getDeclName().getCXXOverloadedOperator();
-  else
-    return OO_None;
+  return OO_None;
 }
 
 /// getLiteralIdentifier - The literal suffix identifier this function
@@ -3608,8 +3600,7 @@ OverloadedOperatorKind FunctionDecl::getOverloadedOperator() const {
 const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
   if (getDeclName().getNameKind() == DeclarationName::CXXLiteralOperatorName)
     return getDeclName().getCXXLiteralIdentifier();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
@@ -3942,8 +3933,8 @@ SourceLocation FunctionDecl::getPointOfInstantiation() const {
         = TemplateOrSpecialization.dyn_cast<
                                         FunctionTemplateSpecializationInfo*>())
     return FTSInfo->getPointOfInstantiation();
-  else if (MemberSpecializationInfo *MSInfo
-             = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>())
+  if (MemberSpecializationInfo *MSInfo =
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();
@@ -4057,29 +4048,29 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
     if (isExternC()) {
       if (FnInfo->isStr("memset"))
         return Builtin::BImemset;
-      else if (FnInfo->isStr("memcpy"))
+      if (FnInfo->isStr("memcpy"))
         return Builtin::BImemcpy;
-      else if (FnInfo->isStr("mempcpy"))
+      if (FnInfo->isStr("mempcpy"))
         return Builtin::BImempcpy;
-      else if (FnInfo->isStr("memmove"))
+      if (FnInfo->isStr("memmove"))
         return Builtin::BImemmove;
-      else if (FnInfo->isStr("memcmp"))
+      if (FnInfo->isStr("memcmp"))
         return Builtin::BImemcmp;
-      else if (FnInfo->isStr("bcmp"))
+      if (FnInfo->isStr("bcmp"))
         return Builtin::BIbcmp;
-      else if (FnInfo->isStr("strncpy"))
+      if (FnInfo->isStr("strncpy"))
         return Builtin::BIstrncpy;
-      else if (FnInfo->isStr("strncmp"))
+      if (FnInfo->isStr("strncmp"))
         return Builtin::BIstrncmp;
-      else if (FnInfo->isStr("strncasecmp"))
+      if (FnInfo->isStr("strncasecmp"))
         return Builtin::BIstrncasecmp;
-      else if (FnInfo->isStr("strncat"))
+      if (FnInfo->isStr("strncat"))
         return Builtin::BIstrncat;
-      else if (FnInfo->isStr("strndup"))
+      if (FnInfo->isStr("strndup"))
         return Builtin::BIstrndup;
-      else if (FnInfo->isStr("strlen"))
+      if (FnInfo->isStr("strlen"))
         return Builtin::BIstrlen;
-      else if (FnInfo->isStr("bzero"))
+      if (FnInfo->isStr("bzero"))
         return Builtin::BIbzero;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))

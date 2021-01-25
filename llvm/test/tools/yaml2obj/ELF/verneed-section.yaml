@@ -1,7 +1,17 @@
-## Check we are able to handle SHT_GNU_verneed sections.
+## Check we are able to dump SHT_GNU_verneed sections properly.
+## Check that we link the SHT_GNU_verneed section to
+## the `.dynstr` section by default.
+## Check that we set the value of `sh_info` field to the number
+## of version dependencies by default.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s
+# RUN: llvm-readelf --sections %t1 | \
+# RUN:   FileCheck %s -DLINK=3 -DINFO=2 --check-prefix=FIELDS
+
+# FIELDS: [Nr] Name           Type    {{.*}} Flg Lk       Inf      Al
+# FIELDS: [ 1] .gnu.version_r VERNEED {{.*}}   A [[LINK]] [[INFO]] 4
+# FIELDS: [ 3] .dynstr
 
 # CHECK:      VersionRequirements [
 # CHECK-NEXT:   Dependency {
@@ -52,13 +62,13 @@ FileHeader:
   Type:  ET_EXEC
   Entry: 0x0000000000201000
 Sections:
-  - Name:            .gnu.version_r
-    Type:            SHT_GNU_verneed
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000200250
-    Link:            .dynstr
-    AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000002
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x0000000000200250
+    AddressAlign: 0x0000000000000004
+    Info:         [[INFO=<none>]]
+    Link:         [[LINK=<none>]]
     Dependencies:
       - Version:         1
         File:            dso.so.0
@@ -82,14 +92,21 @@ DynamicSymbols:
   - Name:    f1
     Binding: STB_GLOBAL
 
+## Check that we are able to set sh_info and sh_link fields to arbitrary values.
+
+# RUN: yaml2obj --docnum=1 -DINFO=123 -DLINK=234 %s -o %t1.fields
+# RUN: llvm-readelf --sections %t1.fields | \
+# RUN:   FileCheck %s -DINFO=123 -DLINK=234 --check-prefix=FIELDS
+
 ## Check we can omit "Content", "Size" and "Dependencies" fields to
 ## produce an empty SHT_GNU_verneed section.
+## Check we set the sh_link field to 0 when there is no .dynstr section.
 
 # RUN: yaml2obj --docnum=2 %s -o %t3
 # RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NO-PROPS
 
-# NO-PROPS: [Nr] Name           Type    Address          Off    Size
-# NO-PROPS: [ 1] .gnu.version_r VERNEED 0000000000000000 000040 000000
+# NO-PROPS: [Nr] Name           Type    Address          Off    Size   ES Flg Lk Inf
+# NO-PROPS: [ 1] .gnu.version_r VERNEED 0000000000000000 000040 000000 00   A 0  0
 
 --- !ELF
 FileHeader:
@@ -97,10 +114,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  0x0
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
     Size:         [[SIZE=<none>]]
     Content:      [[CONTENT=<none>]]
     Dependencies: [[DEPS=<none>]]
@@ -146,3 +162,30 @@ Sections:
 # RUN:   FileCheck %s --check-prefix=DEPS-ERR
 
 # DEPS-ERR: error: "Dependencies" cannot be used with "Content" or "Size"
+
+## Check we set the sh_link field to 0 when the .dynstr section is excluded
+## from the section header table.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=EXCLUDED
+
+# EXCLUDED: [Nr] Name           {{.*}} ES Flg Lk Inf
+# EXCLUDED: [ 1] .gnu.version_r {{.*}} 00     0   0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .gnu.version_r
+    Type: SHT_GNU_verneed
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .gnu.version_r
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynstr

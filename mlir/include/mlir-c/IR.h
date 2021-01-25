@@ -225,6 +225,7 @@ struct MlirOperationState {
   MlirBlock *successors;
   intptr_t nAttributes;
   MlirNamedAttribute *attributes;
+  bool enableResultTypeInference;
 };
 typedef struct MlirOperationState MlirOperationState;
 
@@ -248,6 +249,14 @@ mlirOperationStateAddSuccessors(MlirOperationState *state, intptr_t n,
 MLIR_CAPI_EXPORTED void
 mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
                                 MlirNamedAttribute const *attributes);
+
+/// Enables result type inference for the operation under construction. If
+/// enabled, then the caller must not have called
+/// mlirOperationStateAddResults(). Note that if enabled, the
+/// mlirOperationCreate() call is failable: it will return a null operation
+/// on inference failure and will emit diagnostics.
+MLIR_CAPI_EXPORTED void
+mlirOperationStateEnableResultTypeInference(MlirOperationState *state);
 
 //===----------------------------------------------------------------------===//
 // Op Printing flags API.
@@ -293,8 +302,14 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 //===----------------------------------------------------------------------===//
 
 /// Creates an operation and transfers ownership to the caller.
-MLIR_CAPI_EXPORTED MlirOperation
-mlirOperationCreate(const MlirOperationState *state);
+/// Note that caller owned child objects are transferred in this call and must
+/// not be further used. Particularly, this applies to any regions added to
+/// the state (the implementation may invalidate any such pointers).
+///
+/// This call can fail under the following conditions, in which case, it will
+/// return a null operation and emit diagnostics:
+///   - Result type inference is enabled and cannot be performed.
+MLIR_CAPI_EXPORTED MlirOperation mlirOperationCreate(MlirOperationState *state);
 
 /// Takes an operation owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirOperationDestroy(MlirOperation op);

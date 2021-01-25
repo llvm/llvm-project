@@ -14,7 +14,7 @@
 
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"

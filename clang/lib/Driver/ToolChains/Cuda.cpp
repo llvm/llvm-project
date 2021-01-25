@@ -600,11 +600,6 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
 
-  // Assume that the directory specified with --libomptarget_nvptx_path
-  // contains the static library libomptarget-nvptx.a.
-  if (const Arg *A = Args.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Twine("-L") + A->getValue()));
-
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
 
@@ -613,9 +608,6 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
       llvm::sys::path::parent_path(TC.getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, "lib" CLANG_LIBDIR_SUFFIX);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
-
-  // Add linking against library implementing OpenMP calls on NVPTX target.
-  CmdArgs.push_back("-lomptarget-nvptx");
 
   for (const auto &II : Inputs) {
     if (II.getType() == types::TY_LLVM_IR ||
@@ -761,9 +753,6 @@ void CudaToolChain::addClangTargetOptions(
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;
-    if (const Arg *A = DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
-      LibraryPaths.push_back(A->getValue());
-
     // Add user defined library paths from LIBRARY_PATH.
     llvm::Optional<std::string> LibPath =
         llvm::sys::Process::GetEnv("LIBRARY_PATH");
@@ -781,22 +770,37 @@ void CudaToolChain::addClangTargetOptions(
     llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
     LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
-    std::string LibOmpTargetName =
-      "libomptarget-nvptx-" + GpuArch.str() + ".bc";
-    bool FoundBCLibrary = false;
-    for (StringRef LibraryPath : LibraryPaths) {
-      SmallString<128> LibOmpTargetFile(LibraryPath);
-      llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
-      if (llvm::sys::fs::exists(LibOmpTargetFile)) {
+    // First check whether user specifies bc library
+    if (const Arg *A =
+            DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_bc_path_EQ)) {
+      std::string LibOmpTargetName(A->getValue());
+      if (llvm::sys::fs::exists(LibOmpTargetName)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
-        CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
-        FoundBCLibrary = true;
-        break;
+        CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetName));
+      } else {
+        getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
+            << LibOmpTargetName;
       }
+    } else {
+      bool FoundBCLibrary = false;
+
+      std::string LibOmpTargetName =
+          "libomptarget-nvptx-" + GpuArch.str() + ".bc";
+
+      for (StringRef LibraryPath : LibraryPaths) {
+        SmallString<128> LibOmpTargetFile(LibraryPath);
+        llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
+        if (llvm::sys::fs::exists(LibOmpTargetFile)) {
+          CC1Args.push_back("-mlink-builtin-bitcode");
+          CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
+          FoundBCLibrary = true;
+          break;
+        }
+      }
+      if (!FoundBCLibrary)
+        getDriver().Diag(diag::err_drv_omp_offload_target_missingbcruntime)
+            << LibOmpTargetName;
     }
-    if (!FoundBCLibrary)
-      getDriver().Diag(diag::warn_drv_omp_offload_target_missingbcruntime)
-          << LibOmpTargetName;
   }
 }
 

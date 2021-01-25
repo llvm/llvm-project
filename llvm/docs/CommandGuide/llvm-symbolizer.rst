@@ -182,12 +182,6 @@ OPTIONS
 
   Print just the file's name without any directories, instead of the
   absolute path.
-
-.. option:: --relativenames
-
-  Print the file's path relative to the compilation directory, instead
-  of the absolute path. If the command-line to the compiler included
-  the full path, this will be the same as the default.
   
 .. _llvm-symbolizer-opt-C:
 
@@ -320,6 +314,12 @@ OPTIONS
     10  :   volatile int k = 42;
     11 >:   return foz() + k;
     12  : }
+
+.. option:: --relativenames
+
+  Print the file's path relative to the compilation directory, instead
+  of the absolute path. If the command-line to the compiler included
+  the full path, this will be the same as the default.
 
 .. _llvm-symbolizer-opt-use-symbol-table:
 

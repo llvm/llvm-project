@@ -11,7 +11,7 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(SignalTest, Raise) {
+TEST(LlvmLibcSignalTest, Raise) {
   // SIGCONT is ingored unless stopped, so we can use it to check the return
   // value of raise without needing to block.
   EXPECT_EQ(__llvm_libc::raise(SIGCONT), 0);

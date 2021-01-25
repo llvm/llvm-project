@@ -953,6 +953,7 @@ int main(int argc, char **argv) {
                                true);
 
   LTOCodeGenerator CodeGen(Context);
+  CodeGen.setDisableVerify(DisableVerify);
 
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
@@ -1011,12 +1012,7 @@ int main(int argc, char **argv) {
   CodeGen.setCpu(codegen::getMCPU().c_str());
 
   CodeGen.setOptLevel(OptLevel - '0');
-
-  auto MAttrs = codegen::getMAttrs();
-  if (!MAttrs.empty()) {
-    std::string attrs = join(MAttrs, ",");
-    CodeGen.setAttr(attrs);
-  }
+  CodeGen.setAttrs(codegen::getMAttrs());
 
   if (auto FT = codegen::getExplicitFileType())
     CodeGen.setFileType(FT.getValue());
@@ -1031,7 +1027,7 @@ int main(int argc, char **argv) {
         error("writing linked module failed.");
     }
 
-    if (!CodeGen.optimize(DisableVerify)) {
+    if (!CodeGen.optimize()) {
       // Diagnostic messages should have been printed by the handler.
       error("error optimizing the code");
     }
@@ -1072,7 +1068,7 @@ int main(int argc, char **argv) {
       error(": -save-merged-module must be specified with -o");
 
     const char *OutputName = nullptr;
-    if (!CodeGen.compile_to_file(&OutputName, DisableVerify))
+    if (!CodeGen.compile_to_file(&OutputName))
       error("error compiling the code");
       // Diagnostic messages should have been printed by the handler.
 

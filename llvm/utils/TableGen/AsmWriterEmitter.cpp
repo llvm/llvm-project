@@ -218,12 +218,11 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
 
       // Otherwise, scan to see if all of the other instructions in this command
       // set share the operand.
-      if (std::any_of(Idxs.begin()+1, Idxs.end(),
-                      [&](unsigned Idx) {
-                        const AsmWriterInst &OtherInst = Instructions[Idx];
-                        return OtherInst.Operands.size() == Op ||
-                          OtherInst.Operands[Op] != FirstInst.Operands[Op];
-                      }))
+      if (any_of(drop_begin(Idxs), [&](unsigned Idx) {
+            const AsmWriterInst &OtherInst = Instructions[Idx];
+            return OtherInst.Operands.size() == Op ||
+                   OtherInst.Operands[Op] != FirstInst.Operands[Op];
+          }))
         break;
 
       // Okay, everything in this command set has the same next operand.  Add it
@@ -714,9 +713,7 @@ public:
         ++Next;
     } else {
       // $name, just eat the usual suspects.
-      while (I != End &&
-             ((*I >= 'a' && *I <= 'z') || (*I >= 'A' && *I <= 'Z') ||
-              (*I >= '0' && *I <= '9') || *I == '_'))
+      while (I != End && (isAlnum(*I) || *I == '_'))
         ++I;
       Next = I;
     }

@@ -11,8 +11,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_v_nxv1i32_nxv1i32(<vscale x 1 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32(
@@ -35,8 +35,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_mask_v_nxv1i32_nxv1i32(<vscale x 1
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32(
@@ -59,8 +59,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_v_nxv2i32_nxv2i32(<vscale x 2 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32(
@@ -83,8 +83,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_mask_v_nxv2i32_nxv2i32(<vscale x 2
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32(
@@ -107,8 +107,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_v_nxv4i32_nxv4i32(<vscale x 4 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32(
@@ -131,8 +131,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_mask_v_nxv4i32_nxv4i32(<vscale x 4
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32(
@@ -155,8 +155,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_v_nxv8i32_nxv8i32(<vscale x 8 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32(
@@ -179,8 +179,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_mask_v_nxv8i32_nxv8i32(<vscale x 8
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32(
@@ -202,11 +202,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32(
 define <vscale x 16 x i32> @intrinsic_vamoswap_v_nxv16i32_nxv16i32(<vscale x 16 x i32> *%0, <vscale x 16 x i32> %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16i32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32(
@@ -228,11 +226,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32(
 define <vscale x 16 x i32> @intrinsic_vamoswap_mask_v_nxv16i32_nxv16i32(<vscale x 16 x i32> *%0, <vscale x 16 x i32> %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16i32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32(
@@ -255,8 +251,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_v_nxv1f32_nxv1i32(<vscale x 1 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i32(
@@ -279,8 +275,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_mask_v_nxv1f32_nxv1i32(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i32(
@@ -303,8 +299,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_v_nxv2f32_nxv2i32(<vscale x 2 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i32(
@@ -327,8 +323,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_mask_v_nxv2f32_nxv2i32(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i32(
@@ -351,8 +347,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_v_nxv4f32_nxv4i32(<vscale x 4 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i32(
@@ -375,8 +371,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_mask_v_nxv4f32_nxv4i32(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i32(
@@ -399,8 +395,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_v_nxv8f32_nxv8i32(<vscale x 8 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i32(
@@ -423,8 +419,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_mask_v_nxv8f32_nxv8i32(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i32(
@@ -446,11 +442,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32(
 define <vscale x 16 x float> @intrinsic_vamoswap_v_nxv16f32_nxv16i32(<vscale x 16 x float> *%0, <vscale x 16 x i32> %1, <vscale x 16 x float> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16f32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32(
@@ -472,11 +466,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32(
 define <vscale x 16 x float> @intrinsic_vamoswap_mask_v_nxv16f32_nxv16i32(<vscale x 16 x float> *%0, <vscale x 16 x i32> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16f32_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32(
@@ -499,8 +491,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_v_nxv1f64_nxv1i32(<vscale x 1 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i32(
@@ -523,8 +515,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_mask_v_nxv1f64_nxv1i32(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei32.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i32(
@@ -547,8 +539,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_v_nxv2f64_nxv2i32(<vscale x 2 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i32(
@@ -571,8 +563,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_mask_v_nxv2f64_nxv2i32(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei32.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i32(
@@ -595,8 +587,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_v_nxv4f64_nxv4i32(<vscale x 4 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i32(
@@ -619,8 +611,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_mask_v_nxv4f64_nxv4i32(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei32.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i32(
@@ -642,11 +634,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32(
 define <vscale x 8 x double> @intrinsic_vamoswap_v_nxv8f64_nxv8i32(<vscale x 8 x double> *%0, <vscale x 8 x i32> %1, <vscale x 8 x double> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f64_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32(
@@ -668,11 +658,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32(
 define <vscale x 8 x double> @intrinsic_vamoswap_mask_v_nxv8f64_nxv8i32(<vscale x 8 x double> *%0, <vscale x 8 x i32> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f64_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei32.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei32.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32(
@@ -695,8 +683,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_v_nxv1i32_nxv1i16(<vscale x 1 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16(
@@ -719,8 +707,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_mask_v_nxv1i32_nxv1i16(<vscale x 1
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16(
@@ -743,8 +731,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_v_nxv2i32_nxv2i16(<vscale x 2 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16(
@@ -767,8 +755,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_mask_v_nxv2i32_nxv2i16(<vscale x 2
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16(
@@ -791,8 +779,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_v_nxv4i32_nxv4i16(<vscale x 4 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16(
@@ -815,8 +803,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_mask_v_nxv4i32_nxv4i16(<vscale x 4
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16(
@@ -839,8 +827,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_v_nxv8i32_nxv8i16(<vscale x 8 x i3
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16(
@@ -863,8 +851,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_mask_v_nxv8i32_nxv8i16(<vscale x 8
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16(
@@ -886,11 +874,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16(
 define <vscale x 16 x i32> @intrinsic_vamoswap_v_nxv16i32_nxv16i16(<vscale x 16 x i32> *%0, <vscale x 16 x i16> %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16i32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16(
@@ -912,11 +898,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16(
 define <vscale x 16 x i32> @intrinsic_vamoswap_mask_v_nxv16i32_nxv16i16(<vscale x 16 x i32> *%0, <vscale x 16 x i16> %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16i32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16(
@@ -939,8 +923,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_v_nxv1f32_nxv1i16(<vscale x 1 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i16(
@@ -963,8 +947,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_mask_v_nxv1f32_nxv1i16(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i16(
@@ -987,8 +971,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_v_nxv2f32_nxv2i16(<vscale x 2 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i16(
@@ -1011,8 +995,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_mask_v_nxv2f32_nxv2i16(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i16(
@@ -1035,8 +1019,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_v_nxv4f32_nxv4i16(<vscale x 4 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i16(
@@ -1059,8 +1043,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_mask_v_nxv4f32_nxv4i16(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i16(
@@ -1083,8 +1067,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_v_nxv8f32_nxv8i16(<vscale x 8 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i16(
@@ -1107,8 +1091,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_mask_v_nxv8f32_nxv8i16(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i16(
@@ -1130,11 +1114,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16(
 define <vscale x 16 x float> @intrinsic_vamoswap_v_nxv16f32_nxv16i16(<vscale x 16 x float> *%0, <vscale x 16 x i16> %1, <vscale x 16 x float> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16f32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16(
@@ -1156,11 +1138,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16(
 define <vscale x 16 x float> @intrinsic_vamoswap_mask_v_nxv16f32_nxv16i16(<vscale x 16 x float> *%0, <vscale x 16 x i16> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16f32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16(
@@ -1183,8 +1163,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_v_nxv1f64_nxv1i16(<vscale x 1 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i16(
@@ -1207,8 +1187,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_mask_v_nxv1f64_nxv1i16(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei16.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i16(
@@ -1231,8 +1211,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_v_nxv2f64_nxv2i16(<vscale x 2 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i16(
@@ -1255,8 +1235,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_mask_v_nxv2f64_nxv2i16(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei16.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i16(
@@ -1279,8 +1259,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_v_nxv4f64_nxv4i16(<vscale x 4 x
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i16(
@@ -1303,8 +1283,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_mask_v_nxv4f64_nxv4i16(<vscale 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei16.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i16(
@@ -1326,11 +1306,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16(
 define <vscale x 8 x double> @intrinsic_vamoswap_v_nxv8f64_nxv8i16(<vscale x 8 x double> *%0, <vscale x 8 x i16> %1, <vscale x 8 x double> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f64_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16(
@@ -1352,11 +1330,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16(
 define <vscale x 8 x double> @intrinsic_vamoswap_mask_v_nxv8f64_nxv8i16(<vscale x 8 x double> *%0, <vscale x 8 x i16> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f64_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei16.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei16.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16(
@@ -1379,8 +1355,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_v_nxv1i32_nxv1i8(<vscale x 1 x i32
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8(
@@ -1403,8 +1379,8 @@ define <vscale x 1 x i32> @intrinsic_vamoswap_mask_v_nxv1i32_nxv1i8(<vscale x 1 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8(
@@ -1427,8 +1403,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_v_nxv2i32_nxv2i8(<vscale x 2 x i32
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8(
@@ -1451,8 +1427,8 @@ define <vscale x 2 x i32> @intrinsic_vamoswap_mask_v_nxv2i32_nxv2i8(<vscale x 2 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8(
@@ -1475,8 +1451,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_v_nxv4i32_nxv4i8(<vscale x 4 x i32
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8(
@@ -1499,8 +1475,8 @@ define <vscale x 4 x i32> @intrinsic_vamoswap_mask_v_nxv4i32_nxv4i8(<vscale x 4 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8(
@@ -1523,8 +1499,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_v_nxv8i32_nxv8i8(<vscale x 8 x i32
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8(
@@ -1547,8 +1523,8 @@ define <vscale x 8 x i32> @intrinsic_vamoswap_mask_v_nxv8i32_nxv8i8(<vscale x 8 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8(
@@ -1570,11 +1546,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8(
 define <vscale x 16 x i32> @intrinsic_vamoswap_v_nxv16i32_nxv16i8(<vscale x 16 x i32> *%0, <vscale x 16 x i8> %1, <vscale x 16 x i32> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16i32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8(
@@ -1596,11 +1570,9 @@ declare <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8(
 define <vscale x 16 x i32> @intrinsic_vamoswap_mask_v_nxv16i32_nxv16i8(<vscale x 16 x i32> *%0, <vscale x 16 x i8> %1, <vscale x 16 x i32> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16i32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8(
@@ -1623,8 +1595,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_v_nxv1f32_nxv1i8(<vscale x 1 x f
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i8(
@@ -1647,8 +1619,8 @@ define <vscale x 1 x float> @intrinsic_vamoswap_mask_v_nxv1f32_nxv1i8(<vscale x 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i8(
@@ -1671,8 +1643,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_v_nxv2f32_nxv2i8(<vscale x 2 x f
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i8(
@@ -1695,8 +1667,8 @@ define <vscale x 2 x float> @intrinsic_vamoswap_mask_v_nxv2f32_nxv2i8(<vscale x 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i8(
@@ -1719,8 +1691,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_v_nxv4f32_nxv4i8(<vscale x 4 x f
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i8(
@@ -1743,8 +1715,8 @@ define <vscale x 4 x float> @intrinsic_vamoswap_mask_v_nxv4f32_nxv4i8(<vscale x 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i8(
@@ -1767,8 +1739,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_v_nxv8f32_nxv8i8(<vscale x 8 x f
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i8(
@@ -1791,8 +1763,8 @@ define <vscale x 8 x float> @intrinsic_vamoswap_mask_v_nxv8f32_nxv8i8(<vscale x 
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i8(
@@ -1814,11 +1786,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8(
 define <vscale x 16 x float> @intrinsic_vamoswap_v_nxv16f32_nxv16i8(<vscale x 16 x float> *%0, <vscale x 16 x i8> %1, <vscale x 16 x float> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv16f32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8(
@@ -1840,11 +1810,9 @@ declare <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8(
 define <vscale x 16 x float> @intrinsic_vamoswap_mask_v_nxv16f32_nxv16i8(<vscale x 16 x float> *%0, <vscale x 16 x i8> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv16f32_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8(
@@ -1867,8 +1835,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_v_nxv1f64_nxv1i8(<vscale x 1 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i8(
@@ -1891,8 +1859,8 @@ define <vscale x 1 x double> @intrinsic_vamoswap_mask_v_nxv1f64_nxv1i8(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v17, (a0), v16, v17, v0.t
-; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vamoswapei8.v v9, (a0), v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i8(
@@ -1915,8 +1883,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_v_nxv2f64_nxv2i8(<vscale x 2 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i8(
@@ -1939,8 +1907,8 @@ define <vscale x 2 x double> @intrinsic_vamoswap_mask_v_nxv2f64_nxv2i8(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v18, (a0), v16, v18, v0.t
-; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vamoswapei8.v v10, (a0), v8, v10, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i8(
@@ -1963,8 +1931,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_v_nxv4f64_nxv4i8(<vscale x 4 x 
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i8(
@@ -1987,8 +1955,8 @@ define <vscale x 4 x double> @intrinsic_vamoswap_mask_v_nxv4f64_nxv4i8(<vscale x
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v20, (a0), v16, v20, v0.t
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vamoswapei8.v v12, (a0), v8, v12, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i8(
@@ -2010,11 +1978,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8(
 define <vscale x 8 x double> @intrinsic_vamoswap_v_nxv8f64_nxv8i8(<vscale x 8 x double> *%0, <vscale x 8 x i8> %1, <vscale x 8 x double> %2, i32 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_v_nxv8f64_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8(
@@ -2036,11 +2002,9 @@ declare <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8(
 define <vscale x 8 x double> @intrinsic_vamoswap_mask_v_nxv8f64_nxv8i8(<vscale x 8 x double> *%0, <vscale x 8 x i8> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vamoswap_mask_v_nxv8f64_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    vsetvli a1, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vamoswapei8.v v8, (a0), v16, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vamoswapei8.v v16, (a0), v8, v16, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8(

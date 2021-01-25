@@ -22,7 +22,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -176,10 +177,8 @@ public:
         }
       }
 
-      if (Divergent && PDT.dominates(&DefBlock, MBB)) {
-        for (MachineBasicBlock *Succ : MBB->successors())
-          Stack.push_back(Succ);
-      }
+      if (Divergent && PDT.dominates(&DefBlock, MBB))
+        append_range(Stack, MBB->successors());
     }
 
     while (!Stack.empty()) {
@@ -188,8 +187,7 @@ public:
         continue;
       ReachableOrdered.push_back(MBB);
 
-      for (MachineBasicBlock *Succ : MBB->successors())
-        Stack.push_back(Succ);
+      append_range(Stack, MBB->successors());
     }
 
     for (MachineBasicBlock *MBB : ReachableOrdered) {

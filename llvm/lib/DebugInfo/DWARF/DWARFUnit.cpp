@@ -194,13 +194,12 @@ Optional<object::SectionedAddress>
 DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   if (IsDWO) {
     auto R = Context.info_section_units();
-    auto I = R.begin();
     // Surprising if a DWO file has more than one skeleton unit in it - this
     // probably shouldn't be valid, but if a use case is found, here's where to
     // support it (probably have to linearly search for the matching skeleton CU
     // here)
-    if (I != R.end() && std::next(I) == R.end())
-      return (*I)->getAddrOffsetSectionItem(Index);
+    if (hasSingleElement(R))
+      return (*R.begin())->getAddrOffsetSectionItem(Index);
   }
   if (!AddrOffsetSectionBase)
     return None;

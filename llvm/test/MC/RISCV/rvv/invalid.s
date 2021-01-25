@@ -133,78 +133,6 @@ vslide1up.vx v2, v2, a0
 # CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
 # CHECK-ERROR-LABEL: vslide1up.vx v2, v2, a0
 
-vnsrl.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wv v2, v2, v4
-
-vnsrl.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wx v2, v2, a0
-
-vnsrl.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wi v2, v2, 31
-
-vnsra.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wv v2, v2, v4
-
-vnsra.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wx v2, v2, a0
-
-vnsra.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wi v2, v2, 31
-
-vnclipu.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wv v2, v2, v4
-
-vnclipu.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wx v2, v2, a0
-
-vnclipu.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wi v2, v2, 31
-
-vnclip.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wv v2, v2, v4
-
-vnclip.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wx v2, v2, a0
-
-vnclip.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wi v2, v2, 31
-
-vfncvt.xu.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.xu.f.w v2, v2
-
-vfncvt.x.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.x.f.w v2, v2
-
-vfncvt.f.xu.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.xu.w v2, v2
-
-vfncvt.f.x.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.x.w v2, v2
-
-vfncvt.f.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.f.w v2, v2
-
-vfncvt.rod.f.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.rod.f.f.w v2, v2
-
 vrgather.vv v0, v2, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vrgather.vv v0, v2, v4, v0.t
@@ -589,14 +517,6 @@ vadc.vvm v0, v2, v4, v0
 # CHECK-ERROR: The destination vector register group cannot be V0.
 # CHECK-ERROR-LABEL: vadc.vvm v0, v2, v4, v0
 
-vmadc.vvm v2, v2, v4, v0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vmadc.vvm v2, v2, v4, v0
-
-vmadc.vvm v4, v2, v4, v0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vmadc.vvm v4, v2, v4, v0
-
 vadd.vv v0, v2, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vadd.vv v0, v2, v4, v0.t
@@ -652,3 +572,11 @@ vzext.vf2 v0, v1, v0.t
 vid.v v0, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vid.v v0, v0.t
+
+vnsrl.wv v0, v4, v20, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vnsrl.wv v0, v4, v20, v0.t
+
+vfncvt.xu.f.w v0, v4, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vfncvt.xu.f.w v0, v4, v0.t

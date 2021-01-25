@@ -399,6 +399,9 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
+  AttributeList setAttributes(LLVMContext &C, unsigned Index,
+                              AttributeSet Attrs) const;
+
 public:
   AttributeList() = default;
 

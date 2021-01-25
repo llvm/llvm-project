@@ -2177,7 +2177,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
       } else {
         // A multiplication of a constant with some other value. Update
         // the map.
-        SmallVector<const SCEV *, 4> MulOps(Mul->op_begin()+1, Mul->op_end());
+        SmallVector<const SCEV *, 4> MulOps(drop_begin(Mul->operands()));
         const SCEV *Key = SE.getMulExpr(MulOps);
         auto Pair = M.insert({Key, NewScale});
         if (Pair.second) {

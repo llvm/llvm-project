@@ -748,8 +748,7 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
     Node = WorkList.pop_back_val();
     Scopes.push_back(Node);
     OpenChildren[Node] = Node->getNumChildren();
-    for (MachineDomTreeNode *Child : Node->children())
-      WorkList.push_back(Child);
+    append_range(WorkList, Node->children());
   } while (!WorkList.empty());
 
   // Now perform CSE.
@@ -861,8 +860,7 @@ bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
   BBs.push_back(DT->getRootNode());
   do {
     auto Node = BBs.pop_back_val();
-    for (MachineDomTreeNode *Child : Node->children())
-      BBs.push_back(Child);
+    append_range(BBs, Node->children());
 
     MachineBasicBlock *MBB = Node->getBlock();
     Changed |= ProcessBlockPRE(DT, MBB);

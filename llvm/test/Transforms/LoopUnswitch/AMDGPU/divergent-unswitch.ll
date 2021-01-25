@@ -1,4 +1,7 @@
-; RUN: opt -mtriple=amdgcn-- -O3 -S %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -O3 -S -enable-new-pm=0 %s | FileCheck %s
+
+; This fails with the new pass manager:
+; https://bugs.llvm.org/show_bug.cgi?id=48819
 
 ; Check that loop unswitch happened and condition hoisted out of the loop.
 ; Condition is uniform so all targets should perform unswitching.

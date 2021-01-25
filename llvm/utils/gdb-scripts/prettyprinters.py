@@ -211,7 +211,7 @@ class StringMapPrinter:
     it = self.val['TheTable']
     end = (it + self.val['NumBuckets'])
     value_ty = self.val.type.template_argument(0)
-    entry_ty = gdb.lookup_type('llvm::StringMapEntry<{}>'.format(value_ty.name))
+    entry_base_ty = gdb.lookup_type('llvm::StringMapEntryBase')
     tombstone = gdb.parse_and_eval('llvm::StringMapImpl::TombstoneIntVal');
 
     while it != end:
@@ -220,15 +220,17 @@ class StringMapPrinter:
         it = it + 1
         continue
 
-      entry_ptr = it_deref.cast(entry_ty.pointer())
+      entry_ptr = it_deref.cast(entry_base_ty.pointer())
       entry = entry_ptr.dereference()
 
       str_len = entry['keyLength']
-      str_data = (entry_ptr + 1).cast(gdb.lookup_type('char').const().pointer())
+      value_ptr = (entry_ptr + 1).cast(value_ty.pointer())
+      str_data = (entry_ptr + 1).cast(gdb.lookup_type('uintptr_t')) + max(value_ty.sizeof, entry_base_ty.alignof)
+      str_data = str_data.cast(gdb.lookup_type('char').const().pointer())
       string_ref = gdb.Value(struct.pack('PN', int(str_data), int(str_len)), gdb.lookup_type('llvm::StringRef'))
       yield 'key', string_ref
 
-      value = entry['second']
+      value = value_ptr.dereference()
       yield 'value', value
 
       it = it + 1

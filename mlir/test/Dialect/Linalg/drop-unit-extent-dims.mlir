@@ -331,3 +331,26 @@ func @fold_reshape(%arg0: tensor<2xf32>) -> tensor<2x1xf32>
   ] : tensor<2x1x1xf32> into tensor<2x1xf32>
   return %1 : tensor<2x1xf32>
 }
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map4 = affine_map<(d0, d1, d2) -> (d2)>
+func @fold_unit_dim_tensor_reshape_op(%arg0 : tensor<5xf32>) -> tensor<2x5xf32>
+{
+  %1 = linalg.init_tensor [1, 2, 5] : tensor<1x2x5xf32>
+  %2 = linalg.generic {i64, indexing_maps = [#map1, #map0],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+    ins(%arg0 : tensor<5xf32>) outs(%1 : tensor<1x2x5xf32>) {
+    ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+      linalg.yield %arg1 : f32
+    } -> tensor<1x2x5xf32>
+  %3 = linalg.tensor_reshape %2 [#map3, #map4]
+    : tensor<1x2x5xf32> into tensor<2x5xf32>
+  return %3 : tensor<2x5xf32>
+}
+// CHECK-LABEL: func @fold_unit_dim_tensor_reshape_op
+//       CHECK:   %[[RESULT:.+]] = linalg.generic
+//       CHECK:   return %[[RESULT]]

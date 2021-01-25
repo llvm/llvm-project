@@ -78,7 +78,7 @@ module m
     call s01(null(intPtr))
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
     call s01(B"0101")
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explcit interface
+    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
     call s01(extfunc)
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(realfunc)
@@ -93,9 +93,9 @@ module m
     call s02(null(p))
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(sin)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explcit interface
+    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
     call s02(extfunc)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explcit interface
+    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
     call s03(extfuncPtr)
   end subroutine
 

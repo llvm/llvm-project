@@ -361,21 +361,15 @@ define float @reduction_v4f32_fast(float* %p) {
   ret float %m3
 }
 
-; TODO: This should become a reduce intrinsic.
-
 define float @reduction_v4f32_nnan(float* %p) {
 ; CHECK-LABEL: @reduction_v4f32_nnan(
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T1]], float [[T0]])
-; CHECK-NEXT:    [[M2:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T2]], float [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T3]], float [[M2]])
-; CHECK-NEXT:    ret float [[M3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %g1 = getelementptr inbounds float, float* %p, i64 1
   %g2 = getelementptr inbounds float, float* %p, i64 2

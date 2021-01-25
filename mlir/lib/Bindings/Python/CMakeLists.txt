@@ -11,6 +11,7 @@ set(PY_SRC_FILES
   mlir/ir.py
   mlir/dialects/__init__.py
   mlir/dialects/_linalg.py
+  mlir/dialects/_builtin.py
   mlir/ir.py
   mlir/passmanager.py
   mlir/transforms/__init__.py
@@ -35,6 +36,11 @@ endforeach()
 ################################################################################
 # Generate dialect-specific bindings.
 ################################################################################
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonBuiltinOps
+  TD_FILE BuiltinOps.td
+  DIALECT_NAME builtin)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonBuiltinOps)
 
 add_mlir_dialect_python_bindings(MLIRBindingsPythonLinalgOps
   TD_FILE LinalgOps.td

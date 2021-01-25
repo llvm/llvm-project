@@ -634,7 +634,11 @@ path __canonical(path const& orig_p, error_code* ec) {
     return err.report(capture_errno());
   return {hold.get()};
 #else
-  char buff[PATH_MAX + 1];
+  #if defined(__MVS__) && !defined(PATH_MAX)
+    char buff[ _XOPEN_PATH_MAX + 1 ];
+  #else
+    char buff[PATH_MAX + 1];
+  #endif
   char* ret;
   if ((ret = ::realpath(p.c_str(), buff)) == nullptr)
     return err.report(capture_errno());

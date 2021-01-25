@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -3399,6 +3398,7 @@ static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
 
 static bool isSignExtended(SDNode *N, SelectionDAG &DAG) {
   return N->getOpcode() == ISD::SIGN_EXTEND ||
+         N->getOpcode() == ISD::ANY_EXTEND ||
          isExtendedBUILD_VECTOR(N, DAG, true);
 }
 
@@ -7011,11 +7011,13 @@ SDValue AArch64TargetLowering::LowerWin64_VASTART(SDValue Op,
 }
 
 SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
-                                                SelectionDAG &DAG) const {
+                                                  SelectionDAG &DAG) const {
   // The layout of the va_list struct is specified in the AArch64 Procedure Call
   // Standard, section B.3.
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  unsigned PtrSize = Subtarget->isTargetILP32() ? 4 : 8;
+  auto PtrMemVT = getPointerMemTy(DAG.getDataLayout());
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc DL(Op);
 
@@ -7025,54 +7027,64 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
   SmallVector<SDValue, 4> MemOps;
 
   // void *__stack at offset 0
+  unsigned Offset = 0;
   SDValue Stack = DAG.getFrameIndex(FuncInfo->getVarArgsStackIndex(), PtrVT);
-  MemOps.push_back(
-      DAG.getStore(Chain, DL, Stack, VAList, MachinePointerInfo(SV), Align(8)));
+  Stack = DAG.getZExtOrTrunc(Stack, DL, PtrMemVT);
+  MemOps.push_back(DAG.getStore(Chain, DL, Stack, VAList,
+                                MachinePointerInfo(SV), Align(PtrSize)));
 
-  // void *__gr_top at offset 8
+  // void *__gr_top at offset 8 (4 on ILP32)
+  Offset += PtrSize;
   int GPRSize = FuncInfo->getVarArgsGPRSize();
   if (GPRSize > 0) {
     SDValue GRTop, GRTopAddr;
 
-    GRTopAddr =
-        DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getConstant(8, DL, PtrVT));
+    GRTopAddr = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
+                            DAG.getConstant(Offset, DL, PtrVT));
 
     GRTop = DAG.getFrameIndex(FuncInfo->getVarArgsGPRIndex(), PtrVT);
     GRTop = DAG.getNode(ISD::ADD, DL, PtrVT, GRTop,
                         DAG.getConstant(GPRSize, DL, PtrVT));
+    GRTop = DAG.getZExtOrTrunc(GRTop, DL, PtrMemVT);
 
     MemOps.push_back(DAG.getStore(Chain, DL, GRTop, GRTopAddr,
-                                  MachinePointerInfo(SV, 8), Align(8)));
+                                  MachinePointerInfo(SV, Offset),
+                                  Align(PtrSize)));
   }
 
-  // void *__vr_top at offset 16
+  // void *__vr_top at offset 16 (8 on ILP32)
+  Offset += PtrSize;
   int FPRSize = FuncInfo->getVarArgsFPRSize();
   if (FPRSize > 0) {
     SDValue VRTop, VRTopAddr;
     VRTopAddr = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
-                            DAG.getConstant(16, DL, PtrVT));
+                            DAG.getConstant(Offset, DL, PtrVT));
 
     VRTop = DAG.getFrameIndex(FuncInfo->getVarArgsFPRIndex(), PtrVT);
     VRTop = DAG.getNode(ISD::ADD, DL, PtrVT, VRTop,
                         DAG.getConstant(FPRSize, DL, PtrVT));
+    VRTop = DAG.getZExtOrTrunc(VRTop, DL, PtrMemVT);
 
     MemOps.push_back(DAG.getStore(Chain, DL, VRTop, VRTopAddr,
-                                  MachinePointerInfo(SV, 16), Align(8)));
+                                  MachinePointerInfo(SV, Offset),
+                                  Align(PtrSize)));
   }
 
-  // int __gr_offs at offset 24
-  SDValue GROffsAddr =
-      DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getConstant(24, DL, PtrVT));
+  // int __gr_offs at offset 24 (12 on ILP32)
+  Offset += PtrSize;
+  SDValue GROffsAddr = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
+                                   DAG.getConstant(Offset, DL, PtrVT));
   MemOps.push_back(
       DAG.getStore(Chain, DL, DAG.getConstant(-GPRSize, DL, MVT::i32),
-                   GROffsAddr, MachinePointerInfo(SV, 24), Align(4)));
+                   GROffsAddr, MachinePointerInfo(SV, Offset), Align(4)));
 
-  // int __vr_offs at offset 28
-  SDValue VROffsAddr =
-      DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getConstant(28, DL, PtrVT));
+  // int __vr_offs at offset 28 (16 on ILP32)
+  Offset += 4;
+  SDValue VROffsAddr = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
+                                   DAG.getConstant(Offset, DL, PtrVT));
   MemOps.push_back(
       DAG.getStore(Chain, DL, DAG.getConstant(-FPRSize, DL, MVT::i32),
-                   VROffsAddr, MachinePointerInfo(SV, 28), Align(4)));
+                   VROffsAddr, MachinePointerInfo(SV, Offset), Align(4)));
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOps);
 }
@@ -7095,8 +7107,10 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
   // pointer.
   SDLoc DL(Op);
   unsigned PtrSize = Subtarget->isTargetILP32() ? 4 : 8;
-  unsigned VaListSize = (Subtarget->isTargetDarwin() ||
-                         Subtarget->isTargetWindows()) ? PtrSize : 32;
+  unsigned VaListSize =
+      (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+          ? PtrSize
+          : Subtarget->isTargetILP32() ? 20 : 32;
   const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
@@ -7457,6 +7471,22 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
   return SDValue();
 }
 
+SDValue
+AArch64TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
+                                        const DenormalMode &Mode) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
+  return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+}
+
+SDValue
+AArch64TargetLowering::getSqrtResultForDenormInput(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  return Op;
+}
+
 SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
                                                SelectionDAG &DAG, int Enabled,
                                                int &ExtraSteps,
@@ -7480,17 +7510,8 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
         Step = DAG.getNode(AArch64ISD::FRSQRTS, DL, VT, Operand, Step, Flags);
         Estimate = DAG.getNode(ISD::FMUL, DL, VT, Estimate, Step, Flags);
       }
-      if (!Reciprocal) {
-        EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                      VT);
-        SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-        SDValue Eq = DAG.getSetCC(DL, CCVT, Operand, FPZero, ISD::SETEQ);
-
+      if (!Reciprocal)
         Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate, Flags);
-        // Correct the result if the operand is 0.0.
-        Estimate = DAG.getNode(VT.isVector() ? ISD::VSELECT : ISD::SELECT, DL,
-                               VT, Eq, Operand, Estimate);
-      }
 
       ExtraSteps = 0;
       return Estimate;

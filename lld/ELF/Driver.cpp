@@ -1005,6 +1005,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoPseudoProbeForProfiling =
+      args.hasArg(OPT_lto_pseudo_probe_for_profiling);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->ltoBasicBlockSections =
       args.getLastArgValue(OPT_lto_basic_block_sections);
@@ -1922,7 +1924,13 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;
-    if (!wrap->isUndefined())
+    // If sym is referenced in any object file, bitcode file or shared object,
+    // retain wrap which is the redirection target of sym. If the object file
+    // defining sym has sym references, we cannot easily distinguish the case
+    // from cases where sym is not referenced. Retain wrap because we choose to
+    // wrap sym references regardless of whether sym is defined
+    // (https://sourceware.org/bugzilla/show_bug.cgi?id=26358).
+    if (sym->referenced || sym->isDefined())
       wrap->isUsedInRegularObj = true;
   }
   return v;
@@ -2184,7 +2192,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   compileBitcodeFiles<ELFT>();
 
   // Handle --exclude-libs again because lto.tmp may reference additional
-  // libcalls symbols defined in an excluded archive.
+  // libcalls symbols defined in an excluded archive. This may override
+  // versionId set by scanVersionScript().
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(args);
 

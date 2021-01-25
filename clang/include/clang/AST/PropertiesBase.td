@@ -758,17 +758,6 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
     return TemplateArgument(ctx, value, type);
   }]>;
 }
-let Class = PropertyTypeCase<TemplateArgument, "UncommonValue"> in {
-  def : Property<"value", APValue> {
-    let Read = [{ node.getAsUncommonValue() }];
-  }
-  def : Property<"type", QualType> {
-    let Read = [{ node.getUncommonValueType() }];
-  }
-  def : Creator<[{
-    return TemplateArgument(ctx, type, value);
-  }]>;
-}
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];

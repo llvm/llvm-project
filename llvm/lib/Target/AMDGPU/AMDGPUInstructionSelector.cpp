@@ -16,7 +16,6 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -597,9 +596,11 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock *BB = MI.getParent();
 
-  auto ConstSrc1 = getConstantVRegValWithLookThrough(Src1, *MRI, true, true);
+  auto ConstSrc1 =
+      getConstantVRegValWithLookThrough(Src1, *MRI, true, true, true);
   if (ConstSrc1) {
-    auto ConstSrc0 = getConstantVRegValWithLookThrough(Src0, *MRI, true, true);
+    auto ConstSrc0 =
+        getConstantVRegValWithLookThrough(Src0, *MRI, true, true, true);
     if (ConstSrc0) {
       const int64_t K0 = ConstSrc0->Value.getSExtValue();
       const int64_t K1 = ConstSrc1->Value.getSExtValue();
@@ -3797,13 +3798,9 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
                MIB.addReg(HighBits);
              },
              [=](MachineInstrBuilder &MIB) { // soffset
-               const MachineMemOperand *MMO = *MI->memoperands_begin();
-               const MachinePointerInfo &PtrInfo = MMO->getPointerInfo();
-
-               if (isStackPtrRelative(PtrInfo))
-                 MIB.addReg(Info->getStackPtrOffsetReg());
-               else
-                 MIB.addImm(0);
+               // Use constant zero for soffset and rely on eliminateFrameIndex
+               // to choose the appropriate frame register if need be.
+               MIB.addImm(0);
              },
              [=](MachineInstrBuilder &MIB) { // offset
                MIB.addImm(Offset & 4095);
@@ -3850,15 +3847,9 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
                MIB.addReg(VAddr);
            },
            [=](MachineInstrBuilder &MIB) { // soffset
-             // If we don't know this private access is a local stack object, it
-             // needs to be relative to the entry point's scratch wave offset.
-             // TODO: Should split large offsets that don't fit like above.
-             // TODO: Don't use scratch wave offset just because the offset
-             // didn't fit.
-             if (!Info->isEntryFunction() && FI.hasValue())
-               MIB.addReg(Info->getStackPtrOffsetReg());
-             else
-               MIB.addImm(0);
+             // Use constant zero for soffset and rely on eliminateFrameIndex
+             // to choose the appropriate frame register if need be.
+             MIB.addImm(0);
            },
            [=](MachineInstrBuilder &MIB) { // offset
              MIB.addImm(Offset);

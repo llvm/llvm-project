@@ -46,6 +46,33 @@
 ; CHECK-MIXED-FP-AND-MP: Running pass: NoOpModulePass
 ; CHECK-MIXED-FP-AND-MP: Finished llvm::Module pass manager run
 
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -aa-pipeline= -passes='require<aa>' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-EMPTY-AA
+; CHECK-EMPTY-AA: Running analysis: AAManager
+; CHECK-EMPTY-AA-NOT: Running analysis: BasicAA
+
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -aa-pipeline=basic-aa -passes='require<aa>' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-BASIC-AA
+; CHECK-BASIC-AA: Running analysis: AAManager
+; CHECK-BASIC-AA: Running analysis: BasicAA
+; CHECK-BASIC-AA-NOT: Running analysis: TypeBasedAA
+
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -aa-pipeline=basic-aa,tbaa -passes='require<aa>' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-TWO-AA
+; CHECK-TWO-AA: Running analysis: AAManager
+; CHECK-TWO-AA: Running analysis: BasicAA
+; CHECK-TWO-AA: Running analysis: TypeBasedAA
+
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -aa-pipeline=default -passes='require<aa>' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-DEFAULT-AA
+; CHECK-DEFAULT-AA: Running analysis: AAManager
+; CHECK-DEFAULT-AA-DAG: Running analysis: BasicAA
+; CHECK-DEFAULT-AA-DAG: Running analysis: TypeBasedAA
+
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED1

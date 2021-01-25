@@ -130,7 +130,7 @@ int foo(int n) {
   // CHECK-DAG:   [[CPADDR2:%.+]] = bitcast i8** [[PADDR2]] to [[STRUCT_TT]]**
   // CHECK-DAG:   store [[STRUCT_TT]]* [[D_ADDR:%.+]], [[STRUCT_TT]]** [[CBPADDR2]]
   // CHECK-DAG:   store [[STRUCT_TT]]* [[D_ADDR]], [[STRUCT_TT]]** [[CPADDR2]]
-  // CHECK-DAG:   store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MAPPER_ID:@.+]] to i8*), i8** [[MADDR2]],
+  // CHECK-DAG:   store i8* bitcast (void (i8*, i8*, i8*, i64, i64, i8*)* [[MAPPER_ID:@.+]] to i8*), i8** [[MADDR2]],
 
   // CHECK-DAG:   [[BP_START:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 0
   // CHECK-DAG:   [[P_START:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 0

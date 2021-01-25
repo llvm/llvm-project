@@ -7,13 +7,10 @@ define void @basic(i32 %K, i32 %N) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[CMP_INNER_PEEL:%.*]] = icmp sgt i32 [[K:%.*]], 1
-; CHECK-NEXT:    br i1 [[CMP_INNER_PEEL]], label [[INNER_PEEL2:%.*]], label [[OUTER_BACKEDGE]]
-; CHECK:       inner.peel2:
-; CHECK-NEXT:    [[CMP_INNER_PEEL8:%.*]] = icmp sgt i32 [[K]], 3
+; CHECK-NEXT:    [[CMP_INNER_PEEL8:%.*]] = icmp sgt i32 [[K:%.*]], 3
 ; CHECK-NEXT:    br i1 [[CMP_INNER_PEEL8]], label [[INNER:%.*]], label [[OUTER_BACKEDGE]]
 ; CHECK:       inner:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_INC:%.*]], [[INNER]] ], [ 3, [[INNER_PEEL2]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_INC:%.*]], [[INNER]] ], [ 3, [[OUTER]] ]
 ; CHECK-NEXT:    [[J_INC]] = add nuw nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp slt i32 [[J_INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_INNER]], label [[INNER]], label [[OUTER_BACKEDGE]], [[LOOP0:!llvm.loop !.*]]

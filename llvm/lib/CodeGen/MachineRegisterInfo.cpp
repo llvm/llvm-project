@@ -417,17 +417,11 @@ MachineInstr *MachineRegisterInfo::getUniqueVRegDef(Register Reg) const {
 }
 
 bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
-  use_nodbg_iterator UI = use_nodbg_begin(RegNo);
-  if (UI == use_nodbg_end())
-    return false;
-  return ++UI == use_nodbg_end();
+  return hasSingleElement(use_nodbg_operands(RegNo));
 }
 
 bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
-  use_instr_nodbg_iterator UI = use_instr_nodbg_begin(RegNo);
-  if (UI == use_instr_nodbg_end())
-    return false;
-  return ++UI == use_instr_nodbg_end();
+  return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
 /// clearKillFlags - Iterate over all the uses of the given register and
@@ -637,8 +631,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   if (IsUpdatedCSRsInitialized)
     UpdatedCSRs.clear();
 
-  for (MCPhysReg Reg : CSRs)
-    UpdatedCSRs.push_back(Reg);
+  append_range(UpdatedCSRs, CSRs);
 
   // Zero value represents the end of the register list
   // (no more registers should be pushed).

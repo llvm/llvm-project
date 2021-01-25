@@ -173,6 +173,12 @@ vfncvt.xu.f.w v8, v4, v0.t
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 14 48 48 <unknown>
 
+vfncvt.xu.f.w v4, v4, v0.t
+# CHECK-INST: vfncvt.xu.f.w v4, v4, v0.t
+# CHECK-ENCODING: [0x57,0x12,0x48,0x48]
+# CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
+# CHECK-UNKNOWN: 57 12 48 48 <unknown>
+
 vfncvt.xu.f.w v8, v4
 # CHECK-INST: vfncvt.xu.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x48,0x4a]

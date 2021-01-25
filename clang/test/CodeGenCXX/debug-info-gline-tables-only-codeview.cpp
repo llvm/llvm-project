@@ -5,7 +5,6 @@
 
 namespace NS {
 struct C {
-public:
   void m() {}
 };
 void f() {}
@@ -14,17 +13,18 @@ void f() {}
 NS::C c;
 
 void test() {
-  // CHECK: ![[EMPTY:[0-9]+]] = !{}
   // CHECK: !DISubprogram(name: "f", scope: ![[NS:[0-9]+]],
   // CHECK-SAME:          type: ![[F:[0-9]+]]
   // CHECK: ![[NS]] = !DINamespace(name: "NS", scope: null)
-  // CHECK: ![[F]] = !DISubroutineType(types: ![[EMPTY]])
+  // CHECK: ![[F]] = !DISubroutineType(types: ![[FTYPE:[0-9]+]])
+  // CHECK: ![[FTYPE]] = !{null}
   NS::f();
 
-  // CHECK: !DISubprogram(name: "m", scope: ![[C:[0-9]+]],
-  // CHECK-SAME:          type: ![[F]]
+  // CHECK: ![[M:[0-9]+]] = distinct !DISubprogram(name: "m", scope: ![[C:[0-9]+]],
+  // CHECK-SAME:                                   type: ![[MTYPE:[0-9]+]]
   // CHECK: ![[C]] = !DICompositeType(tag: DW_TAG_structure_type, name: "C",
   // CHECK-SAME:                      flags: DIFlagFwdDecl
   // CHECK-NOT: identifier
+  // CHECK: ![[MTYPE]] = !DISubroutineType(types: !{{.*}})
   c.m();
 }

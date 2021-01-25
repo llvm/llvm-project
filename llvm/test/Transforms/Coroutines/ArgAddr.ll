@@ -54,10 +54,12 @@ entry:
 ; CHECK-NEXT: bitcast i8* %index.addr12.i to i1*
 ; CHECK-NEXT: store i1 false
 ; CHECK-NEXT: store i32 3
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: store i32 3
 ; CHECK-NEXT: call void @print(i32 3)
 ; CHECK-NEXT: store i1 false
 ; CHECK-NEXT: store i32 2
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: store i32 2
 ; CHECK-NEXT: call void @print(i32 2)
 ; CHECK:      ret i32 0

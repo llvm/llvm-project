@@ -58,14 +58,14 @@ struct ConstantAggregateBuilderUtils {
   }
 
   llvm::Constant *getPadding(CharUnits PadSize) const {
-    llvm::Type *Ty = CGM.Int8Ty;
+    llvm::Type *Ty = CGM.CharTy;
     if (PadSize > CharUnits::One())
       Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
     return llvm::UndefValue::get(Ty);
   }
 
   llvm::Constant *getZeroes(CharUnits ZeroSize) const {
-    llvm::Type *Ty = llvm::ArrayType::get(CGM.Int8Ty, ZeroSize.getQuantity());
+    llvm::Type *Ty = llvm::ArrayType::get(CGM.CharTy, ZeroSize.getQuantity());
     return llvm::ConstantAggregateZero::get(Ty);
   }
 };
@@ -1069,7 +1069,7 @@ public:
 
       assert(CurSize <= TotalSize && "Union size mismatch!");
       if (unsigned NumPadBytes = TotalSize - CurSize) {
-        llvm::Type *Ty = CGM.Int8Ty;
+        llvm::Type *Ty = CGM.CharTy;
         if (NumPadBytes > 1)
           Ty = llvm::ArrayType::get(Ty, NumPadBytes);
 
@@ -1366,11 +1366,11 @@ llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (!CE->hasAPValueResult())
     return nullptr;
   const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
-  QualType RetType = Inner->getType();
-  if (Inner->isLValue())
-    RetType = CGF->getContext().getLValueReferenceType(RetType);
-  else if (Inner->isXValue())
-    RetType = CGF->getContext().getRValueReferenceType(RetType);
+  QualType RetType;
+  if (auto *Call = dyn_cast<CallExpr>(Inner))
+    RetType = Call->getCallReturnType(CGF->getContext());
+  else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
+    RetType = Ctor->getType();
   llvm::Constant *Res =
       emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
   return Res;

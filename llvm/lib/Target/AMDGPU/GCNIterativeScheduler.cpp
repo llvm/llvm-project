@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNIterativeScheduler.h"
-#include "AMDGPUSubtarget.h"
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
 

@@ -838,13 +838,13 @@ def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
 }]>;
 def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
-  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+  return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def sexti32 : PatFrags<(ops node:$src),
                        [(sext_inreg node:$src, i32),
                         (assertsexti32 node:$src)]>;
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
-  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+  return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def zexti32 : PatFrags<(ops node:$src),
                        [(and node:$src, 0xffffffff),
@@ -885,6 +885,10 @@ class shiftop<SDPatternOperator operator>
     : PatFrags<(ops node:$val, node:$count),
                [(operator node:$val, node:$count),
                 (operator node:$val, (and node:$count, immbottomxlenset))]>;
+class shiftopw<SDPatternOperator operator>
+    : PatFrags<(ops node:$val, node:$count),
+               [(operator node:$val, node:$count),
+                (operator node:$val, (and node:$count, (XLenVT 31)))]>;
 
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;
@@ -1158,7 +1162,7 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-let Predicates = [IsRV64, NotHasStdExtZbbOrZbp] in
+let Predicates = [IsRV64, NotHasStdExtZba] in
 def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 
 let Predicates = [IsRV64] in {
@@ -1186,9 +1190,9 @@ def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 def : Pat<(sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt),
           (SRAIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 
-def : PatGprGpr<riscv_sllw, SLLW>;
-def : PatGprGpr<riscv_srlw, SRLW>;
-def : PatGprGpr<riscv_sraw, SRAW>;
+def : PatGprGpr<shiftopw<riscv_sllw>, SLLW>;
+def : PatGprGpr<shiftopw<riscv_srlw>, SRLW>;
+def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 
 /// Loads
 

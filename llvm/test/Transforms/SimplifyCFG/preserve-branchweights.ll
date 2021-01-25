@@ -318,10 +318,10 @@ define void @test8(i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[LT]], label [[A:%.*]], label [[B:%.*]], !prof !7
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1:#.*]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       b:
-; CHECK-NEXT:    call void @helper(i32 1) #1
+; CHECK-NEXT:    call void @helper(i32 1) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -355,14 +355,14 @@ define i1 @test9(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    i32 92, label [[END]]
 ; CHECK-NEXT:    ], !prof !8
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
 ; CHECK-NEXT:    [[RETA:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[RETA]]
 ; CHECK:       bees:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[BEES]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    call void @helper(i32 2) #1
+; CHECK-NEXT:    call void @helper(i32 2) [[ATTR1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -394,10 +394,10 @@ define void @test10(i32 %x) nounwind readnone ssp noredzone {
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]], !prof !9
 ; CHECK:       lor.rhs:
-; CHECK-NEXT:    call void @helper(i32 1) #1
+; CHECK-NEXT:    call void @helper(i32 1) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       lor.end:
-; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -424,10 +424,10 @@ define void @test11(i32 %x) nounwind {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], 24
 ; CHECK-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[A:%.*]], !prof !10
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       c:
-; CHECK-NEXT:    call void @helper(i32 2) #1
+; CHECK-NEXT:    call void @helper(i32 2) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %i = shl i32 %x, 1
@@ -472,7 +472,7 @@ sw.epilog:
 define void @test13(i32 %x) nounwind {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -541,8 +541,8 @@ define i32 @HoistThenElseCodeToIf(i32 %n) {
 ; CHECK-LABEL: @HoistThenElseCodeToIf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
-; CHECK-NEXT:    ret i32 [[DOT]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   %tobool = icmp eq i32 %n, 0

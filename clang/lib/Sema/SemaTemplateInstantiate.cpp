@@ -1556,18 +1556,16 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
       VD = nullptr;
     }
 
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
-    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
-    refParam = paramType->isReferenceType();
+    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       paramType.getNonReferenceType()));
+                                       arg.getIntegralType()));
   }
 
   if (result.isInvalid())
@@ -3232,8 +3230,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (FunctionDecl *Pattern =
               Function->getInstantiatedFromMemberFunction()) {
 
-        if (TSK != TSK_ImplicitInstantiation &&
-            Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo =
@@ -3278,8 +3275,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if (Var->isStaticDataMember()) {
-        if (TSK != TSK_ImplicitInstantiation &&
-            Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+        if (Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo = Var->getMemberSpecializationInfo();
@@ -3296,7 +3292,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             SuppressNew)
           continue;
 
-        if (TSK != TSK_ExplicitInstantiationDeclaration) {
+        if (TSK == TSK_ExplicitInstantiationDefinition) {
           // C++0x [temp.explicit]p8:
           //   An explicit instantiation definition that names a class template
           //   specialization explicitly instantiates the class template

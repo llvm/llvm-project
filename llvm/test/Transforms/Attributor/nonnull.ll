@@ -146,30 +146,22 @@ define i8* @test3(i1 %c) {
 ; nonnull if neither can ever return null.  (In this case, they
 ; just never return period.)
 define i8* @test4_helper() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; NOT_CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; IS__CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4_helper
+; CHECK-SAME: () [[ATTR2:#.*]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; NOT_CGSCC_NPM-SAME: () [[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; IS__CGSCC_NPM-SAME: () [[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4
+; CHECK-SAME: () [[ATTR2]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4_helper() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4_helper()
   ret i8* %ret
@@ -798,7 +790,7 @@ declare void @use1nonnull(i8* nonnull %x);
 declare void @use2nonnull(i8* nonnull %x, i8* nonnull %y);
 declare void @use3nonnull(i8* nonnull %x, i8* nonnull %y, i8* nonnull %z);
 
-declare i8 @use1safecall(i8* %x) readonly nounwind ; readonly+nounwind guarantees that execution continues to successor
+declare i8 @use1safecall(i8* %x) readonly nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
 ; Can't extend non-null to parent for any argument because the 2nd call is not guaranteed to execute.
 
@@ -1513,11 +1505,11 @@ define void @PR43833_simple(i32* %0, i32 %1) {
   br i1 %11, label %7, label %8
 }
 
-declare i8* @strrchr(i8* %0, i32 %1) nofree nounwind readonly
+declare i8* @strrchr(i8* %0, i32 %1) nofree nounwind readonly willreturn
 
 ; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
 define i8* @mybasename(i8* nofree readonly %str) {
-; NOT_CGSCC_OPM: Function Attrs: nofree nounwind readonly
+; NOT_CGSCC_OPM: Function Attrs: nofree nounwind readonly willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR11:#.*]] {
 ; NOT_CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR14]]
@@ -1526,7 +1518,7 @@ define i8* @mybasename(i8* nofree readonly %str) {
 ; NOT_CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[COND]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree nounwind readonly
+; IS__CGSCC_OPM: Function Attrs: nofree nounwind readonly willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; IS__CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR12:#.*]] {
 ; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR15]]
@@ -1653,6 +1645,19 @@ define i8* @nonnull_function_ptr_2() {
   %bc = bitcast i8*()* @function_decl to i8*
   ret i8* %bc
 }
+
+; FIXME: nonnull should not be propagated to the caller's p unless there is noundef
+define void @nonnull_caller(i8* %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_caller
+; CHECK-SAME: (i8* nonnull [[P:%.*]]) {
+; CHECK-NEXT:    call void @nonnull_callee(i8* nonnull [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @nonnull_callee(i8* %p)
+  ret void
+}
+
+declare void @nonnull_callee(i8* nonnull %p)
 
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}

@@ -5619,8 +5619,7 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
                                                    QualType T, APValue &Value,
                                                    Sema::CCEKind CCE,
                                                    bool RequireInt,
-                                                   NamedDecl *Dest,
-                                                   bool *ValueDependent) {
+                                                   NamedDecl *Dest) {
   assert(S.getLangOpts().CPlusPlus11 &&
          "converted constant expression outside C++11");
 
@@ -5744,8 +5743,6 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   if (Result.get()->isValueDependent()) {
     Value = APValue();
-    if (ValueDependent)
-      *ValueDependent = true;
     return Result;
   }
 
@@ -5769,14 +5766,10 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     Result = ExprError();
   } else {
     Value = Eval.Val;
-    if (ValueDependent)
-      *ValueDependent = Eval.Dependent;
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = Result.get();
-      if (!isa<ConstantExpr>(E))
-        E = ConstantExpr::Create(S.Context, Result.get(), Value);
+      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
       if (ReturnPreNarrowingValue)
         Value = std::move(PreNarrowingValue);
       return E;
@@ -5803,10 +5796,9 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
 ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
                                                   APValue &Value, CCEKind CCE,
-                                                  NamedDecl *Dest,
-                                                  bool *ValueDependent) {
+                                                  NamedDecl *Dest) {
   return ::CheckConvertedConstantExpression(*this, From, T, Value, CCE, false,
-                                            Dest, ValueDependent);
+                                            Dest);
 }
 
 ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
@@ -5816,8 +5808,7 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
 
   APValue V;
   auto R = ::CheckConvertedConstantExpression(*this, From, T, V, CCE, true,
-                                              /*Dest=*/nullptr,
-                                              /*ValueDependent=*/nullptr);
+                                              /*Dest=*/nullptr);
   if (!R.isInvalid() && !R.get()->isValueDependent())
     Value = V.getInt();
   return R;
@@ -12932,7 +12923,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     return ExprError();
   }
 
-  // Build an implicit member access expression if appropriate. Just drop the
+  // Build an implicit member call if appropriate.  Just drop the
   // casts and such from the call, we don't really care.
   ExprResult NewFn = ExprError();
   if ((*R.begin())->isCXXClassMember())
@@ -12947,19 +12938,12 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   if (NewFn.isInvalid())
     return ExprError();
 
-  auto CallE =
-      SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
-                            MultiExprArg(Args.data(), Args.size()), RParenLoc);
-  if (CallE.isInvalid())
-    return ExprError();
-  // We now have recovered a callee. However, building a real call may lead to
-  // incorrect secondary diagnostics if our recovery wasn't correct.
-  // We keep the recovery behavior but suppress all following diagnostics by
-  // using RecoveryExpr. We deliberately drop the return type of the recovery
-  // function, and rely on clang's dependent mechanism to suppress following
-  // diagnostics.
-  return SemaRef.CreateRecoveryExpr(CallE.get()->getBeginLoc(),
-                                    CallE.get()->getEndLoc(), {CallE.get()});
+  // This shouldn't cause an infinite loop because we're giving it
+  // an expression with viable lookup results, which should never
+  // end up here.
+  return SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
+                               MultiExprArg(Args.data(), Args.size()),
+                               RParenLoc);
 }
 
 /// Constructs and populates an OverloadedCandidateSet from

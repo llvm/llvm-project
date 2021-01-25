@@ -1035,7 +1035,7 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
     if (!real_guy_sp)
       return false;
   }
-  uint8_t value = (real_guy_sp->GetValueAsUnsigned(0) & 0xFF);
+  int8_t value = (real_guy_sp->GetValueAsSigned(0) & 0xFF);
   switch (value) {
   case 0:
     stream.Printf("NO");
@@ -1044,7 +1044,7 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
     stream.Printf("YES");
     break;
   default:
-    stream.Printf("%u", value);
+    stream.Printf("%d", value);
     break;
   }
   return true;

@@ -2392,7 +2392,6 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ; AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: combine_unneeded_subvector1:

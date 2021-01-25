@@ -19,7 +19,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(long double)
 
-TEST(TrunclTest, SpecialNumbers) {
+TEST(LlvmLibcTrunclTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::truncl(zero));
   EXPECT_FP_EQ(negZero, __llvm_libc::truncl(negZero));
 
@@ -29,7 +29,7 @@ TEST(TrunclTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::truncl(aNaN));
 }
 
-TEST(TrunclTest, RoundedNumbers) {
+TEST(LlvmLibcTrunclTest, RoundedNumbers) {
   EXPECT_FP_EQ(1.0l, __llvm_libc::truncl(1.0l));
   EXPECT_FP_EQ(-1.0l, __llvm_libc::truncl(-1.0l));
   EXPECT_FP_EQ(10.0l, __llvm_libc::truncl(10.0l));
@@ -38,7 +38,7 @@ TEST(TrunclTest, RoundedNumbers) {
   EXPECT_FP_EQ(-1234.0l, __llvm_libc::truncl(-1234.0l));
 }
 
-TEST(TrunclTest, Fractions) {
+TEST(LlvmLibcTrunclTest, Fractions) {
   EXPECT_FP_EQ(0.0l, __llvm_libc::truncl(0.5l));
   EXPECT_FP_EQ(-0.0l, __llvm_libc::truncl(-0.5l));
   EXPECT_FP_EQ(0.0l, __llvm_libc::truncl(0.115l));
@@ -61,7 +61,7 @@ TEST(TrunclTest, Fractions) {
   EXPECT_FP_EQ(-1234.0l, __llvm_libc::truncl(-1234.96l));
 }
 
-TEST(TrunclTest, InLongDoubleRange) {
+TEST(LlvmLibcTrunclTest, InLongDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;

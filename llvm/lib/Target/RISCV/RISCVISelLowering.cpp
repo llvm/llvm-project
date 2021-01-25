@@ -163,7 +163,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, XLenVT, Expand);
-  setOperationAction(ISD::SELECT, XLenVT, Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT, Expand);
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -225,6 +224,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZbp()) {
+    // Custom lower bswap/bitreverse so we can convert them to GREVI to enable
+    // more combining.
     setOperationAction(ISD::BITREVERSE, XLenVT, Custom);
     setOperationAction(ISD::BSWAP, XLenVT, Custom);
 
@@ -233,7 +234,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::i32, Custom);
     }
   } else {
-    setOperationAction(ISD::BSWAP, XLenVT, Expand);
+    // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
+    // pattern match it directly in isel.
+    setOperationAction(ISD::BSWAP, XLenVT,
+                       Subtarget.hasStdExtZbb() ? Legal : Expand);
   }
 
   if (Subtarget.hasStdExtZbb()) {
@@ -250,11 +254,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbt()) {
     setOperationAction(ISD::FSHL, XLenVT, Legal);
     setOperationAction(ISD::FSHR, XLenVT, Legal);
+    setOperationAction(ISD::SELECT, XLenVT, Legal);
 
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FSHL, MVT::i32, Custom);
       setOperationAction(ISD::FSHR, MVT::i32, Custom);
     }
+  } else {
+    setOperationAction(ISD::SELECT, XLenVT, Custom);
   }
 
   ISD::CondCode FPCCToExpand[] = {
@@ -359,6 +366,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i16, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
+
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
@@ -1365,7 +1374,29 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
   }
 
-  return SDValue();
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::riscv_vleff: {
+    SDLoc DL(Op);
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
+    SDValue Load = DAG.getNode(RISCVISD::VLEFF, DL, VTs, Op.getOperand(0),
+                               Op.getOperand(2), Op.getOperand(3));
+    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
+    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
+  }
+  case Intrinsic::riscv_vleff_mask: {
+    SDLoc DL(Op);
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
+    SDValue Load = DAG.getNode(RISCVISD::VLEFF_MASK, DL, VTs, Op.getOperand(0),
+                               Op.getOperand(2), Op.getOperand(3),
+                               Op.getOperand(4), Op.getOperand(5));
+    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
+    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
+  }
+  }
 }
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
@@ -2009,7 +2040,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (C1 && C2) {
-      APInt C1Int = C1->getAPIntValue();
+      const APInt &C1Int = C1->getAPIntValue();
       APInt ShiftedC1Int = C1Int << C2->getAPIntValue();
 
       // We can materialise `c1 << c2` into an add immediate, so it's "free",
@@ -2563,14 +2594,15 @@ static const MCPhysReg ArgFPR64s[] = {
 };
 // This is an interim calling convention and it may be changed in the future.
 static const MCPhysReg ArgVRs[] = {
-  RISCV::V16, RISCV::V17, RISCV::V18, RISCV::V19, RISCV::V20,
-  RISCV::V21, RISCV::V22, RISCV::V23
-};
-static const MCPhysReg ArgVRM2s[] = {
-  RISCV::V16M2, RISCV::V18M2, RISCV::V20M2, RISCV::V22M2
-};
-static const MCPhysReg ArgVRM4s[] = {RISCV::V16M4, RISCV::V20M4};
-static const MCPhysReg ArgVRM8s[] = {RISCV::V16M8};
+    RISCV::V8,  RISCV::V9,  RISCV::V10, RISCV::V11, RISCV::V12, RISCV::V13,
+    RISCV::V14, RISCV::V15, RISCV::V16, RISCV::V17, RISCV::V18, RISCV::V19,
+    RISCV::V20, RISCV::V21, RISCV::V22, RISCV::V23};
+static const MCPhysReg ArgVRM2s[] = {RISCV::V8M2,  RISCV::V10M2, RISCV::V12M2,
+                                     RISCV::V14M2, RISCV::V16M2, RISCV::V18M2,
+                                     RISCV::V20M2, RISCV::V22M2};
+static const MCPhysReg ArgVRM4s[] = {RISCV::V8M4, RISCV::V12M4, RISCV::V16M4,
+                                     RISCV::V20M4};
+static const MCPhysReg ArgVRM8s[] = {RISCV::V8M8, RISCV::V16M8};
 
 // Pass a 2*XLEN argument that has been split into two XLEN values through
 // registers or the stack as necessary.
@@ -3812,6 +3844,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR)
+  NODE_NAME_CASE(VLEFF)
+  NODE_NAME_CASE(VLEFF_MASK)
+  NODE_NAME_CASE(READ_VL)
   }
   // clang-format on
   return nullptr;
@@ -4268,4 +4303,11 @@ namespace RISCVVIntrinsicsTable {
 #include "RISCVGenSearchableTables.inc"
 
 } // namespace RISCVVIntrinsicsTable
+
+namespace RISCVZvlssegTable {
+
+#define GET_RISCVZvlssegTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVZvlssegTable
 } // namespace llvm

@@ -27,6 +27,7 @@ class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
 class BlockFrequencyInfo;
+class ICFLoopSafetyInfo;
 class IRBuilderBase;
 class Loop;
 class LoopInfo;

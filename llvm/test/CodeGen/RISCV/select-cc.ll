@@ -62,55 +62,35 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32IBT-LABEL: foo:
 ; RV32IBT:       # %bb.0:
 ; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    beq a0, a2, .LBB0_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_2:
+; RV32IBT-NEXT:    lw a3, 0(a1)
+; RV32IBT-NEXT:    xor a4, a0, a2
+; RV32IBT-NEXT:    cmov a0, a4, a2, a0
 ; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bne a0, a2, .LBB0_4
-; RV32IBT-NEXT:  # %bb.3:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_4:
+; RV32IBT-NEXT:    xor a4, a0, a3
+; RV32IBT-NEXT:    cmov a0, a4, a0, a3
+; RV32IBT-NEXT:    lw a3, 0(a1)
+; RV32IBT-NEXT:    sltu a4, a2, a0
+; RV32IBT-NEXT:    cmov a0, a4, a0, a2
 ; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bltu a2, a0, .LBB0_6
-; RV32IBT-NEXT:  # %bb.5:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_6:
+; RV32IBT-NEXT:    sltu a4, a0, a3
+; RV32IBT-NEXT:    cmov a0, a4, a3, a0
+; RV32IBT-NEXT:    lw a3, 0(a1)
+; RV32IBT-NEXT:    sltu a4, a0, a2
+; RV32IBT-NEXT:    cmov a0, a4, a0, a2
 ; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bgeu a0, a2, .LBB0_8
-; RV32IBT-NEXT:  # %bb.7:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_8:
+; RV32IBT-NEXT:    sltu a4, a3, a0
+; RV32IBT-NEXT:    cmov a0, a4, a3, a0
+; RV32IBT-NEXT:    lw a3, 0(a1)
+; RV32IBT-NEXT:    slt a4, a2, a0
+; RV32IBT-NEXT:    cmov a0, a4, a0, a2
 ; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bltu a0, a2, .LBB0_10
-; RV32IBT-NEXT:  # %bb.9:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_10:
-; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bgeu a2, a0, .LBB0_12
-; RV32IBT-NEXT:  # %bb.11:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_12:
-; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    blt a2, a0, .LBB0_14
-; RV32IBT-NEXT:  # %bb.13:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_14:
-; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    bge a0, a2, .LBB0_16
-; RV32IBT-NEXT:  # %bb.15:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_16:
-; RV32IBT-NEXT:    lw a2, 0(a1)
-; RV32IBT-NEXT:    blt a0, a2, .LBB0_18
-; RV32IBT-NEXT:  # %bb.17:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_18:
+; RV32IBT-NEXT:    slt a4, a0, a3
 ; RV32IBT-NEXT:    lw a1, 0(a1)
-; RV32IBT-NEXT:    bge a1, a0, .LBB0_20
-; RV32IBT-NEXT:  # %bb.19:
-; RV32IBT-NEXT:    mv a0, a1
-; RV32IBT-NEXT:  .LBB0_20:
+; RV32IBT-NEXT:    cmov a0, a4, a3, a0
+; RV32IBT-NEXT:    slt a3, a0, a2
+; RV32IBT-NEXT:    cmov a0, a3, a0, a2
+; RV32IBT-NEXT:    slt a2, a1, a0
+; RV32IBT-NEXT:    cmov a0, a2, a1, a0
 ; RV32IBT-NEXT:    ret
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1

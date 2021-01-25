@@ -4695,6 +4695,8 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
+def err_non_type_template_arg_unsupported : Error<
+  "sorry, non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -4746,6 +4748,9 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
+def err_template_arg_member_ptr_base_derived_not_supported : Error<
+  "sorry, non-type template argument of pointer-to-member type %1 that refers "
+  "to member %q0 of a different class is not supported yet">;
 def ext_template_arg_extra_parens : ExtWarn<
   "address non-type template argument cannot be surrounded by parentheses">;
 def warn_cxx98_compat_template_arg_extra_parens : Warning<
@@ -8232,7 +8237,7 @@ def err_cuda_device_exceptions : Error<
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
-    "__device__, __constant__, and __shared__ variables.">;
+    "__device__, __constant__, __shared__, and __managed__ variables.">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables.">;
 def err_cuda_vla : Error<
@@ -8242,7 +8247,8 @@ def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
 def err_cuda_host_shared : Error<
     "__shared__ local variables not allowed in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
-def err_cuda_nonstatic_constdev: Error<"__constant__ and __device__ are not allowed on non-static local variables">;
+def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
+    "__managed__ are not allowed on non-static local variables">;
 def err_cuda_ovl_target : Error<
   "%select{__device__|__global__|__host__|__host__ __device__}0 function %1 "
   "cannot overload %select{__device__|__global__|__host__|__host__ __device__}2 function %3">;
@@ -10463,8 +10469,9 @@ def err_omp_invariant_or_linear_dependency : Error<
   "expected loop invariant expression or '<invariant1> * %0 + <invariant2>' kind of expression">;
 def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
-def err_device_unsupported_type : Error <
-  "%0 requires %1 bit size %2 type support, but device '%3' does not support it">;
+def err_device_unsupported_type
+    : Error<"%0 requires %select{|%2 bit size}1 %3 type support, but device "
+            "'%4' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<

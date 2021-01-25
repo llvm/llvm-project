@@ -353,17 +353,13 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
 // -----+------------+------------------------------------------------
 // 7    | vma        | Vector mask agnostic
 // 6    | vta        | Vector tail agnostic
-// 5    | vlmul[2]   | Fractional lmul?
-// 4:2  | vsew[2:0]  | Standard element width (SEW) setting
-// 1:0  | vlmul[1:0] | Vector register group multiplier (LMUL) setting
-//
-// TODO: This format will change for the V extensions spec v1.0.
+// 5:3  | vsew[2:0]  | Standard element width (SEW) setting
+// 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
 inline static unsigned encodeVTYPE(RISCVVLMUL VLMUL, RISCVVSEW VSEW,
                                    bool TailAgnostic, bool MaskAgnostic) {
   unsigned VLMULBits = static_cast<unsigned>(VLMUL);
   unsigned VSEWBits = static_cast<unsigned>(VSEW);
-  unsigned VTypeI =
-      ((VLMULBits & 0x4) << 3) | (VSEWBits << 2) | (VLMULBits & 0x3);
+  unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
   if (TailAgnostic)
     VTypeI |= 0x40;
   if (MaskAgnostic)
@@ -372,14 +368,13 @@ inline static unsigned encodeVTYPE(RISCVVLMUL VLMUL, RISCVVSEW VSEW,
   return VTypeI;
 }
 
-// TODO: This format will change for the V extensions spec v1.0.
 inline static RISCVVLMUL getVLMUL(unsigned VType) {
-  unsigned VLMUL = (VType & 0x3) | ((VType & 0x20) >> 3);
+  unsigned VLMUL = VType & 0x7;
   return static_cast<RISCVVLMUL>(VLMUL);
 }
 
 inline static RISCVVSEW getVSEW(unsigned VType) {
-  unsigned VSEW = (VType >> 2) & 0x7;
+  unsigned VSEW = (VType >> 3) & 0x7;
   return static_cast<RISCVVSEW>(VSEW);
 }
 

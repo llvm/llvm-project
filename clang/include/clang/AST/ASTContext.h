@@ -2401,12 +2401,10 @@ public:
         return (*SuperTnullability == NullabilityKind::NonNull &&
                 *SubTnullability == NullabilityKind::Nullable);
       }
-      else {
-        // For the return type, it's okay for the superclass method to specify
-        // "nullable" and the subclass method specify "nonnull"
-        return (*SuperTnullability == NullabilityKind::Nullable &&
-                *SubTnullability == NullabilityKind::NonNull);
-      }
+      // For the return type, it's okay for the superclass method to specify
+      // "nullable" and the subclass method specify "nonnull"
+      return (*SuperTnullability == NullabilityKind::Nullable &&
+              *SubTnullability == NullabilityKind::NonNull);
     }
     return true;
   }
@@ -2818,8 +2816,8 @@ public:
   /// for destruction.
   template <typename T> void addDestruction(T *Ptr) const {
     if (!std::is_trivially_destructible<T>::value) {
-      auto DestroyPtr = [](void *V) { ((T*)V)->~T(); };
-      AddDeallocation(DestroyPtr, (void*)Ptr);
+      auto DestroyPtr = [](void *V) { static_cast<T *>(V)->~T(); };
+      AddDeallocation(DestroyPtr, Ptr);
     }
   }
 

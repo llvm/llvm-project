@@ -235,8 +235,7 @@ static RecordRecTy *resolveRecordTypes(RecordRecTy *T1, RecordRecTy *T2) {
   SmallVector<Record *, 4> Stack(T1->classes_begin(), T1->classes_end());
 
   while (!Stack.empty()) {
-    Record *R = Stack.back();
-    Stack.pop_back();
+    Record *R = Stack.pop_back_val();
 
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);

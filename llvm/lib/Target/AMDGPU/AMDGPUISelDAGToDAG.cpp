@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
@@ -1525,7 +1524,9 @@ std::pair<SDValue, SDValue> AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const 
       FI ? CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0)) : N;
 
   // We rebase the base address into an absolute stack address and hence
-  // use constant 0 for soffset.
+  // use constant 0 for soffset. This value must be retained until
+  // frame elimination and eliminateFrameIndex will choose the appropriate
+  // frame register if need be.
   return std::make_pair(TFI, CurDAG->getTargetConstant(0, DL, MVT::i32));
 }
 

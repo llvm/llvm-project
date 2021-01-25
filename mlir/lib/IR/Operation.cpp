@@ -692,30 +692,6 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
   return getOperation()->emitRemark(message);
 }
 
-Dialect *OpState::getDialect() { return getOperation()->getDialect(); }
-Region *OpState::getParentRegion() { return getOperation()->getParentRegion(); }
-Operation *OpState::getParentOp() { return getOperation()->getParentOp(); }
-OpState::dialect_attr_range OpState::getDialectAttrs() {
-  return state->getDialectAttrs();
-}
-OpState::dialect_attr_iterator OpState::dialect_attr_begin() {
-  return state->dialect_attr_begin();
-}
-OpState::dialect_attr_iterator OpState::dialect_attr_end() {
-  return state->dialect_attr_end();
-}
-Attribute OpState::getAttr(StringRef name) { return state->getAttr(name); }
-void OpState::setAttr(Identifier name, Attribute value) {
-  state->setAttr(name, value);
-}
-void OpState::setAttr(StringRef name, Attribute value) {
-  setAttr(Identifier::get(name, getContext()), value);
-}
-void OpState::setAttrs(ArrayRef<NamedAttribute> attributes) {
-  state->setAttrs(DictionaryAttr::get(attributes, getContext()));
-}
-void OpState::setAttrs(DictionaryAttr newAttrs) { state->setAttrs(newAttrs); }
-
 //===----------------------------------------------------------------------===//
 // Op Trait implementations
 //===----------------------------------------------------------------------===//
@@ -1207,6 +1183,48 @@ void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 // CastOp implementation
 //===----------------------------------------------------------------------===//
+
+/// Attempt to fold the given cast operation.
+LogicalResult
+impl::foldCastInterfaceOp(Operation *op, ArrayRef<Attribute> attrOperands,
+                          SmallVectorImpl<OpFoldResult> &foldResults) {
+  OperandRange operands = op->getOperands();
+  if (operands.empty())
+    return failure();
+  ResultRange results = op->getResults();
+
+  // Check for the case where the input and output types match 1-1.
+  if (operands.getTypes() == results.getTypes()) {
+    foldResults.append(operands.begin(), operands.end());
+    return success();
+  }
+
+  return failure();
+}
+
+/// Attempt to verify the given cast operation.
+LogicalResult impl::verifyCastInterfaceOp(
+    Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible) {
+  auto resultTypes = op->getResultTypes();
+  if (llvm::empty(resultTypes))
+    return op->emitOpError()
+           << "expected at least one result for cast operation";
+
+  auto operandTypes = op->getOperandTypes();
+  if (!areCastCompatible(operandTypes, resultTypes)) {
+    InFlightDiagnostic diag = op->emitOpError("operand type");
+    if (llvm::empty(operandTypes))
+      diag << "s []";
+    else if (llvm::size(operandTypes) == 1)
+      diag << " " << *operandTypes.begin();
+    else
+      diag << "s " << operandTypes;
+    return diag << " and result type" << (resultTypes.size() == 1 ? " " : "s ")
+                << resultTypes << " are cast incompatible";
+  }
+
+  return success();
+}
 
 void impl::buildCastOp(OpBuilder &builder, OperationState &result, Value source,
                        Type destType) {

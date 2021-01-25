@@ -761,8 +761,6 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        if os.path.isdir("/usr/include/c++/v1"):
-            return True, "Headers found, let's hope they work"
         with tempfile.NamedTemporaryFile() as f:
             cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
             p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)

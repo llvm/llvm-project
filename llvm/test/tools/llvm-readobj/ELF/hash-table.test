@@ -113,8 +113,8 @@ Sections:
         Value: 0x0
       - Tag:   DT_NULL
         Value: 0x0
-SectionHeaderTable:
-  NoHeaders: [[NOHEADERS=false]]
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADERS=false]]
 ProgramHeaders:
   - Type:     PT_LOAD
     FirstSec: .hash

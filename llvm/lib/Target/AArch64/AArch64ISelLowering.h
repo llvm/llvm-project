@@ -961,6 +961,10 @@ private:
                           bool Reciprocal) const override;
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &ExtraSteps) const override;
+  SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
+                           const DenormalMode &Mode) const override;
+  SDValue getSqrtResultForDenormInput(SDValue Operand,
+                                      SelectionDAG &DAG) const override;
   unsigned combineRepeatedFPDivisors() const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;

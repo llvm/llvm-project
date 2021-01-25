@@ -173,7 +173,6 @@ public:
   std::string GetPath(Provenance) const; // __FILE__
   int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
-  Provenance CompilerInsertionProvenance(const char *, std::size_t);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

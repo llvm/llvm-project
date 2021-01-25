@@ -1571,6 +1571,25 @@ def FormatOptionalOperandResultBOp : FormatOptionalOperandResultOpBase<"b", [{
   (`[` $variadic^ `]`)? attr-dict
 }]>;
 
+// Test optional result type formatting.
+class FormatOptionalResultOpBase<string suffix, string fmt>
+    : TEST_Op<"format_optional_result_" # suffix # "_op",
+              [AttrSizedResultSegments]> {
+  let results = (outs Optional<I64>:$optional, Variadic<I64>:$variadic);
+  let assemblyFormat = fmt;
+}
+def FormatOptionalResultAOp : FormatOptionalResultOpBase<"a", [{
+  (`:` type($optional)^ `->` type($variadic))? attr-dict
+}]>;
+
+def FormatOptionalResultBOp : FormatOptionalResultOpBase<"b", [{
+  (`:` type($optional) `->` type($variadic)^)? attr-dict
+}]>;
+
+def FormatOptionalResultCOp : FormatOptionalResultOpBase<"c", [{
+  (`:` functional-type($optional, $variadic)^)? attr-dict
+}]>;
+
 def FormatTwoVariadicOperandsNoBuildableTypeOp
     : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
               [AttrSizedOperandSegments]> {

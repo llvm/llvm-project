@@ -53,14 +53,11 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Entries: [ 0 ]
-    Link:    .dynsym
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
-    Info:    0x0
     Entries: []
   - Name: .gnu.version_r
     Type: SHT_GNU_verneed
-    Info: 0x0
     Dependencies:
       - Version: 1
         File:    verneed1.so.0
