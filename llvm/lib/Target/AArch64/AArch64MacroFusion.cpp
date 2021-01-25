@@ -21,13 +21,20 @@ namespace {
 
 /// CMN, CMP, TST followed by Bcc
 static bool isArithmeticBccPair(const MachineInstr *FirstMI,
-                                const MachineInstr &SecondMI) {
+                                const MachineInstr &SecondMI, bool CmpOnly) {
   if (SecondMI.getOpcode() != AArch64::Bcc)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)
     return true;
+
+  // If we're in CmpOnly mode, we only fuse arithmetic instructions that
+  // discard their result.
+  if (CmpOnly && !(FirstMI->getOperand(0).getReg() == AArch64::XZR ||
+                   FirstMI->getOperand(0).getReg() == AArch64::WZR)) {
+    return false;
+  }
 
   switch (FirstMI->getOpcode()) {
   case AArch64::ADDSWri:
@@ -380,8 +387,11 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
-  if (ST.hasArithmeticBccFusion() && isArithmeticBccPair(FirstMI, SecondMI))
-    return true;
+  if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
+    bool CmpOnly = !ST.hasArithmeticBccFusion();
+    if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly))
+      return true;
+  }
   if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI))
