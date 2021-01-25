@@ -87,8 +87,9 @@ public:
   void onCycleEnd() override { ++TotalCycles; }
   void onEvent(const HWInstructionEvent &Event) override;
   void printView(llvm::raw_ostream &OS) const override;
+  StringRef getNameAsString() const override { return "SummaryView"; }
+  json::Value toJSON() const override;
 };
-
 } // namespace mca
 } // namespace llvm
 
