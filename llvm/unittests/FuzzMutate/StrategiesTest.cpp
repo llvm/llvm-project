@@ -49,6 +49,17 @@ std::unique_ptr<IRMutator> createDeleterMutator() {
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
 
+std::unique_ptr<IRMutator> createInstModifierMutator() {
+  std::vector<TypeGetter> Types{
+      Type::getInt1Ty,  Type::getInt8Ty,  Type::getInt16Ty, Type::getInt32Ty,
+      Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
+
+  std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
+  Strategies.push_back(std::make_unique<InstModificationIRStrategy>());
+
+  return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
+}
+
 std::unique_ptr<Module> parseAssembly(
     const char *Assembly, LLVMContext &Context) {
 
@@ -135,4 +146,98 @@ TEST(InstDeleterIRStrategyTest, PhiNodes) {
   IterateOnSource(Source, *Mutator);
 }
 
+static void checkModifyNoUnsignedAndNoSignedWrap(StringRef Opc) {
+  LLVMContext Ctx;
+  std::string Source = std::string("\n\
+      define i32 @test(i32 %x) {\n\
+        %a = ") + Opc.str() +
+                       std::string(" i32 %x, 10\n\
+        ret i32 %a\n\
+      }");
+
+  auto Mutator = createInstModifierMutator();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  auto *AddI = &*F.begin()->begin();
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  bool FoundNUW = false;
+  bool FoundNSW = false;
+  for (int i = 0; i < 100; ++i) {
+    Mutator->mutateModule(*M, Seed + i, Source.size(), Source.size() + 100);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+    FoundNUW |= AddI->hasNoUnsignedWrap();
+    FoundNSW |= AddI->hasNoSignedWrap();
+  }
+
+  // The mutator should have added nuw and nsw during some mutations.
+  EXPECT_TRUE(FoundNUW);
+  EXPECT_TRUE(FoundNSW);
+}
+TEST(InstModificationIRStrategyTest, Add) {
+  checkModifyNoUnsignedAndNoSignedWrap("add");
+}
+
+TEST(InstModificationIRStrategyTest, Sub) {
+  checkModifyNoUnsignedAndNoSignedWrap("sub");
+}
+
+TEST(InstModificationIRStrategyTest, Mul) {
+  checkModifyNoUnsignedAndNoSignedWrap("mul");
+}
+
+TEST(InstModificationIRStrategyTest, Shl) {
+  checkModifyNoUnsignedAndNoSignedWrap("shl");
+}
+
+TEST(InstModificationIRStrategyTest, ICmp) {
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      define i1 @test(i32 %x) {\n\
+        %a = icmp eq i32 %x, 10\n\
+        ret i1 %a\n\
+      }";
+
+  auto Mutator = createInstModifierMutator();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  CmpInst *CI = cast<CmpInst>(&*F.begin()->begin());
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  bool FoundNE = false;
+  for (int i = 0; i < 100; ++i) {
+    Mutator->mutateModule(*M, Seed + i, Source.size(), Source.size() + 100);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+    FoundNE |= CI->getPredicate() == CmpInst::ICMP_NE;
+  }
+
+  EXPECT_TRUE(FoundNE);
+}
+
+TEST(InstModificationIRStrategyTest, GEP) {
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      define i32* @test(i32* %ptr) {\n\
+        %gep = getelementptr i32, i32* %ptr, i32 10\n\
+        ret i32* %gep\n\
+      }";
+
+  auto Mutator = createInstModifierMutator();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  GetElementPtrInst *GEP = cast<GetElementPtrInst>(&*F.begin()->begin());
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  bool FoundInbounds = false;
+  for (int i = 0; i < 100; ++i) {
+    Mutator->mutateModule(*M, Seed + i, Source.size(), Source.size() + 100);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+    FoundInbounds |= GEP->isInBounds();
+  }
+
+  EXPECT_TRUE(FoundInbounds);
+}
 }
