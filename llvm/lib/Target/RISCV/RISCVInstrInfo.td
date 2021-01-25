@@ -332,6 +332,19 @@ def ImmSub32 : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+// Return an immediate subtracted from XLen.
+def ImmSubFromXLen : SDNodeXForm<imm, [{
+  uint64_t XLen = Subtarget->getXLen();
+  return CurDAG->getTargetConstant(XLen - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Return an immediate subtracted from 32.
+def ImmSubFrom32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -855,6 +868,13 @@ def SRLIWPat : PatFrag<(ops node:$A, node:$B),
   return MatchSRLIW(N);
 }]>;
 
+// Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
+// on RV64). Also used to optimize the same sequence without SLLIUW.
+def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
+                        (and (shl node:$A, node:$B), imm), [{
+  return MatchSLLIUW(N);
+}]>;
+
 /// Immediates
 
 def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
@@ -1162,8 +1182,17 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-let Predicates = [IsRV64, NotHasStdExtZba] in
+let Predicates = [IsRV64, NotHasStdExtZba] in {
 def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+
+// If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
+// shifts instead of 3. This can occur when unsigned is used to index an array.
+def : Pat<(shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt),
+          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
+// shl/and can appear in the other order too.
+def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
+          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
+}
 
 let Predicates = [IsRV64] in {
 

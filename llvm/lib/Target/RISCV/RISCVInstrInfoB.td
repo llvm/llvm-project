@@ -46,19 +46,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }
 
 
-// Convert rotl immediate to a rotr immediate for XLen instructions.
-def ImmROTL2R : SDNodeXForm<imm, [{
-  uint64_t XLen = Subtarget->getXLen();
-  return CurDAG->getTargetConstant(XLen - N->getZExtValue(), SDLoc(N),
-                                   N->getValueType(0));
-}]>;
-
-// Convert rotl immediate to a rotr immediate for W instructions.
-def ImmROTL2RW : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
-                                   N->getValueType(0));
-}]>;
-
 // Check that it is a SLOI (Shift Left Ones Immediate).
 def SLOIPat : PatFrag<(ops node:$A, node:$B),
                       (or (shl node:$A, node:$B), imm), [{
@@ -75,13 +62,6 @@ def SROIPat : PatFrag<(ops node:$A, node:$B),
 def SROIWPat : PatFrag<(ops node:$A, node:$B),
                        (or (srl node:$A, node:$B), imm), [{
   return MatchSROIW(N);
-}]>;
-
-// Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
-// on RV64).
-def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
-                        (and (shl node:$A, node:$B), imm), [{
-  return MatchSLLIUW(N);
 }]>;
 
 // Checks if this mask has a single 0 bit and cannot be used with ANDI.
@@ -743,7 +723,7 @@ let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, uimmlog2xlen:$shamt)>;
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
-          (RORI GPR:$rs1, (ImmROTL2R uimmlog2xlen:$shamt))>;
+          (RORI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 }
 
 def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDTIntBinOp, []>;
@@ -829,7 +809,7 @@ def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
 // We can use FSRI for fshl by immediate if we subtract the immediate from
 // XLen and swap the operands.
 def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
-          (FSRI GPR:$rs1, GPR:$rs3, (ImmROTL2R uimmlog2xlen:$shamt))>;
+          (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
 let Predicates = [HasStdExtZbb] in {
@@ -971,7 +951,7 @@ def : Pat<(riscv_rorw GPR:$rs1, GPR:$rs2),
 def : Pat<(riscv_rorw GPR:$rs1, uimm5:$rs2),
           (RORIW GPR:$rs1, uimm5:$rs2)>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
-          (RORIW GPR:$rs1, (ImmROTL2RW uimm5:$rs2))>;
+          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
@@ -1024,7 +1004,7 @@ def : Pat<(riscv_fsrw GPR:$rs3, GPR:$rs1, GPR:$rs2),
 def : Pat<(riscv_fsrw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
           (FSRIW GPR:$rs1, GPR:$rs3, uimm5:$shamt)>;
 def : Pat<(riscv_fslw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
-          (FSRIW GPR:$rs1, GPR:$rs3, (ImmROTL2RW uimm5:$shamt))>;
+          (FSRIW GPR:$rs1, GPR:$rs3, (ImmSubFrom32 uimm5:$shamt))>;
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
