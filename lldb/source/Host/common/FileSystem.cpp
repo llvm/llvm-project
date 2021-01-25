@@ -479,7 +479,7 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
 
   // If VFS mapped we know the underlying FS is a RedirectingFileSystem.
   ErrorOr<vfs::RedirectingFileSystem::Entry *> E =
-      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path);
+      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path.str());
   if (!E) {
     if (E.getError() == llvm::errc::no_such_file_or_directory) {
       return path.str();
