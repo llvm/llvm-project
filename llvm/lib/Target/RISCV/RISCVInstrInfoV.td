@@ -512,6 +512,8 @@ defm VADD_V : VALU_IV_V_X_I<"vadd", 0b000000>;
 defm VSUB_V : VALU_IV_V_X<"vsub", 0b000010>;
 defm VRSUB_V : VALU_IV_X_I<"vrsub", 0b000011>;
 
+def : InstAlias<"vneg.v $vd, $vs$vm", (VRSUB_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+
 // Vector Widening Integer Add/Subtract
 // Refer to 11.2 Widening Vector Arithmetic Instructions
 // The destination vector register group cannot overlap a source vector
@@ -583,6 +585,9 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Narrow in {
 defm VNSRL_W : VALU_IV_V_X_I<"vnsrl", 0b101100, uimm5, "w">;
 defm VNSRA_W : VALU_IV_V_X_I<"vnsra", 0b101101, uimm5, "w">;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Narrow
+
+def : InstAlias<"vncvt.x.x.w $vd, $vs$vm",
+                (VNSRL_WX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
 
 // Vector Integer Comparison Instructions
 let RVVConstraint = NoConstraint in {
@@ -784,6 +789,8 @@ defm VFWNMSAC_V : VALUr_FV_V_F<"vfwnmsac", 0b111111>;
 
 // Vector Floating-Point Square-Root Instruction
 defm VFSQRT_V : VALU_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
+defm VFRSQRTE7_V : VALU_FV_VS2<"vfrsqrte7.v", 0b010011, 0b00100>;
+defm VFRECE7_V : VALU_FV_VS2<"vfrece7.v", 0b010011, 0b00101>;
 
 // Vector Floating-Point MIN/MAX Instructions
 defm VFMIN_V : VALU_FV_V_F<"vfmin", 0b000100>;
@@ -793,6 +800,9 @@ defm VFMAX_V : VALU_FV_V_F<"vfmax", 0b000110>;
 defm VFSGNJ_V : VALU_FV_V_F<"vfsgnj", 0b001000>;
 defm VFSGNJN_V : VALU_FV_V_F<"vfsgnjn", 0b001001>;
 defm VFSGNJX_V : VALU_FV_V_F<"vfsgnjx", 0b001010>;
+
+def : InstAlias<"vfneg.v $vd, $vs$vm",
+                (VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
 
 // Vector Floating-Point Compare Instructions
 let RVVConstraint = NoConstraint in {
@@ -1010,6 +1020,7 @@ let Predicates = [HasStdExtV] in {
 // Vector Register Gather Instruction
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VALU_IV_V_X_I<"vrgather", 0b001100, uimm5>;
+def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
