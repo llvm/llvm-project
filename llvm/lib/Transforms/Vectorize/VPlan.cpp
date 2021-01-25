@@ -216,6 +216,27 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   return It;
 }
 
+Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
+  if (!Def->getDef() && OrigLoop->isLoopInvariant(Def->getLiveInIRValue()))
+    return Def->getLiveInIRValue();
+
+  if (hasScalarValue(Def, Instance))
+    return Data.PerPartScalars[Def][Instance.Part][Instance.Lane];
+
+  if (hasVectorValue(Def, Instance.Part)) {
+    assert(Data.PerPartOutput.count(Def));
+    auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
+    if (!VecPart->getType()->isVectorTy()) {
+      assert(Instance.Lane == 0 && "cannot get lane > 0 for scalar");
+      return VecPart;
+    }
+    // TODO: Cache created scalar values.
+    return Builder.CreateExtractElement(VecPart,
+                                        Builder.getInt32(Instance.Lane));
+  }
+  return Callback.getOrCreateScalarValue(VPValue2Value[Def], Instance);
+}
+
 BasicBlock *
 VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
