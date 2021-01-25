@@ -217,6 +217,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
 
   /// Returns the register with the specified architectural or ABI name. This
   /// method is necessary to lower the llvm.read_register.* and
