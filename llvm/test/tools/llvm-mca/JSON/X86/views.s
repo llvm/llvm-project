@@ -2,7 +2,7 @@
 # Verify that we create proper JSON for the MCA views TimelineView, ResourcePressureview,
 # InstructionInfoView and SummaryView.
 
-# RUN: llvm-mca -mcpu=haswell --json --timeline-max-iterations=1 --timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell --json --timeline-max-iterations=1 --timeline < %s | FileCheck %s
 
 add %eax, %eax
 add %ebx, %ebx
