@@ -181,6 +181,24 @@ struct Fragment {
   };
   IndexBlock Index;
 
+  /// Controls behavior of diagnostics (errors and warnings).
+  struct DiagnosticsBlock {
+    /// Diagnostic codes that should be suppressed.
+    ///
+    /// Valid values are:
+    /// - *, to disable all diagnostics
+    /// - diagnostic codes exposed by clangd (e.g unknown_type, -Wunused-result)
+    /// - clang internal diagnostic codes (e.g. err_unknown_type)
+    /// - warning categories (e.g. unused-result)
+    /// - clang-tidy check names (e.g. bugprone-narrowing-conversions)
+    ///
+    /// This is a simple filter. Diagnostics can be controlled in other ways
+    /// (e.g. by disabling a clang-tidy check, or the -Wunused compile flag).
+    /// This often has other advantages, such as skipping some analysis.
+    std::vector<Located<std::string>> Suppress;
+  };
+  DiagnosticsBlock Diagnostics;
+
   // Describes the style of the codebase, beyond formatting.
   struct StyleBlock {
     // Namespaces that should always be fully qualified, meaning no "using"
@@ -195,6 +213,7 @@ struct Fragment {
   ///
   /// The settings are merged with any settings found in .clang-tidy
   /// configiration files with these ones taking precedence.
+  // FIXME: move this to Diagnostics.Tidy.
   struct ClangTidyBlock {
     std::vector<Located<std::string>> Add;
     /// List of checks to disable.

@@ -27,6 +27,7 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigProvider.h"
+#include "Diagnostics.h"
 #include "Features.inc"
 #include "TidyProvider.h"
 #include "support/Logger.h"
@@ -187,6 +188,7 @@ struct FragmentCompiler {
     compile(std::move(F.If));
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
+    compile(std::move(F.Diagnostics));
     compile(std::move(F.ClangTidy));
   }
 
@@ -326,6 +328,27 @@ struct FragmentCompiler {
       // (including the current one).
       C.Index.Background = Config::BackgroundPolicy::Skip;
     });
+  }
+
+  void compile(Fragment::DiagnosticsBlock &&F) {
+    std::vector<llvm::StringRef> Normalized;
+    for (const auto &Suppressed : F.Suppress) {
+      if (*Suppressed == "*") {
+        Out.Apply.push_back([&](const Params &, Config &C) {
+          C.Diagnostics.SuppressAll = true;
+          C.Diagnostics.Suppress.clear();
+        });
+        return;
+      }
+      Normalized.push_back(normalizeSuppressedCode(*Suppressed));
+    }
+    if (!Normalized.empty())
+      Out.Apply.push_back([Normalized](const Params &, Config &C) {
+        if (C.Diagnostics.SuppressAll)
+          return;
+        for (llvm::StringRef N : Normalized)
+          C.Diagnostics.Suppress.insert(N);
+      });
   }
 
   void compile(Fragment::StyleBlock &&F) {

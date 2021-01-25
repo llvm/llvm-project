@@ -801,5 +801,23 @@ void StoreDiags::flushLastDiag() {
   Output.push_back(std::move(*LastDiag));
 }
 
+bool isBuiltinDiagnosticSuppressed(unsigned ID,
+                                   const llvm::StringSet<> &Suppress) {
+  if (const char *CodePtr = getDiagnosticCode(ID)) {
+    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
+      return true;
+  }
+  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
+  if (!Warning.empty() && Suppress.contains(Warning))
+    return true;
+  return false;
+}
+
+llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
+  Code.consume_front("err_");
+  Code.consume_front("-W");
+  return Code;
+}
+
 } // namespace clangd
 } // namespace clang
