@@ -349,6 +349,18 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
       Victim =
           DAG.getNode(ISD::AND, dl, VT, Victim, DAG.getConstant(0x0f, dl, VT));
       ShiftAmount -= 4;
+    } else if (Op.getOpcode() == ISD::SHL && ShiftAmount == 7) {
+      // Optimize LSL when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::LSL7, dl, VT, Victim);
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::SRL && ShiftAmount == 7) {
+      // Optimize LSR when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::LSR7, dl, VT, Victim);
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::SRA && ShiftAmount == 7) {
+      // Optimize ASR when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::ASR7, dl, VT, Victim);
+      ShiftAmount = 0;
     }
   }
 
