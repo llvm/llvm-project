@@ -145,7 +145,7 @@ struct LTOCodeGenerator {
   /// \note It is up to the linker to remove the intermediate output file.  Do
   /// not try to remove the object file in LTOCodeGenerator's destructor as we
   /// don't who (LTOCodeGenerator or the output file) will last longer.
-  bool compile_to_file(const char **Name, bool DisableVerify);
+  bool compile_to_file(const char **Name);
 
   /// As with compile_to_file(), this function compiles the merged module into
   /// single output file. Instead of returning the output file path to the
@@ -153,12 +153,12 @@ struct LTOCodeGenerator {
   /// to the caller. This function should delete the intermediate file once
   /// its content is brought to memory. Return NULL if the compilation was not
   /// successful.
-  std::unique_ptr<MemoryBuffer> compile(bool DisableVerify);
+  std::unique_ptr<MemoryBuffer> compile();
 
   /// Optimizes the merged module.  Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool optimize(bool DisableVerify);
+  bool optimize();
 
   /// Compiles the merged optimized module into a single output file. It brings
   /// the output to a buffer, and returns the buffer to the caller. Return NULL
@@ -177,6 +177,8 @@ struct LTOCodeGenerator {
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
   void setFreestanding(bool Enabled) { Freestanding = Enabled; }
+
+  void setDisableVerify(bool Value) { DisableVerify = Value; }
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
@@ -239,6 +241,7 @@ private:
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   bool Freestanding = false;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
+  bool DisableVerify = false;
 };
 }
 #endif
