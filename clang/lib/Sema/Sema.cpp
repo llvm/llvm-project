@@ -297,7 +297,7 @@ void Sema::Initialize() {
   // core features.
   if (getLangOpts().OpenCL) {
     getOpenCLOptions().addSupport(
-        Context.getTargetInfo().getSupportedOpenCLOpts());
+        Context.getTargetInfo().getSupportedOpenCLOpts(), getLangOpts());
     getOpenCLOptions().enableSupportedCore(getLangOpts());
     addImplicitTypedef("sampler_t", Context.OCLSamplerTy);
     addImplicitTypedef("event_t", Context.OCLEventTy);

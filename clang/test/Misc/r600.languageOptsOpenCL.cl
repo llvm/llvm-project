@@ -2,27 +2,21 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -target-cpu cayman
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cayman
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cayman
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -target-cpu cypress
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cypress
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu cypress
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -target-cpu turks
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -target-cpu turks
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -target-cpu turks
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -target-cpu turks
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu turks
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu turks
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu turks
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple r600-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES -target-cpu turks
 
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers
