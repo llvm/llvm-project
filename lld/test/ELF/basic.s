@@ -220,7 +220,7 @@ _start:
 
 # RUN: not ld.lld %t.foo -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=MISSING %s
-# MISSING: cannot open {{.*}}.foo: {{.*}}{{[Nn]}}o such file or directory
+# MISSING: cannot open {{.*}}.foo: {{[Nn]}}o such file or directory
 
 # RUN: not ld.lld -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=NO_INPUT %s
@@ -228,7 +228,7 @@ _start:
 
 # RUN: not ld.lld %t.no.such.file -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=CANNOT_OPEN %s
-# CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{.*}}{{[Nn]}}o such file or directory
+# CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
 
 # RUN: not ld.lld --foo 2>&1 | FileCheck --check-prefix=UNKNOWN %s
 # UNKNOWN: unknown argument '--foo'
