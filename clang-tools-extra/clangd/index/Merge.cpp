@@ -44,21 +44,23 @@ bool MergedIndex::fuzzyFind(
   SymbolSlab Dyn = std::move(DynB).build();
 
   llvm::DenseSet<SymbolID> SeenDynamicSymbols;
-  auto DynamicContainsFile = Dynamic->indexedFiles();
-  More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
-    // We expect the definition to see the canonical declaration, so it seems
-    // to be enough to check only the definition if it exists.
-    if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
-                                         : S.CanonicalDeclaration.FileURI))
-      return;
-    auto DynS = Dyn.find(S.ID);
-    ++StaticCount;
-    if (DynS == Dyn.end())
-      return Callback(S);
-    ++MergedCount;
-    SeenDynamicSymbols.insert(S.ID);
-    Callback(mergeSymbol(*DynS, S));
-  });
+  {
+    auto DynamicContainsFile = Dynamic->indexedFiles();
+    More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
+      // We expect the definition to see the canonical declaration, so it seems
+      // to be enough to check only the definition if it exists.
+      if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                           : S.CanonicalDeclaration.FileURI))
+        return;
+      auto DynS = Dyn.find(S.ID);
+      ++StaticCount;
+      if (DynS == Dyn.end())
+        return Callback(S);
+      ++MergedCount;
+      SeenDynamicSymbols.insert(S.ID);
+      Callback(mergeSymbol(*DynS, S));
+    });
+  }
   SPAN_ATTACH(Tracer, "dynamic", DynamicCount);
   SPAN_ATTACH(Tracer, "static", StaticCount);
   SPAN_ATTACH(Tracer, "merged", MergedCount);
@@ -77,20 +79,22 @@ void MergedIndex::lookup(
   Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
 
   auto RemainingIDs = Req.IDs;
-  auto DynamicContainsFile = Dynamic->indexedFiles();
-  Static->lookup(Req, [&](const Symbol &S) {
-    // We expect the definition to see the canonical declaration, so it seems
-    // to be enough to check only the definition if it exists.
-    if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
-                                         : S.CanonicalDeclaration.FileURI))
-      return;
-    const Symbol *Sym = B.find(S.ID);
-    RemainingIDs.erase(S.ID);
-    if (!Sym)
-      Callback(S);
-    else
-      Callback(mergeSymbol(*Sym, S));
-  });
+  {
+    auto DynamicContainsFile = Dynamic->indexedFiles();
+    Static->lookup(Req, [&](const Symbol &S) {
+      // We expect the definition to see the canonical declaration, so it seems
+      // to be enough to check only the definition if it exists.
+      if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                           : S.CanonicalDeclaration.FileURI))
+        return;
+      const Symbol *Sym = B.find(S.ID);
+      RemainingIDs.erase(S.ID);
+      if (!Sym)
+        Callback(S);
+      else
+        Callback(mergeSymbol(*Sym, S));
+    });
+  }
   for (const auto &ID : RemainingIDs)
     if (const Symbol *Sym = B.find(ID))
       Callback(*Sym);
