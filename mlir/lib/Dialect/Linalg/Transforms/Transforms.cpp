@@ -25,6 +25,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
@@ -105,6 +106,118 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   return *this;
 }
 
+/// Try to compute a static bounding box for `operand`
+/// Return success if either:
+///   1. The operand is already statically shaped, `result` is left unchanged.
+///   2. The operand is (partially) dynamic, `result` is the result of a freshly
+///      created SimplePadOp.
+/// Return failure if the operand cannot be padded to a static shape.
+static LogicalResult padOperandToSmallestStaticBoundingBox(
+    PatternRewriter &rewriter, linalg::LinalgOp opToPad, Value operand,
+    const LinalgTilingOptions &options, Value &result) {
+  auto tensorType = operand.getType().cast<RankedTensorType>();
+  // Already static shape, no need to pad.
+  if (tensorType.hasStaticShape())
+    return success();
+  auto subtensor = operand.getDefiningOp<SubTensorOp>();
+  // Not a subtensor, cannot construct a static bounding box.
+  if (!subtensor)
+    return failure();
+  SmallVector<int64_t> staticSizes;
+  staticSizes.reserve(tensorType.getRank());
+  auto shapedOp =
+      cast<OffsetSizeAndStrideOpInterface>(subtensor.getOperation());
+  for (auto size : shapedOp.getMixedSizes()) {
+    auto indexAttr = size.is<Attribute>()
+                         ? size.get<Attribute>().dyn_cast<IntegerAttr>()
+                         : linalg::getSmallestBoundingIndex(size.get<Value>());
+    // SmallestBoundingIndex must exist for all sizes.
+    // For now return an error if we can't find it.
+    if (!indexAttr)
+      return rewriter.notifyMatchFailure(
+          opToPad, "No constant bounding box can be found for padding");
+    staticSizes.push_back(indexAttr.getInt());
+  }
+  Value pad = options.paddingValueComputationFunction(rewriter, opToPad);
+  auto staticTensorType =
+      RankedTensorType::get(staticSizes, tensorType.getElementType());
+  result = rewriter.create<linalg::SimplePadOp>(opToPad->getLoc(),
+                                                staticTensorType, operand, pad);
+  return success();
+}
+
+// Try to create a static bounding box around each operand of `res.op`.
+// If successful, `res.op` is rewritten in static form with padded operands.
+// `res.op` is updated to the cloned static form of the op on success.
+static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
+                                       TiledLinalgOp &res,
+                                       const LinalgTilingOptions &options) {
+  LinalgOp opToPad = res.op;
+  Location loc = opToPad->getLoc();
+
+  // If the op is fully static, it does not need padding.
+  // TODO: there are cases where we may still want to pad to larger sizes.
+  if (llvm::all_of(opToPad.getShapedOperands(), [](Value v) {
+        return v.getType().cast<RankedTensorType>().hasStaticShape();
+      }))
+    return success();
+
+  OpBuilder::InsertionGuard g(rewriter);
+  // Set IP after op because we also take the dims of the original output.
+  rewriter.setInsertionPointAfter(opToPad);
+  // Make a copy of the shaped operands and update it.
+  SmallVector<Value> operands = opToPad.getShapedOperands();
+  for (Value &v : operands) {
+    Value paddedOperand;
+    // If padding was requested but the shape cannot be bounded statically then
+    // the pattern fails to apply.
+    if (failed(padOperandToSmallestStaticBoundingBox(rewriter, opToPad, v,
+                                                     options, paddedOperand))) {
+      return failure();
+    }
+    // Update v if we indeed got a padded operand.
+    v = paddedOperand ? paddedOperand : v;
+  }
+
+  // Clone `opToPad` to operate on the statically padded shapes.
+  auto resultTensorTypes =
+      ValueRange(operands).take_back(opToPad.getNumOutputs()).getTypes();
+  ValueRange otherOperands = opToPad.getAssumedNonShapedOperands();
+  operands.append(otherOperands.begin(), otherOperands.end());
+  linalg::LinalgOp paddedOp =
+      opToPad.clone(rewriter, loc, resultTensorTypes, operands);
+
+  // Recover the subtensor out of the new static results. This keeps the
+  // original linalg op around because it uses the dims of the original results.
+  // This later folds away.
+  SmallVector<Value> paddedSubviewResults;
+  paddedSubviewResults.reserve(opToPad->getNumResults());
+  Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
+  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+  llvm::SetVector<Operation *> newUsersOfOpToPad;
+  for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
+    auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
+    SmallVector<Value> offsets(rank, zero);
+    auto sizes = llvm::to_vector<4>(
+        llvm::map_range(llvm::seq<unsigned>(0, rank), [&](unsigned d) -> Value {
+          auto dimOp = rewriter.create<DimOp>(loc, std::get<0>(it), d);
+          newUsersOfOpToPad.insert(dimOp);
+          return dimOp;
+        }));
+    SmallVector<Value> strides(rank, one);
+    paddedSubviewResults.push_back(rewriter.create<SubTensorOp>(
+        loc, std::get<1>(it), offsets, sizes, strides));
+  }
+  // Replace the transient `opToPad` locally, except for uses that we just
+  // created for the purpose of extracting the dims.
+  rewriter.replaceOpWithIf(opToPad, paddedSubviewResults, [&](OpOperand &opOp) {
+    return !newUsersOfOpToPad.contains(opOp.getOwner());
+  });
+
+  res = TiledLinalgOp{paddedOp, res.loops, res.tensorResults};
+  return success();
+}
+
 /// Linalg base tiling pattern.
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     StringRef opName, MLIRContext *context, LinalgTilingOptions options,
@@ -130,11 +243,34 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   if (!res)
     return failure();
 
-  // Return relevant information to derived pattern.
-  result = *res;
+  // Setup RAII guard to return properly.
+  bool succeeded = true;
+  LinalgOp tiledOp = res->op;
+  auto guard = llvm::make_scope_exit([&]() {
+    if (!succeeded)
+      return;
+    // Return relevant information to derived pattern.
+    result = *res;
+    // Replace marker on both tiledOp and tiledAndPaddedOp, if necessary.
+    marker.replaceLinalgMarker(rewriter, tiledOp);
+    if (tiledOp != res->op)
+      marker.replaceLinalgMarker(rewriter, res->op);
+  });
 
-  // New marker if specified.
-  marker.replaceLinalgMarker(rewriter, res->op.getOperation());
+  // Consider padding on the fly only if the op has tensor semantics.
+  if (!options.paddingValueComputationFunction ||
+      !linalgOp.hasTensorSemantics())
+    return success();
+
+  // Try to pad on the fly by rewriting res->op as a padded op.
+  if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
+    // Set so RAII guard does not propagate TiledLinalgOp to `result`.
+    succeeded = false;
+    return failure();
+  }
+
+  // Do not perform replacement of `linalgOp`, let the derived patterns
+  // do this as they see fit, from the resulting TiledLinalgOp.
   return success();
 }
 
