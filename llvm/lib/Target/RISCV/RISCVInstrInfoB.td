@@ -138,11 +138,6 @@ class RVBUnary<bits<7> funct7, bits<5> funct5, bits<3> funct3,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBALUW_ri<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
-              (ins GPR:$rs1, simm12:$imm12), opcodestr, "$rd, $rs1, $imm12">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVBShift_ri<bits<5> funct5, bits<3> funct3, RISCVOpcode opcode,
                   string opcodestr>
     : RVInstI<funct3, opcode, (outs GPR:$rd),
@@ -375,12 +370,8 @@ def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def ADDIWU : RVBALUW_ri<0b100, "addiwu">, Sched<[]>;
 def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slliu.w">, Sched<[]>;
-def ADDWU : ALUW_rr<0b0000101, 0b000, "addwu">, Sched<[]>;
-def SUBWU : ALUW_rr<0b0100101, 0b000, "subwu">, Sched<[]>;
 def ADDUW : ALUW_rr<0b0000100, 0b000, "addu.w">, Sched<[]>;
-def SUBUW : ALUW_rr<0b0100100, 0b000, "subu.w">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
@@ -444,12 +435,6 @@ def CTZW   : RVBUnary<0b0110000, 0b00001, 0b001, RISCVOpcode<0b0011011>,
 def CPOPW  : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0011011>,
                       "cpopw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
-
-let Predicates = [HasStdExtZbc, IsRV64] in {
-def CLMULW  : ALUW_rr<0b0000101, 0b001, "clmulw">, Sched<[]>;
-def CLMULRW : ALUW_rr<0b0000101, 0b010, "clmulrw">, Sched<[]>;
-def CLMULHW : ALUW_rr<0b0000101, 0b011, "clmulhw">, Sched<[]>;
-} // Predicates = [HasStdExtZbc, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def SHFLW   : ALUW_rr<0b0000100, 0b001, "shflw">, Sched<[]>;
@@ -854,20 +839,12 @@ def : Pat<(or (or (and (shl GPR:$rs1, (i64 1)), (i64 0x4444444444444444)),
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def : Pat<(and (add GPR:$rs, simm12:$simm12), (i64 0xFFFFFFFF)),
-          (ADDIWU GPR:$rs, simm12:$simm12)>;
 def : Pat<(SLLIUWPat GPR:$rs1, uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt),
           (SLLIUW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(and (add GPR:$rs1, GPR:$rs2), (i64 0xFFFFFFFF)),
-          (ADDWU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(and (sub GPR:$rs1, GPR:$rs2), (i64 0xFFFFFFFF)),
-          (SUBWU GPR:$rs1, GPR:$rs2)>;
 def : Pat<(add GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
           (ADDUW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sub GPR:$rs1, (and GPR:$rs2, (i64 0xFFFFFFFF))),
-          (SUBUW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(not (riscv_sllw (not GPR:$rs1), GPR:$rs2)),
           (SLOW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(not (riscv_srlw (not GPR:$rs1), GPR:$rs2)),
