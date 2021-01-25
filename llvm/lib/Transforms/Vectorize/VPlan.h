@@ -246,12 +246,12 @@ struct VPCallback {
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
+  VPTransformState(ElementCount VF, unsigned UF, Loop *OrigLoop, LoopInfo *LI,
                    DominatorTree *DT, IRBuilder<> &Builder,
                    VectorizerValueMap &ValueMap, InnerLoopVectorizer *ILV,
                    VPCallback &Callback)
-      : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
-        ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
+      : VF(VF), UF(UF), Instance(), OrigLoop(OrigLoop), LI(LI), DT(DT),
+        Builder(Builder), ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -269,6 +269,9 @@ struct VPTransformState {
     typedef SmallVector<Value *, 2> PerPartValuesTy;
 
     DenseMap<VPValue *, PerPartValuesTy> PerPartOutput;
+
+    using ScalarsPerPartValuesTy = SmallVector<SmallVector<Value *, 4>, 2>;
+    DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
   /// Get the generated Value for a given VPValue and a given Part. Note that
@@ -285,24 +288,21 @@ struct VPTransformState {
   }
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(VPValue *Def, const VPIteration &Instance) {
-    // If the Def is managed directly by VPTransformState, extract the lane from
-    // the relevant part. Note that currently only VPInstructions and external
-    // defs are managed by VPTransformState. Other Defs are still created by ILV
-    // and managed in its ValueMap. For those this method currently just
-    // delegates the call to ILV below.
-    if (Data.PerPartOutput.count(Def)) {
-      auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
-      if (!VecPart->getType()->isVectorTy()) {
-        assert(Instance.Lane == 0 && "cannot get lane > 0 for scalar");
-        return VecPart;
-      }
-      // TODO: Cache created scalar values.
-      return Builder.CreateExtractElement(VecPart,
-                                          Builder.getInt32(Instance.Lane));
-    }
+  Value *get(VPValue *Def, const VPIteration &Instance);
 
-    return Callback.getOrCreateScalarValue(VPValue2Value[Def], Instance);
+  bool hasVectorValue(VPValue *Def, unsigned Part) {
+    auto I = Data.PerPartOutput.find(Def);
+    return I != Data.PerPartOutput.end() && Part < I->second.size() &&
+           I->second[Part];
+  }
+
+  bool hasScalarValue(VPValue *Def, VPIteration Instance) {
+    auto I = Data.PerPartScalars.find(Def);
+    if (I == Data.PerPartScalars.end())
+      return false;
+    return Instance.Part < I->second.size() &&
+           Instance.Lane < I->second[Instance.Part].size() &&
+           I->second[Instance.Part][Instance.Lane];
   }
 
   /// Set the generated Value for a given VPValue and a given Part.
@@ -314,6 +314,17 @@ struct VPTransformState {
     Data.PerPartOutput[Def][Part] = V;
   }
   void set(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
+
+  void set(VPValue *Def, Value *V, const VPIteration &Instance) {
+    auto Iter = Data.PerPartScalars.insert({Def, {}});
+    auto &PerPartVec = Iter.first->second;
+    while (PerPartVec.size() <= Instance.Part)
+      PerPartVec.emplace_back();
+    auto &Scalars = PerPartVec[Instance.Part];
+    while (Scalars.size() <= Instance.Lane)
+      Scalars.push_back(nullptr);
+    Scalars[Instance.Lane] = V;
+  }
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -339,6 +350,9 @@ struct VPTransformState {
 
     CFGState() = default;
   } CFG;
+
+  /// Hold a pointer to the original loop.
+  Loop *OrigLoop;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;

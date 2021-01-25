@@ -241,10 +241,8 @@ public:
     Value alloc =
         rewriter.create<AllocOp>(op.getLoc(), subviewMemRefType, op.sizes());
     Value subView = rewriter.create<SubViewOp>(
-        op.getLoc(), sourceMemref, extractFromI64ArrayAttr(op.static_offsets()),
-        extractFromI64ArrayAttr(op.static_sizes()),
-        extractFromI64ArrayAttr(op.static_strides()), op.offsets(), op.sizes(),
-        op.strides());
+        op.getLoc(), sourceMemref, op.getMixedOffsets(), op.getMixedSizes(),
+        op.getMixedStrides());
     rewriter.create<linalg::CopyOp>(op.getLoc(), subView, alloc);
     rewriter.replaceOp(op, alloc);
     return success();
@@ -283,10 +281,8 @@ public:
 
     // Take a subview to copy the small memref.
     Value subview = rewriter.create<SubViewOp>(
-        op.getLoc(), destMemRef, extractFromI64ArrayAttr(op.static_offsets()),
-        extractFromI64ArrayAttr(op.static_sizes()),
-        extractFromI64ArrayAttr(op.static_strides()), adaptor.offsets(),
-        adaptor.sizes(), adaptor.strides());
+        op.getLoc(), destMemRef, op.getMixedOffsets(), op.getMixedSizes(),
+        op.getMixedStrides());
     // Copy the small memref.
     rewriter.create<linalg::CopyOp>(op.getLoc(), sourceMemRef, subview);
     rewriter.replaceOp(op, destMemRef);

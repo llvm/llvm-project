@@ -2233,10 +2233,9 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
   // TODO: relax this precondition, will require rank-reducing subviews.
   assert(memrefRank == alloc.getType().cast<MemRefType>().getRank() &&
          "Expected memref rank to match the alloc rank");
-  Value one = std_constant_index(1);
   ValueRange leadingIndices =
       xferOp.indices().take_front(xferOp.getLeadingShapedRank());
-  SmallVector<Value, 4> sizes;
+  SmallVector<OpFoldResult, 4> sizes;
   sizes.append(leadingIndices.begin(), leadingIndices.end());
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
@@ -2252,8 +2251,12 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
                                  ValueRange{dimMemRef, index, dimAlloc});
     sizes.push_back(affineMin);
   });
-  return std_sub_view(xferOp.source(), xferOp.indices(), sizes,
-                      SmallVector<Value, 4>(memrefRank, one));
+
+  SmallVector<OpFoldResult, 4> indices = llvm::to_vector<4>(llvm::map_range(
+      xferOp.indices(), [](Value idx) -> OpFoldResult { return idx; }));
+  return std_sub_view(
+      xferOp.source(), indices, sizes,
+      SmallVector<OpFoldResult>(memrefRank, OpBuilder(xferOp).getIndexAttr(1)));
 }
 
 /// Given an `xferOp` for which:

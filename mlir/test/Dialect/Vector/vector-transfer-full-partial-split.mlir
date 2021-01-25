@@ -8,7 +8,7 @@
 // LINALG-DAG: #[[$map_p4:.*]] = affine_map<()[s0] -> (s0 + 4)>
 // LINALG-DAG: #[[$map_p8:.*]] = affine_map<()[s0] -> (s0 + 8)>
 // LINALG-DAG: #[[$map_2d_stride_1:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-// LINALG-DAG: #[[$map_2d_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+// LINALG-DAG: #[[$map_2d_stride_8x1:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 8 + s0 + d1)>
 // LINALG-DAG: #[[$bounds_map_4:.*]] = affine_map<(d0, d1, d2) -> (d0 - d1, 4)>
 // LINALG-DAG: #[[$bounds_map_8:.*]] = affine_map<(d0, d1, d2) -> (d0 - d1, 8)>
 
@@ -58,7 +58,6 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   // CHECK_SAME:   {masked = [false, false]} : memref<?x8xf32>, vector<4x8xf32>
 
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
-  //  LINALG-DAG: %[[c1:.*]] = constant 1 : index
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
   //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
@@ -82,9 +81,9 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      LINALG:   %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[d0]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
-  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [%[[c1]], %[[c1]]]
-  // LINALG-SAME:     memref<?x8xf32> to memref<?x?xf32, #[[$map_2d_dynamic]]>
-  //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_dynamic]]>, memref<4x8xf32>
+  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
+  // LINALG-SAME:     memref<?x8xf32> to memref<?x?xf32, #[[$map_2d_stride_8x1]]>
+  //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_stride_8x1]]>, memref<4x8xf32>
   //      LINALG:   %[[yielded:.*]] = memref_cast %[[alloc]] :
   // LINALG-SAME:     memref<4x8xf32> to memref<?x8xf32>
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
@@ -150,7 +149,6 @@ func @split_vector_transfer_read_strided_2d(
   // CHECK-SAME:   memref<?x8xf32, #[[$map_2d_stride_1]]>, vector<4x8xf32>
 
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
-  //  LINALG-DAG: %[[c1:.*]] = constant 1 : index
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c7:.*]] = constant 7 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
@@ -176,9 +174,9 @@ func @split_vector_transfer_read_strided_2d(
   //      LINALG:   linalg.fill(%[[alloc]], %[[cst]]) : memref<4x8xf32>, f32
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[c7]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
-  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [%[[c1]], %[[c1]]]
-  // LINALG-SAME:     memref<7x8xf32, #[[$map_2d_stride_1]]> to memref<?x?xf32, #[[$map_2d_dynamic]]>
-  //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_dynamic]]>, memref<4x8xf32>
+  //      LINALG:   %[[sv:.*]] = subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]
+  // LINALG-SAME:     memref<7x8xf32, #[[$map_2d_stride_1]]> to memref<?x?xf32, #[[$map_2d_stride_1]]>
+  //      LINALG:   linalg.copy(%[[sv]], %[[alloc]]) : memref<?x?xf32, #[[$map_2d_stride_1]]>, memref<4x8xf32>
   //      LINALG:   %[[yielded:.*]] = memref_cast %[[alloc]] :
   // LINALG-SAME:     memref<4x8xf32> to memref<?x8xf32, #[[$map_2d_stride_1]]>
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :

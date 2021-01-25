@@ -1,8 +1,26 @@
-//===-- examples/HowToUseJIT/HowToUseJIT.cpp - An example use of the JIT --===//
+//===------- HowToUseLLJIT.cpp - An example use of ORC-based LLJIT --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This small program provides an example of how to quickly build a small
+//  module with a 'add1' function and use of IRBuilder to create add & return
+//  instructions.
+//
+// Goal:
+//  The goal of this snippet is to create in the memory
+//  the LLVM module consisting of a function as follow:
+//
+// int add1(int x) {
+//   return x+1;
+// }
+//  add1(42);
+//
+// then compile the module via LLJIT, then execute the 'add1'
+// function and return result to a driver, i.e. to a "host program".
 //
 //===----------------------------------------------------------------------===//
 

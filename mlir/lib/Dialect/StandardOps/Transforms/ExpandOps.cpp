@@ -83,7 +83,7 @@ public:
       return failure();
 
     int64_t rank = shapeType.cast<MemRefType>().getDimSize(0);
-    SmallVector<Value, 4> sizes, strides;
+    SmallVector<OpFoldResult, 4> sizes, strides;
     sizes.resize(rank);
     strides.resize(rank);
 
@@ -99,12 +99,9 @@ public:
       if (i > 0)
         stride = rewriter.create<MulIOp>(loc, stride, size);
     }
-    SmallVector<int64_t, 2> staticSizes(rank, ShapedType::kDynamicSize);
-    SmallVector<int64_t, 2> staticStrides(rank,
-                                          ShapedType::kDynamicStrideOrOffset);
     rewriter.replaceOpWithNewOp<MemRefReinterpretCastOp>(
-        op, op.getType(), op.source(), /*staticOffset = */ 0, staticSizes,
-        staticStrides, /*offset=*/llvm::None, sizes, strides);
+        op, op.getType(), op.source(), /*offset=*/rewriter.getIndexAttr(0),
+        sizes, strides);
     return success();
   }
 };
