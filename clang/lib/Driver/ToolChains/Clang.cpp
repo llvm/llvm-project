@@ -656,6 +656,21 @@ static void addMacroPrefixMapArg(const Driver &D, const ArgList &Args,
   }
 }
 
+/// Add a CC1 and CC1AS option to specify the coverage file path prefix map.
+static void addProfilePrefixMapArg(const Driver &D, const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
+                                    options::OPT_fprofile_prefix_map_EQ)) {
+    StringRef Map = A->getValue();
+    if (Map.find('=') == StringRef::npos)
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Map << A->getOption().getName();
+    else
+      CmdArgs.push_back(Args.MakeArgString("-fprofile-prefix-map=" + Map));
+    A->claim();
+  }
+}
+
 /// Vectorize at all optimization levels greater than 1 except for -Oz.
 /// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
 /// enabled.
@@ -1360,6 +1375,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   }
 
   addMacroPrefixMapArg(D, Args, CmdArgs);
+  addProfilePrefixMapArg(D, Args, CmdArgs);
 }
 
 // FIXME: Move to target hook.
