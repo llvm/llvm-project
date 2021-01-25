@@ -17,6 +17,111 @@ include "mlir/Pass/PassBase.td"
 
 def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
   let summary = "Fuse affine loop nests";
+  let description = [{
+    This pass performs fusion of loop nests using a slicing-based approach. It
+    combines two fusion strategies: producer-consumer fusion and sibling fusion.
+    Producer-consumer fusion is aimed at fusing pairs of loops where the first
+    one writes to a memref that the second reads. Sibling fusion targets pairs
+    of loops that share no dependences between them but that load from the same
+    memref. The fused loop nests, when possible, are rewritten to access
+    significantly smaller local buffers instead of the original memref's, and
+    the latter are often either completely optimized away or contracted. This
+    transformation leads to enhanced locality and lower memory footprint through
+    the elimination or contraction of temporaries/intermediate memref's. These
+    benefits are sometimes achieved at the expense of redundant computation
+    through a cost model that evaluates available choices such as the depth at
+    which a source slice should be materialized in the designation slice.
+
+    Example 1: Producer-consumer fusion.
+    Input:
+    ```mlir
+    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+      %0 = alloc() : memref<10xf32>
+      %1 = alloc() : memref<10xf32>
+      %cst = constant 0.000000e+00 : f32
+      affine.for %arg2 = 0 to 10 {
+        affine.store %cst, %0[%arg2] : memref<10xf32>
+        affine.store %cst, %1[%arg2] : memref<10xf32>
+      }
+      affine.for %arg2 = 0 to 10 {
+        %2 = affine.load %0[%arg2] : memref<10xf32>
+        %3 = addf %2, %2 : f32
+        affine.store %3, %arg0[%arg2] : memref<10xf32>
+      }
+      affine.for %arg2 = 0 to 10 {
+        %2 = affine.load %1[%arg2] : memref<10xf32>
+        %3 = mulf %2, %2 : f32
+        affine.store %3, %arg1[%arg2] : memref<10xf32>
+      }
+      return
+    }
+    ```
+    Output:
+    ```mlir
+    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+      %0 = alloc() : memref<1xf32>
+      %1 = alloc() : memref<1xf32>
+      %cst = constant 0.000000e+00 : f32
+      affine.for %arg2 = 0 to 10 {
+        affine.store %cst, %0[0] : memref<1xf32>
+        affine.store %cst, %1[0] : memref<1xf32>
+        %2 = affine.load %1[0] : memref<1xf32>
+        %3 = mulf %2, %2 : f32
+        affine.store %3, %arg1[%arg2] : memref<10xf32>
+        %4 = affine.load %0[0] : memref<1xf32>
+        %5 = addf %4, %4 : f32
+        affine.store %5, %arg0[%arg2] : memref<10xf32>
+      }
+      return
+    }
+    ```
+
+    Example 2: Sibling fusion.
+    Input:
+    ```mlir
+    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
+                         %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
+                         %arg4: memref<10x10xf32>) {
+      affine.for %arg5 = 0 to 3 {
+        affine.for %arg6 = 0 to 3 {
+          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
+          %1 = affine.load %arg1[%arg5, %arg6] : memref<10x10xf32>
+          %2 = mulf %0, %1 : f32
+          affine.store %2, %arg3[%arg5, %arg6] : memref<10x10xf32>
+        }
+      }
+      affine.for %arg5 = 0 to 3 {
+        affine.for %arg6 = 0 to 3 {
+          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
+          %1 = affine.load %arg2[%arg5, %arg6] : memref<10x10xf32>
+          %2 = addf %0, %1 : f32
+          affine.store %2, %arg4[%arg5, %arg6] : memref<10x10xf32>
+        }
+      }
+      return
+    }
+    ```
+    Output:
+    ```mlir
+    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
+                         %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
+                         %arg4: memref<10x10xf32>) {
+      affine.for %arg5 = 0 to 3 {
+        affine.for %arg6 = 0 to 3 {
+          %0 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
+          %1 = affine.load %arg1[%arg5, %arg6] : memref<10x10xf32>
+          %2 = mulf %0, %1 : f32
+          affine.store %2, %arg3[%arg5, %arg6] : memref<10x10xf32>
+          %3 = affine.load %arg0[%arg5, %arg6] : memref<10x10xf32>
+          %4 = affine.load %arg2[%arg5, %arg6] : memref<10x10xf32>
+          %5 = addf %3, %4 : f32
+          affine.store %5, %arg4[%arg5, %arg6] : memref<10x10xf32>
+        }
+      }
+      return
+    }
+    ```
+  }];
   let constructor = "mlir::createLoopFusionPass()";
   let options = [
     Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
