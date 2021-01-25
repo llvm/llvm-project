@@ -812,7 +812,8 @@ void PrecompiledPreamble::configurePreamble(
   PreprocessorOpts.PrecompiledPreambleBytes.first = Bounds.Size;
   PreprocessorOpts.PrecompiledPreambleBytes.second =
       Bounds.PreambleEndsAtStartOfLine;
-  PreprocessorOpts.DisablePCHValidation = true;
+  PreprocessorOpts.DisablePCHOrModuleValidation =
+      DisableValidationForModuleKind::PCH;
 
   setupPreambleStorage(Storage, PreprocessorOpts, VFS);
 }
