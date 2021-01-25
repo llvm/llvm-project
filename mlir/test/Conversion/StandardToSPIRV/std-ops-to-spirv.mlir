@@ -286,6 +286,10 @@ func @cmpf(%arg0 : f32, %arg1 : f32) {
   %11 = cmpf ule, %arg0, %arg1 : f32
   // CHECK: spv.FUnordNotEqual
   %12 = cmpf une, %arg0, %arg1 : f32
+  // CHECK: spv.Ordered
+  %13 = cmpf ord, %arg0, %arg1 : f32
+  // CHECK: spv.Unordered
+  %14 = cmpf uno, %arg0, %arg1 : f32
   return
 }
 
