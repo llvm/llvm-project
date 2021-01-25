@@ -750,8 +750,8 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
     operands.push_back(id);
   }
 
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpSpecConstantOperation, operands);
+  encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpSpecConstantOp,
+                        operands);
   valueIDMap[op.getResult()] = resultID;
 
   return success();
