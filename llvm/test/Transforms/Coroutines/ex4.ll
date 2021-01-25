@@ -50,7 +50,9 @@ entry:
   call void @llvm.coro.destroy(i8* %hdl)
   ret i32 0
 ; CHECK:      call void @print(i32 4)
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 5)
+; CHECK-NEXT: call void @llvm.experimental.noalias.scope.decl
 ; CHECK-NEXT: call void @print(i32 6)
 ; CHECK:      ret i32 0
 }
