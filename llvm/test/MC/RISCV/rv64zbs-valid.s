@@ -12,24 +12,48 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zbs -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: sbclrw t0, t1, t2
+# CHECK-ASM-AND-OBJ: bclr t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x12,0x73,0x48]
+bclr t0, t1, t2
+# CHECK-ASM-AND-OBJ: bset t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x12,0x73,0x28]
+bset t0, t1, t2
+# CHECK-ASM-AND-OBJ: binv t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x12,0x73,0x68]
+binv t0, t1, t2
+# CHECK-ASM-AND-OBJ: bext t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x52,0x73,0x48]
+bext t0, t1, t2
+# CHECK-ASM-AND-OBJ: bclri t0, t1, 1
+# CHECK-ASM: encoding: [0x93,0x12,0x13,0x48]
+bclri t0, t1, 1
+# CHECK-ASM-AND-OBJ: bseti t0, t1, 1
+# CHECK-ASM: encoding: [0x93,0x12,0x13,0x28]
+bseti t0, t1, 1
+# CHECK-ASM-AND-OBJ: binvi t0, t1, 1
+# CHECK-ASM: encoding: [0x93,0x12,0x13,0x68]
+binvi t0, t1, 1
+# CHECK-ASM-AND-OBJ: bexti t0, t1, 1
+# CHECK-ASM: encoding: [0x93,0x52,0x13,0x48]
+bexti t0, t1, 1
+# CHECK-ASM-AND-OBJ: bclrw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0x48]
-sbclrw t0, t1, t2
-# CHECK-ASM-AND-OBJ: sbsetw t0, t1, t2
+bclrw t0, t1, t2
+# CHECK-ASM-AND-OBJ: bsetw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0x28]
-sbsetw t0, t1, t2
-# CHECK-ASM-AND-OBJ: sbinvw t0, t1, t2
+bsetw t0, t1, t2
+# CHECK-ASM-AND-OBJ: binvw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x12,0x73,0x68]
-sbinvw t0, t1, t2
-# CHECK-ASM-AND-OBJ: sbextw t0, t1, t2
+binvw t0, t1, t2
+# CHECK-ASM-AND-OBJ: bextw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x52,0x73,0x48]
-sbextw t0, t1, t2
-# CHECK-ASM-AND-OBJ: sbclriw  t0, t1, 0
+bextw t0, t1, t2
+# CHECK-ASM-AND-OBJ: bclriw  t0, t1, 0
 # CHECK-ASM: encoding: [0x9b,0x12,0x03,0x48]
-sbclriw	t0, t1, 0
-# CHECK-ASM-AND-OBJ: sbsetiw  t0, t1, 0
+bclriw	t0, t1, 0
+# CHECK-ASM-AND-OBJ: bsetiw  t0, t1, 0
 # CHECK-ASM: encoding: [0x9b,0x12,0x03,0x28]
-sbsetiw	t0, t1, 0
-# CHECK-ASM-AND-OBJ: sbinviw  t0, t1, 0
+bsetiw	t0, t1, 0
+# CHECK-ASM-AND-OBJ: binviw  t0, t1, 0
 # CHECK-ASM: encoding: [0x9b,0x12,0x03,0x68]
-sbinviw	t0, t1, 0
+binviw	t0, t1, 0

@@ -643,14 +643,8 @@ void SIFoldOperands::foldOperand(
       // wave.
       MachineOperand &SOff =
           *TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
-      if ((!SOff.isReg() || SOff.getReg() != MFI->getStackPtrOffsetReg()) &&
-          (!SOff.isImm() || SOff.getImm() != 0))
+      if (!SOff.isImm() || SOff.getImm() != 0)
         return;
-
-      // If this is relative to the current wave, update it to be relative to
-      // the current frame.
-      if (SOff.isImm())
-        SOff.ChangeToRegister(MFI->getStackPtrOffsetReg(), false);
     }
 
     // A frame index will resolve to a positive constant, so it should always be

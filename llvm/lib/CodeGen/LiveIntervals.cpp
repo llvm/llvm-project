@@ -952,56 +952,6 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
   }
 }
 
-bool LiveIntervals::getInterferenceRegMasks(
-    LiveInterval &LI, SmallVectorImpl<SlotIndex> &RegSlots,
-    SmallVectorImpl<const uint32_t *> &RegBits) {
-  if (LI.empty())
-    return false;
-  LiveInterval::iterator LiveI = LI.begin(), LiveE = LI.end();
-
-  // Use a smaller arrays for local live ranges.
-  ArrayRef<SlotIndex> Slots;
-  ArrayRef<const uint32_t *> Bits;
-  if (MachineBasicBlock *MBB = intervalIsInOneMBB(LI)) {
-    Slots = getRegMaskSlotsInBlock(MBB->getNumber());
-    Bits = getRegMaskBitsInBlock(MBB->getNumber());
-  } else {
-    Slots = getRegMaskSlots();
-    Bits = getRegMaskBits();
-  }
-
-  // We are going to enumerate all the register mask slots contained in LI.
-  // Start with a binary search of RegMaskSlots to find a starting point.
-  ArrayRef<SlotIndex>::iterator SlotI = llvm::lower_bound(Slots, LiveI->start);
-  ArrayRef<SlotIndex>::iterator SlotE = Slots.end();
-
-  // No slots in range, LI begins after the last call.
-  if (SlotI == SlotE)
-    return false;
-
-  bool Found = false;
-  while (true) {
-    assert(*SlotI >= LiveI->start);
-    // Loop over all slots overlapping this segment.
-    while (*SlotI < LiveI->end) {
-      // *SlotI overlaps LI. Collect mask bits.
-      Found = true;
-      RegSlots.push_back(*SlotI);
-      RegBits.push_back(Bits[SlotI - Slots.begin()]);
-      if (++SlotI == SlotE)
-        return Found;
-    }
-    // *SlotI is beyond the current LI segment.
-    LiveI = LI.advanceTo(LiveI, *SlotI);
-    if (LiveI == LiveE)
-      return Found;
-    // Advance SlotI until it overlaps.
-    while (*SlotI < LiveI->start)
-      if (++SlotI == SlotE)
-        return Found;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 //                         IntervalUpdate class.
 //===----------------------------------------------------------------------===//

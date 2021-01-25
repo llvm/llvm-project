@@ -253,6 +253,27 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_iterate_dynamic_tls(
     pid_t, void (*cb)(void *, void *, uptr, void *), void *);
 #endif
 
+static void ProcessThreadRegistry(Frontier *frontier) {
+  InternalMmapVector<uptr> ptrs;
+  GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+      GetAdditionalThreadContextPtrs, &ptrs);
+
+  for (uptr i = 0; i < ptrs.size(); ++i) {
+    void *ptr = reinterpret_cast<void *>(ptrs[i]);
+    uptr chunk = PointsIntoChunk(ptr);
+    if (!chunk)
+      continue;
+    LsanMetadata m(chunk);
+    if (!m.allocated())
+      continue;
+
+    // Mark as reachable and add to frontier.
+    LOG_POINTERS("Treating pointer %p from ThreadContext as reachable\n", ptr);
+    m.set_tag(kReachable);
+    frontier->push_back(chunk);
+  }
+}
+
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
@@ -364,6 +385,9 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 #endif
     }
   }
+
+  // Add pointers reachable from ThreadContexts
+  ProcessThreadRegistry(frontier);
 }
 
 #endif  // SANITIZER_FUCHSIA

@@ -251,31 +251,29 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) nounwind {
 ; X86-LABEL: signbits_sext_shuffle_sitofp:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxdq %xmm0, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X86-NEXT:    vpmovsxdq %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X86-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_sext_shuffle_sitofp:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X64-AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_sext_shuffle_sitofp:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]

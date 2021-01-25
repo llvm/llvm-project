@@ -172,7 +172,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantComposite(operands);
   case spirv::Opcode::OpSpecConstantComposite:
     return processSpecConstantComposite(operands);
-  case spirv::Opcode::OpSpecConstantOperation:
+  case spirv::Opcode::OpSpecConstantOp:
     return processSpecConstantOperation(operands);
   case spirv::Opcode::OpConstantTrue:
     return processConstantBool(/*isTrue=*/true, operands, /*isSpec=*/false);

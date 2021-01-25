@@ -20,6 +20,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -1111,9 +1112,13 @@ void removeConstraintsInvolvingSuffixDims(FlatAffineConstraints &fac,
       fac.removeInequality(i - 1);
 }
 
+bool FlatAffineConstraints::isIntegerEmpty() const {
+  return !findIntegerSample().hasValue();
+}
+
 /// Let this set be S. If S is bounded then we directly call into the GBR
 /// sampling algorithm. Otherwise, there are some unbounded directions, i.e.,
-/// vectors v such that S extends to infininty along v or -v. In this case we
+/// vectors v such that S extends to infinity along v or -v. In this case we
 /// use an algorithm described in the integer set library (isl) manual and used
 /// by the isl_set_sample function in that library. The algorithm is:
 ///
@@ -1121,44 +1126,54 @@ void removeConstraintsInvolvingSuffixDims(FlatAffineConstraints &fac,
 /// dimensions in which S*T is bounded lie in the linear span of a prefix of the
 /// dimensions.
 ///
-/// 2) Construct a set transformedSet by removing all constraints that involve
-/// the unbounded dimensions and also deleting the unbounded dimensions. Note
-/// that this is a bounded set.
+/// 2) Construct a set B by removing all constraints that involve
+/// the unbounded dimensions and then deleting the unbounded dimensions. Note
+/// that B is a Bounded set.
 ///
-/// 3) Check if transformedSet is empty using the GBR sampling algorithm.
+/// 3) Try to obtain a sample from B using the GBR sampling
+/// algorithm. If no sample is found, return that S is empty.
 ///
-/// 4) return S is empty iff transformedSet is empty.
+/// 4) Otherwise, substitute the obtained sample into S*T to obtain a set
+/// C. C is a full-dimensional Cone and always contains a sample.
 ///
-/// Since T is unimodular, a vector v is a solution to S*T iff T*v is a
-/// solution to S. The following is a sketch of a proof that S*T is empty
-/// iff transformedSet is empty:
+/// 5) Obtain an integer sample from C.
 ///
-/// If transformedSet is empty, then S*T is certainly empty since transformedSet
-/// was obtained by removing constraints and deleting dimensions from S*T.
+/// 6) Return T*v, where v is the concatenation of the samples from B and C.
 ///
-/// If transformedSet contains a sample, consider the set C obtained by
-/// substituting the sample for the bounded dimensions of S*T. All the
-/// constraints of S*T that did not involve unbounded dimensions are
-/// satisfied by this substitution.
+/// The following is a sketch of a proof that
+/// a) If the algorithm returns empty, then S is empty.
+/// b) If the algorithm returns a sample, it is a valid sample in S.
 ///
-/// In step 1, all dimensions in the linear span of the dimensions outside the
-/// prefix are unbounded in S*T. Substituting values for the bounded dimensions
-/// cannot makes these dimensions bounded, and these are the only remaining
-/// dimensions in C, so C is unbounded along every vector. C is hence a
-/// full-dimensional cone and therefore always contains an integer point, which
-/// we can then substitute to get a full solution to S*T.
-bool FlatAffineConstraints::isIntegerEmpty() const {
+/// The algorithm returns empty only if B is empty, in which case S*T is
+/// certainly empty since B was obtained by removing constraints and then
+/// deleting unconstrained dimensions from S*T. Since T is unimodular, a vector
+/// v is in S*T iff T*v is in S. So in this case, since
+/// S*T is empty, S is empty too.
+///
+/// Otherwise, the algorithm substitutes the sample from B into S*T. All the
+/// constraints of S*T that did not involve unbounded dimensions are satisfied
+/// by this substitution. All dimensions in the linear span of the dimensions
+/// outside the prefix are unbounded in S*T (step 1). Substituting values for
+/// the bounded dimensions cannot make these dimensions bounded, and these are
+/// the only remaining dimensions in C, so C is unbounded along every vector (in
+/// the positive or negative direction, or both). C is hence a full-dimensional
+/// cone and therefore always contains an integer point.
+///
+/// Concatenating the samples from B and C gives a sample v in S*T, so the
+/// returned sample T*v is a sample in S.
+Optional<SmallVector<int64_t, 8>>
+FlatAffineConstraints::findIntegerSample() const {
   // First, try the GCD test heuristic.
   if (isEmptyByGCDTest())
-    return true;
+    return {};
 
   Simplex simplex(*this);
   if (simplex.isEmpty())
-    return true;
+    return {};
 
   // For a bounded set, we directly call into the GBR sampling algorithm.
   if (!simplex.isUnbounded())
-    return !simplex.findIntegerSample().hasValue();
+    return simplex.findIntegerSample();
 
   // The set is unbounded. We cannot directly use the GBR algorithm.
   //
@@ -1172,21 +1187,79 @@ bool FlatAffineConstraints::isIntegerEmpty() const {
   // transform to use in step 1 of the algorithm.
   std::pair<unsigned, LinearTransform> result =
       LinearTransform::makeTransformToColumnEchelon(std::move(m));
-  FlatAffineConstraints transformedSet = result.second.applyTo(*this);
+  const LinearTransform &transform = result.second;
+  // 1) Apply T to S to obtain S*T.
+  FlatAffineConstraints transformedSet = transform.applyTo(*this);
 
+  // 2) Remove the unbounded dimensions and constraints involving them to
+  // obtain a bounded set.
+  FlatAffineConstraints boundedSet = transformedSet;
   unsigned numBoundedDims = result.first;
   unsigned numUnboundedDims = getNumIds() - numBoundedDims;
-  removeConstraintsInvolvingSuffixDims(transformedSet, numUnboundedDims);
+  removeConstraintsInvolvingSuffixDims(boundedSet, numUnboundedDims);
+  boundedSet.removeIdRange(numBoundedDims, boundedSet.getNumIds());
 
-  // Remove all the unbounded dimensions.
-  transformedSet.removeIdRange(numBoundedDims, transformedSet.getNumIds());
+  // 3) Try to obtain a sample from the bounded set.
+  Optional<SmallVector<int64_t, 8>> boundedSample =
+      Simplex(boundedSet).findIntegerSample();
+  if (!boundedSample)
+    return {};
+  assert(boundedSet.containsPoint(*boundedSample) &&
+         "Simplex returned an invalid sample!");
 
-  return !Simplex(transformedSet).findIntegerSample().hasValue();
-}
+  // 4) Substitute the values of the bounded dimensions into S*T to obtain a
+  // full-dimensional cone, which necessarily contains an integer sample.
+  transformedSet.setAndEliminate(0, *boundedSample);
+  FlatAffineConstraints &cone = transformedSet;
 
-Optional<SmallVector<int64_t, 8>>
-FlatAffineConstraints::findIntegerSample() const {
-  return Simplex(*this).findIntegerSample();
+  // 5) Obtain an integer sample from the cone.
+  //
+  // We shrink the cone such that for any rational point in the shrunken cone,
+  // rounding up each of the point's coordinates produces a point that still
+  // lies in the original cone.
+  //
+  // Rounding up a point x adds a number e_i in [0, 1) to each coordinate x_i.
+  // For each inequality sum_i a_i x_i + c >= 0 in the original cone, the
+  // shrunken cone will have the inequality tightened by some amount s, such
+  // that if x satisfies the shrunken cone's tightened inequality, then x + e
+  // satisfies the original inequality, i.e.,
+  //
+  // sum_i a_i x_i + c + s >= 0 implies sum_i a_i (x_i + e_i) + c >= 0
+  //
+  // for any e_i values in [0, 1). In fact, we will handle the slightly more
+  // general case where e_i can be in [0, 1]. For example, consider the
+  // inequality 2x_1 - 3x_2 - 7x_3 - 6 >= 0, and let x = (3, 0, 0). How low
+  // could the LHS go if we added a number in [0, 1] to each coordinate? The LHS
+  // is minimized when we add 1 to the x_i with negative coefficient a_i and
+  // keep the other x_i the same. In the example, we would get x = (3, 1, 1),
+  // changing the value of the LHS by -3 + -7 = -10.
+  //
+  // In general, the value of the LHS can change by at most the sum of the
+  // negative a_i, so we accomodate this by shifting the inequality by this
+  // amount for the shrunken cone.
+  for (unsigned i = 0, e = cone.getNumInequalities(); i < e; ++i) {
+    for (unsigned j = 0; j < cone.numIds; ++j) {
+      int64_t coeff = cone.atIneq(i, j);
+      if (coeff < 0)
+        cone.atIneq(i, cone.numIds) += coeff;
+    }
+  }
+
+  // Obtain an integer sample in the cone by rounding up a rational point from
+  // the shrunken cone. Shrinking the cone amounts to shifting its apex
+  // "inwards" without changing its "shape"; the shrunken cone is still a
+  // full-dimensional cone and is hence non-empty.
+  Simplex shrunkenConeSimplex(cone);
+  assert(!shrunkenConeSimplex.isEmpty() && "Shrunken cone cannot be empty!");
+  SmallVector<Fraction, 8> shrunkenConeSample =
+      shrunkenConeSimplex.getRationalSample();
+
+  SmallVector<int64_t, 8> coneSample(llvm::map_range(shrunkenConeSample, ceil));
+
+  // 6) Return transform * concat(boundedSample, coneSample).
+  SmallVector<int64_t, 8> &sample = boundedSample.getValue();
+  sample.append(coneSample.begin(), coneSample.end());
+  return transform.preMultiplyColumn(sample);
 }
 
 /// Helper to evaluate an affine expression at a point.
@@ -2204,15 +2277,22 @@ static int findEqualityToConstant(const FlatAffineConstraints &cst,
   return -1;
 }
 
-void FlatAffineConstraints::setAndEliminate(unsigned pos, int64_t constVal) {
-  assert(pos < getNumIds() && "invalid position");
-  for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
-    atIneq(r, getNumCols() - 1) += atIneq(r, pos) * constVal;
-  }
-  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
-    atEq(r, getNumCols() - 1) += atEq(r, pos) * constVal;
-  }
-  removeId(pos);
+void FlatAffineConstraints::setAndEliminate(unsigned pos,
+                                            ArrayRef<int64_t> values) {
+  if (values.empty())
+    return;
+  assert(pos + values.size() <= getNumIds() &&
+         "invalid position or too many values");
+  // Setting x_j = p in sum_i a_i x_i + c is equivalent to adding p*a_j to the
+  // constant term and removing the id x_j. We do this for all the ids
+  // pos, pos + 1, ... pos + values.size() - 1.
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++)
+    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
+      atIneq(r, getNumCols() - 1) += atIneq(r, pos + i) * values[i];
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
+    for (unsigned i = 0, numVals = values.size(); i < numVals; ++i)
+      atEq(r, getNumCols() - 1) += atEq(r, pos + i) * values[i];
+  removeIdRange(pos, pos + values.size());
 }
 
 LogicalResult FlatAffineConstraints::constantFoldId(unsigned pos) {

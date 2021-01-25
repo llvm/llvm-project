@@ -583,17 +583,11 @@ define <4 x float> @add_ps_016(<4 x float> %0, <4 x float> %1) {
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: add_ps_016:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vhaddps %xmm0, %xmm1, %xmm0
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,3]
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: add_ps_016:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm1, %xmm0
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,1]
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: add_ps_016:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,3]
+; AVX-NEXT:    retq
   %3 = shufflevector <4 x float> %1, <4 x float> %0, <2 x i32> <i32 0, i32 6>
   %4 = shufflevector <4 x float> %1, <4 x float> %0, <2 x i32> <i32 1, i32 7>
   %5 = fadd <2 x float> %3, %4

@@ -33,7 +33,6 @@ class MachineRegisterInfo;
 class MCCFIInstruction;
 class MDNode;
 class ModuleSlotTracker;
-class TargetMachine;
 class TargetIntrinsicInfo;
 class TargetRegisterInfo;
 class hash_code;

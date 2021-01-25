@@ -113,18 +113,21 @@ LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
   }
 }
 
-void LinalgDependenceGraph::addDependenceElem(DependenceType dt,
-                                              OpOperand *indexingOpView,
-                                              OpOperand *dependentOpView) {
+void LinalgDependenceGraph::addDependenceElem(
+    DependenceType dt, LinalgDependenceGraphElem::OpView indexingOpView,
+    LinalgDependenceGraphElem::OpView dependentOpView) {
   LLVM_DEBUG(dbgs() << "\nAdd dep type " << getDependenceTypeStr(dt) << ":\t ("
-                    << indexingOpView->get() << " @"
-                    << indexingOpView->getOperandNumber() << ") -> \n\t\t("
-                    << dependentOpView->get() << " @"
-                    << dependentOpView->getOperandNumber() << ")");
-  dependencesFromGraphs[dt][indexingOpView->getOwner()].push_back(
-      LinalgDependenceGraphElem{dependentOpView, indexingOpView, dt});
-  dependencesIntoGraphs[dt][dependentOpView->getOwner()].push_back(
-      LinalgDependenceGraphElem{indexingOpView, dependentOpView, dt});
+                    << LinalgDependenceGraphElem::getValue(indexingOpView)
+                    << " @) -> \n\t\t("
+                    << LinalgDependenceGraphElem::getValue(dependentOpView)
+                    << " @)");
+  dependencesFromGraphs[dt][LinalgDependenceGraphElem::getOwner(indexingOpView)]
+      .push_back(
+          LinalgDependenceGraphElem{dependentOpView, indexingOpView, dt});
+  dependencesIntoGraphs[dt]
+                       [LinalgDependenceGraphElem::getOwner(dependentOpView)]
+                           .push_back(LinalgDependenceGraphElem{
+                               indexingOpView, dependentOpView, dt});
 }
 
 LinalgDependenceGraph::dependence_range
@@ -158,6 +161,18 @@ LinalgDependenceGraph::getDependencesInto(
 }
 
 void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
+  if (src.hasTensorSemantics() && dst.hasTensorSemantics()) {
+    for (OpOperand &dstOpOperand : dst.getInputOpOperands()) {
+      // Check if the operand is defined by the src.
+      auto definingOp = dstOpOperand.get().getDefiningOp<LinalgOp>();
+      if (definingOp && definingOp == src)
+        addDependenceElem(DependenceType::RAW, dstOpOperand.get(),
+                          &dstOpOperand);
+    }
+    return;
+  }
+  assert(src.hasBufferSemantics() && dst.hasBufferSemantics() &&
+         "unhandled dependence tracking for mixed buffer/tensor operations");
   for (OpOperand *srcOpOperand : src.getOutputBuffersOpOperands()) { // W
     // RAW graph
     for (OpOperand *dstOpOperand : dst.getInputBuffersOpOperands()) // R
@@ -218,15 +233,14 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
   // TODO: we are not considering paths yet, just interleaved positions.
   for (auto dt : types) {
     for (auto dependence : getDependencesFrom(src, dt)) {
-      auto interimPos =
-          linalgOpPositions.lookup(dependence.dependentOpView->getOwner());
+      auto interimPos = linalgOpPositions.lookup(dependence.getDependentOp());
       // Skip if not interleaved.
       if (interimPos >= dstPos || interimPos <= srcPos)
         continue;
-      Value consumerView = dependence.indexingOpView->get();
+      Value consumerView = dependence.getIndexingValue();
       if (view && !aliases.alias(view, consumerView))
         continue;
-      auto *op = dependence.dependentOpView->getOwner();
+      auto *op = dependence.getDependentOp();
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
                         << getDependenceTypeStr(dt) << ": " << *src << " -> "
                         << *op << " on " << consumerView);
@@ -241,7 +255,7 @@ bool LinalgDependenceGraph::hasDependenceFrom(
     ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
   for (auto dep : depTypes)
     for (auto dependence : getDependencesInto(dstLinalgOp, dep))
-      if (dependence.dependentOpView->getOwner() == srcLinalgOp)
+      if (dependence.getDependentOp() == srcLinalgOp)
         return true;
   return false;
 }

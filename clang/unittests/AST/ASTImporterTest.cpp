@@ -639,6 +639,38 @@ TEST_P(ImportExpr, ImportSizeOfPackExpr) {
           hasUnqualifiedDesugaredType(constantArrayType(hasSize(7))))))))));
 }
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
+
+AST_MATCHER_P(CXXFoldExpr, hasOperator, BinaryOperatorKind, Op) {
+  return Node.getOperator() == Op;
+}
+AST_MATCHER(CXXFoldExpr, hasInit) { return Node.getInit(); }
+AST_MATCHER(CXXFoldExpr, isRightFold) { return Node.isRightFold(); }
+AST_MATCHER(CXXFoldExpr, isLeftFold) { return Node.isLeftFold(); }
+
+TEST_P(ImportExpr, ImportCXXFoldExpr) {
+  auto Match1 =
+      cxxFoldExpr(hasOperator(BO_Add), isLeftFold(), unless(hasInit()));
+  auto Match2 = cxxFoldExpr(hasOperator(BO_Sub), isLeftFold(), hasInit());
+  auto Match3 =
+      cxxFoldExpr(hasOperator(BO_Mul), isRightFold(), unless(hasInit()));
+  auto Match4 = cxxFoldExpr(hasOperator(BO_Div), isRightFold(), hasInit());
+
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename... Ts>"
+             "void declToImport(Ts... args) {"
+             "  const int i1 = (... + args);"
+             "  const int i2 = (1 - ... - args);"
+             "  const int i3 = (args * ...);"
+             "  const int i4 = (args / ... / 1);"
+             "};"
+             "void g() { declToImport(1, 2, 3, 4, 5); }",
+             Lang_CXX17, "", Lang_CXX17, Verifier,
+             functionTemplateDecl(hasDescendant(Match1), hasDescendant(Match2),
+                                  hasDescendant(Match3),
+                                  hasDescendant(Match4)));
+}
+
 /// \brief Matches __builtin_types_compatible_p:
 /// GNU extension to check equivalent types
 /// Given

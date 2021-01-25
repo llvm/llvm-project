@@ -182,6 +182,8 @@ def int_amdgcn_init_exec : Intrinsic<[],
 // Set EXEC according to a thread count packed in an SGPR input:
 //    thread_count = (input >> bitoffset) & 0x7f;
 // This is always moved to the beginning of the basic block.
+// Note: only inreg arguments to the parent function are valid as
+// inputs to this intrinsic, computed values cannot be used.
 def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [llvm_i32_ty,       // 32-bit SGPR input
    llvm_i32_ty],      // bit offset of the thread count

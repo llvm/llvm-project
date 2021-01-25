@@ -182,10 +182,10 @@ Sections:
     Type: SHT_GNU_verneed
   - Name: .dynstr
     Type: SHT_STRTAB
-SectionHeaderTable:
-  Sections:
-    - Name: .gnu.version_r
-    - Name: .strtab
-    - Name: .shstrtab
-  Excluded:
-    - Name: .dynstr
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .gnu.version_r
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynstr

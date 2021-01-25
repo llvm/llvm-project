@@ -40,8 +40,9 @@ private:
 /// edges.
 class EHFrameEdgeFixer {
 public:
-  EHFrameEdgeFixer(StringRef EHFrameSectionName, Edge::Kind FDEToCIE,
-                   Edge::Kind FDEToPCBegin, Edge::Kind FDEToLSDA);
+  EHFrameEdgeFixer(StringRef EHFrameSectionName, unsigned PointerSize,
+                   Edge::Kind Delta64, Edge::Kind Delta32,
+                   Edge::Kind NegDelta32);
   Error operator()(LinkGraph &G);
 
 private:
@@ -57,6 +58,8 @@ private:
     CIEInformation(Symbol &CIESymbol) : CIESymbol(&CIESymbol) {}
     Symbol *CIESymbol = nullptr;
     bool FDEsHaveLSDAField = false;
+    uint8_t FDEPointerEncoding = 0;
+    uint8_t LSDAPointerEncoding = 0;
   };
 
   struct EdgeTarget {
@@ -96,14 +99,21 @@ private:
 
   Expected<AugmentationInfo>
   parseAugmentationString(BinaryStreamReader &RecordReader);
-  Expected<JITTargetAddress>
-  readAbsolutePointer(LinkGraph &G, BinaryStreamReader &RecordReader);
+
+  static bool isSupportedPointerEncoding(uint8_t PointerEncoding);
+  unsigned getPointerEncodingDataSize(uint8_t PointerEncoding);
+  Expected<std::pair<JITTargetAddress, Edge::Kind>>
+  readEncodedPointer(uint8_t PointerEncoding,
+                     JITTargetAddress PointerFieldAddress,
+                     BinaryStreamReader &RecordReader);
+
   Expected<Symbol &> getOrCreateSymbol(ParseContext &PC, JITTargetAddress Addr);
 
   StringRef EHFrameSectionName;
-  Edge::Kind FDEToCIE;
-  Edge::Kind FDEToPCBegin;
-  Edge::Kind FDEToLSDA;
+  unsigned PointerSize;
+  Edge::Kind Delta64;
+  Edge::Kind Delta32;
+  Edge::Kind NegDelta32;
 };
 
 } // end namespace jitlink

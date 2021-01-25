@@ -80,6 +80,13 @@ void eraseFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
 void eraseFunctionResults(Operation *op, ArrayRef<unsigned> resultIndices,
                           unsigned originalNumResults, Type newType);
 
+/// Get and set a FunctionLike operation's type signature.
+FunctionType getFunctionType(Operation *op);
+void setFunctionType(Operation *op, FunctionType newType);
+
+/// Get a FunctionLike operation's body.
+Region &getFunctionBody(Operation *op);
+
 } // namespace impl
 
 namespace OpTrait {
@@ -134,7 +141,9 @@ public:
   /// Returns true if this function is external, i.e. it has no body.
   bool isExternal() { return empty(); }
 
-  Region &getBody() { return this->getOperation()->getRegion(0); }
+  Region &getBody() {
+    return ::mlir::impl::getFunctionBody(this->getOperation());
+  }
 
   /// Delete all blocks from this function.
   void eraseBody() {
@@ -198,7 +207,7 @@ public:
   /// hide this one if the concrete class does not use FunctionType for the
   /// function type under the hood.
   FunctionType getType() {
-    return getTypeAttr().getValue().template cast<FunctionType>();
+    return ::mlir::impl::getFunctionType(this->getOperation());
   }
 
   /// Return the type of this function without the specified arguments and
@@ -542,15 +551,7 @@ Block *FunctionLike<ConcreteType>::addBlock() {
 
 template <typename ConcreteType>
 void FunctionLike<ConcreteType>::setType(FunctionType newType) {
-  SmallVector<char, 16> nameBuf;
-  auto oldType = getType();
-  auto *concreteOp = static_cast<ConcreteType *>(this);
-
-  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
-    concreteOp->removeAttr(getArgAttrName(i, nameBuf));
-  for (int i = newType.getNumResults(), e = oldType.getNumResults(); i < e; i++)
-    concreteOp->removeAttr(getResultAttrName(i, nameBuf));
-  (*concreteOp)->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  ::mlir::impl::setFunctionType(this->getOperation(), newType);
 }
 
 //===----------------------------------------------------------------------===//

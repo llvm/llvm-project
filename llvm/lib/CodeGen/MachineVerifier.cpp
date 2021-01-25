@@ -123,8 +123,7 @@ namespace {
     void addRegWithSubRegs(RegVector &RV, Register Reg) {
       RV.push_back(Reg);
       if (Reg.isPhysical())
-        for (const MCPhysReg &SubReg : TRI->subregs(Reg.asMCReg()))
-          RV.push_back(SubReg);
+        append_range(RV, TRI->subregs(Reg.asMCReg()));
     }
 
     struct BBInfo {

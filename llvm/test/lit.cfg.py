@@ -82,10 +82,20 @@ def get_asan_rtlib():
         return ''
     return found_dylibs[0]
 
-# Define this first. Afterwards, use_default_substitutions will add the rule for
-# expanding FileCheck to the full path.
-config.substitutions.append(('%FileCheckWithUnusedPrefixes%', 
-    'FileCheck --allow-unused-prefixes=true'))
+
+####################################################
+# FIXME: remove this when we flip the default value for --allow-unused-prefixes
+# to false.
+fc = ToolSubst('FileCheck', unresolved='fatal')
+# Insert this first. Then, we'll first update the blank FileCheck command; then,
+# the default substitution of FileCheck will replace it to its full path.
+config.substitutions.insert(0, (fc.regex,
+    'FileCheck --allow-unused-prefixes=false'))
+# When addressing this fixme, replace %FileCheckRaw% with just FileCheck.
+config.substitutions.append(('%FileCheckRaw%', 'FileCheck'))
+# Also remove the lit.local.cfg under llvm/test/Reduce
+# and the pertinent FIXME in llvm/test/FileCheck
+####################################################
 
 llvm_config.use_default_substitutions()
 

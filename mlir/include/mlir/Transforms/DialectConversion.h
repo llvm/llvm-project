@@ -421,6 +421,21 @@ private:
   using ConversionPattern::matchAndRewrite;
 };
 
+/// Add a pattern to the given pattern list to convert the signature of a
+/// FunctionLike op with the given type converter. This only supports
+/// FunctionLike ops which use FunctionType to represent their type.
+void populateFunctionLikeTypeConversionPattern(
+    StringRef functionLikeOpName, OwningRewritePatternList &patterns,
+    MLIRContext *ctx, TypeConverter &converter);
+
+template <typename FuncOpT>
+void populateFunctionLikeTypeConversionPattern(
+    OwningRewritePatternList &patterns, MLIRContext *ctx,
+    TypeConverter &converter) {
+  populateFunctionLikeTypeConversionPattern(FuncOpT::getOperationName(),
+                                            patterns, ctx, converter);
+}
+
 /// Add a pattern to the given pattern list to convert the signature of a FuncOp
 /// with the given type converter.
 void populateFuncOpTypeConversionPattern(OwningRewritePatternList &patterns,

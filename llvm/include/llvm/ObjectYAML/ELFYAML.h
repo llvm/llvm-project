@@ -128,12 +128,6 @@ struct SectionHeader {
   StringRef Name;
 };
 
-struct SectionHeaderTable {
-  Optional<std::vector<SectionHeader>> Sections;
-  Optional<std::vector<SectionHeader>> Excluded;
-  Optional<bool> NoHeaders;
-};
-
 struct Symbol {
   StringRef Name;
   ELF_STT Type;
@@ -196,18 +190,26 @@ struct Chunk {
     ARMIndexTable,
     MipsABIFlags,
     Addrsig,
-    Fill,
     LinkerOptions,
     DependentLibraries,
     CallGraphProfile,
-    BBAddrMap
+    BBAddrMap,
+
+    // Special chunks.
+    SpecialChunksStart,
+    Fill = SpecialChunksStart,
+    SectionHeaderTable,
   };
 
   ChunkKind Kind;
   StringRef Name;
   Optional<llvm::yaml::Hex64> Offset;
 
-  Chunk(ChunkKind K) : Kind(K) {}
+  // Usually chunks are not created implicitly, but rather loaded from YAML.
+  // This flag is used to signal whether this is the case or not.
+  bool IsImplicit;
+
+  Chunk(ChunkKind K, bool Implicit) : Kind(K), IsImplicit(Implicit) {}
   virtual ~Chunk();
 };
 
@@ -222,17 +224,14 @@ struct Section : public Chunk {
   Optional<yaml::BinaryRef> Content;
   Optional<llvm::yaml::Hex64> Size;
 
-  // Usually sections are not created implicitly, but loaded from YAML.
-  // When they are, this flag is used to signal about that.
-  bool IsImplicit;
-
   // Holds the original section index.
   unsigned OriginalSecNdx;
 
-  Section(ChunkKind Kind, bool IsImplicit = false)
-      : Chunk(Kind), IsImplicit(IsImplicit) {}
+  Section(ChunkKind Kind, bool IsImplicit = false) : Chunk(Kind, IsImplicit) {}
 
-  static bool classof(const Chunk *S) { return S->Kind != ChunkKind::Fill; }
+  static bool classof(const Chunk *S) {
+    return S->Kind < ChunkKind::SpecialChunksStart;
+  }
 
   // Some derived sections might have their own special entries. This method
   // returns a vector of <entry name, is used> pairs. It is used for section
@@ -276,9 +275,32 @@ struct Fill : Chunk {
   Optional<yaml::BinaryRef> Pattern;
   llvm::yaml::Hex64 Size;
 
-  Fill() : Chunk(ChunkKind::Fill) {}
+  Fill() : Chunk(ChunkKind::Fill, /*Implicit=*/false) {}
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Fill; }
+};
+
+struct SectionHeaderTable : Chunk {
+  SectionHeaderTable(bool IsImplicit)
+      : Chunk(ChunkKind::SectionHeaderTable, IsImplicit) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::SectionHeaderTable;
+  }
+
+  Optional<std::vector<SectionHeader>> Sections;
+  Optional<std::vector<SectionHeader>> Excluded;
+  Optional<bool> NoHeaders;
+
+  size_t getNumHeaders(size_t SectionsNum) const {
+    if (IsImplicit)
+      return SectionsNum;
+    if (NoHeaders)
+      return (*NoHeaders) ? 0 : SectionsNum;
+    return (Sections ? Sections->size() : 0) + /*Null section*/ 1;
+  }
+
+  static constexpr StringRef TypeStr = "SectionHeaderTable";
 };
 
 struct BBAddrMapSection : Section {
@@ -665,7 +687,6 @@ struct ProgramHeader {
 
 struct Object {
   FileHeader Header;
-  Optional<SectionHeaderTable> SectionHeaders;
   std::vector<ProgramHeader> ProgramHeaders;
 
   // An object might contain output section descriptions as well as
@@ -686,6 +707,13 @@ struct Object {
       if (auto S = dyn_cast<ELFYAML::Section>(Sec.get()))
         Ret.push_back(S);
     return Ret;
+  }
+
+  const SectionHeaderTable &getSectionHeaderTable() const {
+    for (const std::unique_ptr<Chunk> &C : Chunks)
+      if (auto *S = dyn_cast<ELFYAML::SectionHeaderTable>(C.get()))
+        return *S;
+    llvm_unreachable("the section header table chunk must always be present");
   }
 
   unsigned getMachine() const;
@@ -835,11 +863,6 @@ struct ScalarBitSetTraits<ELFYAML::MIPS_AFL_FLAGS1> {
 template <>
 struct MappingTraits<ELFYAML::FileHeader> {
   static void mapping(IO &IO, ELFYAML::FileHeader &FileHdr);
-};
-
-template <> struct MappingTraits<ELFYAML::SectionHeaderTable> {
-  static void mapping(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
-  static std::string validate(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
 };
 
 template <> struct MappingTraits<ELFYAML::SectionHeader> {

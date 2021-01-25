@@ -17,12 +17,8 @@ define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IBT-LABEL: bare_select:
 ; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    andi a3, a0, 1
-; RV32IBT-NEXT:    mv a0, a1
-; RV32IBT-NEXT:    bnez a3, .LBB0_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB0_2:
+; RV32IBT-NEXT:    andi a0, a0, 1
+; RV32IBT-NEXT:    cmov a0, a0, a1, a2
 ; RV32IBT-NEXT:    ret
   %1 = select i1 %a, i32 %b, i32 %c
   ret i32 %1
@@ -41,12 +37,8 @@ define float @bare_select_float(i1 %a, float %b, float %c) nounwind {
 ;
 ; RV32IBT-LABEL: bare_select_float:
 ; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    andi a3, a0, 1
-; RV32IBT-NEXT:    mv a0, a1
-; RV32IBT-NEXT:    bnez a3, .LBB1_2
-; RV32IBT-NEXT:  # %bb.1:
-; RV32IBT-NEXT:    mv a0, a2
-; RV32IBT-NEXT:  .LBB1_2:
+; RV32IBT-NEXT:    andi a0, a0, 1
+; RV32IBT-NEXT:    cmov a0, a0, a1, a2
 ; RV32IBT-NEXT:    ret
   %1 = select i1 %a, float %b, float %c
   ret float %1

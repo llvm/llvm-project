@@ -200,6 +200,30 @@ define half @fcvt_h_si(i16 %a) nounwind {
   ret half %1
 }
 
+define half @fcvt_h_si_signext(i16 signext %a) nounwind {
+; RV32IZFH-LABEL: fcvt_h_si_signext:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fcvt.h.w fa0, a0
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: fcvt_h_si_signext:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    fcvt.h.w fa0, a0
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fcvt_h_si_signext:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fcvt.h.w fa0, a0
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: fcvt_h_si_signext:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    fcvt.h.w fa0, a0
+; RV64IDZFH-NEXT:    ret
+  %1 = sitofp i16 %a to half
+  ret half %1
+}
+
 define half @fcvt_h_ui(i16 %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_h_ui:
 ; RV32IZFH:       # %bb.0:
@@ -231,6 +255,30 @@ define half @fcvt_h_ui(i16 %a) nounwind {
 ; RV64IDZFH-NEXT:    addiw a1, a1, -1
 ; RV64IDZFH-NEXT:    and a0, a0, a1
 ; RV64IDZFH-NEXT:    fcvt.h.lu fa0, a0
+; RV64IDZFH-NEXT:    ret
+  %1 = uitofp i16 %a to half
+  ret half %1
+}
+
+define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind {
+; RV32IZFH-LABEL: fcvt_h_ui_zeroext:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    fcvt.h.wu fa0, a0
+; RV32IZFH-NEXT:    ret
+;
+; RV32IDZFH-LABEL: fcvt_h_ui_zeroext:
+; RV32IDZFH:       # %bb.0:
+; RV32IDZFH-NEXT:    fcvt.h.wu fa0, a0
+; RV32IDZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fcvt_h_ui_zeroext:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fcvt.h.wu fa0, a0
+; RV64IZFH-NEXT:    ret
+;
+; RV64IDZFH-LABEL: fcvt_h_ui_zeroext:
+; RV64IDZFH:       # %bb.0:
+; RV64IDZFH-NEXT:    fcvt.h.wu fa0, a0
 ; RV64IDZFH-NEXT:    ret
   %1 = uitofp i16 %a to half
   ret half %1

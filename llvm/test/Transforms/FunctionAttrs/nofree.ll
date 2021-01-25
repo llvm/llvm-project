@@ -107,7 +107,7 @@ attributes #5 = { builtin nounwind }
 ; CHECK: attributes #0 = { uwtable }
 ; CHECK: attributes #1 = { nounwind uwtable }
 ; CHECK: attributes #2 = { nounwind }
-; CHECK: attributes #3 = { norecurse nounwind readonly uwtable }
+; CHECK: attributes #3 = { norecurse nounwind readonly uwtable willreturn }
 ; CHECK: attributes #4 = { nobuiltin nounwind }
 ; CHECK: attributes #5 = { builtin nounwind }
 

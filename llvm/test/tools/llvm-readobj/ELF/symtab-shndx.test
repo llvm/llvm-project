@@ -313,6 +313,8 @@ Sections:
     Entries: [ 0, 1 ]
     Offset:  0x2000
     Address: 0x2000
+  - Type:      SectionHeaderTable
+    NoHeaders: true
 DynamicSymbols:
   - Name:  dynsym1
     Index: SHN_XINDEX
@@ -327,5 +329,3 @@ ProgramHeaders:
     VAddr:    0x1000
     FirstSec: .dynamic
     LastSec:  .dynamic
-SectionHeaderTable:
-  NoHeaders: true

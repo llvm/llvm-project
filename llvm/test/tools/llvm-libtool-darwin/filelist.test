@@ -65,13 +65,13 @@
 # RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.invalid-list.txt 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=FILE-ERROR -DFILE=no-such-file
 
-# FILE-ERROR: error: '[[FILE]]': {{[nN]}}o such file or directory
+# FILE-ERROR: error: '[[FILE]]': {{.*}}{{[nN]}}o such file or directory
 
 ## Check that an error is thrown when the directory exists but does not contain the requested file:
 # RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.invalid-list.txt,%t/dirname 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=DIR-ERROR -DDIR=%t/dirname -DFILE=no-such-file
 
-# DIR-ERROR: error: '[[DIR]]{{[/\\]}}[[FILE]]': {{[nN]}}o such file or directory
+# DIR-ERROR: error: '[[DIR]]{{[/\\]}}[[FILE]]': {{.*}}{{[nN]}}o such file or directory
 
 ## Check that an error is thrown when a file is in the cwd but dirname is specified:
 # RUN: yaml2obj %S/Inputs/input2.yaml -o %basename_t.tmp-input2.o

@@ -53,12 +53,6 @@ llvm::Error FrontendAction::Execute() {
 
   Fortran::parser::Options parserOptions =
       this->instance().invocation().fortranOpts();
-  // Set the fixed form flag based on the file extension
-  auto pathDotIndex{currentInputPath.rfind(".")};
-  if (pathDotIndex != std::string::npos) {
-    std::string pathSuffix{currentInputPath.substr(pathDotIndex + 1)};
-    parserOptions.isFixedForm = isFixedFormSuffix(pathSuffix);
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);

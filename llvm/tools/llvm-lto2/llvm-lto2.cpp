@@ -158,6 +158,11 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
+static cl::opt<bool> EnableFreestanding(
+    "lto-freestanding",
+    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
+    cl::init(false), cl::Hidden);
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -269,6 +274,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.UseNewPM = UseNewPM;
+  Conf.Freestanding = EnableFreestanding;
   for (auto &PluginFN : PassPlugins)
     Conf.PassPlugins.push_back(PluginFN);
   switch (CGOptLevel) {

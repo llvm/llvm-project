@@ -21,6 +21,9 @@
 #OS X specific files.
 .DS_store
 
+# Ignore the user specified CMake presets in subproject directories.
+/*/CMakeUserPresets.json
+
 # Nested build directory
 /build*
 

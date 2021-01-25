@@ -12,6 +12,19 @@ extern "C" __host__ void host_fn();
 extern "C" __device__ void dev_fn();
 extern "C" __host__ __device__ void hd_fn();
 
+// Destructors are handled a bit differently, compared to regular functions.
+// Make sure we do trigger kernel generation on the GPU side even if it's only
+// referenced by the destructor.
+template<typename T> __global__ void f(T) {}
+template<typename T> struct A {
+  ~A() { f<<<1, 1>>>(T()); }
+};
+
+// HOST-LABEL: @a
+A<int> a;
+// HOST-LABEL: define linkonce_odr void @_ZN1AIiED1Ev
+// search further down for the deice-side checks for @_Z1fIiEvT_
+
 struct H1D1 {
   __host__ void operator delete(void *) { host_fn(); };
   __device__ void operator delete(void *) { dev_fn(); };
@@ -95,6 +108,9 @@ __host__ __device__ void tests_hd(void *t) {
   test_hd<H1H2D1D2>(t);
 }
 
+// Make sure that we've generated the kernel used by A::~A.
+// DEVICE-LABEL: define dso_local void @_Z1fIiEvT_
+
 // Make sure we've picked deallocator for the correct side of compilation.
 
 // COMMON-LABEL: define  linkonce_odr void @_ZN4H1D1dlEPv(i8* %0)
@@ -131,3 +147,5 @@ __host__ __device__ void tests_hd(void *t) {
 // COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(i8* %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
+
+// DEVICE: !0 = !{void (i32)* @_Z1fIiEvT_, !"kernel", i32 1}

@@ -43,7 +43,7 @@ def extend_opview_class(ext_module):
     except AttributeError:
       # Try to default resolve it.
       try:
-        select_mixin = getattr(ext_module, parent_opview_cls.__name__)
+        mixin_cls = getattr(ext_module, parent_opview_cls.__name__)
       except AttributeError:
         pass
     else:

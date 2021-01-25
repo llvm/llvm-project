@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-fusion-transform-patterns -canonicalize -cse -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-fusion-transform-patterns -canonicalize -cse -split-input-file | FileCheck %s
 
 module {
   func @basic_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
@@ -371,7 +371,6 @@ module {
     %2 = alloc(%0, %1) : memref<?x?xf32>
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%2 : memref<?x?xf32>)
-    // expected-remark @+1 {{unhandled fusion to the same producer but with different indexing maps}}
     linalg.generic
       {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                         affine_map<(d0, d1) -> (d1, d0)>,
@@ -387,6 +386,15 @@ module {
     return
   }
 }
+// CHECK-LABEL: func @matmul_plus_transpose_matmul
+//   CHECK-NOT:   scf.parallel
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.matmul
+//   CHECK-NOT:   scf.parallel
+//   CHECK-NOT:   scf.for
+//       CHECK:   linalg.generic
+//   CHECK-NOT:   scf.parallel
+//   CHECK-NOT:   scf.for
 
 // -----
 
@@ -416,7 +424,6 @@ module {
         %6 = subview %arg0[%arg3, %arg5] [%3, %5] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
         %7 = subview %arg1[%arg5, %arg4] [%5, %4] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
         %8 = subview %arg2[%arg3, %arg4] [%3, %4] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map3>
-	// expected-remark @+1 {{unhandled fusion of ops in different basic blocks}}
         linalg.matmul {__internal_linalg_transform__ = "basic_fusion"}
           ins(%6, %7 : memref<?x?xf32, #map3>, memref<?x?xf32, #map3>)
           outs(%8 : memref<?x?xf32, #map3>)
@@ -426,6 +433,13 @@ module {
     return
   }
 }
+// CHECK-LABEL: func @basic_no_fusion
+//   CHECK-NOT:   scf.parallel
+//       CHECK:   linalg.fill
+//       CHECK:   scf.parallel
+//       CHECK:     scf.for
+//   CHECK-NOT:     linalg.fill
+//       CHECK:     linalg.matmul
 
 // -----
 

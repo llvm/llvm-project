@@ -204,7 +204,7 @@ define <4 x i32> @test11_2(<4 x i32*> %ptrs) {
 ; CHECK: Function Attrs: argmemonly nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@test11_2
 ; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR6:#.*]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x i32*> [[PTRS]]) [[ATTR2]]
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x i32*> [[PTRS]]) [[ATTR9:#.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test11_1(<4 x i32*> %ptrs)
@@ -323,7 +323,7 @@ define void @byval_not_readonly_2(i8* byval(i8) %written) readonly {
 define void @byval_not_readnone_1(i8* byval(i8) %written) readnone {
 ; CHECK: Function Attrs: readnone
 ; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_1
-; CHECK-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR9:#.*]] {
+; CHECK-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) [[ATTR8:#.*]] {
 ; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
 ; CHECK-NEXT:    ret void
 ;
@@ -395,7 +395,9 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(i8* %ptr) {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@ptr_uses
-; CHECK-SAME: (i8* nocapture readonly [[PTR:%.*]]) [[ATTR10:#.*]] {
+; CHECK-SAME: (i8* nocapture readonly [[PTR:%.*]]) [[ATTR9:#.*]] {
+; CHECK-NEXT:    [[CALL_PTR:%.*]] = call i8* @maybe_returned_ptr(i8* readonly [[PTR]])
+; CHECK-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(i8* readonly [[CALL_PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %call_ptr = call i8* @maybe_returned_ptr(i8* %ptr)

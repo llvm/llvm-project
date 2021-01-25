@@ -76,6 +76,14 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %11 = spv.FUnordLessThanEqual %arg0, %arg1 : f32
     // CHECK: spv.FUnordNotEqual
     %12 = spv.FUnordNotEqual %arg0, %arg1 : f32
+    // CHECK: spv.Ordered
+    %13 = spv.Ordered %arg0, %arg1 : f32
+    // CHECK: spv.Unordered
+    %14 = spv.Unordered %arg0, %arg1 : f32
+    // CHCK: spv.IsNan
+    %15 = spv.IsNan %arg0 : f32
+    // CHCK: spv.IsInf
+    %16 = spv.IsInf %arg1 : f32
     spv.Return
   }
 }

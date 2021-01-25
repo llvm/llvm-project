@@ -382,13 +382,18 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
                cast<ELFYAML::Section>(B.get())->OriginalSecNdx;
       });
   if (!SectionsSorted) {
-    Y->SectionHeaders.emplace();
-    Y->SectionHeaders->Sections.emplace();
+    std::unique_ptr<ELFYAML::SectionHeaderTable> SHT =
+        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/false);
+    SHT->Sections.emplace();
     for (ELFYAML::Section *S : OriginalOrder)
-      Y->SectionHeaders->Sections->push_back({S->Name});
+      SHT->Sections->push_back({S->Name});
+    Chunks.push_back(std::move(SHT));
   }
 
   llvm::erase_if(Chunks, [this, &Y](const std::unique_ptr<ELFYAML::Chunk> &C) {
+    if (isa<ELFYAML::SectionHeaderTable>(*C.get()))
+      return false;
+
     const ELFYAML::Section &S = cast<ELFYAML::Section>(*C.get());
     return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
   });

@@ -95,6 +95,11 @@ enum NodeType : unsigned {
   READ_VLENB,
   // Truncates a RVV integer vector by one power-of-two.
   TRUNCATE_VECTOR,
+  // Unit-stride fault-only-first load
+  VLEFF,
+  VLEFF_MASK,
+  // read vl CSR
+  READ_VL,
 };
 } // namespace RISCVISD
 
@@ -325,6 +330,7 @@ struct RISCVZvlsseg {
   unsigned int IntrinsicID;
   unsigned int SEW;
   unsigned int LMUL;
+  unsigned int IndexLMUL;
   unsigned int Pseudo;
 };
 

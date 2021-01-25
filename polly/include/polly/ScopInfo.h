@@ -1805,6 +1805,22 @@ private:
   /// need to be "false". Otherwise they behave the same.
   isl::set InvalidContext;
 
+  /// The context under which the SCoP must have defined behavior. Optimizer and
+  /// code generator can assume that the SCoP will only be executed with
+  /// parameter values within this context. This might be either because we can
+  /// prove that other values are impossible or explicitly have undefined
+  /// behavior, such as due to no-wrap flags. If this becomes too complex, can
+  /// also be nullptr.
+  ///
+  /// In contrast to Scop::AssumedContext and Scop::InvalidContext, these do not
+  /// need to be checked at runtime.
+  ///
+  /// Scop::Context on the other side is an overapproximation and does not
+  /// include all requirements, but is always defined. However, there is still
+  /// no guarantee that there is no undefined behavior in
+  /// DefinedBehaviorContext.
+  isl::set DefinedBehaviorContext;
+
   /// The schedule of the SCoP
   ///
   /// The schedule of the SCoP describes the execution order of the statements
@@ -1903,9 +1919,6 @@ private:
   /// Initialize this ScopBuilder.
   void init(AAResults &AA, AssumptionCache &AC, DominatorTree &DT,
             LoopInfo &LI);
-
-  /// Add parameter constraints to @p C that imply a non-empty domain.
-  isl::set addNonEmptyDomainConstraints(isl::set C) const;
 
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
@@ -2203,6 +2216,19 @@ public:
   /// @return The constraint on parameter of this Scop.
   isl::set getContext() const;
 
+  /// Return the context where execution behavior is defined. Might return
+  /// nullptr.
+  isl::set getDefinedBehaviorContext() const { return DefinedBehaviorContext; }
+
+  /// Return the define behavior context, or if not available, its approximation
+  /// from all other contexts.
+  isl::set getBestKnownDefinedBehaviorContext() const {
+    if (DefinedBehaviorContext)
+      return DefinedBehaviorContext;
+
+    return Context.intersect_params(AssumedContext).subtract(InvalidContext);
+  }
+
   /// Return space of isl context parameters.
   ///
   /// Returns the set of context parameters that are currently constrained. In
@@ -2257,6 +2283,10 @@ public:
   bool trackAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
                        AssumptionSign Sign, BasicBlock *BB);
 
+  /// Add the conditions from @p Set (or subtract them if @p Sign is
+  /// AS_RESTRICTION) to the defined behaviour context.
+  void intersectDefinedBehavior(isl::set Set, AssumptionSign Sign);
+
   /// Add assumptions to assumed context.
   ///
   /// The assumptions added will be assumed to hold during the execution of the
@@ -2275,8 +2305,9 @@ public:
   ///             (needed/assumptions) or negative (invalid/restrictions).
   /// @param BB   The block in which this assumption was taken. Used to
   ///             calculate hotness when emitting remark.
+  /// @param RTC  Does the assumption require a runtime check?
   void addAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
-                     AssumptionSign Sign, BasicBlock *BB);
+                     AssumptionSign Sign, BasicBlock *BB, bool RTC = true);
 
   /// Mark the scop as invalid.
   ///
