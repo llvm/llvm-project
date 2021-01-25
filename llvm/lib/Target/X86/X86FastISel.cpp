@@ -3103,6 +3103,7 @@ bool X86FastISel::fastLowerArguments() {
         Arg.hasAttribute(Attribute::InReg) ||
         Arg.hasAttribute(Attribute::StructRet) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
+        Arg.hasAttribute(Attribute::SwiftAsync) ||
         Arg.hasAttribute(Attribute::SwiftError) ||
         Arg.hasAttribute(Attribute::Nest))
       return false;
