@@ -1984,7 +1984,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
-  if (sinkNotIntoOtherHandOfAnd(I))
+  if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
 
   return nullptr;
@@ -2867,6 +2867,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
+  if (sinkNotIntoOtherHandOfAndOrOr(I))
+    return &I;
+
   return nullptr;
 }
 
@@ -3094,15 +3098,18 @@ static Instruction *sinkNotIntoXor(BinaryOperator &I,
 }
 
 // Transform
-//   z = (~x) & y
+//   z = (~x) &/| y
 // into:
-//   z = ~(x | (~y))
+//   z = ~(x |/& (~y))
 // iff y is free to invert and all uses of z can be freely updated.
-bool InstCombinerImpl::sinkNotIntoOtherHandOfAnd(BinaryOperator &I) {
+bool InstCombinerImpl::sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I) {
   Instruction::BinaryOps NewOpc;
   switch (I.getOpcode()) {
   case Instruction::And:
     NewOpc = Instruction::Or;
+    break;
+  case Instruction::Or:
+    NewOpc = Instruction::And;
     break;
   default:
     return false;
