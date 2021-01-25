@@ -65,6 +65,8 @@ public:
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVBuffer;
   }
+
+  void printCustom(raw_ostream &OS) const override { OS << "BufferResource"; }
 };
 
 class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
@@ -76,6 +78,8 @@ public:
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVImage;
   }
+
+  void printCustom(raw_ostream &OS) const override { OS << "ImageResource"; }
 };
 
 class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
