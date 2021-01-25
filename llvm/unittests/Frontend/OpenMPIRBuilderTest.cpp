@@ -23,6 +23,95 @@ using namespace omp;
 
 namespace {
 
+/// Create an instruction that uses the values in \p Values. We use "printf"
+/// just because it is often used for this purpose in test code, but it is never
+/// executed here.
+static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
+                                  ArrayRef<Value *> Values) {
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+
+  GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
+  Constant *Zero = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0);
+  Constant *Indices[] = {Zero, Zero};
+  Constant *FormatStrConst =
+      ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV, Indices);
+
+  Function *PrintfDecl = M->getFunction("printf");
+  if (!PrintfDecl) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(), true);
+    PrintfDecl = Function::Create(Ty, Linkage, "printf", M);
+  }
+
+  SmallVector<Value *, 4> Args;
+  Args.push_back(FormatStrConst);
+  Args.append(Values.begin(), Values.end());
+  return Builder.CreateCall(PrintfDecl, Args);
+}
+
+/// Verify that blocks in \p RefOrder are corresponds to the depth-first visit
+/// order the control flow of \p F.
+///
+/// This is an easy way to verify the branching structure of the CFG without
+/// checking every branch instruction individually. For the CFG of a
+/// CanonicalLoopInfo, the Cond BB's terminating branch's first edge is entering
+/// the body, i.e. the DFS order corresponds to the execution order with one
+/// loop iteration.
+static testing::AssertionResult
+verifyDFSOrder(Function *F, ArrayRef<BasicBlock *> RefOrder) {
+  ArrayRef<BasicBlock *>::iterator It = RefOrder.begin();
+  ArrayRef<BasicBlock *>::iterator E = RefOrder.end();
+
+  df_iterator_default_set<BasicBlock *, 16> Visited;
+  auto DFS = llvm::depth_first_ext(&F->getEntryBlock(), Visited);
+
+  BasicBlock *Prev = nullptr;
+  for (BasicBlock *BB : DFS) {
+    if (It != E && BB == *It) {
+      Prev = *It;
+      ++It;
+    }
+  }
+
+  if (It == E)
+    return testing::AssertionSuccess();
+  if (!Prev)
+    return testing::AssertionFailure()
+           << "Did not find " << (*It)->getName() << " in control flow";
+  return testing::AssertionFailure()
+         << "Expected " << Prev->getName() << " before " << (*It)->getName()
+         << " in control flow";
+}
+
+/// Verify that blocks in \p RefOrder are in the same relative order in the
+/// linked lists of blocks in \p F. The linked list may contain additional
+/// blocks in-between.
+///
+/// While the order in the linked list is not relevant for semantics, keeping
+/// the order roughly in execution order makes its printout easier to read.
+static testing::AssertionResult
+verifyListOrder(Function *F, ArrayRef<BasicBlock *> RefOrder) {
+  ArrayRef<BasicBlock *>::iterator It = RefOrder.begin();
+  ArrayRef<BasicBlock *>::iterator E = RefOrder.end();
+
+  BasicBlock *Prev = nullptr;
+  for (BasicBlock &BB : *F) {
+    if (It != E && &BB == *It) {
+      Prev = *It;
+      ++It;
+    }
+  }
+
+  if (It == E)
+    return testing::AssertionSuccess();
+  if (!Prev)
+    return testing::AssertionFailure() << "Did not find " << (*It)->getName()
+                                       << " in function " << F->getName();
+  return testing::AssertionFailure()
+         << "Expected " << Prev->getName() << " before " << (*It)->getName()
+         << " in function " << F->getName();
+}
+
 class OpenMPIRBuilderTest : public testing::Test {
 protected:
   void SetUp() override {
@@ -1068,6 +1157,366 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
   // Finalize the function and verify it.
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+
+  BasicBlock *BodyCode = nullptr;
+  Instruction *Call = nullptr;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    Builder.restoreIP(CodeGenIP);
+    BodyCode = Builder.GetInsertBlock();
+
+    // Add something that consumes the induction variable to the body.
+    Call = createPrintfCall(Builder, "%d\\n", {LC});
+  };
+  CanonicalLoopInfo *Loop =
+      OMPBuilder.createCanonicalLoop(Loc, LoopBodyGenCB, TripCount);
+
+  // Finalize the function.
+  Builder.restoreIP(Loop->getAfterIP());
+  Builder.CreateRetVoid();
+
+  Instruction *OrigIndVar = Loop->getIndVar();
+  EXPECT_EQ(Call->getOperand(1), OrigIndVar);
+
+  // Tile the loop.
+  Constant *TileSize = ConstantInt::get(Loop->getIndVarType(), APInt(32, 7));
+  std::vector<CanonicalLoopInfo *> GenLoops =
+      OMPBuilder.tileLoops(DL, {Loop}, {TileSize});
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_EQ(GenLoops.size(), 2);
+  CanonicalLoopInfo *Floor = GenLoops[0];
+  CanonicalLoopInfo *Tile = GenLoops[1];
+
+  BasicBlock *RefOrder[] = {
+      Floor->getPreheader(), Floor->getHeader(),   Floor->getCond(),
+      Floor->getBody(),      Tile->getPreheader(), Tile->getHeader(),
+      Tile->getCond(),       Tile->getBody(),      BodyCode,
+      Tile->getLatch(),      Tile->getExit(),      Tile->getAfter(),
+      Floor->getLatch(),     Floor->getExit(),     Floor->getAfter(),
+  };
+  EXPECT_TRUE(verifyDFSOrder(F, RefOrder));
+  EXPECT_TRUE(verifyListOrder(F, RefOrder));
+
+  // Check the induction variable.
+  EXPECT_EQ(Call->getParent(), BodyCode);
+  auto *Shift = cast<AddOperator>(Call->getOperand(1));
+  EXPECT_EQ(cast<Instruction>(Shift)->getParent(), Tile->getBody());
+  EXPECT_EQ(Shift->getOperand(1), Tile->getIndVar());
+  auto *Scale = cast<MulOperator>(Shift->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(Scale)->getParent(), Tile->getBody());
+  EXPECT_EQ(Scale->getOperand(0), TileSize);
+  EXPECT_EQ(Scale->getOperand(1), Floor->getIndVar());
+}
+
+TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+
+  BasicBlock *BodyCode = nullptr;
+  CanonicalLoopInfo *InnerLoop = nullptr;
+  auto OuterLoopBodyGenCB = [&](InsertPointTy OuterCodeGenIP,
+                                llvm::Value *OuterLC) {
+    auto InnerLoopBodyGenCB = [&](InsertPointTy InnerCodeGenIP,
+                                  llvm::Value *InnerLC) {
+      Builder.restoreIP(InnerCodeGenIP);
+      BodyCode = Builder.GetInsertBlock();
+
+      // Add something that consumes the induction variables to the body.
+      createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
+    };
+    InnerLoop = OMPBuilder.createCanonicalLoop(
+        OuterCodeGenIP, InnerLoopBodyGenCB, TripCount, "inner");
+  };
+  CanonicalLoopInfo *OuterLoop = OMPBuilder.createCanonicalLoop(
+      Loc, OuterLoopBodyGenCB, TripCount, "outer");
+
+  // Finalize the function.
+  Builder.restoreIP(OuterLoop->getAfterIP());
+  Builder.CreateRetVoid();
+
+  // Tile to loop nest.
+  Constant *OuterTileSize = ConstantInt::get(LCTy, APInt(32, 11));
+  Constant *InnerTileSize = ConstantInt::get(LCTy, APInt(32, 7));
+  std::vector<CanonicalLoopInfo *> GenLoops = OMPBuilder.tileLoops(
+      DL, {OuterLoop, InnerLoop}, {OuterTileSize, InnerTileSize});
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_EQ(GenLoops.size(), 4);
+  CanonicalLoopInfo *Floor1 = GenLoops[0];
+  CanonicalLoopInfo *Floor2 = GenLoops[1];
+  CanonicalLoopInfo *Tile1 = GenLoops[2];
+  CanonicalLoopInfo *Tile2 = GenLoops[3];
+
+  BasicBlock *RefOrder[] = {
+      Floor1->getPreheader(),
+      Floor1->getHeader(),
+      Floor1->getCond(),
+      Floor1->getBody(),
+      Floor2->getPreheader(),
+      Floor2->getHeader(),
+      Floor2->getCond(),
+      Floor2->getBody(),
+      Tile1->getPreheader(),
+      Tile1->getHeader(),
+      Tile1->getCond(),
+      Tile1->getBody(),
+      Tile2->getPreheader(),
+      Tile2->getHeader(),
+      Tile2->getCond(),
+      Tile2->getBody(),
+      BodyCode,
+      Tile2->getLatch(),
+      Tile2->getExit(),
+      Tile2->getAfter(),
+      Tile1->getLatch(),
+      Tile1->getExit(),
+      Tile1->getAfter(),
+      Floor2->getLatch(),
+      Floor2->getExit(),
+      Floor2->getAfter(),
+      Floor1->getLatch(),
+      Floor1->getExit(),
+      Floor1->getAfter(),
+  };
+  EXPECT_TRUE(verifyDFSOrder(F, RefOrder));
+  EXPECT_TRUE(verifyListOrder(F, RefOrder));
+}
+
+TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+
+  Value *OuterStartVal = ConstantInt::get(LCTy, 2);
+  Value *OuterStopVal = TripCount;
+  Value *OuterStep = ConstantInt::get(LCTy, 5);
+  Value *InnerStartVal = ConstantInt::get(LCTy, 13);
+  Value *InnerStopVal = TripCount;
+  Value *InnerStep = ConstantInt::get(LCTy, 3);
+
+  // Fix an insertion point for ComputeIP.
+  BasicBlock *LoopNextEnter =
+      BasicBlock::Create(M->getContext(), "loopnest.enter", F,
+                         Builder.GetInsertBlock()->getNextNode());
+  BranchInst *EnterBr = Builder.CreateBr(LoopNextEnter);
+  InsertPointTy ComputeIP{EnterBr->getParent(), EnterBr->getIterator()};
+
+  InsertPointTy LoopIP{LoopNextEnter, LoopNextEnter->begin()};
+  OpenMPIRBuilder::LocationDescription Loc({LoopIP, DL});
+
+  BasicBlock *BodyCode = nullptr;
+  CanonicalLoopInfo *InnerLoop = nullptr;
+  CallInst *Call = nullptr;
+  auto OuterLoopBodyGenCB = [&](InsertPointTy OuterCodeGenIP,
+                                llvm::Value *OuterLC) {
+    auto InnerLoopBodyGenCB = [&](InsertPointTy InnerCodeGenIP,
+                                  llvm::Value *InnerLC) {
+      Builder.restoreIP(InnerCodeGenIP);
+      BodyCode = Builder.GetInsertBlock();
+
+      // Add something that consumes the induction variable to the body.
+      Call = createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
+    };
+    InnerLoop = OMPBuilder.createCanonicalLoop(
+        OuterCodeGenIP, InnerLoopBodyGenCB, InnerStartVal, InnerStopVal,
+        InnerStep, false, false, ComputeIP, "inner");
+  };
+  CanonicalLoopInfo *OuterLoop = OMPBuilder.createCanonicalLoop(
+      Loc, OuterLoopBodyGenCB, OuterStartVal, OuterStopVal, OuterStep, false,
+      false, ComputeIP, "outer");
+
+  // Finalize the function
+  Builder.restoreIP(OuterLoop->getAfterIP());
+  Builder.CreateRetVoid();
+
+  // Tile the loop nest.
+  Constant *TileSize0 = ConstantInt::get(LCTy, APInt(32, 11));
+  Constant *TileSize1 = ConstantInt::get(LCTy, APInt(32, 7));
+  std::vector<CanonicalLoopInfo *> GenLoops =
+      OMPBuilder.tileLoops(DL, {OuterLoop, InnerLoop}, {TileSize0, TileSize1});
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_EQ(GenLoops.size(), 4);
+  CanonicalLoopInfo *Floor0 = GenLoops[0];
+  CanonicalLoopInfo *Floor1 = GenLoops[1];
+  CanonicalLoopInfo *Tile0 = GenLoops[2];
+  CanonicalLoopInfo *Tile1 = GenLoops[3];
+
+  BasicBlock *RefOrder[] = {
+      Floor0->getPreheader(),
+      Floor0->getHeader(),
+      Floor0->getCond(),
+      Floor0->getBody(),
+      Floor1->getPreheader(),
+      Floor1->getHeader(),
+      Floor1->getCond(),
+      Floor1->getBody(),
+      Tile0->getPreheader(),
+      Tile0->getHeader(),
+      Tile0->getCond(),
+      Tile0->getBody(),
+      Tile1->getPreheader(),
+      Tile1->getHeader(),
+      Tile1->getCond(),
+      Tile1->getBody(),
+      BodyCode,
+      Tile1->getLatch(),
+      Tile1->getExit(),
+      Tile1->getAfter(),
+      Tile0->getLatch(),
+      Tile0->getExit(),
+      Tile0->getAfter(),
+      Floor1->getLatch(),
+      Floor1->getExit(),
+      Floor1->getAfter(),
+      Floor0->getLatch(),
+      Floor0->getExit(),
+      Floor0->getAfter(),
+  };
+  EXPECT_TRUE(verifyDFSOrder(F, RefOrder));
+  EXPECT_TRUE(verifyListOrder(F, RefOrder));
+
+  EXPECT_EQ(Call->getParent(), BodyCode);
+
+  auto *RangeShift0 = cast<AddOperator>(Call->getOperand(1));
+  EXPECT_EQ(RangeShift0->getOperand(1), OuterStartVal);
+  auto *RangeScale0 = cast<MulOperator>(RangeShift0->getOperand(0));
+  EXPECT_EQ(RangeScale0->getOperand(1), OuterStep);
+  auto *TileShift0 = cast<AddOperator>(RangeScale0->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(TileShift0)->getParent(), Tile1->getBody());
+  EXPECT_EQ(TileShift0->getOperand(1), Tile0->getIndVar());
+  auto *TileScale0 = cast<MulOperator>(TileShift0->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(TileScale0)->getParent(), Tile1->getBody());
+  EXPECT_EQ(TileScale0->getOperand(0), TileSize0);
+  EXPECT_EQ(TileScale0->getOperand(1), Floor0->getIndVar());
+
+  auto *RangeShift1 = cast<AddOperator>(Call->getOperand(2));
+  EXPECT_EQ(cast<Instruction>(RangeShift1)->getParent(), BodyCode);
+  EXPECT_EQ(RangeShift1->getOperand(1), InnerStartVal);
+  auto *RangeScale1 = cast<MulOperator>(RangeShift1->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(RangeScale1)->getParent(), BodyCode);
+  EXPECT_EQ(RangeScale1->getOperand(1), InnerStep);
+  auto *TileShift1 = cast<AddOperator>(RangeScale1->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(TileShift1)->getParent(), Tile1->getBody());
+  EXPECT_EQ(TileShift1->getOperand(1), Tile1->getIndVar());
+  auto *TileScale1 = cast<MulOperator>(TileShift1->getOperand(0));
+  EXPECT_EQ(cast<Instruction>(TileScale1)->getParent(), Tile1->getBody());
+  EXPECT_EQ(TileScale1->getOperand(0), TileSize1);
+  EXPECT_EQ(TileScale1->getOperand(1), Floor1->getIndVar());
+}
+
+TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+
+  // Create a loop, tile it, and extract its trip count. All input values are
+  // constant and IRBuilder evaluates all-constant arithmetic inplace, such that
+  // the floor trip count itself will be a ConstantInt. Unfortunately we cannot
+  // do the same for the tile loop.
+  auto GetFloorCount = [&](int64_t Start, int64_t Stop, int64_t Step,
+                           bool IsSigned, bool InclusiveStop,
+                           int64_t TileSize) -> uint64_t {
+    OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+    Type *LCTy = Type::getInt16Ty(Ctx);
+    Value *StartVal = ConstantInt::get(LCTy, Start);
+    Value *StopVal = ConstantInt::get(LCTy, Stop);
+    Value *StepVal = ConstantInt::get(LCTy, Step);
+
+    // Generate a loop.
+    auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {};
+    CanonicalLoopInfo *Loop =
+        OMPBuilder.createCanonicalLoop(Loc, LoopBodyGenCB, StartVal, StopVal,
+                                       StepVal, IsSigned, InclusiveStop);
+
+    // Tile the loop.
+    Value *TileSizeVal = ConstantInt::get(LCTy, TileSize);
+    std::vector<CanonicalLoopInfo *> GenLoops =
+        OMPBuilder.tileLoops(Loc.DL, {Loop}, {TileSizeVal});
+
+    // Set the insertion pointer to after loop, where the next loop will be
+    // emitted.
+    Builder.restoreIP(Loop->getAfterIP());
+
+    // Extract the trip count.
+    CanonicalLoopInfo *FloorLoop = GenLoops[0];
+    Value *FloorTripCount = FloorLoop->getTripCount();
+    return cast<ConstantInt>(FloorTripCount)->getValue().getZExtValue();
+  };
+
+  // Empty iteration domain.
+  EXPECT_EQ(GetFloorCount(0, 0, 1, false, false, 7), 0);
+  EXPECT_EQ(GetFloorCount(0, -1, 1, false, true, 7), 0);
+  EXPECT_EQ(GetFloorCount(-1, -1, -1, true, false, 7), 0);
+  EXPECT_EQ(GetFloorCount(-1, 0, -1, true, true, 7), 0);
+  EXPECT_EQ(GetFloorCount(-1, -1, 3, true, false, 7), 0);
+
+  // Only complete tiles.
+  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(1, 15, 1, false, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, -14, -1, true, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, true, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 2, 3, false, false, 7), 2);
+
+  // Only a partial tile.
+  EXPECT_EQ(GetFloorCount(0, 1, 1, false, false, 7), 1);
+  EXPECT_EQ(GetFloorCount(0, 6, 1, false, false, 7), 1);
+  EXPECT_EQ(GetFloorCount(-1, 1, 3, true, false, 7), 1);
+  EXPECT_EQ(GetFloorCount(-1, -2, -1, true, false, 7), 1);
+  EXPECT_EQ(GetFloorCount(0, 2, 3, false, false, 7), 1);
+
+  // Complete and partial tiles.
+  EXPECT_EQ(GetFloorCount(0, 13, 1, false, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, 15, 1, false, false, 7), 3);
+  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 5 - 1, 3, false, false, 7), 5);
+  EXPECT_EQ(GetFloorCount(-1, -3 * 7 * 5, -3, true, false, 7), 5);
+
+  // Close to 16-bit integer range.
+  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 1), 0xFFFF);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 7), 0xFFFF / 7 + 1);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, true, 7), 0xFFFF / 7 + 1);
+  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 7), 0xFFFF / 7 + 1);
+  EXPECT_EQ(GetFloorCount(-0x7FFF, 0x7FFF, 1, true, true, 7), 0xFFFF / 7 + 1);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, false, 0xFFFF), 1);
+  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 0xFFFF), 1);
+
+  // Finalize the function.
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
