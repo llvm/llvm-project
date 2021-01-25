@@ -134,7 +134,7 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  return t->ThreadStart(GetTid(), /* signal_thread_is_registered */ nullptr);
+  return t->ThreadStart(GetTid());
 }
 
 INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
