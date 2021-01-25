@@ -1885,6 +1885,68 @@ struct FormatStyle {
   /// Disables formatting completely.
   bool DisableFormat;
 
+  /// Different styles for empty line before access modifiers.
+  enum EmptyLineBeforeAccessModifierStyle : unsigned char {
+    /// Remove all empty lines before access modifiers.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_Never,
+    /// Keep existing empty lines before access modifiers.
+    ELBAMS_Leave,
+    /// Add empty line only when access modifier starts a new logical block.
+    /// Logical block is a group of one or more member fields or functions.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_LogicalBlock,
+    /// Always add empty line before access modifiers unless access modifier
+    /// is at the start of struct or class definition.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///
+    ///   public:
+    ///     foo() {}
+    ///
+    ///   private:
+    ///
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_Always,
+  };
+
+  /// Defines in which cases to put empty line before access modifiers.
+  EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
+
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
@@ -3015,6 +3077,7 @@ struct FormatStyle {
            DeriveLineEnding == R.DeriveLineEnding &&
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
+           EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
