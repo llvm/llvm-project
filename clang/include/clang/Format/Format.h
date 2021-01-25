@@ -84,10 +84,23 @@ struct FormatStyle {
   /// brackets.
   BracketAlignmentStyle AlignAfterOpenBracket;
 
-  /// \brief If ``true``, aligns consecutive C/C++ preprocessor macros.
+  /// Styles for alignment of consecutive tokens. Tokens can be assignment signs
+  /// (see
+  /// ``AlignConsecutiveAssignments``), bitfield member separators (see
+  /// ``AlignConsecutiveBitFields``), names in declarations (see
+  /// ``AlignConsecutiveDeclarations``) or macro definitions (see
+  /// ``AlignConsecutiveMacros``).
+  enum AlignConsecutiveStyle {
+    ACS_None,
+    ACS_Consecutive,
+    ACS_AcrossEmptyLines,
+    ACS_AcrossComments,
+    ACS_AcrossEmptyLinesAndComments
+  };
+
+  /// Style of aligning consecutive macro definitions.
   ///
-  /// This will align C/C++ preprocessor macros of consecutive lines.
-  /// Will result in formattings like
+  /// ``Consecutive`` will result in formattings like:
   /// \code
   ///   #define SHORT_NAME       42
   ///   #define LONGER_NAME      0x007f
@@ -95,40 +108,271 @@ struct FormatStyle {
   ///   #define foo(x)           (x * x)
   ///   #define bar(y, z)        (y + z)
   /// \endcode
-  bool AlignConsecutiveMacros;
-
-  /// If ``true``, aligns consecutive assignments.
   ///
-  /// This will align the assignment operators of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align macro definitions on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align macro definitions on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x) (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)           (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)    (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)           (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z)        (y + z)
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveMacros;
+
+  /// Style of aligning consecutive assignments.
+  ///
+  /// ``Consecutive`` will result in formattings like:
   /// \code
-  ///   int aaaa = 12;
-  ///   int b    = 23;
-  ///   int ccc  = 23;
+  ///   int a            = 1;
+  ///   int somelongname = 2;
+  ///   double c         = 3;
   /// \endcode
-  bool AlignConsecutiveAssignments;
-
-  /// If ``true``, aligns consecutive bitfield members.
   ///
-  /// This will align the bitfield separators of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align assignments on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align assignments on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d            = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d    = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d            = 3;
+  ///      /* A comment. */
+  ///      double e         = 4;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveAssignments;
+
+  /// Style of aligning consecutive bit field.
+  ///
+  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
+  /// This will result in formattings like:
   /// \code
   ///   int aaaa : 1;
   ///   int b    : 12;
   ///   int ccc  : 8;
   /// \endcode
-  bool AlignConsecutiveBitFields;
-
-  /// If ``true``, aligns consecutive declarations.
   ///
-  /// This will align the declaration names of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align bit fields on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align bit fields on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d    : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d  : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d    : 2;
+  ///      /* A comment. */
+  ///      int ee   : 3;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveBitFields;
+
+  /// Style of aligning consecutive declarations.
+  ///
+  /// ``Consecutive`` will align the declaration names of consecutive lines.
+  /// This will result in formattings like:
   /// \code
   ///   int         aaaa = 12;
   ///   float       b = 23;
-  ///   std::string ccc = 23;
+  ///   std::string ccc;
   /// \endcode
-  bool AlignConsecutiveDeclarations;
+  ///
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align bit declarations on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align declarations on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int         a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int  a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  /// (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int         a = 42;
+  ///      /* A comment. */
+  ///      bool        c = false;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : unsigned char {
@@ -2725,6 +2969,7 @@ struct FormatStyle {
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&
+           AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
