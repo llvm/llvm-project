@@ -36918,19 +36918,21 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
   EVT SrcVT0 = Src0.getValueType();
   EVT SrcVT1 = Src1.getValueType();
 
-  // TODO: Under what circumstances should we push perm2f128 up when we have one
-  // active src?
-  if (SrcOpc0 != SrcOpc1 || SrcVT0 != SrcVT1)
+  if (!Src1.isUndef() && (SrcVT0 != SrcVT1 || SrcOpc0 != SrcOpc1))
     return SDValue();
 
   switch (SrcOpc0) {
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
-    if (Src0.getOperand(1) == Src1.getOperand(1)) {
-      SDValue Res = DAG.getNode(
-          X86ISD::VPERM2X128, DL, VT, DAG.getBitcast(VT, Src0.getOperand(0)),
-          DAG.getBitcast(VT, Src1.getOperand(0)), V.getOperand(2));
+  case X86ISD::PSHUFD:
+  case X86ISD::VPERMILPI:
+    if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
+      SDValue LHS = DAG.getBitcast(VT, Src0.getOperand(0));
+      SDValue RHS =
+          DAG.getBitcast(VT, Src1.isUndef() ? Src1 : Src1.getOperand(0));
+      SDValue Res =
+          DAG.getNode(X86ISD::VPERM2X128, DL, VT, LHS, RHS, V.getOperand(2));
       Res = DAG.getNode(SrcOpc0, DL, SrcVT0, DAG.getBitcast(SrcVT0, Res),
                         Src0.getOperand(1));
       return DAG.getBitcast(VT, Res);
