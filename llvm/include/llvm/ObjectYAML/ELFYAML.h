@@ -427,7 +427,7 @@ struct VerneedEntry {
 
 struct VerneedSection : Section {
   Optional<std::vector<VerneedEntry>> VerneedV;
-  llvm::yaml::Hex64 Info;
+  Optional<llvm::yaml::Hex64> Info;
 
   VerneedSection() : Section(ChunkKind::Verneed) {}
 
@@ -531,8 +531,7 @@ struct VerdefEntry {
 
 struct VerdefSection : Section {
   Optional<std::vector<VerdefEntry>> Entries;
-
-  llvm::yaml::Hex64 Info;
+  Optional<llvm::yaml::Hex64> Info;
 
   VerdefSection() : Section(ChunkKind::Verdef) {}
 

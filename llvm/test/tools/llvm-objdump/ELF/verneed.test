@@ -22,7 +22,6 @@ Sections:
     Address:         0x0000000000200250
     Link:            .dynstr
     AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000002
     Dependencies:
       - Version:         1
         File:            dso.so.0

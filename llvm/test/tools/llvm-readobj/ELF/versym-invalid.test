@@ -66,7 +66,6 @@ FileHeader:
 Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
-    Link:    .dynsym
     Entries: [ 0 ]
   - Name:    .dynstr
     Type:    SHT_NULL
@@ -95,7 +94,6 @@ Sections:
   - Name:     .gnu.version
     Type:     SHT_GNU_versym
     Entries:  [ 0 ]
-    Link:     .dynsym
     ShOffset: [[SHOFFSET=<none>]]
     ShName:   [[SHNAME=<none>]]
   - Name:   .dynsym
@@ -149,7 +147,7 @@ DynamicSymbols: []
 # INVALID-ENT-SIZE-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND @<corrupt>
 # INVALID-ENT-SIZE-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
 # INVALID-ENT-SIZE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
-# INVALID-ENT-SIZE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
+# INVALID-ENT-SIZE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.dynsym)
 # INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has invalid sh_entsize: expected 2, but got 3
 
 # INVALID-ENT-SIZE-LLVM:      DynamicSymbols [
@@ -214,7 +212,6 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Entries: [ 0, 1 ]
-    Link:   .dynsym
 DynamicSymbols:
   - Name: foo
   - Name: bar
