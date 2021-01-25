@@ -2119,6 +2119,75 @@ the configuration (without a prefix: ``Auto``).
 **DisableFormat** (``bool``)
   Disables formatting completely.
 
+**EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``)
+  Defines in which cases to put empty line before access modifiers.
+
+  Possible values:
+
+  * ``ELBAMS_Never`` (in configuration: ``Never``)
+    Remove all empty lines before access modifiers.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+      protected:
+        int j;
+        /* comment */
+      public:
+        foo() {}
+      private:
+      protected:
+      };
+
+  * ``ELBAMS_Leave`` (in configuration: ``Leave``)
+    Keep existing empty lines before access modifiers.
+
+  * ``ELBAMS_LogicalBlock`` (in configuration: ``LogicalBlock``)
+    Add empty line only when access modifier starts a new logical block.
+    Logical block is a group of one or more member fields or functions.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+
+      protected:
+        int j;
+        /* comment */
+      public:
+        foo() {}
+
+      private:
+      protected:
+      };
+
+  * ``ELBAMS_Always`` (in configuration: ``Always``)
+    Always add empty line before access modifiers unless access modifier
+    is at the start of struct or class definition.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+
+      protected:
+        int j;
+        /* comment */
+
+      public:
+        foo() {}
+
+      private:
+
+      protected:
+      };
+
+
+
 **ExperimentalAutoDetectBinPacking** (``bool``)
   If ``true``, clang-format detects whether function calls and
   definitions are formatted with one parameter per line.
