@@ -1,14 +1,20 @@
 // RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1100 %s | FileCheck --check-prefix=GFX11 %s
 // XFAIL: *
 
-; these were 32 bit encoding on gfx10, but now 64 bit. something with 16bit reg support?
-; problem when v255 appears as 16bit src or dst
+; TODO-GFX11 need 16 bit register support for regs > 127
 v_cvt_f16_f32 v255, v1
 // GFX11: encoding: [0xff,0x00,0x8a,0xd5,0x01,0x01,0x00,0x00]
 
 v_cvt_f32_f16 v5, v255
 // GFX11: encoding: [0x05,0x00,0x8b,0xd5,0xff,0x01,0x00,0x00]
 // tests that should pass on gfx11 but dont
+
+; TODO-GFX11 these cases doesn't match sp3, not on gfx10 either in the 08 byte
+v_mov_b32 v5, v1 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// GFX11: encoding: [0xfa,0x02,0x0a,0x7e,0x01,0x1b,0x08,0x00]
+
+v_add_nc_u32 v5, v1, v2 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// GFX11: encoding: [0xfa,0x04,0x0a,0x4a,0x01,0x1b,0x08,0x00]
 
 ; TODO-GFX11  ttmp some support needed, see siregisterinfo
 v_readfirstlane_b32 ttmp11, v1
