@@ -12133,7 +12133,7 @@ SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   if (!isTypeLegal(MVT::i1) ||
       (VT != MVT::f64 &&
        ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX())))
-    return SDValue();
+    return TargetLowering::getSqrtInputTest(Op, DAG, Mode);
 
   SDLoc DL(Op);
   // The output register of FTSQRT is CR field.
