@@ -119,10 +119,9 @@ Error EHFrameSplitter::processBlock(LinkGraph &G, Block &B,
 }
 
 EHFrameEdgeFixer::EHFrameEdgeFixer(StringRef EHFrameSectionName,
-                                   Edge::Kind FDEToCIE, Edge::Kind FDEToPCBegin,
-                                   Edge::Kind FDEToLSDA)
-    : EHFrameSectionName(EHFrameSectionName), FDEToCIE(FDEToCIE),
-      FDEToPCBegin(FDEToPCBegin), FDEToLSDA(FDEToLSDA) {}
+                                   Edge::Kind Delta64, Edge::Kind NegDelta32)
+    : EHFrameSectionName(EHFrameSectionName), Delta64(Delta64),
+      NegDelta32(NegDelta32) {}
 
 Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   auto *EHFrame = G.findSectionByName(EHFrameSectionName);
@@ -419,7 +418,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
       else
         return CIEInfoOrErr.takeError();
       assert(CIEInfo->CIESymbol && "CIEInfo has no CIE symbol set");
-      B.addEdge(FDEToCIE, RecordOffset + CIEDeltaFieldOffset,
+      B.addEdge(NegDelta32, RecordOffset + CIEDeltaFieldOffset,
                 *CIEInfo->CIESymbol, 0);
     } else {
       LLVM_DEBUG({
@@ -459,8 +458,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
       auto PCBeginSym = getOrCreateSymbol(PC, PCBegin);
       if (!PCBeginSym)
         return PCBeginSym.takeError();
-      B.addEdge(FDEToPCBegin, RecordOffset + PCBeginFieldOffset, *PCBeginSym,
-                0);
+      B.addEdge(Delta64, RecordOffset + PCBeginFieldOffset, *PCBeginSym, 0);
       PCBeginBlock = &PCBeginSym->getBlock();
     } else {
       auto &EI = PCEdgeItr->second;
@@ -521,7 +519,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                << formatv("{0:x16}", RecordAddress + LSDAFieldOffset)
                << " to LSDA at " << formatv("{0:x16}", LSDA) << "\n";
       });
-      B.addEdge(FDEToLSDA, RecordOffset + LSDAFieldOffset, *LSDASym, 0);
+      B.addEdge(Delta64, RecordOffset + LSDAFieldOffset, *LSDASym, 0);
     } else {
       LLVM_DEBUG({
         auto &EI = LSDAEdgeItr->second;
