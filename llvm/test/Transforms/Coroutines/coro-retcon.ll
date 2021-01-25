@@ -1,6 +1,6 @@
 ; First example from Doc/Coroutines.rst (two block loop) converted to retcon
 ; RUN: opt < %s -enable-coroutines -O2 -S -enable-new-pm=0 | FileCheck %s
-; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -aa-pipeline=default -passes='default<O2>' -S | FileCheck %s
 
 define i8* @f(i8* %buffer, i32 %n) {
 entry:
