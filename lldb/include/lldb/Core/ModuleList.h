@@ -58,6 +58,8 @@ public:
   bool GetUseSwiftClangImporter() const;
   bool GetUseSwiftDWARFImporter() const;
   bool SetUseSwiftDWARFImporter(bool new_value);
+  bool GetUseSwiftTypeRefTypeSystem() const;
+  bool SetUseSwiftTypeRefTypeSystem(bool new_value);
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(const FileSpec &path);
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
