@@ -4,7 +4,7 @@
 
 //===----------------------------------------------------------------------===//
 
-// In 5.3 and beyond the VM supports integers, so we need to remap
+// In Lua 5.3 and beyond the VM supports integers, so we need to remap
 // SWIG's internal handling of integers.
 
 
