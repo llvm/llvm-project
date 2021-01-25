@@ -28,6 +28,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include <string>
 #include <vector>
 
@@ -76,6 +77,12 @@ struct Config {
     BackgroundPolicy Background = BackgroundPolicy::Build;
     llvm::Optional<ExternalIndexSpec> External;
   } Index;
+
+  /// Controls warnings and errors when parsing code.
+  struct {
+    bool SuppressAll = false;
+    llvm::StringSet<> Suppress;
+  } Diagnostics;
 
   /// Style of the codebase.
   struct {
