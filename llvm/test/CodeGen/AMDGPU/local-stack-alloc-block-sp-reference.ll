@@ -16,7 +16,7 @@
 ; so eliminateFrameIndex would not adjust the access to use the
 ; correct FP offset.
 
-define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8 addrspace(1)* %in) {
+define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -106,7 +106,7 @@ entry:
   ret void
 }
 
-define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8 addrspace(1)* %in) {
+define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-LABEL: func_local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
