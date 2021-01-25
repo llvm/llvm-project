@@ -33981,10 +33981,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitPatchPoint(MI, BB);
 
   case TargetOpcode::PATCHABLE_EVENT_CALL:
-    return emitXRayCustomEvent(MI, BB);
-
   case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
-    return emitXRayTypedEvent(MI, BB);
+    return BB;
 
   case X86::LCMPXCHG8B: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();

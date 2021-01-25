@@ -708,8 +708,6 @@ bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
   if (!isCall(Type))
     return false;
   switch (getOpcode()) {
-  case TargetOpcode::PATCHABLE_EVENT_CALL:
-  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
   case TargetOpcode::PATCHPOINT:
   case TargetOpcode::STACKMAP:
   case TargetOpcode::STATEPOINT:

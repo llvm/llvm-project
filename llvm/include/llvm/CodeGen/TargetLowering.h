@@ -3117,16 +3117,6 @@ protected:
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
 
-  /// Replace/modify the XRay custom event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayCustomEvent(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) const;
-
-  /// Replace/modify the XRay typed event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayTypedEvent(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const;
-
   bool IsStrictFPEnabled;
 };
 
