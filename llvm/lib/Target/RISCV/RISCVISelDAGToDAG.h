@@ -57,6 +57,8 @@ public:
 
   void selectVLSEG(SDNode *Node, unsigned IntNo, bool IsStrided);
   void selectVLSEGMask(SDNode *Node, unsigned IntNo, bool IsStrided);
+  void selectVLXSEG(SDNode *Node, unsigned IntNo);
+  void selectVLXSEGMask(SDNode *Node, unsigned IntNo);
   void selectVSSEG(SDNode *Node, unsigned IntNo, bool IsStrided);
   void selectVSSEGMask(SDNode *Node, unsigned IntNo, bool IsStrided);
 
