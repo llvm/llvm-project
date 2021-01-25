@@ -29,8 +29,8 @@ extern "C" {
 /// Checks whether the given attribute is an affine map attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAAffineMap(MlirAttribute attr);
 
-/** Creates an affine map attribute wrapping the given map. The attribute
- * belongs to the same context as the affine map. */
+/// Creates an affine map attribute wrapping the given map. The attribute
+/// belongs to the same context as the affine map.
 MLIR_CAPI_EXPORTED MlirAttribute mlirAffineMapAttrGet(MlirAffineMap map);
 
 /// Returns the affine map wrapped in the given affine map attribute.
@@ -43,8 +43,8 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapAttrGetValue(MlirAttribute attr);
 /// Checks whether the given attribute is an array attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAArray(MlirAttribute attr);
 
-/** Creates an array element containing the given list of elements in the given
- * context. */
+/// Creates an array element containing the given list of elements in the given
+/// context.
 MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGet(
     MlirContext ctx, intptr_t numElements, MlirAttribute const *elements);
 
@@ -62,8 +62,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirArrayAttrGetElement(MlirAttribute attr,
 /// Checks whether the given attribute is a dictionary attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADictionary(MlirAttribute attr);
 
-/** Creates a dictionary attribute containing the given list of elements in the
- * provided context. */
+/// Creates a dictionary attribute containing the given list of elements in the
+/// provided context.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDictionaryAttrGet(
     MlirContext ctx, intptr_t numElements, MlirNamedAttribute const *elements);
 
@@ -75,8 +75,8 @@ mlirDictionaryAttrGetNumElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirNamedAttribute
 mlirDictionaryAttrGetElement(MlirAttribute attr, intptr_t pos);
 
-/** Returns the dictionary attribute element with the given name or NULL if the
- * given name does not exist in the dictionary. */
+/// Returns the dictionary attribute element with the given name or NULL if the
+/// given name does not exist in the dictionary.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDictionaryAttrGetElementByName(MlirAttribute attr, MlirStringRef name);
 
@@ -84,44 +84,44 @@ mlirDictionaryAttrGetElementByName(MlirAttribute attr, MlirStringRef name);
 // Floating point attribute.
 //===----------------------------------------------------------------------===//
 
-/* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
- * relevant functions here. */
+// TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
+// relevant functions here.
 
 /// Checks whether the given attribute is a floating point attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAFloat(MlirAttribute attr);
 
-/** Creates a floating point attribute in the given context with the given
- * double value and double-precision FP semantics. */
+/// Creates a floating point attribute in the given context with the given
+/// double value and double-precision FP semantics.
 MLIR_CAPI_EXPORTED MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx,
                                                         MlirType type,
                                                         double value);
 
-/** Same as "mlirFloatAttrDoubleGet", but if the type is not valid for a
- * construction of a FloatAttr, returns a null MlirAttribute. */
+/// Same as "mlirFloatAttrDoubleGet", but if the type is not valid for a
+/// construction of a FloatAttr, returns a null MlirAttribute.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirFloatAttrDoubleGetChecked(MlirType type, double value, MlirLocation loc);
 
-/** Returns the value stored in the given floating point attribute, interpreting
- * the value as double. */
+/// Returns the value stored in the given floating point attribute, interpreting
+/// the value as double.
 MLIR_CAPI_EXPORTED double mlirFloatAttrGetValueDouble(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
 // Integer attribute.
 //===----------------------------------------------------------------------===//
 
-/* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
- * relevant functions here. */
+// TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
+// relevant functions here.
 
 /// Checks whether the given attribute is an integer attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAInteger(MlirAttribute attr);
 
-/** Creates an integer attribute of the given type with the given integer
- * value. */
+/// Creates an integer attribute of the given type with the given integer
+/// value.
 MLIR_CAPI_EXPORTED MlirAttribute mlirIntegerAttrGet(MlirType type,
                                                     int64_t value);
 
-/** Returns the value stored in the given integer attribute, assuming the value
- * fits into a 64-bit integer. */
+/// Returns the value stored in the given integer attribute, assuming the value
+/// fits into a 64-bit integer.
 MLIR_CAPI_EXPORTED int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
@@ -151,20 +151,20 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAIntegerSet(MlirAttribute attr);
 /// Checks whether the given attribute is an opaque attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAOpaque(MlirAttribute attr);
 
-/** Creates an opaque attribute in the given context associated with the dialect
- * identified by its namespace. The attribute contains opaque byte data of the
- * specified length (data need not be null-terminated). */
+/// Creates an opaque attribute in the given context associated with the dialect
+/// identified by its namespace. The attribute contains opaque byte data of the
+/// specified length (data need not be null-terminated).
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
                   intptr_t dataLength, const char *data, MlirType type);
 
-/** Returns the namespace of the dialect with which the given opaque attribute
- * is associated. The namespace string is owned by the context. */
+/// Returns the namespace of the dialect with which the given opaque attribute
+/// is associated. The namespace string is owned by the context.
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr);
 
-/** Returns the raw data as a string reference. The data remains live as long as
- * the context in which the attribute lives. */
+/// Returns the raw data as a string reference. The data remains live as long as
+/// the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
@@ -174,18 +174,18 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr);
 /// Checks whether the given attribute is a string attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAString(MlirAttribute attr);
 
-/** Creates a string attribute in the given context containing the given string.
- */
+/// Creates a string attribute in the given context containing the given string.
+
 MLIR_CAPI_EXPORTED MlirAttribute mlirStringAttrGet(MlirContext ctx,
                                                    MlirStringRef str);
 
-/** Creates a string attribute in the given context containing the given string.
- * Additionally, the attribute has the given type. */
+/// Creates a string attribute in the given context containing the given string.
+/// Additionally, the attribute has the given type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirStringAttrTypedGet(MlirType type,
                                                         MlirStringRef str);
 
-/** Returns the attribute values as a string reference. The data remains live as
- * long as the context in which the attribute lives. */
+/// Returns the attribute values as a string reference. The data remains live as
+/// long as the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef mlirStringAttrGetValue(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
@@ -195,25 +195,25 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirStringAttrGetValue(MlirAttribute attr);
 /// Checks whether the given attribute is a symbol reference attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsASymbolRef(MlirAttribute attr);
 
-/** Creates a symbol reference attribute in the given context referencing a
- * symbol identified by the given string inside a list of nested references.
- * Each of the references in the list must not be nested. */
+/// Creates a symbol reference attribute in the given context referencing a
+/// symbol identified by the given string inside a list of nested references.
+/// Each of the references in the list must not be nested.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
                      intptr_t numReferences, MlirAttribute const *references);
 
-/** Returns the string reference to the root referenced symbol. The data remains
- * live as long as the context in which the attribute lives. */
+/// Returns the string reference to the root referenced symbol. The data remains
+/// live as long as the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirSymbolRefAttrGetRootReference(MlirAttribute attr);
 
-/** Returns the string reference to the leaf referenced symbol. The data remains
- * live as long as the context in which the attribute lives. */
+/// Returns the string reference to the leaf referenced symbol. The data remains
+/// live as long as the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirSymbolRefAttrGetLeafReference(MlirAttribute attr);
 
-/** Returns the number of references nested in the given symbol reference
- * attribute. */
+/// Returns the number of references nested in the given symbol reference
+/// attribute.
 MLIR_CAPI_EXPORTED intptr_t
 mlirSymbolRefAttrGetNumNestedReferences(MlirAttribute attr);
 
@@ -228,13 +228,13 @@ mlirSymbolRefAttrGetNestedReference(MlirAttribute attr, intptr_t pos);
 /// Checks whether the given attribute is a flat symbol reference attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAFlatSymbolRef(MlirAttribute attr);
 
-/** Creates a flat symbol reference attribute in the given context referencing a
- * symbol identified by the given string. */
+/// Creates a flat symbol reference attribute in the given context referencing a
+/// symbol identified by the given string.
 MLIR_CAPI_EXPORTED MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx,
                                                           MlirStringRef symbol);
 
-/** Returns the referenced symbol as a string reference. The data remains live
- * as long as the context in which the attribute lives. */
+/// Returns the referenced symbol as a string reference. The data remains live
+/// as long as the context in which the attribute lives.
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
 
@@ -245,8 +245,8 @@ mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
 /// Checks whether the given attribute is a type attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAType(MlirAttribute attr);
 
-/** Creates a type attribute wrapping the given type in the same context as the
- * type. */
+/// Creates a type attribute wrapping the given type in the same context as the
+/// type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirTypeAttrGet(MlirType type);
 
 /// Returns the type stored in the given type attribute.
@@ -274,14 +274,14 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirElementsAttrGetValue(MlirAttribute attr,
                                                           intptr_t rank,
                                                           uint64_t *idxs);
 
-/** Checks whether the given rank-dimensional index is valid in the given
- * elements attribute. */
+/// Checks whether the given rank-dimensional index is valid in the given
+/// elements attribute.
 MLIR_CAPI_EXPORTED bool
 mlirElementsAttrIsValidIndex(MlirAttribute attr, intptr_t rank, uint64_t *idxs);
 
-/** Gets the total number of elements in the given elements attribute. In order
- * to iterate over the attribute, obtain its type, which must be a statically
- * shaped type and use its sizes to build a multi-dimensional index. */
+/// Gets the total number of elements in the given elements attribute. In order
+/// to iterate over the attribute, obtain its type, which must be a statically
+/// shaped type and use its sizes to build a multi-dimensional index.
 MLIR_CAPI_EXPORTED int64_t mlirElementsAttrGetNumElements(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
@@ -289,21 +289,21 @@ MLIR_CAPI_EXPORTED int64_t mlirElementsAttrGetNumElements(MlirAttribute attr);
 //===----------------------------------------------------------------------===//
 
 // TODO: decide on the interface and add support for complex elements.
-/* TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
- * relevant functions here. */
+// TODO: add support for APFloat and APInt to LLVM IR C API, then expose the
+// relevant functions here.
 
 /// Checks whether the given attribute is a dense elements attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseIntElements(MlirAttribute attr);
 MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseFPElements(MlirAttribute attr);
 
-/** Creates a dense elements attribute with the given Shaped type and elements
- * in the same context as the type. */
+/// Creates a dense elements attribute with the given Shaped type and elements
+/// in the same context as the type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrGet(
     MlirType shapedType, intptr_t numElements, MlirAttribute const *elements);
 
-/** Creates a dense elements attribute with the given Shaped type containing a
- * single replicated element (splat). */
+/// Creates a dense elements attribute with the given Shaped type containing a
+/// single replicated element (splat).
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrSplatGet(MlirType shapedType, MlirAttribute element);
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -321,9 +321,9 @@ mlirDenseElementsAttrFloatSplatGet(MlirType shapedType, float element);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrDoubleSplatGet(MlirType shapedType, double element);
 
-/** Creates a dense elements attribute with the given shaped type from elements
- * of a specific type. Expects the element type of the shaped type to match the
- * data element type. */
+/// Creates a dense elements attribute with the given shaped type from elements
+/// of a specific type. Expects the element type of the shaped type to match the
+/// data element type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrBoolGet(
     MlirType shapedType, intptr_t numElements, const int *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt32Get(
@@ -339,23 +339,23 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrFloatGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrDoubleGet(
     MlirType shapedType, intptr_t numElements, const double *elements);
 
-/** Creates a dense elements attribute with the given shaped type from string
- * elements. */
+/// Creates a dense elements attribute with the given shaped type from string
+/// elements.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrStringGet(
     MlirType shapedType, intptr_t numElements, MlirStringRef *strs);
 
-/** Creates a dense elements attribute that has the same data as the given dense
- * elements attribute and a different shaped type. The new type must have the
- * same total number of elements. */
+/// Creates a dense elements attribute that has the same data as the given dense
+/// elements attribute and a different shaped type. The new type must have the
+/// same total number of elements.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrReshapeGet(MlirAttribute attr, MlirType shapedType);
 
-/** Checks whether the given dense elements attribute contains a single
- * replicated value (splat). */
+/// Checks whether the given dense elements attribute contains a single
+/// replicated value (splat).
 MLIR_CAPI_EXPORTED bool mlirDenseElementsAttrIsSplat(MlirAttribute attr);
 
-/** Returns the single replicated value (splat) of a specific type contained by
- * the given dense elements attribute. */
+/// Returns the single replicated value (splat) of a specific type contained by
+/// the given dense elements attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrGetSplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED int
@@ -375,8 +375,8 @@ mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr);
 
-/** Returns the pos-th value (flat contiguous indexing) of a specific type
- * contained by the given dense elements attribute. */
+/// Returns the pos-th value (flat contiguous indexing) of a specific type
+/// contained by the given dense elements attribute.
 MLIR_CAPI_EXPORTED bool mlirDenseElementsAttrGetBoolValue(MlirAttribute attr,
                                                           intptr_t pos);
 MLIR_CAPI_EXPORTED int32_t
@@ -394,7 +394,7 @@ mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirDenseElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos);
 
-/** Returns the raw data of the given dense elements attribute. */
+/// Returns the raw data of the given dense elements attribute.
 MLIR_CAPI_EXPORTED const void *
 mlirDenseElementsAttrGetRawData(MlirAttribute attr);
 
@@ -414,21 +414,21 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAOpaqueElements(MlirAttribute attr);
 /// Checks whether the given attribute is a sparse elements attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsASparseElements(MlirAttribute attr);
 
-/** Creates a sparse elements attribute of the given shape from a list of
- * indices and a list of associated values. Both lists are expected to be dense
- * elements attributes with the same number of elements. The list of indices is
- * expected to contain 64-bit integers. The attribute is created in the same
- * context as the type. */
+/// Creates a sparse elements attribute of the given shape from a list of
+/// indices and a list of associated values. Both lists are expected to be dense
+/// elements attributes with the same number of elements. The list of indices is
+/// expected to contain 64-bit integers. The attribute is created in the same
+/// context as the type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseElementsAttribute(
     MlirType shapedType, MlirAttribute denseIndices, MlirAttribute denseValues);
 
-/** Returns the dense elements attribute containing 64-bit integer indices of
- * non-null elements in the given sparse elements attribute. */
+/// Returns the dense elements attribute containing 64-bit integer indices of
+/// non-null elements in the given sparse elements attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSparseElementsAttrGetIndices(MlirAttribute attr);
 
-/** Returns the dense elements attribute containing the non-null elements in the
- * given sparse elements attribute. */
+/// Returns the dense elements attribute containing the non-null elements in the
+/// given sparse elements attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirSparseElementsAttrGetValues(MlirAttribute attr);
 
