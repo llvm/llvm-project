@@ -1,32 +1,53 @@
 	.text
-	.file	"main.c"
+	.file	"subprogram_ranges.c"
 	.globl	main                            # -- Begin function main
 	.p2align	4, 0x90
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	1 "/usr/local/google/home/blaikie/dev/scratch" "main.c"
-	.loc	1 1 0                           # main.c:1:0
+	.file	1 "/usr/local/google/home/blaikie/dev/scratch" "subprogram_ranges.c"
+	.loc	1 2 0                           # subprogram_ranges.c:2:0
 	.cfi_startproc
 # %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	xorl	%eax, %eax
+	#DEBUG_VALUE: main:var <- 3
+	.loc	1 4 5 prologue_end              # subprogram_ranges.c:4:5
+	movl	$1, i(%rip)
 .Ltmp0:
-	.loc	1 2 7 prologue_end              # main.c:2:7
-	movl	$3, -4(%rbp)
-	.loc	1 3 1                           # main.c:3:1
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
+	#DEBUG_VALUE: main:var <- 5
+	.loc	1 6 5                           # subprogram_ranges.c:6:5
+	movl	$2, i(%rip)
+	.loc	1 7 1                           # subprogram_ranges.c:7:1
+	xorl	%eax, %eax
 	retq
 .Ltmp1:
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
 	.cfi_endproc
                                         # -- End function
+	.type	i,@object                       # @i
+	.bss
+	.globl	i
+	.p2align	2
+i:
+	.long	0                               # 0x0
+	.size	i, 4
+
+	.section	.debug_loc,"",@progbits
+.Ldebug_loc0:
+	.quad	.Lfunc_begin0-.Lfunc_begin0
+	.quad	.Ltmp0-.Lfunc_begin0
+	.short	3                               # Loc expr size
+	.byte	17                              # DW_OP_consts
+	.byte	3                               # 3
+	.byte	159                             # DW_OP_stack_value
+	.quad	.Ltmp0-.Lfunc_begin0
+	.quad	.Lfunc_end0-.Lfunc_begin0
+	.short	3                               # Loc expr size
+	.byte	17                              # DW_OP_consts
+	.byte	5                               # 5
+	.byte	159                             # DW_OP_stack_value
+	.quad	0
+	.quad	0
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
@@ -54,6 +75,8 @@ main:                                   # @main
 	.byte	23                              # DW_FORM_sec_offset
 	.byte	64                              # DW_AT_frame_base
 	.byte	24                              # DW_FORM_exprloc
+	.ascii	"\227B"                         # DW_AT_GNU_all_call_sites
+	.byte	25                              # DW_FORM_flag_present
 	.byte	3                               # DW_AT_name
 	.byte	14                              # DW_FORM_strp
 	.byte	58                              # DW_AT_decl_file
@@ -70,7 +93,7 @@ main:                                   # @main
 	.byte	52                              # DW_TAG_variable
 	.byte	0                               # DW_CHILDREN_no
 	.byte	2                               # DW_AT_location
-	.byte	24                              # DW_FORM_exprloc
+	.byte	23                              # DW_FORM_sec_offset
 	.byte	3                               # DW_AT_name
 	.byte	14                              # DW_FORM_strp
 	.byte	58                              # DW_AT_decl_file
@@ -100,7 +123,7 @@ main:                                   # @main
 	.short	4                               # DWARF version number
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 	.byte	8                               # Address Size (in bytes)
-	.byte	1                               # Abbrev [1] 0xb:0x47 DW_TAG_compile_unit
+	.byte	1                               # Abbrev [1] 0xb:0x48 DW_TAG_compile_unit
 	.long	.Linfo_string0                  # DW_AT_producer
 	.short	12                              # DW_AT_language
 	.long	.Linfo_string1                  # DW_AT_name
@@ -108,25 +131,24 @@ main:                                   # @main
 	.long	.Linfo_string2                  # DW_AT_comp_dir
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.byte	2                               # Abbrev [2] 0x2a:0x20 DW_TAG_subprogram
+	.byte	2                               # Abbrev [2] 0x2a:0x21 DW_TAG_subprogram
 	.long	.Ldebug_ranges0                 # DW_AT_ranges
 	.byte	1                               # DW_AT_frame_base
-	.byte	86
+	.byte	87
+                                        # DW_AT_GNU_all_call_sites
 	.long	.Linfo_string3                  # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
-	.byte	1                               # DW_AT_decl_line
-	.long	74                              # DW_AT_type
+	.byte	2                               # DW_AT_decl_line
+	.long	75                              # DW_AT_type
                                         # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x3b:0xe DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	124
+	.byte	3                               # Abbrev [3] 0x3b:0xf DW_TAG_variable
+	.long	.Ldebug_loc0                    # DW_AT_location
 	.long	.Linfo_string5                  # DW_AT_name
 	.byte	1                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-	.long	74                              # DW_AT_type
+	.byte	3                               # DW_AT_decl_line
+	.long	75                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	4                               # Abbrev [4] 0x4a:0x7 DW_TAG_base_type
+	.byte	4                               # Abbrev [4] 0x4b:0x7 DW_TAG_base_type
 	.long	.Linfo_string4                  # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	4                               # DW_AT_byte_size
@@ -140,20 +162,20 @@ main:                                   # @main
 	.quad	0
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 12.0.0 (git@github.com:llvm/llvm-project.git 1c15aa171b2f67d9198a8498945cbdb936c0cd3b)" # string offset=0
+	.asciz	"clang version 12.0.0 (git@github.com:llvm/llvm-project.git 439e8f6c05584c36ea3f79d9b83a78098d40e629)" # string offset=0
 .Linfo_string1:
-	.asciz	"main.c"                        # string offset=101
+	.asciz	"subprogram_ranges.c"           # string offset=101
 .Linfo_string2:
-	.asciz	"/usr/local/google/home/blaikie/dev/scratch" # string offset=108
+	.asciz	"/usr/local/google/home/blaikie/dev/scratch" # string offset=121
 .Linfo_string3:
-	.asciz	"main"                          # string offset=151
+	.asciz	"main"                          # string offset=164
 .Linfo_string4:
-	.asciz	"int"                           # string offset=156
+	.asciz	"int"                           # string offset=169
 .Linfo_string5:
-	.asciz	"var"                           # string offset=160
-	.ident	"clang version 12.0.0 (git@github.com:llvm/llvm-project.git 1c15aa171b2f67d9198a8498945cbdb936c0cd3b)"
+	.asciz	"var"                           # string offset=173
+	.ident	"clang version 12.0.0 (git@github.com:llvm/llvm-project.git 439e8f6c05584c36ea3f79d9b83a78098d40e629)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
+	.addrsig_sym i
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
-

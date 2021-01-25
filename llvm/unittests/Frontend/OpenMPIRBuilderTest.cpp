@@ -1197,7 +1197,7 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  EXPECT_EQ(GenLoops.size(), 2);
+  EXPECT_EQ(GenLoops.size(), 2u);
   CanonicalLoopInfo *Floor = GenLoops[0];
   CanonicalLoopInfo *Tile = GenLoops[1];
 
@@ -1264,7 +1264,7 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  EXPECT_EQ(GenLoops.size(), 4);
+  EXPECT_EQ(GenLoops.size(), 4u);
   CanonicalLoopInfo *Floor1 = GenLoops[0];
   CanonicalLoopInfo *Floor2 = GenLoops[1];
   CanonicalLoopInfo *Tile1 = GenLoops[2];
@@ -1366,7 +1366,7 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  EXPECT_EQ(GenLoops.size(), 4);
+  EXPECT_EQ(GenLoops.size(), 4u);
   CanonicalLoopInfo *Floor0 = GenLoops[0];
   CanonicalLoopInfo *Floor1 = GenLoops[1];
   CanonicalLoopInfo *Tile0 = GenLoops[2];
@@ -1476,42 +1476,42 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
   };
 
   // Empty iteration domain.
-  EXPECT_EQ(GetFloorCount(0, 0, 1, false, false, 7), 0);
-  EXPECT_EQ(GetFloorCount(0, -1, 1, false, true, 7), 0);
-  EXPECT_EQ(GetFloorCount(-1, -1, -1, true, false, 7), 0);
-  EXPECT_EQ(GetFloorCount(-1, 0, -1, true, true, 7), 0);
-  EXPECT_EQ(GetFloorCount(-1, -1, 3, true, false, 7), 0);
+  EXPECT_EQ(GetFloorCount(0, 0, 1, false, false, 7), 0u);
+  EXPECT_EQ(GetFloorCount(0, -1, 1, false, true, 7), 0u);
+  EXPECT_EQ(GetFloorCount(-1, -1, -1, true, false, 7), 0u);
+  EXPECT_EQ(GetFloorCount(-1, 0, -1, true, true, 7), 0u);
+  EXPECT_EQ(GetFloorCount(-1, -1, 3, true, false, 7), 0u);
 
   // Only complete tiles.
-  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(1, 15, 1, false, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(0, -14, -1, true, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, true, 7), 2);
-  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 2, 3, false, false, 7), 2);
+  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(0, 14, 1, false, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(1, 15, 1, false, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(0, -14, -1, true, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, true, 7), 2u);
+  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 2, 3, false, false, 7), 2u);
 
   // Only a partial tile.
-  EXPECT_EQ(GetFloorCount(0, 1, 1, false, false, 7), 1);
-  EXPECT_EQ(GetFloorCount(0, 6, 1, false, false, 7), 1);
-  EXPECT_EQ(GetFloorCount(-1, 1, 3, true, false, 7), 1);
-  EXPECT_EQ(GetFloorCount(-1, -2, -1, true, false, 7), 1);
-  EXPECT_EQ(GetFloorCount(0, 2, 3, false, false, 7), 1);
+  EXPECT_EQ(GetFloorCount(0, 1, 1, false, false, 7), 1u);
+  EXPECT_EQ(GetFloorCount(0, 6, 1, false, false, 7), 1u);
+  EXPECT_EQ(GetFloorCount(-1, 1, 3, true, false, 7), 1u);
+  EXPECT_EQ(GetFloorCount(-1, -2, -1, true, false, 7), 1u);
+  EXPECT_EQ(GetFloorCount(0, 2, 3, false, false, 7), 1u);
 
   // Complete and partial tiles.
-  EXPECT_EQ(GetFloorCount(0, 13, 1, false, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(0, 15, 1, false, false, 7), 3);
-  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, false, 7), 2);
-  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 5 - 1, 3, false, false, 7), 5);
-  EXPECT_EQ(GetFloorCount(-1, -3 * 7 * 5, -3, true, false, 7), 5);
+  EXPECT_EQ(GetFloorCount(0, 13, 1, false, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(0, 15, 1, false, false, 7), 3u);
+  EXPECT_EQ(GetFloorCount(-1, -14, -1, true, false, 7), 2u);
+  EXPECT_EQ(GetFloorCount(0, 3 * 7 * 5 - 1, 3, false, false, 7), 5u);
+  EXPECT_EQ(GetFloorCount(-1, -3 * 7 * 5, -3, true, false, 7), 5u);
 
   // Close to 16-bit integer range.
-  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 1), 0xFFFF);
-  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 7), 0xFFFF / 7 + 1);
-  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, true, 7), 0xFFFF / 7 + 1);
-  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 7), 0xFFFF / 7 + 1);
-  EXPECT_EQ(GetFloorCount(-0x7FFF, 0x7FFF, 1, true, true, 7), 0xFFFF / 7 + 1);
-  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, false, 0xFFFF), 1);
-  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 0xFFFF), 1);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 1), 0xFFFFu);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFF, 1, false, false, 7), 0xFFFFu / 7 + 1);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, true, 7), 0xFFFFu / 7 + 1);
+  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 7), 0xFFFFu / 7 + 1);
+  EXPECT_EQ(GetFloorCount(-0x7FFF, 0x7FFF, 1, true, true, 7), 0xFFFFu / 7 + 1);
+  EXPECT_EQ(GetFloorCount(0, 0xFFFE, 1, false, false, 0xFFFF), 1u);
+  EXPECT_EQ(GetFloorCount(-0x8000, 0x7FFF, 1, true, false, 0xFFFF), 1u);
 
   // Finalize the function.
   Builder.CreateRetVoid();
