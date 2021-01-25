@@ -467,9 +467,17 @@ body: |
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-UNSAFE: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; GFX9-UNSAFE: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY1]]
+    ; GFX9-UNSAFE: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[COPY1]](s64)
-    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[INT]]
-    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[FMUL]](s64)
+    ; GFX9-UNSAFE: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[INT]], [[C]]
+    ; GFX9-UNSAFE: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FMA]], [[INT]], [[INT]]
+    ; GFX9-UNSAFE: [[FMA2:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMA1]], [[C]]
+    ; GFX9-UNSAFE: [[FMA3:%[0-9]+]]:_(s64) = G_FMA [[FMA2]], [[FMA1]], [[FMA1]]
+    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[FMA3]]
+    ; GFX9-UNSAFE: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMUL]], [[COPY]]
+    ; GFX9-UNSAFE: [[FMA5:%[0-9]+]]:_(s64) = G_FMA [[FMA4]], [[FMA3]], [[FMUL]]
+    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[FMA5]](s64)
     ; GFX10-LABEL: name: test_fdiv_s64
     ; GFX10: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
@@ -1140,11 +1148,26 @@ body: |
     ; GFX9-UNSAFE: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX9-UNSAFE: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; GFX9-UNSAFE: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
+    ; GFX9-UNSAFE: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[UV2]]
+    ; GFX9-UNSAFE: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[UV2]](s64)
-    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[UV]], [[INT]]
+    ; GFX9-UNSAFE: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[INT]], [[C]]
+    ; GFX9-UNSAFE: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FMA]], [[INT]], [[INT]]
+    ; GFX9-UNSAFE: [[FMA2:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMA1]], [[C]]
+    ; GFX9-UNSAFE: [[FMA3:%[0-9]+]]:_(s64) = G_FMA [[FMA2]], [[FMA1]], [[FMA1]]
+    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[UV]], [[FMA3]]
+    ; GFX9-UNSAFE: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMUL]], [[UV]]
+    ; GFX9-UNSAFE: [[FMA5:%[0-9]+]]:_(s64) = G_FMA [[FMA4]], [[FMA3]], [[FMUL]]
+    ; GFX9-UNSAFE: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[UV3]]
     ; GFX9-UNSAFE: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[UV3]](s64)
-    ; GFX9-UNSAFE: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[UV1]], [[INT1]]
-    ; GFX9-UNSAFE: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FMUL]](s64), [[FMUL1]](s64)
+    ; GFX9-UNSAFE: [[FMA6:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[INT1]], [[C]]
+    ; GFX9-UNSAFE: [[FMA7:%[0-9]+]]:_(s64) = G_FMA [[FMA6]], [[INT1]], [[INT1]]
+    ; GFX9-UNSAFE: [[FMA8:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[FMA7]], [[C]]
+    ; GFX9-UNSAFE: [[FMA9:%[0-9]+]]:_(s64) = G_FMA [[FMA8]], [[FMA7]], [[FMA7]]
+    ; GFX9-UNSAFE: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[UV1]], [[FMA9]]
+    ; GFX9-UNSAFE: [[FMA10:%[0-9]+]]:_(s64) = G_FMA [[FNEG1]], [[FMUL1]], [[UV1]]
+    ; GFX9-UNSAFE: [[FMA11:%[0-9]+]]:_(s64) = G_FMA [[FMA10]], [[FMA9]], [[FMUL1]]
+    ; GFX9-UNSAFE: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FMA5]](s64), [[FMA11]](s64)
     ; GFX9-UNSAFE: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; GFX10-LABEL: name: test_fdiv_v2s64
     ; GFX10: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -2312,9 +2335,18 @@ body: |
     ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
     ; GFX9: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64_constant_one_rcp
+    ; GFX9-UNSAFE: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9-UNSAFE: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY]]
     ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[COPY]](s64)
-    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[INT]](s64)
+    ; GFX9-UNSAFE: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[INT]], [[C]]
+    ; GFX9-UNSAFE: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FMA]], [[INT]], [[INT]]
+    ; GFX9-UNSAFE: [[FMA2:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMA1]], [[C]]
+    ; GFX9-UNSAFE: [[FMA3:%[0-9]+]]:_(s64) = G_FMA [[FMA2]], [[FMA1]], [[FMA1]]
+    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[C]], [[FMA3]]
+    ; GFX9-UNSAFE: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMUL]], [[C]]
+    ; GFX9-UNSAFE: [[FMA5:%[0-9]+]]:_(s64) = G_FMA [[FMA4]], [[FMA3]], [[FMUL]]
+    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[FMA5]](s64)
     ; GFX10-LABEL: name: test_fdiv_s64_constant_one_rcp
     ; GFX10: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
     ; GFX10: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -2409,10 +2441,19 @@ body: |
     ; GFX9: [[INT6:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.fixup), [[INT5]](s64), [[COPY]](s64), [[C]](s64)
     ; GFX9: $vgpr0_vgpr1 = COPY [[INT6]](s64)
     ; GFX9-UNSAFE-LABEL: name: test_fdiv_s64_constant_negative_one_rcp
+    ; GFX9-UNSAFE: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
     ; GFX9-UNSAFE: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; GFX9-UNSAFE: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY]]
-    ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FNEG]](s64)
-    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[INT]](s64)
+    ; GFX9-UNSAFE: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
+    ; GFX9-UNSAFE: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[COPY]](s64)
+    ; GFX9-UNSAFE: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[INT]], [[C1]]
+    ; GFX9-UNSAFE: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FMA]], [[INT]], [[INT]]
+    ; GFX9-UNSAFE: [[FMA2:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMA1]], [[C1]]
+    ; GFX9-UNSAFE: [[FMA3:%[0-9]+]]:_(s64) = G_FMA [[FMA2]], [[FMA1]], [[FMA1]]
+    ; GFX9-UNSAFE: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[C]], [[FMA3]]
+    ; GFX9-UNSAFE: [[FMA4:%[0-9]+]]:_(s64) = G_FMA [[FNEG]], [[FMUL]], [[C]]
+    ; GFX9-UNSAFE: [[FMA5:%[0-9]+]]:_(s64) = G_FMA [[FMA4]], [[FMA3]], [[FMUL]]
+    ; GFX9-UNSAFE: $vgpr0_vgpr1 = COPY [[FMA5]](s64)
     ; GFX10-LABEL: name: test_fdiv_s64_constant_negative_one_rcp
     ; GFX10: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
     ; GFX10: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
