@@ -191,8 +191,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
 
   // Parse the arguments
   const llvm::opt::OptTable &opts = clang::driver::getDriverOptTable();
-  const unsigned includedFlagsBitmask =
-      clang::driver::options::FC1Option;
+  const unsigned includedFlagsBitmask = clang::driver::options::FC1Option;
   unsigned missingArgIndex, missingArgCount;
   llvm::opt::InputArgList args = opts.ParseArgs(
       commandLineArgs, missingArgIndex, missingArgCount, includedFlagsBitmask);
