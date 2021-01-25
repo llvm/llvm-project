@@ -15,8 +15,8 @@ define dso_local void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_typ
 ; CHECK-P9-NEXT:    ld 5, 0(5)
 ; CHECK-P9-NEXT:    addis 6, 2, scalars@toc@ha
 ; CHECK-P9-NEXT:    addi 6, 6, scalars@toc@l
-; CHECK-P9-NEXT:    addi 6, 6, 16
 ; CHECK-P9-NEXT:    rldicr 5, 5, 0, 58
+; CHECK-P9-NEXT:    addi 6, 6, 16
 ; CHECK-P9-NEXT:    addi 5, 5, -32
 ; CHECK-P9-NEXT:    lxvdsx 0, 0, 6
 ; CHECK-P9-NEXT:    rldicl 5, 5, 59, 5
@@ -35,9 +35,9 @@ define dso_local void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_typ
 ; CHECK-P9-NEXT:    xvmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    xvmuldp 4, 4, 0
 ; CHECK-P9-NEXT:    xvmuldp 3, 3, 0
+; CHECK-P9-NEXT:    xvmuldp 6, 6, 0
 ; CHECK-P9-NEXT:    xvmuldp 5, 5, 0
 ; CHECK-P9-NEXT:    addi 4, 4, 256
-; CHECK-P9-NEXT:    xvmuldp 6, 6, 0
 ; CHECK-P9-NEXT:    stxv 1, 16(3)
 ; CHECK-P9-NEXT:    stxv 2, 0(3)
 ; CHECK-P9-NEXT:    stxv 3, 48(3)
