@@ -502,6 +502,25 @@ let TargetPrefix = "riscv" in {
                                  llvm_anyint_ty]),
                     [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic;
 
+  // For unit stride segment store
+  // Input: (value, pointer, vl)
+  class RISCVUSSegStore<int nf>
+        : Intrinsic<[],
+                    !listconcat([llvm_anyvector_ty],
+                                !listsplat(LLVMMatchType<0>, !add(nf, -1)),
+                                [LLVMPointerToElt<0>, llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For unit stride segment store with mask
+  // Input: (value, pointer, mask, vl)
+  class RISCVUSSegStoreMask<int nf>
+        : Intrinsic<[],
+                    !listconcat([llvm_anyvector_ty],
+                                !listsplat(LLVMMatchType<0>, !add(nf, -1)),
+                                [LLVMPointerToElt<0>,
+                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                 llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic;
+
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
@@ -607,6 +626,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVUSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVUSSegLoad<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVUSSegLoadMask<nf>;
+  }
+  multiclass RISCVUSSegStore<int nf> {
+    def "int_riscv_" # NAME : RISCVUSSegStore<nf>;
+    def "int_riscv_" # NAME # "_mask" : RISCVUSSegStoreMask<nf>;
   }
 
   defm vle : RISCVUSLoad;
@@ -901,6 +924,7 @@ let TargetPrefix = "riscv" in {
 
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
     defm vlseg # nf : RISCVUSSegLoad<nf>;
+    defm vsseg # nf : RISCVUSSegStore<nf>;
   }
 
 } // TargetPrefix = "riscv"
