@@ -533,6 +533,31 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
   }
 }
 
+Register TargetRegisterInfo::lookThruSingleUseCopyChain(
+    Register SrcReg, const MachineRegisterInfo *MRI) const {
+  while (true) {
+    const MachineInstr *MI = MRI->getVRegDef(SrcReg);
+    // Found the real definition, return it if it has a single use.
+    if (!MI->isCopyLike())
+      return MRI->hasOneNonDBGUse(SrcReg) ? SrcReg : Register();
+
+    Register CopySrcReg;
+    if (MI->isCopy())
+      CopySrcReg = MI->getOperand(1).getReg();
+    else {
+      assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
+      CopySrcReg = MI->getOperand(2).getReg();
+    }
+
+    // Continue only if the next definition in the chain is for a virtual
+    // register that has a single use.
+    if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUse(CopySrcReg))
+      return Register();
+
+    SrcReg = CopySrcReg;
+  }
+}
+
 void TargetRegisterInfo::getOffsetOpcodes(
     const StackOffset &Offset, SmallVectorImpl<uint64_t> &Ops) const {
   assert(!Offset.getScalable() && "Scalable offsets are not handled");
