@@ -2408,6 +2408,8 @@ def MrgWords {
 // arbitrarily chosen to be Big, Little.
 //
 // Predicate combinations available:
+// [HasVSX, IsLittleEndian, HasP8Altivec] Altivec patterns using VSX instr.
+// [HasVSX, IsBigEndian, HasP8Altivec] Altivec patterns using VSX instr.
 // [HasVSX]
 // [HasVSX, IsBigEndian]
 // [HasVSX, IsLittleEndian]
@@ -2435,6 +2437,18 @@ def MrgWords {
 // [HasVSX, HasP9Altivec, IsLittleEndian]
 // [HasVSX, IsISA3_0, HasDirectMove, IsBigEndian, IsPPC64]
 // [HasVSX, IsISA3_0, HasDirectMove, IsLittleEndian]
+
+// These Altivec patterns are here because we need a VSX instruction to match
+// the intrinsic (but only for little endian system).
+let Predicates = [HasVSX, IsLittleEndian, HasP8Altivec] in
+  def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor v16i8:$a,
+                                                    v16i8:$b, v16i8:$c)),
+            (v16i8 (VPERMXOR $a, $b, (XXLNOR (COPY_TO_REGCLASS $c, VSRC),
+                                             (COPY_TO_REGCLASS $c, VSRC))))>;
+let Predicates = [HasVSX, IsBigEndian, HasP8Altivec] in
+  def : Pat<(v16i8 (int_ppc_altivec_crypto_vpermxor v16i8:$a,
+                                                    v16i8:$b, v16i8:$c)),
+            (v16i8 (VPERMXOR $a, $b, $c))>;
 
 let AddedComplexity = 400 in {
 // Valid for any VSX subtarget, regardless of endianness.
