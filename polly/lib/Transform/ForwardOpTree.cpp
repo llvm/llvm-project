@@ -306,6 +306,9 @@ private:
     // { Domain[] -> Element[] }
     isl::map Result;
 
+    // Make irrelevant elements not interfere.
+    Domain = Domain.intersect_params(S->getContext());
+
     // MemoryAccesses can read only elements from a single array
     // (i.e. not: { Dom[0] -> A[0]; Dom[1] -> B[1] }).
     // Look through all spaces until we find one that contains at least the
