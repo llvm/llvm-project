@@ -332,7 +332,7 @@ declare void @use1nonnull_without_noundef(i8* nonnull %x);
 declare void @use2nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y);
 declare void @use3nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y, i8* nonnull noundef %z);
 
-declare i8 @use1safecall(i8* %x) readonly nounwind ; readonly+nounwind guarantees that execution continues to successor
+declare i8 @use1safecall(i8* %x) nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
 ; Without noundef, nonnull cannot be propagated to the parent
 
