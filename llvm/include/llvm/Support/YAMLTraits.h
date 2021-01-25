@@ -1586,7 +1586,7 @@ public:
 private:
   void output(StringRef s);
   void outputUpToEndOfLine(StringRef s);
-  void newLineCheck();
+  void newLineCheck(bool EmptySequence = false);
   void outputNewLine();
   void paddedKey(StringRef key);
   void flowKey(StringRef Key);
