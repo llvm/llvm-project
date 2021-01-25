@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: res=kwm
 * KWM with spaces in name at invocation NOT replaced
       integer, parameter :: KWM = 777
