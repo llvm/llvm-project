@@ -1297,7 +1297,8 @@ public:
   parseNamedBit(const char *Name, OperandVector &Operands,
                 AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
-                                             StringRef &Value);
+                                             StringRef &Value,
+                                             SMLoc &StringLoc);
 
   bool isModifier();
   bool isOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const;
@@ -5099,11 +5100,15 @@ static void addOptionalImmOperand(
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix, StringRef &Value) {
+AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix,
+                                       StringRef &Value,
+                                       SMLoc &StringLoc) {
   if (!trySkipId(Prefix, AsmToken::Colon))
     return MatchOperand_NoMatch;
 
-  return parseId(Value) ? MatchOperand_Success : MatchOperand_ParseFail;
+  StringLoc = getLoc();
+  return parseId(Value, "expected an identifier") ? MatchOperand_Success
+                                                  : MatchOperand_ParseFail;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7523,7 +7528,8 @@ AMDGPUAsmParser::parseSDWASel(OperandVector &Operands, StringRef Prefix,
   StringRef Value;
   OperandMatchResultTy res;
 
-  res = parseStringWithPrefix(Prefix, Value);
+  SMLoc StringLoc;
+  res = parseStringWithPrefix(Prefix, Value, StringLoc);
   if (res != MatchOperand_Success) {
     return res;
   }
@@ -7540,6 +7546,7 @@ AMDGPUAsmParser::parseSDWASel(OperandVector &Operands, StringRef Prefix,
         .Default(0xffffffff);
 
   if (Int == 0xffffffff) {
+    Error(StringLoc, "invalid " + Twine(Prefix) + " value");
     return MatchOperand_ParseFail;
   }
 
@@ -7555,7 +7562,8 @@ AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
   StringRef Value;
   OperandMatchResultTy res;
 
-  res = parseStringWithPrefix("dst_unused", Value);
+  SMLoc StringLoc;
+  res = parseStringWithPrefix("dst_unused", Value, StringLoc);
   if (res != MatchOperand_Success) {
     return res;
   }
@@ -7568,6 +7576,7 @@ AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
         .Default(0xffffffff);
 
   if (Int == 0xffffffff) {
+    Error(StringLoc, "invalid dst_unused value");
     return MatchOperand_ParseFail;
   }
 
