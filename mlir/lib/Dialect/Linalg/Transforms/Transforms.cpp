@@ -161,12 +161,16 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
 
   DenseSet<Operation *> producers;
   producers.insert(linalgOp);
-  for (auto dependence : dependenceGraph.getDependentOperations(linalgOp)) {
-    if (!fusionOptions.indicesToFuse.count(
-            dependence.indexingOpView->getOperandNumber()))
+  for (auto dependence : dependenceGraph.getDependentOperationsInto(linalgOp)) {
+    Optional<unsigned> operandNumber = dependence.getIndexingOpViewOperandNum();
+    // When looking at dependences into, indexingOp is always OpOperand. We
+    // could assert, but continue if this is not the case.
+    if (!operandNumber)
       continue;
-    if (isa<LinalgOp>(dependence.dependentOpView->getOwner()))
-      producers.insert(dependence.dependentOpView->getOwner());
+    if (!fusionOptions.indicesToFuse.count(operandNumber.getValue()))
+      continue;
+    if (isa<LinalgOp>(dependence.getDependentOp()))
+      producers.insert(dependence.getDependentOp());
   }
 
   SmallVector<LinalgOp, 1> fusionOps;
