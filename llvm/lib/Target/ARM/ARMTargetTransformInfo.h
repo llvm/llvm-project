@@ -247,6 +247,9 @@ public:
   int getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                  bool IsPairwiseForm,
                                  TTI::TargetCostKind CostKind);
+  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
+                                              Type *ResTy, VectorType *ValTy,
+                                              TTI::TargetCostKind CostKind);
 
   int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                             TTI::TargetCostKind CostKind);
