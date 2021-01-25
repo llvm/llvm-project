@@ -1417,7 +1417,7 @@ protected:
     // TODO: Add some code to work around the linkage limitation, but it's not
     // clear what MLIR's intented design should be.
     auto convertLinkage = [&]() -> mlir::LLVM::Linkage {
-      if (auto link = funcOp.getAttrOfType<mlir::StringAttr>("linkName")) {
+      if (auto link = funcOp->getAttrOfType<mlir::StringAttr>("linkName")) {
         auto name = link.getValue();
         if (name == "internal")
           return mlir::LLVM::Linkage::Internal;

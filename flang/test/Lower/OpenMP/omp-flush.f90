@@ -17,9 +17,9 @@ program flush
 !FIRDialect:  %{{.*}} = fir.alloca i32 {name = "{{.*}}Ec"}
 
 !LLVMIRDialect-LABEL: llvm.func @_QQmain() {
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ea"} : (!llvm.i64) -> !llvm.ptr<i32>
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Eb"} : (!llvm.i64) -> !llvm.ptr<i32>
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ec"} : (!llvm.i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ea"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Eb"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ec"} : (i64) -> !llvm.ptr<i32>
 
 !LLVMIR-LABEL: define void @_QQmain() {{.*}} {
 !LLVMIR:   %{{.*}} = alloca i32, i64 1, align 4
@@ -47,7 +47,7 @@ program flush
 !LLVMIRDialect:     omp.flush
 !LLVMIRDialect:     %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
 !LLVMIRDialect:     %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
-!LLVMIRDialect:     %{{.*}} = llvm.add %{{.*}}, %{{.*}} : !llvm.i32
+!LLVMIRDialect:     %{{.*}} = llvm.add %{{.*}}, %{{.*}} : i32
 !LLVMIRDialect:     llvm.store %{{.*}}, %{{.*}} : !llvm.ptr<i32>
         c = a + b
 !FIRDialect:    omp.terminator
@@ -70,7 +70,7 @@ program flush
 !LLVMIRDialect:     omp.flush
 !LLVMIRDialect:     %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
 !LLVMIRDialect:     %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
-!LLVMIRDialect:     %{{.*}} = llvm.add %{{.*}}, %{{.*}} : !llvm.i32
+!LLVMIRDialect:     %{{.*}} = llvm.add %{{.*}}, %{{.*}} : i32
 !LLVMIRDialect:     llvm.store %{{.*}}, %{{.*}} : !llvm.ptr<i32>
 
         c = a + b

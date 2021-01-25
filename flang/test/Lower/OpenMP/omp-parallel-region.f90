@@ -20,10 +20,10 @@ program parallel
 !FIRDialect:  %[[VAR_C:.*]] = fir.alloca i32 {name = "{{.*}}Ec"}
 !FIRDialect:  %[[VAR_NUM_THREADS:.*]] = fir.alloca i32 {name = "{{.*}}Enum_threads"}
 
-!LLVMIRDialect: %[[VAR_A:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ea"}
-!LLVMIRDialect: %[[VAR_B:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Eb"}
-!LLVMIRDialect: %[[VAR_C:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ec"}
-!LLVMIRDialect: %[[VAR_NUM_THREADS:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Enum_threads"}
+!LLVMIRDialect: %[[VAR_A:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ea"}
+!LLVMIRDialect: %[[VAR_B:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Eb"}
+!LLVMIRDialect: %[[VAR_C:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ec"}
+!LLVMIRDialect: %[[VAR_NUM_THREADS:.*]] = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Enum_threads"}
 
 !LLVMIR: %[[OMP_GLOBAL_THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.*}})
 !LLVMIR: call void @__kmpc_push_num_threads(%struct.ident_t* @{{.*}}, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 %{{.*}})
@@ -36,7 +36,7 @@ program parallel
 !FIRDialect:     fir.store %[[OMP_VAR_C]] to %[[VAR_C]]
 !FIRDialect-DAG: %[[CONSTANT:.*]] = constant 4 : i32
 !FIRDialect-DAG: %[[COND_C:.*]] = fir.load %[[VAR_C]] : !fir.ref<i32>
-!FIRDialect:     %[[COND_RES:.*]] = cmpi "sgt", %[[COND_C]], %[[CONSTANT]] : i32
+!FIRDialect:     %[[COND_RES:.*]] = cmpi sgt, %[[COND_C]], %[[CONSTANT]] : i32
 !FIRDialect: fir.if %[[COND_RES]] {
 !FIRDialect:       fir.call @_FortranAioBeginExternalListOutput
 !FIRDialect:       fir.call @_FortranAioOutputAscii
@@ -50,13 +50,13 @@ program parallel
 !FIRDialect:     omp.terminator
 !FIRDialect-NEXT: }
 
-!LLVMIRDialect-LABEL:   omp.parallel num_threads(%{{.*}} : !llvm.i32) {
+!LLVMIRDialect-LABEL:   omp.parallel num_threads(%{{.*}} : i32) {
 !LLVMIRDialect-DAG: %[[OMP_VAR_A:.*]] = llvm.load %[[VAR_A:.*]]
 !LLVMIRDialect-DAG: %[[OMP_VAR_B:.*]] = llvm.load %[[VAR_B:.*]]
 !LLVMIRDialect:     %[[OMP_VAR_C:.*]] = llvm.add {{.*}}%[[OMP_VAR_A]]
 !LLVMIRDialect:     llvm.store %[[OMP_VAR_C]], %[[VAR_C]]
 !LLVMIRDialect:     %[[COND_C:.*]] = llvm.load %[[VAR_C]] : !llvm.ptr<i32>
-!LLVMIRDialect:     %[[COND_RES:.*]] = llvm.icmp "sgt" %[[COND_C]], %{{.*}} : !llvm.i32
+!LLVMIRDialect:     %[[COND_RES:.*]] = llvm.icmp "sgt" %[[COND_C]], %{{.*}} : i32
 !LLVMIRDialect:        llvm.cond_br %[[COND_RES]], ^bb1, ^bb2
 !LLVMIRDialect: ^bb1:  // pred: ^bb0
 !LLVMIRDialect:     llvm.call @_FortranAioBeginExternalListOutput

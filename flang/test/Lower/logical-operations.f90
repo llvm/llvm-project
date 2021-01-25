@@ -10,7 +10,7 @@ LOGICAL(1) :: x1
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
 ! CHECK-DAG:[[reg3:%[0-9]+]] = fir.convert [[reg1]] {{.*}} -> i1
 ! CHECK-DAG:[[reg4:%[0-9]+]] = fir.convert [[reg2]] {{.*}} -> i1
-! CHECK:[[reg5:%[0-9]+]] = cmpi "eq", [[reg3]], [[reg4]]
+! CHECK:[[reg5:%[0-9]+]] = cmpi eq, [[reg3]], [[reg4]]
 ! CHECK:fir.convert [[reg5]] {{.*}} -> !fir.logical<1>
 eqv0_test = x0 .EQV. x1
 END FUNCTION
@@ -23,7 +23,7 @@ LOGICAL(1) :: x1
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
 ! CHECK-DAG:[[reg3:%[0-9]+]] = fir.convert [[reg1]] {{.*}} -> i1
 ! CHECK-DAG:[[reg4:%[0-9]+]] = fir.convert [[reg2]] {{.*}} -> i1
-! CHECK:[[reg5:%[0-9]+]] = cmpi "ne", [[reg3]], [[reg4]]
+! CHECK:[[reg5:%[0-9]+]] = cmpi ne, [[reg3]], [[reg4]]
 ! CHECK:fir.convert [[reg5]] {{.*}} -> !fir.logical<1>
 neqv1_test = x0 .NEQV. x1
 END FUNCTION

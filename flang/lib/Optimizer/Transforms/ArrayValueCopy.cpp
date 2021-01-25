@@ -230,7 +230,7 @@ void ArrayCopyAnalysis::arrayAccesses(
       structuredLoop(ro);
     } else if (auto rs = mlir::dyn_cast<ResultOp>(owner)) {
       // Thread any uses of fir.if that return the marked array value.
-      auto *parent = rs.getParentRegion()->getParentOp();
+      auto *parent = rs->getParentRegion()->getParentOp();
       if (auto ifOp = mlir::dyn_cast<fir::IfOp>(parent))
         appendToQueue(ifOp.getResult(operand->getOperandNumber()));
     } else if (mlir::isa<ArrayFetchOp>(owner)) {

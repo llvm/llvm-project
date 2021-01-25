@@ -614,7 +614,7 @@ struct MemToReg : public mlir::PassWrapper<MemToReg<LOAD, STORE, ALLOCA, UNDEF>,
     for (std::size_t allocaNum = 0, End{allocas.size()}; allocaNum != End;
          ++allocaNum) {
       auto ae = allocas[allocaNum];
-      assert(ae.template getParentOfType<mlir::FuncOp>() == F);
+      assert(ae->template getParentOfType<mlir::FuncOp>() == F);
       if (ae.use_empty()) {
         ae.erase();
         continue;

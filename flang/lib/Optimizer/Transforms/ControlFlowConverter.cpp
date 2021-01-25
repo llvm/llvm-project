@@ -67,7 +67,7 @@ struct SelectTypeOpConversion : public FIROpConversion<SelectTypeOp> {
     auto selectType = mlir::cast<SelectTypeOp>(op);
     auto conds = selectType.getNumConditions();
     auto attrName = SelectTypeOp::getCasesAttr();
-    auto caseAttr = selectType.getAttrOfType<mlir::ArrayAttr>(attrName);
+    auto caseAttr = selectType->getAttrOfType<mlir::ArrayAttr>(attrName);
     auto cases = caseAttr.getValue();
     // Selector must be of type !fir.box<T>
     auto selector = selectType.getSelector(operands);
