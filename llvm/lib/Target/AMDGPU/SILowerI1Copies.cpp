@@ -177,8 +177,10 @@ public:
         }
       }
 
-      if (Divergent && PDT.dominates(&DefBlock, MBB))
-        append_range(Stack, MBB->successors());
+      if (Divergent && PDT.dominates(&DefBlock, MBB)) {
+        for (MachineBasicBlock *Succ : MBB->successors())
+          Stack.push_back(Succ);
+      }
     }
 
     while (!Stack.empty()) {
@@ -187,7 +189,8 @@ public:
         continue;
       ReachableOrdered.push_back(MBB);
 
-      append_range(Stack, MBB->successors());
+      for (MachineBasicBlock *Succ : MBB->successors())
+        Stack.push_back(Succ);
     }
 
     for (MachineBasicBlock *MBB : ReachableOrdered) {

@@ -315,7 +315,8 @@ HexagonTargetLowering::getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
                               const SDLoc &dl, SelectionDAG &DAG) const {
   SmallVector<SDValue,4> IntOps;
   IntOps.push_back(DAG.getConstant(IntId, dl, MVT::i32));
-  append_range(IntOps, Ops);
+  for (const SDValue &Op : Ops)
+    IntOps.push_back(Op);
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, ResTy, IntOps);
 }
 
