@@ -4792,6 +4792,44 @@ defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",
                  BinOpFrag<(sub node:$LHS, (zanyext node:$RHS))>>;
 
+// Additional patterns for [SU]ML[AS]L
+multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperator vecopnode,
+  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
+  def : Pat<(v4i16 (opnode
+                    V64:$Ra,
+                    (v4i16 (extract_subvector
+                            (vecopnode (v8i8 V64:$Rn),(v8i8 V64:$Rm)),
+                            (i64 0))))),
+             (EXTRACT_SUBREG (v8i16 (INST8B
+                                     (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), V64:$Ra, dsub),
+                                     V64:$Rn, V64:$Rm)), dsub)>;
+  def : Pat<(v2i32 (opnode
+                    V64:$Ra,
+                    (v2i32 (extract_subvector
+                            (vecopnode (v4i16 V64:$Rn),(v4i16 V64:$Rm)),
+                            (i64 0))))),
+             (EXTRACT_SUBREG (v4i32 (INST4H
+                                     (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$Ra, dsub),
+                                     V64:$Rn, V64:$Rm)), dsub)>;
+  def : Pat<(v1i64 (opnode
+                    V64:$Ra,
+                    (v1i64 (extract_subvector
+                            (vecopnode (v2i32 V64:$Rn),(v2i32 V64:$Rm)),
+                            (i64 0))))),
+             (EXTRACT_SUBREG (v2i64 (INST2S
+                                     (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), V64:$Ra, dsub),
+                                     V64:$Rn, V64:$Rm)), dsub)>;
+}
+
+defm : Neon_mul_acc_widen_patterns<add, int_aarch64_neon_umull,
+     UMLALv8i8_v8i16, UMLALv4i16_v4i32, UMLALv2i32_v2i64>;
+defm : Neon_mul_acc_widen_patterns<add, int_aarch64_neon_smull,
+     SMLALv8i8_v8i16, SMLALv4i16_v4i32, SMLALv2i32_v2i64>;
+defm : Neon_mul_acc_widen_patterns<sub, int_aarch64_neon_umull,
+     UMLSLv8i8_v8i16, UMLSLv4i16_v4i32, UMLSLv2i32_v2i64>;
+defm : Neon_mul_acc_widen_patterns<sub, int_aarch64_neon_smull,
+     SMLSLv8i8_v8i16, SMLSLv4i16_v4i32, SMLSLv2i32_v2i64>;
+
 // Additional patterns for SMULL and UMULL
 multiclass Neon_mul_widen_patterns<SDPatternOperator opnode,
   Instruction INST8B, Instruction INST4H, Instruction INST2S> {
