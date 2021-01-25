@@ -516,24 +516,24 @@ private:
     bool isOptional = false;
     [[maybe_unused]] auto loc = interface.converter.genLocation();
     llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
+    auto addMLIRAttr = [&](llvm::StringRef attr) {
+      attrs.emplace_back(mlir::Identifier::get(attr, &mlirContext),
+                         UnitAttr::get(&mlirContext));
+    };
     if (obj.attrs.test(Attrs::Optional)) {
-      attrs.emplace_back(
-          mlir::Identifier::get(fir::getOptionalAttrName(), &mlirContext),
-          UnitAttr::get(&mlirContext));
+      addMLIRAttr(fir::getOptionalAttrName());
       isOptional = true;
     }
     if (obj.attrs.test(Attrs::Asynchronous))
       TODO(loc, "Asynchronous in procedure interface");
     if (obj.attrs.test(Attrs::Contiguous))
-      attrs.emplace_back(
-          mlir::Identifier::get(fir::getContiguousAttrName(), &mlirContext),
-          UnitAttr::get(&mlirContext));
+      addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       TODO(loc, "Value in procedure interface");
     if (obj.attrs.test(Attrs::Volatile))
       TODO(loc, "Volatile in procedure interface");
     if (obj.attrs.test(Attrs::Target))
-      TODO(loc, "Target in procedure interface");
+      addMLIRAttr(fir::getTargetAttrName());
 
     // TODO: intents that require special care (e.g finalization)
 

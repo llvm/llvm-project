@@ -30,3 +30,12 @@ function sub2(r)
   ! CHECK: return %{{.*}} : f32
 end function sub2
 
+! Test TARGET attribute lowering
+! CHECK-LABEL: func @_QPtest_target(
+! CHECK-SAME: !fir.ref<i32> {fir.target},
+! CHECK-SAME: !fir.box<!fir.array<?xf32>> {fir.target})
+subroutine test_target(i, x)
+  integer, target :: i
+  real, target :: x(:)
+  print *, xs, xa
+end subroutine

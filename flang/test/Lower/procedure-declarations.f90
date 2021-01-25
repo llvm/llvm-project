@@ -165,5 +165,24 @@ subroutine call_foo8_2(i)
   call foo8(i)
 end subroutine 
 
+! Test that target attribute is lowered in declaration of functions that are
+! not defined in this file.
+! CHECK-LABEL:func @_QPtest_target_in_iface
+subroutine test_target_in_iface()
+  interface
+  subroutine test_target(i, x)
+    integer, target :: i
+    real, target :: x(:)
+  end subroutine
+  end interface
+  integer :: i
+  real :: x(10)
+  ! CHECK: fir.call @_QPtest_target
+  call test_target(i, x)
+end subroutine
+
 ! CHECK: func private @_QPfoo6(!fir.ref<!fir.array<10xi32>>)
 ! CHECK: func private @_QPfoo7()
+
+! Test declaration from test_target_in_iface
+! CHECK-LABEL: func private @_QPtest_target(!fir.ref<i32> {fir.target}, !fir.box<!fir.array<?xf32>> {fir.target})
