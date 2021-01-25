@@ -11,7 +11,7 @@
 #include "utils/CPP/ArrayRef.h"
 #include "utils/UnitTest/Test.h"
 
-class MemmoveTest : public __llvm_libc::testing::Test {
+class LlvmLibcMemmoveTest : public __llvm_libc::testing::Test {
 public:
   void check_memmove(void *dest, const void *src, size_t count, const void *str,
                      const __llvm_libc::cpp::ArrayRef<unsigned char> expected) {
@@ -25,20 +25,20 @@ public:
   }
 };
 
-TEST_F(MemmoveTest, MoveZeroByte) {
+TEST_F(LlvmLibcMemmoveTest, MoveZeroByte) {
   unsigned char dest[] = {'a', 'b'};
   const unsigned char src[] = {'y', 'z'};
   const unsigned char expected[] = {'a', 'b'};
   check_memmove(dest, src, 0, dest, expected);
 }
 
-TEST_F(MemmoveTest, OverlapThatDestAndSrcPointToSameAddress) {
+TEST_F(LlvmLibcMemmoveTest, OverlapThatDestAndSrcPointToSameAddress) {
   unsigned char str[] = {'a', 'b'};
   const unsigned char expected[] = {'a', 'b'};
   check_memmove(str, str, 1, str, expected);
 }
 
-TEST_F(MemmoveTest, OverlapThatDestStartsBeforeSrc) {
+TEST_F(LlvmLibcMemmoveTest, OverlapThatDestStartsBeforeSrc) {
   // Set boundary at beginning and end for not overstepping when
   // copy forward or backward.
   unsigned char str[] = {'z', 'a', 'b', 'c', 'z'};
@@ -47,7 +47,7 @@ TEST_F(MemmoveTest, OverlapThatDestStartsBeforeSrc) {
   check_memmove(&str[1], &str[2], 2, str, expected);
 }
 
-TEST_F(MemmoveTest, OverlapThatDestStartsAfterSrc) {
+TEST_F(LlvmLibcMemmoveTest, OverlapThatDestStartsAfterSrc) {
   unsigned char str[] = {'z', 'a', 'b', 'c', 'z'};
   const unsigned char expected[] = {'z', 'a', 'a', 'b', 'z'};
   check_memmove(&str[2], &str[1], 2, str, expected);
@@ -57,13 +57,13 @@ TEST_F(MemmoveTest, OverlapThatDestStartsAfterSrc) {
 // str: [abcdefghij]
 //      [__src_____]
 //      [_____dest_]
-TEST_F(MemmoveTest, SrcFollowDest) {
+TEST_F(LlvmLibcMemmoveTest, SrcFollowDest) {
   unsigned char str[] = {'z', 'a', 'b', 'z'};
   const unsigned char expected[] = {'z', 'b', 'b', 'z'};
   check_memmove(&str[1], &str[2], 1, str, expected);
 }
 
-TEST_F(MemmoveTest, DestFollowSrc) {
+TEST_F(LlvmLibcMemmoveTest, DestFollowSrc) {
   unsigned char str[] = {'z', 'a', 'b', 'z'};
   const unsigned char expected[] = {'z', 'a', 'a', 'z'};
   check_memmove(&str[2], &str[1], 1, str, expected);

@@ -9,8 +9,8 @@
 #include "src/stdlib/llabs.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(LlabsTest, Zero) { EXPECT_EQ(__llvm_libc::llabs(0ll), 0ll); }
+TEST(LlvmLibcLlabsTest, Zero) { EXPECT_EQ(__llvm_libc::llabs(0ll), 0ll); }
 
-TEST(LlabsTest, Positive) { EXPECT_EQ(__llvm_libc::llabs(1ll), 1ll); }
+TEST(LlvmLibcLlabsTest, Positive) { EXPECT_EQ(__llvm_libc::llabs(1ll), 1ll); }
 
-TEST(LlabsTest, Negative) { EXPECT_EQ(__llvm_libc::llabs(-1ll), 1ll); }
+TEST(LlvmLibcLlabsTest, Negative) { EXPECT_EQ(__llvm_libc::llabs(-1ll), 1ll); }

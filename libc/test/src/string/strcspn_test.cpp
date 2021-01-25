@@ -10,7 +10,7 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(StrCSpnTest, ComplementarySpanShouldNotGoPastNullTerminator) {
+TEST(LlvmLibcStrCSpnTest, ComplementarySpanShouldNotGoPastNullTerminator) {
   const char src[5] = {'a', 'b', '\0', 'c', 'd'};
   EXPECT_EQ(__llvm_libc::strcspn(src, "b"), size_t{1});
   EXPECT_EQ(__llvm_libc::strcspn(src, "d"), size_t{2});
@@ -20,7 +20,7 @@ TEST(StrCSpnTest, ComplementarySpanShouldNotGoPastNullTerminator) {
   EXPECT_EQ(__llvm_libc::strcspn("123", segment), size_t{0});
 }
 
-TEST(StrCSpnTest, ComplementarySpanForEachIndividualCharacter) {
+TEST(LlvmLibcStrCSpnTest, ComplementarySpanForEachIndividualCharacter) {
   const char *src = "12345";
   // The complementary span size should increment accordingly.
   EXPECT_EQ(__llvm_libc::strcspn(src, "1"), size_t{0});
@@ -30,7 +30,7 @@ TEST(StrCSpnTest, ComplementarySpanForEachIndividualCharacter) {
   EXPECT_EQ(__llvm_libc::strcspn(src, "5"), size_t{4});
 }
 
-TEST(StrCSpnTest, ComplementarySpanIsStringLengthIfNoCharacterFound) {
+TEST(LlvmLibcStrCSpnTest, ComplementarySpanIsStringLengthIfNoCharacterFound) {
   // Null terminator.
   EXPECT_EQ(__llvm_libc::strcspn("", ""), size_t{0});
   EXPECT_EQ(__llvm_libc::strcspn("", "_"), size_t{0});
@@ -40,7 +40,7 @@ TEST(StrCSpnTest, ComplementarySpanIsStringLengthIfNoCharacterFound) {
   EXPECT_EQ(__llvm_libc::strcspn("abc", "1"), size_t{3});
 }
 
-TEST(StrCSpnTest, DuplicatedCharactersNotPartOfComplementarySpan) {
+TEST(LlvmLibcStrCSpnTest, DuplicatedCharactersNotPartOfComplementarySpan) {
   // Complementary span should be zero in all these cases.
   EXPECT_EQ(__llvm_libc::strcspn("a", "aa"), size_t{0});
   EXPECT_EQ(__llvm_libc::strcspn("aa", "a"), size_t{0});

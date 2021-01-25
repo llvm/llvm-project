@@ -12,7 +12,7 @@
 #include "utils/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
 
-TEST(UniStd, WriteBasic) {
+TEST(LlvmLibcUniStd, WriteBasic) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *hello = "hello";
   __llvm_libc::testutils::FDReader reader;
@@ -20,7 +20,7 @@ TEST(UniStd, WriteBasic) {
   EXPECT_TRUE(reader.matchWritten(hello));
 }
 
-TEST(UniStd, WriteFails) {
+TEST(LlvmLibcUniStd, WriteFails) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 
   EXPECT_THAT(__llvm_libc::write(-1, "", 1), Fails(EBADF));

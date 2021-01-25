@@ -25,7 +25,7 @@ Data getData(ArrayRef<char> filler) {
   return out;
 }
 
-TEST(MemcpyTest, Thorough) {
+TEST(LlvmLibcMemcpyTest, Thorough) {
   const Data groundtruth = getData(kNumbers);
   const Data dirty = getData(kDeadcode);
   for (size_t count = 0; count < 1024; ++count) {

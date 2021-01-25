@@ -16,7 +16,7 @@ using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
 DECLARE_SPECIAL_CONSTANTS(long double)
 
-TEST(FminlTest, NaNArg) {
+TEST(LlvmLibcFminlTest, NaNArg) {
   EXPECT_FP_EQ(inf, __llvm_libc::fminl(aNaN, inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, aNaN));
   EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(aNaN, 0.0L));
@@ -26,7 +26,7 @@ TEST(FminlTest, NaNArg) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::fminl(aNaN, aNaN));
 }
 
-TEST(FminlTest, InfArg) {
+TEST(LlvmLibcFminlTest, InfArg) {
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, inf));
   EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(inf, 0.0L));
   EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, inf));
@@ -34,7 +34,7 @@ TEST(FminlTest, InfArg) {
   EXPECT_FP_EQ(-1.2345L, __llvm_libc::fminl(-1.2345L, inf));
 }
 
-TEST(FminlTest, NegInfArg) {
+TEST(LlvmLibcFminlTest, NegInfArg) {
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(inf, negInf));
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, 0.0L));
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(-0.0L, negInf));
@@ -42,14 +42,14 @@ TEST(FminlTest, NegInfArg) {
   EXPECT_FP_EQ(negInf, __llvm_libc::fminl(1.2345L, negInf));
 }
 
-TEST(FminlTest, BothZero) {
+TEST(LlvmLibcFminlTest, BothZero) {
   EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(0.0L, 0.0L));
   EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, 0.0L));
   EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(0.0L, -0.0L));
   EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, -0.0L));
 }
 
-TEST(FminlTest, InLongDoubleRange) {
+TEST(LlvmLibcFminlTest, InLongDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;

@@ -9,7 +9,7 @@
 #include "src/ctype/isupper.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsUpper, DefaultLocale) {
+TEST(LlvmLibcIsUpper, DefaultLocale) {
   // Loops through all characters, verifying that uppercase letters
   // return a non-zero integer and everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {
