@@ -27,8 +27,9 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/Analysis/ObjCARCRVAttr.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
@@ -61,6 +62,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1644,6 +1646,77 @@ void llvm::updateProfileCallee(
   }
 }
 
+static void
+insertRetainOrClaimRVCalls(CallBase &CB,
+                           const SmallVectorImpl<ReturnInst *> &Returns) {
+  Module *Mod = CB.getParent()->getParent()->getParent();
+  bool IsRetainRV = objcarc::hasRetainRVAttr(&CB), IsClaimRV = !IsRetainRV;
+
+  for (auto *RI : Returns) {
+    Value *RetOpnd = llvm::objcarc::GetRCIdentityRoot(RI->getOperand(0));
+    BasicBlock::reverse_iterator I = ++(RI->getIterator().getReverse());
+    BasicBlock::reverse_iterator EI = RI->getParent()->rend();
+    bool InsertRetainCall = IsRetainRV;
+    IRBuilder<> Builder(RI->getContext());
+
+    // Walk backwards through the basic block looking for either a matching
+    // autoreleaseRV call or an unannotated call.
+    for (; I != EI;) {
+      auto CurI = I++;
+
+      // Ignore casts.
+      if (isa<CastInst>(*CurI))
+        continue;
+
+      if (auto *II = dyn_cast<IntrinsicInst>(&*CurI)) {
+        if (II->getIntrinsicID() == Intrinsic::objc_autoreleaseReturnValue &&
+            II->hasNUses(0) &&
+            llvm::objcarc::GetRCIdentityRoot(II->getOperand(0)) == RetOpnd) {
+          // If we've found a matching authoreleaseRV call:
+          // - If the call is annotated with claimRV, insert a call to
+          //   objc_release and erase the autoreleaseRV call.
+          // - If the call is annotated with retainRV, just erase the
+          //   autoreleaseRV call.
+          if (IsClaimRV) {
+            Builder.SetInsertPoint(II);
+            Function *IFn =
+                Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+            Value *BC =
+                Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
+            Builder.CreateCall(IFn, BC, "");
+          }
+          II->eraseFromParent();
+          InsertRetainCall = false;
+        }
+      } else if (auto *CI = dyn_cast<CallInst>(&*CurI)) {
+        if (llvm::objcarc::GetRCIdentityRoot(CI) == RetOpnd &&
+            !objcarc::hasRetainRVOrClaimRVAttr(CI)) {
+          // If we've found an unannotated call that defines RetOpnd, annotate
+          // the call with the attributes.
+          llvm::AttributeList AL = CI->getAttributes();
+          AL = AL.addAttribute(CI->getContext(), AttributeList::ReturnIndex,
+                               objcarc::getRVAttrKeyStr(),
+                               objcarc::getRVAttrValStr(IsRetainRV));
+          CI->setAttributes(AL);
+          InsertRetainCall = false;
+        }
+      }
+
+      break;
+    }
+
+    if (InsertRetainCall) {
+      // The call is annotated with retainRV and we've failed to find a matching
+      // autoreleaseRV or an annotated call in the callee. Emit a call to
+      // objc_retain.
+      Builder.SetInsertPoint(RI);
+      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
+      Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
+      Builder.CreateCall(IFn, BC, "");
+    }
+  }
+}
+
 /// This function inlines the called function into the basic block of the
 /// caller. This returns false if it is not possible to inline this call.
 /// The program is still in a well defined state if this occurs though.
@@ -1846,6 +1919,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                               &InlinedFunctionInfo, &CB);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
+
+    // Insert retainRV/clainRV runtime calls.
+    if (objcarc::hasRetainRVOrClaimRVAttr(&CB))
+      insertRetainOrClaimRVCalls(CB, Returns);
 
     if (IFI.CallerBFI != nullptr && IFI.CalleeBFI != nullptr)
       // Update the BFI of blocks cloned into the caller.

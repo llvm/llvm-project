@@ -19,6 +19,7 @@
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ObjCARCRVAttr.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -570,6 +571,13 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
     // bother checking return values if all of them are live already.
     if (NumLiveRetVals == RetCount)
       continue;
+
+    // Don't change the return type of the function if it has retainRV/claimRV.
+    if (objcarc::hasRetainRVOrClaimRVAttr(CB)) {
+      NumLiveRetVals = RetCount;
+      RetValLiveness.assign(RetCount, Live);
+      continue;
+    }
 
     // Check all uses of the return value.
     for (const Use &U : CB->uses()) {
