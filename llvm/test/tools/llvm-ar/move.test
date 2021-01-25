@@ -84,7 +84,7 @@
 # RUN: not llvm-ar m %t/missing.a %t/missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
 
-# MISSING-FILE: error: [[FILE]]: {{.*}}{{[nN]}}o such file or directory
+# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
 
 --- !ELF
 FileHeader:
