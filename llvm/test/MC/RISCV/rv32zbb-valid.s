@@ -6,10 +6,10 @@
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # With Bitmanip base extension:
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbb -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbb -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zbb < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zbb -d -r - \
+# RUN:     | llvm-objdump --mattr=+experimental-zbb -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: clz t0, t1
@@ -39,3 +39,6 @@ max t0, t1, t2
 # CHECK-ASM-AND-OBJ: maxu t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x72,0x73,0x0a]
 maxu t0, t1, t2
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+zext.h t0, t1

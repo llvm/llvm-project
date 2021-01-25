@@ -19,7 +19,7 @@
 # CHECK-S-OBJ: andi t0, t1, 255
 zext.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: pack t0, t1, zero
+# CHECK-S-OBJ-NOALIAS: zext.h t0, t1
 # CHECK-S-OBJ: zext.h t0, t1
 zext.h x5, x6
 

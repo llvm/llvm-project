@@ -465,6 +465,22 @@ def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
 let Predicates = [HasStdExtZbf, IsRV64] in
 def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">, Sched<[]>;
 
+let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def ZEXTH_RV32 : RVInstR<0b0000100, 0b100, OPC_OP, (outs GPR:$rd),
+                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">, Sched<[]> {
+  let rs2 = 0b00000;
+}
+} // Predicates = [HasStdExtZbbOrZbp, IsRV32]
+
+let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
+                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">, Sched<[]> {
+  let rs2 = 0b00000;
+}
+} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+
 //===----------------------------------------------------------------------===//
 // Future compressed instructions
 //===----------------------------------------------------------------------===//
@@ -499,14 +515,6 @@ def C_ZEXTW : RVBInstC<0b10, "c.zext.w">, Sched<[]>;
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZbp, IsRV32] in {
-def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
-} // Predicates = [HasStdExtZbb, IsRV32]
-
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
-} // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
 // NOTE: The 0.93 spec shows zext.w as an alias of pack/packw. It has been
@@ -805,10 +813,10 @@ def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFF00),
               (and GPR:$rs1, 0x00FF)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 
-let Predicates = [HasStdExtZbp, IsRV32] in
-def : Pat<(and GPR:$rs, 0x0000FFFF), (PACK GPR:$rs, X0)>;
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(and GPR:$rs, 0x000000000000FFFF), (PACKW GPR:$rs, X0)>;
+let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
+def : Pat<(and GPR:$rs, 0x0000FFFF), (ZEXTH_RV32 GPR:$rs)>;
+let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+def : Pat<(and GPR:$rs, 0x000000000000FFFF), (ZEXTH_RV64 GPR:$rs)>;
 }
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
