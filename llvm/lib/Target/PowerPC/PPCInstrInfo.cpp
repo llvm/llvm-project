@@ -21,12 +21,15 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -72,6 +75,14 @@ cl::Hidden);
 static cl::opt<bool>
 UseOldLatencyCalc("ppc-old-latency-calc", cl::Hidden,
   cl::desc("Use the old (incorrect) instruction latency calculation"));
+
+static cl::opt<float>
+    FMARPFactor("ppc-fma-rp-factor", cl::Hidden, cl::init(1.5),
+                cl::desc("register pressure factor for the transformations."));
+
+static cl::opt<bool> EnableFMARegPressureReduction(
+    "ppc-fma-rp-reduction", cl::Hidden, cl::init(true),
+    cl::desc("enable register pressure reduce in machine combiner pass."));
 
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
@@ -278,21 +289,23 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
 #define InfoArrayIdxFMULInst 2
 #define InfoArrayIdxAddOpIdx 3
 #define InfoArrayIdxMULOpIdx 4
+#define InfoArrayIdxFSubInst 5
 // Array keeps info for FMA instructions:
 // Index 0(InfoArrayIdxFMAInst): FMA instruction;
-// Index 1(InfoArrayIdxFAddInst): ADD instruction assoaicted with FMA;
-// Index 2(InfoArrayIdxFMULInst): MUL instruction assoaicted with FMA;
+// Index 1(InfoArrayIdxFAddInst): ADD instruction associated with FMA;
+// Index 2(InfoArrayIdxFMULInst): MUL instruction associated with FMA;
 // Index 3(InfoArrayIdxAddOpIdx): ADD operand index in FMA operands;
 // Index 4(InfoArrayIdxMULOpIdx): first MUL operand index in FMA operands;
-//                                second MUL operand index is plus 1.
-static const uint16_t FMAOpIdxInfo[][5] = {
+//                                second MUL operand index is plus 1;
+// Index 5(InfoArrayIdxFSubInst): SUB instruction associated with FMA.
+static const uint16_t FMAOpIdxInfo[][6] = {
     // FIXME: Add more FMA instructions like XSNMADDADP and so on.
-    {PPC::XSMADDADP, PPC::XSADDDP, PPC::XSMULDP, 1, 2},
-    {PPC::XSMADDASP, PPC::XSADDSP, PPC::XSMULSP, 1, 2},
-    {PPC::XVMADDADP, PPC::XVADDDP, PPC::XVMULDP, 1, 2},
-    {PPC::XVMADDASP, PPC::XVADDSP, PPC::XVMULSP, 1, 2},
-    {PPC::FMADD, PPC::FADD, PPC::FMUL, 3, 1},
-    {PPC::FMADDS, PPC::FADDS, PPC::FMULS, 3, 1}};
+    {PPC::XSMADDADP, PPC::XSADDDP, PPC::XSMULDP, 1, 2, PPC::XSSUBDP},
+    {PPC::XSMADDASP, PPC::XSADDSP, PPC::XSMULSP, 1, 2, PPC::XSSUBSP},
+    {PPC::XVMADDADP, PPC::XVADDDP, PPC::XVMULDP, 1, 2, PPC::XVSUBDP},
+    {PPC::XVMADDASP, PPC::XVADDSP, PPC::XVMULSP, 1, 2, PPC::XVSUBSP},
+    {PPC::FMADD, PPC::FADD, PPC::FMUL, 3, 1, PPC::FSUB},
+    {PPC::FMADDS, PPC::FADDS, PPC::FMULS, 3, 1, PPC::FSUBS}};
 
 // Check if an opcode is a FMA instruction. If it is, return the index in array
 // FMAOpIdxInfo. Otherwise, return -1.
@@ -303,6 +316,8 @@ int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
   return -1;
 }
 
+// On PowerPC target, we have two kinds of patterns related to FMA:
+// 1: Improve ILP.
 // Try to reassociate FMA chains like below:
 //
 // Pattern 1:
@@ -326,11 +341,35 @@ int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
 //
 // breaking the dependency between A and B, allowing FMA to be executed in
 // parallel (or back-to-back in a pipeline) instead of depending on each other.
+//
+// 2: Reduce register pressure.
+// Try to reassociate FMA with FSUB and a constant like below:
+// C is a floatint point const.
+//
+// Pattern 1:
+//   A = FSUB  X,  Y      (Leaf)
+//   D = FMA   B,  C,  A  (Root)
+// -->
+//   A = FMA   B,  Y,  -C
+//   D = FMA   A,  X,  C
+//
+// Pattern 2:
+//   A = FSUB  X,  Y      (Leaf)
+//   D = FMA   B,  A,  C  (Root)
+// -->
+//   A = FMA   B,  Y,  -C
+//   D = FMA   A,  X,  C
+//
+//  Before the transformation, A must be assigned with different hardware
+//  register with D. After the transformation, A and D must be assigned with
+//  same hardware register due to TIE attricute of FMA instructions.
+//
 bool PPCInstrInfo::getFMAPatterns(
-    MachineInstr &Root,
-    SmallVectorImpl<MachineCombinerPattern> &Patterns) const {
+    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    bool DoRegPressureReduce) const {
   MachineBasicBlock *MBB = Root.getParent();
-  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  const MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
 
   auto IsAllOpsVirtualReg = [](const MachineInstr &Instr) {
     for (const auto &MO : Instr.explicit_operands())
@@ -339,9 +378,10 @@ bool PPCInstrInfo::getFMAPatterns(
     return true;
   };
 
-  auto IsReassociableAdd = [&](const MachineInstr &Instr) {
+  auto IsReassociableAddOrSub = [&](const MachineInstr &Instr,
+                                    unsigned OpType) {
     if (Instr.getOpcode() !=
-        FMAOpIdxInfo[getFMAOpIdxInfo(Root.getOpcode())][InfoArrayIdxFAddInst])
+        FMAOpIdxInfo[getFMAOpIdxInfo(Root.getOpcode())][OpType])
       return false;
 
     // Instruction can be reassociated.
@@ -354,11 +394,17 @@ bool PPCInstrInfo::getFMAPatterns(
     if (!IsAllOpsVirtualReg(Instr))
       return false;
 
+    // For register pressure reassociation, the FSub must have only one use as
+    // we want to delete the sub to save its def.
+    if (OpType == InfoArrayIdxFSubInst &&
+        !MRI->hasOneNonDBGUse(Instr.getOperand(0).getReg()))
+      return false;
+
     return true;
   };
 
   auto IsReassociableFMA = [&](const MachineInstr &Instr, int16_t &AddOpIdx,
-                               bool IsLeaf) {
+                               int16_t &MulOpIdx, bool IsLeaf) {
     int16_t Idx = getFMAOpIdxInfo(Instr.getOpcode());
     if (Idx < 0)
       return false;
@@ -373,51 +419,341 @@ bool PPCInstrInfo::getFMAPatterns(
     if (!IsAllOpsVirtualReg(Instr))
       return false;
 
+    MulOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxMULOpIdx];
     if (IsLeaf)
       return true;
 
     AddOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxAddOpIdx];
 
     const MachineOperand &OpAdd = Instr.getOperand(AddOpIdx);
-    MachineInstr *MIAdd = MRI.getUniqueVRegDef(OpAdd.getReg());
+    MachineInstr *MIAdd = MRI->getUniqueVRegDef(OpAdd.getReg());
     // If 'add' operand's def is not in current block, don't do ILP related opt.
     if (!MIAdd || MIAdd->getParent() != MBB)
       return false;
 
     // If this is not Leaf FMA Instr, its 'add' operand should only have one use
     // as this fma will be changed later.
-    return IsLeaf ? true : MRI.hasOneNonDBGUse(OpAdd.getReg());
+    return IsLeaf ? true : MRI->hasOneNonDBGUse(OpAdd.getReg());
   };
 
   int16_t AddOpIdx = -1;
+  int16_t MulOpIdx = -1;
+
+  bool IsUsedOnceL = false;
+  bool IsUsedOnceR = false;
+  MachineInstr *MULInstrL = nullptr;
+  MachineInstr *MULInstrR = nullptr;
+
+  auto IsRPReductionCandidate = [&]() {
+    // Currently, we only support float and double.
+    // FIXME: add support for other types.
+    unsigned Opcode = Root.getOpcode();
+    if (Opcode != PPC::XSMADDASP && Opcode != PPC::XSMADDADP)
+      return false;
+
+    // Root must be a valid FMA like instruction.
+    // Treat it as leaf as we don't care its add operand.
+    if (IsReassociableFMA(Root, AddOpIdx, MulOpIdx, true)) {
+      assert((MulOpIdx >= 0) && "mul operand index not right!");
+      Register MULRegL = TRI->lookThruSingleUseCopyChain(
+          Root.getOperand(MulOpIdx).getReg(), MRI);
+      Register MULRegR = TRI->lookThruSingleUseCopyChain(
+          Root.getOperand(MulOpIdx + 1).getReg(), MRI);
+      if (!MULRegL && !MULRegR)
+        return false;
+
+      if (MULRegL && !MULRegR) {
+        MULRegR =
+            TRI->lookThruCopyLike(Root.getOperand(MulOpIdx + 1).getReg(), MRI);
+        IsUsedOnceL = true;
+      } else if (!MULRegL && MULRegR) {
+        MULRegL =
+            TRI->lookThruCopyLike(Root.getOperand(MulOpIdx).getReg(), MRI);
+        IsUsedOnceR = true;
+      } else {
+        IsUsedOnceL = true;
+        IsUsedOnceR = true;
+      }
+
+      if (!Register::isVirtualRegister(MULRegL) ||
+          !Register::isVirtualRegister(MULRegR))
+        return false;
+
+      MULInstrL = MRI->getVRegDef(MULRegL);
+      MULInstrR = MRI->getVRegDef(MULRegR);
+      return true;
+    }
+    return false;
+  };
+
+  // Register pressure fma reassociation patterns.
+  if (DoRegPressureReduce && IsRPReductionCandidate()) {
+    assert((MULInstrL && MULInstrR) && "wrong register preduction candidate!");
+    // Register pressure pattern 1
+    if (isLoadFromConstantPool(MULInstrL) && IsUsedOnceR &&
+        IsReassociableAddOrSub(*MULInstrR, InfoArrayIdxFSubInst)) {
+      LLVM_DEBUG(dbgs() << "add pattern REASSOC_XY_BCA\n");
+      Patterns.push_back(MachineCombinerPattern::REASSOC_XY_BCA);
+      return true;
+    }
+
+    // Register pressure pattern 2
+    if ((isLoadFromConstantPool(MULInstrR) && IsUsedOnceL &&
+         IsReassociableAddOrSub(*MULInstrL, InfoArrayIdxFSubInst))) {
+      LLVM_DEBUG(dbgs() << "add pattern REASSOC_XY_BAC\n");
+      Patterns.push_back(MachineCombinerPattern::REASSOC_XY_BAC);
+      return true;
+    }
+  }
+
+  // ILP fma reassociation patterns.
   // Root must be a valid FMA like instruction.
-  if (!IsReassociableFMA(Root, AddOpIdx, false))
+  AddOpIdx = -1;
+  if (!IsReassociableFMA(Root, AddOpIdx, MulOpIdx, false))
     return false;
 
   assert((AddOpIdx >= 0) && "add operand index not right!");
 
   Register RegB = Root.getOperand(AddOpIdx).getReg();
-  MachineInstr *Prev = MRI.getUniqueVRegDef(RegB);
+  MachineInstr *Prev = MRI->getUniqueVRegDef(RegB);
 
   // Prev must be a valid FMA like instruction.
   AddOpIdx = -1;
-  if (!IsReassociableFMA(*Prev, AddOpIdx, false))
+  if (!IsReassociableFMA(*Prev, AddOpIdx, MulOpIdx, false))
     return false;
 
   assert((AddOpIdx >= 0) && "add operand index not right!");
 
   Register RegA = Prev->getOperand(AddOpIdx).getReg();
-  MachineInstr *Leaf = MRI.getUniqueVRegDef(RegA);
+  MachineInstr *Leaf = MRI->getUniqueVRegDef(RegA);
   AddOpIdx = -1;
-  if (IsReassociableFMA(*Leaf, AddOpIdx, true)) {
+  if (IsReassociableFMA(*Leaf, AddOpIdx, MulOpIdx, true)) {
     Patterns.push_back(MachineCombinerPattern::REASSOC_XMM_AMM_BMM);
+    LLVM_DEBUG(dbgs() << "add pattern REASSOC_XMM_AMM_BMM\n");
     return true;
   }
-  if (IsReassociableAdd(*Leaf)) {
+  if (IsReassociableAddOrSub(*Leaf, InfoArrayIdxFAddInst)) {
     Patterns.push_back(MachineCombinerPattern::REASSOC_XY_AMM_BMM);
+    LLVM_DEBUG(dbgs() << "add pattern REASSOC_XY_AMM_BMM\n");
     return true;
   }
   return false;
+}
+
+void PPCInstrInfo::finalizeInsInstrs(
+    MachineInstr &Root, MachineCombinerPattern &P,
+    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
+  assert(!InsInstrs.empty() && "Instructions set to be inserted is empty!");
+
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  MachineConstantPool *MCP = MF->getConstantPool();
+
+  int16_t Idx = getFMAOpIdxInfo(Root.getOpcode());
+  if (Idx < 0)
+    return;
+
+  uint16_t FirstMulOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxMULOpIdx];
+
+  // For now we only need to fix up placeholder for register pressure reduce
+  // patterns.
+  Register ConstReg = 0;
+  switch (P) {
+  case MachineCombinerPattern::REASSOC_XY_BCA:
+    ConstReg =
+        TRI->lookThruCopyLike(Root.getOperand(FirstMulOpIdx).getReg(), MRI);
+    break;
+  case MachineCombinerPattern::REASSOC_XY_BAC:
+    ConstReg =
+        TRI->lookThruCopyLike(Root.getOperand(FirstMulOpIdx + 1).getReg(), MRI);
+    break;
+  default:
+    // Not register pressure reduce patterns.
+    return;
+  }
+
+  MachineInstr *ConstDefInstr = MRI->getVRegDef(ConstReg);
+  // Get const value from const pool.
+  const Constant *C = getConstantFromConstantPool(ConstDefInstr);
+  assert(isa<llvm::ConstantFP>(C) && "not a valid constant!");
+
+  // Get negative fp const.
+  APFloat F1((dyn_cast<ConstantFP>(C))->getValueAPF());
+  F1.changeSign();
+  Constant *NegC = ConstantFP::get(dyn_cast<ConstantFP>(C)->getContext(), F1);
+  Align Alignment = MF->getDataLayout().getPrefTypeAlign(C->getType());
+
+  // Put negative fp const into constant pool.
+  unsigned ConstPoolIdx = MCP->getConstantPoolIndex(NegC, Alignment);
+
+  MachineOperand *Placeholder = nullptr;
+  // Record the placeholder PPC::ZERO8 we add in reassociateFMA.
+  for (auto *Inst : InsInstrs) {
+    for (MachineOperand &Operand : Inst->explicit_operands()) {
+      assert(Operand.isReg() && "Invalid instruction in InsInstrs!");
+      if (Operand.getReg() == PPC::ZERO8) {
+        Placeholder = &Operand;
+        break;
+      }
+    }
+  }
+
+  assert(Placeholder && "Placeholder does not exist!");
+
+  // Generate instructions to load the const fp from constant pool.
+  // We only support PPC64 and medium code model.
+  Register LoadNewConst =
+      generateLoadForNewConst(ConstPoolIdx, &Root, C->getType(), InsInstrs);
+
+  // Fill the placeholder with the new load from constant pool.
+  Placeholder->setReg(LoadNewConst);
+}
+
+bool PPCInstrInfo::shouldReduceRegisterPressure(
+    MachineBasicBlock *MBB, RegisterClassInfo *RegClassInfo) const {
+
+  if (!EnableFMARegPressureReduction)
+    return false;
+
+  // Currently, we only enable register pressure reducing in machine combiner
+  // for: 1: PPC64; 2: Code Model is Medium; 3: Power9 which also has vector
+  // support.
+  //
+  // So we need following instructions to access a TOC entry:
+  //
+  // %6:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
+  // %7:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0,
+  //   killed %6:g8rc_and_g8rc_nox0, implicit $x2 :: (load 4 from constant-pool)
+  //
+  // FIXME: add more supported targets, like Small and Large code model, PPC32,
+  // AIX.
+  if (!(Subtarget.isPPC64() && Subtarget.hasP9Vector() &&
+        Subtarget.getTargetMachine().getCodeModel() == CodeModel::Medium))
+    return false;
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  MachineFunction *MF = MBB->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  auto GetMBBPressure = [&](MachineBasicBlock *MBB) -> std::vector<unsigned> {
+    RegionPressure Pressure;
+    RegPressureTracker RPTracker(Pressure);
+
+    // Initialize the register pressure tracker.
+    RPTracker.init(MBB->getParent(), RegClassInfo, nullptr, MBB, MBB->end(),
+                   /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
+
+    for (MachineBasicBlock::iterator MII = MBB->instr_end(),
+                                     MIE = MBB->instr_begin();
+         MII != MIE; --MII) {
+      MachineInstr &MI = *std::prev(MII);
+      if (MI.isDebugValue() || MI.isDebugLabel())
+        continue;
+      RegisterOperands RegOpers;
+      RegOpers.collect(MI, *TRI, *MRI, false, false);
+      RPTracker.recedeSkipDebugValues();
+      assert(&*RPTracker.getPos() == &MI && "RPTracker sync error!");
+      RPTracker.recede(RegOpers);
+    }
+
+    // Close the RPTracker to finalize live ins.
+    RPTracker.closeRegion();
+
+    return RPTracker.getPressure().MaxSetPressure;
+  };
+
+  // For now we only care about float and double type fma.
+  unsigned VSSRCLimit = TRI->getRegPressureSetLimit(
+      *MBB->getParent(), PPC::RegisterPressureSets::VSSRC);
+
+  // Only reduce register pressure when pressure is high.
+  return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
+         (float)VSSRCLimit * FMARPFactor;
+}
+
+bool PPCInstrInfo::isLoadFromConstantPool(MachineInstr *I) const {
+  // I has only one memory operand which is load from constant pool.
+  if (!I->hasOneMemOperand())
+    return false;
+
+  MachineMemOperand *Op = I->memoperands()[0];
+  return Op->isLoad() && Op->getPseudoValue() &&
+         Op->getPseudoValue()->kind() == PseudoSourceValue::ConstantPool;
+}
+
+Register PPCInstrInfo::generateLoadForNewConst(
+    unsigned Idx, MachineInstr *MI, Type *Ty,
+    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
+  // Now we only support PPC64, Medium code model and P9 with vector.
+  // We have immutable pattern to access const pool. See function
+  // shouldReduceRegisterPressure.
+  assert((Subtarget.isPPC64() && Subtarget.hasP9Vector() &&
+          Subtarget.getTargetMachine().getCodeModel() == CodeModel::Medium) &&
+         "Target not supported!\n");
+
+  MachineFunction *MF = MI->getMF();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  // Generate ADDIStocHA8
+  Register VReg1 = MRI->createVirtualRegister(&PPC::G8RC_and_G8RC_NOX0RegClass);
+  MachineInstrBuilder TOCOffset =
+      BuildMI(*MF, MI->getDebugLoc(), get(PPC::ADDIStocHA8), VReg1)
+          .addReg(PPC::X2)
+          .addConstantPoolIndex(Idx);
+
+  assert((Ty->isFloatTy() || Ty->isDoubleTy()) &&
+         "Only float and double are supported!");
+
+  unsigned LoadOpcode;
+  // Should be float type or double type.
+  if (Ty->isFloatTy())
+    LoadOpcode = PPC::DFLOADf32;
+  else
+    LoadOpcode = PPC::DFLOADf64;
+
+  const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
+  Register VReg2 = MRI->createVirtualRegister(RC);
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getConstantPool(*MF), MachineMemOperand::MOLoad,
+      Ty->getScalarSizeInBits() / 8, MF->getDataLayout().getPrefTypeAlign(Ty));
+
+  // Generate Load from constant pool.
+  MachineInstrBuilder Load =
+      BuildMI(*MF, MI->getDebugLoc(), get(LoadOpcode), VReg2)
+          .addConstantPoolIndex(Idx)
+          .addReg(VReg1, getKillRegState(true))
+          .addMemOperand(MMO);
+
+  Load->getOperand(1).setTargetFlags(PPCII::MO_TOC_LO);
+
+  // Insert the toc load instructions into InsInstrs.
+  InsInstrs.insert(InsInstrs.begin(), Load);
+  InsInstrs.insert(InsInstrs.begin(), TOCOffset);
+  return VReg2;
+}
+
+// This function returns the const value in constant pool if the \p I is a load
+// from constant pool.
+const Constant *
+PPCInstrInfo::getConstantFromConstantPool(MachineInstr *I) const {
+  MachineFunction *MF = I->getMF();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  MachineConstantPool *MCP = MF->getConstantPool();
+  assert(I->mayLoad() && "Should be a load instruction.\n");
+  for (auto MO : I->uses()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg == 0 || !Register::isVirtualRegister(Reg))
+      continue;
+    // Find the toc address.
+    MachineInstr *DefMI = MRI->getVRegDef(Reg);
+    for (auto MO2 : DefMI->uses())
+      if (MO2.isCPI())
+        return (MCP->getConstants())[MO2.getIndex()].Val.ConstVal;
+  }
+  return nullptr;
 }
 
 bool PPCInstrInfo::getMachineCombinerPatterns(
@@ -428,7 +764,7 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
     return false;
 
-  if (getFMAPatterns(Root, Patterns))
+  if (getFMAPatterns(Root, Patterns, DoRegPressureReduce))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -443,6 +779,8 @@ void PPCInstrInfo::genAlternativeCodeSequence(
   switch (Pattern) {
   case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
   case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
+  case MachineCombinerPattern::REASSOC_XY_BCA:
+  case MachineCombinerPattern::REASSOC_XY_BAC:
     reassociateFMA(Root, Pattern, InsInstrs, DelInstrs, InstrIdxForVirtReg);
     break;
   default:
@@ -453,8 +791,6 @@ void PPCInstrInfo::genAlternativeCodeSequence(
   }
 }
 
-// Currently, only handle two patterns REASSOC_XY_AMM_BMM and
-// REASSOC_XMM_AMM_BMM. See comments for getFMAPatterns.
 void PPCInstrInfo::reassociateFMA(
     MachineInstr &Root, MachineCombinerPattern Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -462,6 +798,7 @@ void PPCInstrInfo::reassociateFMA(
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
   MachineOperand &OpC = Root.getOperand(0);
   Register RegC = OpC.getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(RegC);
@@ -471,13 +808,42 @@ void PPCInstrInfo::reassociateFMA(
   int16_t Idx = getFMAOpIdxInfo(FmaOp);
   assert(Idx >= 0 && "Root must be a FMA instruction");
 
+  bool IsILPReassociate =
+      (Pattern == MachineCombinerPattern::REASSOC_XY_AMM_BMM) ||
+      (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM);
+
   uint16_t AddOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxAddOpIdx];
   uint16_t FirstMulOpIdx = FMAOpIdxInfo[Idx][InfoArrayIdxMULOpIdx];
-  MachineInstr *Prev = MRI.getUniqueVRegDef(Root.getOperand(AddOpIdx).getReg());
-  MachineInstr *Leaf =
-      MRI.getUniqueVRegDef(Prev->getOperand(AddOpIdx).getReg());
-  uint16_t IntersectedFlags =
-      Root.getFlags() & Prev->getFlags() & Leaf->getFlags();
+
+  MachineInstr *Prev = nullptr;
+  MachineInstr *Leaf = nullptr;
+  switch (Pattern) {
+  default:
+    llvm_unreachable("not recognized pattern!");
+  case MachineCombinerPattern::REASSOC_XY_AMM_BMM:
+  case MachineCombinerPattern::REASSOC_XMM_AMM_BMM:
+    Prev = MRI.getUniqueVRegDef(Root.getOperand(AddOpIdx).getReg());
+    Leaf = MRI.getUniqueVRegDef(Prev->getOperand(AddOpIdx).getReg());
+    break;
+  case MachineCombinerPattern::REASSOC_XY_BAC: {
+    Register MULReg =
+        TRI->lookThruCopyLike(Root.getOperand(FirstMulOpIdx).getReg(), &MRI);
+    Leaf = MRI.getVRegDef(MULReg);
+    break;
+  }
+  case MachineCombinerPattern::REASSOC_XY_BCA: {
+    Register MULReg = TRI->lookThruCopyLike(
+        Root.getOperand(FirstMulOpIdx + 1).getReg(), &MRI);
+    Leaf = MRI.getVRegDef(MULReg);
+    break;
+  }
+  }
+
+  uint16_t IntersectedFlags = 0;
+  if (IsILPReassociate)
+    IntersectedFlags = Root.getFlags() & Prev->getFlags() & Leaf->getFlags();
+  else
+    IntersectedFlags = Root.getFlags() & Leaf->getFlags();
 
   auto GetOperandInfo = [&](const MachineOperand &Operand, Register &Reg,
                             bool &KillFlag) {
@@ -487,23 +853,33 @@ void PPCInstrInfo::reassociateFMA(
   };
 
   auto GetFMAInstrInfo = [&](const MachineInstr &Instr, Register &MulOp1,
-                             Register &MulOp2, bool &MulOp1KillFlag,
-                             bool &MulOp2KillFlag) {
+                             Register &MulOp2, Register &AddOp,
+                             bool &MulOp1KillFlag, bool &MulOp2KillFlag,
+                             bool &AddOpKillFlag) {
     GetOperandInfo(Instr.getOperand(FirstMulOpIdx), MulOp1, MulOp1KillFlag);
     GetOperandInfo(Instr.getOperand(FirstMulOpIdx + 1), MulOp2, MulOp2KillFlag);
+    GetOperandInfo(Instr.getOperand(AddOpIdx), AddOp, AddOpKillFlag);
   };
 
-  Register RegM11, RegM12, RegX, RegY, RegM21, RegM22, RegM31, RegM32;
+  Register RegM11, RegM12, RegX, RegY, RegM21, RegM22, RegM31, RegM32, RegA11,
+      RegA21, RegB;
   bool KillX = false, KillY = false, KillM11 = false, KillM12 = false,
-       KillM21 = false, KillM22 = false, KillM31 = false, KillM32 = false;
+       KillM21 = false, KillM22 = false, KillM31 = false, KillM32 = false,
+       KillA11 = false, KillA21 = false, KillB = false;
 
-  GetFMAInstrInfo(Root, RegM31, RegM32, KillM31, KillM32);
-  GetFMAInstrInfo(*Prev, RegM21, RegM22, KillM21, KillM22);
+  GetFMAInstrInfo(Root, RegM31, RegM32, RegB, KillM31, KillM32, KillB);
+
+  if (IsILPReassociate)
+    GetFMAInstrInfo(*Prev, RegM21, RegM22, RegA21, KillM21, KillM22, KillA21);
 
   if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
-    GetFMAInstrInfo(*Leaf, RegM11, RegM12, KillM11, KillM12);
+    GetFMAInstrInfo(*Leaf, RegM11, RegM12, RegA11, KillM11, KillM12, KillA11);
     GetOperandInfo(Leaf->getOperand(AddOpIdx), RegX, KillX);
   } else if (Pattern == MachineCombinerPattern::REASSOC_XY_AMM_BMM) {
+    GetOperandInfo(Leaf->getOperand(1), RegX, KillX);
+    GetOperandInfo(Leaf->getOperand(2), RegY, KillY);
+  } else {
+    // Get FSUB instruction info.
     GetOperandInfo(Leaf->getOperand(1), RegX, KillX);
     GetOperandInfo(Leaf->getOperand(2), RegY, KillY);
   }
@@ -512,11 +888,16 @@ void PPCInstrInfo::reassociateFMA(
   // recycling legacy ones because the MachineCombiner's computation of the
   // critical path requires a new register definition rather than an existing
   // one.
+  // For register pressure reassociation, we only need create one virtual
+  // register for the new fma.
   Register NewVRA = MRI.createVirtualRegister(RC);
   InstrIdxForVirtReg.insert(std::make_pair(NewVRA, 0));
 
-  Register NewVRB = MRI.createVirtualRegister(RC);
-  InstrIdxForVirtReg.insert(std::make_pair(NewVRB, 1));
+  Register NewVRB = 0;
+  if (IsILPReassociate) {
+    NewVRB = MRI.createVirtualRegister(RC);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVRB, 1));
+  }
 
   Register NewVRD = 0;
   if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
@@ -535,7 +916,11 @@ void PPCInstrInfo::reassociateFMA(
     MI->getOperand(FirstMulOpIdx + 1).setIsKill(KillRegMul2);
   };
 
-  if (Pattern == MachineCombinerPattern::REASSOC_XY_AMM_BMM) {
+  MachineInstrBuilder NewARegPressure, NewCRegPressure;
+  switch (Pattern) {
+  default:
+    llvm_unreachable("not recognized pattern!");
+  case MachineCombinerPattern::REASSOC_XY_AMM_BMM: {
     // Create new instructions for insertion.
     MachineInstrBuilder MINewB =
         BuildMI(*MF, Prev->getDebugLoc(), get(FmaOp), NewVRB)
@@ -568,7 +953,9 @@ void PPCInstrInfo::reassociateFMA(
     InsInstrs.push_back(MINewA);
     InsInstrs.push_back(MINewB);
     InsInstrs.push_back(MINewC);
-  } else if (Pattern == MachineCombinerPattern::REASSOC_XMM_AMM_BMM) {
+    break;
+  }
+  case MachineCombinerPattern::REASSOC_XMM_AMM_BMM: {
     assert(NewVRD && "new FMA register not created!");
     // Create new instructions for insertion.
     MachineInstrBuilder MINewA =
@@ -610,6 +997,47 @@ void PPCInstrInfo::reassociateFMA(
     InsInstrs.push_back(MINewB);
     InsInstrs.push_back(MINewD);
     InsInstrs.push_back(MINewC);
+    break;
+  }
+  case MachineCombinerPattern::REASSOC_XY_BAC:
+  case MachineCombinerPattern::REASSOC_XY_BCA: {
+    Register VarReg;
+    bool KillVarReg = false;
+    if (Pattern == MachineCombinerPattern::REASSOC_XY_BCA) {
+      VarReg = RegM31;
+      KillVarReg = KillM31;
+    } else {
+      VarReg = RegM32;
+      KillVarReg = KillM32;
+    }
+    // We don't want to get negative const from memory pool too early, as the
+    // created entry will not be deleted even if it has no users. Since all
+    // operand of Leaf and Root are virtual register, we use zero register
+    // here as a placeholder. When the InsInstrs is selected in
+    // MachineCombiner, we call finalizeInsInstrs to replace the zero register
+    // with a virtual register which is a load from constant pool.
+    NewARegPressure = BuildMI(*MF, Root.getDebugLoc(), get(FmaOp), NewVRA)
+                          .addReg(RegB, getKillRegState(RegB))
+                          .addReg(RegY, getKillRegState(KillY))
+                          .addReg(PPC::ZERO8);
+    NewCRegPressure = BuildMI(*MF, Root.getDebugLoc(), get(FmaOp), RegC)
+                          .addReg(NewVRA, getKillRegState(true))
+                          .addReg(RegX, getKillRegState(KillX))
+                          .addReg(VarReg, getKillRegState(KillVarReg));
+    // For now, we only support xsmaddadp/xsmaddasp, their add operand are
+    // both at index 1, no need to adjust.
+    // FIXME: when add more fma instructions support, like fma/fmas, adjust
+    // the operand index here.
+    break;
+  }
+  }
+
+  if (!IsILPReassociate) {
+    setSpecialOperandAttr(*NewARegPressure, IntersectedFlags);
+    setSpecialOperandAttr(*NewCRegPressure, IntersectedFlags);
+
+    InsInstrs.push_back(NewARegPressure);
+    InsInstrs.push_back(NewCRegPressure);
   }
 
   assert(!InsInstrs.empty() &&
@@ -617,7 +1045,8 @@ void PPCInstrInfo::reassociateFMA(
 
   // Record old instructions for deletion.
   DelInstrs.push_back(Leaf);
-  DelInstrs.push_back(Prev);
+  if (IsILPReassociate)
+    DelInstrs.push_back(Prev);
   DelInstrs.push_back(&Root);
 }
 
