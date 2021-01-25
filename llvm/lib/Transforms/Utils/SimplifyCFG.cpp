@@ -1049,6 +1049,55 @@ static void FitWeights(MutableArrayRef<uint64_t> Weights) {
   }
 }
 
+static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
+    BasicBlock *BB, BasicBlock *PredBlock, ValueToValueMapTy &VMap) {
+  Instruction *PTI = PredBlock->getTerminator();
+
+  // If we have bonus instructions, clone them into the predecessor block.
+  // Note that there may be multiple predecessor blocks, so we cannot move
+  // bonus instructions to a predecessor block.
+  for (Instruction &BonusInst : *BB) {
+    if (isa<DbgInfoIntrinsic>(BonusInst) || BonusInst.isTerminator())
+      continue;
+
+    Instruction *NewBonusInst = BonusInst.clone();
+
+    if (PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
+      // Unless the instruction has the same !dbg location as the original
+      // branch, drop it. When we fold the bonus instructions we want to make
+      // sure we reset their debug locations in order to avoid stepping on
+      // dead code caused by folding dead branches.
+      NewBonusInst->setDebugLoc(DebugLoc());
+    }
+
+    RemapInstruction(NewBonusInst, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    VMap[&BonusInst] = NewBonusInst;
+
+    // If we moved a load, we cannot any longer claim any knowledge about
+    // its potential value. The previous information might have been valid
+    // only given the branch precondition.
+    // For an analogous reason, we must also drop all the metadata whose
+    // semantics we don't understand. We *can* preserve !annotation, because
+    // it is tied to the instruction itself, not the value or position.
+    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
+
+    PredBlock->getInstList().insert(PTI->getIterator(), NewBonusInst);
+    NewBonusInst->takeName(&BonusInst);
+    BonusInst.setName(NewBonusInst->getName() + ".old");
+
+    // Update (liveout) uses of bonus instructions,
+    // now that the bonus instruction has been cloned into predecessor.
+    SSAUpdater SSAUpdate;
+    SSAUpdate.Initialize(BonusInst.getType(),
+                         (NewBonusInst->getName() + ".merge").str());
+    SSAUpdate.AddAvailableValue(BB, &BonusInst);
+    SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
+    for (Use &U : make_early_inc_range(BonusInst.uses()))
+      SSAUpdate.RewriteUseAfterInsertions(U);
+  }
+}
+
 bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
     Instruction *TI, Value *&CV, Instruction *PTI, IRBuilder<> &Builder) {
   BasicBlock *BB = TI->getParent();
@@ -2890,50 +2939,8 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
     PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
-  // If we have bonus instructions, clone them into the predecessor block.
-  // Note that there may be multiple predecessor blocks, so we cannot move
-  // bonus instructions to a predecessor block.
   ValueToValueMapTy VMap; // maps original values to cloned values
-  for (Instruction &BonusInst : *BB) {
-    if (isa<DbgInfoIntrinsic>(BonusInst) || isa<BranchInst>(BonusInst))
-      continue;
-
-    Instruction *NewBonusInst = BonusInst.clone();
-
-    if (PBI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
-      // Unless the instruction has the same !dbg location as the original
-      // branch, drop it. When we fold the bonus instructions we want to make
-      // sure we reset their debug locations in order to avoid stepping on
-      // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc());
-    }
-
-    RemapInstruction(NewBonusInst, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    VMap[&BonusInst] = NewBonusInst;
-
-    // If we moved a load, we cannot any longer claim any knowledge about
-    // its potential value. The previous information might have been valid
-    // only given the branch precondition.
-    // For an analogous reason, we must also drop all the metadata whose
-    // semantics we don't understand. We *can* preserve !annotation, because
-    // it is tied to the instruction itself, not the value or position.
-    NewBonusInst->dropUnknownNonDebugMetadata(LLVMContext::MD_annotation);
-
-    PredBlock->getInstList().insert(PBI->getIterator(), NewBonusInst);
-    NewBonusInst->takeName(&BonusInst);
-    BonusInst.setName(NewBonusInst->getName() + ".old");
-
-    // Update (liveout) uses of bonus instructions,
-    // now that the bonus instruction has been cloned into predecessor.
-    SSAUpdater SSAUpdate;
-    SSAUpdate.Initialize(BonusInst.getType(),
-                         (NewBonusInst->getName() + ".merge").str());
-    SSAUpdate.AddAvailableValue(BB, &BonusInst);
-    SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
-    for (Use &U : make_early_inc_range(BonusInst.uses()))
-      SSAUpdate.RewriteUseAfterInsertions(U);
-  }
+  CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(BB, PredBlock, VMap);
 
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.
