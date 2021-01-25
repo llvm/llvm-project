@@ -1602,8 +1602,8 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
   return true;
 }
 
-bool ProcessGDBRemote::UpdateThreadList(ThreadList &old_thread_list,
-                                        ThreadList &new_thread_list) {
+bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
+                                          ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_THREAD));
   LLDB_LOGV(log, "pid = {0}", GetID());

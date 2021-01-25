@@ -462,8 +462,8 @@ Status ProcessMinidump::GetMemoryRegions(MemoryRegionInfos &region_list) {
 
 void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
 
-bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
-                                       ThreadList &new_thread_list) {
+bool ProcessMinidump::DoUpdateThreadList(ThreadList &old_thread_list,
+                                         ThreadList &new_thread_list) {
   for (const minidump::Thread &thread : m_thread_list) {
     LocationDescriptor context_location = thread.Context;
 

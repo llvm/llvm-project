@@ -1245,10 +1245,33 @@ void UnwrappedLineFormatter::formatFirstToken(
       !startsExternCBlock(*PreviousLine))
     Newlines = 1;
 
-  // Insert extra new line before access specifiers.
-  if (PreviousLine && PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) &&
-      RootToken.isAccessSpecifier() && RootToken.NewlinesBefore == 1)
-    ++Newlines;
+  // Insert or remove empty line before access specifiers.
+  if (PreviousLine && RootToken.isAccessSpecifier()) {
+    switch (Style.EmptyLineBeforeAccessModifier) {
+    case FormatStyle::ELBAMS_Never:
+      if (RootToken.NewlinesBefore > 1)
+        Newlines = 1;
+      break;
+    case FormatStyle::ELBAMS_Leave:
+      Newlines = std::max(RootToken.NewlinesBefore, 1u);
+      break;
+    case FormatStyle::ELBAMS_LogicalBlock:
+      if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) &&
+          RootToken.NewlinesBefore <= 1)
+        Newlines = 2;
+      break;
+    case FormatStyle::ELBAMS_Always: {
+      const FormatToken *previousToken;
+      if (PreviousLine->Last->is(tok::comment))
+        previousToken = PreviousLine->Last->getPreviousNonComment();
+      else
+        previousToken = PreviousLine->Last;
+      if ((!previousToken || !previousToken->is(tok::l_brace)) &&
+          RootToken.NewlinesBefore <= 1)
+        Newlines = 2;
+    } break;
+    }
+  }
 
   // Remove empty lines after access specifiers.
   if (PreviousLine && PreviousLine->First->isAccessSpecifier() &&
