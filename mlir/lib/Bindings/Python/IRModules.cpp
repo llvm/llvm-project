@@ -15,6 +15,7 @@
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
@@ -3332,6 +3333,102 @@ PyAffineMap PyAffineMap::createFromCapsule(py::object capsule) {
 }
 
 //------------------------------------------------------------------------------
+// PyIntegerSet and utilities.
+//------------------------------------------------------------------------------
+
+class PyIntegerSetConstraint {
+public:
+  PyIntegerSetConstraint(PyIntegerSet set, intptr_t pos) : set(set), pos(pos) {}
+
+  PyAffineExpr getExpr() {
+    return PyAffineExpr(set.getContext(),
+                        mlirIntegerSetGetConstraint(set, pos));
+  }
+
+  bool isEq() { return mlirIntegerSetIsConstraintEq(set, pos); }
+
+  static void bind(py::module &m) {
+    py::class_<PyIntegerSetConstraint>(m, "IntegerSetConstraint")
+        .def_property_readonly("expr", &PyIntegerSetConstraint::getExpr)
+        .def_property_readonly("is_eq", &PyIntegerSetConstraint::isEq);
+  }
+
+private:
+  PyIntegerSet set;
+  intptr_t pos;
+};
+
+class PyIntegerSetConstraintList
+    : public Sliceable<PyIntegerSetConstraintList, PyIntegerSetConstraint> {
+public:
+  static constexpr const char *pyClassName = "IntegerSetConstraintList";
+
+  PyIntegerSetConstraintList(PyIntegerSet set, intptr_t startIndex = 0,
+                             intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirIntegerSetGetNumConstraints(set) : length,
+                  step),
+        set(set) {}
+
+  intptr_t getNumElements() { return mlirIntegerSetGetNumConstraints(set); }
+
+  PyIntegerSetConstraint getElement(intptr_t pos) {
+    return PyIntegerSetConstraint(set, pos);
+  }
+
+  PyIntegerSetConstraintList slice(intptr_t startIndex, intptr_t length,
+                                   intptr_t step) {
+    return PyIntegerSetConstraintList(set, startIndex, length, step);
+  }
+
+private:
+  PyIntegerSet set;
+};
+
+bool PyIntegerSet::operator==(const PyIntegerSet &other) {
+  return mlirIntegerSetEqual(integerSet, other.integerSet);
+}
+
+py::object PyIntegerSet::getCapsule() {
+  return py::reinterpret_steal<py::object>(
+      mlirPythonIntegerSetToCapsule(*this));
+}
+
+PyIntegerSet PyIntegerSet::createFromCapsule(py::object capsule) {
+  MlirIntegerSet rawIntegerSet = mlirPythonCapsuleToIntegerSet(capsule.ptr());
+  if (mlirIntegerSetIsNull(rawIntegerSet))
+    throw py::error_already_set();
+  return PyIntegerSet(
+      PyMlirContext::forContext(mlirIntegerSetGetContext(rawIntegerSet)),
+      rawIntegerSet);
+}
+
+/// Attempts to populate `result` with the content of `list` casted to the
+/// appropriate type (Python and C types are provided as template arguments).
+/// Throws errors in case of failure, using "action" to describe what the caller
+/// was attempting to do.
+template <typename PyType, typename CType>
+static void pyListToVector(py::list list, llvm::SmallVectorImpl<CType> &result,
+                           StringRef action) {
+  result.reserve(py::len(list));
+  for (py::handle item : list) {
+    try {
+      result.push_back(item.cast<PyType>());
+    } catch (py::cast_error &err) {
+      std::string msg = (llvm::Twine("Invalid expression when ") + action +
+                         " (" + err.what() + ")")
+                            .str();
+      throw py::cast_error(msg);
+    } catch (py::reference_cast_error &err) {
+      std::string msg = (llvm::Twine("Invalid expression (None?) when ") +
+                         action + " (" + err.what() + ")")
+                            .str();
+      throw py::cast_error(msg);
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
 // Populates the pybind11 IR submodule.
 //------------------------------------------------------------------------------
 
@@ -4152,24 +4249,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           [](intptr_t dimCount, intptr_t symbolCount, py::list exprs,
              DefaultingPyMlirContext context) {
             SmallVector<MlirAffineExpr> affineExprs;
-            affineExprs.reserve(py::len(exprs));
-            for (py::handle expr : exprs) {
-              try {
-                affineExprs.push_back(expr.cast<PyAffineExpr>());
-              } catch (py::cast_error &err) {
-                std::string msg =
-                    std::string("Invalid expression when attempting to create "
-                                "an AffineMap (") +
-                    err.what() + ")";
-                throw py::cast_error(msg);
-              } catch (py::reference_cast_error &err) {
-                std::string msg =
-                    std::string("Invalid expression (None?) when attempting to "
-                                "create an AffineMap (") +
-                    err.what() + ")";
-                throw py::cast_error(msg);
-              }
-            }
+            pyListToVector<PyAffineExpr, MlirAffineExpr>(
+                exprs, affineExprs, "attempting to create an AffineMap");
             MlirAffineMap map =
                 mlirAffineMapGet(context->get(), dimCount, symbolCount,
                                  affineExprs.size(), affineExprs.data());
@@ -4275,4 +4356,125 @@ void mlir::python::populateIRSubmodule(py::module &m) {
         return PyAffineMapExprList(self);
       });
   PyAffineMapExprList::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyIntegerSet.
+  //----------------------------------------------------------------------------
+  py::class_<PyIntegerSet>(m, "IntegerSet")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyIntegerSet::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyIntegerSet::createFromCapsule)
+      .def("__eq__", [](PyIntegerSet &self,
+                        PyIntegerSet &other) { return self == other; })
+      .def("__eq__", [](PyIntegerSet &self, py::object other) { return false; })
+      .def("__str__",
+           [](PyIntegerSet &self) {
+             PyPrintAccumulator printAccum;
+             mlirIntegerSetPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             return printAccum.join();
+           })
+      .def("__repr__",
+           [](PyIntegerSet &self) {
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("IntegerSet(");
+             mlirIntegerSetPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "context",
+          [](PyIntegerSet &self) { return self.getContext().getObject(); })
+      .def(
+          "dump", [](PyIntegerSet &self) { mlirIntegerSetDump(self); },
+          kDumpDocstring)
+      .def_static(
+          "get",
+          [](intptr_t numDims, intptr_t numSymbols, py::list exprs,
+             std::vector<bool> eqFlags, DefaultingPyMlirContext context) {
+            if (exprs.size() != eqFlags.size())
+              throw py::value_error(
+                  "Expected the number of constraints to match "
+                  "that of equality flags");
+            if (exprs.empty())
+              throw py::value_error("Expected non-empty list of constraints");
+
+            // Copy over to a SmallVector because std::vector has a
+            // specialization for booleans that packs data and does not
+            // expose a `bool *`.
+            SmallVector<bool, 8> flags(eqFlags.begin(), eqFlags.end());
+
+            SmallVector<MlirAffineExpr> affineExprs;
+            pyListToVector<PyAffineExpr>(exprs, affineExprs,
+                                         "attempting to create an IntegerSet");
+            MlirIntegerSet set = mlirIntegerSetGet(
+                context->get(), numDims, numSymbols, exprs.size(),
+                affineExprs.data(), flags.data());
+            return PyIntegerSet(context->getRef(), set);
+          },
+          py::arg("num_dims"), py::arg("num_symbols"), py::arg("exprs"),
+          py::arg("eq_flags"), py::arg("context") = py::none())
+      .def_static(
+          "get_empty",
+          [](intptr_t numDims, intptr_t numSymbols,
+             DefaultingPyMlirContext context) {
+            MlirIntegerSet set =
+                mlirIntegerSetEmptyGet(context->get(), numDims, numSymbols);
+            return PyIntegerSet(context->getRef(), set);
+          },
+          py::arg("num_dims"), py::arg("num_symbols"),
+          py::arg("context") = py::none())
+      .def("get_replaced",
+           [](PyIntegerSet &self, py::list dimExprs, py::list symbolExprs,
+              intptr_t numResultDims, intptr_t numResultSymbols) {
+             if (static_cast<intptr_t>(dimExprs.size()) !=
+                 mlirIntegerSetGetNumDims(self))
+               throw py::value_error(
+                   "Expected the number of dimension replacement expressions "
+                   "to match that of dimensions");
+             if (static_cast<intptr_t>(symbolExprs.size()) !=
+                 mlirIntegerSetGetNumSymbols(self))
+               throw py::value_error(
+                   "Expected the number of symbol replacement expressions "
+                   "to match that of symbols");
+
+             SmallVector<MlirAffineExpr> dimAffineExprs, symbolAffineExprs;
+             pyListToVector<PyAffineExpr>(
+                 dimExprs, dimAffineExprs,
+                 "attempting to create an IntegerSet by replacing dimensions");
+             pyListToVector<PyAffineExpr>(
+                 symbolExprs, symbolAffineExprs,
+                 "attempting to create an IntegerSet by replacing symbols");
+             MlirIntegerSet set = mlirIntegerSetReplaceGet(
+                 self, dimAffineExprs.data(), symbolAffineExprs.data(),
+                 numResultDims, numResultSymbols);
+             return PyIntegerSet(self.getContext(), set);
+           })
+      .def_property_readonly("is_canonical_empty",
+                             [](PyIntegerSet &self) {
+                               return mlirIntegerSetIsCanonicalEmpty(self);
+                             })
+      .def_property_readonly(
+          "n_dims",
+          [](PyIntegerSet &self) { return mlirIntegerSetGetNumDims(self); })
+      .def_property_readonly(
+          "n_symbols",
+          [](PyIntegerSet &self) { return mlirIntegerSetGetNumSymbols(self); })
+      .def_property_readonly(
+          "n_inputs",
+          [](PyIntegerSet &self) { return mlirIntegerSetGetNumInputs(self); })
+      .def_property_readonly("n_equalities",
+                             [](PyIntegerSet &self) {
+                               return mlirIntegerSetGetNumEqualities(self);
+                             })
+      .def_property_readonly("n_inequalities",
+                             [](PyIntegerSet &self) {
+                               return mlirIntegerSetGetNumInequalities(self);
+                             })
+      .def_property_readonly("constraints", [](PyIntegerSet &self) {
+        return PyIntegerSetConstraintList(self);
+      });
+  PyIntegerSetConstraint::bind(m);
+  PyIntegerSetConstraintList::bind(m);
 }

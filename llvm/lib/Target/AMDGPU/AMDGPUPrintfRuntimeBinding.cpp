@@ -182,8 +182,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
       StringRef Str("unknown");
       if (GVar && GVar->hasInitializer()) {
-        auto Init = GVar->getInitializer();
-        if (auto CA = dyn_cast<ConstantDataArray>(Init)) {
+        auto *Init = GVar->getInitializer();
+        if (auto *CA = dyn_cast<ConstantDataArray>(Init)) {
           if (CA->isString())
             Str = CA->getAsCString();
         } else if (isa<ConstantAggregateZero>(Init)) {
@@ -246,16 +246,15 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           }
         }
         if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
-          if (ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-            GlobalVariable *GV =
-                dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+          if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
+            auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
             if (GV && GV->hasInitializer()) {
               Constant *Init = GV->getInitializer();
-              ConstantDataArray *CA = dyn_cast<ConstantDataArray>(Init);
-              if (Init->isZeroValue() || CA->isString()) {
-                size_t SizeStr = Init->isZeroValue()
-                                     ? 1
-                                     : (strlen(CA->getAsCString().data()) + 1);
+              bool IsZeroValue = Init->isZeroValue();
+              auto *CA = dyn_cast<ConstantDataArray>(Init);
+              if (IsZeroValue || (CA && CA->isString())) {
+                size_t SizeStr =
+                    IsZeroValue ? 1 : (strlen(CA->getAsCString().data()) + 1);
                 size_t Rem = SizeStr % DWORD_ALIGN;
                 size_t NSizeStr = 0;
                 LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr
@@ -430,9 +429,10 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
               auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
               if (GV && GV->hasInitializer()) {
                 Constant *Init = GV->getInitializer();
-                ConstantDataArray *CA = dyn_cast<ConstantDataArray>(Init);
-                if (Init->isZeroValue() || CA->isString()) {
-                  S = Init->isZeroValue() ? "" : CA->getAsCString().data();
+                bool IsZeroValue = Init->isZeroValue();
+                auto *CA = dyn_cast<ConstantDataArray>(Init);
+                if (IsZeroValue || (CA && CA->isString())) {
+                  S = IsZeroValue ? "" : CA->getAsCString().data();
                 }
               }
             }
