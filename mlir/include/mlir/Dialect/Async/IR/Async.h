@@ -29,6 +29,10 @@ namespace detail {
 struct ValueTypeStorage;
 } // namespace detail
 
+//===----------------------------------------------------------------------===//
+// Async dialect types.
+//===----------------------------------------------------------------------===//
+
 /// The token type to represent asynchronous operation completion.
 class TokenType : public Type::TypeBase<TokenType, Type, TypeStorage> {
 public:
@@ -53,9 +57,32 @@ public:
   using Base::Base;
 };
 
-// -------------------------------------------------------------------------- //
+//===----------------------------------------------------------------------===//
+// LLVM coroutines types.
+//===----------------------------------------------------------------------===//
+
+/// The type identifying a switched-resume coroutine.
+class CoroIdType : public Type::TypeBase<CoroIdType, Type, TypeStorage> {
+public:
+  using Base::Base;
+};
+
+/// The coroutine handle type which is a pointer to the coroutine frame.
+class CoroHandleType
+    : public Type::TypeBase<CoroHandleType, Type, TypeStorage> {
+public:
+  using Base::Base;
+};
+
+/// The coroutine saved state type.
+class CoroStateType : public Type::TypeBase<CoroStateType, Type, TypeStorage> {
+public:
+  using Base::Base;
+};
+
+//===----------------------------------------------------------------------===//
 // Helper functions of Async dialect transformations.
-// -------------------------------------------------------------------------- //
+//===----------------------------------------------------------------------===//
 
 /// Returns true if the type is reference counted. All async dialect types are
 /// reference counted at runtime.
