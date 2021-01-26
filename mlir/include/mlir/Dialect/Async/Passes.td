@@ -38,4 +38,11 @@ def AsyncRefCountingOptimization :
   let dependentDialects = ["async::AsyncDialect"];
 }
 
+def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
+  let summary = "Lower high level async operations (e.g. async.execute) to the"
+                "explicit async.rutime and async.coro operations";
+  let constructor = "mlir::createAsyncToAsyncRuntimePass()";
+  let dependentDialects = ["async::AsyncDialect"];
+}
+
 #endif // MLIR_DIALECT_ASYNC_PASSES

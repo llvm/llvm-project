@@ -26,6 +26,8 @@ std::unique_ptr<OperationPass<FuncOp>> createAsyncRefCountingPass();
 
 std::unique_ptr<OperationPass<FuncOp>> createAsyncRefCountingOptimizationPass();
 
+std::unique_ptr<OperationPass<ModuleOp>> createAsyncToAsyncRuntimePass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
