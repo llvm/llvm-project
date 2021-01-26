@@ -805,18 +805,14 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
   if (m_opaque_sp) {
     Status error;
     const bool add_dependent_modules = true;
-    PlatformSP platform_sp = m_opaque_sp->GetPlatformList().GetSelectedPlatform();
-    ArchSpec arch = Platform::GetAugmentedArchSpec(
-        platform_sp.get(), arch_cstr);
-    if (arch.IsValid()) {
-      error = m_opaque_sp->GetTargetList().CreateTarget(
-          *m_opaque_sp, filename, arch,
-          add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, 
-          platform_sp, target_sp);
 
-      if (error.Success())
-        sb_target.SetSP(target_sp);
-    }
+    error = m_opaque_sp->GetTargetList().CreateTarget(
+        *m_opaque_sp, filename, arch_cstr,
+        add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
+        target_sp);
+
+    if (error.Success())
+      sb_target.SetSP(target_sp);
   }
 
   LLDB_LOGF(log,
