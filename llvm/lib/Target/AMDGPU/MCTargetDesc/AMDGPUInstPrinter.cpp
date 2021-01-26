@@ -1004,25 +1004,19 @@ void AMDGPUInstPrinter::printExpSrc3(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  // This is really a 6 bit field.
-  uint32_t Tgt = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
+  using namespace llvm::AMDGPU::Exp;
 
-  if (Tgt <= Exp::ET_MRT7)
-    O << " mrt" << Tgt - Exp::ET_MRT0;
-  else if (Tgt == Exp::ET_MRTZ)
-    O << " mrtz";
-  else if (Tgt == Exp::ET_NULL)
-    O << " null";
-  else if (Tgt >= Exp::ET_POS0 &&
-           Tgt <= uint32_t(isGFX10Plus(STI) ? Exp::ET_POS4 : Exp::ET_POS3))
-    O << " pos" << Tgt - Exp::ET_POS0;
-  else if (isGFX10Plus(STI) && Tgt == Exp::ET_PRIM)
-    O << " prim";
-  else if (Tgt >= Exp::ET_PARAM0 && Tgt <= Exp::ET_PARAM31)
-    O << " param" << Tgt - Exp::ET_PARAM0;
-  else {
-    // Reserved values 10, 11
-    O << " invalid_target_" << Tgt;
+  // This is really a 6 bit field.
+  unsigned Id = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
+
+  int Index;
+  StringRef TgtName;
+  if (getTgtName(Id, TgtName, Index) && isSupportedTgtId(Id, STI)) {
+    O << ' ' << TgtName;
+    if (Index >= 0)
+      O << Index;
+  } else {
+    O << " invalid_target_" << Id;
   }
 }
 

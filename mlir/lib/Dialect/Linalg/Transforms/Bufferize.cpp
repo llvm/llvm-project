@@ -204,14 +204,6 @@ public:
   }
 };
 
-// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
-static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
-        return a.cast<IntegerAttr>().getInt();
-      }));
-}
-
 /// Convert `subtensor %t [offsets][sizes][strides] -> %st` to an alloc + copy
 /// pattern.
 /// ```
