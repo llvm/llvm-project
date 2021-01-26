@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNC_H
 #define MLIR_DIALECT_ASYNC_IR_ASYNC_H
 
+#include "mlir/Dialect/Async/IR/AsyncTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -22,80 +23,32 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace async {
-
-namespace detail {
-struct ValueTypeStorage;
-} // namespace detail
-
 //===----------------------------------------------------------------------===//
-// Async dialect types.
+// Async Dialect
 //===----------------------------------------------------------------------===//
 
-/// The token type to represent asynchronous operation completion.
-class TokenType : public Type::TypeBase<TokenType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The value type to represent values returned from asynchronous operations.
-class ValueType
-    : public Type::TypeBase<ValueType, Type, detail::ValueTypeStorage> {
-public:
-  using Base::Base;
-
-  /// Get or create an async ValueType with the provided value type.
-  static ValueType get(Type valueType);
-
-  Type getValueType();
-};
-
-/// The group type to represent async tokens or values grouped together.
-class GroupType : public Type::TypeBase<GroupType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
+#include "mlir/Dialect/Async/IR/AsyncOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// LLVM coroutines types.
+// Async Dialect Operations
 //===----------------------------------------------------------------------===//
 
-/// The type identifying a switched-resume coroutine.
-class CoroIdType : public Type::TypeBase<CoroIdType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The coroutine handle type which is a pointer to the coroutine frame.
-class CoroHandleType
-    : public Type::TypeBase<CoroHandleType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
-
-/// The coroutine saved state type.
-class CoroStateType : public Type::TypeBase<CoroStateType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Async/IR/AsyncOps.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Helper functions of Async dialect transformations.
 //===----------------------------------------------------------------------===//
 
-/// Returns true if the type is reference counted. All async dialect types are
-/// reference counted at runtime.
+namespace mlir {
+namespace async {
+
+/// Returns true if the type is reference counted at runtime.
 inline bool isRefCounted(Type type) {
   return type.isa<TokenType, ValueType, GroupType>();
 }
 
 } // namespace async
 } // namespace mlir
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Async/IR/AsyncOps.h.inc"
-
-#include "mlir/Dialect/Async/IR/AsyncOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_ASYNC_IR_ASYNC_H
