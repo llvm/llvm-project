@@ -285,6 +285,10 @@ public:
   /// attribute(s).
   std::vector<std::string> XRayAttrListFiles;
 
+  /// Paths to special case list files specifying which entities
+  /// (files, functions) should or should not be instrumented.
+  std::vector<std::string> ProfileListFiles;
+
   clang::ObjCRuntime ObjCRuntime;
 
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
