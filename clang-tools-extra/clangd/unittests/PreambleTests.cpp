@@ -415,6 +415,8 @@ TEST(PreamblePatchTest, LocateMacroAtDeletion) {
   }
 }
 
+MATCHER_P(referenceRangeIs, R, "") { return arg.Loc.range == R; }
+
 TEST(PreamblePatchTest, RefsToMacros) {
   struct {
     const char *const Baseline;
@@ -450,9 +452,9 @@ TEST(PreamblePatchTest, RefsToMacros) {
     ASSERT_TRUE(AST);
 
     const auto &SM = AST->getSourceManager();
-    std::vector<Matcher<Location>> ExpectedLocations;
+    std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
     for (const auto &R : Modified.ranges())
-      ExpectedLocations.push_back(Field(&Location::range, R));
+      ExpectedLocations.push_back(referenceRangeIs(R));
 
     for (const auto &P : Modified.points()) {
       auto *MacroTok = AST->getTokens().spelledTokenAt(SM.getComposedLoc(

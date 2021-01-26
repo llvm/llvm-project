@@ -1312,9 +1312,13 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       auto Refs = IDToRefs.find(MacroSID);
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
-          Location Result;
-          Result.range = Ref.Rng;
-          Result.uri = URIMainFile;
+          ReferencesResult::Reference Result;
+          Result.Loc.range = Ref.Rng;
+          Result.Loc.uri = URIMainFile;
+          if (Ref.IsDefinition) {
+            Result.Attributes |= ReferencesResult::Declaration;
+            Result.Attributes |= ReferencesResult::Definition;
+          }
           Results.References.push_back(std::move(Result));
         }
       }
@@ -1367,9 +1371,15 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
-      Location Result;
-      Result.range = Ref.range(SM);
-      Result.uri = URIMainFile;
+      ReferencesResult::Reference Result;
+      Result.Loc.range = Ref.range(SM);
+      Result.Loc.uri = URIMainFile;
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Declaration))
+        Result.Attributes |= ReferencesResult::Declaration;
+      // clang-index doesn't report definitions as declarations, but they are.
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Definition))
+        Result.Attributes |=
+            ReferencesResult::Definition | ReferencesResult::Declaration;
       Results.References.push_back(std::move(Result));
     }
     if (Index && Results.References.size() <= Limit) {
@@ -1397,8 +1407,15 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       // Avoid indexed results for the main file - the AST is authoritative.
       if (!LSPLoc || LSPLoc->uri.file() == *MainFilePath)
         return;
-
-      Results.References.push_back(std::move(*LSPLoc));
+      ReferencesResult::Reference Result;
+      Result.Loc = std::move(*LSPLoc);
+      if ((R.Kind & RefKind::Declaration) == RefKind::Declaration)
+        Result.Attributes |= ReferencesResult::Declaration;
+      // FIXME: our index should definitely store def | decl separately!
+      if ((R.Kind & RefKind::Definition) == RefKind::Definition)
+        Result.Attributes |=
+            ReferencesResult::Declaration | ReferencesResult::Definition;
+      Results.References.push_back(std::move(Result));
     });
   }
   if (Results.References.size() > Limit) {
@@ -1466,6 +1483,16 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LocatedSymbol &S) {
   OS << S.Name << ": " << S.PreferredDeclaration;
   if (S.Definition)
     OS << " def=" << *S.Definition;
+  return OS;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const ReferencesResult::Reference &R) {
+  OS << R.Loc;
+  if (R.Attributes & ReferencesResult::Declaration)
+    OS << " [decl]";
+  if (R.Attributes & ReferencesResult::Definition)
+    OS << " [def]";
   return OS;
 }
 
