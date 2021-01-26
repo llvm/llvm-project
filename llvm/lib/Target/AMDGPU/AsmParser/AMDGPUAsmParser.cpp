@@ -1355,7 +1355,6 @@ private:
                      const OperandInfoTy &Offset,
                      const OperandInfoTy &Width);
 
-  OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
 
@@ -5884,76 +5883,24 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 // exp
 //===----------------------------------------------------------------------===//
 
-OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
-                                                      uint8_t &Val) {
-  if (Str == "null") {
-    Val = Exp::ET_NULL;
-    return MatchOperand_Success;
-  }
-
-  if (Str.startswith("mrt")) {
-    Str = Str.drop_front(3);
-    if (Str == "z") { // == mrtz
-      Val = Exp::ET_MRTZ;
-      return MatchOperand_Success;
-    }
-
-    if (Str.getAsInteger(10, Val))
-      return MatchOperand_ParseFail;
-
-    if (Val > Exp::ET_MRT7)
-      return MatchOperand_ParseFail;
-
-    return MatchOperand_Success;
-  }
-
-  if (Str.startswith("pos")) {
-    Str = Str.drop_front(3);
-    if (Str.getAsInteger(10, Val))
-      return MatchOperand_ParseFail;
-
-    if (Val > (isGFX10Plus() ? 4 : 3))
-      return MatchOperand_ParseFail;
-
-    Val += Exp::ET_POS0;
-    return MatchOperand_Success;
-  }
-
-  if (isGFX10Plus() && Str == "prim") {
-    Val = Exp::ET_PRIM;
-    return MatchOperand_Success;
-  }
-
-  if (Str.startswith("param")) {
-    Str = Str.drop_front(5);
-    if (Str.getAsInteger(10, Val))
-      return MatchOperand_ParseFail;
-
-    if (Val >= 32)
-      return MatchOperand_ParseFail;
-
-    Val += Exp::ET_PARAM0;
-    return MatchOperand_Success;
-  }
-
-  return MatchOperand_ParseFail;
-}
-
 OperandMatchResultTy AMDGPUAsmParser::parseExpTgt(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::Exp;
+
   StringRef Str;
   SMLoc S = getLoc();
 
   if (!parseId(Str))
     return MatchOperand_NoMatch;
 
-  uint8_t Val;
-  auto Res = parseExpTgtImpl(Str, Val);
-  if (Res != MatchOperand_Success) {
-    Error(S, "invalid exp target");
-    return Res;
+  unsigned Id = getTgtId(Str);
+  if (Id == ET_INVALID || !isSupportedTgtId(Id, getSTI())) {
+    Error(S, (Id == ET_INVALID) ?
+                "invalid exp target" :
+                "exp target is not supported on this GPU");
+    return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S,
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Id, S,
                                               AMDGPUOperand::ImmTyExpTgt));
   return MatchOperand_Success;
 }

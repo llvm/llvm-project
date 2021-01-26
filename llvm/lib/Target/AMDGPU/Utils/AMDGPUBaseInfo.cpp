@@ -789,6 +789,67 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) 
 } // namespace Hwreg
 
 //===----------------------------------------------------------------------===//
+// exp tgt
+//===----------------------------------------------------------------------===//
+
+namespace Exp {
+
+struct ExpTgt {
+  StringLiteral Name;
+  unsigned Tgt;
+  unsigned MaxIndex;
+};
+
+static constexpr ExpTgt ExpTgtInfo[] = {
+  {{"null"},  ET_NULL,   ET_NULL_MAX_IDX},
+  {{"mrtz"},  ET_MRTZ,   ET_MRTZ_MAX_IDX},
+  {{"prim"},  ET_PRIM,   ET_PRIM_MAX_IDX},
+  {{"mrt"},   ET_MRT0,   ET_MRT_MAX_IDX},
+  {{"pos"},   ET_POS0,   ET_POS_MAX_IDX},
+  {{"param"}, ET_PARAM0, ET_PARAM_MAX_IDX},
+};
+
+bool getTgtName(unsigned Id, StringRef &Name, int &Index) {
+  for (const ExpTgt &Val : ExpTgtInfo) {
+    if (Val.Tgt <= Id && Id <= Val.Tgt + Val.MaxIndex) {
+      Index = (Val.MaxIndex == 0) ? -1 : (Id - Val.Tgt);
+      Name = Val.Name;
+      return true;
+    }
+  }
+  return false;
+}
+
+unsigned getTgtId(const StringRef Name) {
+
+  for (const ExpTgt &Val : ExpTgtInfo) {
+    if (Val.MaxIndex == 0 && Name == Val.Name)
+      return Val.Tgt;
+
+    if (Val.MaxIndex > 0 && Name.startswith(Val.Name)) {
+      StringRef Suffix = Name.drop_front(Val.Name.size());
+
+      unsigned Id;
+      if (Suffix.getAsInteger(10, Id) || Id > Val.MaxIndex)
+        return ET_INVALID;
+
+      // Disable leading zeroes
+      if (Suffix.size() > 1 && Suffix[0] == '0')
+        return ET_INVALID;
+
+      return Val.Tgt + Id;
+    }
+  }
+  return ET_INVALID;
+}
+
+bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI) {
+  return (Id != ET_POS4 && Id != ET_PRIM) || isGFX10Plus(STI);
+}
+
+} // namespace Exp
+
+//===----------------------------------------------------------------------===//
 // MTBUF Format
 //===----------------------------------------------------------------------===//
 
