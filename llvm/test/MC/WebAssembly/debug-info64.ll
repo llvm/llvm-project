@@ -89,44 +89,44 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
-; CHECK-NEXT:     Size: 95
+; CHECK-NEXT:     Size: 91
 ; CHECK-NEXT:     Offset: 759
 ; CHECK-NEXT:     Name: linking
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 9
-; CHECK-NEXT:     Offset: 868
+; CHECK-NEXT:     Offset: 864
 ; CHECK-NEXT:     Name: reloc.DATA
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 61
-; CHECK-NEXT:     Offset: 894
+; CHECK-NEXT:     Offset: 890
 ; CHECK-NEXT:     Name: reloc..debug_info
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 979
+; CHECK-NEXT:     Offset: 975
 ; CHECK-NEXT:     Name: reloc..debug_pubnames
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1013
+; CHECK-NEXT:     Offset: 1009
 ; CHECK-NEXT:     Name: reloc..debug_pubtypes
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1047
+; CHECK-NEXT:     Offset: 1043
 ; CHECK-NEXT:     Name: reloc..debug_line
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 77
-; CHECK-NEXT:     Offset: 1077
+; CHECK-NEXT:     Offset: 1073
 ; CHECK-NEXT:     Name: producers
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
@@ -237,16 +237,6 @@
 ; CHECK-NEXT:       BINDING_LOCAL (0x2)
 ; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0xC
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Symbol {
-; CHECK-NEXT:     Name: __indirect_function_table
-; CHECK-NEXT:     Type: TABLE (0x5)
-; CHECK-NEXT:     Flags [ (0x90)
-; CHECK-NEXT:       NO_STRIP (0x80)
-; CHECK-NEXT:       UNDEFINED (0x10)
-; CHECK-NEXT:     ]
-; CHECK-NEXT:     ImportModule: env
-; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
 
