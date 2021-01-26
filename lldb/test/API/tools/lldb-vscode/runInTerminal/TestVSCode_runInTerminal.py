@@ -35,6 +35,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_runInTerminal(self):
         '''
             Tests the "runInTerminal" reverse request. It makes sure that the IDE can
