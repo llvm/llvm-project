@@ -2096,6 +2096,24 @@ public:
     return nullptr;
   }
 
+  static mlir::Value getLBoundOrDefault(mlir::Location loc,
+                                        const fir::ExtendedValue &exv,
+                                        mlir::Value one, unsigned dim) {
+    auto getLBound = [&](const fir::AbstractArrayBox &v) -> mlir::Value {
+      auto &lbounds = v.getLBounds();
+      if (lbounds.empty())
+        return one;
+      return lbounds[dim];
+    };
+    return exv.match(
+        [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
+        [&](const fir::CharArrayBoxValue &v) { return getLBound(v); },
+        [&](const fir::BoxValue &v) { return getLBound(v); },
+        [&](auto) -> mlir::Value {
+          fir::emitFatalError(loc, "expected array");
+        });
+  }
+
   /// Array reference with subscripts. Since this has rank > 0, this is a form
   /// of an array section (slice).
   ///
@@ -2147,22 +2165,7 @@ public:
                       arrLd.getType().cast<fir::SequenceType>().getEleTy();
                   auto currentPC = pc;
                   auto dim = sub.index();
-                  auto getLBound =
-                      [&](const fir::AbstractArrayBox &v) -> mlir::Value {
-                    auto &lbounds = v.getLBounds();
-                    if (lbounds.empty())
-                      return one;
-                    return lbounds[dim];
-                  };
-                  auto lb = exv.match(
-                      [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
-                      [&](const fir::CharArrayBoxValue &v) {
-                        return getLBound(v);
-                      },
-                      [&](const fir::BoxValue &v) { return getLBound(v); },
-                      [&](auto) -> mlir::Value {
-                        fir::emitFatalError(loc, "expected array");
-                      });
+                  auto lb = getLBoundOrDefault(loc, exv, one, dim);
                   pc = [=](IterSpace iters) {
                     IterationSpace newIters = currentPC(iters);
                     auto iter = newIters.iterVec()[dim];
@@ -2217,29 +2220,16 @@ public:
                                              : sel.gen(base.GetComponent());
                   auto v = fir::getBase(asScalar(e));
                   trips.push_back(v);
-                  auto undef = builder.create<fir::UndefOp>(loc, idxTy);
+                  // Use LenType to distinguish this as a placeholder operand.
+                  auto undef = builder.create<fir::UndefOp>(
+                      loc, fir::LenType::get(v.getContext()));
                   trips.push_back(undef);
                   trips.push_back(undef);
                   auto currentPC = pc;
-                  auto dim = sub.index();
                   // Cast `e` to index type.
                   auto iv = builder.createConvert(loc, idxTy, v);
-                  auto getLBound =
-                      [&](const fir::AbstractArrayBox &v) -> mlir::Value {
-                    auto &lbounds = v.getLBounds();
-                    if (lbounds.empty())
-                      return one;
-                    return lbounds[dim];
-                  };
-                  auto lb = exv.match(
-                      [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
-                      [&](const fir::CharArrayBoxValue &v) {
-                        return getLBound(v);
-                      },
-                      [&](const fir::BoxValue &v) { return getLBound(v); },
-                      [&](auto) -> mlir::Value {
-                        fir::emitFatalError(loc, "expected array");
-                      });
+                  auto dim = sub.index();
+                  auto lb = getLBoundOrDefault(loc, exv, one, dim);
                   // Normalize `e` by subtracting the declared lbound.
                   mlir::Value ivAdj =
                       builder.create<mlir::SubIOp>(loc, idxTy, iv, lb);
