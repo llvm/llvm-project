@@ -886,15 +886,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::powi:
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // 0 and 1 are handled in instsimplify
-
       // powi(x, -1) -> 1/x
       if (Power->isMinusOne())
-        return BinaryOperator::CreateFDiv(ConstantFP::get(CI.getType(), 1.0),
-                                          II->getArgOperand(0));
+        return BinaryOperator::CreateFDivFMF(ConstantFP::get(CI.getType(), 1.0),
+                                             II->getArgOperand(0), II);
       // powi(x, 2) -> x*x
       if (Power->equalsInt(2))
-        return BinaryOperator::CreateFMul(II->getArgOperand(0),
-                                          II->getArgOperand(0));
+        return BinaryOperator::CreateFMulFMF(II->getArgOperand(0),
+                                             II->getArgOperand(0), II);
     }
     break;
 
