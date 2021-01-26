@@ -1333,7 +1333,21 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
   // The SP is specifically managed and we don't want extra spills of it.
   SavedRegs.reset(MFI->getStackPtrOffsetReg());
+
+  const BitVector AllSavedRegs = SavedRegs;
   SavedRegs.clearBitsInMask(TRI->getAllVGPRRegMask());
+
+  // If clearing VGPRs changed the mask, we will have some CSR VGPR spills.
+  const bool HaveAnyCSRVGPR = SavedRegs != AllSavedRegs;
+
+  // We have to anticipate introducing CSR VGPR spills if we don't have any
+  // stack objects already, since we require an FP if there is a call and stack.
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  const bool WillHaveFP = FrameInfo.hasCalls() && HaveAnyCSRVGPR;
+
+  // FP will be specially managed like SP.
+  if (WillHaveFP || hasFP(MF))
+    SavedRegs.reset(MFI->getFrameOffsetReg());
 }
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
