@@ -13830,7 +13830,7 @@ static SDValue lowerShuffleAsInsertPS(const SDLoc &DL, SDValue V1, SDValue V2,
   assert(V2.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
 
   // Attempt to match the insertps pattern.
-  unsigned InsertPSMask;
+  unsigned InsertPSMask = 0;
   if (!matchShuffleAsInsertPS(V1, V2, InsertPSMask, Zeroable, Mask, DAG))
     return SDValue();
 
