@@ -70,7 +70,7 @@ public:
         G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
     // Re-use GOT entries for stub targets.
     auto &GOTEntrySymbol = getGOTEntrySymbol(Target);
-    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, 0);
+    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, -4);
     return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
   }
 
