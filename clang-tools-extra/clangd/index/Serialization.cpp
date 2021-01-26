@@ -118,7 +118,7 @@ public:
   template <typename T> LLVM_NODISCARD bool consumeSize(T &Container) {
     auto Size = consumeVar();
     // Conservatively assume each element is at least one byte.
-    if (Size > (End - Begin)) {
+    if (Size > (size_t)(End - Begin)) {
       Err = true;
       return false;
     }
