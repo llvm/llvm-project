@@ -112,6 +112,46 @@ TEST_F(ConfigCompileTests, CompileCommands) {
   EXPECT_THAT(Argv, ElementsAre("clang", "a.cc", "-foo"));
 }
 
+TEST_F(ConfigCompileTests, CompilationDatabase) {
+  Frag.CompileFlags.CompilationDatabase.emplace("None");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::NoCDBSearch);
+
+  Frag.CompileFlags.CompilationDatabase.emplace("Ancestors");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors);
+
+  // Relative path not allowed without directory set.
+  Frag.CompileFlags.CompilationDatabase.emplace("Something");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors)
+      << "default value";
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(DiagMessage(
+                  "CompilationDatabase must be an absolute path, because this "
+                  "fragment is not associated with any directory.")));
+
+  // Relative path allowed if directory is set.
+  Frag.Source.Directory = testRoot();
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
+  // Absolute path allowed.
+  Frag.Source.Directory.clear();
+  Frag.CompileFlags.CompilationDatabase.emplace(testPath("Something2"));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something2"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+}
+
 TEST_F(ConfigCompileTests, Index) {
   Frag.Index.Background.emplace("Skip");
   EXPECT_TRUE(compileAndApply());
