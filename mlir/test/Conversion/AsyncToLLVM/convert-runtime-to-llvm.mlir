@@ -73,7 +73,7 @@ func @await_group() {
 // CHECK-LABEL: @await_and_resume_token
 func @await_and_resume_token() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken
   %2 = async.runtime.create : !async.token
@@ -87,7 +87,7 @@ func @await_and_resume_token() {
 // CHECK-LABEL: @await_and_resume_value
 func @await_and_resume_value() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
   %2 = async.runtime.create : !async.value<f32>
@@ -101,7 +101,7 @@ func @await_and_resume_value() {
 // CHECK-LABEL: @await_and_resume_group
 func @await_and_resume_group() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateGroup
   %2 = async.runtime.create : !async.group
@@ -115,7 +115,7 @@ func @await_and_resume_group() {
 // CHECK-LABEL: @resume
 func @resume() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[RESUME:.*]] = llvm.mlir.addressof @__resume
   // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL]], %[[RESUME]])
