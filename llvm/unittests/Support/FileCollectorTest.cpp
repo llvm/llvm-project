@@ -33,7 +33,6 @@ public:
   using FileCollector::FileCollector;
   using FileCollector::Root;
   using FileCollector::Seen;
-  using FileCollector::SymlinkMap;
   using FileCollector::VFSWriter;
 
   bool hasSeen(StringRef fs) {
