@@ -434,7 +434,10 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
     AutoNormalizeEnum {}
 
 // Key paths that are constant during parsing of options with the same key path prefix.
+defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
+
+defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
 
 /////////
 // Options
@@ -1952,10 +1955,11 @@ def fno_common : Flag<["-"], "fno-common">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
 def fno_cxx_modules : Flag <["-"], "fno-cxx-modules">, Group<f_Group>,
   Flags<[NoXarchOption]>;
-def fdigraphs : Flag<["-"], "fdigraphs">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:' (default)">;
-def fno_digraphs : Flag<["-"], "fno-digraphs">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Disallow alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:'">;
+defm digraphs : BoolFOption<"digraphs",
+  LangOpts<"Digraphs">, Default<std#".hasDigraphs()">,
+  PosFlag<SetTrue, [], "Enable alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:' (default)">,
+  NegFlag<SetFalse, [], "Disallow alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:'">,
+  BothFlags<[CC1Option]>>;
 def fno_declspec : Flag<["-"], "fno-declspec">, Group<f_clang_Group>,
   HelpText<"Disallow __declspec as a keyword">, Flags<[CC1Option]>;
 def fno_dollars_in_identifiers : Flag<["-"], "fno-dollars-in-identifiers">, Group<f_Group>,

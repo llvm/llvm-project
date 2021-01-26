@@ -16,6 +16,7 @@
 
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/Visibility.h"
@@ -257,6 +258,9 @@ public:
   };
 
 public:
+  /// The used language standard.
+  LangStandard::Kind LangStd;
+
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
 
