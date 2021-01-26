@@ -96,4 +96,41 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [NoSideEffect,
     "$src `,` $a `,` $b `,` $k `,` $rounding attr-dict `:` type($dst)";
 }
 
+def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
+  AllTypesMatch<["a", "b"]>,
+  TypesMatchWith<"k1 has the same number of bits as elements in a",
+                 "a", "k1",
+                 "IntegerType::get($_self.getContext(), "
+                 "($_self.cast<VectorType>().getShape()[0]))">,
+  TypesMatchWith<"k2 has the same number of bits as elements in b",
+                 // Should use `b` instead of `a`, but that would require
+                 // adding `type($b)` to assemblyFormat.
+                 "a", "k2",
+                 "IntegerType::get($_self.getContext(), "
+                 "($_self.cast<VectorType>().getShape()[0]))">]> {
+  let summary = "Vp2Intersect op";
+  let description = [{
+    The `vp2intersect` op is an AVX512 specific op that can lower to the proper
+    LLVMAVX512 operation: `llvm.vp2intersect.d.512` or
+    `llvm.vp2intersect.q.512` depending on the type of MLIR vectors it is
+    applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Compute intersection of packed integer vectors `a` and `b`, and store
+    indication of match in the corresponding bit of two mask registers
+    specified by `k1` and `k2`. A match in corresponding elements of `a` and
+    `b` is indicated by a set bit in the corresponding bit of the mask
+    registers.
+  }];
+  let arguments = (ins VectorOfLengthAndType<[16, 8], [I32, I64]>:$a,
+                   VectorOfLengthAndType<[16, 8], [I32, I64]>:$b
+                   );
+  let results = (outs AnyTypeOf<[I16, I8]>:$k1,
+                 AnyTypeOf<[I16, I8]>:$k2
+                 );
+  let assemblyFormat =
+    "$a `,` $b attr-dict `:` type($a)";
+}
+
 #endif // AVX512_OPS
