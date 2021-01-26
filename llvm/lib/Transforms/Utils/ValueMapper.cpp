@@ -819,11 +819,15 @@ void Mapper::flush() {
       break;
     case WorklistEntry::MapAppendingVar: {
       unsigned PrefixSize = AppendingInits.size() - E.AppendingGVNumNewMembers;
+      // mapAppendingVariable call can change AppendingInits if initalizer for
+      // the variable depends on another appending global, because of that inits
+      // need to be extracted and updated before the call.
+      SmallVector<Constant *, 8> NewInits(
+          drop_begin(AppendingInits, PrefixSize));
+      AppendingInits.resize(PrefixSize);
       mapAppendingVariable(*E.Data.AppendingGV.GV,
                            E.Data.AppendingGV.InitPrefix,
-                           E.AppendingGVIsOldCtorDtor,
-                           makeArrayRef(AppendingInits).slice(PrefixSize));
-      AppendingInits.resize(PrefixSize);
+                           E.AppendingGVIsOldCtorDtor, makeArrayRef(NewInits));
       break;
     }
     case WorklistEntry::MapGlobalIndirectSymbol:
