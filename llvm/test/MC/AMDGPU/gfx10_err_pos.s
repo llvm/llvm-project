@@ -665,6 +665,11 @@ exp invalid_target_10 v3, v2, v1, v0
 // CHECK-NEXT:{{^}}exp invalid_target_10 v3, v2, v1, v0
 // CHECK-NEXT:{{^}}    ^
 
+exp pos00 v3, v2, v1, v0
+// CHECK: error: invalid exp target
+// CHECK-NEXT:{{^}}exp pos00 v3, v2, v1, v0
+// CHECK-NEXT:{{^}}    ^
+
 //==============================================================================
 // invalid immediate: only 16-bit values are legal
 

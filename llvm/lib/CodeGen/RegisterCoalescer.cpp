@@ -442,7 +442,7 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   Flipped = CrossClass = false;
 
   Register Src, Dst;
-  unsigned SrcSub, DstSub;
+  unsigned SrcSub = 0, DstSub = 0;
   if (!isMoveInstr(TRI, MI, Src, Dst, SrcSub, DstSub))
     return false;
   Partial = SrcSub || DstSub;
@@ -537,7 +537,7 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
   if (!MI)
     return false;
   Register Src, Dst;
-  unsigned SrcSub, DstSub;
+  unsigned SrcSub = 0, DstSub = 0;
   if (!isMoveInstr(TRI, MI, Src, Dst, SrcSub, DstSub))
     return false;
 
@@ -1590,7 +1590,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // CoalescerPair may have a new register class with adjusted subreg indices
   // at this point.
   Register SrcReg, DstReg;
-  unsigned SrcSubIdx, DstSubIdx;
+  unsigned SrcSubIdx = 0, DstSubIdx = 0;
   if(!isMoveInstr(*TRI, CopyMI, SrcReg, DstReg, SrcSubIdx, DstSubIdx))
     return nullptr;
 
@@ -1966,7 +1966,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     if (!canJoinPhys(CP)) {
       // Before giving up coalescing, if definition of source is defined by
       // trivial computation, try rematerializing it.
-      bool IsDefCopy;
+      bool IsDefCopy = false;
       if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
         return true;
       if (IsDefCopy)
@@ -2005,7 +2005,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
 
     // If definition of source is defined by trivial computation, try
     // rematerializing it.
-    bool IsDefCopy;
+    bool IsDefCopy = false;
     if (reMaterializeTrivialDef(CP, CopyMI, IsDefCopy))
       return true;
 
@@ -3798,7 +3798,7 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
   if (!UseTerminalRule)
     return false;
   Register SrcReg, DstReg;
-  unsigned SrcSubReg, DstSubReg;
+  unsigned SrcSubReg = 0, DstSubReg = 0;
   if (!isMoveInstr(*TRI, &Copy, SrcReg, DstReg, SrcSubReg, DstSubReg))
     return false;
   // Check if the destination of this copy has any other affinity.
@@ -3823,7 +3823,7 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
     if (&MI == &Copy || !MI.isCopyLike() || MI.getParent() != OrigBB)
       continue;
     Register OtherSrcReg, OtherReg;
-    unsigned OtherSrcSubReg, OtherSubReg;
+    unsigned OtherSrcSubReg = 0, OtherSubReg = 0;
     if (!isMoveInstr(*TRI, &Copy, OtherSrcReg, OtherReg, OtherSrcSubReg,
                 OtherSubReg))
       return false;

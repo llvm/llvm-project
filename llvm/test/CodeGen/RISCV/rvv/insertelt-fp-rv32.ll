@@ -5,7 +5,6 @@
 define <vscale x 1 x half> @insertelt_nxv1f16_0(<vscale x 1 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv1f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -16,7 +15,6 @@ define <vscale x 1 x half> @insertelt_nxv1f16_0(<vscale x 1 x half> %v, half %el
 define <vscale x 1 x half> @insertelt_nxv1f16_imm(<vscale x 1 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv1f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -30,7 +28,6 @@ define <vscale x 1 x half> @insertelt_nxv1f16_imm(<vscale x 1 x half> %v, half %
 define <vscale x 1 x half> @insertelt_nxv1f16_idx(<vscale x 1 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv1f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -44,7 +41,6 @@ define <vscale x 1 x half> @insertelt_nxv1f16_idx(<vscale x 1 x half> %v, half %
 define <vscale x 2 x half> @insertelt_nxv2f16_0(<vscale x 2 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv2f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -55,7 +51,6 @@ define <vscale x 2 x half> @insertelt_nxv2f16_0(<vscale x 2 x half> %v, half %el
 define <vscale x 2 x half> @insertelt_nxv2f16_imm(<vscale x 2 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv2f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -69,7 +64,6 @@ define <vscale x 2 x half> @insertelt_nxv2f16_imm(<vscale x 2 x half> %v, half %
 define <vscale x 2 x half> @insertelt_nxv2f16_idx(<vscale x 2 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -83,7 +77,6 @@ define <vscale x 2 x half> @insertelt_nxv2f16_idx(<vscale x 2 x half> %v, half %
 define <vscale x 4 x half> @insertelt_nxv4f16_0(<vscale x 4 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv4f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -94,7 +87,6 @@ define <vscale x 4 x half> @insertelt_nxv4f16_0(<vscale x 4 x half> %v, half %el
 define <vscale x 4 x half> @insertelt_nxv4f16_imm(<vscale x 4 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv4f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -108,7 +100,6 @@ define <vscale x 4 x half> @insertelt_nxv4f16_imm(<vscale x 4 x half> %v, half %
 define <vscale x 4 x half> @insertelt_nxv4f16_idx(<vscale x 4 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv4f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
@@ -122,7 +113,6 @@ define <vscale x 4 x half> @insertelt_nxv4f16_idx(<vscale x 4 x half> %v, half %
 define <vscale x 8 x half> @insertelt_nxv8f16_0(<vscale x 8 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv8f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -133,7 +123,6 @@ define <vscale x 8 x half> @insertelt_nxv8f16_0(<vscale x 8 x half> %v, half %el
 define <vscale x 8 x half> @insertelt_nxv8f16_imm(<vscale x 8 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv8f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v26, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v26, fa0
@@ -147,7 +136,6 @@ define <vscale x 8 x half> @insertelt_nxv8f16_imm(<vscale x 8 x half> %v, half %
 define <vscale x 8 x half> @insertelt_nxv8f16_idx(<vscale x 8 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv8f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v26, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v26, fa0
@@ -161,7 +149,6 @@ define <vscale x 8 x half> @insertelt_nxv8f16_idx(<vscale x 8 x half> %v, half %
 define <vscale x 16 x half> @insertelt_nxv16f16_0(<vscale x 16 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv16f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -172,7 +159,6 @@ define <vscale x 16 x half> @insertelt_nxv16f16_0(<vscale x 16 x half> %v, half 
 define <vscale x 16 x half> @insertelt_nxv16f16_imm(<vscale x 16 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv16f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v28, fa0
@@ -186,7 +172,6 @@ define <vscale x 16 x half> @insertelt_nxv16f16_imm(<vscale x 16 x half> %v, hal
 define <vscale x 16 x half> @insertelt_nxv16f16_idx(<vscale x 16 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv16f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v28, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v28, fa0
@@ -200,7 +185,6 @@ define <vscale x 16 x half> @insertelt_nxv16f16_idx(<vscale x 16 x half> %v, hal
 define <vscale x 32 x half> @insertelt_nxv32f16_0(<vscale x 32 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv32f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
@@ -211,7 +195,6 @@ define <vscale x 32 x half> @insertelt_nxv32f16_0(<vscale x 32 x half> %v, half 
 define <vscale x 32 x half> @insertelt_nxv32f16_imm(<vscale x 32 x half> %v, half %elt) {
 ; CHECK-LABEL: insertelt_nxv32f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 3
 ; CHECK-NEXT:    vfmv.s.f v16, fa0
@@ -225,7 +208,6 @@ define <vscale x 32 x half> @insertelt_nxv32f16_imm(<vscale x 32 x half> %v, hal
 define <vscale x 32 x half> @insertelt_nxv32f16_idx(<vscale x 32 x half> %v, half %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv32f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vfmv.s.f v16, fa0

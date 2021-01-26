@@ -2697,7 +2697,7 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   }
 
   bool HasByrefExtendedLayout = false;
-  Qualifiers::ObjCLifetime Lifetime;
+  Qualifiers::ObjCLifetime Lifetime = Qualifiers::OCL_None;
   if (getContext().getByrefLifetime(Ty, Lifetime, HasByrefExtendedLayout) &&
       HasByrefExtendedLayout) {
     /// void *__byref_variable_layout;
@@ -2767,8 +2767,8 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   const VarDecl &D = *emission.Variable;
   QualType type = D.getType();
 
-  bool HasByrefExtendedLayout;
-  Qualifiers::ObjCLifetime ByrefLifetime;
+  bool HasByrefExtendedLayout = false;
+  Qualifiers::ObjCLifetime ByrefLifetime = Qualifiers::OCL_None;
   bool ByRefHasLifetime =
     getContext().getByrefLifetime(type, ByrefLifetime, HasByrefExtendedLayout);
 

@@ -100,6 +100,8 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_undeclared_var_use_suggest:
   case diag::err_no_member: // Could be no member in namespace.
   case diag::err_no_member_suggest:
+  case diag::err_no_member_template:
+  case diag::err_no_member_template_suggest:
     if (LastUnresolvedName) {
       // Try to fix unresolved name caused by missing declaration.
       // E.g.

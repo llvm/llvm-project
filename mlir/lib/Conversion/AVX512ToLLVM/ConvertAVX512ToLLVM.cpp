@@ -77,6 +77,29 @@ struct ScaleFOp512Conversion : public ConvertToLLVMPattern {
     return failure();
   }
 };
+
+struct Vp2IntersectOp512Conversion
+    : public ConvertOpToLLVMPattern<Vp2IntersectOp> {
+  explicit Vp2IntersectOp512Conversion(MLIRContext *context,
+                                       LLVMTypeConverter &typeConverter)
+      : ConvertOpToLLVMPattern<Vp2IntersectOp>(typeConverter) {}
+
+  LogicalResult
+  matchAndRewrite(Vp2IntersectOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type elementType =
+        op.a().getType().template cast<VectorType>().getElementType();
+    if (elementType.isInteger(32))
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_vp2intersect_d_512::getOperationName(), operands,
+          *getTypeConverter(), rewriter);
+    if (elementType.isInteger(64))
+      return LLVM::detail::oneToOneRewrite(
+          op, LLVM::x86_avx512_vp2intersect_q_512::getOperationName(), operands,
+          *getTypeConverter(), rewriter);
+    return failure();
+  }
+};
 } // namespace
 
 /// Populate the given list with patterns that convert from AVX512 to LLVM.
@@ -84,6 +107,8 @@ void mlir::populateAVX512ToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   // clang-format off
   patterns.insert<MaskRndScaleOp512Conversion,
-                  ScaleFOp512Conversion>(&converter.getContext(), converter);
+                  ScaleFOp512Conversion,
+                  Vp2IntersectOp512Conversion>(&converter.getContext(),
+                                               converter);
   // clang-format on
 }

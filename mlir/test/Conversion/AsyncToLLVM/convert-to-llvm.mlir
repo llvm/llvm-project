@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -convert-async-to-llvm | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -async-to-async-runtime -convert-async-to-llvm | FileCheck %s
 
 // CHECK-LABEL: reference_counting
 func @reference_counting(%arg0: !async.token) {
@@ -247,8 +247,7 @@ func @execute_and_return_f32() -> f32 {
 
 // -----
 
-// RUN: mlir-opt %s -split-input-file -convert-async-to-llvm | FileCheck %s
-
+// CHECK-LABEL: @async_value_operands
 func @async_value_operands() {
   // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
