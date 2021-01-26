@@ -1,8 +1,12 @@
 # REQUIRES: asserts
+# UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t %s
 # RUN: llvm-jitlink -debug-only=jitlink -define-abs bar=0x01 \
 # RUN:     -define-abs _ZTIi=0x02 -noexec %t 2>&1 | FileCheck %s
+#
+# FIXME: This test should run on windows. Investigate spurious
+# 'note: command had no output on stdout or stderr' errors, then re-enable.
 #
 # Check that a basic .eh-frame section is recognized and parsed. We
 # Expect to see two FDEs with corresponding keep-alive edges.
