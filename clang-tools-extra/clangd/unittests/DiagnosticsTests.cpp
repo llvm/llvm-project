@@ -879,11 +879,13 @@ void bar() {
 
   ::$global[[Global]] glob;
 }
+using Type = ns::$template[[Foo]]<int>;
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   auto Index = buildIndexWithSymbol(
       {SymbolWithHeader{"ns::X", "unittest:///x.h", "\"x.h\""},
-       SymbolWithHeader{"Global", "unittest:///global.h", "\"global.h\""}});
+       SymbolWithHeader{"Global", "unittest:///global.h", "\"global.h\""},
+       SymbolWithHeader{"ns::Foo", "unittest:///foo.h", "\"foo.h\""}});
   TU.ExternalIndex = Index.get();
 
   EXPECT_THAT(
@@ -908,7 +910,12 @@ void bar() {
                      "no type named 'Global' in the global namespace"),
                 DiagName("typename_nested_not_found"),
                 WithFix(Fix(Test.range("insert"), "#include \"global.h\"\n",
-                            "Add include \"global.h\" for symbol Global")))));
+                            "Add include \"global.h\" for symbol Global"))),
+          AllOf(Diag(Test.range("template"),
+                     "no template named 'Foo' in namespace 'ns'"),
+                DiagName("no_member_template"),
+                WithFix(Fix(Test.range("insert"), "#include \"foo.h\"\n",
+                            "Add include \"foo.h\" for symbol ns::Foo")))));
 }
 
 TEST(IncludeFixerTest, MultipleMatchedSymbols) {
