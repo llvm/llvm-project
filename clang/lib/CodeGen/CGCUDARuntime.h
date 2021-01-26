@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
 class Function;
@@ -80,12 +81,10 @@ public:
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
-  virtual void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                 bool Extern, bool Constant) = 0;
-  virtual void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                  bool Extern, int Type) = 0;
-  virtual void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                 bool Extern, int Type, bool Normalized) = 0;
+
+  /// Check whether a variable is a device variable and register it if true.
+  virtual void handleVarRegistration(const VarDecl *VD,
+                                     llvm::GlobalVariable &Var) = 0;
 
   /// Constructs and returns a module initialization function or nullptr if it's
   /// not needed. Must be called after all kernels have been emitted.
@@ -98,6 +97,11 @@ public:
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *ND) = 0;
+
+  /// Adjust linkage of shadow variables in host compilation.
+  virtual void
+  internalizeDeviceSideVar(const VarDecl *D,
+                           llvm::GlobalValue::LinkageTypes &Linkage) = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.
