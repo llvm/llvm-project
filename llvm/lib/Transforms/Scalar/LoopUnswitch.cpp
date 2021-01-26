@@ -725,6 +725,11 @@ hasPartialIVCondition(Loop *L, MemorySSA &MSSA, AAResults *AA) {
           WorkList.append(succ_begin(Current), succ_end(Current));
         }
 
+        // Require at least 2 blocks on a path through the loop. This skips
+        // paths that directly exit the loop.
+        if (Seen.size() < 2)
+          return false;
+
         // Next, check if there are any MemoryDefs that are on the path through
         // the loop (in the Seen set) and they may-alias any of the locations in
         // AccessedLocs. If that is the case, they may modify the condition and
@@ -760,6 +765,11 @@ hasPartialIVCondition(Loop *L, MemorySSA &MSSA, AAResults *AA) {
 
         return true;
       };
+
+  // If we branch to the same successor, partial unswitching will not be
+  // beneficial.
+  if (TI->getSuccessor(0) == TI->getSuccessor(1))
+    return {};
 
   if (HasNoClobbersOnPath(TI->getSuccessor(0), L->getHeader(), AccessesToCheck))
     return {ToDuplicate, ConstantInt::getTrue(TI->getContext())};
