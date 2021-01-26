@@ -32,17 +32,33 @@
     llvm::errs() << "'" << #expr << "' failed with '" << name << "'\n";        \
   }(expr)
 
-// Static initialization of CUDA context for device ordinal 0.
-static auto InitializeCtx = [] {
+// Static reference to CUDA primary context for device ordinal 0.
+static CUcontext Context = [] {
   CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
   CUdevice device;
   CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/0));
   CUcontext context;
-  CUDA_REPORT_IF_ERROR(cuCtxCreate(&context, /*flags=*/0, device));
-  return 0;
+  CUDA_REPORT_IF_ERROR(cuDevicePrimaryCtxRetain(&context, device));
+  return context;
 }();
 
+// Sets the `Context` for the duration of the instance and restores the previous
+// context on destruction.
+class ScopedContext {
+public:
+  ScopedContext() {
+    CUDA_REPORT_IF_ERROR(cuCtxGetCurrent(&previous));
+    CUDA_REPORT_IF_ERROR(cuCtxSetCurrent(Context));
+  }
+
+  ~ScopedContext() { CUDA_REPORT_IF_ERROR(cuCtxSetCurrent(previous)); }
+
+private:
+  CUcontext previous;
+};
+
 extern "C" CUmodule mgpuModuleLoad(void *data) {
+  ScopedContext scopedContext;
   CUmodule module = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleLoadData(&module, data));
   return module;
@@ -66,12 +82,14 @@ extern "C" void mgpuLaunchKernel(CUfunction function, intptr_t gridX,
                                  intptr_t blockX, intptr_t blockY,
                                  intptr_t blockZ, int32_t smem, CUstream stream,
                                  void **params, void **extra) {
+  ScopedContext scopedContext;
   CUDA_REPORT_IF_ERROR(cuLaunchKernel(function, gridX, gridY, gridZ, blockX,
                                       blockY, blockZ, smem, stream, params,
                                       extra));
 }
 
 extern "C" CUstream mgpuStreamCreate() {
+  ScopedContext scopedContext;
   CUstream stream = nullptr;
   CUDA_REPORT_IF_ERROR(cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING));
   return stream;
@@ -90,6 +108,7 @@ extern "C" void mgpuStreamWaitEvent(CUstream stream, CUevent event) {
 }
 
 extern "C" CUevent mgpuEventCreate() {
+  ScopedContext scopedContext;
   CUevent event = nullptr;
   CUDA_REPORT_IF_ERROR(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING));
   return event;
@@ -108,6 +127,7 @@ extern "C" void mgpuEventRecord(CUevent event, CUstream stream) {
 }
 
 extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
+  ScopedContext scopedContext;
   CUdeviceptr ptr;
   CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
