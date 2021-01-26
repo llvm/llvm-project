@@ -147,6 +147,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return R_GOT;
+  case R_AARCH64_LD64_GOTPAGE_LO15:
+    return R_AARCH64_GOT_PAGE;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_AARCH64_GOT_PAGE_PC;
@@ -398,6 +400,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
     checkAlignment(loc, val, 16, rel);
     or32AArch64Imm(loc, getBits(val, 4, 11));
+    break;
+  case R_AARCH64_LD64_GOTPAGE_LO15:
+    checkAlignment(loc, val, 8, rel);
+    or32AArch64Imm(loc, getBits(val, 3, 14));
     break;
   case R_AARCH64_MOVW_UABS_G0:
     checkUInt(loc, val, 16, rel);
