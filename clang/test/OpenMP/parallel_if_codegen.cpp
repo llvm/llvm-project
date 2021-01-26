@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple %itanium_abi_triple -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple %itanium_abi_triple -emit-llvm %s -disable-O0-optnone -o - | FileCheck %s --check-prefix=WOPT
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
@@ -96,14 +97,20 @@ int main() {
   return tmain(Arg);
 }
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN4]]
 // CHECK: call {{.*}}void @{{.+}}fn4
 // CHECK: ret void
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN5]]
 // CHECK: call {{.*}}void @{{.+}}fn5
 // CHECK: ret void
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN6]]
 // CHECK: call {{.*}}void @{{.+}}fn6
 // CHECK: ret void
@@ -129,14 +136,20 @@ int main() {
 // CHECK: br label %[[OMP_END]]
 // CHECK: [[OMP_END]]
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN1]]
 // CHECK: call {{.*}}void @{{.+}}fn1
 // CHECK: ret void
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN2]]
 // CHECK: call {{.*}}void @{{.+}}fn2
 // CHECK: ret void
 
+// WOPT:     noinline
+// WOPT-NOT: optnone
 // CHECK: define internal {{.*}}void [[CAP_FN3]]
 // CHECK: call {{.*}}void @{{.+}}fn3
 // CHECK: ret void
