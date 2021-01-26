@@ -5692,7 +5692,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = AArch64ISD::CALL;
   // Calls marked with "rv_marker" are special. They should be expanded to the
   // call, directly followed by a special marker sequence. Use the CALL_RVMARKER
   // to do that.
