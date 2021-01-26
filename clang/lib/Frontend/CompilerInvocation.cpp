@@ -444,6 +444,22 @@ static void FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fgnu89-inline" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
+    Diags.Report(diag::warn_ignored_hip_only_option)
+        << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
+
+  if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ) && !LangOpts.HIP)
+    Diags.Report(diag::warn_ignored_hip_only_option)
+        << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
+
+  // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
+  // This option should be deprecated for CL > 1.0 because
+  // this option was added for compatibility with OpenCL 1.0.
+  if (Args.getLastArg(OPT_cl_strict_aliasing) && LangOpts.OpenCLVersion > 100)
+    Diags.Report(diag::warn_option_invalid_ocl_version)
+        << LangOpts.getOpenCLVersionTuple().getAsString()
+        << Args.getLastArg(OPT_cl_strict_aliasing)->getAsString(Args);
+
   if (Arg *A = Args.getLastArg(OPT_fdefault_calling_conv_EQ)) {
     auto DefaultCC = LangOpts.getDefaultCallingConv();
 
@@ -2014,8 +2030,6 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.AltiVec = 0;
     Opts.ZVector = 0;
     Opts.setDefaultFPContractMode(LangOptions::FPM_On);
-    Opts.NativeHalfType = 1;
-    Opts.NativeHalfArgsAndReturns = 1;
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
 
     // Include default header file for OpenCL.
@@ -2047,10 +2061,6 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   }
 
   Opts.RenderScript = IK.getLanguage() == Language::RenderScript;
-  if (Opts.RenderScript) {
-    Opts.NativeHalfType = 1;
-    Opts.NativeHalfArgsAndReturns = 1;
-  }
 
   // OpenCL and C++ both have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
@@ -2246,37 +2256,8 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-  Opts.SYCLIsDevice = Opts.SYCL && Args.hasArg(options::OPT_fsycl_is_device);
-
-  // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
-  // This option should be deprecated for CL > 1.0 because
-  // this option was added for compatibility with OpenCL 1.0.
-  if (Args.getLastArg(OPT_cl_strict_aliasing)
-       && Opts.OpenCLVersion > 100) {
-    Diags.Report(diag::warn_option_invalid_ocl_version)
-        << Opts.getOpenCLVersionTuple().getAsString()
-        << Args.getLastArg(OPT_cl_strict_aliasing)->getAsString(Args);
-  }
-
   if (Args.hasArg(OPT_fno_operator_names))
     Opts.CXXOperatorNames = 0;
-
-  if (Opts.CUDAIsDevice && Args.hasArg(OPT_fcuda_approx_transcendentals))
-    Opts.CUDADeviceApproxTranscendentals = 1;
-
-  if (Args.hasArg(OPT_fgpu_allow_device_init)) {
-    if (Opts.HIP)
-      Opts.GPUAllowDeviceInit = 1;
-    else
-      Diags.Report(diag::warn_ignored_hip_only_option)
-          << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
-  }
-  if (Opts.HIP)
-    Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
-        Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);
-  else if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ))
-    Diags.Report(diag::warn_ignored_hip_only_option)
-        << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
 
   if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
@@ -2438,12 +2419,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   Opts.XLPragmaPack = Args.hasArg(OPT_fxl_pragma_pack);
   llvm::sort(Opts.ModuleFeatures);
-  Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
-  Opts.NativeHalfArgsAndReturns |= Args.hasArg(OPT_fnative_half_arguments_and_returns);
-  // Enable HalfArgsAndReturns if present in Args or if NativeHalfArgsAndReturns
-  // is enabled.
-  Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
-                            | Opts.NativeHalfArgsAndReturns;
 
   Opts.ArmSveVectorBits =
       getLastArgIntValue(Args, options::OPT_msve_vector_bits_EQ, 0, Diags);

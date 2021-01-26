@@ -438,6 +438,8 @@ defvar cplusplus = LangOpts<"CPlusPlus">;
 defvar c99 = LangOpts<"C99">;
 defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
+defvar render_script = LangOpts<"RenderScript">;
+defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
 
 defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
@@ -870,8 +872,6 @@ def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Group<i_Group>,
 def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">,
   HelpText<"Flush denormal floating point values to zero in CUDA device mode.">;
 def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">;
-defm cuda_approx_transcendentals : OptInFFlag<"cuda-approx-transcendentals", "Use", "Don't use",
-  " approximate transcendental functions">;
 defm gpu_rdc : BoolFOption<"gpu-rdc",
   LangOpts<"GPURelocatableDeviceCode">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Generate relocatable device code, also known as separate compilation mode">,
@@ -896,8 +896,11 @@ defm hip_new_launch_api : BoolFOption<"hip-new-launch-api",
   LangOpts<"HIPUseNewLaunchAPI">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
   BothFlags<[], " new kernel launching API for HIP">>;
-defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
-  "Allow", "Don't allow", " device side init function in HIP">;
+defm gpu_allow_device_init : BoolFOption<"gpu-allow-device-init",
+  LangOpts<"GPUAllowDeviceInit">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Allow">, NegFlag<SetFalse, [], "Don't allow">,
+  BothFlags<[], " device side init function in HIP">>,
+  ShouldParseIf<hip.KeyPath>;
 defm gpu_defer_diag : BoolFOption<"gpu-defer-diag",
   LangOpts<"GPUDeferDiag">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Defer">, NegFlag<SetFalse, [], "Don't defer">,
@@ -909,7 +912,9 @@ defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-over
   BothFlags<[HelpHidden], " in overloading resolution for CUDA/HIP">>;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
-  HelpText<"Default max threads per block for kernel launch bounds for HIP">;
+  HelpText<"Default max threads per block for kernel launch bounds for HIP">,
+  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "256">,
+  ShouldParseIf<hip.KeyPath>;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;
@@ -5161,11 +5166,17 @@ def vtordisp_mode_EQ : Joined<["-"], "vtordisp-mode=">,
   HelpText<"Control vtordisp placement on win32 targets">,
   MarshallingInfoStringInt<LangOpts<"VtorDispMode">, "1">;
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
-  HelpText<"Use the native half type for __fp16 instead of promoting to float">;
+  HelpText<"Use the native half type for __fp16 instead of promoting to float">,
+  MarshallingInfoFlag<LangOpts<"NativeHalfType">>,
+  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath]>;
 def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
-  HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">;
+  HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">,
+  MarshallingInfoFlag<LangOpts<"NativeHalfArgsAndReturns">>,
+  ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath]>;
 def fallow_half_arguments_and_returns : Flag<["-"], "fallow-half-arguments-and-returns">,
-  HelpText<"Allow function arguments and returns of type half">;
+  HelpText<"Allow function arguments and returns of type half">,
+  MarshallingInfoFlag<LangOpts<"HalfArgsAndReturns">>,
+  ImpliedByAnyOf<[fnative_half_arguments_and_returns.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">, Values<"cdecl,fastcall,stdcall,vectorcall,regcall">,
   NormalizedValuesScope<"LangOptions">,
@@ -5299,9 +5310,17 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
 //===----------------------------------------------------------------------===//
 
 def fsycl_is_device : Flag<["-"], "fsycl-is-device">,
-  HelpText<"Generate code for SYCL device.">;
+  HelpText<"Generate code for SYCL device.">,
+  MarshallingInfoFlag<LangOpts<"SYCLIsDevice">>,
+  ShouldParseIf<fsycl.KeyPath>;
 
 } // let Flags = [CC1Option, NoDriverOption]
+
+defm cuda_approx_transcendentals : BoolFOption<"cuda-approx-transcendentals",
+  LangOpts<"CUDADeviceApproxTranscendentals">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
+  BothFlags<[], " approximate transcendental functions">>,
+  ShouldParseIf<fcuda_is_device.KeyPath>;
 
 //===----------------------------------------------------------------------===//
 // Frontend Options - cc1 + fc1
