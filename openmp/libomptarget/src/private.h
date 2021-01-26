@@ -19,22 +19,24 @@
 
 #include <cstdint>
 
-extern int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
-                           void **args, int64_t *arg_sizes, int64_t *arg_types,
-                           map_var_info_t *arg_names, void **arg_mappers,
+extern int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
+                           void **args_base, void **args, int64_t *arg_sizes,
+                           int64_t *arg_types, map_var_info_t *arg_names,
+                           void **arg_mappers,
                            __tgt_async_info *async_info_ptr);
 
-extern int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
-                         void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-                         map_var_info_t *arg_names, void **ArgMappers,
-                         __tgt_async_info *AsyncInfo);
+extern int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
+                         void **ArgBases, void **Args, int64_t *ArgSizes,
+                         int64_t *ArgTypes, map_var_info_t *arg_names,
+                         void **ArgMappers, __tgt_async_info *AsyncInfo);
 
-extern int targetDataUpdate(DeviceTy &Device, int32_t arg_num, void **args_base,
-                            void **args, int64_t *arg_sizes, int64_t *arg_types,
-                            map_var_info_t *arg_names, void **arg_mappers,
+extern int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t arg_num,
+                            void **args_base, void **args, int64_t *arg_sizes,
+                            int64_t *arg_types, map_var_info_t *arg_names,
+                            void **arg_mappers,
                             __tgt_async_info *async_info_ptr = nullptr);
 
-extern int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+extern int target(ident_t *loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *arg_names,
                   void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
@@ -73,9 +75,10 @@ typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
 
 // Function pointer type for target_data_* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
-typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
-                                   int64_t *, int64_t *, map_var_info_t *,
-                                   void **, __tgt_async_info *);
+typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
+                                   void **, int64_t *, int64_t *,
+                                   map_var_info_t *, void **,
+                                   __tgt_async_info *);
 
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
@@ -157,8 +160,16 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 #ifdef OMPTARGET_PROFILE_ENABLED
 #include "llvm/Support/TimeProfiler.h"
 #define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
+#define TIMESCOPE_WITH_IDENT(IDENT)                                            \
+  SourceInfo SI(IDENT);                                                        \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation())
+#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
+  SourceInfo SI(IDENT);                                                        \
+  llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
 #else
 #define TIMESCOPE()
+#define TIMESCOPE_WITH_IDENT(IDENT)
+#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME IDENT)
 #endif
 
 #endif

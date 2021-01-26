@@ -91,6 +91,7 @@ public:
 
   const char *getName() const { return Name.c_str(); }
   const char *getFilename() const { return Filename.c_str(); }
+  const char *getProfileLocation() const { return SourceStr.data(); }
   int32_t getLine() const { return Line; }
   int32_t getColumn() const { return Column; }
   bool isAvailible() const { return (Line || Column); }
