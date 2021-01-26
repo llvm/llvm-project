@@ -379,8 +379,9 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return getIntImmCost(Imm, Ty, CostKind);
 }
 
-int ARMTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                               const Instruction *I) {
+InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
     // FIXME: The vectorizer is highly sensistive to the cost of these
