@@ -939,6 +939,16 @@ llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias = true}) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @byvalattr(i32* byval(i32) %
+llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval}) {
+  llvm.return
+}
+
+// CHECK-LABEL: define void @sretattr(i32* sret(i32) %
+llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
+  llvm.return
+}
+
 // CHECK-LABEL: define void @llvm_align(float* align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
