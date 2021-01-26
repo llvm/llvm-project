@@ -831,9 +831,7 @@ exit:
 define i32 @no_partial_unswitch_true_successor_exit(i32* %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_true_successor_exit
 ; CHECK-LABEL: entry:
-; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
-; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
-; CHECK-NEXT:   br i1 [[C]],
+; CHECK-NEXT:   br label %loop.header
 ;
 entry:
   br label %loop.header
@@ -860,9 +858,7 @@ exit:
 define i32 @no_partial_unswitch_true_same_successor(i32* %ptr, i32 %N) {
 ; CHECK-LABEL: @no_partial_unswitch_true_same_successor
 ; CHECK-LABEL: entry:
-; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
-; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
-; CHECK-NEXT:   br i1 [[C]],
+; CHECK-NEXT:   br label %loop.header
 ;
 entry:
   br label %loop.header
