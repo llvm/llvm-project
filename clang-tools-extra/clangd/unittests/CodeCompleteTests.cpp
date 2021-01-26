@@ -2573,7 +2573,7 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
 }
 
 TEST(CompletionTest, IncludedCompletionKinds) {
-  Annotations Test(R"cpp(#include "^")cpp");
+  Annotations Test(R"cpp(#include "^)cpp");
   auto TU = TestTU::withCode(Test.code());
   TU.AdditionalFiles["sub/bar.h"] = "";
   TU.ExtraArgs.push_back("-I" + testPath("sub"));
