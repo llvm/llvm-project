@@ -495,8 +495,8 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(<8 x i16> addrspace(1)* %out, <
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umin_ult_i16:
 ; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
 ; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
-; GCN: s_min_u32 [[MIN:s[0-9]+]], [[A]], [[B]]
-; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
+; GCN: s_min_u32 [[MIN:s[0-9]+]], s{{[0-9]}}, s{{[0-9]}}
+; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], s{{[0-9]}}
 ; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_UINT

@@ -38,6 +38,7 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GCN-NEXT:    global_load_dwordx4 v[20:23], v[2:3], off offset:16
 ; GCN-NEXT:    global_load_dwordx4 v[24:27], v[2:3], off offset:32
 ; GCN-NEXT:    global_load_dwordx4 v[28:31], v[2:3], off offset:48
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1] offset:128
 ; GCN-NEXT:    global_load_dwordx4 v[16:19], v64, s[0:1] offset:192
 ; GCN-NEXT:    s_waitcnt vmcnt(7)
