@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o - -always-use-ranges-in-v5=Enable \
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o - -minimize-addr-in-v5=Ranges \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
 ; RUN:   | FileCheck --implicit-check-not=DW_TAG --implicit-check-not=NULL --implicit-check-not=DW_AT_low_pc --implicit-check-not=DW_AT_high_pc --implicit-check-not=DW_AT_ranges %s
 
