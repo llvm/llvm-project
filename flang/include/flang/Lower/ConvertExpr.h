@@ -91,7 +91,7 @@ createSomeNewArrayValue(AbstractConverter &converter, fir::ArrayLoadOp dst,
                         const evaluate::Expr<evaluate::SomeType> &expr,
                         SymMap &symMap, StatementContext &stmtCtx);
 
-/// Lower an designator expression to a value of type box.
+/// Lower an array expression to a value of type box.
 fir::ExtendedValue
 createSomeArrayBox(AbstractConverter &converter,
                    const evaluate::Expr<evaluate::SomeType> &expr,
