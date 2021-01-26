@@ -1303,6 +1303,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   LiveRegs.init(*TRI);
 
   if (WillHaveFP || hasFP(MF)) {
+    assert(!MFI->SGPRForFPSaveRestoreCopy && !MFI->FramePointerSaveIndex &&
+           "Re-reserving spill slot for FP");
     getVGPRSpillLaneOrTempRegister(MF, LiveRegs, MFI->SGPRForFPSaveRestoreCopy,
                                    MFI->FramePointerSaveIndex, true);
   }
@@ -1310,6 +1312,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (TRI->hasBasePointer(MF)) {
     if (MFI->SGPRForFPSaveRestoreCopy)
       LiveRegs.addReg(MFI->SGPRForFPSaveRestoreCopy);
+
+    assert(!MFI->SGPRForBPSaveRestoreCopy &&
+           !MFI->BasePointerSaveIndex && "Re-reserving spill slot for BP");
     getVGPRSpillLaneOrTempRegister(MF, LiveRegs, MFI->SGPRForBPSaveRestoreCopy,
                                    MFI->BasePointerSaveIndex, false);
   }
