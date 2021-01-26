@@ -434,8 +434,11 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
     AutoNormalizeEnum {}
 
 // Key paths that are constant during parsing of options with the same key path prefix.
+defvar cplusplus = LangOpts<"CPlusPlus">;
+defvar c99 = LangOpts<"C99">;
 defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
+defvar gnu_mode = LangOpts<"GNUMode">;
 
 defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
 
@@ -1619,9 +1622,19 @@ def ffreestanding : Flag<["-"], "ffreestanding">, Group<f_Group>, Flags<[CC1Opti
 def fgnuc_version_EQ : Joined<["-"], "fgnuc-version=">, Group<f_Group>,
   HelpText<"Sets various macros to claim compatibility with the given GCC version (default is 4.2.1)">,
   Flags<[CC1Option, CoreOption]>;
-def fgnu_keywords : Flag<["-"], "fgnu-keywords">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Allow GNU-extension keywords regardless of language standard">;
-defm gnu89_inline : OptInFFlag<"gnu89-inline", "Use the gnu89 inline semantics">;
+// We abuse '-f[no-]gnu-keywords' to force overriding all GNU-extension
+// keywords. This behavior is provided by GCC's poorly named '-fasm' flag,
+// while a subset (the non-C++ GNU keywords) is provided by GCC's
+// '-fgnu-keywords'. Clang conflates the two for simplicity under the single
+// name, as it doesn't seem a useful distinction.
+defm gnu_keywords : BoolFOption<"gnu-keywords",
+  LangOpts<"GNUKeywords">, Default<gnu_mode.KeyPath>,
+  PosFlag<SetTrue, [], "Allow GNU-extension keywords regardless of language standard">,
+  NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
+defm gnu89_inline : BoolFOption<"gnu89-inline",
+  LangOpts<"GNUInline">, Default<!strconcat("!", c99.KeyPath, " && !", cplusplus.KeyPath)>,
+  PosFlag<SetTrue, [CC1Option], "Use the gnu89 inline semantics">,
+  NegFlag<SetFalse>>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
 def fgnu_runtime : Flag<["-"], "fgnu-runtime">, Group<f_Group>,
   HelpText<"Generate output compatible with the standard GNU Objective-C runtime">;
 def fheinous_gnu_extensions : Flag<["-"], "fheinous-gnu-extensions">, Flags<[CC1Option]>,
@@ -1965,7 +1978,6 @@ def fno_declspec : Flag<["-"], "fno-declspec">, Group<f_clang_Group>,
 def fno_dollars_in_identifiers : Flag<["-"], "fno-dollars-in-identifiers">, Group<f_Group>,
   HelpText<"Disallow '$' in identifiers">, Flags<[CC1Option]>;
 def fno_eliminate_unused_debug_symbols : Flag<["-"], "fno-eliminate-unused-debug-symbols">, Group<f_Group>;
-def fno_gnu_keywords : Flag<["-"], "fno-gnu-keywords">, Group<f_Group>, Flags<[CC1Option]>;
 def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fno_global_isel : Flag<["-"], "fno-global-isel">, Group<f_clang_Group>,
