@@ -110,23 +110,23 @@
 // CHECK-DOUBLE-NOT: __riscv_float_abi_single
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN:   -march=rv32iv0p9 -x c -E -dM %s \
+// RUN:   -march=rv32iv1p0 -x c -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-V-EXT %s
 // RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN:   -march=rv64iv0p9 -x c -E -dM %s \
+// RUN:   -march=rv64iv1p0 -x c -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-V-EXT %s
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvamo0p9 -x c -E -dM %s \
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvamo1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-V-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvamo0p9 -x c -E -dM %s \
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvamo1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-V-EXT %s
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvlsseg0p9 -x c -E -dM %s \
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvlsseg1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-V-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvlsseg0p9 -x c -E -dM %s \
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions -march=rv32izvlsseg1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-V-EXT %s
-// CHECK-V-EXT: __riscv_v 9000
+// CHECK-V-EXT: __riscv_v 1000000
 // CHECK-V-EXT: __riscv_vector 1
-// CHECK-V-EXT: __riscv_zvamo 9000
-// CHECK-V-EXT: __riscv_zvlsseg 9000
+// CHECK-V-EXT: __riscv_zvamo 1000000
+// CHECK-V-EXT: __riscv_zvlsseg 1000000
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions -march=rv32izba0p93 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBA-EXT %s
