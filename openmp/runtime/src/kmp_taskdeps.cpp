@@ -86,6 +86,12 @@ static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
   h->buckets = (kmp_dephash_entry **)(h + 1);
   h->generation = gen;
   h->nconflicts = 0;
+
+  // make sure buckets are properly initialized
+  for (size_t i = 0; i < new_size; i++) {
+    h->buckets[i] = NULL;
+  }
+
   // insert existing elements in the new table
   for (size_t i = 0; i < current_dephash->size; i++) {
     kmp_dephash_entry_t *next, *entry;
@@ -523,10 +529,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       current_task->ompt_task_info.frame.enter_frame.ptr =
           OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_task_create) {
-      ompt_data_t task_data = ompt_data_none;
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-          current_task ? &(current_task->ompt_task_info.frame) : NULL,
+          &(current_task->ompt_task_info.task_data),
+          &(current_task->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
           ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
@@ -583,7 +588,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                 current_task->td_flags.tasking_ser ||
                 current_task->td_flags.final;
   kmp_task_team_t *task_team = thread->th.th_task_team;
-  serial = serial && !(task_team && task_team->tt.tt_found_proxy_tasks);
+  serial = serial &&
+           !(task_team && (task_team->tt.tt_found_proxy_tasks ||
+                           task_team->tt.tt_hidden_helper_task_encountered));
 
   if (!serial && (ndeps > 0 || ndeps_noalias > 0)) {
     /* if no dependencies have been tracked yet, create the dependence hash */
@@ -640,13 +647,12 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 void __ompt_taskwait_dep_finish(kmp_taskdata_t *current_task,
                                 ompt_data_t *taskwait_task_data) {
   if (ompt_enabled.ompt_callback_task_schedule) {
-    ompt_data_t task_data = ompt_data_none;
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
-        current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-        ompt_task_switch, taskwait_task_data);
+        &(current_task->ompt_task_info.task_data), ompt_task_switch,
+        taskwait_task_data);
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
         taskwait_task_data, ompt_task_complete,
-        current_task ? &(current_task->ompt_task_info.task_data) : &task_data);
+        &(current_task->ompt_task_info.task_data));
   }
   current_task->ompt_task_info.frame.enter_frame.ptr = NULL;
   *taskwait_task_data = ompt_data_none;
@@ -692,11 +698,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
       current_task->ompt_task_info.frame.enter_frame.ptr =
           OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_task_create) {
-      ompt_data_t task_data = ompt_data_none;
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-          current_task ? &(current_task->ompt_task_info.frame) : NULL,
-          taskwait_task_data,
+          &(current_task->ompt_task_info.task_data),
+          &(current_task->ompt_task_info.frame), taskwait_task_data,
           ompt_task_explicit | ompt_task_undeferred | ompt_task_mergeable, 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }

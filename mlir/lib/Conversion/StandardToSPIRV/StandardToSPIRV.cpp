@@ -386,6 +386,28 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts floating point NaN check to SPIR-V ops. This pattern requires
+/// Kernel capability.
+class CmpFOpNanKernelPattern final : public OpConversionPattern<CmpFOp> {
+public:
+  using OpConversionPattern<CmpFOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts floating point NaN check to SPIR-V ops. This pattern does not
+/// require additional capability.
+class CmpFOpNanNonePattern final : public OpConversionPattern<CmpFOp> {
+public:
+  using OpConversionPattern<CmpFOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts integer compare operation on i1 type operands to SPIR-V ops.
 class BoolCmpIOpPattern final : public OpConversionPattern<CmpIOp> {
 public:
@@ -481,16 +503,32 @@ public:
     auto dstType =
         this->getTypeConverter()->convertType(op.getResult().getType());
     Location loc = op.getLoc();
-    Attribute zeroAttr, oneAttr;
-    if (auto vectorType = dstType.dyn_cast<VectorType>()) {
-      zeroAttr = DenseElementsAttr::get(vectorType, 0);
-      oneAttr = DenseElementsAttr::get(vectorType, 1);
-    } else {
-      zeroAttr = IntegerAttr::get(dstType, 0);
-      oneAttr = IntegerAttr::get(dstType, 1);
-    }
-    Value zero = rewriter.create<ConstantOp>(loc, zeroAttr);
-    Value one = rewriter.create<ConstantOp>(loc, oneAttr);
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+    rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
+        op, dstType, operands.front(), one, zero);
+    return success();
+  }
+};
+
+/// Converts std.uitofp to spv.Select if the type of source is i1 or vector of
+/// i1.
+class UIToFPI1Pattern final : public OpConversionPattern<UIToFPOp> {
+public:
+  using OpConversionPattern<UIToFPOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(UIToFPOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = operands.front().getType();
+    if (!isBoolScalarOrVector(srcType))
+      return failure();
+
+    auto dstType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    Location loc = op.getLoc();
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
         op, dstType, operands.front(), one, zero);
     return success();
@@ -728,6 +766,47 @@ CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     break;
   }
   return failure();
+}
+
+LogicalResult CmpFOpNanKernelPattern::matchAndRewrite(
+    CmpFOp cmpFOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  CmpFOpAdaptor cmpFOpOperands(operands);
+
+  if (cmpFOp.getPredicate() == CmpFPredicate::ORD) {
+    rewriter.replaceOpWithNewOp<spirv::OrderedOp>(cmpFOp, cmpFOpOperands.lhs(),
+                                                  cmpFOpOperands.rhs());
+    return success();
+  }
+
+  if (cmpFOp.getPredicate() == CmpFPredicate::UNO) {
+    rewriter.replaceOpWithNewOp<spirv::UnorderedOp>(
+        cmpFOp, cmpFOpOperands.lhs(), cmpFOpOperands.rhs());
+    return success();
+  }
+
+  return failure();
+}
+
+LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
+    CmpFOp cmpFOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  if (cmpFOp.getPredicate() != CmpFPredicate::ORD &&
+      cmpFOp.getPredicate() != CmpFPredicate::UNO)
+    return failure();
+
+  CmpFOpAdaptor cmpFOpOperands(operands);
+  Location loc = cmpFOp.getLoc();
+
+  Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, cmpFOpOperands.lhs());
+  Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, cmpFOpOperands.rhs());
+
+  Value replace = rewriter.create<spirv::LogicalOrOp>(loc, lhsIsNan, rhsIsNan);
+  if (cmpFOp.getPredicate() == CmpFPredicate::ORD)
+    replace = rewriter.create<spirv::LogicalNotOp>(loc, replace);
+
+  rewriter.replaceOp(cmpFOp, replace);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1084,7 +1163,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       SignedRemIOpPattern, XOrOpPattern,
 
       // Comparison patterns
-      BoolCmpIOpPattern, CmpFOpPattern, CmpIOpPattern,
+      BoolCmpIOpPattern, CmpFOpPattern, CmpFOpNanNonePattern, CmpIOpPattern,
 
       // Constant patterns
       ConstantCompositeOpPattern, ConstantScalarOpPattern,
@@ -1096,13 +1175,20 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       ReturnOpPattern, SelectOpPattern,
 
       // Type cast patterns
-      ZeroExtendI1Pattern, TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
+      UIToFPI1Pattern, ZeroExtendI1Pattern,
+      TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      TypeCastingOpPattern<UIToFPOp, spirv::ConvertUToFOp>,
       TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
       TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
       TypeCastingOpPattern<FPToSIOp, spirv::ConvertFToSOp>,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
       TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>>(typeConverter,
                                                           context);
+
+  // Give CmpFOpNanKernelPattern a higher benefit so it can prevail when Kernel
+  // capability is available.
+  patterns.insert<CmpFOpNanKernelPattern>(typeConverter, context,
+                                          /*benefit=*/2);
 }
 } // namespace mlir

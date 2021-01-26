@@ -44,27 +44,6 @@ using folded_std_view = FoldedValueBuilder<ViewOp>;
 
 #define DEBUG_TYPE "linalg-promotion"
 
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// Otherwise return size.
-static Value extractSmallestConstantBoundingSize(OpBuilder &b, Location loc,
-                                                 Value size) {
-  Optional<int64_t> boundingConst = {};
-  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
-    for (auto e : affineMinOp.getAffineMap().getResults())
-      if (auto cst = e.dyn_cast<AffineConstantExpr>())
-        boundingConst = boundingConst
-                            ? std::min(boundingConst.getValue(), cst.getValue())
-                            : cst.getValue();
-  } else if (auto constIndexOp = size.getDefiningOp<ConstantOp>()) {
-    if (constIndexOp.getType().isa<IndexType>())
-      boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
-  }
-  return boundingConst && *boundingConst >= 0
-             ? b.create<ConstantIndexOp>(loc, *boundingConst)
-             : size;
-}
-
 /// Alloc a new buffer of `size`. If `dynamicBuffers` is true allocate exactly
 /// the size needed, otherwise try to allocate a static bounding box.
 static Value allocBuffer(const LinalgPromotionOptions &options,
@@ -235,17 +214,20 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   ScopedContext scopedContext(b, loc);
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
-  SmallVector<Value, 4> fullSizes, partialSizes;
+  SmallVector<Value, 4> fullSizes;
+  SmallVector<OpFoldResult> partialSizes;
   fullSizes.reserve(rank);
   partialSizes.reserve(rank);
   for (auto en : llvm::enumerate(subView.getOrCreateRanges(b, loc))) {
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
-    Value size = extractSmallestConstantBoundingSize(b, loc, rangeValue.size);
+    IntegerAttr sizeAttr = getSmallestBoundingIndex(rangeValue.size);
+    Value size =
+        (!sizeAttr) ? rangeValue.size : b.create<ConstantOp>(loc, sizeAttr);
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
-    partialSizes.push_back(folded_std_dim(folder, subView, en.index()));
+    partialSizes.push_back(folded_std_dim(folder, subView, en.index()).value);
   }
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
   // If a callback is not specified, then use the default implementation for
@@ -253,10 +235,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, folder);
   if (!fullLocalView)
     return {};
-  auto zero = folded_std_constant_index(folder, 0);
-  auto one = folded_std_constant_index(folder, 1);
-  SmallVector<Value, 4> zeros(fullSizes.size(), zero);
-  SmallVector<Value, 4> ones(fullSizes.size(), one);
+  SmallVector<OpFoldResult, 4> zeros(fullSizes.size(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult, 4> ones(fullSizes.size(), b.getIndexAttr(1));
   auto partialLocalView =
       folded_std_subview(folder, *fullLocalView, zeros, partialSizes, ones);
   return PromotionInfo{*fullLocalView, partialLocalView};

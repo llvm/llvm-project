@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
@@ -16,6 +17,7 @@
 #include "TestTU.h"
 #include "TidyProvider.h"
 #include "index/MemIndex.h"
+#include "support/Context.h"
 #include "support/Path.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -369,6 +371,28 @@ TEST(DiagnosticTest, NoMultipleDiagnosticInFlight) {
       UnorderedElementsAre(::testing::AllOf(
           Diag(Main.range(), "use range-based for loop instead"),
           DiagSource(Diag::ClangTidy), DiagName("modernize-loop-convert"))));
+}
+
+TEST(DiagnosticTest, RespectsDiagnosticConfig) {
+  Annotations Main(R"cpp(
+    // error-ok
+    void x() {
+      [[unknown]]();
+      $ret[[return]] 42;
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Main.code());
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(Diag(Main.range(), "use of undeclared identifier 'unknown'"),
+                  Diag(Main.range("ret"),
+                       "void function 'x' should not return a value")));
+  Config Cfg;
+  Cfg.Diagnostics.Suppress.insert("return-type");
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(Diag(Main.range(),
+                               "use of undeclared identifier 'unknown'")));
 }
 
 TEST(DiagnosticTest, ClangTidySuppressionComment) {
@@ -855,11 +879,13 @@ void bar() {
 
   ::$global[[Global]] glob;
 }
+using Type = ns::$template[[Foo]]<int>;
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   auto Index = buildIndexWithSymbol(
       {SymbolWithHeader{"ns::X", "unittest:///x.h", "\"x.h\""},
-       SymbolWithHeader{"Global", "unittest:///global.h", "\"global.h\""}});
+       SymbolWithHeader{"Global", "unittest:///global.h", "\"global.h\""},
+       SymbolWithHeader{"ns::Foo", "unittest:///foo.h", "\"foo.h\""}});
   TU.ExternalIndex = Index.get();
 
   EXPECT_THAT(
@@ -884,7 +910,12 @@ void bar() {
                      "no type named 'Global' in the global namespace"),
                 DiagName("typename_nested_not_found"),
                 WithFix(Fix(Test.range("insert"), "#include \"global.h\"\n",
-                            "Add include \"global.h\" for symbol Global")))));
+                            "Add include \"global.h\" for symbol Global"))),
+          AllOf(Diag(Test.range("template"),
+                     "no template named 'Foo' in namespace 'ns'"),
+                DiagName("no_member_template"),
+                WithFix(Fix(Test.range("insert"), "#include \"foo.h\"\n",
+                            "Add include \"foo.h\" for symbol ns::Foo")))));
 }
 
 TEST(IncludeFixerTest, MultipleMatchedSymbols) {

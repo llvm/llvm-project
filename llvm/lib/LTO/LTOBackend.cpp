@@ -237,6 +237,12 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
   ModuleAnalysisManager MAM(Conf.DebugPassManager);
 
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+  if (Conf.Freestanding)
+    TLII->disableAllFunctions();
+  FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
+
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });
 
@@ -302,6 +308,12 @@ static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
+  std::unique_ptr<TargetLibraryInfoImpl> TLII(
+      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+  if (Conf.Freestanding)
+    TLII->disableAllFunctions();
+  FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
+
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });
 
@@ -335,6 +347,8 @@ static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 
   PassManagerBuilder PMB;
   PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
+  if (Conf.Freestanding)
+    PMB.LibraryInfo->disableAllFunctions();
   PMB.Inliner = createFunctionInliningPass();
   PMB.ExportSummary = ExportSummary;
   PMB.ImportSummary = ImportSummary;

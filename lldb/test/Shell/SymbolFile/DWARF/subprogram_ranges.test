@@ -14,6 +14,26 @@
 # especially useful, but don't dismiss it as pointless just because it's a bit
 # weird.
 
+# * Using volatile writes to create instructions the location may be valid over
+# * Using two values for the variable so it is described by a location list,
+#   not a single location description
+# * Not using function calls, so that the function has no frame pointer
+#   initialization/no prologue instructions, so the location of "var" is valid
+#   at the start of the function, so 'image lookup -v -s main' will include it.
+#
+# Source:
+# __attribute__((nodebug)) volatile int i;
+# int main() {
+#   int var = 3;
+#   i = 1;
+#   var = 5;
+#   i = 2;
+# }
+
 b main
 # CHECK: (lldb) b main
-# CHECK-NEXT: Breakpoint 1: where = {{.*}}`main + 6 at main.c:2:7
+# CHECK-NEXT: Breakpoint 1: where = {{.*}}`main at subprogram_ranges.c:4:5
+
+image lookup -v -s main
+# CHECK: 1 symbols match 'main'
+# CHECK:  Variable: {{.*}}, name = "var", type = "int", {{.*}}, decl = subprogram_ranges.c:3

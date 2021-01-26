@@ -17,6 +17,7 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Dialect/Standard.h"
+#include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
 
 #include <assert.h>
@@ -553,6 +554,35 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // clang-format on
 }
 
+/// Creates operations with type inference and tests various failure modes.
+static int createOperationWithTypeInference(MlirContext ctx) {
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirAttribute iAttr = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 4);
+
+  // The shape.const_size op implements result type inference and is only used
+  // for that reason.
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("shape.const_size"), loc);
+  MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), iAttr);
+  mlirOperationStateAddAttributes(&state, 1, &valueAttr);
+  mlirOperationStateEnableResultTypeInference(&state);
+
+  // Expect result type inference to succeed.
+  MlirOperation op = mlirOperationCreate(&state);
+  if (mlirOperationIsNull(op)) {
+    fprintf(stderr, "ERROR: Result type inference unexpectedly failed");
+    return 1;
+  }
+
+  // CHECK: RESULT_TYPE_INFERENCE: !shape.size
+  fprintf(stderr, "RESULT_TYPE_INFERENCE: ");
+  mlirTypeDump(mlirValueGetType(mlirOperationGetResult(op, 0)));
+  fprintf(stderr, "\n");
+  mlirOperationDestroy(op);
+  return 0;
+}
+
 /// Dumps instances of all builtin types to check that C API works correctly.
 /// Additionally, performs simple identity checks that a builtin type
 /// constructed with C API can be inspected and has the expected type. The
@@ -957,14 +987,12 @@ int printBuiltinAttributes(MlirContext ctx) {
       (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
   int64_t *int64RawData =
       (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  float *floatRawData =
-      (float *)mlirDenseElementsAttrGetRawData(floatElements);
+  float *floatRawData = (float *)mlirDenseElementsAttrGetRawData(floatElements);
   double *doubleRawData =
       (double *)mlirDenseElementsAttrGetRawData(doubleElements);
   if (uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
-      int32RawData[0] != 0 || int32RawData[1] != 1 ||
-      uint64RawData[0] != 0u || uint64RawData[1] != 1u ||
-      int64RawData[0] != 0 || int64RawData[1] != 1 ||
+      int32RawData[0] != 0 || int32RawData[1] != 1 || uint64RawData[0] != 0u ||
+      uint64RawData[1] != 1u || int64RawData[0] != 0 || int64RawData[1] != 1 ||
       floatRawData[0] != 0.0f || floatRawData[1] != 1.0f ||
       doubleRawData[0] != 0.0 || doubleRawData[1] != 1.0)
     return 18;
@@ -1298,6 +1326,85 @@ int affineMapFromExprs(MlirContext ctx) {
   return 0;
 }
 
+int printIntegerSet(MlirContext ctx) {
+  MlirIntegerSet emptySet = mlirIntegerSetEmptyGet(ctx, 2, 1);
+
+  // CHECK-LABEL: @printIntegerSet
+  fprintf(stderr, "@printIntegerSet");
+
+  // CHECK: (d0, d1)[s0] : (1 == 0)
+  mlirIntegerSetDump(emptySet);
+
+  if (!mlirIntegerSetIsCanonicalEmpty(emptySet))
+    return 1;
+
+  MlirIntegerSet anotherEmptySet = mlirIntegerSetEmptyGet(ctx, 2, 1);
+  if (!mlirIntegerSetEqual(emptySet, anotherEmptySet))
+    return 2;
+
+  // Construct a set constrained by:
+  //   d0 - s0 == 0,
+  //   d1 - 42 >= 0.
+  MlirAffineExpr negOne = mlirAffineConstantExprGet(ctx, -1);
+  MlirAffineExpr negFortyTwo = mlirAffineConstantExprGet(ctx, -42);
+  MlirAffineExpr d0 = mlirAffineDimExprGet(ctx, 0);
+  MlirAffineExpr d1 = mlirAffineDimExprGet(ctx, 1);
+  MlirAffineExpr s0 = mlirAffineSymbolExprGet(ctx, 0);
+  MlirAffineExpr negS0 = mlirAffineMulExprGet(negOne, s0);
+  MlirAffineExpr d0minusS0 = mlirAffineAddExprGet(d0, negS0);
+  MlirAffineExpr d1minus42 = mlirAffineAddExprGet(d1, negFortyTwo);
+  MlirAffineExpr constraints[] = {d0minusS0, d1minus42};
+  bool flags[] = {true, false};
+
+  MlirIntegerSet set = mlirIntegerSetGet(ctx, 2, 1, 2, constraints, flags);
+  // CHECK: (d0, d1)[s0] : (
+  // CHECK-DAG: d0 - s0 == 0
+  // CHECK-DAG: d1 - 42 >= 0
+  mlirIntegerSetDump(set);
+
+  // Transform d1 into s0.
+  MlirAffineExpr s1 = mlirAffineSymbolExprGet(ctx, 1);
+  MlirAffineExpr repl[] = {d0, s1};
+  MlirIntegerSet replaced = mlirIntegerSetReplaceGet(set, repl, &s0, 1, 2);
+  // CHECK: (d0)[s0, s1] : (
+  // CHECK-DAG: d0 - s0 == 0
+  // CHECK-DAG: s1 - 42 >= 0
+  mlirIntegerSetDump(replaced);
+
+  if (mlirIntegerSetGetNumDims(set) != 2)
+    return 3;
+  if (mlirIntegerSetGetNumDims(replaced) != 1)
+    return 4;
+
+  if (mlirIntegerSetGetNumSymbols(set) != 1)
+    return 5;
+  if (mlirIntegerSetGetNumSymbols(replaced) != 2)
+    return 6;
+
+  if (mlirIntegerSetGetNumInputs(set) != 3)
+    return 7;
+
+  if (mlirIntegerSetGetNumConstraints(set) != 2)
+    return 8;
+
+  if (mlirIntegerSetGetNumEqualities(set) != 1)
+    return 9;
+
+  if (mlirIntegerSetGetNumInequalities(set) != 1)
+    return 10;
+
+  MlirAffineExpr cstr1 = mlirIntegerSetGetConstraint(set, 0);
+  MlirAffineExpr cstr2 = mlirIntegerSetGetConstraint(set, 1);
+  bool isEq1 = mlirIntegerSetIsConstraintEq(set, 0);
+  bool isEq2 = mlirIntegerSetIsConstraintEq(set, 1);
+  if (!mlirAffineExprEqual(cstr1, isEq1 ? d0minusS0 : d1minus42))
+    return 11;
+  if (!mlirAffineExprEqual(cstr2, isEq2 ? d0minusS0 : d1minus42))
+    return 12;
+
+  return 0;
+}
+
 int registerOnlyStd() {
   MlirContext ctx = mlirContextCreate();
   // The built-in dialect is always loaded.
@@ -1389,19 +1496,23 @@ int main() {
   if (constructAndTraverseIr(ctx))
     return 1;
   buildWithInsertionsAndPrint(ctx);
+  if (createOperationWithTypeInference(ctx))
+    return 2;
 
   if (printBuiltinTypes(ctx))
-    return 2;
-  if (printBuiltinAttributes(ctx))
     return 3;
-  if (printAffineMap(ctx))
+  if (printBuiltinAttributes(ctx))
     return 4;
-  if (printAffineExpr(ctx))
+  if (printAffineMap(ctx))
     return 5;
-  if (affineMapFromExprs(ctx))
+  if (printAffineExpr(ctx))
     return 6;
-  if (registerOnlyStd())
+  if (affineMapFromExprs(ctx))
     return 7;
+  if (printIntegerSet(ctx))
+    return 8;
+  if (registerOnlyStd())
+    return 9;
 
   mlirContextDestroy(ctx);
 

@@ -19,81 +19,11 @@ void AsyncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
       >();
-  addTypes<TokenType>();
-  addTypes<ValueType>();
-  addTypes<GroupType>();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/Async/IR/AsyncOpsTypes.cpp.inc"
+      >();
 }
-
-/// Parse a type registered to this dialect.
-Type AsyncDialect::parseType(DialectAsmParser &parser) const {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-
-  if (keyword == "token")
-    return TokenType::get(getContext());
-
-  if (keyword == "value") {
-    Type ty;
-    if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater()) {
-      parser.emitError(parser.getNameLoc(), "failed to parse async value type");
-      return Type();
-    }
-    return ValueType::get(ty);
-  }
-
-  parser.emitError(parser.getNameLoc(), "unknown async type: ") << keyword;
-  return Type();
-}
-
-/// Print a type registered to this dialect.
-void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
-  TypeSwitch<Type>(type)
-      .Case<TokenType>([&](TokenType) { os << "token"; })
-      .Case<ValueType>([&](ValueType valueTy) {
-        os << "value<";
-        os.printType(valueTy.getValueType());
-        os << '>';
-      })
-      .Case<GroupType>([&](GroupType) { os << "group"; })
-      .Default([](Type) { llvm_unreachable("unexpected 'async' type kind"); });
-}
-
-//===----------------------------------------------------------------------===//
-/// ValueType
-//===----------------------------------------------------------------------===//
-
-namespace mlir {
-namespace async {
-namespace detail {
-
-// Storage for `async.value<T>` type, the only member is the wrapped type.
-struct ValueTypeStorage : public TypeStorage {
-  ValueTypeStorage(Type valueType) : valueType(valueType) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = Type;
-  bool operator==(const KeyTy &key) const { return key == valueType; }
-
-  /// Construction.
-  static ValueTypeStorage *construct(TypeStorageAllocator &allocator,
-                                     Type valueType) {
-    return new (allocator.allocate<ValueTypeStorage>())
-        ValueTypeStorage(valueType);
-  }
-
-  Type valueType;
-};
-
-} // namespace detail
-} // namespace async
-} // namespace mlir
-
-ValueType ValueType::get(Type valueType) {
-  return Base::get(valueType.getContext(), valueType);
-}
-
-Type ValueType::getValueType() { return getImpl()->valueType; }
 
 //===----------------------------------------------------------------------===//
 // YieldOp
@@ -362,5 +292,47 @@ static LogicalResult verify(AwaitOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// TableGen'd type method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/Async/IR/AsyncOpsTypes.cpp.inc"
+
+void ValueType::print(DialectAsmPrinter &printer) const {
+  printer << getMnemonic();
+  printer << "<";
+  printer.printType(getValueType());
+  printer << '>';
+}
+
+Type ValueType::parse(mlir::MLIRContext *, mlir::DialectAsmParser &parser) {
+  Type ty;
+  if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater()) {
+    parser.emitError(parser.getNameLoc(), "failed to parse async value type");
+    return Type();
+  }
+  return ValueType::get(ty);
+}
+
+/// Print a type registered to this dialect.
+void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
+  if (failed(generatedTypePrinter(type, os)))
+    llvm_unreachable("unexpected 'async' type kind");
+}
+
+/// Parse a type registered to this dialect.
+Type AsyncDialect::parseType(DialectAsmParser &parser) const {
+  StringRef mnemonic;
+  if (parser.parseKeyword(&mnemonic))
+    return Type();
+
+  return generatedTypeParser(getContext(), parser, mnemonic);
+}

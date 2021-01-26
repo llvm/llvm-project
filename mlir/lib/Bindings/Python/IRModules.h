@@ -317,12 +317,12 @@ public:
   void contextExit(pybind11::object excType, pybind11::object excVal,
                    pybind11::object excTb);
 
-  /// Gets a capsule wrapping the void* within the MlirContext.
+  /// Gets a capsule wrapping the void* within the MlirLocation.
   pybind11::object getCapsule();
 
-  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
-  /// Note that PyMlirContext instances are uniqued, so the returned object
-  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// Creates a PyLocation from the MlirLocation wrapped by a capsule.
+  /// Note that PyLocation instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirLocation
   /// is taken by calling this function.
   static PyLocation createFromCapsule(pybind11::object capsule);
 
@@ -455,8 +455,8 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
-  create(std::string name, llvm::Optional<std::vector<PyValue *>> operands,
-         llvm::Optional<std::vector<PyType *>> results,
+  create(std::string name, llvm::Optional<std::vector<PyType *>> results,
+         llvm::Optional<std::vector<PyValue *>> operands,
          llvm::Optional<pybind11::dict> attributes,
          llvm::Optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, pybind11::object ip);
@@ -498,12 +498,12 @@ public:
   pybind11::object getOperationObject() { return operationObject; }
 
   static pybind11::object
-  odsBuildDefault(pybind11::object cls, pybind11::list operandList,
-                  pybind11::list resultTypeList,
-                  llvm::Optional<pybind11::dict> attributes,
-                  llvm::Optional<std::vector<PyBlock *>> successors,
-                  llvm::Optional<int> regions, DefaultingPyLocation location,
-                  pybind11::object maybeIp);
+  buildGeneric(pybind11::object cls, pybind11::list resultTypeList,
+               pybind11::list operandList,
+               llvm::Optional<pybind11::dict> attributes,
+               llvm::Optional<std::vector<PyBlock *>> successors,
+               llvm::Optional<int> regions, DefaultingPyLocation location,
+               pybind11::object maybeIp);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
@@ -597,12 +597,12 @@ public:
   operator MlirAttribute() const { return attr; }
   MlirAttribute get() const { return attr; }
 
-  /// Gets a capsule wrapping the void* within the MlirContext.
+  /// Gets a capsule wrapping the void* within the MlirAttribute.
   pybind11::object getCapsule();
 
-  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
-  /// Note that PyMlirContext instances are uniqued, so the returned object
-  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// Creates a PyAttribute from the MlirAttribute wrapped by a capsule.
+  /// Note that PyAttribute instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(pybind11::object capsule);
 
@@ -643,12 +643,12 @@ public:
   operator MlirType() const { return type; }
   MlirType get() const { return type; }
 
-  /// Gets a capsule wrapping the void* within the MlirContext.
+  /// Gets a capsule wrapping the void* within the MlirType.
   pybind11::object getCapsule();
 
-  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
-  /// Note that PyMlirContext instances are uniqued, so the returned object
-  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// Creates a PyType from the MlirType wrapped by a capsule.
+  /// Note that PyType instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirType
   /// is taken by calling this function.
   static PyType createFromCapsule(pybind11::object capsule);
 

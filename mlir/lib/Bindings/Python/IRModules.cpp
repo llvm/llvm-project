@@ -891,8 +891,8 @@ PyBlock PyOperation::getBlock() {
 }
 
 py::object PyOperation::create(
-    std::string name, llvm::Optional<std::vector<PyValue *>> operands,
-    llvm::Optional<std::vector<PyType *>> results,
+    std::string name, llvm::Optional<std::vector<PyType *>> results,
+    llvm::Optional<std::vector<PyValue *>> operands,
     llvm::Optional<py::dict> attributes,
     llvm::Optional<std::vector<PyBlock *>> successors, int regions,
     DefaultingPyLocation location, py::object maybeIp) {
@@ -1039,12 +1039,12 @@ py::object PyOperation::createOpView() {
 //------------------------------------------------------------------------------
 
 py::object
-PyOpView::odsBuildDefault(py::object cls, py::list operandList,
-                          py::list resultTypeList,
-                          llvm::Optional<py::dict> attributes,
-                          llvm::Optional<std::vector<PyBlock *>> successors,
-                          llvm::Optional<int> regions,
-                          DefaultingPyLocation location, py::object maybeIp) {
+PyOpView::buildGeneric(py::object cls, py::list resultTypeList,
+                       py::list operandList,
+                       llvm::Optional<py::dict> attributes,
+                       llvm::Optional<std::vector<PyBlock *>> successors,
+                       llvm::Optional<int> regions,
+                       DefaultingPyLocation location, py::object maybeIp) {
   PyMlirContextRef context = location->getContext();
   // Class level operation construction metadata.
   std::string name = py::cast<std::string>(cls.attr("OPERATION_NAME"));
@@ -1288,8 +1288,9 @@ PyOpView::odsBuildDefault(py::object cls, py::list operandList,
   }
 
   // Delegate to create.
-  return PyOperation::create(std::move(name), /*operands=*/std::move(operands),
+  return PyOperation::create(std::move(name),
                              /*results=*/std::move(resultTypes),
+                             /*operands=*/std::move(operands),
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp);
@@ -1357,6 +1358,16 @@ void PyInsertionPoint::insert(PyOperationBase &operationBase) {
     // Insert before operation.
     (*refOperation)->checkValid();
     beforeOp = (*refOperation)->get();
+  } else {
+    // Insert at end (before null) is only valid if the block does not
+    // already end in a known terminator (violating this will cause assertion
+    // failures later).
+    if (!mlirOperationIsNull(mlirBlockGetTerminator(block.get()))) {
+      throw py::index_error("Cannot insert operation at the end of a block "
+                            "that already has a terminator. Did you mean to "
+                            "use 'InsertionPoint.at_block_terminator(block)' "
+                            "versus 'InsertionPoint(block)'?");
+    }
   }
   mlirBlockInsertOwnedOperationBefore(block.get(), beforeOp, operation);
   operation.setAttached();
@@ -3646,8 +3657,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static("create", &PyOperation::create, py::arg("name"),
-                  py::arg("operands") = py::none(),
                   py::arg("results") = py::none(),
+                  py::arg("operands") = py::none(),
                   py::arg("attributes") = py::none(),
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
@@ -3681,12 +3692,11 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   opViewClass.attr("_ODS_REGIONS") = py::make_tuple(0, true);
   opViewClass.attr("_ODS_OPERAND_SEGMENTS") = py::none();
   opViewClass.attr("_ODS_RESULT_SEGMENTS") = py::none();
-  opViewClass.attr("_ods_build_default") = classmethod(
-      &PyOpView::odsBuildDefault, py::arg("cls"),
-      py::arg("operands") = py::none(), py::arg("results") = py::none(),
-      py::arg("attributes") = py::none(), py::arg("successors") = py::none(),
-      py::arg("regions") = py::none(), py::arg("loc") = py::none(),
-      py::arg("ip") = py::none(),
+  opViewClass.attr("build_generic") = classmethod(
+      &PyOpView::buildGeneric, py::arg("cls"), py::arg("results") = py::none(),
+      py::arg("operands") = py::none(), py::arg("attributes") = py::none(),
+      py::arg("successors") = py::none(), py::arg("regions") = py::none(),
+      py::arg("loc") = py::none(), py::arg("ip") = py::none(),
       "Builds a specific, generated OpView based on class level attributes.");
 
   //----------------------------------------------------------------------------

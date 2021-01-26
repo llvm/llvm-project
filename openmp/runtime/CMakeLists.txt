@@ -34,6 +34,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
+  set(LIBOMPTARGET_PROFILING_SUPPORT FALSE)
 else() # Part of LLVM build
   # Determine the native architecture from LLVM.
   string(TOLOWER "${LLVM_TARGET_ARCH}" LIBOMP_NATIVE_ARCH)
@@ -65,6 +66,8 @@ else() # Part of LLVM build
     libomp_get_architecture(LIBOMP_ARCH)
   endif ()
   set(LIBOMP_ENABLE_ASSERTIONS ${LLVM_ENABLE_ASSERTIONS})
+  # Time profiling support
+  set(LIBOMPTARGET_PROFILING_SUPPORT ${OPENMP_ENABLE_LIBOMPTARGET_PROFILING})
 endif()
 
 # FUJITSU A64FX is a special processor because its cache line size is 256.

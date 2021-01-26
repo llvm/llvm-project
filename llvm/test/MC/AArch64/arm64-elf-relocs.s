@@ -245,6 +245,16 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym+0x7
 
+  ldr x24, [x23, #:gotpage_lo15:sym]
+  ldr d22, [x21, :gotpage_lo15:sym]
+  ldr d22, [x23, :gotpage_lo15:sym+7]
+// CHECK: ldr x24, [x23, :gotpage_lo15:sym]
+// CHECK: ldr d22, [x21, :gotpage_lo15:sym]
+// CHECK: ldr d22, [x23, :gotpage_lo15:sym+7]
+// CHECK-OBJ-LP64: R_AARCH64_LD64_GOTPAGE_LO15 sym{{$}}
+// CHECK-OBJ-LP64: R_AARCH64_LD64_GOTPAGE_LO15 sym{{$}}
+// CHECK-OBJ-LP64: R_AARCH64_LD64_GOTPAGE_LO15 sym+0x7
+
    ldr x24, [x23, :dtprel_lo12_nc:sym]
    ldr d22, [x21, #:dtprel_lo12:sym]
 // CHECK: ldr x24, [x23, :dtprel_lo12_nc:sym]

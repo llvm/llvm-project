@@ -695,4 +695,49 @@ TEST_F(CommandLineTest, DiagnosticOptionPresent) {
 
   ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-verify=xyz"), 1));
 }
+
+// Option default depends on language standard.
+
+TEST_F(CommandLineTest, DigraphsImplied) {
+  const char *Args[] = {""};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-digraphs"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsDisabled) {
+  const char *Args[] = {"-fno-digraphs"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-digraphs")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsNotImplied) {
+  const char *Args[] = {"-std=c89"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-digraphs"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsEnabled) {
+  const char *Args[] = {"-std=c89", "-fdigraphs"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdigraphs")));
+}
 } // anonymous namespace

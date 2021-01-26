@@ -194,6 +194,33 @@ TEST_F(LSPTest, IncomingCalls) {
   EXPECT_EQ(From["name"], "caller1");
 }
 
+TEST_F(LSPTest, CDBConfigIntegration) {
+  auto CfgProvider =
+      config::Provider::fromAncestorRelativeYAMLFiles(".clangd", FS);
+  Opts.ConfigProvider = CfgProvider.get();
+
+  // Map bar.cpp to a different compilation database which defines FOO->BAR.
+  FS.Files[".clangd"] = R"yaml(
+If:
+  PathMatch: bar.cpp
+CompileFlags:
+  CompilationDatabase: bar
+)yaml";
+  FS.Files["bar/compile_flags.txt"] = "-DFOO=BAR";
+
+  auto &Client = start();
+  // foo.cpp gets parsed as normal.
+  Client.didOpen("foo.cpp", "int x = FOO;");
+  EXPECT_THAT(Client.diagnostics("foo.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'FOO'"))));
+  // bar.cpp shows the configured compile command.
+  Client.didOpen("bar.cpp", "int x = FOO;");
+  EXPECT_THAT(Client.diagnostics("bar.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'BAR'"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

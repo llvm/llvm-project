@@ -36,6 +36,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -200,9 +201,12 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
   SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
   FindFunctionBackedges(F, Edges);
-  SmallPtrSet<BasicBlock *, 16> LoopHeaders;
+  SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
   for (unsigned i = 0, e = Edges.size(); i != e; ++i)
-    LoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+
+  SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
+                                      UniqueLoopHeaders.end());
 
   while (LocalChange) {
     LocalChange = false;
@@ -219,7 +223,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, &LoopHeaders)) {
+      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }

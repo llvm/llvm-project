@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: res = iflm (666)
 ! FLM call name split across continuation, no leading &, with & ! comment
       integer function IFLM(x)

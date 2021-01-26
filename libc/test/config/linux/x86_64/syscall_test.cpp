@@ -11,7 +11,7 @@
 
 #include "utils/CPP/Functional.h"
 
-TEST(X86_64_SyscallTest, APITest) {
+TEST(LlvmLibcX86_64_SyscallTest, APITest) {
   // We only do a signature test here. Actual functionality tests are
   // done by the unit tests of the syscall wrappers like mmap.
 

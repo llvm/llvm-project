@@ -35,36 +35,36 @@ static inline time_t call_mktime(struct tm *tm_data, int year, int month,
   return __llvm_libc::mktime(tm_data);
 }
 
-TEST(MkTime, FailureSetsErrno) {
+TEST(LlvmLibcMkTime, FailureSetsErrno) {
   struct tm tm_data;
   initialize_tm_data(&tm_data, 0, 0, 0, 0, 0, -1);
   EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
 }
 
-TEST(MkTime, MktimeTestsInvalidSeconds) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidSeconds) {
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 0, 0, 0, -1), OutOfRangeReturnValue);
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 0, 0, 0, 60), OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidMinutes) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidMinutes) {
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 0, 0, -1, 0), OutOfRangeReturnValue);
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 1, 0, 60, 0), OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidHours) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidHours) {
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 0, -1, 0, 0), OutOfRangeReturnValue);
   EXPECT_EQ(call_mktime(&tm_data, 0, 0, 0, 24, 0, 0), OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidYear) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidYear) {
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 1969, 0, 0, 0, 0, 0), OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidEndOf32BitEpochYear) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidEndOf32BitEpochYear) {
   if (sizeof(time_t) != 4)
     return;
   struct tm tm_data;
@@ -88,7 +88,7 @@ TEST(MkTime, MktimeTestsInvalidEndOf32BitEpochYear) {
             OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidMonths) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidMonths) {
   struct tm tm_data;
   // Before Jan of 1970
   EXPECT_EQ(call_mktime(&tm_data, 1970, -1, 15, 0, 0, 0),
@@ -98,7 +98,7 @@ TEST(MkTime, MktimeTestsInvalidMonths) {
             OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsInvalidDays) {
+TEST(LlvmLibcMkTime, MktimeTestsInvalidDays) {
   struct tm tm_data;
   // -1 day of Jan, 1970
   EXPECT_EQ(call_mktime(&tm_data, 1970, 0, -1, 0, 0, 0), OutOfRangeReturnValue);
@@ -112,7 +112,7 @@ TEST(MkTime, MktimeTestsInvalidDays) {
   EXPECT_EQ(call_mktime(&tm_data, 1970, 3, 31, 0, 0, 0), OutOfRangeReturnValue);
 }
 
-TEST(MkTime, MktimeTestsStartEpochYear) {
+TEST(LlvmLibcMkTime, MktimeTestsStartEpochYear) {
   // Thu Jan 1 00:00:00 1970
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 1970, 0, 1, 0, 0, 0), static_cast<time_t>(0));
@@ -120,7 +120,7 @@ TEST(MkTime, MktimeTestsStartEpochYear) {
   EXPECT_EQ(0, tm_data.tm_yday);
 }
 
-TEST(MkTime, MktimeTestsEpochYearRandomTime) {
+TEST(LlvmLibcMkTime, MktimeTestsEpochYearRandomTime) {
   // Thu Jan 1 12:50:50 1970
   struct tm tm_data;
   EXPECT_EQ(call_mktime(&tm_data, 1970, 0, 1, 12, 50, 50),
@@ -129,7 +129,7 @@ TEST(MkTime, MktimeTestsEpochYearRandomTime) {
   EXPECT_EQ(0, tm_data.tm_yday);
 }
 
-TEST(MkTime, MktimeTestsEndOf32BitEpochYear) {
+TEST(LlvmLibcMkTime, MktimeTestsEndOf32BitEpochYear) {
   struct tm tm_data;
   // Test for maximum value of a signed 32-bit integer.
   // Test implementation can encode time for Tue 19 January 2038 03:14:07 UTC.
@@ -139,7 +139,7 @@ TEST(MkTime, MktimeTestsEndOf32BitEpochYear) {
   EXPECT_EQ(18, tm_data.tm_yday);
 }
 
-TEST(MkTime, MktimeTests64BitYear) {
+TEST(LlvmLibcMkTime, MktimeTests64BitYear) {
   if (sizeof(time_t) == 4)
     return;
   // Mon Jan 1 12:50:50 2170

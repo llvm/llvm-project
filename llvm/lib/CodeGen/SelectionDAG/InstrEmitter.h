@@ -26,6 +26,7 @@ class MCInstrDesc;
 class SDDbgLabel;
 class SDDbgValue;
 class TargetLowering;
+class TargetMachine;
 
 class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   MachineFunction *MF;

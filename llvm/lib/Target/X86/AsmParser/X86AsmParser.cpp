@@ -1842,12 +1842,15 @@ bool X86AsmParser::ParseMasmNamedOperator(StringRef Name,
 
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
   StringRef ErrMsg;
 
   AsmToken::TokenKind PrevTK = AsmToken::Error;
   bool Done = false;
   while (!Done) {
+    // Get a fresh reference on each loop iteration in case the previous
+    // iteration moved the token storage during UnLex().
+    const AsmToken &Tok = Parser.getTok();
+
     bool UpdateLocLex = true;
     AsmToken::TokenKind TK = getLexer().getKind();
 

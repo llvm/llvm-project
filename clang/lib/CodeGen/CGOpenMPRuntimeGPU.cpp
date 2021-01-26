@@ -1719,11 +1719,6 @@ llvm::Function *CGOpenMPRuntimeGPU::emitParallelOutlinedFunction(
   auto *OutlinedFun =
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
-  if (CGM.getLangOpts().Optimize) {
-    OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
-    OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
-    OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
-  }
   IsInTargetMasterThreadRegion = PrevIsInTargetMasterThreadRegion;
   IsInTTDRegion = PrevIsInTTDRegion;
   if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD &&
@@ -1841,11 +1836,6 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
   CodeGen.setAction(Action);
   llvm::Function *OutlinedFun = CGOpenMPRuntime::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
-  if (CGM.getLangOpts().Optimize) {
-    OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
-    OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
-    OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
-  }
 
   return OutlinedFun;
 }
@@ -2247,6 +2237,14 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
 
   // Force inline this outlined function at its call site.
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
+
+  // Ensure we do not inline the function. This is trivially true for the ones
+  // passed to __kmpc_fork_call but the ones calles in serialized regions
+  // could be inlined. This is not a perfect but it is closer to the invariant
+  // we want, namely, every data environment starts with a new function.
+  // TODO: We should pass the if condition to the runtime function and do the
+  //       handling there. Much cleaner code.
+  cast<llvm::Function>(OutlinedFn)->addFnAttr(llvm::Attribute::NoInline);
 
   Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                                       /*Name=*/".zero.addr");
@@ -3308,11 +3306,6 @@ static llvm::Function *emitShuffleAndReduceFunction(
       "_omp_reduction_shuffle_and_reduce_func", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setDoesNotRecurse();
-  if (CGM.getLangOpts().Optimize) {
-    Fn->removeFnAttr(llvm::Attribute::NoInline);
-    Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
-    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
-  }
 
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);

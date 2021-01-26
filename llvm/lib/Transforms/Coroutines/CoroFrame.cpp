@@ -913,8 +913,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
       // StoreAliases contains aliases of the memory location stored into.
       SmallVector<Instruction *, 4> StoreAliases = {AI};
       while (!StoreAliases.empty()) {
-        Instruction *I = StoreAliases.back();
-        StoreAliases.pop_back();
+        Instruction *I = StoreAliases.pop_back_val();
         for (User *U : I->users()) {
           // If we are loading from the memory location, we are creating an
           // alias of the original pointer.
@@ -1495,8 +1494,7 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
                                                 pred_size(CleanupPadBB));
 
   int SwitchIndex = 0;
-  SmallVector<BasicBlock *, 8> Preds(pred_begin(CleanupPadBB),
-                                     pred_end(CleanupPadBB));
+  SmallVector<BasicBlock *, 8> Preds(predecessors(CleanupPadBB));
   for (BasicBlock *Pred : Preds) {
     // Create a new cleanuppad and move the PHI values to there.
     auto *CaseBB = BasicBlock::Create(CleanupPadBB->getContext(),
@@ -1551,7 +1549,6 @@ static void rewritePHIs(BasicBlock &BB) {
     for (BasicBlock *Pred : Preds) {
       if (CatchSwitchInst *CS =
               dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
-        (void)CS;
         // CleanupPad with a CatchSwitch predecessor: therefore this is an
         // unwind destination that needs to be handle specially.
         assert(CS->getUnwindDest() == &BB);
@@ -2006,8 +2003,7 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
   }
   // Recursively collect users before coro.begin.
   while (!Worklist.empty()) {
-    auto *Def = Worklist.back();
-    Worklist.pop_back();
+    auto *Def = Worklist.pop_back_val();
     for (User *U : Def->users()) {
       auto Inst = cast<Instruction>(U);
       if (Dom.dominates(CoroBegin, Inst))

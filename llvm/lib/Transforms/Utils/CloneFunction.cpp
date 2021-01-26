@@ -27,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -35,6 +36,8 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <map>
 using namespace llvm;
+
+#define DEBUG_TYPE "clone-function"
 
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
@@ -433,9 +436,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
-    const Instruction *TI = BB->getTerminator();
-    for (const BasicBlock *Succ : successors(TI))
-      ToClone.push_back(Succ);
+    append_range(ToClone, successors(BB->getTerminator()));
   }
 
   if (CodeInfo) {
@@ -882,4 +883,109 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
   }
 
   return NewBB;
+}
+
+void llvm::cloneNoAliasScopes(
+    ArrayRef<MDNode *> NoAliasDeclScopes,
+    DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    StringRef Ext, LLVMContext &Context) {
+  MDBuilder MDB(Context);
+
+  for (auto *ScopeList : NoAliasDeclScopes) {
+    for (auto &MDOperand : ScopeList->operands()) {
+      if (MDNode *MD = dyn_cast<MDNode>(MDOperand)) {
+        AliasScopeNode SNANode(MD);
+
+        std::string Name;
+        auto ScopeName = SNANode.getName();
+        if (!ScopeName.empty())
+          Name = (Twine(ScopeName) + ":" + Ext).str();
+        else
+          Name = std::string(Ext);
+
+        MDNode *NewScope = MDB.createAnonymousAliasScope(
+            const_cast<MDNode *>(SNANode.getDomain()), Name);
+        ClonedScopes.insert(std::make_pair(MD, NewScope));
+      }
+    }
+  }
+}
+
+void llvm::adaptNoAliasScopes(
+    Instruction *I, const DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    LLVMContext &Context) {
+  auto CloneScopeList = [&](const MDNode *ScopeList) -> MDNode * {
+    bool NeedsReplacement = false;
+    SmallVector<Metadata *, 8> NewScopeList;
+    for (auto &MDOp : ScopeList->operands()) {
+      if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
+        if (auto *NewMD = ClonedScopes.lookup(MD)) {
+          NewScopeList.push_back(NewMD);
+          NeedsReplacement = true;
+          continue;
+        }
+        NewScopeList.push_back(MD);
+      }
+    }
+    if (NeedsReplacement)
+      return MDNode::get(Context, NewScopeList);
+    return nullptr;
+  };
+
+  if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I))
+    if (auto *NewScopeList = CloneScopeList(Decl->getScopeList()))
+      Decl->setScopeList(NewScopeList);
+
+  auto replaceWhenNeeded = [&](unsigned MD_ID) {
+    if (const MDNode *CSNoAlias = I->getMetadata(MD_ID))
+      if (auto *NewScopeList = CloneScopeList(CSNoAlias))
+        I->setMetadata(MD_ID, NewScopeList);
+  };
+  replaceWhenNeeded(LLVMContext::MD_noalias);
+  replaceWhenNeeded(LLVMContext::MD_alias_scope);
+}
+
+void llvm::cloneAndAdaptNoAliasScopes(
+    ArrayRef<MDNode *> NoAliasDeclScopes,
+    ArrayRef<BasicBlock *> NewBlocks, LLVMContext &Context, StringRef Ext) {
+  if (NoAliasDeclScopes.empty())
+    return;
+
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
+                    << NoAliasDeclScopes.size() << " node(s)\n");
+
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, Ext, Context);
+  // Identify instructions using metadata that needs adaptation
+  for (BasicBlock *NewBlock : NewBlocks)
+    for (Instruction &I : *NewBlock)
+      adaptNoAliasScopes(&I, ClonedScopes, Context);
+}
+
+void llvm::cloneAndAdaptNoAliasScopes(
+    ArrayRef<MDNode *> NoAliasDeclScopes, Instruction *IStart,
+    Instruction *IEnd, LLVMContext &Context, StringRef Ext) {
+  if (NoAliasDeclScopes.empty())
+    return;
+
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
+                    << NoAliasDeclScopes.size() << " node(s)\n");
+
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, Ext, Context);
+  // Identify instructions using metadata that needs adaptation
+  assert(IStart->getParent() == IEnd->getParent() && "different basic block ?");
+  auto ItStart = IStart->getIterator();
+  auto ItEnd = IEnd->getIterator();
+  ++ItEnd; // IEnd is included, increment ItEnd to get the end of the range
+  for (auto &I : llvm::make_range(ItStart, ItEnd))
+    adaptNoAliasScopes(&I, ClonedScopes, Context);
+}
+
+void llvm::identifyNoAliasScopesToClone(
+    ArrayRef<BasicBlock *> BBs, SmallVectorImpl<MDNode *> &NoAliasDeclScopes) {
+  for (BasicBlock *BB : BBs)
+    for (Instruction &I : *BB)
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        NoAliasDeclScopes.push_back(Decl->getScopeList());
 }

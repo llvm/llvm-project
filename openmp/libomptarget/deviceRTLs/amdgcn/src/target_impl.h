@@ -68,8 +68,6 @@ typedef enum omp_allocator_handle_t {
 
 #define ALIGN(N) __attribute__((aligned(N)))
 
-#include "hip_atomics.h"
-
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
 ////////////////////////////////////////////////////////////////////////////////
@@ -165,6 +163,19 @@ DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
+
+// Atomics
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *, uint32_t);
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *, uint32_t, uint32_t);
+
+static_assert(sizeof(unsigned long long) == sizeof(uint64_t), "");
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *,
+                                                 unsigned long long);
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *,
+                                            unsigned long long);
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

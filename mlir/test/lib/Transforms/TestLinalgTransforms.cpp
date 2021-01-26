@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -79,6 +80,12 @@ struct TestLinalgTransforms
       *this, "test-affine-min-scf-canonicalization-patterns",
       llvm::cl::desc("Test affine-min + scf canonicalization patterns."),
       llvm::cl::init(false)};
+  Option<bool> testTileAndPadPattern{
+      *this, "test-tile-and-pad-pattern",
+      llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
+  Option<bool> testHoistPadding2Levels{*this, "test-hoist-padding-2-level",
+                                       llvm::cl::desc("Test hoist padding"),
+                                       llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -487,6 +494,27 @@ static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
     applyOpPatternsAndFold(minOp, frozenPatterns);
   });
 }
+
+// For now, just assume it is the zero of type.
+// In the future, it should be the zero of type + op.
+static Value getNeutralOfLinalgOp(OpBuilder &b, Operation *op) {
+  auto t = op->getResult(0).getType().cast<ShapedType>().getElementType();
+  return b.create<ConstantOp>(op->getLoc(), t, b.getZeroAttr(t));
+}
+
+static void applyTileAndPadPattern(FuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  OwningRewritePatternList tilingPattern;
+  auto linalgTilingOptions =
+      linalg::LinalgTilingOptions()
+          .setTileSizes({2, 3, 4})
+          .setPaddingValueComputationFunction(getNeutralOfLinalgOp);
+  tilingPattern.insert<linalg::LinalgTilingPattern<linalg::MatmulOp>>(
+      context, linalgTilingOptions,
+      linalg::LinalgMarker(Identifier::get("tile-and-pad", context)));
+  applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
   auto lambda = [&](void *) {
@@ -520,6 +548,13 @@ void TestLinalgTransforms::runOnFunction() {
     return applyLinalgToVectorPatterns(getFunction());
   if (testAffineMinSCFCanonicalizationPatterns)
     return applyAffineMinSCFCanonicalizationPatterns(getFunction());
+  if (testTileAndPadPattern)
+    return applyTileAndPadPattern(getFunction());
+  if (testHoistPadding2Levels) {
+    getFunction().walk([](linalg::SimplePadOp simplePadOp) {
+      linalg::hoistPaddingOnTensors(simplePadOp, 2);
+    });
+  }
 }
 
 namespace mlir {

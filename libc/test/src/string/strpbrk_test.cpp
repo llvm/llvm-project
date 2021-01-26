@@ -10,23 +10,23 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(StrPBrkTest, EmptyStringShouldReturnNullptr) {
+TEST(LlvmLibcStrPBrkTest, EmptyStringShouldReturnNullptr) {
   // The search should not include the null terminator.
   EXPECT_STREQ(__llvm_libc::strpbrk("", ""), nullptr);
   EXPECT_STREQ(__llvm_libc::strpbrk("_", ""), nullptr);
   EXPECT_STREQ(__llvm_libc::strpbrk("", "_"), nullptr);
 }
 
-TEST(StrPBrkTest, ShouldNotFindAnythingAfterNullTerminator) {
+TEST(LlvmLibcStrPBrkTest, ShouldNotFindAnythingAfterNullTerminator) {
   const char src[4] = {'a', 'b', '\0', 'c'};
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "c"), nullptr);
 }
 
-TEST(StrPBrkTest, ShouldReturnNullptrIfNoCharactersFound) {
+TEST(LlvmLibcStrPBrkTest, ShouldReturnNullptrIfNoCharactersFound) {
   EXPECT_STREQ(__llvm_libc::strpbrk("12345", "abcdef"), nullptr);
 }
 
-TEST(StrPBrkTest, FindsFirstCharacter) {
+TEST(LlvmLibcStrPBrkTest, FindsFirstCharacter) {
   const char *src = "12345";
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "1"), "12345");
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "-1"), "12345");
@@ -35,7 +35,7 @@ TEST(StrPBrkTest, FindsFirstCharacter) {
   ASSERT_STREQ(src, "12345");
 }
 
-TEST(StrPBrkTest, FindsMiddleCharacter) {
+TEST(LlvmLibcStrPBrkTest, FindsMiddleCharacter) {
   const char *src = "12345";
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "3"), "345");
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "?3"), "345");
@@ -44,7 +44,7 @@ TEST(StrPBrkTest, FindsMiddleCharacter) {
   ASSERT_STREQ(src, "12345");
 }
 
-TEST(StrPBrkTest, FindsLastCharacter) {
+TEST(LlvmLibcStrPBrkTest, FindsLastCharacter) {
   const char *src = "12345";
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "5"), "5");
   EXPECT_STREQ(__llvm_libc::strpbrk(src, "r5"), "5");
@@ -53,10 +53,10 @@ TEST(StrPBrkTest, FindsLastCharacter) {
   ASSERT_STREQ(src, "12345");
 }
 
-TEST(StrPBrkTest, FindsFirstOfRepeated) {
+TEST(LlvmLibcStrPBrkTest, FindsFirstOfRepeated) {
   EXPECT_STREQ(__llvm_libc::strpbrk("A,B,C,D", ","), ",B,C,D");
 }
 
-TEST(StrPBrkTest, FindsFirstInBreakset) {
+TEST(LlvmLibcStrPBrkTest, FindsFirstInBreakset) {
   EXPECT_STREQ(__llvm_libc::strpbrk("12345", "34"), "345");
 }

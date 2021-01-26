@@ -26,7 +26,7 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
 using Properties = __llvm_libc::fputil::FloatProperties<float>;
 
-TEST(FrexpfTest, SpecialNumbers) {
+TEST(LlvmLibcFrexpfTest, SpecialNumbers) {
   int exponent;
 
   EXPECT_EQ(BitPatterns::aQuietNaN,
@@ -60,7 +60,7 @@ TEST(FrexpfTest, SpecialNumbers) {
   EXPECT_EQ(exponent, 0);
 }
 
-TEST(FrexpfTest, PowersOfTwo) {
+TEST(LlvmLibcFrexpfTest, PowersOfTwo) {
   int exponent;
 
   EXPECT_EQ(valueAsBits(0.5f),
@@ -113,7 +113,7 @@ TEST(FrexpfTest, PowersOfTwo) {
   EXPECT_EQ(exponent, 7);
 }
 
-TEST(FrexpfTest, SomeIntegers) {
+TEST(LlvmLibcFrexpfTest, SomeIntegers) {
   int exponent;
 
   EXPECT_EQ(valueAsBits(0.75f),
@@ -138,7 +138,7 @@ TEST(FrexpfTest, SomeIntegers) {
   EXPECT_EQ(exponent, 10);
 }
 
-TEST(FrexpfTest, InFloatRange) {
+TEST(LlvmLibcFrexpfTest, InFloatRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 1000001;
   constexpr UIntType step = UIntType(-1) / count;

@@ -420,6 +420,14 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     return true;
   }
 
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    // Treat calls that may not return as alive.
+    // TODO: Remove the intrinsic escape hatch once all intrinsics set
+    // willreturn properly.
+    if (!CB->willReturn() && !isa<IntrinsicInst>(I))
+      return false;
+  }
+
   if (!I->mayHaveSideEffects())
     return true;
 

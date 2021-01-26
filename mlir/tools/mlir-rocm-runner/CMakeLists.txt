@@ -61,7 +61,6 @@ if(MLIR_ROCM_RUNNER_ENABLED)
   target_link_libraries(rocm-runtime-wrappers
     PUBLIC
     LLVMSupport
-    mlir_runner_utils_static
     ${ROCM_RUNTIME_LIBRARY}
   )
 

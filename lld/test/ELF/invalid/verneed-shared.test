@@ -14,10 +14,9 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_X86_64
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
+  - Name:     .gnu.version_r
+    Type:     SHT_GNU_verneed
+    Flags:    [ SHF_ALLOC ]
     ShOffset: 0xFFFFFFFF
 
 ## A Verneed entry is misaligned (not a multiple of 4). This may happen
@@ -37,8 +36,6 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  .dynstr
     Dependencies:
       - Version: 1
         File:    foo
@@ -65,7 +62,6 @@ Sections:
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
     Info:  1
-    Link:  .dynstr
     Content: "[[VERNEED]]"
 DynamicSymbols:
   - Name: foo

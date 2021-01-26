@@ -198,6 +198,15 @@ define i8* @memset_attrs4(i1 %b, i8* %ptr, i32 %size) {
   ret i8* %memset
 }
 
+define i8* @test_no_incompatible_attr(i8* %mem, i32 %val, i32 %size) {
+; CHECK-LABEL: @test_no_incompatible_attr(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[VAL:%.*]] to i8
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret i8* [[MEM]]
+;
+  %ret = call dereferenceable(1) i8* @memset(i8* %mem, i32 %val, i32 %size)
+  ret i8* %ret
+}
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind }

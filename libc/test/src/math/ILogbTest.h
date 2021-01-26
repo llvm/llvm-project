@@ -16,7 +16,7 @@
 
 #include <limits.h>
 
-class ILogbTest : public __llvm_libc::testing::Test {
+class LlvmLibcILogbTest : public __llvm_libc::testing::Test {
 public:
   template <typename T> struct ILogbFunc { typedef int (*Func)(T); };
 

@@ -192,3 +192,67 @@ define float @fcvt_s_lu(i64 %a) nounwind {
   %1 = uitofp i64 %a to float
   ret float %1
 }
+
+define float @fcvt_s_w_i8(i8 signext %a) nounwind {
+; RV32IF-LABEL: fcvt_s_w_i8:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fcvt.s.w ft0, a0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_w_i8:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fcvt.s.w ft0, a0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %1 = sitofp i8 %a to float
+  ret float %1
+}
+
+define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind {
+; RV32IF-LABEL: fcvt_s_wu_i8:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fcvt.s.wu ft0, a0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_wu_i8:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fcvt.s.wu ft0, a0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %1 = uitofp i8 %a to float
+  ret float %1
+}
+
+define float @fcvt_s_w_i16(i16 signext %a) nounwind {
+; RV32IF-LABEL: fcvt_s_w_i16:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fcvt.s.w ft0, a0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_w_i16:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fcvt.s.w ft0, a0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %1 = sitofp i16 %a to float
+  ret float %1
+}
+
+define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind {
+; RV32IF-LABEL: fcvt_s_wu_i16:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fcvt.s.wu ft0, a0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_s_wu_i16:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fcvt.s.wu ft0, a0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
+  %1 = uitofp i16 %a to float
+  ret float %1
+}

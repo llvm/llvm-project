@@ -282,6 +282,32 @@ CPU revision    : 0
 )";
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CarmelProcCpuInfo), "carmel");
+
+  // Snapdragon mixed implementer quirk
+  const std::string Snapdragon865ProcCPUInfo = R"(
+processor       : 0
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x51
+CPU architecture: 8
+CPU variant     : 0xd
+CPU part        : 0x805
+CPU revision    : 14
+processor       : 1
+processor       : 2
+processor       : 3
+processor       : 4
+processor       : 5
+processor       : 6
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x1
+CPU part        : 0xd0d
+CPU revision    : 0
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(Snapdragon865ProcCPUInfo), "cortex-a77");
 }
 
 #if defined(__APPLE__) || defined(_AIX)

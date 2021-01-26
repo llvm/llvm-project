@@ -631,8 +631,7 @@ MustBeExecutedContextExplorer::findForwardJoinPoint(const BasicBlock *InitBB) {
       if (!TransfersExecution)
         return nullptr;
 
-      for (const BasicBlock *AdjacentBB : successors(ToBB))
-        Worklist.push_back(AdjacentBB);
+      append_range(Worklist, successors(ToBB));
     }
   }
 

@@ -156,3 +156,59 @@ define <4 x double> @PR41414(i64 %x, <4 x double> %y) {
   %t3 = fadd <4 x double> zeroinitializer, %t2
   ret <4 x double> %t3
 }
+
+define <4 x float> @PR48823(<4 x float> %0, <4 x float> %1) {
+; SSE2-LABEL: PR48823:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
+; SSE2-NEXT:    subps %xmm2, %xmm0
+; SSE2-NEXT:    movaps %xmm1, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,2],xmm1[2,2]
+; SSE2-NEXT:    subps %xmm1, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
+; SSE2-NEXT:    retq
+;
+; SSSE3-SLOW-LABEL: PR48823:
+; SSSE3-SLOW:       # %bb.0:
+; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSSE3-SLOW-NEXT:    subps %xmm2, %xmm0
+; SSSE3-SLOW-NEXT:    movsldup {{.*#+}} xmm2 = xmm1[0,0,2,2]
+; SSSE3-SLOW-NEXT:    subps %xmm1, %xmm2
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
+; SSSE3-SLOW-NEXT:    retq
+;
+; SSSE3-FAST-LABEL: PR48823:
+; SSSE3-FAST:       # %bb.0:
+; SSSE3-FAST-NEXT:    hsubps %xmm1, %xmm0
+; SSSE3-FAST-NEXT:    retq
+;
+; AVX1-SLOW-LABEL: PR48823:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX1-SLOW-NEXT:    vsubps %xmm2, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vmovsldup {{.*#+}} xmm2 = xmm1[0,0,2,2]
+; AVX1-SLOW-NEXT:    vsubps %xmm1, %xmm2, %xmm1
+; AVX1-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: PR48823:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX2-LABEL: PR48823:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vsubps %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vmovsldup {{.*#+}} xmm2 = xmm1[0,0,2,2]
+; AVX2-NEXT:    vsubps %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    retq
+  %3 = shufflevector <4 x float> %0, <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %4 = fsub <4 x float> %0, %3
+  %5 = shufflevector <4 x float> %1, <4 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
+  %6 = fsub <4 x float> %5, %1
+  %7 = shufflevector <4 x float> %4, <4 x float> %6, <4 x i32> <i32 0, i32 undef, i32 undef, i32 7>
+  ret <4 x float> %7
+}

@@ -12,3 +12,5 @@ crc32c.b t0, t1, t2 # CHECK: :[[@LINE]]:18: error: invalid operand for instructi
 crc32c.h t0, t1, t2 # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
 # Too many operands
 crc32c.w t0, t1, t2 # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
+crc32.d t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+crc32c.d t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set

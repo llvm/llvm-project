@@ -568,7 +568,12 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     PDepth = P->getResolver()->getPMDataManager().getDepth();
 
   for (Pass *AP : AnalysisPasses) {
-    LastUser[AP] = P;
+    // Record P as the new last user of AP.
+    auto &LastUserOfAP = LastUser[AP];
+    if (LastUserOfAP)
+      InversedLastUser[LastUserOfAP].erase(AP);
+    LastUserOfAP = P;
+    InversedLastUser[P].insert(AP);
 
     if (P == AP)
       continue;
@@ -598,13 +603,13 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     if (P->getResolver())
       setLastUser(LastPMUses, P->getResolver()->getPMDataManager().getAsPass());
 
-
     // If AP is the last user of other passes then make P last user of
     // such passes.
-    for (auto &LU : LastUser) {
-      if (LU.second == AP)
-        LU.second = P;
-    }
+    auto &LastUsedByAP = InversedLastUser[AP];
+    for (Pass *L : LastUsedByAP)
+      LastUser[L] = P;
+    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    LastUsedByAP.clear();
   }
 }
 
@@ -850,11 +855,6 @@ void PMTopLevelManager::initializeAllAnalysisInfo() {
   // Initailize other pass managers
   for (PMDataManager *IPM : IndirectPassManagers)
     IPM->initializeAnalysisInfo();
-
-  for (auto LU : LastUser) {
-    SmallPtrSet<Pass *, 8> &L = InversedLastUser[LU.second];
-    L.insert(LU.first);
-  }
 }
 
 /// Destructor
@@ -1151,6 +1151,8 @@ Pass *PMDataManager::findAnalysisPass(AnalysisID AID, bool SearchParent) {
 
 // Print list of passes that are last used by P.
 void PMDataManager::dumpLastUses(Pass *P, unsigned Offset) const{
+  if (PassDebugging < Details)
+    return;
 
   SmallVector<Pass *, 12> LUses;
 

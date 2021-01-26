@@ -28,6 +28,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include <string>
 #include <vector>
 
@@ -51,11 +52,19 @@ struct Config {
   Config(Config &&) = default;
   Config &operator=(Config &&) = default;
 
+  struct CDBSearchSpec {
+    enum { Ancestors, FixedDir, NoCDBSearch } Policy = Ancestors;
+    // Absolute, native slashes, no trailing slash.
+    llvm::Optional<std::string> FixedCDBPath;
+  };
+
   /// Controls how the compile command for the current file is determined.
   struct {
-    // Edits to apply to the compile command, in sequence.
+    /// Edits to apply to the compile command, in sequence.
     std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
         Edits;
+    /// Where to search for compilation databases for this file's flags.
+    CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, llvm::None};
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -76,6 +85,12 @@ struct Config {
     BackgroundPolicy Background = BackgroundPolicy::Build;
     llvm::Optional<ExternalIndexSpec> External;
   } Index;
+
+  /// Controls warnings and errors when parsing code.
+  struct {
+    bool SuppressAll = false;
+    llvm::StringSet<> Suppress;
+  } Diagnostics;
 
   /// Style of the codebase.
   struct {

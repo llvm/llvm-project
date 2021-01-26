@@ -15,7 +15,7 @@
 
 #include <fenv.h>
 
-TEST(ExceptionStatusTest, RaiseAndTest) {
+TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   // This test raises a set of exceptions and checks that the exception
   // status flags are updated. The intention is really not to invoke the
   // exception handler. Hence, we will disable all exceptions at the

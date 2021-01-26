@@ -30,7 +30,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iomanip>
-#include <set>
 #include <sstream>
 #define DEBUG_TYPE "affine-loop-fusion"
 
@@ -634,10 +633,14 @@ static bool canRemoveSrcNodeAfterFusion(
 }
 
 /// Returns in 'srcIdCandidates' the producer fusion candidates for consumer
-/// 'dstId'.
+/// 'dstId'. Candidates are sorted by node id order. This order corresponds to
+/// the program order when the 'mdg' is created. However, program order is not
+/// guaranteed and must not be required by the client. Program order won't be
+/// held if the 'mdg' is reused from a previous fusion step or if the node
+/// creation order changes in the future to support more advance cases.
 // TODO: Move this to a loop fusion utility once 'mdg' is also moved.
 static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
-                                  DenseSet<unsigned> &srcIdCandidates) {
+                                  SmallVectorImpl<unsigned> &srcIdCandidates) {
   // Skip if no input edges along which to fuse.
   if (mdg->inEdges.count(dstId) == 0)
     return;
@@ -660,8 +663,13 @@ static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
           auto storeOp = cast<AffineWriteOpInterface>(op);
           return consumedMemrefs.count(storeOp.getMemRef()) > 0;
         }))
-      srcIdCandidates.insert(srcNode->id);
+      srcIdCandidates.push_back(srcNode->id);
   }
+
+  std::sort(srcIdCandidates.begin(), srcIdCandidates.end());
+  srcIdCandidates.erase(
+      std::unique(srcIdCandidates.begin(), srcIdCandidates.end()),
+      srcIdCandidates.end());
 }
 
 /// Returns in 'producerConsumerMemrefs' the memrefs involved in a
@@ -763,11 +771,11 @@ bool MemRefDependenceGraph::init(FuncOp f) {
     }
   }
 
-#ifndef NDEBUG
-  for (auto &idAndNode : nodes)
+  for (auto &idAndNode : nodes) {
     LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
                             << *(idAndNode.second.op) << "\n");
-#endif
+    (void)idAndNode;
+  }
 
   // Add dependence edges between nodes which produce SSA values and their
   // users.
@@ -1395,22 +1403,10 @@ public:
         // 'getProducerCandidates' does not always guarantee that program order
         // in 'srcIdCandidates'.
         dstNodeChanged = false;
-        DenseSet<unsigned> srcIdCandidates;
+        SmallVector<unsigned, 16> srcIdCandidates;
         getProducerCandidates(dstId, mdg, srcIdCandidates);
 
-        /// Visit candidates in reverse node id order. This order corresponds to
-        /// the reverse program order when the 'mdg' is created. However,
-        /// reverse program order is not guaranteed and must not be required.
-        /// Reverse program order won't be held if the 'mdg' is reused from a
-        /// previous fusion step or if the node creation order changes in the
-        /// future to support more advance cases.
-        SmallVector<unsigned, 16> sortedSrcIdCandidates;
-        sortedSrcIdCandidates.reserve(srcIdCandidates.size());
-        sortedSrcIdCandidates.append(srcIdCandidates.begin(),
-                                     srcIdCandidates.end());
-        llvm::sort(sortedSrcIdCandidates, std::greater<unsigned>());
-
-        for (unsigned srcId : sortedSrcIdCandidates) {
+        for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
           // Get 'srcNode' from which to attempt fusion into 'dstNode'.
           auto *srcNode = mdg->getNode(srcId);
           auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
@@ -1574,28 +1570,35 @@ public:
           mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
                            removeSrcNode);
 
-          // Collect slice loop stats.
-          LoopNestStateCollector dstForCollector;
-          dstForCollector.collect(dstAffineForOp);
-          for (Value memref : privateMemrefs) {
-            // Create private memref for 'memref' in 'dstAffineForOp'.
-            // TODO: remove storesForMemref and move the code below to the
-            // loop-if.
-            SmallVector<Operation *, 4> storesForMemref;
-            for (auto *storeOpInst : dstForCollector.storeOpInsts) {
-              if (cast<AffineWriteOpInterface>(storeOpInst).getMemRef() ==
-                  memref)
-                storesForMemref.push_back(storeOpInst);
+          // Create private memrefs.
+          if (!privateMemrefs.empty()) {
+            // Gather stores for all the private-to-be memrefs.
+            DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
+            dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
+              Value storeMemRef = storeOp.getMemRef();
+              if (privateMemrefs.count(storeMemRef) > 0)
+                privateMemRefToStores[storeMemRef].push_back(
+                    storeOp.getOperation());
+            });
+
+            // Replace original memrefs with private memrefs. Note that all the
+            // loads and stores on these memrefs will be replaced with a new
+            // loads and stores. Any reference to the original ones becomes
+            // invalid after this point.
+            for (auto &memrefToStoresPair : privateMemRefToStores) {
+              // TODO: Use union of memref write regions to compute
+              // private memref footprint.
+              SmallVector<Operation *, 4> &storesForMemref =
+                  memrefToStoresPair.second;
+              Value newMemRef = createPrivateMemRef(
+                  dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
+                  fastMemorySpace, localBufSizeThreshold);
+              // Create new node in dependence graph for 'newMemRef' alloc op.
+              unsigned newMemRefNodeId =
+                  mdg->addNode(newMemRef.getDefiningOp());
+              // Add edge from 'newMemRef' node to dstNode.
+              mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
             }
-            // TODO: Use union of memref write regions to compute
-            // private memref footprint.
-            auto newMemRef = createPrivateMemRef(
-                dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
-                fastMemorySpace, localBufSizeThreshold);
-            // Create new node in dependence graph for 'newMemRef' alloc op.
-            unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
-            // Add edge from 'newMemRef' node to dstNode.
-            mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
           }
 
           // Collect dst loop stats after memref privatization transformation.

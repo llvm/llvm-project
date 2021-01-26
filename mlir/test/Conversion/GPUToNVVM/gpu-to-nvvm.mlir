@@ -247,6 +247,21 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__nv_log1pf(f32) -> f32
+  // CHECK: llvm.func @__nv_log1p(f64) -> f64
+  // CHECK-LABEL: func @gpu_log1p
+  func @gpu_log1p(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = std.log1p %arg_f32 : f32
+    // CHECK: llvm.call @__nv_log1pf(%{{.*}}) : (f32) -> f32
+    %result64 = std.log1p %arg_f64 : f64
+    // CHECK: llvm.call @__nv_log1p(%{{.*}}) : (f64) -> f64
+    std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_log2f(f32) -> f32
   // CHECK: llvm.func @__nv_log2(f64) -> f64
   // CHECK-LABEL: func @gpu_log2

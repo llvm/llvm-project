@@ -23,11 +23,11 @@
 # RUN: ld.lld %t/main.o %t/bar.so --wrap=foo -o %t2
 # RUN: llvm-readelf --dyn-syms %t2 | FileCheck %s --check-prefix=CHECK2
 
-## The reference __real_foo from %t/bar.so causes foo to be exported.
-## __wrap_foo is not used, thus not exported.
-# CHECK2:      Symbol table '.dynsym' contains 3 entries:
+## See wrap-plt2.s why __wrap_foo is retained.
+# CHECK2:      Symbol table '.dynsym' contains 4 entries:
 # CHECK2:      NOTYPE  LOCAL  DEFAULT  UND
 # CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT  UND bar
+# CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_foo
 # CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
 ## __wrap_bar is undefined.

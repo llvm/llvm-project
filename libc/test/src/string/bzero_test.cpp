@@ -24,7 +24,7 @@ Data getData(ArrayRef<char> filler) {
   return out;
 }
 
-TEST(BzeroTest, Thorough) {
+TEST(LlvmLibcBzeroTest, Thorough) {
   const Data dirty = getData(kDeadcode);
   for (size_t count = 0; count < 1024; ++count) {
     for (size_t align = 0; align < 64; ++align) {

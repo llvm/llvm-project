@@ -44,7 +44,8 @@ enum NodeType : unsigned {
   SRAW,
   SRLW,
   // 32-bit operations from RV64M that can't be simply matched with a pattern
-  // at instruction selection time.
+  // at instruction selection time. These have undefined behavior for division
+  // by 0 or overflow (divw) like their target independent counterparts.
   DIVW,
   DIVUW,
   REMUW,
@@ -95,6 +96,21 @@ enum NodeType : unsigned {
   READ_VLENB,
   // Truncates a RVV integer vector by one power-of-two.
   TRUNCATE_VECTOR,
+  // Unit-stride fault-only-first load
+  VLEFF,
+  VLEFF_MASK,
+  // Unit-stride fault-only-first segment load
+  VLSEGFF,
+  VLSEGFF_MASK,
+  // read vl CSR
+  READ_VL,
+  // Matches the semantics of vslideup/vslidedown. The first operand is the
+  // pass-thru operand, the second is the source vector, and the third is the
+  // XLenVT index (either constant or non-constant).
+  VSLIDEUP,
+  VSLIDEDOWN,
+  // Matches the semantics of the unmasked vid.v instruction.
+  VID,
 };
 } // namespace RISCVISD
 
@@ -212,6 +228,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
 
   /// Returns the register with the specified architectural or ABI name. This
   /// method is necessary to lower the llvm.read_register.* and
@@ -291,6 +308,8 @@ private:
   SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                              int64_t ExtTrueVal) const;
   SDValue lowerVectorMaskTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
@@ -325,6 +344,7 @@ struct RISCVZvlsseg {
   unsigned int IntrinsicID;
   unsigned int SEW;
   unsigned int LMUL;
+  unsigned int IndexLMUL;
   unsigned int Pseudo;
 };
 

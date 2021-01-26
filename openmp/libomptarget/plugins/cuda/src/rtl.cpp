@@ -363,14 +363,15 @@ class DeviceRTLTy {
     E.Entries.push_back(entry);
   }
 
-  // Return true if the entry is associated with device
-  bool findOffloadEntry(const int DeviceId, const void *Addr) const {
+   // Return a pointer to the entry associated with the pointer
+  const __tgt_offload_entry *getOffloadEntry(const int DeviceId,
+                                             const void *Addr) const {
     for (const __tgt_offload_entry &Itr :
          DeviceData[DeviceId].FuncGblEntries.back().Entries)
       if (Itr.addr == Addr)
-        return true;
+        return &Itr;
 
-    return false;
+    return nullptr;
   }
 
   // Return the pointer to the target entries table
@@ -605,7 +606,7 @@ public:
       DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
     }
 
-    INFO(DeviceId,
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Device supports up to %d CUDA blocks and %d threads with a "
          "warp size of %d\n",
          DeviceData[DeviceId].BlocksPerGrid,
@@ -1025,7 +1026,7 @@ public:
       CudaBlocksPerGrid = TeamNum;
     }
 
-    INFO(DeviceId,
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Launching kernel %s with %d blocks and %d threads in %s "
          "mode\n",
          (getOffloadEntry(DeviceId, TgtEntryPtr))

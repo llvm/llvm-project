@@ -300,6 +300,53 @@ public:
                                                bool NeedsBarrier,
                                                Value *Chunk = nullptr);
 
+  /// Tile a loop nest.
+  ///
+  /// Tiles the loops of \p Loops by the tile sizes in \p TileSizes. Loops in
+  /// \p/ Loops must be perfectly nested, from outermost to innermost loop
+  /// (i.e. Loops.front() is the outermost loop). The trip count llvm::Value
+  /// of every loop and every tile sizes must be usable in the outermost
+  /// loop's preheader. This implies that the loop nest is rectangular.
+  ///
+  /// Example:
+  /// \code
+  ///   for (int i = 0; i < 15; ++i) // Canonical loop "i"
+  ///     for (int j = 0; j < 14; ++j) // Canonical loop "j"
+  ///         body(i, j);
+  /// \endcode
+  ///
+  /// After tiling with Loops={i,j} and TileSizes={5,7}, the loop is changed to
+  /// \code
+  ///   for (int i1 = 0; i1 < 3; ++i1)
+  ///     for (int j1 = 0; j1 < 2; ++j1)
+  ///       for (int i2 = 0; i2 < 5; ++i2)
+  ///         for (int j2 = 0; j2 < 7; ++j2)
+  ///           body(i1*3+i2, j1*3+j2);
+  /// \endcode
+  ///
+  /// The returned vector are the loops {i1,j1,i2,j2}. The loops i1 and j1 are
+  /// referred to the floor, and the loops i2 and j2 are the tiles. Tiling also
+  /// handles non-constant trip counts, non-constant tile sizes and trip counts
+  /// that are not multiples of the tile size. In the latter case the tile loop
+  /// of the last floor-loop iteration will have fewer iterations than specified
+  /// as its tile size.
+  ///
+  ///
+  /// @param DL        Debug location for instructions added by tiling, for
+  ///                  instance the floor- and tile trip count computation.
+  /// @param Loops     Loops to tile. The CanonicalLoopInfo objects are
+  ///                  invalidated by this method, i.e. should not used after
+  ///                  tiling.
+  /// @param TileSizes For each loop in \p Loops, the tile size for that
+  ///                  dimensions.
+  ///
+  /// \returns A list of generated loops. Contains twice as many loops as the
+  ///          input loop nest; the first half are the floor loops and the
+  ///          second half are the tile loops.
+  std::vector<CanonicalLoopInfo *>
+  tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+            ArrayRef<Value *> TileSizes);
+
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
@@ -729,6 +776,12 @@ private:
   BasicBlock *Exit;
   BasicBlock *After;
 
+  /// Add the control blocks of this loop to \p BBs.
+  ///
+  /// This does not include any block from the body, including the one returned
+  /// by getBody().
+  void collectControlBlocks(SmallVectorImpl<BasicBlock *> &BBs);
+
 public:
   /// The preheader ensures that there is only a single edge entering the loop.
   /// Code that must be execute before any loop iteration can be emitted here,
@@ -780,6 +833,14 @@ public:
     assert(isa<PHINode>(IndVarPHI) && "First inst must be the IV PHI");
     return IndVarPHI;
   }
+
+  /// Return the type of the induction variable (and the trip count).
+  Type *getIndVarType() const { return getIndVar()->getType(); }
+
+  /// Return the insertion point for user code before the loop.
+  OpenMPIRBuilder::InsertPointTy getPreheaderIP() const {
+    return {Preheader, std::prev(Preheader->end())};
+  };
 
   /// Return the insertion point for user code in the body.
   OpenMPIRBuilder::InsertPointTy getBodyIP() const {

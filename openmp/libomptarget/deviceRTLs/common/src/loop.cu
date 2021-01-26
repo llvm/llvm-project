@@ -15,7 +15,6 @@
 
 #include "common/omptarget.h"
 #include "target_impl.h"
-#include "common/target_atomic.h"
 #ifdef OMPD_SUPPORT
   #include "common/ompd-specific.h"
 #endif /*OMPD_SUPPORT*/

@@ -171,9 +171,7 @@ static void addBlockAndPredsToSet(BasicBlock *InputBB, BasicBlock *StopBlock,
     if (Blocks.insert(BB).second && BB != StopBlock)
       // If BB is not already processed and it is not a stop block then
       // insert its predecessor in the work list
-      for (BasicBlock *WBB : predecessors(BB)) {
-        Worklist.push_back(WBB);
-      }
+      append_range(Worklist, predecessors(BB));
   } while (!Worklist.empty());
 }
 

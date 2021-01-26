@@ -2317,6 +2317,9 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
     if (ES->hasExternalDefinitions(RD) == ExternalASTSource::EK_Always)
       return true;
 
+  // Only emit forward declarations in line tables only to keep debug info size
+  // small. This only applies to CodeView, since we don't emit types in DWARF
+  // line tables only.
   if (DebugKind == codegenoptions::DebugLineTablesOnly)
     return true;
 
@@ -3726,7 +3729,10 @@ llvm::DISubprogram *CGDebugInfo::getObjCMethodDeclaration(
 llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
                                                              QualType FnType,
                                                              llvm::DIFile *F) {
-  if (!D || DebugKind <= codegenoptions::DebugLineTablesOnly)
+  // In CodeView, we emit the function types in line tables only because the
+  // only way to distinguish between functions is by display name and type.
+  if (!D || (DebugKind <= codegenoptions::DebugLineTablesOnly &&
+             !CGM.getCodeGenOpts().EmitCodeView))
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray(None));

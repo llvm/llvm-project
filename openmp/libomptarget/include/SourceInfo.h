@@ -16,9 +16,9 @@
 #include <string>
 
 #ifdef _WIN32
-static const bool OS_WINDOWS = true;
+constexpr bool OSWindows = true;
 #else
-static const bool OS_WINDOWS = false;
+constexpr bool OSWindows = false;
 #endif
 
 /// Type alias for source location information for variable mappings with
@@ -39,72 +39,73 @@ struct ident_t {
 /// Struct to hold source individual location information.
 class SourceInfo {
   /// Underlying string copy of the original source information.
-  const std::string sourceStr;
+  const std::string SourceStr;
 
   /// Location fields extracted from the source information string.
-  const std::string name;
-  const std::string filename;
-  const int32_t line;
-  const int32_t column;
+  const std::string Name;
+  const std::string Filename;
+  const int32_t Line;
+  const int32_t Column;
 
-  std::string initStr(const void *name) {
-    if (!name)
+  std::string initStr(const void *Name) {
+    if (!Name)
       return ";unknown;unknown;0;0;;";
     else
-      return std::string(reinterpret_cast<const char *>(name));
+      return std::string(reinterpret_cast<const char *>(Name));
   }
 
-  std::string initStr(const ident_t *loc) {
-    if (!loc)
+  std::string initStr(const ident_t *Loc) {
+    if (!Loc)
       return ";unknown;unknown;0;0;;";
     else
-      return std::string(reinterpret_cast<const char *>(loc->psource));
+      return std::string(reinterpret_cast<const char *>(Loc->psource));
   }
 
   /// Get n-th substring in an expression separated by ;.
-  std::string getSubstring(const int n) const {
-    std::size_t begin = sourceStr.find(';');
-    std::size_t end = sourceStr.find(';', begin + 1);
-    for (int i = 0; i < n; i++) {
-      begin = end;
-      end = sourceStr.find(';', begin + 1);
+  std::string getSubstring(const unsigned N) const {
+    std::size_t Begin = SourceStr.find(';');
+    std::size_t End = SourceStr.find(';', Begin + 1);
+    for (unsigned I = 0; I < N; I++) {
+      Begin = End;
+      End = SourceStr.find(';', Begin + 1);
     }
-    return sourceStr.substr(begin + 1, end - begin - 1);
+    return SourceStr.substr(Begin + 1, End - Begin - 1);
   };
 
   /// Get the filename from a full path.
-  std::string removePath(const std::string &path) const {
-    std::size_t pos = (OS_WINDOWS) ? path.rfind('\\') : path.rfind('/');
-    return path.substr(pos + 1);
+  std::string removePath(const std::string &Path) const {
+    std::size_t Pos = (OSWindows) ? Path.rfind('\\') : Path.rfind('/');
+    return Path.substr(Pos + 1);
   };
 
 public:
-  SourceInfo(const ident_t *loc)
-      : sourceStr(initStr(loc)), name(getSubstring(1)),
-        filename(removePath(getSubstring(0))), line(std::stoi(getSubstring(2))),
-        column(std::stoi(getSubstring(3))) {}
+  SourceInfo(const ident_t *Loc)
+      : SourceStr(initStr(Loc)), Name(getSubstring(1)),
+        Filename(removePath(getSubstring(0))), Line(std::stoi(getSubstring(2))),
+        Column(std::stoi(getSubstring(3))) {}
 
-  SourceInfo(const map_var_info_t name)
-      : sourceStr(initStr(name)), name(getSubstring(0)),
-        filename(removePath(getSubstring(1))), line(std::stoi(getSubstring(2))),
-        column(std::stoi(getSubstring(3))) {}
+  SourceInfo(const map_var_info_t Name)
+      : SourceStr(initStr(Name)), Name(getSubstring(0)),
+        Filename(removePath(getSubstring(1))), Line(std::stoi(getSubstring(2))),
+        Column(std::stoi(getSubstring(3))) {}
 
-  const char *getName() const { return name.c_str(); }
-  const char *getFilename() const { return filename.c_str(); }
-  int32_t getLine() const { return line; }
-  int32_t getColumn() const { return column; }
-  bool isAvailible() const { return (line || column); }
+  const char *getName() const { return Name.c_str(); }
+  const char *getFilename() const { return Filename.c_str(); }
+  const char *getProfileLocation() const { return SourceStr.data(); }
+  int32_t getLine() const { return Line; }
+  int32_t getColumn() const { return Column; }
+  bool isAvailible() const { return (Line || Column); }
 };
 
 /// Standalone function for getting the variable name of a mapping.
-static inline std::string getNameFromMapping(const map_var_info_t name) {
-  if (!name)
+static inline std::string getNameFromMapping(const map_var_info_t Name) {
+  if (!Name)
     return "unknown";
 
-  const std::string name_str(reinterpret_cast<const char *>(name));
-  std::size_t begin = name_str.find(';');
-  std::size_t end = name_str.find(';', begin + 1);
-  return name_str.substr(begin + 1, end - begin - 1);
+  const std::string NameStr(reinterpret_cast<const char *>(Name));
+  std::size_t Begin = NameStr.find(';');
+  std::size_t End = NameStr.find(';', Begin + 1);
+  return NameStr.substr(Begin + 1, End - Begin - 1);
 }
 
 #endif

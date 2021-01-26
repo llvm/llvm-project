@@ -115,3 +115,68 @@ class ExecTestCase(TestBase):
                     self.runCmd("bt")
         self.assertTrue(len(threads) == 1,
                         "Stopped at breakpoint in exec'ed process.")
+
+    @expectedFailureAll(archs=['i386'],
+                        oslist=no_match(["freebsd"]),
+                        bugnumber="rdar://28656532")
+    @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
+    @expectedFailureNetBSD
+    @skipIfAsan # rdar://problem/43756823
+    @skipIfWindows
+    def test_correct_thread_plan_state_before_exec(self):
+        '''
+        In this test we make sure that the Thread* cache in the ThreadPlans
+        is cleared correctly when performing exec
+        '''
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+
+        (target, process, thread, breakpoint1) = lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.cpp', False))
+
+        # The stop reason of the thread should be breakpoint.
+        self.assertTrue(process.GetState() == lldb.eStateStopped,
+                        STOPPED_DUE_TO_BREAKPOINT)
+
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
+        self.assertTrue(len(threads) == 1)
+
+        # We perform an instruction step, which effectively sets the cache of the base
+        # thread plan, which should be cleared when a new thread list appears.
+        #
+        # Continuing after this instruction step will trigger a call to
+        # ThreadPlan::ShouldReportRun, which sets the ThreadPlan's Thread cache to 
+        # the old Thread* value. In Process::UpdateThreadList we are clearing this
+        # cache in preparation for the new ThreadList.
+        #
+        # Not doing this stepping will cause LLDB to first execute a private single step
+        # past the current breakpoint, which eventually avoids the call to ShouldReportRun,
+        # thus not setting the cache to its invalid value.
+        thread.StepInstruction(False)
+
+        # Run and we should stop due to exec
+        breakpoint2 = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint 2 here', lldb.SBFileSpec("secondprog.cpp", False))
+
+        process.Continue()
+
+        self.assertFalse(process.GetState() == lldb.eStateExited,
+                            "Process should not have exited!")
+        self.assertTrue(process.GetState() == lldb.eStateStopped,
+                        "Process should be stopped at __dyld_start")
+
+        threads = lldbutil.get_stopped_threads(
+            process, lldb.eStopReasonExec)
+        self.assertTrue(
+            len(threads) == 1,
+            "We got a thread stopped for exec.")
+
+        # Run and we should stop at breakpoint in main after exec
+        process.Continue()
+
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint2)
+        self.assertTrue(len(threads) == 1,
+                        "Stopped at breakpoint in exec'ed process.")

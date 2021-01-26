@@ -510,8 +510,8 @@ bool ProcessWindows::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-bool ProcessWindows::UpdateThreadList(ThreadList &old_thread_list,
-                                      ThreadList &new_thread_list) {
+bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
+                                        ThreadList &new_thread_list) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_THREAD);
   // Add all the threads that were previously running and for which we did not
   // detect a thread exited event.

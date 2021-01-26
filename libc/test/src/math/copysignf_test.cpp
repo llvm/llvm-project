@@ -16,7 +16,7 @@ using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
-TEST(CopySinfTest, SpecialNumbers) {
+TEST(LlvmLibcCopySinfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::copysignf(aNaN, -1.0));
   EXPECT_FP_EQ(aNaN, __llvm_libc::copysignf(aNaN, 1.0));
 
@@ -27,7 +27,7 @@ TEST(CopySinfTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::copysignf(negZero, 1.0));
 }
 
-TEST(CopySinfTest, InFloatRange) {
+TEST(LlvmLibcCopySinfTest, InFloatRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 1000000;
   constexpr UIntType step = UIntType(-1) / count;

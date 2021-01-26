@@ -44,9 +44,9 @@ define void @two_preds(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
 ; CHECK:       pred0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    [[DOTOLD:%.*]] = icmp eq i8 [[V3:%.*]], 0
-; CHECK-NEXT:    [[OR_COND2:%.*]] = or i1 [[C1]], [[DOTOLD]]
-; CHECK-NEXT:    br i1 [[OR_COND2]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3:%.*]], 0
+; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[C1]], [[C3_OLD]]
+; CHECK-NEXT:    br i1 [[OR_COND1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       pred1:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3]], 0
@@ -118,10 +118,10 @@ define void @two_preds_with_extra_op(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
 ; CHECK:       pred0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2:%.*]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = icmp eq i8 [[DOTOLD]], 0
-; CHECK-NEXT:    [[OR_COND4:%.*]] = or i1 [[C1]], [[DOTOLD1]]
-; CHECK-NEXT:    br i1 [[OR_COND4]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_ADJ_OLD]], 0
+; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[C1]], [[C3_OLD]]
+; CHECK-NEXT:    br i1 [[OR_COND1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       pred1:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2]], 0
 ; CHECK-NEXT:    [[V3_ADJ:%.*]] = add i8 [[V1]], [[V2]]
@@ -197,11 +197,11 @@ define void @two_preds_with_extra_op_multiuse(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
 ; CHECK:       pred0:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2:%.*]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = add i8 [[DOTOLD]], [[DOTOLD]]
-; CHECK-NEXT:    [[DOTOLD2:%.*]] = icmp eq i8 [[DOTOLD1]], 0
-; CHECK-NEXT:    [[OR_COND6:%.*]] = or i1 [[C1]], [[DOTOLD2]]
-; CHECK-NEXT:    br i1 [[OR_COND6]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2:%.*]]
+; CHECK-NEXT:    [[V3_ADJ_ADJ_OLD:%.*]] = add i8 [[V3_ADJ_OLD]], [[V3_ADJ_OLD]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_ADJ_ADJ_OLD]], 0
+; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[C1]], [[C3_OLD]]
+; CHECK-NEXT:    br i1 [[OR_COND1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       pred1:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2]], 0
 ; CHECK-NEXT:    [[V3_ADJ:%.*]] = add i8 [[V1]], [[V2]]
@@ -245,11 +245,10 @@ define void @one_pred_with_extra_op_liveout(i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @one_pred_with_extra_op_liveout(
 ; CHECK-NEXT:  pred:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[V1_ADJ:%.*]] = add i8 [[V0]], [[V1:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1_ADJ]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C0]], [[C1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V1_ADJ]])
@@ -277,11 +276,10 @@ define void @one_pred_with_extra_op_liveout_multiuse(i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @one_pred_with_extra_op_liveout_multiuse(
 ; CHECK-NEXT:  pred:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[V1_ADJ:%.*]] = add i8 [[V0]], [[V1:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1_ADJ]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C0]], [[C1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V1_ADJ]])
@@ -315,11 +313,10 @@ define void @one_pred_with_extra_op_liveout_distant_phi(i8 %v0, i8 %v1) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED:%.*]], label [[LEFT_END:%.*]]
 ; CHECK:       pred:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[V2_ADJ:%.*]] = add i8 [[V0]], [[V1]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2_ADJ]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V2_ADJ]])
@@ -372,11 +369,11 @@ define void @two_preds_with_extra_op_liveout(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C2]], [[C3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = icmp eq i8 [[DOTOLD]], 0
-; CHECK-NEXT:    br i1 [[DOTOLD1]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_ADJ_OLD]], 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       final_left:
-; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT]])
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    ret void
@@ -422,12 +419,12 @@ define void @two_preds_with_extra_op_liveout_multiuse(i8 %v0, i8 %v1, i8 %v2, i8
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C2]], [[C3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = icmp eq i8 [[DOTOLD]], 0
-; CHECK-NEXT:    br i1 [[DOTOLD1]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_ADJ_OLD]], 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       final_left:
-; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
-; CHECK-NEXT:    [[MERGE_LEFT_2:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 42, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT_2:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 42, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT]])
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT_2]])
 ; CHECK-NEXT:    call void @sideeffect0()
@@ -468,11 +465,10 @@ define void @one_pred_with_extra_op_eexternally_used_only(i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @one_pred_with_extra_op_eexternally_used_only(
 ; CHECK-NEXT:  pred:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[V1_ADJ:%.*]] = add i8 [[V0]], [[V1:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C0]], [[C1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V1_ADJ]])
@@ -500,11 +496,10 @@ define void @one_pred_with_extra_op_externally_used_only_multiuse(i8 %v0, i8 %v1
 ; CHECK-LABEL: @one_pred_with_extra_op_externally_used_only_multiuse(
 ; CHECK-NEXT:  pred:
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
-; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[V1_ADJ:%.*]] = add i8 [[V0]], [[V1:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C0]], [[C1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V1_ADJ]])
@@ -546,11 +541,11 @@ define void @two_preds_with_extra_op_externally_used_only(i8 %v0, i8 %v1, i8 %v2
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C2]], [[C3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = icmp eq i8 [[V3]], 0
-; CHECK-NEXT:    br i1 [[DOTOLD1]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       final_left:
-; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT]])
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    ret void
@@ -596,12 +591,12 @@ define void @two_preds_with_extra_op_externally_used_only_multiuse(i8 %v0, i8 %v
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C2]], [[C3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = add i8 [[V1]], [[V2]]
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = icmp eq i8 [[V3]], 0
-; CHECK-NEXT:    br i1 [[DOTOLD1]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       final_left:
-; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
-; CHECK-NEXT:    [[MERGE_LEFT_2:%.*]] = phi i8 [ [[DOTOLD]], [[DISPATCH]] ], [ 42, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT_2:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 42, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT]])
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT_2]])
 ; CHECK-NEXT:    call void @sideeffect0()
@@ -643,11 +638,10 @@ define void @one_pred_with_extra_op_externally_used_only_after_cond_distant_phi(
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED:%.*]], label [[LEFT_END:%.*]]
 ; CHECK:       pred:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
-; CHECK:       dispatch:
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3:%.*]], 0
 ; CHECK-NEXT:    [[V2_ADJ:%.*]] = add i8 [[V4:%.*]], [[V5:%.*]]
-; CHECK-NEXT:    br i1 [[C3]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C1]], [[C3]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       final_left:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    call void @use8(i8 [[V2_ADJ]])
@@ -699,11 +693,11 @@ define void @two_preds_with_extra_op_externally_used_only_after_cond(i8 %v0, i8 
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C2]], [[C3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = icmp eq i8 [[V3]], 0
-; CHECK-NEXT:    [[DOTOLD1:%.*]] = add i8 [[V4]], [[V5]]
-; CHECK-NEXT:    br i1 [[DOTOLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V4]], [[V5]]
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       final_left:
-; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[DOTOLD1]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
+; CHECK-NEXT:    [[MERGE_LEFT:%.*]] = phi i8 [ [[V3_ADJ_OLD]], [[DISPATCH]] ], [ 0, [[PRED0]] ], [ [[V3_ADJ]], [[PRED1]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[MERGE_LEFT]])
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    ret void
@@ -739,17 +733,22 @@ define void @pr48450() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i16 [ 128, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[DEC_MERGE:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @gen1()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[DEC]] = add i16 [[COUNTDOWN]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
+; CHECK-NEXT:    [[DEC_OLD:%.*]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT_OLD:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT_OLD]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    br i1 [[C2]], label [[FOR_INC]], label [[IF_END_LOOPEXIT]]
+; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C2_NOT]], [[CMP_NOT]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END_LOOPEXIT]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       for.bodythread-pre-split:
+; CHECK-NEXT:    [[DEC_MERGE]] = phi i8 [ [[DEC]], [[IF_THEN]] ], [ [[DEC_OLD]], [[FOR_INC]] ]
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       if.end.loopexit:
@@ -759,13 +758,13 @@ entry:
   br label %for.body
 
 for.body:
-  %countdown = phi i16 [ 128, %entry ], [ %dec, %for.bodythread-pre-split ]
+  %countdown = phi i8 [ 8, %entry ], [ %dec, %for.bodythread-pre-split ]
   %c = call i1 @gen1()
   br i1 %c, label %for.inc, label %if.then
 
 for.inc:
-  %dec = add i16 %countdown, -1
-  %cmp.not = icmp eq i16 %countdown, 0
+  %dec = add i8 %countdown, -1
+  %cmp.not = icmp eq i8 %countdown, 0
   br i1 %cmp.not, label %if.end.loopexit, label %for.bodythread-pre-split
 
 if.then:
@@ -785,18 +784,23 @@ define void @pr48450_2(i1 %enable_loopback) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i16 [ 128, [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[COUNTDOWN:%.*]] = phi i8 [ 8, [[ENTRY:%.*]] ], [ [[DEC_MERGE:%.*]], [[FOR_BODYTHREAD_PRE_SPLIT:%.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @gen1()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_INC:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[DEC]] = add i16 [[COUNTDOWN]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[COUNTDOWN]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
+; CHECK-NEXT:    [[DEC_OLD:%.*]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT_OLD:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT_OLD]], label [[IF_END_LOOPEXIT:%.*]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[C2:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    br i1 [[C2]], label [[FOR_INC]], label [[IF_END_LOOPEXIT]]
+; CHECK-NEXT:    [[C2_NOT:%.*]] = xor i1 [[C2]], true
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[COUNTDOWN]], -1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[COUNTDOWN]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C2_NOT]], [[CMP_NOT]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END_LOOPEXIT]], label [[FOR_BODYTHREAD_PRE_SPLIT]]
 ; CHECK:       for.bodythread-pre-split:
-; CHECK-NEXT:    [[SHOULD_LOOPBACK:%.*]] = phi i1 [ true, [[FOR_INC]] ], [ false, [[FOR_BODYTHREAD_PRE_SPLIT_LOOPBACK:%.*]] ]
+; CHECK-NEXT:    [[DEC_MERGE]] = phi i8 [ [[DEC_OLD]], [[FOR_INC]] ], [ [[DEC_MERGE]], [[FOR_BODYTHREAD_PRE_SPLIT_LOOPBACK:%.*]] ], [ [[DEC]], [[IF_THEN]] ]
+; CHECK-NEXT:    [[SHOULD_LOOPBACK:%.*]] = phi i1 [ true, [[FOR_INC]] ], [ false, [[FOR_BODYTHREAD_PRE_SPLIT_LOOPBACK]] ], [ true, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[DO_LOOPBACK:%.*]] = and i1 [[SHOULD_LOOPBACK]], [[ENABLE_LOOPBACK:%.*]]
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    br i1 [[DO_LOOPBACK]], label [[FOR_BODYTHREAD_PRE_SPLIT_LOOPBACK]], label [[FOR_BODY]]
@@ -810,13 +814,13 @@ entry:
   br label %for.body
 
 for.body:
-  %countdown = phi i16 [ 128, %entry ], [ %dec, %for.bodythread-pre-split ]
+  %countdown = phi i8 [ 8, %entry ], [ %dec, %for.bodythread-pre-split ]
   %c = call i1 @gen1()
   br i1 %c, label %for.inc, label %if.then
 
 for.inc:
-  %dec = add i16 %countdown, -1
-  %cmp.not = icmp eq i16 %countdown, 0
+  %dec = add i8 %countdown, -1
+  %cmp.not = icmp eq i8 %countdown, 0
   br i1 %cmp.not, label %if.end.loopexit, label %for.bodythread-pre-split
 
 if.then:
@@ -837,14 +841,14 @@ if.end.loopexit:
   ret void
 }
 
-@f.b = external global i16, align 1
+@f.b = external global i8, align 1
 define void @pr48450_3() {
 ; CHECK-LABEL: @pr48450_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[V:%.*]] = load i16, i16* @f.b, align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[V]], 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* @f.b, align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[V]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br label [[FOR_COND1]]
 ;
@@ -852,15 +856,15 @@ entry:
   br label %for.cond1
 
 for.cond1:
-  %v = load i16, i16* @f.b, align 1
-  %cmp = icmp slt i16 %v, 1
+  %v = load i8, i8* @f.b, align 1
+  %cmp = icmp slt i8 %v, 1
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
   br label %for.cond1
 
 for.end:
-  %tobool = icmp ne i16 %v, 0
+  %tobool = icmp ne i8 %v, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
@@ -870,8 +874,8 @@ if.end:
   br label %for.cond2
 
 for.cond2:
-  %c.0 = phi i16 [ undef, %if.end ], [ %inc, %if.end7 ]
-  %cmp3 = icmp slt i16 %c.0, 1
+  %c.0 = phi i8 [ undef, %if.end ], [ %inc, %if.end7 ]
+  %cmp3 = icmp slt i8 %c.0, 1
   br i1 %cmp3, label %for.body4, label %for.cond.cleanup
 
 for.cond.cleanup:
@@ -884,7 +888,7 @@ if.then6:
   br label %cleanup
 
 if.end7:
-  %inc = add nsw i16 %c.0, 1
+  %inc = add nsw i8 %c.0, 1
   br label %for.cond2
 
 cleanup:

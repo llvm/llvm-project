@@ -10,10 +10,16 @@
 
 #include "src/math/hypotf.h"
 
-using HypotfTest = HypotTestTemplate<float>;
+using LlvmLibcHypotfTest = HypotTestTemplate<float>;
 
-TEST_F(HypotfTest, SpecialNumbers) { testSpecialNumbers(&__llvm_libc::hypotf); }
+TEST_F(LlvmLibcHypotfTest, SpecialNumbers) {
+  testSpecialNumbers(&__llvm_libc::hypotf);
+}
 
-TEST_F(HypotfTest, SubnormalRange) { testSubnormalRange(&__llvm_libc::hypotf); }
+TEST_F(LlvmLibcHypotfTest, SubnormalRange) {
+  testSubnormalRange(&__llvm_libc::hypotf);
+}
 
-TEST_F(HypotfTest, NormalRange) { testNormalRange(&__llvm_libc::hypotf); }
+TEST_F(LlvmLibcHypotfTest, NormalRange) {
+  testNormalRange(&__llvm_libc::hypotf);
+}

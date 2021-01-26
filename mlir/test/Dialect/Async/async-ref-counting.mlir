@@ -5,7 +5,7 @@ func private @cond() -> i1
 
 // CHECK-LABEL: @token_arg_no_uses
 func @token_arg_no_uses(%arg0: !async.token) {
-  // CHECK: async.drop_ref %arg0 {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %arg0 {count = 1 : i32}
   return
 }
 
@@ -13,11 +13,11 @@ func @token_arg_no_uses(%arg0: !async.token) {
 func @token_arg_conditional_await(%arg0: !async.token, %arg1: i1) {
   cond_br %arg1, ^bb1, ^bb2
 ^bb1:
-  // CHECK: async.drop_ref %arg0 {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %arg0 {count = 1 : i32}
   return
 ^bb2:
   // CHECK: async.await %arg0
-  // CHECK: async.drop_ref %arg0 {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %arg0 {count = 1 : i32}
   async.await %arg0 : !async.token
   return
 }
@@ -25,7 +25,7 @@ func @token_arg_conditional_await(%arg0: !async.token, %arg1: i1) {
 // CHECK-LABEL: @token_no_uses
 func @token_no_uses() {
   // CHECK: %[[TOKEN:.*]] = async.execute
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   %token = async.execute {
     async.yield
   }
@@ -50,7 +50,7 @@ func @token_await() {
   }
   // CHECK: async.await %[[TOKEN]]
   async.await %token : !async.token
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: return
   return
 }
@@ -62,7 +62,7 @@ func @token_await_and_return() -> !async.token {
     async.yield
   }
   // CHECK: async.await %[[TOKEN]]
-  // CHECK-NOT: async.drop_ref
+  // CHECK-NOT: async.runtime.drop_ref
   async.await %token : !async.token
   // CHECK: return %[[TOKEN]]
   return %token : !async.token
@@ -80,7 +80,7 @@ func @token_await_inside_scf_if(%arg0: i1) {
     async.await %token : !async.token
   }
   // CHECK: }
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: return
   return
 }
@@ -93,11 +93,11 @@ func @token_conditional_await(%arg0: i1) {
   }
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   return
 ^bb2:
   // CHECK: async.await %[[TOKEN]]
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   async.await %token : !async.token
   return
 }
@@ -115,7 +115,7 @@ func @token_await_in_the_loop() {
   %0 = call @cond(): () -> (i1)
   cond_br %0, ^bb1, ^bb2
 ^bb2:
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   return
 }
 
@@ -128,7 +128,7 @@ func @token_defined_in_the_loop() {
     async.yield
   }
   // CHECK: async.await %[[TOKEN]]
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   async.await %token : !async.token
   %0 = call @cond(): () -> (i1)
   cond_br %0, ^bb1, ^bb2
@@ -143,16 +143,16 @@ func @token_capture() {
     async.yield
   }
 
-  // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: %[[TOKEN_0:.*]] = async.execute
   %token_0 = async.execute {
-    // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
     // CHECK-NEXT: async.yield
     async.await %token : !async.token
     async.yield
   }
-  // CHECK: async.drop_ref %[[TOKEN_0]] {count = 1 : i32}
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN_0]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: return
   return
 }
@@ -164,30 +164,30 @@ func @token_nested_capture() {
     async.yield
   }
 
-  // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: %[[TOKEN_0:.*]] = async.execute
   %token_0 = async.execute {
-    // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
+    // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
     // CHECK: %[[TOKEN_1:.*]] = async.execute
     %token_1 = async.execute {
-      // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
+      // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
       // CHECK: %[[TOKEN_2:.*]] = async.execute
       %token_2 = async.execute {
         // CHECK: async.await %[[TOKEN]]
-        // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+        // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
         async.await %token : !async.token
         async.yield
       }
-      // CHECK: async.drop_ref %[[TOKEN_2]] {count = 1 : i32}
-      // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+      // CHECK: async.runtime.drop_ref %[[TOKEN_2]] {count = 1 : i32}
+      // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
       async.yield
     }
-    // CHECK: async.drop_ref %[[TOKEN_1]] {count = 1 : i32}
-    // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[TOKEN_1]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
     async.yield
   }
-  // CHECK: async.drop_ref %[[TOKEN_0]] {count = 1 : i32}
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN_0]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: return
   return
 }
@@ -199,19 +199,19 @@ func @token_dependency() {
     async.yield
   }
 
-  // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
   // CHECK: %[[TOKEN_0:.*]] = async.execute
   %token_0 = async.execute[%token] {
-    // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
     // CHECK-NEXT: async.yield
     async.yield
   }
 
   // CHECK: async.await %[[TOKEN]]
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   async.await %token : !async.token
   // CHECK: async.await %[[TOKEN_0]]
-  // CHECK: async.drop_ref %[[TOKEN_0]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN_0]] {count = 1 : i32}
   async.await %token_0 : !async.token
 
   // CHECK: return
@@ -226,26 +226,26 @@ func @value_operand() -> f32 {
     async.yield %0 : f32
   }
 
-  // CHECK: async.add_ref %[[TOKEN]] {count = 1 : i32}
-  // CHECK: async.add_ref %[[RESULTS]] {count = 1 : i32}
+  // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.add_ref %[[RESULTS]] {count = 1 : i32}
   // CHECK: %[[TOKEN_0:.*]] = async.execute
   %token_0 = async.execute[%token](%results as %arg0 : !async.value<f32>)  {
-    // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
-    // CHECK: async.drop_ref %[[RESULTS]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+    // CHECK: async.runtime.drop_ref %[[RESULTS]] {count = 1 : i32}
     // CHECK: async.yield
     async.yield
   }
 
   // CHECK: async.await %[[TOKEN]]
-  // CHECK: async.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
   async.await %token : !async.token
 
   // CHECK: async.await %[[TOKEN_0]]
-  // CHECK: async.drop_ref %[[TOKEN_0]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[TOKEN_0]] {count = 1 : i32}
   async.await %token_0 : !async.token
 
   // CHECK: async.await %[[RESULTS]]
-  // CHECK: async.drop_ref %[[RESULTS]] {count = 1 : i32}
+  // CHECK: async.runtime.drop_ref %[[RESULTS]] {count = 1 : i32}
   %0 = async.await %results : !async.value<f32>
 
   // CHECK: return

@@ -22,7 +22,7 @@ constexpr UIntType HiddenBit =
 
 DECLARE_SPECIAL_CONSTANTS(long double)
 
-TEST(SqrtlTest, SpecialValues) {
+TEST(LlvmLibcSqrtlTest, SpecialValues) {
   ASSERT_FP_EQ(aNaN, __llvm_libc::sqrtl(aNaN));
   ASSERT_FP_EQ(inf, __llvm_libc::sqrtl(inf));
   ASSERT_FP_EQ(aNaN, __llvm_libc::sqrtl(negInf));
@@ -34,7 +34,7 @@ TEST(SqrtlTest, SpecialValues) {
   ASSERT_FP_EQ(3.0L, __llvm_libc::sqrtl(9.0L));
 }
 
-TEST(SqrtlTest, DenormalValues) {
+TEST(LlvmLibcSqrtlTest, DenormalValues) {
   for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
     FPBits denormal(0.0L);
     denormal.mantissa = mant;
@@ -51,7 +51,7 @@ TEST(SqrtlTest, DenormalValues) {
   }
 }
 
-TEST(SqrtlTest, InLongDoubleRange) {
+TEST(LlvmLibcSqrtlTest, InLongDoubleRange) {
   constexpr UIntType count = 10'000'001;
   constexpr UIntType step = UIntType(-1) / count;
   for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {

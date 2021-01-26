@@ -1766,7 +1766,6 @@ bb.1:
   ret void
 }
 
-; FIXME: This is a miscompile.
 ; The FMF on the reduction should match the incoming insts.
 
 define float @fadd_v4f32_fmf(float* %p) {
@@ -1776,7 +1775,7 @@ define float @fadd_v4f32_fmf(float* %p) {
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
 ; STORE-LABEL: @fadd_v4f32_fmf(
@@ -1785,7 +1784,7 @@ define float @fadd_v4f32_fmf(float* %p) {
 ; STORE-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
 ; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; STORE-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; STORE-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; STORE-NEXT:    ret float [[TMP3]]
 ;
   %p1 = getelementptr inbounds float, float* %p, i64 1
@@ -1798,6 +1797,42 @@ define float @fadd_v4f32_fmf(float* %p) {
   %add1 = fadd reassoc nsz float %t1, %t0
   %add2 = fadd reassoc nsz float %t2, %add1
   %add3 = fadd reassoc nsz float %t3, %add2
+  ret float %add3
+}
+
+; The minimal FMF for fadd reduction are "reassoc nsz".
+; Only the common FMF of all operations in the reduction propagate to the result.
+; In this example, "contract nnan arcp" are dropped, but "ninf" transfers with the required flags.
+
+define float @fadd_v4f32_fmf_intersect(float* %p) {
+; CHECK-LABEL: @fadd_v4f32_fmf_intersect(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
+;
+; STORE-LABEL: @fadd_v4f32_fmf_intersect(
+; STORE-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; STORE-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; STORE-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; STORE-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; STORE-NEXT:    ret float [[TMP3]]
+;
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  %p3 = getelementptr inbounds float, float* %p, i64 3
+  %t0 = load float, float* %p, align 4
+  %t1 = load float, float* %p1, align 4
+  %t2 = load float, float* %p2, align 4
+  %t3 = load float, float* %p3, align 4
+  %add1 = fadd ninf reassoc nsz nnan float %t1, %t0
+  %add2 = fadd ninf reassoc nsz nnan arcp float %t2, %add1
+  %add3 = fadd ninf reassoc nsz contract float %t3, %add2
   ret float %add3
 }
 

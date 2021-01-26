@@ -209,15 +209,6 @@ int z = 1 ? N : ;  // expected-error {{expected expression}}
 // expected-error-re@-1 {{use of undeclared identifier 'N'{{$}}}}
 }
 
-namespace noSecondaryDiags {
-void abcc(); // expected-note {{'abcc' declared here}}
-
-void test() {
-  // Verify the secondary diagnostic ".. convertible to 'bool'" is suppressed.
-  if (abc()) {} // expected-error {{use of undeclared identifier 'abc'; did you mean 'abcc'?}}
-}
-}
-
 // PR 23285. This test must be at the end of the file to avoid additional,
 // unwanted diagnostics.
 // expected-error-re@+2 {{use of undeclared identifier 'uintmax_t'{{$}}}}

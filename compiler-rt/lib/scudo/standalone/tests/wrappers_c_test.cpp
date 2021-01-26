@@ -303,8 +303,10 @@ TEST(ScudoWrappersCTest, MallocIterateBoundary) {
   }
 }
 
-// We expect heap operations within a disable/enable scope to deadlock.
+// Fuchsia doesn't have alarm, fork or malloc_info.
+#if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallocDisableDeadlock) {
+  // We expect heap operations within a disable/enable scope to deadlock.
   EXPECT_DEATH(
       {
         void *P = malloc(Size);
@@ -317,9 +319,6 @@ TEST(ScudoWrappersCTest, MallocDisableDeadlock) {
       },
       "");
 }
-
-// Fuchsia doesn't have fork or malloc_info.
-#if !SCUDO_FUCHSIA
 
 TEST(ScudoWrappersCTest, MallocInfo) {
   // Use volatile so that the allocations don't get optimized away.

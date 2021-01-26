@@ -116,7 +116,7 @@ def parse_args():
             dest="maxIndividualTestTime",
             help="Maximum time to spend running a single test (in seconds). "
                  "0 means no time limit. [Default: 0]",
-            type=_non_negative_int) # TODO(yln): --[no-]test-timeout, instead of 0 allowed
+            type=_non_negative_int)
     execution_group.add_argument("--max-failures",
             help="Stop execution after the given number of failures.",
             type=_positive_int)
@@ -135,15 +135,15 @@ def parse_args():
             metavar="N",
             help="Maximum number of tests to run",
             type=_positive_int)
-    selection_group.add_argument("--max-time", #TODO(yln): --timeout
+    selection_group.add_argument("--max-time",
             dest="timeout",
             metavar="N",
             help="Maximum time to spend testing (in seconds)",
             type=_positive_int)
-    selection_group.add_argument("--shuffle",   # TODO(yln): --order=random
-            help="Run tests in random order",   # default or 'by-path' (+ isEarlyTest())
+    selection_group.add_argument("--shuffle",
+            help="Run tests in random order",
             action="store_true")
-    selection_group.add_argument("-i", "--incremental",  # TODO(yln): --order=failing-first
+    selection_group.add_argument("-i", "--incremental",
             help="Run modified and failing tests first (updates mtimes)",
             action="store_true")
     selection_group.add_argument("--filter",
@@ -151,7 +151,7 @@ def parse_args():
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER", ".*"))
-    selection_group.add_argument("--num-shards", # TODO(yln): --shards N/M
+    selection_group.add_argument("--num-shards",
             dest="numShards",
             metavar="M",
             help="Split testsuite into M pieces and only run one",

@@ -617,3 +617,83 @@ func @illegal_expanding_reshape_mixed_memref_2(%arg0 : memref<?x4x5xf32>) -> mem
        memref<?x4x5xf32> into memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
+
+// -----
+
+func @pad_result_type(%arg0: tensor<?x2x3x4xi32>, %arg1: index, %arg2: i32) -> tensor<?x?x?x8xf32> {
+  // expected-error @+1 {{specified type 'tensor<?x?x?x8xf32>' does not match the inferred type 'tensor<?x?x?x9xi32>}}
+  %0 = linalg.pad_tensor %arg0 low[1, %arg1, 2, 2] high[1, 2, %arg1, 3] {
+  ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    linalg.yield %arg2 : i32
+  } : tensor<?x2x3x4xi32> to tensor<?x?x?x8xf32>
+  return %0 : tensor<?x?x?x8xf32>
+}
+
+// -----
+
+func @pad_number_of_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
+  // expected-error @+1 {{expected the block to have 2 arguments}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: index, %arg3: index, %arg4: index):  // no predecessors
+    linalg.yield %arg1 : i32
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
+func @pad_no_block(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
+  // expected-error @+1 {{expected region with 1 block}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
+func @pad_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
+  // expected-error @+1 {{op expected block argument 1 to be an index}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: i32, %arg3: i32):  // no predecessors
+    linalg.yield %arg1 : i32
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
+func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
+{
+  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+  // expected-error @+1 {{expected fill op with no result value to use memref type}}
+  linalg.fill(%0, %arg2) : tensor<?x?xf32>, f32
+}
+
+// -----
+
+func @illegal_fill_memref_with_return(%arg0 : memref<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
+{
+  // expected-error @+1 {{unexpected #results > #outputs}}
+  %0 = linalg.fill(%arg0, %arg1) : memref<?x?xf32>, f32 -> memref<?x?xf32>
+  return %0 : memref<?x?xf32>
+}
+
+// -----
+
+func @illegal_fill_memref_with_tensor_return
+  (%arg0 : memref<?x?xf32>, %arg1 : f32) -> tensor<?x?xf32>
+{
+  // expected-error @+1 {{unexpected #results > #outputs}}
+  %0 = linalg.fill(%arg0, %arg1) : memref<?x?xf32>, f32 -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func @illegal_fill_tensor_with_memref_return
+  (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
+{
+  // expected-error @+1 {{expected type of operand #0 ('tensor<?x?xf32>') to match type of corresponding result ('memref<?x?xf32>')}}
+  %0 = linalg.fill(%arg0, %arg1) : tensor<?x?xf32>, f32 -> memref<?x?xf32>
+  return %0 : memref<?x?xf32>
+}

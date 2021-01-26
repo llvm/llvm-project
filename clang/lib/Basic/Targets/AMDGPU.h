@@ -284,33 +284,32 @@ public:
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
-    Opts.support("cl_clang_storage_class_specifiers");
-    Opts.support("__cl_clang_function_pointers");
-    Opts.support("__cl_clang_variadic_functions");
+    Opts["cl_clang_storage_class_specifiers"] = true;
+    Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_function_pointers"] = true;
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 
-    if (hasFP64())
-      Opts.support("cl_khr_fp64");
+    Opts["cl_khr_fp64"] = hasFP64();
 
     if (IsAMDGCN || GPUKind >= llvm::AMDGPU::GK_CEDAR) {
-      Opts.support("cl_khr_byte_addressable_store");
-      Opts.support("cl_khr_global_int32_base_atomics");
-      Opts.support("cl_khr_global_int32_extended_atomics");
-      Opts.support("cl_khr_local_int32_base_atomics");
-      Opts.support("cl_khr_local_int32_extended_atomics");
+      Opts["cl_khr_byte_addressable_store"] = true;
+      Opts["cl_khr_global_int32_base_atomics"] = true;
+      Opts["cl_khr_global_int32_extended_atomics"] = true;
+      Opts["cl_khr_local_int32_base_atomics"] = true;
+      Opts["cl_khr_local_int32_extended_atomics"] = true;
     }
 
     if (IsAMDGCN) {
-      Opts.support("cl_khr_fp16");
-      Opts.support("cl_khr_int64_base_atomics");
-      Opts.support("cl_khr_int64_extended_atomics");
-      Opts.support("cl_khr_mipmap_image");
-      Opts.support("cl_khr_mipmap_image_writes");
-      Opts.support("cl_khr_subgroups");
-      Opts.support("cl_khr_3d_image_writes");
-      Opts.support("cl_amd_media_ops");
-      Opts.support("cl_amd_media_ops2");
+      Opts["cl_khr_fp16"] = true;
+      Opts["cl_khr_int64_base_atomics"] = true;
+      Opts["cl_khr_int64_extended_atomics"] = true;
+      Opts["cl_khr_mipmap_image"] = true;
+      Opts["cl_khr_mipmap_image_writes"] = true;
+      Opts["cl_khr_subgroups"] = true;
+      Opts["cl_khr_3d_image_writes"] = true;
+      Opts["cl_amd_media_ops"] = true;
+      Opts["cl_amd_media_ops2"] = true;
     }
   }
 

@@ -169,6 +169,7 @@ public:
   std::string RecordCommandLine;
 
   std::map<std::string, std::string> DebugPrefixMap;
+  std::map<std::string, std::string> ProfilePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;

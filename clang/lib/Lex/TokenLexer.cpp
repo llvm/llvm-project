@@ -148,12 +148,12 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
     return false;
 
   // GCC removes the comma in the expansion of " ... , ## __VA_ARGS__ " if
-  // __VA_ARGS__ is empty, but not in strict C99 mode where there are no
-  // named arguments, where it remains.  In all other modes, including C99
-  // with GNU extensions, it is removed regardless of named arguments.
+  // __VA_ARGS__ is empty, but not in strict mode where there are no
+  // named arguments, where it remains.  With GNU extensions, it is removed
+  // regardless of named arguments.
   // Microsoft also appears to support this extension, unofficially.
-  if (PP.getLangOpts().C99 && !PP.getLangOpts().GNUMode
-        && Macro->getNumParams() < 2)
+  if (!PP.getLangOpts().GNUMode && !PP.getLangOpts().MSVCCompat &&
+      Macro->getNumParams() < 2)
     return false;
 
   // Is a comma available to be removed?

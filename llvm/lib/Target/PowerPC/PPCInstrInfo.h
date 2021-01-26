@@ -252,6 +252,11 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
+  bool isLoadFromConstantPool(MachineInstr *I) const;
+  Register
+  generateLoadForNewConst(unsigned Idx, MachineInstr *MI, Type *Ty,
+                          SmallVectorImpl<MachineInstr *> &InsInstrs) const;
+  const Constant *getConstantFromConstantPool(MachineInstr *I) const;
   virtual void anchor();
 
 protected:
@@ -343,7 +348,8 @@ public:
   /// chain ending in \p Root. All potential patterns are output in the \p
   /// P array.
   bool getFMAPatterns(MachineInstr &Root,
-                      SmallVectorImpl<MachineCombinerPattern> &P) const;
+                      SmallVectorImpl<MachineCombinerPattern> &P,
+                      bool DoRegPressureReduce) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in <Root>. All potential patterns are
@@ -351,6 +357,20 @@ public:
   bool getMachineCombinerPatterns(MachineInstr &Root,
                                   SmallVectorImpl<MachineCombinerPattern> &P,
                                   bool DoRegPressureReduce) const override;
+
+  /// On PowerPC, we leverage machine combiner pass to reduce register pressure
+  /// when the register pressure is high for one BB.
+  /// Return true if register pressure for \p MBB is high and ABI is supported
+  /// to reduce register pressure. Otherwise return false.
+  bool
+  shouldReduceRegisterPressure(MachineBasicBlock *MBB,
+                               RegisterClassInfo *RegClassInfo) const override;
+
+  /// Fixup the placeholders we put in genAlternativeCodeSequence() for
+  /// MachineCombiner.
+  void
+  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
 

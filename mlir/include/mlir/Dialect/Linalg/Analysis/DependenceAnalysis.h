@@ -48,16 +48,104 @@ public:
   // TODO: OpOperand tracks dependencies on buffer operands. Tensor result will
   // need an extension to use OpResult.
   struct LinalgDependenceGraphElem {
+    using OpView = PointerUnion<OpOperand *, Value>;
     // dependentOpView may be either:
     //   1. src in the case of dependencesIntoGraphs.
     //   2. dst in the case of dependencesFromDstGraphs.
-    OpOperand *dependentOpView;
+    OpView dependentOpView;
     // View in the op that is used to index in the graph:
     //   1. src in the case of dependencesFromDstGraphs.
     //   2. dst in the case of dependencesIntoGraphs.
-    OpOperand *indexingOpView;
+    OpView indexingOpView;
     // Type of the dependence.
     DependenceType dependenceType;
+
+    // Return the Operation that owns the operand or result represented in
+    // `opView`.
+    static Operation *getOwner(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->getOwner();
+      return opView.get<Value>().cast<OpResult>().getOwner();
+    }
+    // Return the operand or the result Value represented by the `opView`.
+    static Value getValue(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->get();
+      return opView.get<Value>();
+    }
+    // Return the indexing map of the operand/result in `opView` specified in
+    // the owning LinalgOp. If the owner is not a LinalgOp returns llvm::None.
+    static Optional<AffineMap> getIndexingMap(OpView opView) {
+      auto owner = dyn_cast<LinalgOp>(getOwner(opView));
+      if (!owner)
+        return llvm::None;
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return owner.getIndexingMap(operand->getOperandNumber());
+      return owner.getOutputIndexingMap(
+          opView.get<Value>().cast<OpResult>().getResultNumber());
+    }
+    // Return the operand number if the `opView` is an OpOperand *. Otherwise
+    // return llvm::None.
+    static Optional<unsigned> getOperandNumber(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->getOperandNumber();
+      return llvm::None;
+    }
+    // Return the result number if the `opView` is an OpResult. Otherwise return
+    // llvm::None.
+    static Optional<unsigned> getResultNumber(OpView opView) {
+      if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
+        return result.getResultNumber();
+      return llvm::None;
+    }
+
+    // Return the owner of the dependent OpView.
+    Operation *getDependentOp() const { return getOwner(dependentOpView); }
+
+    // Return the owner of the indexing OpView.
+    Operation *getIndexingOp() const { return getOwner(indexingOpView); }
+
+    // Return the operand or result stored in the dependentOpView.
+    Value getDependentValue() const { return getValue(dependentOpView); }
+
+    // Return the operand or result stored in the indexingOpView.
+    Value getIndexingValue() const { return getValue(indexingOpView); }
+
+    // If the dependent OpView is an operand, return operand number. Return
+    // llvm::None otherwise.
+    Optional<unsigned> getDependentOpViewOperandNum() const {
+      return getOperandNumber(dependentOpView);
+    }
+
+    // If the indexing OpView is an operand, return operand number. Return
+    // llvm::None otherwise.
+    Optional<unsigned> getIndexingOpViewOperandNum() const {
+      return getOperandNumber(indexingOpView);
+    }
+
+    // If the dependent OpView is a result value, return the result
+    // number. Return llvm::None otherwise.
+    Optional<unsigned> getDependentOpViewResultNum() const {
+      return getResultNumber(dependentOpView);
+    }
+
+    // If the dependent OpView is a result value, return the result
+    // number. Return llvm::None otherwise.
+    Optional<unsigned> getIndexingOpViewResultNum() const {
+      return getResultNumber(indexingOpView);
+    }
+
+    // Return the indexing map of the operand/result in the dependent OpView as
+    // specified in the owner of the OpView.
+    Optional<AffineMap> getDependentOpViewIndexingMap() const {
+      return getIndexingMap(dependentOpView);
+    }
+
+    // Return the indexing map of the operand/result in the indexing OpView as
+    // specified in the owner of the OpView.
+    Optional<AffineMap> getIndexingOpViewIndexingMap() const {
+      return getIndexingMap(indexingOpView);
+    }
   };
   using LinalgDependences = SmallVector<LinalgDependenceGraphElem, 8>;
   using DependenceGraph = DenseMap<Operation *, LinalgDependences>;
@@ -159,8 +247,9 @@ private:
   // Uses std::pair to keep operations and view together and avoid usage errors
   // related to src/dst and producer/consumer terminology in the context of
   // dependences.
-  void addDependenceElem(DependenceType dt, OpOperand *indexingOpView,
-                         OpOperand *dependentOpView);
+  void addDependenceElem(DependenceType dt,
+                         LinalgDependenceGraphElem::OpView indexingOpView,
+                         LinalgDependenceGraphElem::OpView dependentOpView);
 
   /// Implementation detail for findCoveringxxx.
   SmallVector<Operation *, 8>

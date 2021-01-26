@@ -285,7 +285,7 @@ define void @test8() {
   ret void
 }
 
-declare noalias i8* @malloc(i32)
+declare noalias i8* @malloc(i32) willreturn
 
 ; rdar://11341081
 %struct.big = type { [50 x i32] }
@@ -384,5 +384,6 @@ declare void @f2(%struct.big*)
 ; CHECK: attributes [[ATTR0]] = { nounwind }
 ; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #2 = { nounwind ssp }
-; CHECK: attributes #3 = { nounwind ssp uwtable }
-; CHECK: attributes #4 = { argmemonly nofree nosync nounwind willreturn writeonly }
+; CHECK: attributes #3 = { willreturn }
+; CHECK: attributes #4 = { nounwind ssp uwtable }
+; CHECK: attributes #5 = { argmemonly nofree nosync nounwind willreturn writeonly }

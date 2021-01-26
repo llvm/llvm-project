@@ -89,7 +89,6 @@ EXTERN int omp_get_default_device(void);
 EXTERN int omp_get_num_devices(void);
 EXTERN int omp_get_num_teams(void);
 EXTERN int omp_get_team_num(void);
-EXTERN int omp_is_initial_device(void);
 EXTERN int omp_get_initial_device(void);
 EXTERN int omp_get_max_task_priority(void);
 

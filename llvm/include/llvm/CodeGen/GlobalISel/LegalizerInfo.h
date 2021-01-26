@@ -37,7 +37,6 @@ extern cl::opt<bool> DisableGISelLegalityCheck;
 
 class LegalizerHelper;
 class MachineInstr;
-class MachineIRBuilder;
 class MachineRegisterInfo;
 class MCInstrInfo;
 class GISelChangeObserver;

@@ -1249,7 +1249,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
   }
 
-  // TODO: Check with Guansong to understand the below comment more thoroughly.
   // Here, we take advantage of the data that is appended after img_end to get
   // the symbols' name we need to load. This data consist of the host entries
   // begin and end as well as the target name (see the offloading linker script

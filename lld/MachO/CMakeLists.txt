@@ -31,6 +31,7 @@ add_lld_library(lldMachO2
   DebugInfoDWARF
   LTO
   MC
+  ObjCARCOpts
   Object
   Option
   Passes

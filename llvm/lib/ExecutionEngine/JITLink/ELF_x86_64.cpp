@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
-#include "BasicGOTAndStubsBuilder.h"
-#include "JITLinkGeneric.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
+
+#include "BasicGOTAndStubsBuilder.h"
+#include "EHFrameSupportImpl.h"
+#include "JITLinkGeneric.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -238,6 +240,8 @@ private:
     switch (Type) {
     case ELF::R_X86_64_PC32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
+    case ELF::R_X86_64_PC64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::Delta64;
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
@@ -404,9 +408,6 @@ private:
       LLVM_DEBUG({
         dbgs() << "Adding relocations from section " << *RelSectName << "\n";
       });
-      // Deal with .eh_frame later
-      if (*RelSectName == StringRef(".rela.eh_frame"))
-        continue;
 
       auto UpdateSection = Obj.getSection(SecRef.sh_info);
       if (!UpdateSection)
@@ -544,7 +545,6 @@ private:
         //   Type != ELF::STT_COMMON) {
         //     continue;
         //   }
-        std::pair<Linkage, Scope> bindings;
         auto Name = SymRef.getName(*StringTable);
         // I am not sure on If this is going to hold as an invariant. Revisit.
         if (!Name)
@@ -560,11 +560,43 @@ private:
           continue;
         }
 
-        // TODO: weak and hidden
-        if (SymRef.isExternal())
-          bindings = {Linkage::Strong, Scope::Default};
-        else
-          bindings = {Linkage::Strong, Scope::Local};
+        // Map Visibility and Binding to Scope and Linkage:
+        Linkage L = Linkage::Strong;
+        Scope S = Scope::Default;
+
+        switch (SymRef.getBinding()) {
+        case ELF::STB_LOCAL:
+          S = Scope::Local;
+          break;
+        case ELF::STB_GLOBAL:
+          // Nothing to do here.
+          break;
+        case ELF::STB_WEAK:
+          L = Linkage::Weak;
+          break;
+        default:
+          return make_error<StringError>("Unrecognized symbol binding for " +
+                                             *Name,
+                                         inconvertibleErrorCode());
+        }
+
+        switch (SymRef.getVisibility()) {
+        case ELF::STV_DEFAULT:
+        case ELF::STV_PROTECTED:
+          // FIXME: Make STV_DEFAULT symbols pre-emptible? This probably needs
+          // Orc support.
+          // Otherwise nothing to do here.
+          break;
+        case ELF::STV_HIDDEN:
+          // Default scope -> Hidden scope. No effect on local scope.
+          if (S == Scope::Default)
+            S = Scope::Hidden;
+          break;
+        case ELF::STV_INTERNAL:
+          return make_error<StringError>("Unrecognized symbol visibility for " +
+                                             *Name,
+                                         inconvertibleErrorCode());
+        }
 
         if (SymRef.isDefined() &&
             (Type == ELF::STT_FUNC || Type == ELF::STT_OBJECT ||
@@ -591,17 +623,17 @@ private:
             return make_error<llvm::StringError>(
                 "Section has no block", llvm::inconvertibleErrorCode());
 
-          auto B = *bs.begin();
+          auto *B = *bs.begin();
           LLVM_DEBUG({ dbgs() << "  " << *Name << " at index " << SymbolIndex << "\n"; });
           if (SymRef.getType() == ELF::STT_SECTION)
             *Name = *sectName;
-          auto &S = G->addDefinedSymbol(
-              *B, SymRef.getValue(), *Name, SymRef.st_size, bindings.first,
-              bindings.second, SymRef.getType() == ELF::STT_FUNC, false);
-          JITSymbolTable[SymbolIndex] = &S;
+          auto &Sym = G->addDefinedSymbol(
+              *B, SymRef.getValue(), *Name, SymRef.st_size, L, S,
+              SymRef.getType() == ELF::STT_FUNC, false);
+          JITSymbolTable[SymbolIndex] = &Sym;
         } else if (SymRef.isUndefined() && SymRef.isExternal()) {
-          auto &S = G->addExternalSymbol(*Name, SymRef.st_size, bindings.first);
-          JITSymbolTable[SymbolIndex] = &S;
+          auto &Sym = G->addExternalSymbol(*Name, SymRef.st_size, L);
+          JITSymbolTable[SymbolIndex] = &Sym;
         } else
           LLVM_DEBUG({
               dbgs()
@@ -670,6 +702,17 @@ private:
     return getELFX86RelocationKindName(R);
   }
 
+  static Error targetOutOfRangeError(const Block &B, const Edge &E) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream ErrStream(ErrMsg);
+      ErrStream << "Relocation target out of range: ";
+      printEdge(ErrStream, B, E, getELFX86RelocationKindName(E.getKind()));
+      ErrStream << "\n";
+    }
+    return make_error<JITLinkError>(std::move(ErrMsg));
+  }
+
   Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
     using namespace ELF_x86_64_Edges;
     using namespace llvm::support;
@@ -681,12 +724,20 @@ private:
     case ELFX86RelocationKind::PCRel32:
     case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      endian::write32le(FixupPtr, Value);
+      if (Value < std::numeric_limits<int32_t>::min() ||
+          Value > std::numeric_limits<int32_t>::max())
+        return targetOutOfRangeError(B, E);
+      *(little32_t *)FixupPtr = Value;
       break;
     }
     case ELFX86RelocationKind::Pointer64: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend();
-      endian::write64le(FixupPtr, Value);
+      *(ulittle64_t *)FixupPtr = Value;
+      break;
+    }
+    case ELFX86RelocationKind::Delta64: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      *(little64_t *)FixupPtr = Value;
       break;
     }
     }
@@ -715,21 +766,28 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
                      std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
 
-  // Construct a JITLinker and run the link function.
-  // Add a mark-live pass.
-  if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
-    Config.PrePrunePasses.push_back(std::move(MarkLive));
-  else
-    Config.PrePrunePasses.push_back(markAllSymbolsLive);
+  if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
 
-  // Add an in-place GOT/Stubs pass.
-  Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
-    ELF_x86_64_GOTAndStubsBuilder(G).run();
-    return Error::success();
-  });
+    Config.PrePrunePasses.push_back(EHFrameSplitter(".eh_frame"));
+    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
+        ".eh_frame", G->getPointerSize(), Delta64, Delta32, NegDelta32));
 
-  // Add GOT/Stubs optimizer pass.
-  Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+    // Construct a JITLinker and run the link function.
+    // Add a mark-live pass.
+    if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
+      Config.PrePrunePasses.push_back(std::move(MarkLive));
+    else
+      Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Add an in-place GOT/Stubs pass.
+    Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
+      ELF_x86_64_GOTAndStubsBuilder(G).run();
+      return Error::success();
+    });
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+  }
 
   if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))
     return Ctx->notifyFailed(std::move(Err));

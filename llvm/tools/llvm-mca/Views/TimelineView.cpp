@@ -297,5 +297,19 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
     }
   }
 }
+
+json::Value TimelineView::toJSON() const {
+  json::Array TimelineInfo;
+
+  for (const TimelineViewEntry &TLE : Timeline) {
+    TimelineInfo.push_back(
+        json::Object({{"CycleDispatched", TLE.CycleDispatched},
+                      {"CycleReady", TLE.CycleReady},
+                      {"CycleIssued", TLE.CycleIssued},
+                      {"CycleExecuted", TLE.CycleExecuted},
+                      {"CycleRetired", TLE.CycleRetired}}));
+  }
+  return json::Object({{"TimelineInfo", std::move(TimelineInfo)}});
+}
 } // namespace mca
 } // namespace llvm

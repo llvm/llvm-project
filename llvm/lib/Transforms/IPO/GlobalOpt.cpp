@@ -1933,8 +1933,7 @@ static void makeAllConstantUsesInstructions(Constant *C) {
   SmallVector<Value*,4> UUsers;
   for (auto *U : Users) {
     UUsers.clear();
-    for (auto *UU : U->users())
-      UUsers.push_back(UU);
+    append_range(UUsers, U->users());
     for (auto *UU : UUsers) {
       Instruction *UI = cast<Instruction>(UU);
       Instruction *NewU = U->getAsInstruction();

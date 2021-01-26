@@ -661,6 +661,10 @@ static Value *followLCSSA(Value *SV) {
 
 // Check V's users to see if it is involved in a reduction in L.
 static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
+  // Reduction variables cannot be constants.
+  if (isa<Constant>(V))
+    return nullptr;
+
   for (Value *User : V->users()) {
     if (PHINode *PHI = dyn_cast<PHINode>(User)) {
       if (PHI->getNumIncomingValues() == 1)

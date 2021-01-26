@@ -35,6 +35,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -3040,8 +3041,12 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
     if (sc.function) {
       DWARFDIE function_die = GetDIE(sc.function->GetID());
 
-      const dw_addr_t func_lo_pc = function_die.GetAttributeValueAsAddress(
-          DW_AT_low_pc, LLDB_INVALID_ADDRESS);
+      dw_addr_t func_lo_pc = LLDB_INVALID_ADDRESS;
+      DWARFRangeList ranges;
+      if (function_die.GetDIE()->GetAttributeAddressRanges(
+              function_die.GetCU(), ranges,
+              /*check_hi_lo_pc=*/true))
+        func_lo_pc = ranges.GetMinRangeBase(0);
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables = ParseVariables(
             sc, function_die.GetFirstChild(), func_lo_pc, true, true);

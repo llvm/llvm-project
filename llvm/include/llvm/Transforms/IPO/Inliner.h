@@ -14,8 +14,9 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 #include <utility>
 
 namespace llvm {
@@ -97,7 +98,6 @@ protected:
 class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
   InlinerPass(bool OnlyMandatory = false) : OnlyMandatory(OnlyMandatory) {}
-  ~InlinerPass();
   InlinerPass(InlinerPass &&Arg) = default;
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -106,8 +106,7 @@ public:
 private:
   InlineAdvisor &getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                             FunctionAnalysisManager &FAM, Module &M);
-  std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
-  std::unique_ptr<DefaultInlineAdvisor> OwnedDefaultAdvisor;
+  std::unique_ptr<InlineAdvisor> OwnedAdvisor;
   const bool OnlyMandatory;
 };
 

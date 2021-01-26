@@ -64,9 +64,9 @@ define <4 x i32> @abs_trailing_zeros_negative_vec(<4 x i32> %x) {
 ; sign bits, the abs reduces this to 2 sign bits.
 define i32 @abs_signbits(i30 %x) {
 ; CHECK-LABEL: @abs_signbits(
-; CHECK-NEXT:    [[EXT:%.*]] = sext i30 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[EXT]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ABS]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i30 @llvm.abs.i30(i30 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw i30 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = zext i30 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %ext = sext i30 %x to i32
@@ -77,9 +77,9 @@ define i32 @abs_signbits(i30 %x) {
 
 define <4 x i32> @abs_signbits_vec(<4 x i30> %x) {
 ; CHECK-LABEL: @abs_signbits_vec(
-; CHECK-NEXT:    [[EXT:%.*]] = sext <4 x i30> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[EXT]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <4 x i32> [[ABS]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i30> @llvm.abs.v4i30(<4 x i30> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], <i30 1, i30 1, i30 1, i30 1>
+; CHECK-NEXT:    [[ADD:%.*]] = zext <4 x i30> [[NARROW]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %ext = sext <4 x i30> %x to <4 x i32>
@@ -291,4 +291,63 @@ define i1 @abs_ne_int_min_nopoison(i8 %x) {
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
   %cmp = icmp ne i8 %abs, -128
   ret i1 %cmp
+}
+
+define i32 @abs_sext(i8 %x) {
+; CHECK-LABEL: @abs_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[A:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %s = sext i8 %x to i32
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  ret i32 %a
+}
+
+define <3 x i82> @abs_nsw_sext(<3 x i7> %x) {
+; CHECK-LABEL: @abs_nsw_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i7> @llvm.abs.v3i7(<3 x i7> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[A:%.*]] = zext <3 x i7> [[TMP1]] to <3 x i82>
+; CHECK-NEXT:    ret <3 x i82> [[A]]
+;
+  %s = sext <3 x i7> %x to <3 x i82>
+  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 1)
+  ret <3 x i82> %a
+}
+
+define i32 @abs_sext_extra_use(i8 %x, i32* %p) {
+; CHECK-LABEL: @abs_sext_extra_use(
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 false)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %s = sext i8 %x to i32
+  store i32 %s, i32* %p
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  ret i32 %a
+}
+
+; PR48816
+
+define i8 @trunc_abs_sext(i8 %x) {
+; CHECK-LABEL: @trunc_abs_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %s = sext i8 %x to i32
+  %a = tail call i32 @llvm.abs.i32(i32 %s, i1 true)
+  %t = trunc i32 %a to i8
+  ret i8 %t
+}
+
+define <4 x i8> @trunc_abs_sext_vec(<4 x i8> %x) {
+; CHECK-LABEL: @trunc_abs_sext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %s = sext <4 x i8> %x to <4 x i32>
+  %a = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> %s, i1 true)
+  %t = trunc <4 x i32> %a to <4 x i8>
+  ret <4 x i8> %t
 }

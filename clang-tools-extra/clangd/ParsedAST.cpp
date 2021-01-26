@@ -12,6 +12,7 @@
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "IncludeFixer.h"
@@ -315,12 +316,18 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       Check->registerMatchers(&CTFinder);
     }
 
-    if (!CTChecks.empty()) {
-      ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
-                                             const clang::Diagnostic &Info) {
+    ASTDiags.setLevelAdjuster([&, &Cfg(Config::current())](
+                                  DiagnosticsEngine::Level DiagLevel,
+                                  const clang::Diagnostic &Info) {
+      if (Cfg.Diagnostics.SuppressAll ||
+          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress))
+        return DiagnosticsEngine::Ignored;
+      if (!CTChecks.empty()) {
         std::string CheckName = CTContext->getCheckName(Info.getID());
         bool IsClangTidyDiag = !CheckName.empty();
         if (IsClangTidyDiag) {
+          if (Cfg.Diagnostics.Suppress.contains(CheckName))
+            return DiagnosticsEngine::Ignored;
           // Check for suppression comment. Skip the check for diagnostics not
           // in the main file, because we don't want that function to query the
           // source buffer for preamble files. For the same reason, we ask
@@ -342,9 +349,9 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             return DiagnosticsEngine::Error;
           }
         }
-        return DiagLevel;
-      });
-    }
+      }
+      return DiagLevel;
+    });
   }
 
   // Add IncludeFixer which can recover diagnostics caused by missing includes

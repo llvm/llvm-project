@@ -1974,8 +1974,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
         switchesFormatting(Current))
       return nullptr;
     return std::make_unique<BreakableLineCommentSection>(
-        Current, StartColumn, Current.OriginalColumn, !Current.Previous,
-        /*InPPDirective=*/false, Encoding, Style);
+        Current, StartColumn, /*InPPDirective=*/false, Encoding, Style);
   }
   return nullptr;
 }

@@ -105,6 +105,7 @@ public:
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
+  bool sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I);
   Instruction *visitXor(BinaryOperator &I);
   Instruction *visitShl(BinaryOperator &I);
   Value *reassociateShiftAmtsOfTwoSameDirectionShifts(
@@ -323,6 +324,8 @@ private:
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(SelectInst &MinMax1);
 
+  void freelyInvertAllUsersOf(Value *V);
+
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
   /// \param CI1 The first of a pair of casts.
@@ -395,6 +398,7 @@ public:
                       << "    with " << *V << '\n');
 
     I.replaceAllUsesWith(V);
+    MadeIRChange = true;
     return &I;
   }
 

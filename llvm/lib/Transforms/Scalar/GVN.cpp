@@ -366,9 +366,7 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
        OI != OE; ++OI)
     e.varargs.push_back(lookupOrAdd(*OI));
 
-  for (ExtractValueInst::idx_iterator II = EI->idx_begin(), IE = EI->idx_end();
-         II != IE; ++II)
-    e.varargs.push_back(*II);
+  append_range(e.varargs, EI->indices());
 
   return e;
 }
@@ -2675,9 +2673,11 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
   BasicBlock *BB = SplitCriticalEdge(
       Pred, Succ,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).unsetPreserveLoopSimplify());
-  if (MD)
-    MD->invalidateCachedPredecessors();
-  InvalidBlockRPONumbers = true;
+  if (BB) {
+    if (MD)
+      MD->invalidateCachedPredecessors();
+    InvalidBlockRPONumbers = true;
+  }
   return BB;
 }
 
@@ -2686,14 +2686,20 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
 bool GVN::splitCriticalEdges() {
   if (toSplit.empty())
     return false;
+
+  bool Changed = false;
   do {
     std::pair<Instruction *, unsigned> Edge = toSplit.pop_back_val();
-    SplitCriticalEdge(Edge.first, Edge.second,
-                      CriticalEdgeSplittingOptions(DT, LI, MSSAU));
+    Changed |= SplitCriticalEdge(Edge.first, Edge.second,
+                                 CriticalEdgeSplittingOptions(DT, LI, MSSAU)) !=
+               nullptr;
   } while (!toSplit.empty());
-  if (MD) MD->invalidateCachedPredecessors();
-  InvalidBlockRPONumbers = true;
-  return true;
+  if (Changed) {
+    if (MD)
+      MD->invalidateCachedPredecessors();
+    InvalidBlockRPONumbers = true;
+  }
+  return Changed;
 }
 
 /// Executes one iteration of GVN

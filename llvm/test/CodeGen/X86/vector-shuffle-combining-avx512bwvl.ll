@@ -108,13 +108,12 @@ define void @PR46178(i16* %0) {
 ; X86-NEXT:    vmovdqu (%eax), %ymm1
 ; X86-NEXT:    vpmovqw %ymm0, %xmm0
 ; X86-NEXT:    vpmovqw %ymm1, %xmm1
-; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
-; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
-; X86-NEXT:    vmovapd {{.*#+}} ymm1 = [0,0,2,0,4,0,4,0]
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
-; X86-NEXT:    vmovupd %ymm1, (%eax)
+; X86-NEXT:    vpsllw $8, %xmm1, %xmm1
+; X86-NEXT:    vpsraw $8, %xmm1, %xmm1
+; X86-NEXT:    vpsllw $8, %xmm0, %xmm0
+; X86-NEXT:    vpsraw $8, %xmm0, %xmm0
+; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[3]
+; X86-NEXT:    vmovupd %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;

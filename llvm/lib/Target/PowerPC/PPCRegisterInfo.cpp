@@ -1375,10 +1375,9 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
 /// Insert defining instruction(s) for BaseReg to
 /// be a pointer to FrameIdx at the beginning of the basic block.
-void PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                   Register BaseReg,
-                                                   int FrameIdx,
-                                                   int64_t Offset) const {
+Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                       int FrameIdx,
+                                                       int64_t Offset) const {
   unsigned ADDriOpc = TM.isPPC64() ? PPC::ADDI8 : PPC::ADDI;
 
   MachineBasicBlock::iterator Ins = MBB->begin();
@@ -1391,10 +1390,14 @@ void PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  const TargetRegisterClass *RC = getPointerRegClass(MF);
+  Register BaseReg = MRI.createVirtualRegister(RC);
   MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
+
+  return BaseReg;
 }
 
 void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,

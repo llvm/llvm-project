@@ -235,11 +235,14 @@ std::optional<DataRef> ExtractSubstringBase(const Substring &);
 
 // Predicate: is an expression is an array element reference?
 template <typename T>
-bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = false) {
+bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
+    bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
     const DataRef *ref{&*dataRef};
-    while (const Component * component{std::get_if<Component>(&ref->u)}) {
-      ref = &component->base();
+    if (skipComponents) {
+      while (const Component * component{std::get_if<Component>(&ref->u)}) {
+        ref = &component->base();
+      }
     }
     if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
       return !coarrayRef->subscript().empty();
@@ -789,6 +792,7 @@ bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
 bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
+bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
 // Extracts the chain of symbols from a designator, which has perhaps been
 // wrapped in an Expr<>, removing all of the (co)subscripts.  The
@@ -913,12 +917,13 @@ class Scope;
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
 // All of these apply GetUltimate() or ResolveAssociations() to their arguments.
-
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
 bool IsFunction(const Symbol &);
+bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);
+bool IsProcedure(const Scope &);
 bool IsProcedurePointer(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);

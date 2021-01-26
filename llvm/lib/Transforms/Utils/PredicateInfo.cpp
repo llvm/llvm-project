@@ -416,7 +416,7 @@ void PredicateInfoBuilder::processAssume(
       break;
 
     Value *Op0, *Op1;
-    if (match(Cond, m_And(m_Value(Op0), m_Value(Op1)))) {
+    if (match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op0);
     }
@@ -461,8 +461,8 @@ void PredicateInfoBuilder::processBranch(
         break;
 
       Value *Op0, *Op1;
-      if (TakenEdge ? match(Cond, m_And(m_Value(Op0), m_Value(Op1)))
-                    : match(Cond, m_Or(m_Value(Op0), m_Value(Op1)))) {
+      if (TakenEdge ? match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))
+                    : match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
         Worklist.push_back(Op1);
         Worklist.push_back(Op0);
       }
