@@ -1629,3 +1629,40 @@ finish: // Clean up and exit.
 
   return running_threads;
 } //__kmp_get_load_balance()
+
+// Functions for hidden helper task
+void __kmp_hidden_helper_worker_thread_wait() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_do_initialize_hidden_helper_threads() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_threads_initz_wait() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_initz_release() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_main_thread_wait() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_main_thread_release() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_worker_thread_signal() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_threads_deinitz_wait() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
+
+void __kmp_hidden_helper_threads_deinitz_release() {
+  KMP_ASSERT(0 && "Hidden helper task is not supported on Windows");
+}
