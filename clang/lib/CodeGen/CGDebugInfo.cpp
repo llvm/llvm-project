@@ -481,11 +481,10 @@ std::string CGDebugInfo::remapDIPath(StringRef Path) const {
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
-  if (Loc.isInvalid() && CurLoc.isInvalid())
+  if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
-  return PLoc.isValid() ? PLoc.getLine() : 0;
+  return SM.getPresumedLoc(Loc).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -1025,7 +1024,8 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   if (llvm::DIType *T = getTypeOrNull(CGM.getContext().getRecordType(RD)))
     return cast<llvm::DICompositeType>(T);
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
-  unsigned Line = getLineNumber(RD->getLocation());
+  const unsigned Line =
+      getLineNumber(RD->getLocation().isValid() ? RD->getLocation() : CurLoc);
   StringRef RDName = getClassName(RD);
 
   uint64_t Size = 0;
@@ -1349,7 +1349,7 @@ CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
 
   // Get the location for the field.
   llvm::DIFile *file = getOrCreateFile(loc);
-  unsigned line = getLineNumber(loc);
+  const unsigned line = getLineNumber(loc.isValid() ? loc : CurLoc);
 
   uint64_t SizeInBits = 0;
   auto Align = AlignInBits;
@@ -3333,7 +3333,8 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
-  unsigned Line = getLineNumber(RD->getLocation());
+  const unsigned Line =
+      getLineNumber(RD->getLocation().isValid() ? RD->getLocation() : CurLoc);
   StringRef RDName = getClassName(RD);
 
   llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
@@ -3869,7 +3870,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
       SPFlags | llvm::DISubprogram::SPFlagDefinition;
 
-  unsigned LineNo = getLineNumber(Loc);
+  const unsigned LineNo = getLineNumber(Loc.isValid() ? Loc : CurLoc);
   unsigned ScopeLine = getLineNumber(ScopeLoc);
   llvm::DISubroutineType *DIFnType = getOrCreateFunctionType(D, FnType, Unit);
   llvm::DISubprogram *Decl = nullptr;
@@ -4372,7 +4373,8 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
       Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.
-  unsigned Line = getLineNumber(VD->getLocation());
+  const unsigned Line =
+      getLineNumber(VD->getLocation().isValid() ? VD->getLocation() : CurLoc);
   unsigned Column = getColumnNumber(VD->getLocation());
 
   const llvm::DataLayout &target = CGM.getDataLayout();
@@ -4832,6 +4834,8 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
   if (!NSDecl->isAnonymousNamespace() ||
       CGM.getCodeGenOpts().DebugExplicitImport) {
     auto Loc = UD.getLocation();
+    if (!Loc.isValid())
+      Loc = CurLoc;
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
         getOrCreateNamespace(NSDecl), getOrCreateFile(Loc), getLineNumber(Loc));
