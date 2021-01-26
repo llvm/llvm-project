@@ -401,11 +401,6 @@ public:
     DP("Start initializing CUDA\n");
 
     CUresult Err = cuInit(0);
-    if (Err == CUDA_ERROR_INVALID_HANDLE) {
-      // Can't call cuGetErrorString if dlsym failed
-      DP("Failed to load CUDA shared library\n");
-      return;
-    }
     if (!checkResult(Err, "Error returned from cuInit\n")) {
       return;
     }
