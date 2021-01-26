@@ -24,10 +24,15 @@ add_definitions(-DTARGET_NAME=CUDA)
 
 include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
 
-option(LIBOMPTARGET_DLOPEN_LIBCUDA "Build with dlopened libcuda" OFF)
+set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
+option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})
 
-if (LIBOMPTARGET_DEP_CUDA_FOUND AND LIBOMPTARGET_DEP_CUDA_DRIVER_FOUND
-      AND NOT LIBOMPTARGET_DLOPEN_LIBCUDA)
+set(LIBOMPTARGET_CAN_LINK_LIBCUDA FALSE)
+if (LIBOMPTARGET_DEP_CUDA_FOUND AND LIBOMPTARGET_DEP_CUDA_DRIVER_FOUND)
+  set(LIBOMPTARGET_CAN_LINK_LIBCUDA TRUE)
+endif()
+
+if (LIBOMPTARGET_CAN_LINK_LIBCUDA AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
   include_directories(${LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS})
   add_library(omptarget.rtl.cuda SHARED src/rtl.cpp)
@@ -51,4 +56,12 @@ target_link_libraries(omptarget.rtl.cuda
   "-Wl,-z,defs")
 
 # Report to the parent scope that we are building a plugin for CUDA.
-set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
+# This controls whether tests are run for the nvptx offloading target
+# Run them if libcuda is available, or if the user explicitly asked for dlopen
+# Otherwise this plugin is being built speculatively and there may be no cuda available
+if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
+  libomptarget_say("Enable tests using CUDA plugin")
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
+else()
+  libomptarget_say("Disabling tests using CUDA plugin as cuda may not be available")
+endif()
