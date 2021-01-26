@@ -101,11 +101,11 @@ DynamicSymbols:
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 2
-# LLVM-NEXT:     Name: sym1@@VERSION1
+# LLVM-NEXT:     Name: sym1@VERSION1
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 3
-# LLVM-NEXT:     Name: sym2@@VERSION2
+# LLVM-NEXT:     Name: sym2@VERSION2
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 4

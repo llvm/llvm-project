@@ -32,33 +32,12 @@ def riscv_trunc_vector : SDNode<"RISCVISD::TRUNCATE_VECTOR",
                                 SDTypeProfile<1, 1,
                                  [SDTCisVec<0>, SDTCisVec<1>]>>;
 
-class FromFPR32<DAGOperand operand, dag input_dag> {
-  dag ret = !cond(!eq(!cast<string>(operand), !cast<string>(FPR64)):
-                     (INSERT_SUBREG (IMPLICIT_DEF), input_dag, sub_32),
-                  !eq(!cast<string>(operand), !cast<string>(FPR16)):
-                      (EXTRACT_SUBREG input_dag, sub_16),
-                  !eq(1, 1):
-                    input_dag);
-}
-
 // Penalize the generic form with Complexity=1 to give the simm5/uimm5 variants
 // precedence
 def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
 
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
-
-// FIXME: We only model FPR32 for V instructions in RISCVInstrInfoV.td.
-// FP16/FP32/FP64 registers are alias each other. Convert FPR16 and FPR64
-// to FPR32 for V instructions is enough.
-class ToFPR32<ValueType type, DAGOperand operand, string name> {
-  dag ret = !cond(!eq(!cast<string>(operand), !cast<string>(FPR64)):
-                      (EXTRACT_SUBREG !dag(type, [FPR64], [name]), sub_32),
-                  !eq(!cast<string>(operand), !cast<string>(FPR16)):
-                      (SUBREG_TO_REG (i16 -1), !dag(type, [FPR16], [name]), sub_16),
-                  !eq(1, 1):
-                      !dag(type, [operand], [name]));
-}
 
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
@@ -174,9 +153,9 @@ class VPatBinarySDNode_VF<SDNode vop,
                           DAGOperand xop_kind> :
     Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
                           (vop_type (splat_vector xop_kind:$rs2)))),
-        (!cast<Instruction>(instruction_name#"_VF_F32_"#vlmul.MX)
+        (!cast<Instruction>(instruction_name#"_"#vlmul.MX)
                      vop_reg_class:$rs1,
-                     ToFPR32<xop_type, xop_kind, "rs2">.ret,
+                     (xop_type xop_kind:$rs2),
                      avl, sew)>;
 
 multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
@@ -184,7 +163,7 @@ multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
     def : VPatBinarySDNode_VV<vop, instruction_name,
                               vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
-    def : VPatBinarySDNode_VF<vop, instruction_name,
+    def : VPatBinarySDNode_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
                               vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
                               vti.SEW, vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
                               vti.ScalarRegClass>;
@@ -195,9 +174,9 @@ multiclass VPatBinaryFPSDNode_R_VF<SDNode vop, string instruction_name> {
   foreach fvti = AllFloatVectors in
     def : Pat<(fvti.Vector (vop (fvti.Vector (splat_vector fvti.Scalar:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_VF_F32_"#fvti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                            fvti.RegClass:$rs1,
-                           ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
                            fvti.AVL, fvti.SEW)>;
 }
 
@@ -275,9 +254,9 @@ multiclass VPatFPSetCCSDNode_VF<CondCode cc, string instruction_name> {
     def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
                                 (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
                                 cc)),
-              (!cast<Instruction>(instruction_name#"_VF_F32_"#fvti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                   fvti.RegClass:$rs1,
-                  ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
                   fvti.AVL, fvti.SEW)>;
 }
 
@@ -286,9 +265,9 @@ multiclass VPatFPSetCCSDNode_FV<CondCode cc, string swapped_op_instruction_name>
     def : Pat<(fvti.Mask (setcc (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1),
                                 cc)),
-              (!cast<Instruction>(swapped_op_instruction_name#"_VF_F32_"#fvti.LMul.MX)
+              (!cast<Instruction>(swapped_op_instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                   fvti.RegClass:$rs1,
-                  ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
                   fvti.AVL, fvti.SEW)>;
 }
 
@@ -499,9 +478,9 @@ foreach fvti = AllFloatVectors in {
   def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                   (splat_vector fvti.ScalarRegClass:$rs1),
                                   fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFMERGE_VFM_F32_"#fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                  fvti.RegClass:$rs2,
-                 ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs1">.ret,
+                 (fvti.Scalar fvti.ScalarRegClass:$rs1),
                  VMV0:$vm, fvti.AVL, fvti.SEW)>;
 
   def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
@@ -550,8 +529,8 @@ foreach vti = AllIntegerVectors in {
 let Predicates = [HasStdExtV, HasStdExtF] in {
 foreach fvti = AllFloatVectors in {
   def : Pat<(fvti.Vector (splat_vector fvti.ScalarRegClass:$rs1)),
-            (!cast<Instruction>("PseudoVFMV_V_F_F32_"#fvti.LMul.MX)
-              ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs1">.ret,
+            (!cast<Instruction>("PseudoVFMV_V_"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+              (fvti.Scalar fvti.ScalarRegClass:$rs1),
               fvti.AVL, fvti.SEW)>;
 
   def : Pat<(fvti.Vector (splat_vector (fvti.Scalar fpimm0))),
@@ -582,22 +561,27 @@ multiclass VPatInsertExtractElt_XI_Idx<bit IsFloat> {
   defvar extractelt_node = !if(IsFloat, extractelt, riscv_extract_vector_elt);
   foreach vti = vtilist in {
     defvar MX = vti.LMul.MX;
-    defvar vmv_xf_s_inst = !cast<Instruction>(!if(IsFloat, "PseudoVFMV_F_S_F32_",
-                                                           "PseudoVMV_X_S_")#MX);
-    defvar vmv_s_xf_inst = !cast<Instruction>(!if(IsFloat, "PseudoVFMV_S_F_F32_",
-                                                           "PseudoVMV_S_X_")#MX);
+    defvar vmv_xf_s_inst = !cast<Instruction>(!strconcat("PseudoV",
+                                                         !if(IsFloat, "F", ""),
+                                                         "MV_",
+                                                         vti.ScalarSuffix,
+                                                         "_S_", MX));
+    defvar vmv_s_xf_inst = !cast<Instruction>(!strconcat("PseudoV",
+                                                         !if(IsFloat, "F", ""),
+                                                         "MV_S_",
+                                                         vti.ScalarSuffix,
+                                                         "_", MX));
     // Only pattern-match insert/extract-element operations where the index is
     // 0. Any other index will have been custom-lowered to slide the vector
     // correctly into place (and, in the case of insert, slide it back again
     // afterwards).
     def : Pat<(vti.Scalar (extractelt_node (vti.Vector vti.RegClass:$rs2), 0)),
-              FromFPR32<vti.ScalarRegClass,
-                       (vmv_xf_s_inst vti.RegClass:$rs2, vti.SEW)>.ret>;
+              (vmv_xf_s_inst vti.RegClass:$rs2, vti.SEW)>;
 
     def : Pat<(vti.Vector (insertelt_node (vti.Vector vti.RegClass:$merge),
                                           vti.ScalarRegClass:$rs1, 0)),
               (vmv_s_xf_inst vti.RegClass:$merge,
-                      ToFPR32<vti.Scalar, vti.ScalarRegClass, "rs1">.ret,
+                      (vti.Scalar vti.ScalarRegClass:$rs1),
                       vti.AVL, vti.SEW)>;
   }
 }

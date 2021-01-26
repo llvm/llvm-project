@@ -154,9 +154,9 @@ class KeyPathAndMacro<string key_path_prefix, string key_path_base,
 
 def EmptyKPM : KeyPathAndMacro<"", "">;
 
-class ImpliedByAnyOf<list<Option> options, code value = "true"> {
-  code ImpliedCheck = !foldl("false", options, accumulator, option,
-                             !strconcat(accumulator, " || ", option.KeyPath));
+class ImpliedByAnyOf<list<string> key_paths, code value = "true"> {
+  code ImpliedCheck = !foldl("false", key_paths, accumulator, key_path,
+                             !strconcat(accumulator, " || ", key_path));
   code ImpliedValue = value;
 }
 

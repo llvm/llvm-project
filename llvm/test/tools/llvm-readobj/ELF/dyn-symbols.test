@@ -245,47 +245,97 @@ ProgramHeaders:
 
 ## Case 7: Check how we dump versioned symbols. Use both -V and --dyn-symbols
 ## to check that printed version is consistent.
+## A default version is one that is contained in the version table (SHT_GNU_versym)
+## and only available for defined symbols. We use the "@@" prefix to print it.
+
+## Check how we dump undefined symbols.
+
 # RUN: yaml2obj %s --docnum=6 -o %t6
-# RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-LLVM
-# RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-GNU
+# RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-UND-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-UND-GNU
 
-# VERSIONED-LLVM:      Symbol {
-# VERSIONED-LLVM:        Name: foo (16)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM-NEXT: Symbol {
-# VERSIONED-LLVM-NEXT:   Name: bar@@Default (12)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM-NEXT: Symbol {
-# VERSIONED-LLVM-NEXT:   Name: zed@NonDefault (20)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM: VersionSymbols [
-# VERSIONED-LLVM:  Name: foo
-# VERSIONED-LLVM:  Name: bar@@Default
-# VERSIONED-LLVM:  Name: zed@NonDefault
+# VERSIONED-UND-LLVM:       DynamicSymbols [
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name:  (0)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: localversym (28)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: globalversym (40)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: aaa@v2 (65)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: bbb@v3hidden (61)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: ccc@v4 (57)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: ddd@v5hidden (53)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT: ]
+# VERSIONED-UND-LLVM:      VersionSymbols [
+# VERSIONED-UND-LLVM:          Name: localversym
+# VERSIONED-UND-LLVM:          Name: globalversym
+# VERSIONED-UND-LLVM:          Name: aaa@v2
+# VERSIONED-UND-LLVM:          Name: bbb@v3hidden
+# VERSIONED-UND-LLVM:          Name: ccc@v4
+# VERSIONED-UND-LLVM:          Name: ddd@v5hidden
 
-# VERSIONED-GNU:      Num:    Value          Size Type    Bind   Vis       Ndx Name
-# VERSIONED-GNU:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
-# VERSIONED-GNU-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@@Default
-# VERSIONED-GNU-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND zed@NonDefault
-# VERSIONED-GNU:      000:   0 (*local*) 1 (*global*) 2 (Default) 3h(NonDefault)
+# VERSIONED-UND-GNU:      Num:    Value          Size Type    Bind   Vis     Ndx Name
+# VERSIONED-UND-GNU:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND localversym
+# VERSIONED-UND-GNU-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND globalversym
+# VERSIONED-UND-GNU-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND aaa@v2
+# VERSIONED-UND-GNU-NEXT:   4: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND bbb@v3hidden
+# VERSIONED-UND-GNU-NEXT:   5: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND ccc@v4
+# VERSIONED-UND-GNU-NEXT:   6: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND ddd@v5hidden
+# VERSIONED-UND-GNU:      000:   0 (*local*)  0 (*local*) 1 (*global*) 2 (v2)
+# VERSIONED-UND-GNU:      004:   3h(v3hidden) 4 (v4)      5h(v5hidden)
 
 --- !ELF
 FileHeader:
@@ -300,7 +350,10 @@ Sections:
     AddressAlign: 0x2
     EntSize:      0x2
 ## 0x8000 is a special VERSYM_HIDDEN bit.
-    Entries:      [ 0, 1, 2, 0x8003 ]
+## Here we have: VER_NDX_LOCAL (0), VER_NDX_GLOBAL (1), two versions
+## from the SHT_GNU_verdef section (2, 0x8003) and two versions
+## from the SHT_GNU_verneed section (4, 0x8005).
+    Entries:      [ 0, 0, 1, 2, 0x8003, 4, 0x8005 ]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
@@ -308,63 +361,143 @@ Sections:
     Entries:
       - VersionNdx: 2
         Names:
-          - Default
+          - v2
       - VersionNdx: 3
         Names:
-          - NonDefault
+          - v3hidden
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Dependencies:
+      - Version: 1
+        File:    file1.so
+        Entries:
+          - Name:  v4
+            Other: 4
+            Hash:  0
+            Flags: 0
+      - Version: 1
+        File:    file2.0
+        Entries:
+          - Name:  v5hidden
+            Other: 5
+            Hash:  0
+            Flags: 0
 DynamicSymbols:
-  - Name: foo
-  - Name:  [[NAME=bar]]
+  - Name:  localversym
+    Index: [[INDEX=<none>]]
+  - Name:  globalversym
+    Index: [[INDEX=<none>]]
+  - Name:  aaa
+    Index: [[INDEX=<none>]]
+  - Name:  [[NAME=bbb]]
+    Type:  [[TYPE=STT_NOTYPE]]
+    Index: [[INDEX_BBB=<none>]]
+  - Name:  [[NAME=ccc]]
     Type:  [[TYPE=STT_NOTYPE]]
     Index: [[INDEX=<none>]]
-  - Name: [[NAME=zed]]
-    Type: [[TYPE=STT_NOTYPE]]
+  - Name:  ddd
+    Index: [[INDEX=<none>]]
+
+## In this case all dynamic symbols are defined. Check that we print the
+## "@@" prefix for default versions as expected.
+
+# RUN: yaml2obj %s --docnum=6 -DINDEX=1 -DINDEX_BBB=1 -o %t6.def
+# RUN: llvm-readobj -V --dyn-symbols %t6.def | FileCheck %s --check-prefix=VERSIONED-DEF-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.def | FileCheck %s --check-prefix=VERSIONED-DEF-GNU
+
+# VERSIONED-DEF-LLVM:      DynamicSymbols [
+# VERSIONED-DEF-LLVM:        Symbol {
+# VERSIONED-DEF-LLVM:          Name:    localversym (28)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    globalversym (40)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    aaa@@v2 (65)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    bbb@v3hidden (61)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    ccc@v4 (57)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    ddd@v5hidden (53)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM:      VersionSymbols [
+# VERSIONED-DEF-LLVM:          Name: localversym
+# VERSIONED-DEF-LLVM:          Name: globalversym
+# VERSIONED-DEF-LLVM:          Name: aaa@@v2
+# VERSIONED-DEF-LLVM:          Name: bbb@v3hidden
+# VERSIONED-DEF-LLVM:          Name: ccc@v4
+# VERSIONED-DEF-LLVM:          Name: ddd@v5hidden
+
+# VERSIONED-DEF-GNU:      Num: {{.*}} Vis     Ndx Name
+# VERSIONED-DEF-GNU:        1: {{.*}} DEFAULT   1 localversym
+# VERSIONED-DEF-GNU-NEXT:   2: {{.*}} DEFAULT   1 globalversym
+# VERSIONED-DEF-GNU-NEXT:   3: {{.*}} DEFAULT   1 aaa@@v2
+# VERSIONED-DEF-GNU-NEXT:   4: {{.*}} DEFAULT   1 bbb@v3hidden
+# VERSIONED-DEF-GNU-NEXT:   5: {{.*}} DEFAULT   1 ccc@v4
+# VERSIONED-DEF-GNU-NEXT:   6: {{.*}} DEFAULT   1 ddd@v5hidden
 
 ## Check the behavior for unnamed versioned section symbols.
-# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX=SHN_ABS --docnum=6 -o %t6.sec.sym
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX_BBB=SHN_ABS --docnum=6 -o %t6.sec.sym
 # RUN: llvm-readobj -V --dyn-symbols %t6.sec.sym 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6.sec.sym --check-prefix=VERSIONED-SEC-SYM-LLVM
 # RUN: llvm-readelf -V --dyn-symbols %t6.sec.sym 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6.sec.sym --check-prefix=VERSIONED-SEC-SYM-GNU
 
 # VERSIONED-SEC-SYM-LLVM: DynamicSymbols [
-# VERSIONED-SEC-SYM-LLVM:  Name: foo (12)
+# VERSIONED-SEC-SYM-LLVM:  Name: localversym (28)
+# VERSIONED-SEC-SYM-LLVM:  Name: globalversym (40)
+# VERSIONED-SEC-SYM-LLVM:  Name: aaa@v2 (57)
 # VERSIONED-SEC-SYM-LLVM: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
 # VERSIONED-SEC-SYM-LLVM:  Name: <?> (0)
 # VERSIONED-SEC-SYM-LLVM: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
 # VERSIONED-SEC-SYM-LLVM:  Name: <?> (0)
+# VERSIONED-SEC-SYM-LLVM:  Name: ddd@v5hidden (53)
 # VERSIONED-SEC-SYM-LLVM: VersionSymbols [
-# VERSIONED-SEC-SYM-LLVM:  Name: foo
+# VERSIONED-SEC-SYM-LLVM:  Name: localversym
+# VERSIONED-SEC-SYM-LLVM:  Name: globalversym
+# VERSIONED-SEC-SYM-LLVM:  Name: aaa@v2
 # VERSIONED-SEC-SYM-LLVM:  Name: <?>
 # VERSIONED-SEC-SYM-LLVM:  Name: <?>
+# VERSIONED-SEC-SYM-LLVM:  Name: ddd@v5hidden
 
-# VERSIONED-SEC-SYM-GNU:     Symbol table '.dynsym' contains 4 entries:
+# VERSIONED-SEC-SYM-GNU:     Symbol table '.dynsym' contains 7 entries:
 # VERSIONED-SEC-SYM-GNU:        Num: {{.*}} Ndx Name
-# VERSIONED-SEC-SYM-GNU:          1: {{.*}} UND foo
-# VERSIONED-SEC-SYM-GNU:      warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
-# VERSIONED-SEC-SYM-GNU-NEXT:     2: {{.*}} ABS <?>
+# VERSIONED-SEC-SYM-GNU:          1: {{.*}} UND localversym
+# VERSIONED-SEC-SYM-GNU-NEXT:     2: {{.*}} UND globalversym
+# VERSIONED-SEC-SYM-GNU-NEXT:     3: {{.*}} UND aaa@v2
+# VERSIONED-SEC-SYM-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# VERSIONED-SEC-SYM-GNU-NEXT:     4: {{.*}} ABS <?>
 # VERSIONED-SEC-SYM-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
-# VERSIONED-SEC-SYM-GNU-NEXT:     3: {{.*}} UND <?>
+# VERSIONED-SEC-SYM-GNU-NEXT:     5: {{.*}} UND <?>
+# VERSIONED-SEC-SYM-GNU-NEXT:     6: {{.*}} UND ddd@v5hidden
 
 ## Check we print a proper warning when an unnamed versioned section symbol has st_shndx = SHN_XINDEX, but there
 ## is no SHT_SYMTAB_SHNDX section in the object.
-# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX=SHN_XINDEX --docnum=6 -o %t6.sec.xindex.sym
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX_BBB=SHN_XINDEX --docnum=6 -o %t6.sec.xindex.sym
 # RUN: llvm-readobj -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-LLVM
 # RUN: llvm-readelf -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-GNU
 
-# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: (0)
-# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: foo (12)
-# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
+# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: aaa@v2 (57)
+# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
 # VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT: Symbol {
 # VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT:  Name: <?> (0)
-# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: <?> (0)
 
-# VERSIONED-SEC-SYM-XINDEX-GNU:      Symbol table '.dynsym' contains 4 entries:
-# VERSIONED-SEC-SYM-XINDEX-GNU:         Num: {{.*}} Ndx Name
-# VERSIONED-SEC-SYM-XINDEX-GNU:      warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
-# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT:      2: {{.*}} RSV[0xffff] <?>
+# VERSIONED-SEC-SYM-XINDEX-GNU:      3: {{.*}} UND aaa@v2
+# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
+# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT: 4: {{.*}} RSV[0xffff] <?>
 
 ## Case 8: Check what we print when:
 ## a) The dynamic symbol table does not exist.
