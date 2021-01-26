@@ -73,7 +73,7 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
                                 void *);
 
-// Function pointer type for target_data_* functions (targetDataBegin,
+// Function pointer type for targetData* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
