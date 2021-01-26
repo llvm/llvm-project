@@ -93,6 +93,8 @@ Sections:
     BloomFilter: [0x3, 0x4]
     HashBuckets: [0x0, 0x1]
     HashValues:  [[GNUHASHVALUE]]
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADER=false]]
 DynamicSymbols:
   - Name:    foo
     Type:    STT_FUNC
@@ -111,5 +113,3 @@ ProgramHeaders:
     VAddr:    0x800
     FirstSec: .dynamic
     LastSec:  .dynamic
-SectionHeaderTable:
-  NoHeaders: [[NOHEADER=false]]
