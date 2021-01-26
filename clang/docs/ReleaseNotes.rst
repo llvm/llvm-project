@@ -153,6 +153,11 @@ Windows Support
 - Implicitly add ``.exe`` suffix for MinGW targets, even when cross compiling.
   (This matches a change from GCC 8.)
 
+- Windows on Arm64: programs using the C standard library's setjmp and longjmp
+  functions may crash with a "Security check failure or stack buffer overrun"
+  exception. To workaround (with reduced security), compile with
+  /guard:cf,nolongjmp.
+
 C Language Changes in Clang
 ---------------------------
 
