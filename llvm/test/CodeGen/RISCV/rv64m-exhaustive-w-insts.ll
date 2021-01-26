@@ -809,6 +809,8 @@ define signext i8 @sext_divw_sext_sext_i8(i8 signext %a, i8 signext %b) nounwind
 ; RV64IM-LABEL: sext_divw_sext_sext_i8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divw a0, a0, a1
+; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    srai a0, a0, 56
 ; RV64IM-NEXT:    ret
   %1 = sdiv i8 %a, %b
   ret i8 %1
@@ -818,6 +820,8 @@ define signext i16 @sext_divw_sext_sext_i16(i16 signext %a, i16 signext %b) noun
 ; RV64IM-LABEL: sext_divw_sext_sext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divw a0, a0, a1
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srai a0, a0, 48
 ; RV64IM-NEXT:    ret
   %1 = sdiv i16 %a, %b
   ret i16 %1
