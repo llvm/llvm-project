@@ -152,7 +152,8 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
   // named arguments, where it remains.  With GNU extensions, it is removed
   // regardless of named arguments.
   // Microsoft also appears to support this extension, unofficially.
-  if (!PP.getLangOpts().GNUMode && Macro->getNumParams() < 2)
+  if (!PP.getLangOpts().GNUMode && !PP.getLangOpts().MSVCCompat &&
+      Macro->getNumParams() < 2)
     return false;
 
   // Is a comma available to be removed?
