@@ -272,7 +272,7 @@ class MigratorOpts<string base>
 multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
                       string help="", list<OptionFlag> flags=[],
                       KeyPathAndMacro kpm = EmptyKPM,
-                      list<Option> enablers = []> {
+                      list<string> enablers = []> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<!listconcat([CC1Option], flags)>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>,
                MarshallingInfoFlag<kpm, "false">,
@@ -286,7 +286,7 @@ multiclass OptInFFlag<string name, string pos_prefix, string neg_prefix="",
 multiclass OptOutFFlag<string name, string pos_prefix, string neg_prefix,
                        string help="", list<OptionFlag> flags=[],
                        KeyPathAndMacro kpm = EmptyKPM,
-                       list<Option> disablers = []> {
+                       list<string> disablers = []> {
   def f#NAME : Flag<["-"], "f"#name>, Flags<flags>,
                Group<f_Group>, HelpText<!strconcat(pos_prefix, help)>;
   def fno_#NAME : Flag<["-"], "fno-"#name>, Flags<!listconcat([CC1Option], flags)>,
@@ -314,7 +314,7 @@ def SetFalse : Set<false> {}
 // Definition of single command line flag. This is an implementation detail, use
 // SetTrueBy or SetFalseBy instead.
 class FlagDef<bit polarity, bit value, list<OptionFlag> option_flags,
-              string help, list<Option> implied_by_options = []> {
+              string help, list<code> implied_by_expressions = []> {
   // The polarity. Besides spelling, this also decides whether the TableGen
   // record will be prefixed with "no_".
   bit Polarity = polarity;
@@ -328,8 +328,8 @@ class FlagDef<bit polarity, bit value, list<OptionFlag> option_flags,
   // The help text associated with the flag.
   string Help = help;
 
-  // Options that imply this flag when present on command line.
-  list<Option> ImpliedBy = implied_by_options;
+  // List of expressions that, when true, imply this flag.
+  list<code> ImpliedBy = implied_by_expressions;
 }
 
 // Additional information to be appended to both positive and negative flag.
@@ -348,13 +348,13 @@ class ApplySuffix<FlagDef flag, BothFlags suffix> {
 
 // Definition of the command line flag with positive spelling, e.g. "-ffoo".
 class PosFlag<Set value, list<OptionFlag> flags = [], string help = "",
-              list<Option> implied_by_options = []>
-  : FlagDef<true, value.Value, flags, help, implied_by_options> {}
+              list<code> implied_by_expressions = []>
+  : FlagDef<true, value.Value, flags, help, implied_by_expressions> {}
 
 // Definition of the command line flag with negative spelling, e.g. "-fno-foo".
 class NegFlag<Set value, list<OptionFlag> flags = [], string help = "",
-              list<Option> implied_by_options = []>
-  : FlagDef<false, value.Value, flags, help, implied_by_options> {}
+              list<code> implied_by_expressions = []>
+  : FlagDef<false, value.Value, flags, help, implied_by_expressions> {}
 
 // Expanded FlagDef that's convenient for creation of TableGen records.
 class FlagDefExpanded<FlagDef flag, string prefix, string name, string spelling>
@@ -790,7 +790,7 @@ def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">, Group<opencl_Gro
 def cl_mad_enable : Flag<["-"], "cl-mad-enable">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">,
   MarshallingInfoFlag<CodeGenOpts<"LessPreciseFPMAD">>,
-  ImpliedByAnyOf<[cl_unsafe_math_optimizations, cl_fast_relaxed_math]>;
+  ImpliedByAnyOf<[cl_unsafe_math_optimizations.KeyPath, cl_fast_relaxed_math.KeyPath]>;
 def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
   MarshallingInfoFlag<LangOpts<"CLNoSignedZero">>;
@@ -1331,11 +1331,11 @@ def ffp_model_EQ : Joined<["-"], "ffp-model=">, Group<f_Group>, Flags<[NoXarchOp
 def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies the exception behavior of floating-point operations.">;
 defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
-  LangOpts<"FastMath">, [cl_fast_relaxed_math]>;
+  LangOpts<"FastMath">, [cl_fast_relaxed_math.KeyPath]>;
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
   MarshallingInfoFlag<LangOpts<"UnsafeFPMath">>,
-  ImpliedByAnyOf<[cl_unsafe_math_optimizations, ffast_math]>;
+  ImpliedByAnyOf<[cl_unsafe_math_optimizations.KeyPath, ffast_math.KeyPath]>;
 defm math_errno : OptInFFlag<"math-errno", "Require math functions to indicate errors by setting errno">;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
@@ -1550,15 +1550,15 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
 def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
 defm reciprocal_math : OptInFFlag<"reciprocal-math", "Allow division operations to be reassociated", "", "", [],
-  LangOpts<"AllowRecip">, [menable_unsafe_fp_math]>;
+  LangOpts<"AllowRecip">, [menable_unsafe_fp_math.KeyPath]>;
 def fapprox_func : Flag<["-"], "fapprox-func">, Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
-  MarshallingInfoFlag<LangOpts<"ApproxFunc">>, ImpliedByAnyOf<[menable_unsafe_fp_math]>;
+  MarshallingInfoFlag<LangOpts<"ApproxFunc">>, ImpliedByAnyOf<[menable_unsafe_fp_math.KeyPath]>;
 defm finite_math_only : OptInFFlag<"finite-math-only", "", "", "", [],
-  LangOpts<"FiniteMathOnly">, [cl_finite_math_only, ffast_math]>;
+  LangOpts<"FiniteMathOnly">, [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Allow optimizations that ignore the sign of floating point zeros",
-            [cl_no_signed_zeros, menable_unsafe_fp_math]>,
+            [cl_no_signed_zeros.KeyPath, menable_unsafe_fp_math.KeyPath]>,
   PosFlag<SetFalse>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
 def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
@@ -4503,13 +4503,13 @@ def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only]>;
+  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
   HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only]>;
+  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
 def mreassociate : Flag<["-"], "mreassociate">,
   HelpText<"Allow reassociation transformations for floating-point instructions">,
-  MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[menable_unsafe_fp_math]>;
+  MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[menable_unsafe_fp_math.KeyPath]>;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
@@ -5080,7 +5080,7 @@ def fallow_pcm_with_errors : Flag<["-"], "fallow-pcm-with-compiler-errors">,
 def fallow_pch_with_errors : Flag<["-"], "fallow-pch-with-compiler-errors">,
   HelpText<"Accept a PCH file that was created with compiler errors">,
   MarshallingInfoFlag<PreprocessorOpts<"AllowPCHWithCompilerErrors">>,
-  ImpliedByAnyOf<[fallow_pcm_with_errors]>;
+  ImpliedByAnyOf<[fallow_pcm_with_errors.KeyPath]>;
 def dump_deserialized_pch_decls : Flag<["-"], "dump-deserialized-decls">,
   HelpText<"Dump declarations that are deserialized from PCH, for testing">,
   MarshallingInfoFlag<PreprocessorOpts<"DumpDeserializedPCHDecls">>;
