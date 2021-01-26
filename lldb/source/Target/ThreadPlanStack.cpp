@@ -379,19 +379,6 @@ void ThreadPlanStack::WillResume() {
   m_discarded_plans.clear();
 }
 
-const ThreadPlanStack::PlanStack &
-ThreadPlanStack::GetStackOfKind(ThreadPlanStack::StackKind kind) const {
-  switch (kind) {
-  case ePlans:
-    return m_plans;
-  case eCompletedPlans:
-    return m_completed_plans;
-  case eDiscardedPlans:
-    return m_discarded_plans;
-  }
-  llvm_unreachable("Invalid StackKind value");
-}
-
 void ThreadPlanStackMap::Update(ThreadList &current_threads,
                                 bool delete_missing,
                                 bool check_for_new) {
