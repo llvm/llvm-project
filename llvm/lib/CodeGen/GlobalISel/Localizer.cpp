@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -56,6 +57,20 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   return InsertMBB == Def.getParent();
 }
 
+bool Localizer::isNonUniquePhiValue(MachineOperand &Op) const {
+  MachineInstr *MI = Op.getParent();
+  if (!MI->isPHI())
+    return false;
+
+  Register SrcReg = Op.getReg();
+  for (unsigned Idx = 1; Idx < MI->getNumOperands(); Idx += 2) {
+    auto &MO = MI->getOperand(Idx);
+    if (&MO != &Op && MO.isReg() && MO.getReg() == SrcReg)
+      return true;
+  }
+  return false;
+}
+
 bool Localizer::localizeInterBlock(MachineFunction &MF,
                                    LocalizedSetVecT &LocalizedInstrs) {
   bool Changed = false;
@@ -93,6 +108,14 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         LocalizedInstrs.insert(&MI);
         continue;
       }
+
+      // If the use is a phi operand that's not unique, don't try to localize.
+      // If we do, we can cause unnecessary instruction bloat by duplicating
+      // into each predecessor block, when the existing one is sufficient and
+      // allows for easier optimization later.
+      if (isNonUniquePhiValue(MOUse))
+        continue;
+
       LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
       Changed = true;
       auto MBBAndReg = std::make_pair(InsertMBB, Reg);
