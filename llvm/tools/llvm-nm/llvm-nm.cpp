@@ -1691,7 +1691,7 @@ struct SymbolVersion {
   std::string Name;
   bool IsDefault;
 };
-}; // namespace
+} // namespace
 
 template <class ELFT>
 static Expected<std::vector<SymbolVersion>>
