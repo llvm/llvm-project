@@ -169,7 +169,7 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 #else
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
-#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME IDENT)
+#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
 #endif
 
 #endif
