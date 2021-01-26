@@ -827,3 +827,89 @@ loop.latch:
 exit:
   ret i32 10
 }
+
+define i32 @no_partial_unswitch_true_successor_exit(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @no_partial_unswitch_true_successor_exit
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]],
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load i32, i32* %ptr
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %exit, label %clobber
+
+clobber:
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
+
+define i32 @no_partial_unswitch_true_same_successor(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @no_partial_unswitch_true_same_successor
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]],
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load i32, i32* %ptr
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %noclobber, label %noclobber
+
+noclobber:
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
+
+define i32 @partial_unswitch_true_to_latch(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @partial_unswitch_true_to_latch
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]],
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load i32, i32* %ptr
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %loop.latch, label %clobber
+
+clobber:
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
