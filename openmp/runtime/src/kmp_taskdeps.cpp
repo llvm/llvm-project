@@ -588,7 +588,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                 current_task->td_flags.tasking_ser ||
                 current_task->td_flags.final;
   kmp_task_team_t *task_team = thread->th.th_task_team;
-  serial = serial && !(task_team && task_team->tt.tt_found_proxy_tasks);
+  serial = serial &&
+           !(task_team && (task_team->tt.tt_found_proxy_tasks ||
+                           task_team->tt.tt_hidden_helper_task_encountered));
 
   if (!serial && (ndeps > 0 || ndeps_noalias > 0)) {
     /* if no dependencies have been tracked yet, create the dependence hash */
