@@ -138,7 +138,6 @@ class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
 
   let HasModifiers = 0;
   let HasClamp = 1;
-  let HasOMod = 1;
 }
 
 def VOP1_F64_I32 : VOPProfileI2F <f64, i32>;
