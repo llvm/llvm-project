@@ -189,6 +189,8 @@ random_device::entropy() const _NOEXCEPT
     return std::numeric_limits<result_type>::digits;
 
   return ent;
+#elif defined(__OpenBSD__)
+  return std::numeric_limits<result_type>::digits;
 #else
   return 0;
 #endif
