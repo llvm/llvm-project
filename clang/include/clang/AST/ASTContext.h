@@ -36,7 +36,6 @@
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -567,10 +566,6 @@ private:
   /// should be imbued with the XRay "always" or "never" attributes.
   std::unique_ptr<XRayFunctionFilter> XRayFilter;
 
-  /// ProfileList object that is used by the profile instrumentation
-  /// to decide which entities should be instrumented.
-  std::unique_ptr<ProfileList> ProfList;
-
   /// The allocator used to create AST objects.
   ///
   /// AST objects are never destructed; rather, all memory associated with the
@@ -695,8 +690,6 @@ public:
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
   }
-
-  const ProfileList &getProfileList() const { return *ProfList; }
 
   DiagnosticsEngine &getDiagnostics() const;
 

@@ -2045,12 +2045,6 @@ Set update method of profile counters (atomic,prefer-atomic,single)
 
 Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.
 
-.. program:: clang1
-.. option:: -fprofile-list=<file>
-.. program:: clang
-
-Filename defining the list of functions/files to instrument. The file uses the sanitizer special case list format.
-
 .. option:: -freciprocal-math, -fno-reciprocal-math
 
 Allow division operations to be reassociated
