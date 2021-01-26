@@ -3332,10 +3332,14 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl();
 
   // Get overall information about the record type for the debug info.
-  llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
-  const unsigned Line =
-      getLineNumber(RD->getLocation().isValid() ? RD->getLocation() : CurLoc);
   StringRef RDName = getClassName(RD);
+  const SourceLocation Loc = RD->getLocation();
+  llvm::DIFile *DefUnit = nullptr;
+  unsigned Line = 0;
+  if (Loc.isValid()) {
+    DefUnit = getOrCreateFile(Loc);
+    Line = getLineNumber(Loc);
+  }
 
   llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
 
