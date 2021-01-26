@@ -156,7 +156,7 @@ DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
-  return __builtin_amdgcn_atomic_inc32(Address, max, __ATOMIC_SEQ_CST, "");
+  return __builtin_amdgcn_atomic_inc32(Address, Val, __ATOMIC_SEQ_CST, "");
 }
 DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
