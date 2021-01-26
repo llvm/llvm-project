@@ -170,7 +170,6 @@ def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins );
   let results = (outs Async_GroupType:$result);
 
   let assemblyFormat = "attr-dict";
@@ -250,7 +249,6 @@ def Async_CoroIdOp : Async_Op<"coro.id"> {
     The `async.coro.id` returns a switched-resume coroutine identifier.
   }];
 
-  let arguments = (ins );
   let results = (outs Async_CoroIdType:$id);
   let assemblyFormat = "attr-dict";
 }
@@ -276,7 +274,6 @@ def Async_CoroFreeOp : Async_Op<"coro.free"> {
 
   let arguments = (ins Async_CoroIdType:$id,
                        Async_CoroHandleType:$handle);
-  let results = (outs );
   let assemblyFormat = "$id `,` $handle attr-dict";
 }
 
@@ -289,7 +286,6 @@ def Async_CoroEndOp : Async_Op<"coro.end"> {
   }];
 
   let arguments = (ins Async_CoroHandleType:$handle);
-  let results = (outs );
   let assemblyFormat = "$handle attr-dict";
 }
 
@@ -309,8 +305,8 @@ def Async_CoroSuspendOp : Async_Op<"coro.suspend", [Terminator]> {
   let description = [{
     The `async.coro.suspend` suspends the coroutine and transfers control to the
     `suspend` successor. If suspended coroutine later resumed it will transfer
-    control to the `resume` successor. If it destroyed it will transfer control
-    to the the `cleanup` successor.
+    control to the `resume` successor. If it is destroyed it will transfer
+    control to the the `cleanup` successor.
 
     In switched-resume lowering coroutine can be already in resumed state when
     suspend operation is called, in this case control will be transferred to the
@@ -334,14 +330,13 @@ def Async_CoroSuspendOp : Async_Op<"coro.suspend", [Terminator]> {
 // Runtime API defined in the `ExecutionEngine/AsyncRuntime.h`.
 
 def Async_RuntimeCreateOp : Async_Op<"runtime.create"> {
-  let summary = "creates and async runtime value (token, value or group)";
+  let summary = "creates an async runtime value (token, value or group)";
   let description = [{
     The `async.runtime.create` operation creates an async dialect value
     (token, value or group). Tokens and values are created in non-ready state.
     Groups are created in empty state.
   }];
 
-  let arguments = (ins );
   let results = (outs Async_AnyAsyncType:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
 }
@@ -354,7 +349,6 @@ def Async_RuntimeSetAvailableOp : Async_Op<"runtime.set_available"> {
   }];
 
   let arguments = (ins Async_AnyValueOrTokenType:$operand);
-  let results = (outs );
   let assemblyFormat = "$operand attr-dict `:` type($operand)";
 }
 
@@ -366,7 +360,6 @@ def Async_RuntimeAwaitOp : Async_Op<"runtime.await"> {
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand);
-  let results = (outs );
   let assemblyFormat = "$operand attr-dict `:` type($operand)";
 }
 
@@ -378,7 +371,6 @@ def Async_RuntimeResumeOp : Async_Op<"runtime.resume"> {
   }];
 
   let arguments = (ins Async_CoroHandleType:$handle);
-  let results = (outs );
   let assemblyFormat = "$handle attr-dict";
 }
 
@@ -392,7 +384,6 @@ def Async_RuntimeAwaitAndResumeOp : Async_Op<"runtime.await_and_resume"> {
 
   let arguments = (ins Async_AnyAsyncType:$operand,
                        Async_CoroHandleType:$handle);
-  let results = (outs );
   let assemblyFormat = "$operand `,` $handle attr-dict `:` type($operand)";
 }
 
@@ -408,7 +399,6 @@ def Async_RuntimeStoreOp : Async_Op<"runtime.store",
 
   let arguments = (ins AnyType:$value,
                        Async_AnyValueType:$storage);
-  let results = (outs );
   let assemblyFormat = "$value `,` $storage attr-dict `:` type($storage)";
 }
 
@@ -472,7 +462,6 @@ def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
 
   let arguments = (ins Async_AnyAsyncType:$operand,
                        Confined<I32Attr, [IntPositive]>:$count);
-  let results = (outs );
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)
@@ -488,7 +477,6 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
 
   let arguments = (ins Async_AnyAsyncType:$operand,
                        Confined<I32Attr, [IntPositive]>:$count);
-  let results = (outs );
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)

@@ -195,17 +195,11 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
 }
 
 //===----------------------------------------------------------------------===//
-// LLVM coroutines intrinsics declarations.
+// Add malloc/free declarations to the module.
 //===----------------------------------------------------------------------===//
 
-static constexpr const char *kCoroId = "llvm.coro.id";
-static constexpr const char *kCoroSizeI64 = "llvm.coro.size.i64";
-static constexpr const char *kCoroBegin = "llvm.coro.begin";
-static constexpr const char *kCoroSave = "llvm.coro.save";
-static constexpr const char *kCoroSuspend = "llvm.coro.suspend";
-static constexpr const char *kCoroEnd = "llvm.coro.end";
-static constexpr const char *kCoroFree = "llvm.coro.free";
-static constexpr const char *kCoroResume = "llvm.coro.resume";
+static constexpr const char *kMalloc = "malloc";
+static constexpr const char *kFree = "free";
 
 static void addLLVMFuncDecl(ModuleOp module, ImplicitLocOpBuilder &builder,
                             StringRef name, Type ret, ArrayRef<Type> params) {
@@ -214,40 +208,6 @@ static void addLLVMFuncDecl(ModuleOp module, ImplicitLocOpBuilder &builder,
   Type type = LLVM::LLVMFunctionType::get(ret, params);
   builder.create<LLVM::LLVMFuncOp>(name, type);
 }
-
-/// Adds coroutine intrinsics declarations to the module.
-static void addCoroutineIntrinsicsDeclarations(ModuleOp module) {
-  using namespace mlir::LLVM;
-
-  MLIRContext *ctx = module.getContext();
-  ImplicitLocOpBuilder builder(module.getLoc(),
-                               module.getBody()->getTerminator());
-
-  auto token = LLVMTokenType::get(ctx);
-  auto voidTy = LLVMVoidType::get(ctx);
-
-  auto i8 = IntegerType::get(ctx, 8);
-  auto i1 = IntegerType::get(ctx, 1);
-  auto i32 = IntegerType::get(ctx, 32);
-  auto i64 = IntegerType::get(ctx, 64);
-  auto i8Ptr = LLVMPointerType::get(i8);
-
-  addLLVMFuncDecl(module, builder, kCoroId, token, {i32, i8Ptr, i8Ptr, i8Ptr});
-  addLLVMFuncDecl(module, builder, kCoroSizeI64, i64, {});
-  addLLVMFuncDecl(module, builder, kCoroBegin, i8Ptr, {token, i8Ptr});
-  addLLVMFuncDecl(module, builder, kCoroSave, token, {i8Ptr});
-  addLLVMFuncDecl(module, builder, kCoroSuspend, i8, {token, i1});
-  addLLVMFuncDecl(module, builder, kCoroEnd, i1, {i8Ptr, i1});
-  addLLVMFuncDecl(module, builder, kCoroFree, i8Ptr, {token, i8Ptr});
-  addLLVMFuncDecl(module, builder, kCoroResume, voidTy, {i8Ptr});
-}
-
-//===----------------------------------------------------------------------===//
-// Add malloc/free declarations to the module.
-//===----------------------------------------------------------------------===//
-
-static constexpr const char *kMalloc = "malloc";
-static constexpr const char *kFree = "free";
 
 /// Adds malloc/free declarations to the module.
 static void addCRuntimeDeclarations(ModuleOp module) {
@@ -293,10 +253,7 @@ static void addResumeFunction(ModuleOp module) {
   auto *block = resumeOp.addEntryBlock();
   auto blockBuilder = ImplicitLocOpBuilder::atBlockEnd(loc, block);
 
-  blockBuilder.create<LLVM::CallOp>(TypeRange(),
-                                    blockBuilder.getSymbolRefAttr(kCoroResume),
-                                    resumeOp.getArgument(0));
-
+  blockBuilder.create<LLVM::CoroResumeOp>(resumeOp.getArgument(0));
   blockBuilder.create<LLVM::ReturnOp>(ValueRange());
 }
 
@@ -576,9 +533,8 @@ public:
     auto nullPtr = rewriter.create<LLVM::NullOp>(loc, i8Ptr);
 
     // Get coroutine id: @llvm.coro.id.
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, token, rewriter.getSymbolRefAttr(kCoroId),
-        ValueRange({constZero, nullPtr, nullPtr, nullPtr}));
+    rewriter.replaceOpWithNewOp<LLVM::CoroIdOp>(
+        op, token, ValueRange({constZero, nullPtr, nullPtr, nullPtr}));
 
     return success();
   }
@@ -601,20 +557,18 @@ public:
     auto loc = op->getLoc();
 
     // Get coroutine frame size: @llvm.coro.size.i64.
-    auto coroSize = rewriter.create<LLVM::CallOp>(
-        loc, rewriter.getI64Type(), rewriter.getSymbolRefAttr(kCoroSizeI64),
-        ValueRange());
+    auto coroSize =
+        rewriter.create<LLVM::CoroSizeOp>(loc, rewriter.getI64Type());
 
     // Allocate memory for the coroutine frame.
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
         loc, i8Ptr, rewriter.getSymbolRefAttr(kMalloc),
-        ValueRange(coroSize.getResult(0)));
+        ValueRange(coroSize.getResult()));
 
     // Begin a coroutine: @llvm.coro.begin.
     auto coroId = CoroBeginOpAdaptor(operands).id();
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, i8Ptr, rewriter.getSymbolRefAttr(kCoroBegin),
-        ValueRange({coroId, coroAlloc.getResult(0)}));
+    rewriter.replaceOpWithNewOp<LLVM::CoroBeginOp>(
+        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult(0)}));
 
     return success();
   }
@@ -637,13 +591,12 @@ public:
     auto loc = op->getLoc();
 
     // Get a pointer to the coroutine frame memory: @llvm.coro.free.
-    auto coroMem = rewriter.create<LLVM::CallOp>(
-        loc, i8Ptr, rewriter.getSymbolRefAttr(kCoroFree), operands);
+    auto coroMem = rewriter.create<LLVM::CoroFreeOp>(loc, i8Ptr, operands);
 
     // Free the memory.
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, TypeRange(),
                                               rewriter.getSymbolRefAttr(kFree),
-                                              ValueRange(coroMem.getResult(0)));
+                                              ValueRange(coroMem.getResult()));
 
     return success();
   }
@@ -668,9 +621,8 @@ public:
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = CoroEndOpAdaptor(operands).handle();
-    rewriter.create<LLVM::CallOp>(op->getLoc(), rewriter.getI1Type(),
-                                  rewriter.getSymbolRefAttr(kCoroEnd),
-                                  ValueRange({coroHdl, constFalse}));
+    rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
+                                     ValueRange({coroHdl, constFalse}));
     rewriter.eraseOp(op);
 
     return success();
@@ -691,9 +643,8 @@ public:
   matchAndRewrite(CoroSaveOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     // Save the coroutine state: @llvm.coro.save
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, AsyncAPI::tokenType(op->getContext()),
-        rewriter.getSymbolRefAttr(kCoroSave), operands);
+    rewriter.replaceOpWithNewOp<LLVM::CoroSaveOp>(
+        op, AsyncAPI::tokenType(op->getContext()), operands);
 
     return success();
   }
@@ -723,7 +674,7 @@ namespace {
 ///
 ///   ^suspended:
 ///     "opBefore"(...)
-///     %suspend = llmv.call @llvm.coro.suspend(...)
+///     %suspend = llmv.intr.coro.suspend ...
 ///     switch %suspend [-1: ^suspend, 0: ^resume, 1: ^cleanup]
 ///   ^resume:
 ///     "op"(...)
@@ -747,9 +698,8 @@ public:
 
     // Suspend a coroutine: @llvm.coro.suspend
     auto coroState = CoroSuspendOpAdaptor(operands).state();
-    auto coroSuspend = rewriter.create<LLVM::CallOp>(
-        loc, i8, rewriter.getSymbolRefAttr(kCoroSuspend),
-        ValueRange({coroState, constFalse}));
+    auto coroSuspend = rewriter.create<LLVM::CoroSuspendOp>(
+        loc, i8, ValueRange({coroState, constFalse}));
 
     // Cast return code to i32.
 
@@ -760,7 +710,7 @@ public:
     llvm::SmallVector<Block *, 2> caseDest = {op.resumeDest(),
                                               op.cleanupDest()};
     rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
-        op, rewriter.create<LLVM::SExtOp>(loc, i32, coroSuspend.getResult(0)),
+        op, rewriter.create<LLVM::SExtOp>(loc, i32, coroSuspend.getResult()),
         /*defaultDestination=*/op.suspendDest(),
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
@@ -1382,7 +1332,6 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   // Add declarations for all functions required by the coroutines lowering.
   addResumeFunction(module);
   addAsyncRuntimeApiDeclarations(module);
-  addCoroutineIntrinsicsDeclarations(module);
   addCRuntimeDeclarations(module);
 
   // ------------------------------------------------------------------------ //
