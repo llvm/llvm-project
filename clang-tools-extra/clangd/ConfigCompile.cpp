@@ -27,6 +27,7 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "ConfigProvider.h"
+#include "Diagnostics.h"
 #include "Features.inc"
 #include "TidyProvider.h"
 #include "support/Logger.h"
@@ -187,6 +188,7 @@ struct FragmentCompiler {
     compile(std::move(F.If));
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
+    compile(std::move(F.Diagnostics));
     compile(std::move(F.ClangTidy));
   }
 
@@ -261,6 +263,36 @@ struct FragmentCompiler {
         });
       });
     }
+
+    if (F.CompilationDatabase) {
+      llvm::Optional<Config::CDBSearchSpec> Spec;
+      if (**F.CompilationDatabase == "Ancestors") {
+        Spec.emplace();
+        Spec->Policy = Config::CDBSearchSpec::Ancestors;
+      } else if (**F.CompilationDatabase == "None") {
+        Spec.emplace();
+        Spec->Policy = Config::CDBSearchSpec::NoCDBSearch;
+      } else {
+        if (auto Path =
+                makeAbsolute(*F.CompilationDatabase, "CompilationDatabase",
+                             llvm::sys::path::Style::native)) {
+          // Drop trailing slash to put the path in canonical form.
+          // Should makeAbsolute do this?
+          llvm::StringRef Rel = llvm::sys::path::relative_path(*Path);
+          if (!Rel.empty() && llvm::sys::path::is_separator(Rel.back()))
+            Path->pop_back();
+
+          Spec.emplace();
+          Spec->Policy = Config::CDBSearchSpec::FixedDir;
+          Spec->FixedCDBPath = std::move(Path);
+        }
+      }
+      if (Spec)
+        Out.Apply.push_back(
+            [Spec(std::move(*Spec))](const Params &, Config &C) {
+              C.CompileFlags.CDBSearch = Spec;
+            });
+    }
   }
 
   void compile(Fragment::IndexBlock &&F) {
@@ -326,6 +358,27 @@ struct FragmentCompiler {
       // (including the current one).
       C.Index.Background = Config::BackgroundPolicy::Skip;
     });
+  }
+
+  void compile(Fragment::DiagnosticsBlock &&F) {
+    std::vector<llvm::StringRef> Normalized;
+    for (const auto &Suppressed : F.Suppress) {
+      if (*Suppressed == "*") {
+        Out.Apply.push_back([&](const Params &, Config &C) {
+          C.Diagnostics.SuppressAll = true;
+          C.Diagnostics.Suppress.clear();
+        });
+        return;
+      }
+      Normalized.push_back(normalizeSuppressedCode(*Suppressed));
+    }
+    if (!Normalized.empty())
+      Out.Apply.push_back([Normalized](const Params &, Config &C) {
+        if (C.Diagnostics.SuppressAll)
+          return;
+        for (llvm::StringRef N : Normalized)
+          C.Diagnostics.Suppress.insert(N);
+      });
   }
 
   void compile(Fragment::StyleBlock &&F) {

@@ -63,8 +63,8 @@ AsyncRefCountingOptimizationPass::optimizeReferenceCounting(Value value) {
   };
 
   struct BlockUsersInfo {
-    llvm::SmallVector<AddRefOp, 4> addRefs;
-    llvm::SmallVector<DropRefOp, 4> dropRefs;
+    llvm::SmallVector<RuntimeAddRefOp, 4> addRefs;
+    llvm::SmallVector<RuntimeDropRefOp, 4> dropRefs;
     llvm::SmallVector<UserInfo, 4> users;
   };
 
@@ -74,9 +74,9 @@ AsyncRefCountingOptimizationPass::optimizeReferenceCounting(Value value) {
     BlockUsersInfo &info = blockUsers[user.operation->getBlock()];
     info.users.push_back(user);
 
-    if (auto addRef = dyn_cast<AddRefOp>(user.operation))
+    if (auto addRef = dyn_cast<RuntimeAddRefOp>(user.operation))
       info.addRefs.push_back(addRef);
-    if (auto dropRef = dyn_cast<DropRefOp>(user.operation))
+    if (auto dropRef = dyn_cast<RuntimeDropRefOp>(user.operation))
       info.dropRefs.push_back(dropRef);
   };
 
@@ -118,8 +118,8 @@ AsyncRefCountingOptimizationPass::optimizeReferenceCounting(Value value) {
     // Mapping from `dropRef.getOperation()` to `addRef.getOperation()`.
     llvm::SmallDenseMap<Operation *, Operation *> cancellable;
 
-    for (AddRefOp addRef : info.addRefs) {
-      for (DropRefOp dropRef : info.dropRefs) {
+    for (RuntimeAddRefOp addRef : info.addRefs) {
+      for (RuntimeDropRefOp dropRef : info.dropRefs) {
         // `drop_ref` operation after the `add_ref` with matching count.
         if (dropRef.count() != addRef.count() ||
             dropRef->isBeforeInBlock(addRef.getOperation()))

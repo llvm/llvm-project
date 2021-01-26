@@ -436,7 +436,6 @@ private:
 class BreakableLineCommentSection : public BreakableComment {
 public:
   BreakableLineCommentSection(const FormatToken &Token, unsigned StartColumn,
-                              unsigned OriginalStartColumn, bool FirstInLine,
                               bool InPPDirective, encoding::Encoding Encoding,
                               const FormatStyle &Style);
 

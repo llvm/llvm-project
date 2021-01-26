@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-patterns | FileCheck %s
 
-// CHECK-DAG: #[[$STRIDED_1D:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1  + s0)>
+// CHECK-DAG: #[[$STRIDED_1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // Map corresponding to a 2D memory access where the stride along the last dim is known to be 1.
 // CHECK-DAG: #[[$STRIDED_2D_u_1:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // Map corresponding to a 2D memory access where the stride along all dims are unknown.
@@ -48,7 +48,7 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:         scf.parallel {{.*}} step (%[[c5]])
 // CHECK:           scf.for {{.*}} step %[[c6]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>)
+// CHECK:               ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
 func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -87,8 +87,8 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:                             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3]] {
 // CHECK:                               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4]] {
 // CHECK:                                 linalg.matmul
-// CHECK:                                   ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>)
-// CHECK:                                  outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>)
+// CHECK:                                   ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
+// CHECK:                                  outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
 
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,
@@ -172,7 +172,7 @@ func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
 // CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?xf32, #[[$STRIDED_1D]]>)
+// CHECK:               ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
 func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -205,8 +205,8 @@ func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:                       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
 // CHECK:                         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
 // CHECK:                                 linalg.matmul
-// CHECK:                                  ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>, memref<?x?xf32, #[[$STRIDED_2D]]>)
-// CHECK:                                   outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D]]>)
+// CHECK:                                  ins({{.*}}, {{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
+// CHECK:                                   outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
 
 func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
@@ -250,13 +250,16 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               %[[s2:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:               %[[a0:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK:               %[[v0:.*]] = std.view %[[a0]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK:               %[[l0:.*]] = subview %[[v0]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:               %[[l0:.*]] = subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1]
+// CHECK-SAME:            memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:               %[[a1:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK:               %[[v1:.*]] = std.view %[[a1]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK:               %[[l1:.*]] = subview %[[v1]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:               %[[l1:.*]] = subview %[[v1]][0, 0] [%{{.*}}, %{{.*}}] [1, 1]
+// CHECK-SAME:            memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:               %[[a2:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK:               %[[v2:.*]] = std.view %[[a2]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK:               %[[l2:.*]] = subview %[[v2]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:               %[[l2:.*]] = subview %[[v2]][0, 0] [%{{.*}}, %{{.*}}] [1, 1]
+// CHECK-SAME:            memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:               linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:               linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:               linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
@@ -306,13 +309,13 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK:         %[[s2:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         %[[a0:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK:         %[[v0:.*]] = std.view %[[a0]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK:         %[[l0:.*]] = subview %[[v0]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:         %[[l0:.*]] = subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-NOT:     %[[a1:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK-NOT:     %[[v1:.*]] = std.view %[[a1]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK-NOT:     %[[l0:.*]] = subview %[[v1]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK-NOT:     %[[l0:.*]] = subview %[[v1]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-NOT:     %[[a2:.*]] = alloc({{%.*}}) : memref<?xi8>
 // CHECK-NOT:     %[[v2:.*]] = std.view %[[a2]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK-NOT:     %[[l0:.*]] = subview %[[v2]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK-NOT:     %[[l0:.*]] = subview %[[v2]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK-NOT:     linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK-NOT:     linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
@@ -337,7 +340,7 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 // CHECK:         %[[s0:.*]] = subview {{%.*}}[{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         %[[a0:.*]] = alloc({{%.*}}) {alignment = 32 : i64} : memref<?xi8>
 // CHECK:         %[[v0:.*]] = std.view %[[a0]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK:         %[[l0:.*]] = subview %[[v0]][{{%.*}}, {{%.*}}] [{{%.*}}, {{%.*}}] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D]]>
+// CHECK:         %[[l0:.*]] = subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:         linalg.fill(%[[v0]], {{%.*}}) : memref<?x?xf32>, f32
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
 // CHECK:         linalg.fill(%[[v0]], %[[cf]]) : memref<?x?xf32>, f32

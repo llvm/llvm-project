@@ -2601,6 +2601,10 @@ def fdebug_prefix_map_EQ
   : Joined<["-"], "fdebug-prefix-map=">, Group<f_Group>,
     Flags<[CC1Option,CC1AsOption]>,
     HelpText<"remap file source paths in debug info">;
+def fprofile_prefix_map_EQ
+  : Joined<["-"], "fprofile-prefix-map=">, Group<f_Group>,
+    Flags<[CC1Option]>,
+    HelpText<"remap file source paths in coverage info">;
 def ffile_prefix_map_EQ
   : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>,
     HelpText<"remap file source paths in debug info and predefined preprocessor macros">;

@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: if(7777.eq.777)then
 ! CHECK: print*,'pp037.F no: ',7777
 * fixed-form clipping NOT applied to #define

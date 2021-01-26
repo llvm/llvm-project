@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -82,6 +83,9 @@ struct TestLinalgTransforms
   Option<bool> testTileAndPadPattern{
       *this, "test-tile-and-pad-pattern",
       llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
+  Option<bool> testHoistPadding2Levels{*this, "test-hoist-padding-2-level",
+                                       llvm::cl::desc("Test hoist padding"),
+                                       llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -546,6 +550,11 @@ void TestLinalgTransforms::runOnFunction() {
     return applyAffineMinSCFCanonicalizationPatterns(getFunction());
   if (testTileAndPadPattern)
     return applyTileAndPadPattern(getFunction());
+  if (testHoistPadding2Levels) {
+    getFunction().walk([](linalg::SimplePadOp simplePadOp) {
+      linalg::hoistPaddingOnTensors(simplePadOp, 2);
+    });
+  }
 }
 
 namespace mlir {

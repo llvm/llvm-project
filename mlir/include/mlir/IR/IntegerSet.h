@@ -104,6 +104,15 @@ public:
 
   friend ::llvm::hash_code hash_value(IntegerSet arg);
 
+  /// Methods supporting C API.
+  const void *getAsOpaquePointer() const {
+    return static_cast<const void *>(set);
+  }
+  static IntegerSet getFromOpaquePointer(const void *pointer) {
+    return IntegerSet(
+        reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
+  }
+
 private:
   ImplType *set;
   /// Sets with constraints fewer than kUniquingThreshold are uniqued.

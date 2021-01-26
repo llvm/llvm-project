@@ -61,6 +61,7 @@ static_library("Basic") {
     "LangStandards.cpp",
     "Module.cpp",
     "ObjCRuntime.cpp",
+    "OpenCLOptions.cpp",
     "OpenMPKinds.cpp",
     "OperatorPrecedence.cpp",
     "SanitizerBlacklist.cpp",

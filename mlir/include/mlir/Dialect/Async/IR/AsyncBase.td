@@ -77,4 +77,39 @@ def Async_AnyAsyncType : AnyTypeOf<[Async_AnyValueType,
                                     Async_TokenType,
                                     Async_GroupType]>;
 
+//===----------------------------------------------------------------------===//
+// Types for lowering to LLVM + Async Runtime via the LLVM Coroutines.
+//===----------------------------------------------------------------------===//
+
+// LLVM coroutines intrinsics use `token` and `i8*` types to represent coroutine
+// identifiers and handles. To define type-safe Async Runtime operations and
+// build a properly typed intermediate IR during the Async to LLVM lowering we
+// define a separate types for values that can be produced by LLVM intrinsics.
+
+def Async_CoroIdType : DialectType<AsyncDialect,
+    CPred<"$_self.isa<::mlir::async::CoroIdType>()">, "coro.id type">,
+    BuildableType<"$_builder.getType<::mlir::async::CoroIdType>()"> {
+  let description = [{
+    `async.coro.id` is a type identifying a switched-resume coroutine.
+  }];
+}
+
+def Async_CoroHandleType : DialectType<AsyncDialect,
+    CPred<"$_self.isa<::mlir::async::CoroHandleType>()">, "coro.handle type">,
+    BuildableType<"$_builder.getType<::mlir::async::CoroHandleType>()"> {
+  let description = [{
+    `async.coro.handle` is a handle to the coroutine (pointer to the coroutine
+    frame) that can be passed around to resume or destroy the coroutine.
+  }];
+}
+
+def Async_CoroStateType : DialectType<AsyncDialect,
+    CPred<"$_self.isa<::mlir::async::CoroStateType>()">, "coro.state type">,
+    BuildableType<"$_builder.getType<::mlir::async::CoroStateType>()"> {
+  let description = [{
+    `async.coro.state` is a saved coroutine state that should be passed to the
+    coroutine suspension operation.
+  }];
+}
+
 #endif // ASYNC_BASE_TD

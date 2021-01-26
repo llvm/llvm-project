@@ -1440,6 +1440,17 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     assert(LatchBlock && "PostInc mode requires a unique loop latch!");
     Result = PN->getIncomingValueForBlock(LatchBlock);
 
+    // We might be introducing a new use of the post-inc IV that is not poison
+    // safe, in which case we should drop poison generating flags. Only keep
+    // those flags for which SCEV has proven that they always hold.
+    if (isa<OverflowingBinaryOperator>(Result)) {
+      auto *I = cast<Instruction>(Result);
+      if (!S->hasNoUnsignedWrap())
+        I->setHasNoUnsignedWrap(false);
+      if (!S->hasNoSignedWrap())
+        I->setHasNoSignedWrap(false);
+    }
+
     // For an expansion to use the postinc form, the client must call
     // expandCodeFor with an InsertPoint that is either outside the PostIncLoop
     // or dominated by IVIncInsertPos.

@@ -73,6 +73,11 @@ tools = [
 
 if config.include_flang_new_driver_test:
    tools.append(ToolSubst('%flang-new', command=FindTool('flang-new'), unresolved='fatal'))
+   tools.append(ToolSubst('%flang', command=FindTool('flang-new'), unresolved='fatal'))
+else:
+   tools.append(ToolSubst('%flang', command=FindTool('f18'),
+    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
+    unresolved='fatal'))
 
 if config.flang_standalone_build:
     llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir])

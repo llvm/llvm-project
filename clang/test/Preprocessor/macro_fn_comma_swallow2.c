@@ -9,6 +9,8 @@
 // RUN: %clang_cc1 -E -x c++ -std=c++11 %s | FileCheck -check-prefix=C99 -strict-whitespace %s
 // RUN: %clang_cc1 -E -std=gnu99 %s | FileCheck -check-prefix=GCC -strict-whitespace %s
 // RUN: %clang_cc1 -E -fms-compatibility %s | FileCheck -check-prefix=MS -strict-whitespace %s
+// RUN: %clang_cc1 -E -x c++ -fms-compatibility %s | FileCheck -check-prefix=MS -strict-whitespace %s
+// RUN: %clang_cc1 -E -x c++ -std=c++11 -fms-compatibility %s | FileCheck -check-prefix=MS -strict-whitespace %s
 // RUN: %clang_cc1 -E -DNAMED %s | FileCheck -check-prefix=GCC -strict-whitespace %s
 // RUN: %clang_cc1 -E -std=c99 -DNAMED %s | FileCheck -check-prefix=C99 -strict-whitespace %s
 

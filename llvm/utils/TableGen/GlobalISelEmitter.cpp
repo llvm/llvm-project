@@ -933,7 +933,8 @@ public:
                                 StringRef ParentSymbolicName) {
     std::string ParentName(ParentSymbolicName);
     if (ComplexSubOperands.count(SymbolicName)) {
-      auto RecordedParentName = ComplexSubOperandsParentName[SymbolicName];
+      const std::string &RecordedParentName =
+          ComplexSubOperandsParentName[SymbolicName];
       if (RecordedParentName != ParentName)
         return failedImport("Error: Complex suboperand " + SymbolicName +
                             " referenced by different operands: " +

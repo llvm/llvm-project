@@ -11,6 +11,7 @@
 #include "ConfigTesting.h"
 #include "Features.inc"
 #include "TestFS.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,6 +31,7 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
 using ::testing::StartsWith;
+using ::testing::UnorderedElementsAre;
 
 class ConfigCompileTests : public ::testing::Test {
 protected:
@@ -110,6 +112,46 @@ TEST_F(ConfigCompileTests, CompileCommands) {
   EXPECT_THAT(Argv, ElementsAre("clang", "a.cc", "-foo"));
 }
 
+TEST_F(ConfigCompileTests, CompilationDatabase) {
+  Frag.CompileFlags.CompilationDatabase.emplace("None");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::NoCDBSearch);
+
+  Frag.CompileFlags.CompilationDatabase.emplace("Ancestors");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors);
+
+  // Relative path not allowed without directory set.
+  Frag.CompileFlags.CompilationDatabase.emplace("Something");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors)
+      << "default value";
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(DiagMessage(
+                  "CompilationDatabase must be an absolute path, because this "
+                  "fragment is not associated with any directory.")));
+
+  // Relative path allowed if directory is set.
+  Frag.Source.Directory = testRoot();
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
+  // Absolute path allowed.
+  Frag.Source.Directory.clear();
+  Frag.CompileFlags.CompilationDatabase.emplace(testPath("Something2"));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something2"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+}
+
 TEST_F(ConfigCompileTests, Index) {
   Frag.Index.Background.emplace("Skip");
   EXPECT_TRUE(compileAndApply());
@@ -181,6 +223,39 @@ TEST_F(ConfigCompileTests, PathSpecMatch) {
     EXPECT_NE(compileAndApply(), Case.ShouldMatch);
     ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   }
+}
+
+TEST_F(ConfigCompileTests, DiagnosticSuppression) {
+  Frag.Diagnostics.Suppress.emplace_back("bugprone-use-after-move");
+  Frag.Diagnostics.Suppress.emplace_back("unreachable-code");
+  Frag.Diagnostics.Suppress.emplace_back("-Wunused-variable");
+  Frag.Diagnostics.Suppress.emplace_back("typecheck_bool_condition");
+  Frag.Diagnostics.Suppress.emplace_back("err_unexpected_friend");
+  Frag.Diagnostics.Suppress.emplace_back("warn_alloca");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_THAT(Conf.Diagnostics.Suppress.keys(),
+              UnorderedElementsAre("bugprone-use-after-move",
+                                   "unreachable-code", "unused-variable",
+                                   "typecheck_bool_condition",
+                                   "unexpected_friend", "warn_alloca"));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable,
+                                            Conf.Diagnostics.Suppress));
+  // Subcategory not respected/suppressed.
+  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable_break,
+                                             Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unused_variable,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_unexpected_friend,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_alloca,
+                                            Conf.Diagnostics.Suppress));
+
+  Frag.Diagnostics.Suppress.emplace_back("*");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Diagnostics.SuppressAll);
+  EXPECT_THAT(Conf.Diagnostics.Suppress, IsEmpty());
 }
 
 TEST_F(ConfigCompileTests, Tidy) {

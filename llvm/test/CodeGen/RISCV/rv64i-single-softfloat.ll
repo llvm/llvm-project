@@ -80,7 +80,6 @@ define i32 @flt_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __ltsf2@plt
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slti a0, a0, 0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -96,7 +95,6 @@ define i32 @fle_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __lesf2@plt
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    slti a0, a0, 1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -112,7 +110,6 @@ define i32 @fcmp_ogt(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __gtsf2@plt
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sgtz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -128,7 +125,6 @@ define i32 @fcmp_oge(float %a, float %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __gesf2@plt
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a1, zero, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -214,8 +210,7 @@ define float @fcvt_s_wu(i32 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    call __floatunsisf@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -675,8 +670,7 @@ define float @fpowi_s(float %a, i32 %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    call __powisf2@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

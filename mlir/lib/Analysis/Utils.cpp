@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Utils.h"
-
 #include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Analysis/PresburgerSet.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -125,6 +125,128 @@ void ComputationSliceState::dump() const {
     for (Value ubOp : ubOperands[en.index()])
       llvm::errs() << "\t\t\t" << ubOp << "\n";
   }
+}
+
+/// Fast check to determine if the computation slice is maximal. Returns true if
+/// each slice dimension maps to an existing dst dimension and both the src
+/// and the dst loops for those dimensions have the same bounds. Returns false
+/// if both the src and the dst loops don't have the same bounds. Returns
+/// llvm::None if none of the above can be proven.
+Optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
+  assert(lbs.size() == ubs.size() && lbs.size() && ivs.size() &&
+         "Unexpected number of lbs, ubs and ivs in slice");
+
+  for (unsigned i = 0, end = lbs.size(); i < end; ++i) {
+    AffineMap lbMap = lbs[i];
+    AffineMap ubMap = ubs[i];
+
+    // Check if this slice is just an equality along this dimension.
+    if (!lbMap || !ubMap || lbMap.getNumResults() != 1 ||
+        ubMap.getNumResults() != 1 ||
+        lbMap.getResult(0) + 1 != ubMap.getResult(0) ||
+        // The condition above will be true for maps describing a single
+        // iteration (e.g., lbMap.getResult(0) = 0, ubMap.getResult(0) = 1).
+        // Make sure we skip those cases by checking that the lb result is not
+        // just a constant.
+        lbMap.getResult(0).isa<AffineConstantExpr>())
+      return llvm::None;
+
+    // Limited support: we expect the lb result to be just a loop dimension for
+    // now.
+    AffineDimExpr result = lbMap.getResult(0).dyn_cast<AffineDimExpr>();
+    if (!result)
+      return llvm::None;
+
+    // Retrieve dst loop bounds.
+    AffineForOp dstLoop =
+        getForInductionVarOwner(lbOperands[i][result.getPosition()]);
+    if (!dstLoop)
+      return llvm::None;
+    AffineMap dstLbMap = dstLoop.getLowerBoundMap();
+    AffineMap dstUbMap = dstLoop.getUpperBoundMap();
+
+    // Retrieve src loop bounds.
+    AffineForOp srcLoop = getForInductionVarOwner(ivs[i]);
+    assert(srcLoop && "Expected affine for");
+    AffineMap srcLbMap = srcLoop.getLowerBoundMap();
+    AffineMap srcUbMap = srcLoop.getUpperBoundMap();
+
+    // Limited support: we expect simple src and dst loops with a single
+    // constant component per bound for now.
+    if (srcLbMap.getNumResults() != 1 || srcUbMap.getNumResults() != 1 ||
+        dstLbMap.getNumResults() != 1 || dstUbMap.getNumResults() != 1)
+      return llvm::None;
+
+    AffineExpr srcLbResult = srcLbMap.getResult(0);
+    AffineExpr dstLbResult = dstLbMap.getResult(0);
+    AffineExpr srcUbResult = srcUbMap.getResult(0);
+    AffineExpr dstUbResult = dstUbMap.getResult(0);
+    if (!srcLbResult.isa<AffineConstantExpr>() ||
+        !srcUbResult.isa<AffineConstantExpr>() ||
+        !dstLbResult.isa<AffineConstantExpr>() ||
+        !dstUbResult.isa<AffineConstantExpr>())
+      return llvm::None;
+
+    // Check if src and dst loop bounds are the same. If not, we can guarantee
+    // that the slice is not maximal.
+    if (srcLbResult != dstLbResult || srcUbResult != dstUbResult)
+      return false;
+  }
+
+  return true;
+}
+
+/// Returns true if the computation slice encloses all the iterations of the
+/// sliced loop nest. Returns false if it does not. Returns llvm::None if it
+/// cannot determine if the slice is maximal or not.
+Optional<bool> ComputationSliceState::isMaximal() const {
+  // Fast check to determine if the computation slice is maximal. If the result
+  // is inconclusive, we proceed with a more expensive analysis.
+  Optional<bool> isMaximalFastCheck = isSliceMaximalFastCheck();
+  if (isMaximalFastCheck.hasValue())
+    return isMaximalFastCheck;
+
+  // Create constraints for the src loop nest being sliced.
+  FlatAffineConstraints srcConstraints;
+  srcConstraints.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0,
+                       /*numLocals=*/0, ivs);
+  for (Value iv : ivs) {
+    AffineForOp loop = getForInductionVarOwner(iv);
+    assert(loop && "Expected affine for");
+    if (failed(srcConstraints.addAffineForOpDomain(loop)))
+      return llvm::None;
+  }
+
+  // Create constraints for the slice using the dst loop nest information. We
+  // retrieve existing dst loops from the lbOperands.
+  SmallVector<Value, 8> consumerIVs;
+  for (Value lbOp : lbOperands[0])
+    if (getForInductionVarOwner(lbOp))
+      consumerIVs.push_back(lbOp);
+
+  // Add empty IV Values for those new loops that are not equalities and,
+  // therefore, are not yet materialized in the IR.
+  for (int i = consumerIVs.size(), end = ivs.size(); i < end; ++i)
+    consumerIVs.push_back(Value());
+
+  FlatAffineConstraints sliceConstraints;
+  sliceConstraints.reset(/*numDims=*/consumerIVs.size(), /*numSymbols=*/0,
+                         /*numLocals=*/0, consumerIVs);
+
+  if (failed(sliceConstraints.addDomainFromSliceMaps(lbs, ubs, lbOperands[0])))
+    return llvm::None;
+
+  if (srcConstraints.getNumDimIds() != sliceConstraints.getNumDimIds())
+    // Constraint dims are different. The integer set difference can't be
+    // computed so we don't know if the slice is maximal.
+    return llvm::None;
+
+  // Compute the difference between the src loop nest and the slice integer
+  // sets.
+  PresburgerSet srcSet(srcConstraints);
+  PresburgerSet sliceSet(sliceConstraints);
+  PresburgerSet diffSet = srcSet.subtract(sliceSet);
+  return diffSet.isIntegerEmpty();
 }
 
 unsigned MemRefRegion::getRank() const {
