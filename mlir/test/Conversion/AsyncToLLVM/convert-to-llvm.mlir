@@ -4,11 +4,11 @@
 func @reference_counting(%arg0: !async.token) {
   // CHECK: %[[C2:.*]] = constant 2 : i32
   // CHECK: call @mlirAsyncRuntimeAddRef(%arg0, %[[C2]])
-  async.add_ref %arg0 {count = 2 : i32} : !async.token
+  async.runtime.add_ref %arg0 {count = 2 : i32} : !async.token
 
   // CHECK: %[[C1:.*]] = constant 1 : i32
   // CHECK: call @mlirAsyncRuntimeDropRef(%arg0, %[[C1]])
-  async.drop_ref %arg0 {count = 1 : i32} : !async.token
+  async.runtime.drop_ref %arg0 {count = 1 : i32} : !async.token
 
   return
 }
@@ -38,21 +38,16 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
 
 // Pass a suspended coroutine to the async runtime.
-// CHECK: %[[RESUME:.*]] = llvm.mlir.addressof @__resume
 // CHECK: %[[STATE:.*]] = llvm.call @llvm.coro.save
+// CHECK: %[[RESUME:.*]] = llvm.mlir.addressof @__resume
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL]], %[[RESUME]])
 // CHECK: %[[SUSPENDED:.*]] = llvm.call @llvm.coro.suspend(%[[STATE]]
 
 // Decide the next block based on the code returned from suspend.
-// CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i8)
-// CHECK: %[[NONE:.*]] = llvm.mlir.constant(-1 : i8)
-// CHECK: %[[IS_NONE:.*]] = llvm.icmp "eq" %[[SUSPENDED]], %[[NONE]]
-// CHECK: llvm.cond_br %[[IS_NONE]], ^[[SUSPEND:.*]], ^[[RESUME_OR_CLEANUP:.*]]
-
-// Decide if branch to resume or cleanup block.
-// CHECK: ^[[RESUME_OR_CLEANUP]]:
-// CHECK: %[[IS_ZERO:.*]] = llvm.icmp "eq" %[[SUSPENDED]], %[[ZERO]]
-// CHECK: llvm.cond_br %[[IS_ZERO]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+// CHECK: %[[SEXT:.*]] = llvm.sext %[[SUSPENDED]] : i8 to i32
+// CHECK: llvm.switch %[[SEXT]], ^[[SUSPEND:[b0-9]+]]
+// CHECK-NEXT: 0: ^[[RESUME:[b0-9]+]]
+// CHECK-NEXT: 1: ^[[CLEANUP:[b0-9]+]]
 
 // Resume coroutine after suspension.
 // CHECK: ^[[RESUME]]:
