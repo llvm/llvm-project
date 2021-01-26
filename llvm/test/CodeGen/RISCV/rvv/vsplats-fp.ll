@@ -7,14 +7,12 @@
 define <vscale x 8 x half> @vsplat_nxv8f16(half %f) {
 ; RV32V-LABEL: vsplat_nxv8f16:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; RV32V-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; RV32V-NEXT:    vfmv.v.f v8, fa0
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: vsplat_nxv8f16:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; RV64V-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; RV64V-NEXT:    vfmv.v.f v8, fa0
 ; RV64V-NEXT:    ret

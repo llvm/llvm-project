@@ -18,7 +18,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_oeq_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfeq.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -31,7 +30,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_oeq_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfeq.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -54,7 +52,6 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_oeq_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfeq.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -77,7 +74,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ogt_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -90,7 +86,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ogt_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -113,7 +108,6 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ogt_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -136,7 +130,6 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_oge_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -149,7 +142,6 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_oge_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -172,7 +164,6 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_oge_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -195,7 +186,6 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_olt_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -208,7 +198,6 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_olt_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -231,7 +220,6 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_olt_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -254,7 +242,6 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ole_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -267,7 +254,6 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ole_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -290,7 +276,6 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ole_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -316,7 +301,6 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_one_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
@@ -332,7 +316,6 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_one_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_one_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmflt.vf v26, v8, fa0
@@ -358,7 +341,6 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_one_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -384,7 +366,6 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ord_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfeq.vf v25, v26, fa0
@@ -401,7 +382,6 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ord_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfeq.vf v25, v26, fa0
@@ -431,7 +411,6 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ord_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfeq.vf v25, v26, fa0
@@ -461,7 +440,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ueq_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
@@ -477,7 +455,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ueq_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vmflt.vf v26, v8, fa0
@@ -503,7 +480,6 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ueq_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfeq.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -529,7 +505,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ugt_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -545,7 +520,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ugt_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -571,7 +545,6 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ugt_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -597,7 +570,6 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_uge_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -613,7 +585,6 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_uge_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -639,7 +610,6 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_uge_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -665,7 +635,6 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ult_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfge.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -681,7 +650,6 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ult_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -707,7 +675,6 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ult_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -733,7 +700,6 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ule_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -749,7 +715,6 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_ule_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmflt.vf v25, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
@@ -775,7 +740,6 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_ule_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfle.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -798,7 +762,6 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_une_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -811,7 +774,6 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_une_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_une_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -834,7 +796,6 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_une_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vf v0, v8, fa0
 ; CHECK-NEXT:    ret
@@ -860,7 +821,6 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x
 define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_uno_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfne.vf v25, v26, fa0
@@ -877,7 +837,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: fcmp_uno_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfne.vf v25, v26, fa0
@@ -907,7 +866,6 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
 define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
 ; CHECK-LABEL: fcmp_uno_vf_nxv8f16_nonans:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f10_h killed $f10_h def $f10_f
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfne.vf v25, v26, fa0
