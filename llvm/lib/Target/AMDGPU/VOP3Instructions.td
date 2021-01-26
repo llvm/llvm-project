@@ -183,7 +183,7 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProf
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
 
-  let HasModifiers = !if(Features.IsPacked, !not(Features.IsMAI), P.HasModifiers);
+  let HasModifiers = !if(Features.IsMAI, 0, !or(Features.IsPacked, P.HasModifiers));
 
   // FIXME: Hack to stop printing _e64
   let Outs64 = (outs DstRC.RegClass:$vdst);
@@ -253,6 +253,7 @@ def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
 
   let HasClamp = 1;
+  let HasSrc0Mods = 0;
 }
 
 class getInterp16Asm <bit HasSrc2, bit HasOMod> {
@@ -691,7 +692,6 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
                           IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
-  let HasOMod = 0;
 }
 
 class PermlanePat<SDPatternOperator permlane,
