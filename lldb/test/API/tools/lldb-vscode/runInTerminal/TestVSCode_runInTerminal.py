@@ -75,6 +75,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adaptor()
         response = self.launch(
@@ -85,6 +86,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run([self.lldbVSCodeExec,  "--launch-target", "INVALIDPROGRAM"],
             capture_output=True, universal_newlines=True)
@@ -93,6 +95,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -110,6 +113,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -126,6 +130,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
@@ -143,6 +148,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=no_match(['x86_64']))
     def test_NonAttachedRunInTerminalLauncher(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)

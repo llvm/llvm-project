@@ -4,29 +4,29 @@
 func @coro_id() {
   // CHECK: %0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %1 = llvm.mlir.null : !llvm.ptr<i8>
-  // CHECK: %2 = llvm.call @llvm.coro.id(%0, %1, %1, %1)
+  // CHECK: %2 = llvm.intr.coro.id %0, %1, %1, %1 : !llvm.token
   %0 = async.coro.id
   return
 }
 
 // CHECK-LABEL: @coro_begin
 func @coro_begin() {
-  // CHECK: %[[ID:.*]] = llvm.call @llvm.coro.id
+  // CHECK: %[[ID:.*]] = llvm.intr.coro.id
   %0 = async.coro.id
-  // CHECK: %[[SIZE:.*]] = llvm.call @llvm.coro.size.i64()
+  // CHECK: %[[SIZE:.*]] = llvm.intr.coro.size : i64
   // CHECK: %[[ALLOC:.*]] = llvm.call @malloc(%[[SIZE]])
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin(%[[ID]], %[[ALLOC]])
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin %[[ID]], %[[ALLOC]]
   %1 = async.coro.begin %0
   return
 }
 
 // CHECK-LABEL: @coro_free
 func @coro_free() {
-  // CHECK: %[[ID:.*]] = llvm.call @llvm.coro.id
+  // CHECK: %[[ID:.*]] = llvm.intr.coro.id
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
-  // CHECK: %[[MEM:.*]] = llvm.call @llvm.coro.free(%[[ID]], %[[HDL]])
+  // CHECK: %[[MEM:.*]] = llvm.intr.coro.free %[[ID]], %[[HDL]]
   // CHECK: llvm.call @free(%[[MEM]])
   async.coro.free %0, %1
   return
@@ -35,10 +35,10 @@ func @coro_free() {
 // CHECK-LABEL: @coro_end
 func @coro_end() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
   // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false) : i1
-  // CHECK: llvm.call @llvm.coro.end(%[[HDL]], %[[FALSE]])
+  // CHECK: llvm.intr.coro.end %[[HDL]], %[[FALSE]]
   async.coro.end %1
   return
 }
@@ -46,9 +46,9 @@ func @coro_end() {
 // CHECK-LABEL: @coro_save
 func @coro_save() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
-  // CHECK: llvm.call @llvm.coro.save(%[[HDL]])
+  // CHECK: llvm.intr.coro.save %[[HDL]]
   %2 = async.coro.save %1
   return
 }
@@ -56,13 +56,13 @@ func @coro_save() {
 // CHECK-LABEL: @coro_suspend
 func @coro_suspend() {
   %0 = async.coro.id
-  // CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+  // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
-  // CHECK: %[[STATE:.*]] = llvm.call @llvm.coro.save(%[[HDL]])
+  // CHECK: %[[STATE:.*]] = llvm.intr.coro.save %[[HDL]]
   %2 = async.coro.save %1
 
   // CHECK: %[[FINAL:.*]] = llvm.mlir.constant(false) : i1
-  // CHECK: %[[RET:.*]] = llvm.call @llvm.coro.suspend(%[[STATE]], %[[FINAL]])
+  // CHECK: %[[RET:.*]] = llvm.intr.coro.suspend %[[STATE]], %[[FINAL]]
   // CHECK: %[[SEXT:.*]] = llvm.sext %[[RET]] : i8 to i32
   // CHECK: llvm.switch %[[SEXT]], ^[[SUSPEND:[b0-9]+]]
   // CHECK-NEXT: 0: ^[[RESUME:[b0-9]+]]

@@ -378,8 +378,16 @@ class DwarfDebug : public DebugHandlerBase {
   /// Avoid using DW_OP_convert due to consumer incompatibilities.
   bool EnableOpConvert;
 
+public:
+  enum class MinimizeAddrInV5 {
+    Default,
+    Disabled,
+    Ranges,
+  };
+
+private:
   /// Force the use of DW_AT_ranges even for single-entry range lists.
-  bool AlwaysUseRanges = false;
+  MinimizeAddrInV5 MinimizeAddr = MinimizeAddrInV5::Disabled;
 
   /// DWARF5 Experimental Options
   /// @{
@@ -694,7 +702,9 @@ public:
 
   /// Returns whether range encodings should be used for single entry range
   /// lists.
-  bool alwaysUseRanges() const { return AlwaysUseRanges; }
+  bool alwaysUseRanges() const {
+    return MinimizeAddr == MinimizeAddrInV5::Ranges;
+  }
 
   /// Returns whether to use sections as labels rather than temp symbols.
   bool useSectionsAsReferences() const {

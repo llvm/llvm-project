@@ -35,13 +35,13 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 
 // Create token for return op, and mark a function as a coroutine.
 // CHECK: %[[RET:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
 
 // Pass a suspended coroutine to the async runtime.
-// CHECK: %[[STATE:.*]] = llvm.call @llvm.coro.save
+// CHECK: %[[STATE:.*]] = llvm.intr.coro.save
 // CHECK: %[[RESUME:.*]] = llvm.mlir.addressof @__resume
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL]], %[[RESUME]])
-// CHECK: %[[SUSPENDED:.*]] = llvm.call @llvm.coro.suspend(%[[STATE]]
+// CHECK: %[[SUSPENDED:.*]] = llvm.intr.coro.suspend %[[STATE]]
 
 // Decide the next block based on the code returned from suspend.
 // CHECK: %[[SEXT:.*]] = llvm.sext %[[SUSPENDED]] : i8 to i32
@@ -56,12 +56,12 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 
 // Delete coroutine.
 // CHECK: ^[[CLEANUP]]:
-// CHECK: %[[MEM:.*]] = llvm.call @llvm.coro.free
+// CHECK: %[[MEM:.*]] = llvm.intr.coro.free
 // CHECK: llvm.call @free(%[[MEM]])
 
 // Suspend coroutine, and also a return statement for ramp function.
 // CHECK: ^[[SUSPEND]]:
-// CHECK: llvm.call @llvm.coro.end
+// CHECK: llvm.intr.coro.end
 // CHECK: return %[[RET]]
 
 // -----
@@ -92,9 +92,9 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK-LABEL: func private @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>, %arg2: index)
 // CHECK-SAME: -> !llvm.ptr<i8>
 // CHECK: %[[RET_0:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL_0:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL_0:.*]] = llvm.intr.coro.begin
 // CHECK: call @mlirAsyncRuntimeExecute
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 // CHECK: store %arg0, %arg1[%arg2] : memref<1xf32>
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_0]])
 
@@ -102,17 +102,17 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK-LABEL: func private @async_execute_fn_0(%arg0: f32, %arg1: memref<1xf32>, %arg2: f32)
 // CHECK-SAME: -> !llvm.ptr<i8>
 // CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL_1:.*]] = llvm.intr.coro.begin
 
 // Suspend coroutine in the beginning.
 // CHECK: call @mlirAsyncRuntimeExecute
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Suspend coroutine second time waiting for the completion of inner execute op.
 // CHECK: %[[TOKEN_1:.*]] = call @async_execute_fn
-// CHECK: llvm.call @llvm.coro.save
+// CHECK: llvm.intr.coro.save
 // CHECK: call @mlirAsyncRuntimeAwaitTokenAndExecute(%[[TOKEN_1]], %[[HDL_1]]
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Emplace result token after second resumption.
 // CHECK: store %arg2, %arg1[%c0] : memref<1xf32>
@@ -141,9 +141,9 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK-LABEL: func private @async_execute_fn(%arg0: f32, %arg1: memref<1xf32>)
 // CHECK-SAME: -> !llvm.ptr<i8>
 // CHECK: %[[RET_0:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL_0:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL_0:.*]] = llvm.intr.coro.begin
 // CHECK: call @mlirAsyncRuntimeExecute
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 // CHECK: store %arg0, %arg1[%c0] : memref<1xf32>
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_0]])
 
@@ -151,16 +151,16 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK-LABEL: func private @async_execute_fn_0(%arg0: !llvm.ptr<i8>, %arg1: f32, %arg2: memref<1xf32>)
 // CHECK-SAME: -> !llvm.ptr<i8>
 // CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL_1:.*]] = llvm.intr.coro.begin
 
 // Suspend coroutine in the beginning.
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL_1]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Suspend coroutine second time waiting for the completion of token dependency.
-// CHECK: llvm.call @llvm.coro.save
+// CHECK: llvm.intr.coro.save
 // CHECK: call @mlirAsyncRuntimeAwaitTokenAndExecute(%arg0, %[[HDL_1]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Emplace result token after second resumption.
 // CHECK: store %arg1, %arg2[%c0] : memref<1xf32>
@@ -193,16 +193,16 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // Function outlined from the async.execute operation.
 // CHECK: func private @async_execute_fn_0(%arg0: !llvm.ptr<i8>)
 // CHECK: %[[RET_1:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL_1:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL_1:.*]] = llvm.intr.coro.begin
 
 // Suspend coroutine in the beginning.
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL_1]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Suspend coroutine second time waiting for the group.
-// CHECK: llvm.call @llvm.coro.save
+// CHECK: llvm.intr.coro.save
 // CHECK: call @mlirAsyncRuntimeAwaitAllInGroupAndExecute(%arg0, %[[HDL_1]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Emplace result token.
 // CHECK: call @mlirAsyncRuntimeEmplaceToken(%[[RET_1]])
@@ -229,11 +229,11 @@ func @execute_and_return_f32() -> f32 {
 // CHECK-LABEL: func private @async_execute_fn()
 // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken()
 // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
-// CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
 
 // Suspend coroutine in the beginning.
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Emplace result value.
 // CHECK: %[[CST:.*]] = constant 1.230000e+02 : f32
@@ -274,16 +274,16 @@ func @async_value_operands() {
 // Function outlined from the second async.execute operation.
 // CHECK-LABEL: func private @async_execute_fn_0(%arg0: !llvm.ptr<i8>)
 // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken()
-// CHECK: %[[HDL:.*]] = llvm.call @llvm.coro.begin
+// CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
 
 // Suspend coroutine in the beginning.
 // CHECK: call @mlirAsyncRuntimeExecute(%[[HDL]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Suspend coroutine second time waiting for the async operand.
-// CHECK: llvm.call @llvm.coro.save
+// CHECK: llvm.intr.coro.save
 // CHECK: call @mlirAsyncRuntimeAwaitValueAndExecute(%arg0, %[[HDL]],
-// CHECK: llvm.call @llvm.coro.suspend
+// CHECK: llvm.intr.coro.suspend
 
 // Get the operand value storage, cast to f32 and add the value.
 // CHECK: %[[STORAGE:.*]] = call @mlirAsyncRuntimeGetValueStorage(%arg0)

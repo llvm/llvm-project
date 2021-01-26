@@ -9,11 +9,8 @@
 define i64 @slliuw(i64 %a) nounwind {
 ; RV64I-LABEL: slliuw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    addi a1, zero, 1
-; RV64I-NEXT:    slli a1, a1, 33
-; RV64I-NEXT:    addi a1, a1, -2
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 31
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: slliuw:
@@ -34,8 +31,7 @@ define i128 @slliuw_2(i32 signext %0, i128* %1) {
 ; RV64I-LABEL: slliuw_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    srli a0, a0, 28
 ; RV64I-NEXT:    add a1, a1, a0
 ; RV64I-NEXT:    ld a0, 0(a1)
 ; RV64I-NEXT:    ld a1, 8(a1)
@@ -206,8 +202,7 @@ define signext i16 @sh1adduw(i32 signext %0, i16* %1) {
 ; RV64I-LABEL: sh1adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    srli a0, a0, 31
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lh a0, 0(a0)
 ; RV64I-NEXT:    ret
@@ -232,11 +227,8 @@ define signext i16 @sh1adduw(i32 signext %0, i16* %1) {
 define i64 @sh1adduw_2(i64 %0, i64 %1) {
 ; RV64I-LABEL: sh1adduw_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    addi a2, zero, 1
-; RV64I-NEXT:    slli a2, a2, 33
-; RV64I-NEXT:    addi a2, a2, -2
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 31
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -259,8 +251,7 @@ define signext i32 @sh2adduw(i32 signext %0, i32* %1) {
 ; RV64I-LABEL: sh2adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    srli a0, a0, 30
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    ret
@@ -285,11 +276,8 @@ define signext i32 @sh2adduw(i32 signext %0, i32* %1) {
 define i64 @sh2adduw_2(i64 %0, i64 %1) {
 ; RV64I-LABEL: sh2adduw_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 2
-; RV64I-NEXT:    addi a2, zero, 1
-; RV64I-NEXT:    slli a2, a2, 34
-; RV64I-NEXT:    addi a2, a2, -4
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 30
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -312,8 +300,7 @@ define i64 @sh3adduw(i32 signext %0, i64* %1) {
 ; RV64I-LABEL: sh3adduw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    srli a0, a0, 29
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    ret
@@ -338,11 +325,8 @@ define i64 @sh3adduw(i32 signext %0, i64* %1) {
 define i64 @sh3adduw_2(i64 %0, i64 %1) {
 ; RV64I-LABEL: sh3adduw_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 3
-; RV64I-NEXT:    addi a2, zero, 1
-; RV64I-NEXT:    slli a2, a2, 35
-; RV64I-NEXT:    addi a2, a2, -8
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 29
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
