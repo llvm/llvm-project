@@ -25,13 +25,15 @@ class OptimizationRemarkEmitter;
 class ReplayInlineAdvisor : public InlineAdvisor {
 public:
   ReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                      LLVMContext &Context, StringRef RemarksFile,
-                      bool EmitRemarks);
+                      LLVMContext &Context,
+                      std::unique_ptr<InlineAdvisor> OriginalAdvisor,
+                      StringRef RemarksFile, bool EmitRemarks);
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
   bool areReplayRemarksLoaded() const { return HasReplayRemarks; }
 
 private:
   StringSet<> InlineSitesFromRemarks;
+  std::unique_ptr<InlineAdvisor> OriginalAdvisor;
   bool HasReplayRemarks = false;
   bool EmitRemarks = false;
 };
