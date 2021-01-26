@@ -486,6 +486,18 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 
+namespace Exp {
+
+bool getTgtName(unsigned Id, StringRef &Name, int &Index);
+
+LLVM_READONLY
+unsigned getTgtId(const StringRef Name);
+
+LLVM_READNONE
+bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI);
+
+} // namespace Exp
+
 namespace MTBUFFormat {
 
 LLVM_READNONE

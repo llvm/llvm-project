@@ -692,7 +692,7 @@ enum DppFiMode {
 
 namespace Exp {
 
-enum Target {
+enum Target : unsigned {
   ET_MRT0 = 0,
   ET_MRT7 = 7,
   ET_MRTZ = 8,
@@ -704,6 +704,15 @@ enum Target {
   ET_PRIM = 20,          // GFX10+
   ET_PARAM0 = 32,
   ET_PARAM31 = 63,
+
+  ET_NULL_MAX_IDX = 0,
+  ET_MRTZ_MAX_IDX = 0,
+  ET_PRIM_MAX_IDX = 0,
+  ET_MRT_MAX_IDX = 7,
+  ET_POS_MAX_IDX = 4,
+  ET_PARAM_MAX_IDX = 31,
+
+  ET_INVALID = 255,
 };
 
 } // namespace Exp
