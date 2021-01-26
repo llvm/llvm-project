@@ -127,16 +127,16 @@ public:
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
-    Opts.support("cl_clang_storage_class_specifiers");
-    Opts.support("__cl_clang_function_pointers");
-    Opts.support("__cl_clang_variadic_functions");
+    Opts["cl_clang_storage_class_specifiers"] = true;
+    Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_variadic_functions"] = true;
 
-    Opts.support("cl_khr_fp64");
-    Opts.support("cl_khr_byte_addressable_store");
-    Opts.support("cl_khr_global_int32_base_atomics");
-    Opts.support("cl_khr_global_int32_extended_atomics");
-    Opts.support("cl_khr_local_int32_base_atomics");
-    Opts.support("cl_khr_local_int32_extended_atomics");
+    Opts["cl_khr_fp64"] = true;
+    Opts["cl_khr_byte_addressable_store"] = true;
+    Opts["cl_khr_global_int32_base_atomics"] = true;
+    Opts["cl_khr_global_int32_extended_atomics"] = true;
+    Opts["cl_khr_local_int32_base_atomics"] = true;
+    Opts["cl_khr_local_int32_extended_atomics"] = true;
   }
 
   /// \returns If a target requires an address within a target specific address

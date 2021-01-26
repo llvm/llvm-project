@@ -407,7 +407,7 @@ void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
       Result.push_back(replacementToEdit(Code, R));
     return CB(Result);
   };
-  WorkScheduler.run("FormatOnType", File, std::move(Action));
+  WorkScheduler.runQuick("FormatOnType", File, std::move(Action));
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
@@ -635,7 +635,7 @@ void ClangdServer::formatCode(PathRef File, llvm::StringRef Code,
         tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
         File)));
   };
-  WorkScheduler.run("Format", File, std::move(Action));
+  WorkScheduler.runQuick("Format", File, std::move(Action));
 }
 
 void ClangdServer::findDocumentHighlights(

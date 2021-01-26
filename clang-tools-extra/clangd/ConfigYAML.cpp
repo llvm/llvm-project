@@ -95,6 +95,9 @@ private:
       if (auto Values = scalarValues(N))
         F.Remove = std::move(*Values);
     });
+    Dict.handle("CompilationDatabase", [&](Node &N) {
+      F.CompilationDatabase = scalarValue(N, "CompilationDatabase");
+    });
     Dict.parse(N);
   }
 

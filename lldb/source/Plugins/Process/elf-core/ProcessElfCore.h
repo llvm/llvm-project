@@ -105,8 +105,8 @@ public:
 protected:
   void Clear();
 
-  bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,
-                        lldb_private::ThreadList &new_thread_list) override;
+  bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
+                          lldb_private::ThreadList &new_thread_list) override;
 
 private:
   struct NT_FILE_Entry {

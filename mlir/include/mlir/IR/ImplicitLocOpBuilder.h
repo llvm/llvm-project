@@ -22,20 +22,11 @@ namespace mlir {
 /// as OpBuilder.
 class ImplicitLocOpBuilder : public mlir::OpBuilder {
 public:
-  /// Create an ImplicitLocOpBuilder using the insertion point and listener from
-  /// an existing OpBuilder.
-  ImplicitLocOpBuilder(Location loc, const OpBuilder &builder)
-      : OpBuilder(builder), curLoc(loc) {}
-
   /// OpBuilder has a bunch of convenience constructors - we support them all
   /// with the additional Location.
-  template <typename T>
-  ImplicitLocOpBuilder(Location loc, T &&operand, Listener *listener = nullptr)
-      : OpBuilder(std::forward<T>(operand), listener), curLoc(loc) {}
-
-  ImplicitLocOpBuilder(Location loc, Block *block, Block::iterator insertPoint,
-                       Listener *listener = nullptr)
-      : OpBuilder(block, insertPoint, listener), curLoc(loc) {}
+  template <typename... T>
+  ImplicitLocOpBuilder(Location loc, T &&...operands)
+      : OpBuilder(std::forward<T>(operands)...), curLoc(loc) {}
 
   /// Create a builder and set the insertion point to before the first operation
   /// in the block but still inside the block.

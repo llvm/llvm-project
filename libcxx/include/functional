@@ -2348,9 +2348,9 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
     template <class _Fp>
         struct __callable<_Fp, true>
         {
-            static const bool value = is_same<void, _Rp>::value ||
-                is_convertible<typename __invoke_of<_Fp, _ArgTypes...>::type,
-                               _Rp>::value;
+            static const bool value = is_void<_Rp>::value ||
+                __is_core_convertible<typename __invoke_of<_Fp, _ArgTypes...>::type,
+                                      _Rp>::value;
         };
     template <class _Fp>
         struct __callable<_Fp, false>

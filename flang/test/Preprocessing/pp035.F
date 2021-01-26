@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: if(777.eq.777)then
 ! CHECK: print*,'pp035.F no: ',777
 * #if 2 .LT. 3 works

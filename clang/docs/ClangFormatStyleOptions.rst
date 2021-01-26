@@ -2119,6 +2119,75 @@ the configuration (without a prefix: ``Auto``).
 **DisableFormat** (``bool``)
   Disables formatting completely.
 
+**EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``)
+  Defines in which cases to put empty line before access modifiers.
+
+  Possible values:
+
+  * ``ELBAMS_Never`` (in configuration: ``Never``)
+    Remove all empty lines before access modifiers.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+      protected:
+        int j;
+        /* comment */
+      public:
+        foo() {}
+      private:
+      protected:
+      };
+
+  * ``ELBAMS_Leave`` (in configuration: ``Leave``)
+    Keep existing empty lines before access modifiers.
+
+  * ``ELBAMS_LogicalBlock`` (in configuration: ``LogicalBlock``)
+    Add empty line only when access modifier starts a new logical block.
+    Logical block is a group of one or more member fields or functions.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+
+      protected:
+        int j;
+        /* comment */
+      public:
+        foo() {}
+
+      private:
+      protected:
+      };
+
+  * ``ELBAMS_Always`` (in configuration: ``Always``)
+    Always add empty line before access modifiers unless access modifier
+    is at the start of struct or class definition.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+
+      protected:
+        int j;
+        /* comment */
+
+      public:
+        foo() {}
+
+      private:
+
+      protected:
+      };
+
+
+
 **ExperimentalAutoDetectBinPacking** (``bool``)
   If ``true``, clang-format detects whether function calls and
   definitions are formatted with one parameter per line.
@@ -2281,6 +2350,27 @@ the configuration (without a prefix: ``Auto``).
   also being respected in later phase). Without this option set,
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
+
+**IncludeSortAlphabetically** (``bool``)
+  Specify if sorting should be done in an alphabetical and
+  case sensitive fashion.
+
+  When ``false``, includes are sorted in an ASCIIbetical
+  fashion.
+  When ``true``, includes are sorted in an alphabetical
+  fashion with case used as a tie-breaker.
+
+
+  .. code-block:: c++
+
+    false:                                   true:
+    #include "A/B.h"               vs.       #include "A/B.h"
+    #include "A/b.h"                         #include "A/b.h"
+    #include "B/A.h"                         #include "a/b.h"
+    #include "B/a.h"                         #include "B/A.h"
+    #include "a/b.h"                         #include "B/a.h"
+
+  This option is off by default.
 
 **IndentCaseBlocks** (``bool``)
   Indent case label blocks one level from the case label.

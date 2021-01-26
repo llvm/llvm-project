@@ -282,7 +282,8 @@ class VSCodeTestCaseBase(TestBase):
                trace=False, initCommands=None, preRunCommands=None,
                stopCommands=None, exitCommands=None, terminateCommands=None,
                sourcePath=None, debuggerRoot=None, launchCommands=None,
-               sourceMap=None, disconnectAutomatically=True, runInTerminal=False):
+               sourceMap=None, disconnectAutomatically=True, runInTerminal=False,
+               expectFailure=False):
         '''Sending launch request to vscode
         '''
 
@@ -317,7 +318,12 @@ class VSCodeTestCaseBase(TestBase):
             debuggerRoot=debuggerRoot,
             launchCommands=launchCommands,
             sourceMap=sourceMap,
-            runInTerminal=runInTerminal)
+            runInTerminal=runInTerminal,
+            expectFailure=expectFailure)
+
+        if expectFailure:
+            return response
+
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))
@@ -325,6 +331,7 @@ class VSCodeTestCaseBase(TestBase):
         # attached a runInTerminal process to finish initialization.
         if runInTerminal:
             self.vscode.request_configurationDone()
+        return response
 
 
     def build_and_launch(self, program, args=None, cwd=None, env=None,
@@ -340,7 +347,7 @@ class VSCodeTestCaseBase(TestBase):
         self.build_and_create_debug_adaptor()
         self.assertTrue(os.path.exists(program), 'executable must exist')
 
-        self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
+        return self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
                     terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal)

@@ -264,8 +264,9 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
       debugger.GetScriptInterpreter(true, eScriptLanguageLua));
   Lua &lua = lua_interpreter->GetLua();
 
-  llvm::Expected<bool> BoolOrErr =
-      lua.CallBreakpointCallback(baton, stop_frame_sp, bp_loc_sp);
+  CommandDataLua *bp_option_data = static_cast<CommandDataLua *>(baton);
+  llvm::Expected<bool> BoolOrErr = lua.CallBreakpointCallback(
+      baton, stop_frame_sp, bp_loc_sp, bp_option_data->m_extra_args_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
     debugger.GetErrorStream() << toString(std::move(E));
     return true;
@@ -283,10 +284,25 @@ void ScriptInterpreterLua::CollectDataForBreakpointCommandCallback(
   m_debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
+Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
+    BreakpointOptions *bp_options, const char *function_name,
+    StructuredData::ObjectSP extra_args_sp) {
+  const char *fmt_str = "return {0}(frame, bp_loc, ...)";
+  std::string oneliner = llvm::formatv(fmt_str, function_name).str();
+  return RegisterBreakpointCallback(bp_options, oneliner.c_str(),
+                                    extra_args_sp);
+}
+
 Status ScriptInterpreterLua::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
+  return RegisterBreakpointCallback(bp_options, command_body_text, {});
+}
+
+Status ScriptInterpreterLua::RegisterBreakpointCallback(
+    BreakpointOptions *bp_options, const char *command_body_text,
+    StructuredData::ObjectSP extra_args_sp) {
   Status error;
-  auto data_up = std::make_unique<CommandDataLua>();
+  auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
   error = m_lua->RegisterBreakpointCallback(data_up.get(), command_body_text);
   if (error.Fail())
     return error;

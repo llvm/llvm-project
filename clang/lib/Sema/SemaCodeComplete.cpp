@@ -3529,9 +3529,11 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
         Result.AddTypedTextChunk("");
     }
     unsigned Idx = 0;
+    // The extra Idx < Sel.getNumArgs() check is needed due to legacy C-style
+    // method parameters.
     for (ObjCMethodDecl::param_const_iterator P = Method->param_begin(),
                                               PEnd = Method->param_end();
-         P != PEnd; (void)++P, ++Idx) {
+         P != PEnd && Idx < Sel.getNumArgs(); (void)++P, ++Idx) {
       if (Idx > 0) {
         std::string Keyword;
         if (Idx > StartParameter)

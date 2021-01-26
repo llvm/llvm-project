@@ -201,17 +201,11 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_shift
-#     error "__cpp_lib_shift should be defined in c++20"
-#   endif
-#   if __cpp_lib_shift != 201806L
-#     error "__cpp_lib_shift should have the value 201806L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_shift
-#     error "__cpp_lib_shift should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_shift
+#   error "__cpp_lib_shift should be defined in c++20"
+# endif
+# if __cpp_lib_shift != 201806L
+#   error "__cpp_lib_shift should have the value 201806L in c++20"
 # endif
 
 #elif TEST_STD_VER > 20
@@ -276,17 +270,11 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_shift
-#     error "__cpp_lib_shift should be defined in c++2b"
-#   endif
-#   if __cpp_lib_shift != 201806L
-#     error "__cpp_lib_shift should have the value 201806L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_shift
-#     error "__cpp_lib_shift should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_shift
+#   error "__cpp_lib_shift should be defined in c++2b"
+# endif
+# if __cpp_lib_shift != 201806L
+#   error "__cpp_lib_shift should have the value 201806L in c++2b"
 # endif
 
 #endif // TEST_STD_VER > 20

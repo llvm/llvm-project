@@ -14,4 +14,4 @@
 # RUN: rm %t-temp.txt
 # RUN: not llvm-ar p %t-archive.a 2>&1 | FileCheck %s --check-prefix=DELETED
 
-# DELETED: error: {{.*}}{{[Nn]}}o such file or directory
+# DELETED: error: {{[Nn]}}o such file or directory

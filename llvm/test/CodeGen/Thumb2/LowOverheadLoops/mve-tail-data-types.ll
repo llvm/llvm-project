@@ -387,37 +387,37 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB5_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r5, r1, r12
-; CHECK-NEXT:    cmp r4, r1
-; CHECK-NEXT:    add.w r6, r0, r12
-; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r5, r3
-; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    add.w r5, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r6, r1, r12
+; CHECK-NEXT:    cmp r5, r1
+; CHECK-NEXT:    add.w r4, r0, r12
+; CHECK-NEXT:    cset r7, hi
 ; CHECK-NEXT:    cmp r6, r3
 ; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    ands r4, r6
-; CHECK-NEXT:    lsls r4, r4, #31
+; CHECK-NEXT:    cmp r5, r0
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    cmp r4, r3
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    ands r5, r4
+; CHECK-NEXT:    lsls r5, r5, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r6, r5, lr
-; CHECK-NEXT:    lslseq.w r6, r6, #31
+; CHECK-NEXT:    andeq r7, r6
+; CHECK-NEXT:    lslseq.w r7, r7, #31
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r6, r12, #1
-; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r6, #3
+; CHECK-NEXT:    sub.w r4, r12, #1
+; CHECK-NEXT:    and lr, r12, #3
+; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB5_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB5_8
 ; CHECK-NEXT:  .LBB5_4: @ %vector.ph
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB5_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    adds r7, #4
 ; CHECK-NEXT:    vldrb.u32 q0, [r0], #4
 ; CHECK-NEXT:    vldrb.u32 q1, [r1], #4
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2
@@ -425,49 +425,45 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    letp lr, .LBB5_5
 ; CHECK-NEXT:    b .LBB5_11
 ; CHECK-NEXT:  .LBB5_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r6, r12, #3
-; CHECK-NEXT:    movs r5, #1
-; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    add.w r4, r3, #8
+; CHECK-NEXT:    sub.w r8, r12, lr
+; CHECK-NEXT:    add.w r5, r3, #8
+; CHECK-NEXT:    adds r6, r0, #3
+; CHECK-NEXT:    adds r7, r1, #1
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    adds r5, r0, #3
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:  .LBB5_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb r8, [r5, #-3]
+; CHECK-NEXT:    ldrb r9, [r6, #-3]
 ; CHECK-NEXT:    add.w r12, r12, #4
-; CHECK-NEXT:    ldrb r7, [r6, #-1]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-8]
-; CHECK-NEXT:    ldrb r8, [r5, #-2]
-; CHECK-NEXT:    ldrb r7, [r6], #4
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-4]
-; CHECK-NEXT:    ldrb r8, [r5, #-1]
-; CHECK-NEXT:    ldrb r7, [r6, #-3]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4]
-; CHECK-NEXT:    ldrb r8, [r5], #4
-; CHECK-NEXT:    ldrb r7, [r6, #-2]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #4]
-; CHECK-NEXT:    adds r4, #16
-; CHECK-NEXT:    le lr, .LBB5_7
+; CHECK-NEXT:    ldrb r4, [r7, #-1]
+; CHECK-NEXT:    cmp r8, r12
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-8]
+; CHECK-NEXT:    ldrb r9, [r6, #-2]
+; CHECK-NEXT:    ldrb r4, [r7], #4
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-4]
+; CHECK-NEXT:    ldrb r9, [r6, #-1]
+; CHECK-NEXT:    ldrb r4, [r7, #-3]
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5]
+; CHECK-NEXT:    ldrb r9, [r6], #4
+; CHECK-NEXT:    ldrb r4, [r7, #-2]
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #4]
+; CHECK-NEXT:    add.w r5, r5, #16
+; CHECK-NEXT:    bne .LBB5_7
 ; CHECK-NEXT:  .LBB5_8: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r9, .LBB5_11
+; CHECK-NEXT:    wls lr, lr, .LBB5_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
 ; CHECK-NEXT:    add r0, r12
 ; CHECK-NEXT:    add r1, r12
 ; CHECK-NEXT:    add.w r3, r3, r12, lsl #2
-; CHECK-NEXT:    mov lr, r9
 ; CHECK-NEXT:  .LBB5_10: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb r6, [r0], #1
-; CHECK-NEXT:    ldrb r5, [r1], #1
-; CHECK-NEXT:    smlabb r6, r5, r6, r2
-; CHECK-NEXT:    str r6, [r3], #4
+; CHECK-NEXT:    ldrb r7, [r0], #1
+; CHECK-NEXT:    ldrb r6, [r1], #1
+; CHECK-NEXT:    smlabb r7, r6, r7, r2
+; CHECK-NEXT:    str r7, [r3], #4
 ; CHECK-NEXT:    le lr, .LBB5_10
 ; CHECK-NEXT:  .LBB5_11: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
@@ -689,37 +685,37 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB7_11
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r5, r1, r12
-; CHECK-NEXT:    cmp r4, r1
-; CHECK-NEXT:    add.w r6, r0, r12
-; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r5, r3
-; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    add.w r5, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r6, r1, r12
+; CHECK-NEXT:    cmp r5, r1
+; CHECK-NEXT:    add.w r4, r0, r12
+; CHECK-NEXT:    cset r7, hi
 ; CHECK-NEXT:    cmp r6, r3
 ; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    ands r4, r6
-; CHECK-NEXT:    lsls r4, r4, #31
+; CHECK-NEXT:    cmp r5, r0
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    cmp r4, r3
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    ands r5, r4
+; CHECK-NEXT:    lsls r5, r5, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r6, r5, lr
-; CHECK-NEXT:    lslseq.w r6, r6, #31
+; CHECK-NEXT:    andeq r7, r6
+; CHECK-NEXT:    lslseq.w r7, r7, #31
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r6, r12, #1
-; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r6, #3
+; CHECK-NEXT:    sub.w r4, r12, #1
+; CHECK-NEXT:    and lr, r12, #3
+; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB7_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB7_8
 ; CHECK-NEXT:  .LBB7_4: @ %vector.ph
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB7_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    adds r7, #4
 ; CHECK-NEXT:    vldrb.u32 q0, [r0], #4
 ; CHECK-NEXT:    vldrb.u32 q1, [r1], #4
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2
@@ -727,49 +723,45 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    letp lr, .LBB7_5
 ; CHECK-NEXT:    b .LBB7_11
 ; CHECK-NEXT:  .LBB7_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r6, r12, #3
-; CHECK-NEXT:    movs r5, #1
-; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    add.w r4, r3, #8
+; CHECK-NEXT:    sub.w r8, r12, lr
+; CHECK-NEXT:    add.w r5, r3, #8
+; CHECK-NEXT:    adds r6, r0, #3
+; CHECK-NEXT:    adds r7, r1, #1
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    adds r5, r0, #3
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    adds r6, r1, #1
 ; CHECK-NEXT:  .LBB7_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb r8, [r5, #-3]
+; CHECK-NEXT:    ldrb r9, [r6, #-3]
 ; CHECK-NEXT:    add.w r12, r12, #4
-; CHECK-NEXT:    ldrb r7, [r6, #-1]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-8]
-; CHECK-NEXT:    ldrb r8, [r5, #-2]
-; CHECK-NEXT:    ldrb r7, [r6], #4
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-4]
-; CHECK-NEXT:    ldrb r8, [r5, #-1]
-; CHECK-NEXT:    ldrb r7, [r6, #-3]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4]
-; CHECK-NEXT:    ldrb r8, [r5], #4
-; CHECK-NEXT:    ldrb r7, [r6, #-2]
-; CHECK-NEXT:    smlabb r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #4]
-; CHECK-NEXT:    adds r4, #16
-; CHECK-NEXT:    le lr, .LBB7_7
+; CHECK-NEXT:    ldrb r4, [r7, #-1]
+; CHECK-NEXT:    cmp r8, r12
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-8]
+; CHECK-NEXT:    ldrb r9, [r6, #-2]
+; CHECK-NEXT:    ldrb r4, [r7], #4
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-4]
+; CHECK-NEXT:    ldrb r9, [r6, #-1]
+; CHECK-NEXT:    ldrb r4, [r7, #-3]
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5]
+; CHECK-NEXT:    ldrb r9, [r6], #4
+; CHECK-NEXT:    ldrb r4, [r7, #-2]
+; CHECK-NEXT:    smlabb r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #4]
+; CHECK-NEXT:    add.w r5, r5, #16
+; CHECK-NEXT:    bne .LBB7_7
 ; CHECK-NEXT:  .LBB7_8: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r9, .LBB7_11
+; CHECK-NEXT:    wls lr, lr, .LBB7_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
 ; CHECK-NEXT:    add r0, r12
 ; CHECK-NEXT:    add r1, r12
 ; CHECK-NEXT:    add.w r3, r3, r12, lsl #2
-; CHECK-NEXT:    mov lr, r9
 ; CHECK-NEXT:  .LBB7_10: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb r6, [r0], #1
-; CHECK-NEXT:    ldrb r5, [r1], #1
-; CHECK-NEXT:    smlabb r6, r5, r6, r2
-; CHECK-NEXT:    str r6, [r3], #4
+; CHECK-NEXT:    ldrb r7, [r0], #1
+; CHECK-NEXT:    ldrb r6, [r1], #1
+; CHECK-NEXT:    smlabb r7, r6, r7, r2
+; CHECK-NEXT:    str r7, [r3], #4
 ; CHECK-NEXT:    le lr, .LBB7_10
 ; CHECK-NEXT:  .LBB7_11: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
@@ -991,37 +983,37 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    cmp.w r12, #0
 ; CHECK-NEXT:    beq.w .LBB9_11
 ; CHECK-NEXT:  @ %bb.1: @ %vector.memcheck
-; CHECK-NEXT:    add.w r4, r3, r12, lsl #2
-; CHECK-NEXT:    add.w r5, r1, r12, lsl #2
-; CHECK-NEXT:    cmp r4, r1
-; CHECK-NEXT:    add.w r6, r0, r12, lsl #2
-; CHECK-NEXT:    cset lr, hi
-; CHECK-NEXT:    cmp r5, r3
-; CHECK-NEXT:    cset r5, hi
-; CHECK-NEXT:    cmp r4, r0
-; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    add.w r5, r3, r12, lsl #2
+; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
+; CHECK-NEXT:    cmp r5, r1
+; CHECK-NEXT:    add.w r4, r0, r12, lsl #2
+; CHECK-NEXT:    cset r7, hi
 ; CHECK-NEXT:    cmp r6, r3
 ; CHECK-NEXT:    cset r6, hi
-; CHECK-NEXT:    ands r4, r6
-; CHECK-NEXT:    lsls r4, r4, #31
+; CHECK-NEXT:    cmp r5, r0
+; CHECK-NEXT:    cset r5, hi
+; CHECK-NEXT:    cmp r4, r3
+; CHECK-NEXT:    cset r4, hi
+; CHECK-NEXT:    ands r5, r4
+; CHECK-NEXT:    lsls r5, r5, #31
 ; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq.w r6, r5, lr
-; CHECK-NEXT:    lslseq.w r6, r6, #31
+; CHECK-NEXT:    andeq r7, r6
+; CHECK-NEXT:    lslseq.w r7, r7, #31
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    sub.w r6, r12, #1
-; CHECK-NEXT:    and r9, r12, #3
-; CHECK-NEXT:    cmp r6, #3
+; CHECK-NEXT:    sub.w r4, r12, #1
+; CHECK-NEXT:    and lr, r12, #3
+; CHECK-NEXT:    cmp r4, #3
 ; CHECK-NEXT:    bhs .LBB9_6
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    b .LBB9_8
 ; CHECK-NEXT:  .LBB9_4: @ %vector.ph
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB9_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    adds r7, #4
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vmlas.u32 q1, q0, r2
@@ -1029,51 +1021,47 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    letp lr, .LBB9_5
 ; CHECK-NEXT:    b .LBB9_11
 ; CHECK-NEXT:  .LBB9_6: @ %for.body.preheader.new
-; CHECK-NEXT:    bic r6, r12, #3
-; CHECK-NEXT:    movs r5, #1
-; CHECK-NEXT:    subs r6, #4
-; CHECK-NEXT:    add.w r4, r3, #8
+; CHECK-NEXT:    sub.w r8, r12, lr
+; CHECK-NEXT:    add.w r5, r3, #8
+; CHECK-NEXT:    add.w r6, r0, #8
+; CHECK-NEXT:    add.w r7, r1, #8
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    add.w r5, r0, #8
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    add.w r6, r1, #8
 ; CHECK-NEXT:  .LBB9_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r8, [r5, #-8]
+; CHECK-NEXT:    ldr r9, [r6, #-8]
 ; CHECK-NEXT:    add.w r12, r12, #4
-; CHECK-NEXT:    ldr r7, [r6, #-8]
-; CHECK-NEXT:    mla r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-8]
-; CHECK-NEXT:    ldr r8, [r5, #-4]
-; CHECK-NEXT:    ldr r7, [r6, #-4]
-; CHECK-NEXT:    mla r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #-4]
-; CHECK-NEXT:    ldr.w r8, [r5]
-; CHECK-NEXT:    ldr r7, [r6]
-; CHECK-NEXT:    mla r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4]
-; CHECK-NEXT:    ldr.w r8, [r5, #4]
-; CHECK-NEXT:    adds r5, #16
-; CHECK-NEXT:    ldr r7, [r6, #4]
-; CHECK-NEXT:    adds r6, #16
-; CHECK-NEXT:    mla r7, r7, r8, r2
-; CHECK-NEXT:    str r7, [r4, #4]
-; CHECK-NEXT:    adds r4, #16
-; CHECK-NEXT:    le lr, .LBB9_7
+; CHECK-NEXT:    ldr r4, [r7, #-8]
+; CHECK-NEXT:    cmp r8, r12
+; CHECK-NEXT:    mla r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-8]
+; CHECK-NEXT:    ldr r9, [r6, #-4]
+; CHECK-NEXT:    ldr r4, [r7, #-4]
+; CHECK-NEXT:    mla r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #-4]
+; CHECK-NEXT:    ldr.w r9, [r6]
+; CHECK-NEXT:    ldr r4, [r7]
+; CHECK-NEXT:    mla r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5]
+; CHECK-NEXT:    ldr.w r9, [r6, #4]
+; CHECK-NEXT:    add.w r6, r6, #16
+; CHECK-NEXT:    ldr r4, [r7, #4]
+; CHECK-NEXT:    add.w r7, r7, #16
+; CHECK-NEXT:    mla r4, r4, r9, r2
+; CHECK-NEXT:    str r4, [r5, #4]
+; CHECK-NEXT:    add.w r5, r5, #16
+; CHECK-NEXT:    bne .LBB9_7
 ; CHECK-NEXT:  .LBB9_8: @ %for.cond.cleanup.loopexit.unr-lcssa
-; CHECK-NEXT:    wls lr, r9, .LBB9_11
+; CHECK-NEXT:    wls lr, lr, .LBB9_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r3, r3, r12, lsl #2
-; CHECK-NEXT:    mov lr, r9
 ; CHECK-NEXT:  .LBB9_10: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r6, [r0], #4
-; CHECK-NEXT:    ldr r5, [r1], #4
-; CHECK-NEXT:    mla r6, r5, r6, r2
-; CHECK-NEXT:    str r6, [r3], #4
+; CHECK-NEXT:    ldr r7, [r0], #4
+; CHECK-NEXT:    ldr r6, [r1], #4
+; CHECK-NEXT:    mla r7, r6, r7, r2
+; CHECK-NEXT:    str r7, [r3], #4
 ; CHECK-NEXT:    le lr, .LBB9_10
 ; CHECK-NEXT:  .LBB9_11: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}

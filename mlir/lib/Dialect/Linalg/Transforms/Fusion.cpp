@@ -61,9 +61,9 @@ using llvm::dbgs;
 // by `permutationMap`.
 static void inferShapeComponents(AffineMap permutationMap,
                                  ArrayRef<Range> loopRanges,
-                                 SmallVectorImpl<Value> &offsets,
-                                 SmallVectorImpl<Value> &sizes,
-                                 SmallVectorImpl<Value> &strides) {
+                                 SmallVectorImpl<OpFoldResult> &offsets,
+                                 SmallVectorImpl<OpFoldResult> &sizes,
+                                 SmallVectorImpl<OpFoldResult> &strides) {
   assert(permutationMap.isProjectedPermutation() &&
          "expected some subset of a permutation map");
   SmallVector<Range, 4> shapeRanges(permutationMap.getNumResults());
@@ -101,7 +101,7 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
     AffineMap map = op.getIndexingMap(shapedOperandIdx);
     LLVM_DEBUG(llvm::dbgs() << "shapedOperandIdx: " << shapedOperandIdx
                             << " with indexingMap: " << map << "\n");
-    SmallVector<Value, 4> offsets, sizes, strides;
+    SmallVector<OpFoldResult, 4> offsets, sizes, strides;
     inferShapeComponents(map, loopRanges, offsets, sizes, strides);
     Value shape = en.value();
     Value sub = shape.getType().isa<MemRefType>()

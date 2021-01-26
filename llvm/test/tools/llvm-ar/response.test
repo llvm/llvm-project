@@ -34,8 +34,8 @@
 # RUN: echo -e 'rc %/t.a blah\\foo' > %t-rsp.txt
 # RUN: not llvm-ar --rsp-quoting=windows @%t-rsp.txt 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=WIN
-# WIN: error: blah\foo: {{.*}}{{[Nn]}}o such file or directory
+# WIN: error: blah\foo: {{[Nn]}}o such file or directory
 
 # RUN: not llvm-ar -rsp-quoting posix @%t-rsp.txt 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=POSIX
-# POSIX: error: blahfoo: {{.*}}{{[Nn]}}o such file or directory
+# POSIX: error: blahfoo: {{[Nn]}}o such file or directory

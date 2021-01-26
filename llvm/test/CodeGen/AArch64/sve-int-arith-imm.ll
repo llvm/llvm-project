@@ -593,7 +593,7 @@ define <vscale x 2 x i64> @mul_i64_range(<vscale x 2 x i64> %a) {
 
 define <vscale x 16 x i8> @asr_i8(<vscale x 16 x i8> %a){
 ; CHECK-LABEL: @asr_i8
-; CHECK-DAG: asr z0.b, z0.b, #8
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 16 x i8> undef, i8 8, i32 0
   %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
@@ -603,7 +603,7 @@ define <vscale x 16 x i8> @asr_i8(<vscale x 16 x i8> %a){
 
 define <vscale x 8 x i16> @asr_i16(<vscale x 8 x i16> %a){
 ; CHECK-LABEL: @asr_i16
-; CHECK-DAG: asr z0.h, z0.h, #16
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 8 x i16> undef, i16 16, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
@@ -613,7 +613,7 @@ define <vscale x 8 x i16> @asr_i16(<vscale x 8 x i16> %a){
 
 define <vscale x 4 x i32> @asr_i32(<vscale x 4 x i32> %a){
 ; CHECK-LABEL: @asr_i32
-; CHECK-DAG: asr z0.s, z0.s, #32
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 4 x i32> undef, i32 32, i32 0
   %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -623,7 +623,7 @@ define <vscale x 4 x i32> @asr_i32(<vscale x 4 x i32> %a){
 
 define <vscale x 2 x i64> @asr_i64(<vscale x 2 x i64> %a){
 ; CHECK-LABEL: @asr_i64
-; CHECK-DAG: asr z0.d, z0.d, #64
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 64, i32 0
   %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
@@ -677,7 +677,7 @@ define <vscale x 2 x i64> @lsl_i64(<vscale x 2 x i64> %a){
 
 define <vscale x 16 x i8> @lsr_i8(<vscale x 16 x i8> %a){
 ; CHECK-LABEL: @lsr_i8
-; CHECK-DAG: lsr z0.b, z0.b, #8
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 16 x i8> undef, i8 8, i32 0
   %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
@@ -687,7 +687,7 @@ define <vscale x 16 x i8> @lsr_i8(<vscale x 16 x i8> %a){
 
 define <vscale x 8 x i16> @lsr_i16(<vscale x 8 x i16> %a){
 ; CHECK-LABEL: @lsr_i16
-; CHECK-DAG: lsr z0.h, z0.h, #16
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 8 x i16> undef, i16 16, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
@@ -697,7 +697,7 @@ define <vscale x 8 x i16> @lsr_i16(<vscale x 8 x i16> %a){
 
 define <vscale x 4 x i32> @lsr_i32(<vscale x 4 x i32> %a){
 ; CHECK-LABEL: @lsr_i32
-; CHECK-DAG: lsr z0.s, z0.s, #32
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 4 x i32> undef, i32 32, i32 0
   %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -707,7 +707,7 @@ define <vscale x 4 x i32> @lsr_i32(<vscale x 4 x i32> %a){
 
 define <vscale x 2 x i64> @lsr_i64(<vscale x 2 x i64> %a){
 ; CHECK-LABEL: @lsr_i64
-; CHECK-DAG: lsr z0.d, z0.d, #64
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 64, i32 0
   %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer

@@ -7,6 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @use(i8 zeroext)
 declare void @use_p(i8*)
 
+; nuw needs to be dropped when switching to post-inc comparison.
 define i8 @drop_nuw() {
 ; CHECK-LABEL: @drop_nuw(
 ; CHECK-NEXT:  entry:
@@ -14,7 +15,7 @@ define i8 @drop_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i8 [[IV]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -36,6 +37,7 @@ exit:
   ret i8 %iv
 }
 
+; nsw needs to be dropped when switching to post-inc comparison.
 define i8 @drop_nsw() {
 ; CHECK-LABEL: @drop_nsw(
 ; CHECK-NEXT:  entry:
@@ -43,7 +45,7 @@ define i8 @drop_nsw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 127, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i8 [[IV]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i8 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 127
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -65,6 +67,7 @@ exit:
   ret i8 %iv
 }
 
+; Comparison already in post-inc form, no need to drop nuw.
 define i8 @already_postinc() {
 ; CHECK-LABEL: @already_postinc(
 ; CHECK-NEXT:  entry:

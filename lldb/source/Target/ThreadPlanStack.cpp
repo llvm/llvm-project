@@ -369,6 +369,11 @@ ThreadPlan *ThreadPlanStack::GetInnermostExpression() const {
   return nullptr;
 }
 
+void ThreadPlanStack::ClearThreadCache() {
+  for (lldb::ThreadPlanSP thread_plan_sp : m_plans)
+    thread_plan_sp->ClearThreadCache();
+}
+
 void ThreadPlanStack::WillResume() {
   m_completed_plans.clear();
   m_discarded_plans.clear();

@@ -98,7 +98,7 @@ If:
             YAML.range());
 }
 
-TEST(ParseYAML, Diagnostics) {
+TEST(ParseYAML, ConfigDiagnostics) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 If:

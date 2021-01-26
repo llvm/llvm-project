@@ -16,6 +16,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -153,11 +154,19 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 AnalysisKey InlineAdvisorAnalysis::Key;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
-                                              InliningAdvisorMode Mode) {
+                                              InliningAdvisorMode Mode,
+                                              StringRef ReplayFile) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   switch (Mode) {
   case InliningAdvisorMode::Default:
     Advisor.reset(new DefaultInlineAdvisor(M, FAM, Params));
+    // Restrict replay to default advisor, ML advisors are stateful so
+    // replay will need augmentations to interleave with them correctly.
+    if (!ReplayFile.empty()) {
+      Advisor = std::make_unique<ReplayInlineAdvisor>(
+          M, FAM, M.getContext(), std::move(Advisor), ReplayFile,
+          /* EmitRemarks =*/true);
+    }
     break;
   case InliningAdvisorMode::Development:
 #ifdef LLVM_HAVE_TF_API
@@ -174,6 +183,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
 #endif
     break;
   }
+
   return !!Advisor;
 }
 

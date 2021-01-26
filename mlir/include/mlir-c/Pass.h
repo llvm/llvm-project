@@ -22,17 +22,16 @@ extern "C" {
 #endif
 
 //===----------------------------------------------------------------------===//
-/** Opaque type declarations.
- *
- * Types are exposed to C bindings as structs containing opaque pointers. They
- * are not supposed to be inspected from C. This allows the underlying
- * representation to change without affecting the API users. The use of structs
- * instead of typedefs enables some type safety as structs are not implicitly
- * convertible to each other.
- *
- * Instances of these types may or may not own the underlying object. The
- * ownership semantics is defined by how an instance of the type was obtained.
- */
+// Opaque type declarations.
+//
+// Types are exposed to C bindings as structs containing opaque pointers. They
+// are not supposed to be inspected from C. This allows the underlying
+// representation to change without affecting the API users. The use of structs
+// instead of typedefs enables some type safety as structs are not implicitly
+// convertible to each other.
+//
+// Instances of these types may or may not own the underlying object. The
+// ownership semantics is defined by how an instance of the type was obtained.
 //===----------------------------------------------------------------------===//
 
 #define DEFINE_C_API_STRUCT(name, storage)                                     \
@@ -66,42 +65,42 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
 
-/** Nest an OpPassManager under the top-level PassManager, the nested
- * passmanager will only run on operations matching the provided name.
- * The returned OpPassManager will be destroyed when the parent is destroyed.
- * To further nest more OpPassManager under the newly returned one, see
- * `mlirOpPassManagerNest` below. */
+/// Nest an OpPassManager under the top-level PassManager, the nested
+/// passmanager will only run on operations matching the provided name.
+/// The returned OpPassManager will be destroyed when the parent is destroyed.
+/// To further nest more OpPassManager under the newly returned one, see
+/// `mlirOpPassManagerNest` below.
 MLIR_CAPI_EXPORTED MlirOpPassManager mlirPassManagerGetNestedUnder(
     MlirPassManager passManager, MlirStringRef operationName);
 
-/** Nest an OpPassManager under the provided OpPassManager, the nested
- * passmanager will only run on operations matching the provided name.
- * The returned OpPassManager will be destroyed when the parent is destroyed. */
+/// Nest an OpPassManager under the provided OpPassManager, the nested
+/// passmanager will only run on operations matching the provided name.
+/// The returned OpPassManager will be destroyed when the parent is destroyed.
 MLIR_CAPI_EXPORTED MlirOpPassManager mlirOpPassManagerGetNestedUnder(
     MlirOpPassManager passManager, MlirStringRef operationName);
 
-/** Add a pass and transfer ownership to the provided top-level mlirPassManager.
- * If the pass is not a generic operation pass or a ModulePass, a new
- * OpPassManager is implicitly nested under the provided PassManager. */
+/// Add a pass and transfer ownership to the provided top-level mlirPassManager.
+/// If the pass is not a generic operation pass or a ModulePass, a new
+/// OpPassManager is implicitly nested under the provided PassManager.
 MLIR_CAPI_EXPORTED void mlirPassManagerAddOwnedPass(MlirPassManager passManager,
                                                     MlirPass pass);
 
-/** Add a pass and transfer ownership to the provided mlirOpPassManager. If the
- * pass is not a generic operation pass or matching the type of the provided
- * PassManager, a new OpPassManager is implicitly nested under the provided
- * PassManager. */
+/// Add a pass and transfer ownership to the provided mlirOpPassManager. If the
+/// pass is not a generic operation pass or matching the type of the provided
+/// PassManager, a new OpPassManager is implicitly nested under the provided
+/// PassManager.
 MLIR_CAPI_EXPORTED void
 mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager, MlirPass pass);
 
-/** Print a textual MLIR pass pipeline by sending chunks of the string
- * representation and forwarding `userData to `callback`. Note that the callback
- * may be called several times with consecutive chunks of the string. */
+/// Print a textual MLIR pass pipeline by sending chunks of the string
+/// representation and forwarding `userData to `callback`. Note that the
+/// callback may be called several times with consecutive chunks of the string.
 MLIR_CAPI_EXPORTED void mlirPrintPassPipeline(MlirOpPassManager passManager,
                                               MlirStringCallback callback,
                                               void *userData);
 
-/** Parse a textual MLIR pass pipeline and add it to the provided OpPassManager.
- */
+/// Parse a textual MLIR pass pipeline and add it to the provided OpPassManager.
+
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline);
 

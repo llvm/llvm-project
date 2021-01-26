@@ -96,10 +96,37 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-NOEXCEPT-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fsanitize=address \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions -fsanitize=address \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-NOEXCEPT-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
+// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables -fexperimental-relative-c++-abi-vtables \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
 // CHECK-MULTILIB-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}asan"
 // CHECK-MULTILIB-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}noexcept"
 // CHECK-MULTILIB-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}asan+noexcept"
 // CHECK-MULTILIB-RELATIVE-VTABLES-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}relative-vtables"
 // CHECK-MULTILIB-RELATIVE-VTABLES-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}relative-vtables+noexcept"
+// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}relative-vtables+asan"
+// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++{{/|\\\\}}relative-vtables+asan+noexcept"
 // CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}c++"

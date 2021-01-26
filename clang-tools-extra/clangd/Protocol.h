@@ -265,8 +265,6 @@ inline bool fromJSON(const llvm::json::Value &, NoParams &, llvm::json::Path) {
   return true;
 }
 using InitializedParams = NoParams;
-using ShutdownParams = NoParams;
-using ExitParams = NoParams;
 
 /// Defines how the host (editor) should sync document changes to the language
 /// server.
