@@ -35,8 +35,6 @@ public:
   ThreadPlanStack(const Thread &thread, bool make_empty = false);
   ~ThreadPlanStack() {}
 
-  enum StackKind { ePlans, eCompletedPlans, eDiscardedPlans };
-
   using PlanStack = std::vector<lldb::ThreadPlanSP>;
 
   void DumpThreadPlans(Stream &s, lldb::DescriptionLevel desc_level,
@@ -102,8 +100,6 @@ public:
   void ClearThreadCache();
 
 private:
-  const PlanStack &GetStackOfKind(ThreadPlanStack::StackKind kind) const;
-
   void PrintOneStack(Stream &s, llvm::StringRef stack_name,
                      const PlanStack &stack, lldb::DescriptionLevel desc_level,
                      bool include_internal) const;
