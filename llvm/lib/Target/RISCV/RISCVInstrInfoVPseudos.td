@@ -103,20 +103,6 @@ def FPList {
   list<FPR_Info> fpinfo = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
 }
 
-class getScalarSuffix<ValueType type> {
-  string suffix = !cond(!eq(type, XLenVT): "VX",
-                        !eq(type, f16): "VF_F16",
-                        !eq(type, f32): "VF_F32",
-                        !eq(type, f64): "VF_F64");
-}
-
-class getWScalarSuffix<ValueType type> {
-  string suffix = !cond(!eq(type, XLenVT): "WX",
-                        !eq(type, f16): "WF_F16",
-                        !eq(type, f32): "WF_F32",
-                        !eq(type, f64): "WF_F64");
-}
-
 class MxSet<int eew> {
   list<LMULInfo> m = !cond(!eq(eew, 8) : [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 16) : [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
@@ -186,6 +172,11 @@ class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
   // The pattern fragment which produces the AVL operand, representing the
   // "natural" vector length for this type. For scalable vectors this is VLMax.
   OutPatFrag AVL = VLMax;
+
+  string ScalarSuffix = !cond(!eq(Scal, XLenVT) : "X",
+                              !eq(Scal, f16) : "F16",
+                              !eq(Scal, f32) : "F32",
+                              !eq(Scal, f64) : "F64");
 }
 
 class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas, int Sew,
@@ -467,9 +458,9 @@ class PseudoToVInst<string PseudoInst> {
                  !subst("_B32", "",
                  !subst("_B64", "",
                  !subst("_MASK", "",
-                 !subst("_F16", "",
-                 !subst("_F32", "",
-                 !subst("_F64", "",
+                 !subst("F16", "F",
+                 !subst("F32", "F",
+                 !subst("F64", "F",
                  !subst("Pseudo", "", PseudoInst)))))))))))))))))));
 }
 
@@ -1408,8 +1399,8 @@ multiclass VPseudoBinaryV_VX<string Constraint = ""> {
 multiclass VPseudoBinaryV_VF<string Constraint = ""> {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
-      defm "_VF_" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
-                                         f.fprclass, m, Constraint>;
+      defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
+                                       f.fprclass, m, Constraint>;
 }
 
 multiclass VPseudoBinaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -1446,9 +1437,9 @@ multiclass VPseudoBinaryW_VX {
 multiclass VPseudoBinaryW_VF {
   foreach m = MxList.m[0-5] in
     foreach f = FPList.fpinfo[0-1] in
-      defm "_VF_" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
-                                         f.fprclass, m,
-                                         "@earlyclobber $rd">;
+      defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
+                                       f.fprclass, m,
+                                       "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryW_WV {
@@ -1466,9 +1457,9 @@ multiclass VPseudoBinaryW_WX {
 multiclass VPseudoBinaryW_WF {
   foreach m = MxList.m[0-5] in
     foreach f = FPList.fpinfo[0-1] in
-      defm "_WF_" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
-                                         f.fprclass, m,
-                                         "@earlyclobber $rd">;
+      defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
+                                       f.fprclass, m,
+                                       "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryV_WV {
@@ -1515,7 +1506,7 @@ multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
 multiclass VPseudoBinaryV_FM {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
-      def "_VFM_" # f.FX # "_" # m.MX :
+      def "_V" # f.FX # "M_" # m.MX :
         VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
                              m.vrclass, f.fprclass, m, /*CarryIn=*/1, "">;
 }
@@ -1544,7 +1535,7 @@ multiclass VPseudoUnaryV_F_NoDummyMask {
   foreach m = MxList.m in {
     foreach f = FPList.fpinfo in {
       let VLMul = m.value in {
-        def "_F_" # f.FX # "_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, f.fprclass>;
+        def "_" # f.FX # "_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, f.fprclass>;
       }
     }
   }
@@ -1613,7 +1604,7 @@ multiclass VPseudoBinaryM_VX {
 multiclass VPseudoBinaryM_VF {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
-      defm "_VF_" # f.FX :
+      defm "_V" # f.FX :
         VPseudoBinary<VR, m.vrclass, f.fprclass, m, "@earlyclobber $rd">;
 }
 
@@ -1731,8 +1722,8 @@ multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
 multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
-      defm "_VF_" # f.FX : VPseudoTernary<m.vrclass, f.fprclass, m.vrclass,
-                                          m, Constraint>;
+      defm "_V" # f.FX : VPseudoTernary<m.vrclass, f.fprclass, m.vrclass,
+                                        m, Constraint>;
 }
 
 multiclass VPseudoTernaryW_VV {
@@ -1751,8 +1742,8 @@ multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList.m[0-5] in
     foreach f = FPList.fpinfo[0-1] in
-      defm "_VF_" # f.FX : VPseudoTernary<m.wvrclass, f.fprclass, m.vrclass, m,
-                                          constraint>;
+      defm "_V" # f.FX : VPseudoTernary<m.wvrclass, f.fprclass, m.vrclass, m,
+                                        constraint>;
 }
 
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -2510,7 +2501,7 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
 multiclass VPatBinaryV_VX<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
-    defvar kind = getScalarSuffix<vti.Scalar>.suffix;
+    defvar kind = "V"#vti.ScalarSuffix;
     defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
                       vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
                       vti.SEW, vti.RegClass,
@@ -2560,7 +2551,7 @@ multiclass VPatBinaryW_VX<string intrinsic, string instruction,
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
-    defvar kind = getScalarSuffix<Vti.Scalar>.suffix;
+    defvar kind = "V"#Vti.ScalarSuffix;
     defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
                       Wti.Vector, Vti.Vector, Vti.Scalar, Vti.Mask,
                       Vti.SEW, Wti.RegClass,
@@ -2585,7 +2576,7 @@ multiclass VPatBinaryW_WX<string intrinsic, string instruction,
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
-    defvar kind = getWScalarSuffix<Vti.Scalar>.suffix;
+    defvar kind = "W"#Vti.ScalarSuffix;
     defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
                       Wti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
                       Vti.SEW, Wti.RegClass,
@@ -2610,7 +2601,7 @@ multiclass VPatBinaryV_WX<string intrinsic, string instruction,
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
-    defvar kind = getWScalarSuffix<Vti.Scalar>.suffix;
+    defvar kind = "W"#Vti.ScalarSuffix;
     defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
                       Vti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
                       Vti.SEW, Vti.RegClass,
@@ -2646,10 +2637,7 @@ multiclass VPatBinaryV_XM<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist = AllIntegerVectors> {
   foreach vti = vtilist in
     defm : VPatBinaryCarryIn<intrinsic, instruction,
-                             !cond(!eq(vti.Scalar, XLenVT): "VXM",
-                                   !eq(vti.Scalar, f16): "VFM_F16",
-                                   !eq(vti.Scalar, f32): "VFM_F32",
-                                   !eq(vti.Scalar, f64): "VFM_F64"),
+                             "V"#vti.ScalarSuffix#"M",
                              !if(CarryOut, vti.Mask, vti.Vector),
                              vti.Vector, vti.Scalar, vti.Mask,
                              vti.SEW, vti.LMul,
@@ -2702,7 +2690,7 @@ multiclass VPatBinaryM_VV<string intrinsic, string instruction,
 multiclass VPatBinaryM_VX<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {
-    defvar kind = getScalarSuffix<vti.Scalar>.suffix;
+    defvar kind = "V"#vti.ScalarSuffix;
     defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
                       vti.Mask, vti.Vector, vti.Scalar, vti.Mask,
                       vti.SEW, VR,
@@ -2844,7 +2832,7 @@ multiclass VPatTernaryV_VX_AAXA<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     defm : VPatTernary<intrinsic, instruction,
-                       getScalarSuffix<vti.Scalar>.suffix,
+                       "V"#vti.ScalarSuffix,
                        vti.Vector, vti.Scalar, vti.Vector, vti.Mask,
                        vti.SEW, vti.LMul, vti.RegClass,
                        vti.ScalarRegClass, vti.RegClass>;
@@ -2877,7 +2865,7 @@ multiclass VPatTernaryW_VX<string intrinsic, string instruction,
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
     defm : VPatTernary<intrinsic, instruction,
-                       getScalarSuffix<vti.Scalar>.suffix,
+                       "V"#vti.ScalarSuffix,
                        wti.Vector, vti.Scalar, vti.Vector,
                        vti.Mask, vti.SEW, vti.LMul,
                        wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
@@ -3662,14 +3650,14 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
     foreach f = FPList.fpinfo in {
       let VLMul = m.value in {
         let HasSEWOp = 1, BaseInstr = VFMV_F_S in
-        def PseudoVFMV_F_S # "_" # f.FX # "_" # m.MX :
+        def "PseudoVFMV_" # f.FX # "_S_" # m.MX :
                                           Pseudo<(outs f.fprclass:$rd),
                                                  (ins m.vrclass:$rs2,
                                                       ixlenimm:$sew),
                                                  []>, RISCVVPseudo;
         let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, WritesElement0 = 1,
             Constraints = "$rd = $rs1" in
-        def PseudoVFMV_S_F # "_" # f.FX #"_" # m.MX :
+        def "PseudoVFMV_S_" # f.FX # "_" # m.MX :
                                           Pseudo<(outs m.vrclass:$rd),
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
                                                       GPR:$vl, ixlenimm:$sew),
@@ -4185,10 +4173,7 @@ foreach fvti = AllFloatVectors in {
 
   def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), GPR:$vl)),
-            (!cast<Instruction>("PseudoVFMV_V_F_" #
-                                !cond(!eq(fvti.Scalar, f16): "F16_",
-                                      !eq(fvti.Scalar, f32): "F32_",
-                                      !eq(fvti.Scalar, f64): "F64_") #
+            (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
                                 fvti.LMul.MX)
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
              (NoX0 GPR:$vl), fvti.SEW)>;
@@ -4348,20 +4333,14 @@ foreach vti = AllIntegerVectors in {
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 foreach fvti = AllFloatVectors in {
-  defvar instr = !cast<Instruction>("PseudoVFMV_F_S_" #
-                                    !cond(!eq(fvti.Scalar, f16): "F16_",
-                                          !eq(fvti.Scalar, f32): "F32_",
-                                          !eq(fvti.Scalar, f64): "F64_") #
+  defvar instr = !cast<Instruction>("PseudoVFMV_"#fvti.ScalarSuffix#"_S_" #
                                     fvti.LMul.MX);
   def : Pat<(fvti.Scalar (int_riscv_vfmv_f_s (fvti.Vector fvti.RegClass:$rs2))),
                          (instr $rs2, fvti.SEW)>;
 
   def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), GPR:$vl)),
-            (!cast<Instruction>("PseudoVFMV_S_F_" #
-                                !cond(!eq(fvti.Scalar, f16): "F16_",
-                                      !eq(fvti.Scalar, f32): "F32_",
-                                      !eq(fvti.Scalar, f64): "F64_") #
+            (!cast<Instruction>("PseudoVFMV_S_"#fvti.ScalarSuffix#"_" #
                                 fvti.LMul.MX)
              (fvti.Vector $rs1),
              (fvti.Scalar fvti.ScalarRegClass:$rs2),
