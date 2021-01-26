@@ -200,9 +200,10 @@ public:
   Expected<std::vector<VerNeed>> getVersionDependencies(
       const Elf_Shdr &Sec,
       WarningHandler WarnHandler = &defaultWarningHandler) const;
-  Expected<StringRef> getSymbolVersionByIndex(
-      uint32_t SymbolVersionIndex, bool &IsDefault,
-      SmallVector<Optional<VersionEntry>, 0> &VersionMap) const;
+  Expected<StringRef>
+  getSymbolVersionByIndex(uint32_t SymbolVersionIndex, bool &IsDefault,
+                          SmallVector<Optional<VersionEntry>, 0> &VersionMap,
+                          Optional<bool> IsSymHidden) const;
 
   Expected<StringRef>
   getStringTable(const Elf_Shdr &Section,
@@ -741,7 +742,8 @@ Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr &Section,
 template <typename ELFT>
 Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
     uint32_t SymbolVersionIndex, bool &IsDefault,
-    SmallVector<Optional<VersionEntry>, 0> &VersionMap) const {
+    SmallVector<Optional<VersionEntry>, 0> &VersionMap,
+    Optional<bool> IsSymHidden) const {
   size_t VersionIndex = SymbolVersionIndex & llvm::ELF::VERSYM_VERSION;
 
   // Special markers for unversioned symbols.
@@ -757,10 +759,11 @@ Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
                        Twine(VersionIndex) + " which is missing");
 
   const VersionEntry &Entry = *VersionMap[VersionIndex];
-  if (Entry.IsVerDef)
-    IsDefault = !(SymbolVersionIndex & llvm::ELF::VERSYM_HIDDEN);
-  else
+  // A default version (@@) is only available for defined symbols.
+  if (!Entry.IsVerDef || IsSymHidden.getValueOr(false))
     IsDefault = false;
+  else
+    IsDefault = !(SymbolVersionIndex & llvm::ELF::VERSYM_HIDDEN);
   return Entry.Name.c_str();
 }
 
