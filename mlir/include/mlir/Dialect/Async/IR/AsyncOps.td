@@ -13,7 +13,8 @@
 #ifndef ASYNC_OPS
 #define ASYNC_OPS
 
-include "mlir/Dialect/Async/IR/AsyncBase.td"
+include "mlir/Dialect/Async/IR/AsyncDialect.td"
+include "mlir/Dialect/Async/IR/AsyncTypes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -75,7 +76,7 @@ def Async_ExecuteOp :
                        Variadic<Async_AnyValueOrTokenType>:$operands);
 
   let results = (outs Async_TokenType:$token,
-                      Variadic<Async_AnyValueType>:$results);
+                      Variadic<Async_ValueType>:$results);
   let regions = (region SizedRegion<1>:$body);
 
   let printer = [{ return ::print(p, *this); }];
@@ -398,7 +399,7 @@ def Async_RuntimeStoreOp : Async_Op<"runtime.store",
   }];
 
   let arguments = (ins AnyType:$value,
-                       Async_AnyValueType:$storage);
+                       Async_ValueType:$storage);
   let assemblyFormat = "$value `,` $storage attr-dict `:` type($storage)";
 }
 
@@ -412,7 +413,7 @@ def Async_RuntimeLoadOp : Async_Op<"runtime.load",
     async.value storage.
   }];
 
-  let arguments = (ins Async_AnyValueType:$storage);
+  let arguments = (ins Async_ValueType:$storage);
   let results = (outs AnyType:$result);
   let assemblyFormat = "$storage attr-dict `:` type($storage)";
 }
