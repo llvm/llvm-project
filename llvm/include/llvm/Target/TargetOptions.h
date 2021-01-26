@@ -146,6 +146,10 @@ namespace llvm {
     /// optimization should be disabled for the given machine function.
     bool DisableFramePointerElim(const MachineFunction &MF) const;
 
+    /// If greater than 0, override the default value of
+    /// MCAsmInfo::BinutilsVersion.
+    std::pair<int, int> BinutilsVersion{0, 0};
+
     /// UnsafeFPMath - This flag is enabled when the
     /// -enable-unsafe-fp-math flag is specified on the command line.  When
     /// this flag is off (the default), the code generator is not allowed to

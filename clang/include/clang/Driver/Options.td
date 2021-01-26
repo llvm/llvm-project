@@ -3969,6 +3969,13 @@ defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimizati
 
 def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
 
+// The default value matches BinutilsVersion in MCAsmInfo.h.
+def fbinutils_version_EQ : Joined<["-"], "fbinutils-version=">,
+  MetaVarName<"<major.minor>">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Produced object files can use all ELF features supported by this "
+  "binutils version and newer. If -fno-integrated-as is specified, the "
+  "generated assembly will consider GNU as support. 'none' means that all ELF "
+  "features can be used, regardless of binutils support. Defaults to 2.26.">;
 def fuse_ld_EQ : Joined<["-"], "fuse-ld=">, Group<f_Group>, Flags<[CoreOption, LinkOption]>;
 def ld_path_EQ : Joined<["--"], "ld-path=">, Group<Link_Group>;
 
