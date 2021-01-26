@@ -383,8 +383,34 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
     return false;
   };
 
+  auto supportedHalfPrecisionOp = [](Instruction *Inst) {
+    switch (Inst->getOpcode()) {
+    default:
+      return false;
+    case Instruction::FPTrunc:
+    case Instruction::FPExt:
+    case Instruction::Load:
+    case Instruction::Store:
+    case Instruction::FPToUI:
+    case Instruction::UIToFP:
+    case Instruction::FPToSI:
+    case Instruction::SIToFP:
+      return true;
+    }
+  };
+
   for (BasicBlock::iterator J = BB->begin(), JE = BB->end();
        J != JE; ++J) {
+    // There are no direct operations on half precision so assume that
+    // anything with that type requires a call except for a few select
+    // operations with Power9.
+    if (Instruction *CurrInst = dyn_cast<Instruction>(J)) {
+      for (const auto &Op : CurrInst->operands()) {
+        if (Op->getType()->getScalarType()->isHalfTy() ||
+            CurrInst->getType()->getScalarType()->isHalfTy())
+          return !(ST->isISA3_0() && supportedHalfPrecisionOp(CurrInst));
+      }
+    }
     if (CallInst *CI = dyn_cast<CallInst>(J)) {
       // Inline ASM is okay, unless it clobbers the ctr register.
       if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
@@ -628,10 +654,6 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           CI->getDestTy()->getScalarType()->isPPC_FP128Ty() ||
           isLargeIntegerTy(!TM.isPPC64(), CI->getSrcTy()->getScalarType()) ||
           isLargeIntegerTy(!TM.isPPC64(), CI->getDestTy()->getScalarType()))
-        return true;
-      if (!ST->isISA3_0() &&
-          (CI->getSrcTy()->getScalarType()->isHalfTy() ||
-           CI->getDestTy()->getScalarType()->isHalfTy()))
         return true;
     } else if (isLargeIntegerTy(!TM.isPPC64(),
                                 J->getType()->getScalarType()) &&
