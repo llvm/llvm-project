@@ -23,7 +23,7 @@ def parse_args():
             metavar="N",
             help="Number of workers used for testing",
             type=_positive_int,
-            default=lit.util.usable_core_count())
+            default=lit.util.detectCPUs())
     parser.add_argument("--config-prefix",
             dest="configPrefix",
             metavar="NAME",
