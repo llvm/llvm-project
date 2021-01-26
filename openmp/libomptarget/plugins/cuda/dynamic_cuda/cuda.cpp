@@ -93,7 +93,7 @@ CUresult cuInit(unsigned X) {
   // Note: Called exactly once from cuda rtl.cpp in a global constructor so
   // does not need to handle being called repeatedly or concurrently
   if (!checkForCUDA()) {
-    return CUDA_ERROR_INVALID_HANDLE;
+    return CUDA_ERROR_INVALID_VALUE;
   }
   return dlwrap_cuInit(X);
 }

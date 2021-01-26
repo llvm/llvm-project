@@ -26,7 +26,6 @@ typedef struct CUstream_st *CUstream;
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_INVALID_VALUE = 1,
-  CUDA_ERROR_INVALID_HANDLE = 400,
 } CUresult;
 
 typedef enum CUstream_flags_enum {
