@@ -148,9 +148,9 @@ public:
     return *this;
   }
 
-  void AppendSearchPathDirectory(std::string); // new last directory
-  const SourceFile *Open(std::string path, llvm::raw_ostream &error,
-      const std::optional<std::string> &prependPath);
+  void PushSearchPathDirectory(std::string);
+  std::string PopSearchPathDirectory();
+  const SourceFile *Open(std::string path, llvm::raw_ostream &error);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
 
   ProvenanceRange AddIncludedFile(
@@ -210,7 +210,7 @@ private:
   ProvenanceRange range_;
   std::map<char, Provenance> compilerInsertionProvenance_;
   std::vector<std::unique_ptr<SourceFile>> ownedSourceFiles_;
-  std::list<std::string> searchPath_;
+  std::vector<std::string> searchPath_;
   Encoding encoding_{Encoding::UTF_8};
 };
 
