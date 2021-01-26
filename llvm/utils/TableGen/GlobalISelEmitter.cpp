@@ -5431,8 +5431,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
     // added rules out of it and make sure to re-create the group to properly
     // re-initialize it:
     if (CurrentGroup->size() < 2)
-      for (Matcher *M : CurrentGroup->matchers())
-        OptRules.push_back(M);
+      append_range(OptRules, CurrentGroup->matchers());
     else {
       CurrentGroup->finalize();
       OptRules.push_back(CurrentGroup.get());
@@ -5691,8 +5690,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Emit a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects;
-  for (const auto &Ty : KnownTypes)
-    TypeObjects.push_back(Ty);
+  append_range(TypeObjects, KnownTypes);
   llvm::sort(TypeObjects);
   OS << "// LLT Objects.\n"
      << "enum {\n";
