@@ -316,11 +316,6 @@ EXTERN int omp_get_team_num() {
   return rc;
 }
 
-EXTERN int omp_is_initial_device(void) {
-  PRINT0(LD_IO, "call omp_is_initial_device() returns 0\n");
-  return 0; // 0 by def on device
-}
-
 // Unspecified on the device.
 EXTERN int omp_get_initial_device(void) {
   PRINT0(LD_IO, "call omp_get_initial_device() returns 0\n");
