@@ -710,7 +710,8 @@ allTargetDecls(const DynTypedNode &N) {
     Finder.add(CCI, Flags);
   else if (const TemplateArgumentLoc *TAL = N.get<TemplateArgumentLoc>())
     Finder.add(TAL->getArgument(), Flags);
-
+  else if (const CXXBaseSpecifier *CBS = N.get<CXXBaseSpecifier>())
+    Finder.add(CBS->getTypeSourceInfo()->getType(), Flags);
   return Finder.takeDecls();
 }
 
