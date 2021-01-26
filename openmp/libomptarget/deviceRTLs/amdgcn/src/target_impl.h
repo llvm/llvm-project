@@ -26,7 +26,8 @@
 #define DEVICE __attribute__((device))
 #define INLINE inline DEVICE
 #define NOINLINE __attribute__((noinline)) DEVICE
-#define SHARED __attribute__((shared))
+#define SHARED(NAME) __attribute__((shared)) NAME
+#define EXTERN_SHARED(NAME) __attribute__((shared)) NAME
 #define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////
