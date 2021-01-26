@@ -223,13 +223,13 @@ bb:
 define amdgpu_kernel void @scalar_to_vector_test6(<2 x half> addrspace(1)* %out, i8 zeroext %val) nounwind {
 ; SI-LABEL: scalar_to_vector_test6:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s2
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: scalar_to_vector_test6:
