@@ -2268,17 +2268,6 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   This option currently works with ``-fprofile-arcs`` and ``-fprofile-instr-generate``,
   but not with ``-fprofile-generate``.
 
-.. option:: -fprofile-list=<pathname>
-
-  This option can be used to apply profile instrumentation only to selected
-  files or functions. ``pathname`` specifies a file in the sanitizer special
-  case list format which selects which files and functions to instrument.
-
-  .. code-block:: console
-
-    $ echo "fun:test" > fun.list
-    $ clang++ -O2 -fprofile-instr-generate -fprofile-list=fun.list code.cc -o code
-
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3751,8 +3740,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Use instrumentation data for profile-guided optimization
       -fprofile-remapping-file=<file>
                               Use the remappings described in <file> to match the profile data against names in the program
-      -fprofile-list=<file>
-                              Filename defining the list of functions/files to instrument
       -fsanitize-address-field-padding=<value>
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping

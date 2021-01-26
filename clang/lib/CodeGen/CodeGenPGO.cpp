@@ -811,9 +811,6 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   if (isa<CXXDestructorDecl>(D) && GD.getDtorType() != Dtor_Base)
     return;
 
-  if (Fn->hasFnAttribute(llvm::Attribute::NoProfile))
-    return;
-
   CGM.ClearUnusedCoverageMapping(D);
   setFuncName(Fn);
 
