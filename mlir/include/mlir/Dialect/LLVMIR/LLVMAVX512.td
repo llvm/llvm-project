@@ -28,25 +28,33 @@ def LLVMAVX512_Dialect : Dialect {
 // MLIR LLVM AVX512 intrinsics using the MLIR LLVM Dialect type system
 //----------------------------------------------------------------------------//
 
-class LLVMAVX512_IntrOp<string mnemonic, list<OpTrait> traits = []> :
+class LLVMAVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
   LLVM_IntrOpBase<LLVMAVX512_Dialect, mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
-                  [], [], traits, 1>;
+                  [], [], traits, numResults>;
 
 def LLVM_x86_avx512_mask_rndscale_ps_512 :
-  LLVMAVX512_IntrOp<"mask.rndscale.ps.512">,
+  LLVMAVX512_IntrOp<"mask.rndscale.ps.512", 1>,
   Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type)>;
 
 def LLVM_x86_avx512_mask_rndscale_pd_512 :
-  LLVMAVX512_IntrOp<"mask.rndscale.pd.512">,
+  LLVMAVX512_IntrOp<"mask.rndscale.pd.512", 1>,
   Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type)>;
 
 def LLVM_x86_avx512_mask_scalef_ps_512 :
-  LLVMAVX512_IntrOp<"mask.scalef.ps.512">,
+  LLVMAVX512_IntrOp<"mask.scalef.ps.512", 1>,
   Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type)>;
 
 def LLVM_x86_avx512_mask_scalef_pd_512 :
-  LLVMAVX512_IntrOp<"mask.scalef.pd.512">,
+  LLVMAVX512_IntrOp<"mask.scalef.pd.512", 1>,
   Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type, LLVM_Type)>;
+
+def LLVM_x86_avx512_vp2intersect_d_512 :
+  LLVMAVX512_IntrOp<"vp2intersect.d.512", 2>,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def LLVM_x86_avx512_vp2intersect_q_512 :
+  LLVMAVX512_IntrOp<"vp2intersect.q.512", 2>,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 #endif // AVX512_OPS
