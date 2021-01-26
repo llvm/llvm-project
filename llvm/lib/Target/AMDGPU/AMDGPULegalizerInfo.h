@@ -23,6 +23,7 @@ namespace llvm {
 class GCNTargetMachine;
 class LLVMContext;
 class GCNSubtarget;
+class MachineIRBuilder;
 
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
