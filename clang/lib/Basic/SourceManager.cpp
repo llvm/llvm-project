@@ -534,11 +534,8 @@ FileID SourceManager::createFileID(const FileEntry *SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID, unsigned LoadedOffset) {
-  assert(SourceFile && "Null source file!");
-  SrcMgr::ContentCache &IR =
-      getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
-  return createFileIDImpl(IR, SourceFile->getName(), IncludePos, FileCharacter,
-                          LoadedID, LoadedOffset);
+  return createFileID(SourceFile->getLastRef(), IncludePos, FileCharacter,
+                      LoadedID, LoadedOffset);
 }
 
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
