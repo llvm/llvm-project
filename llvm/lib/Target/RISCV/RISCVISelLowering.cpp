@@ -1619,7 +1619,7 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG,
   SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
   SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
   // ReplaceNodeResults requires we maintain the same type for the return value.
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+  return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
 }
 
 // Converts the given 32-bit operation to a i64 operation with signed extension
