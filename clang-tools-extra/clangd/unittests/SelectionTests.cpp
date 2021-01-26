@@ -261,6 +261,27 @@ TEST(SelectionTest, CommonAncestor) {
           )cpp",
           "StringLiteral", // Not DeclRefExpr to operator()!
       },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : [[v^ir^tual private Foo]] {};
+          )cpp",
+          "CXXBaseSpecifier",
+      },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : private [[Fo^o]] {};
+          )cpp",
+          "RecordTypeLoc",
+      },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : [[Fo^o]] {};
+          )cpp",
+          "RecordTypeLoc",
+      },
 
       // Point selections.
       {"void foo() { [[^foo]](); }", "DeclRefExpr"},
