@@ -456,14 +456,15 @@ class PseudoToVInst<string PseudoInst> {
 }
 
 class ToLowerCase<string Upper> {
-  string L = !subst("VLSEG", "vlseg",
+  string L = !subst("FF", "ff",
+             !subst("VLSEG", "vlseg",
              !subst("VLSSEG", "vlsseg",
              !subst("VSSEG", "vsseg",
              !subst("VSSSEG", "vssseg",
              !subst("VLOXSEG", "vloxseg",
              !subst("VLUXSEG", "vluxseg",
              !subst("VSOXSEG", "vsoxseg",
-             !subst("VSUXSEG", "vsuxseg", Upper))))))));
+             !subst("VSUXSEG", "vsuxseg", Upper)))))))));
 }
 
 // Example: PseudoVLSEG2E32_V_M2 -> int_riscv_vlseg2
@@ -1744,15 +1745,18 @@ multiclass VPseudoConversionV_W {
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>;
 }
 
-multiclass VPseudoUSSegLoad {
+multiclass VPseudoUSSegLoad<bit isFF> {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       let VLMul = lmul.value in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
-          def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegLoadNoMask<vreg, eew>;
-          def nf # "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSSegLoadMask<vreg, eew>;
+          defvar FFStr = !if(isFF, "FF", "");
+          def nf # "E" # eew # FFStr # "_V_" # LInfo :
+            VPseudoUSSegLoadNoMask<vreg, eew>;
+          def nf # "E" # eew # FFStr # "_V_" # LInfo # "_MASK" :
+            VPseudoUSSegLoadMask<vreg, eew>;
         }
       }
     }
@@ -3086,7 +3090,7 @@ foreach eew = EEWList in {
 //===----------------------------------------------------------------------===//
 // 7.8. Vector Load/Store Segment Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVLSEG : VPseudoUSSegLoad;
+defm PseudoVLSEG : VPseudoUSSegLoad</*fault-only-first*/false>;
 defm PseudoVLSSEG : VPseudoSSegLoad;
 defm PseudoVLOXSEG : VPseudoISegLoad;
 defm PseudoVLUXSEG : VPseudoISegLoad;
@@ -3094,6 +3098,10 @@ defm PseudoVSSEG : VPseudoUSSegStore;
 defm PseudoVSSSEG : VPseudoSSegStore;
 defm PseudoVSOXSEG : VPseudoISegStore;
 defm PseudoVSUXSEG : VPseudoISegStore;
+
+// vlseg<nf>e<eew>ff.v may update VL register
+let hasSideEffects = 1, Defs = [VL] in
+defm PseudoVLSEG : VPseudoUSSegLoad</*fault-only-first*/true>;
 
 //===----------------------------------------------------------------------===//
 // 8. Vector AMO Operations

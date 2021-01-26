@@ -524,6 +524,30 @@ let TargetPrefix = "riscv" in {
                                  llvm_anyint_ty]),
                     [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic;
 
+  // For unit stride fault-only-first segment load
+  // Input: (pointer, vl)
+  // Output: (data, vl)
+  // NOTE: We model this with default memory properties since we model writing
+  // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
+  class RISCVUSSegLoadFF<int nf>
+        : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
+                                !add(nf, -1)), [llvm_anyint_ty]),
+                    [LLVMPointerToElt<0>, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic;
+  // For unit stride fault-only-first segment load with mask
+  // Input: (maskedoff, pointer, mask, vl)
+  // Output: (data, vl)
+  // NOTE: We model this with default memory properties since we model writing
+  // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
+  class RISCVUSSegLoadFFMask<int nf>
+        : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
+                                !add(nf, -1)), [llvm_anyint_ty]),
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                     [LLVMPointerToElt<0>,
+                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                      LLVMMatchType<1>]),
+                    [NoCapture<ArgIndex<nf>>]>, RISCVVIntrinsic;
+
   // For stride segment load
   // Input: (pointer, offset, vl)
   class RISCVSSegLoad<int nf>
@@ -730,6 +754,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVUSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVUSSegLoad<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVUSSegLoadMask<nf>;
+  }
+  multiclass RISCVUSSegLoadFF<int nf> {
+    def "int_riscv_" # NAME : RISCVUSSegLoadFF<nf>;
+    def "int_riscv_" # NAME # "_mask" : RISCVUSSegLoadFFMask<nf>;
   }
   multiclass RISCVSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVSSegLoad<nf>;
@@ -1048,6 +1076,7 @@ let TargetPrefix = "riscv" in {
 
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
     defm vlseg # nf : RISCVUSSegLoad<nf>;
+    defm vlseg # nf # ff : RISCVUSSegLoadFF<nf>;
     defm vlsseg # nf : RISCVSSegLoad<nf>;
     defm vloxseg # nf : RISCVISegLoad<nf>;
     defm vluxseg # nf : RISCVISegLoad<nf>;
