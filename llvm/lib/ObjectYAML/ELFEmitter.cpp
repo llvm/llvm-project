@@ -762,6 +762,12 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         SHeader.sh_link = Link;
     }
 
+    if (Sec->EntSize)
+      SHeader.sh_entsize = *Sec->EntSize;
+    else
+      SHeader.sh_entsize = ELFYAML::getDefaultShEntSize<ELFT>(
+          Doc.Header.Machine.getValueOr(ELF::EM_NONE), Sec->Type, Sec->Name);
+
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
     // in the YAML, we need to write them here. This ensures the file offset
@@ -786,12 +792,6 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, Sec->Offset);
 
     assignSectionAddress(SHeader, Sec);
-
-    if (Sec->EntSize)
-      SHeader.sh_entsize = *Sec->EntSize;
-    else
-      SHeader.sh_entsize = ELFYAML::getDefaultShEntSize<ELFT>(
-          Doc.Header.Machine.getValueOr(ELF::EM_NONE), Sec->Type, Sec->Name);
 
     if (IsFirstUndefSection) {
       if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
@@ -970,9 +970,6 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   // then we should set the fields requested.
   SHeader.sh_info = (RawSec && RawSec->Info) ? (unsigned)(*RawSec->Info)
                                              : findFirstNonGlobal(Symbols) + 1;
-  SHeader.sh_entsize = (YAMLSec && YAMLSec->EntSize)
-                           ? (uint64_t)(*YAMLSec->EntSize)
-                           : sizeof(Elf_Sym);
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 8;
 
   assignSectionAddress(SHeader, YAMLSec);
@@ -1014,9 +1011,6 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
       STB.write(*OS);
     SHeader.sh_size = STB.getSize();
   }
-
-  if (YAMLSec && YAMLSec->EntSize)
-    SHeader.sh_entsize = *YAMLSec->EntSize;
 
   if (RawSec && RawSec->Info)
     SHeader.sh_info = *RawSec->Info;
@@ -1083,11 +1077,6 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   else
     llvm_unreachable("debug sections can only be initialized via the 'DWARF' "
                      "entry or a RawContentSection");
-
-  if (YAMLSec && YAMLSec->EntSize)
-    SHeader.sh_entsize = *YAMLSec->EntSize;
-  else if (Name == ".debug_str")
-    SHeader.sh_entsize = 1;
 
   if (RawSec && RawSec->Info)
     SHeader.sh_info = *RawSec->Info;
