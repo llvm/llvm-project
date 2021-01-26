@@ -1204,7 +1204,7 @@ class AMDGPUBufferAtomicFP : Intrinsic <
    llvm_i32_ty,      // vindex(VGPR)
    llvm_i32_ty,      // offset(SGPR/VGPR/imm)
    llvm_i1_ty],      // slc(imm)
-  [ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
+  [ImmArg<ArgIndex<4>>, IntrWillReturn], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1, 0>;
 
 // Legacy form of the intrinsic. raw and struct forms should be preferred.
@@ -1289,7 +1289,7 @@ def int_amdgcn_s_getreg :
 def int_amdgcn_s_setreg :
   GCCBuiltin<"__builtin_amdgcn_s_setreg">,
   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty],
-  [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]
+  [IntrNoMem, IntrHasSideEffects, IntrWillReturn, ImmArg<ArgIndex<0>>]
 >;
 
 // int_amdgcn_s_getpc is provided to allow a specific style of position
@@ -1725,7 +1725,7 @@ def int_amdgcn_image_bvh_intersect_ray :
   Intrinsic<[llvm_v4i32_ty],
             [llvm_anyint_ty, llvm_float_ty, llvm_v4f32_ty, llvm_anyvector_ty,
              LLVMMatchType<1>, llvm_v4i32_ty],
-            [IntrReadMem]>;
+            [IntrReadMem, IntrWillReturn]>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
