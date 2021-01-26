@@ -4670,7 +4670,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Triple.isOSAIX() && Args.hasArg(options::OPT_maltivec)) {
-    if (Args.hasArg(options::OPT_mabi_EQ_vec_extabi)) {
+    if (Args.getLastArg(options::OPT_mabi_EQ_vec_extabi)) {
       CmdArgs.push_back("-mabi=vec-extabi");
     } else {
       D.Diag(diag::err_aix_default_altivec_abi);
@@ -4682,8 +4682,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Triple.isOSAIX())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << RawTriple.str();
-    if (!Args.hasArg(options::OPT_maltivec))
-      D.Diag(diag::err_aix_altivec);
+    if (A->getOption().getID() == options::OPT_mabi_EQ_vec_default)
+      D.Diag(diag::err_aix_default_altivec_abi);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {

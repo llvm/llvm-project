@@ -339,7 +339,6 @@ def VOP_MAC_LEGACY_F32 : VOP_MAC <f32>;
 class VOP_DOT_ACC<ValueType vt0, ValueType vt1> : VOP_MAC<vt0, vt1> {
   let HasClamp = 0;
   let HasExtSDWA = 0;
-  let HasModifiers = 1;
   let HasOpSel = 0;
   let IsPacked = 0;
 }
@@ -348,7 +347,11 @@ def VOP_DOT_ACC_F32_V2F16 : VOP_DOT_ACC<f32, v2f16> {
   let Src0ModDPP = FPVRegInputMods;
   let Src1ModDPP = FPVRegInputMods;
 }
-def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32>;
+
+def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
+  let HasSrc0Mods = 1;
+  let HasSrc1Mods = 1;
+}
 
 // Write out to vcc or arbitrary SGPR.
 def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], 0, /*EnableClamp=*/1> {

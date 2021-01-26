@@ -239,7 +239,7 @@ public:
       });
       for (auto DeinitFnAddr : *Deinitializers) {
         LLVM_DEBUG({
-          dbgs() << "  Running init " << formatv("{0:x16}", DeinitFnAddr)
+          dbgs() << "  Running deinit " << formatv("{0:x16}", DeinitFnAddr)
                  << "...\n";
         });
         auto *DeinitFn = jitTargetAddressToFunction<void (*)()>(DeinitFnAddr);
