@@ -156,28 +156,20 @@ const char &AllSources::operator[](Provenance at) const {
   return origin[origin.covers.MemberOffset(at)];
 }
 
-void AllSources::AppendSearchPathDirectory(std::string directory) {
+void AllSources::PushSearchPathDirectory(std::string directory) {
   // gfortran and ifort append to current path, PGI prepends
   searchPath_.push_back(directory);
 }
 
-const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
-    const std::optional<std::string> &prependPath) {
+std::string AllSources::PopSearchPathDirectory() {
+  std::string directory{searchPath_.back()};
+  searchPath_.pop_back();
+  return directory;
+}
+
+const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
-  if (prependPath) {
-    // Set to "." for the initial source file; set to the directory name
-    // of the including file for #include "quoted-file" directives &
-    // INCLUDE statements.
-    searchPath_.push_front(*prependPath);
-  }
-  std::optional<std::string> found{LocateSourceFile(path, searchPath_)};
-  if (prependPath) {
-    searchPath_.pop_front();
-  }
-  if (!found) {
-    error << "Source file '" << path << "' was not found";
-    return nullptr;
-  } else if (source->Open(*found, error)) {
+  if (source->Open(LocateSourceFile(path, searchPath_), error)) {
     return ownedSourceFiles_.emplace_back(std::move(source)).get();
   } else {
     return nullptr;
