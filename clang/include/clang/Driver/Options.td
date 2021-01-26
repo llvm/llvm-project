@@ -4129,7 +4129,6 @@ def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran
 def fcheck_EQ : Joined<["-"], "fcheck=">, Group<gfortran_Group>;
 def fcoarray_EQ : Joined<["-"], "fcoarray=">, Group<gfortran_Group>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<gfortran_Group>;
-def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<gfortran_Group>;
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<gfortran_Group>;
 def ffree_line_length_VALUE : Joined<["-"], "ffree-line-length-">, Group<gfortran_Group>;
 def finit_character_EQ : Joined<["-"], "finit-character=">, Group<gfortran_Group>;
@@ -4163,8 +4162,6 @@ defm dump_fortran_original : BooleanFFlag<"dump-fortran-original">, Group<gfortr
 defm dump_parse_tree : BooleanFFlag<"dump-parse-tree">, Group<gfortran_Group>;
 defm external_blas : BooleanFFlag<"external-blas">, Group<gfortran_Group>;
 defm f2c : BooleanFFlag<"f2c">, Group<gfortran_Group>;
-defm fixed_form : BooleanFFlag<"fixed-form">, Group<gfortran_Group>;
-defm free_form : BooleanFFlag<"free-form">, Group<gfortran_Group>;
 defm frontend_optimize : BooleanFFlag<"frontend-optimize">, Group<gfortran_Group>;
 defm implicit_none : BooleanFFlag<"implicit-none">, Group<gfortran_Group>;
 defm init_local_zero : BooleanFFlag<"init-local-zero">, Group<gfortran_Group>;
@@ -4206,6 +4203,20 @@ def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>, Flags<[CC1Optio
 //===----------------------------------------------------------------------===//
 def test_io : Flag<["-"], "test-io">, Flags<[HelpHidden, FlangOption, FC1Option, FlangOnlyOption]>, Group<Action_Group>,
   HelpText<"Run the InputOuputTest action. Use for development and testing only.">;
+
+let Flags = [FC1Option, FlangOption, FlangOnlyOption] in {
+
+def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
+  HelpText<"Process source files in fixed form">;
+def ffree_form : Flag<["-"], "ffree-form">, Group<f_Group>,
+  HelpText<"Process source files in free form">;
+def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>,
+  HelpText<"Use <value> as character line width in fixed mode">,
+  DocBrief<[{Set column after which characters are ignored in typical fixed-form lines in the source
+file}]>;
+def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
+
+}
 
 //===----------------------------------------------------------------------===//
 // CC1 Options
