@@ -1490,7 +1490,7 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
   // This will notify the runInTerminal launcher that we attached.
   // We have to make this async, as the function won't return until the launcher
   // resumes and reads the data.
-  std::future<llvm::Error> did_attach_message_success =
+  std::future<lldb::SBError> did_attach_message_success =
       comm_channel.NotifyDidAttach();
 
   // We just attached to the runInTerminal launcher, which was waiting to be
@@ -1509,7 +1509,11 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
   // the async didAttach notification should have an error message, so we
   // return it. Otherwise, everything was a success.
   did_attach_message_success.wait();
-  return did_attach_message_success.get();
+  error = did_attach_message_success.get();
+  if (error.Success())
+    return llvm::Error::success();
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 error.GetCString());
 }
 
 // "LaunchRequest": {

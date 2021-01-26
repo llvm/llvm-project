@@ -128,9 +128,15 @@ RunInTerminalDebugAdapterCommChannel::RunInTerminalDebugAdapterCommChannel(
     StringRef comm_file)
     : m_io(comm_file, "runInTerminal launcher") {}
 
-std::future<Error> RunInTerminalDebugAdapterCommChannel::NotifyDidAttach() {
+// Can't use \a std::future<llvm::Error> because it doesn't compile on Windows
+std::future<lldb::SBError>
+RunInTerminalDebugAdapterCommChannel::NotifyDidAttach() {
   return std::async(std::launch::async, [&]() {
-    return m_io.SendJSON(RunInTerminalMessageDidAttach().ToJSON());
+    lldb::SBError error;
+    if (llvm::Error err =
+            m_io.SendJSON(RunInTerminalMessageDidAttach().ToJSON()))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
+    return error;
   });
 }
 
