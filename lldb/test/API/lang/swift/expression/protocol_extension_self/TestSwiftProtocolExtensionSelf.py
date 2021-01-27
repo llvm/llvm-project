@@ -15,4 +15,4 @@ class TestSwiftProtocolExtensionSelf(TestBase):
 
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
-        self.expect("e f", substrs=[' = 12345'])
+        self.expect("e -d no-run -- f", substrs=[' = 12345'])
