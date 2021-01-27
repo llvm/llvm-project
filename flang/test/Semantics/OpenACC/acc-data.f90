@@ -75,6 +75,9 @@ program openacc_data_validity
 
   !$acc exit data delete(aa) finalize
 
+  !ERROR: At most one FINALIZE clause can appear on the EXIT DATA directive
+  !$acc exit data delete(aa) finalize finalize
+
   !$acc exit data detach(cc)
 
   !$acc exit data copyout(bb)
@@ -83,7 +86,13 @@ program openacc_data_validity
 
   !$acc exit data delete(aa) if(ifCondition)
 
+  !ERROR: At most one IF clause can appear on the EXIT DATA directive
+  !$acc exit data delete(aa) if(ifCondition) if(.TRUE.)
+
   !$acc exit data delete(aa) async
+
+  !ERROR: At most one ASYNC clause can appear on the EXIT DATA directive
+  !$acc exit data delete(aa) async async
 
   !$acc exit data delete(aa) async(async1)
 
