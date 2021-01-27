@@ -556,9 +556,9 @@ public:
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
         TraverseStmt(LE->getTrailingRequiresClause());
-
-        TraverseStmt(LE->getBody());
       }
+
+      TraverseStmt(LE->getBody());
       return true;
     }
     return RecursiveASTVisitor<MatchASTVisitor>::dataTraverseNode(S, Queue);
@@ -696,6 +696,10 @@ public:
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   bool shouldVisitImplicitCode() const { return true; }
+
+  // We visit the lambda body explicitly, so instruct the RAV
+  // to not visit it on our behalf too.
+  bool shouldVisitLambdaBody() const { return false; }
 
   bool IsMatchingInASTNodeNotSpelledInSource() const override {
     return TraversingASTNodeNotSpelledInSource;
