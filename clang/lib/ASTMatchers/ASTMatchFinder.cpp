@@ -243,10 +243,14 @@ public:
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
     if (auto *Init = Node->getInit())
-      if (!match(*Init))
+      if (!traverse(*Init))
         return false;
-    if (!match(*Node->getLoopVariable()) || !match(*Node->getRangeInit()) ||
-        !match(*Node->getBody()))
+    if (!match(*Node->getLoopVariable()))
+      return false;
+    if (match(*Node->getRangeInit()))
+      if (!VisitorBase::TraverseStmt(Node->getRangeInit()))
+        return false;
+    if (!match(*Node->getBody()))
       return false;
     return VisitorBase::TraverseStmt(Node->getBody());
   }
@@ -488,15 +492,21 @@ public:
 
   bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
     if (auto *RF = dyn_cast<CXXForRangeStmt>(S)) {
-      for (auto *SubStmt : RF->children()) {
-        if (SubStmt == RF->getInit() || SubStmt == RF->getLoopVarStmt() ||
-            SubStmt == RF->getRangeInit() || SubStmt == RF->getBody()) {
-          TraverseStmt(SubStmt, Queue);
-        } else {
-          ASTNodeNotSpelledInSourceScope RAII(this, true);
-          TraverseStmt(SubStmt, Queue);
+      {
+        ASTNodeNotAsIsSourceScope RAII(this, true);
+        TraverseStmt(RF->getInit());
+        // Don't traverse under the loop variable
+        match(*RF->getLoopVariable());
+        TraverseStmt(RF->getRangeInit());
+      }
+      {
+        ASTNodeNotSpelledInSourceScope RAII(this, true);
+        for (auto *SubStmt : RF->children()) {
+          if (SubStmt != RF->getBody())
+            TraverseStmt(SubStmt);
         }
       }
+      TraverseStmt(RF->getBody());
       return true;
     } else if (auto *RBO = dyn_cast<CXXRewrittenBinaryOperator>(S)) {
       {
