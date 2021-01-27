@@ -5762,10 +5762,15 @@ def _SLASH_Tp : CLCompileJoinedOrSeparate<"Tp">,
 def _SLASH_TP : CLCompileFlag<"TP">, HelpText<"Treat all source files as C++">;
 def _SLASH_vctoolsdir : CLJoinedOrSeparate<"vctoolsdir">,
   HelpText<"Path to the VCToolChain">, MetaVarName<"<dir>">;
+def _SLASH_vctoolsversion : CLJoinedOrSeparate<"vctoolsversion">,
+  HelpText<"For use with /winsysroot, defaults to newest found">;
 def _SLASH_winsdkdir : CLJoinedOrSeparate<"winsdkdir">,
   HelpText<"Path to the Windows SDK">, MetaVarName<"<dir>">;
 def _SLASH_winsdkversion : CLJoinedOrSeparate<"winsdkversion">,
-  HelpText<"Full version of the Windows SDK">;
+  HelpText<"Full version of the Windows SDK, defaults to newest found">;
+def _SLASH_winsysroot : CLJoinedOrSeparate<"winsysroot">,
+  HelpText<"Same as /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> /winsdkdir <dir>/Windows Kits/10">,
+  MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
   Group<_SLASH_volatile_Group>, Flags<[CLOption, NoXarchOption]>,
   HelpText<"Volatile loads and stores have standard semantics">;
