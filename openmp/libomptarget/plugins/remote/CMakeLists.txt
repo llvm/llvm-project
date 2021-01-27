@@ -9,8 +9,6 @@
 #
 ##===----------------------------------------------------------------------===#
 
-cmake_minimum_required(VERSION 3.15)
-
 if (NOT(CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building remote offloading plugin: only support Linux hosts.")
   return()
