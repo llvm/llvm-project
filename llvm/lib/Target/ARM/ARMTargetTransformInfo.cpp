@@ -797,8 +797,8 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                   unsigned Index) {
+InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                               unsigned Index) {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -816,7 +816,8 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     // of NEON and VFP code and should be therefore penalized.
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
-      return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index), 2U);
+      return std::max<InstructionCost>(
+          BaseT::getVectorInstrCost(Opcode, ValTy, Index), 2U);
   }
 
   if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||

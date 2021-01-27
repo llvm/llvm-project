@@ -3016,7 +3016,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                               unsigned Index) {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -3099,7 +3100,7 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
           getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, None, 0, SubTy);
     }
     int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;
-    return *ShuffleCost.getValue() + IntOrFpCost + RegisterFileMoveCost;
+    return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
   }
 
   // Add to the base cost if we know that the extracted element of a vector is
@@ -4217,7 +4218,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
       VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                            MaybeAlign(Alignment), AddressSpace, CostKind);
 
-  int InsertExtractCost = 0;
+  InstructionCost InsertExtractCost = 0;
   if (Opcode == Instruction::Load)
     for (unsigned i = 0; i < VF; ++i)
       // Add the cost of inserting each scalar load into the vector

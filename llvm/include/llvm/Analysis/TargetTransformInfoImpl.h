@@ -532,8 +532,8 @@ public:
     return 1;
   }
 
-  unsigned getVectorInstrCost(unsigned Opcode, Type *Val,
-                              unsigned Index) const {
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index) const {
     return 1;
   }
 

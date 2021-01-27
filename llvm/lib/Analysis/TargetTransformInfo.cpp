@@ -809,9 +809,10 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
   return Cost;
 }
 
-int TargetTransformInfo::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                            unsigned Index) const {
-  int Cost = TTIImpl->getVectorInstrCost(Opcode, Val, Index);
+InstructionCost TargetTransformInfo::getVectorInstrCost(unsigned Opcode,
+                                                        Type *Val,
+                                                        unsigned Index) const {
+  InstructionCost Cost = TTIImpl->getVectorInstrCost(Opcode, Val, Index);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

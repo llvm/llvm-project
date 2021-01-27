@@ -952,8 +952,8 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind);
 }
 
-int SystemZTTIImpl::
-getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   unsigned Index) {
   // vlvgp will insert two grs into a vector register, so only count half the
   // number of instructions.
   if (Opcode == Instruction::InsertElement && Val->isIntOrIntVectorTy(64))

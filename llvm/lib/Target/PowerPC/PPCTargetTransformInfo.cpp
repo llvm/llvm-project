@@ -1040,14 +1040,15 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return vectorCostAdjustment(Cost, Opcode, ValTy, nullptr);
 }
 
-int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                               unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
-  Cost = *vectorCostAdjustment(Cost, Opcode, Val, nullptr).getValue();
+  InstructionCost Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
+  Cost = vectorCostAdjustment(Cost, Opcode, Val, nullptr);
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
     // Double-precision scalars are already located in index #0 (or #1 if LE).
@@ -1062,7 +1063,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
         // for both (cost will be 2x on P9).
-        return *vectorCostAdjustment(2, Opcode, Val, nullptr).getValue();
+        return vectorCostAdjustment(2, Opcode, Val, nullptr);
 
       // It's an extract.  Maybe we can do a cheap move-from VSR.
       unsigned EltSize = Val->getScalarSizeInBits();
@@ -1079,7 +1080,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return *vectorCostAdjustment(1, Opcode, Val, nullptr).getValue();
+      return vectorCostAdjustment(1, Opcode, Val, nullptr);
 
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
@@ -1125,7 +1126,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
 
-  Cost = *vectorCostAdjustment(Cost, Opcode, Src, nullptr).getValue();
+  Cost = vectorCostAdjustment(Cost, Opcode, Src, nullptr);
 
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
