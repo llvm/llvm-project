@@ -2126,6 +2126,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::assume:
+  case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
     // Discard annotate attributes, assumptions, and artificial side-effects.
