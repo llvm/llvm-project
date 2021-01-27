@@ -712,6 +712,10 @@ static LogicalResult verify(InitTensorOp op) {
                                             ShapedType::isDynamic)))
     return failure();
 
+  if (op.static_sizes().size() != static_cast<unsigned>(resultType.getRank()))
+    return op->emitError("expected ")
+           << resultType.getRank() << " sizes values";
+
   Type expectedType =
       InitTensorOp::inferResultType(staticSizes, resultType.getElementType());
   if (resultType != expectedType) {
