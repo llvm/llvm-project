@@ -14,4 +14,4 @@ import lldbsuite.test.lldbinline as lldbinline
 from lldbsuite.test.decorators import *
 
 # Test that loading self from a register works as expected
-lldbinline.MakeInlineTest(__file__, globals(), decorators=[swiftTest])
+lldbinline.MakeInlineTest(__file__, globals(), decorators=[swiftTest,skipIf(bugnumber="rdar://73214713")])

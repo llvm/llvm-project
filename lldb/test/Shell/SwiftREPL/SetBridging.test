@@ -2,6 +2,7 @@
 // Test formatters on bridged sets in the REPL.
 // REQUIRES: system-darwin
 // REQUIRES: swift
+// REQUIRES: rdar73216234
 
 // RUN: %lldb --repl < %s | FileCheck %s --check-prefix=SET
 
