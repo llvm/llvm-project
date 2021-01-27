@@ -2237,8 +2237,7 @@ void coro::salvageDebugInfo(
   DDI->setOperand(
       0, MetadataAsValue::get(VMContext, ValueAsMetadata::get(Storage)));
   DDI->setOperand(2, MetadataAsValue::get(VMContext, Expr));
-  if (auto *InsertPt = dyn_cast_or_null<Instruction>(Storage))
-    DDI->moveAfter(InsertPt);
+  DDI->moveAfter(cast<Instruction>(Storage));
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
