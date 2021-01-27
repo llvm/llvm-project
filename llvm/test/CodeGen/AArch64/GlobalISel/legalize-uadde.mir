@@ -6,21 +6,21 @@ name:            test_scalar_uadde_32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_uadde_32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY]], [[COPY1]], [[TRUNC]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
-    ; CHECK: $w0 = COPY [[UADDE]](s32)
-    ; CHECK: $w1 = COPY [[COPY3]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
+    ; CHECK: %lhs:_(s32) = COPY $w0
+    ; CHECK: %rhs:_(s32) = COPY $w1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: %add:_(s32), %carry_out:_(s1) = G_UADDE %lhs, %rhs, %carry_in
+    ; CHECK: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $w0 = COPY %add(s32)
+    ; CHECK: $w1 = COPY %carry_out_ext(s32)
+    %lhs:_(s32) = COPY $w0
+    %rhs:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
-    %3:_(s1) = G_TRUNC %2
-    %4:_(s32), %5:_(s1) = G_UADDE %0, %1, %3
-    %6:_(s32) = G_ANYEXT %3
-    $w0 = COPY %4(s32)
-    $w1 = COPY %6(s32)
+    %carry_in:_(s1) = G_TRUNC %2
+    %add:_(s32), %carry_out:_(s1) = G_UADDE %lhs, %rhs, %carry_in
+    %carry_out_ext:_(s32) = G_ANYEXT %carry_out
+    $w0 = COPY %add
+    $w1 = COPY %carry_out_ext
 
 ...
