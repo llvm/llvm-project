@@ -906,6 +906,36 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected mixed offsets rank to match mixed sizes rank (2 vs 3) so the rank of the result type is well-formed}}
+  %1 = subview %0[0, 0][2, 2, 2][1, 1, 1]
+    : memref<8x16x4xf32> to memref<8x16x4xf32>
+  return
+}
+
+// -----
+
+func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected mixed sizes rank to match mixed strides rank (3 vs 2) so the rank of the result type is well-formed}}
+  %1 = subview %0[0, 0, 0][2, 2, 2][1, 1]
+    : memref<8x16x4xf32> to memref<8x16x4xf32>
+  return
+}
+
+// -----
+
+func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected mixed sizes rank to match mixed strides rank (3 vs 2) so the rank of the result type is well-formed}}
+  %1 = memref_reinterpret_cast %0 to offset: [0], sizes: [2, 2, 2], strides:[1, 1]
+    : memref<8x16x4xf32> to memref<8x16x4xf32>
+  return
+}
+
+// -----
+
+func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32, offset: 0, strides: [64, 4, 1], 2>
   // expected-error@+1 {{different memory spaces}}
   %1 = subview %0[0, 0, 0][%arg2, %arg2, %arg2][1, 1, 1]
@@ -929,8 +959,8 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected 3 offset values}}
-  %1 = subview %0[%arg0, %arg1][%arg2][1, 1, 1]
+  // expected-error@+1 {{expected <= 3 offset values}}
+  %1 = subview %0[%arg0, %arg1, 0, 0][%arg2, 0, 0, 0][1, 1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x?x4xf32, offset: 0, strides:[?, ?, 4]>
   return

@@ -2209,6 +2209,8 @@ static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
   return parser.addTypeToList(dstType, result.types);
 }
 
+// TODO: ponder whether we want to allow missing trailing sizes/strides that are
+// completed automatically, like we have for subview and subtensor.
 static LogicalResult verify(MemRefReinterpretCastOp op) {
   // The source and result memrefs should be in the same memory space.
   auto srcType = op.source().getType().cast<BaseMemRefType>();
@@ -2833,16 +2835,28 @@ Wrapper operator*(Wrapper a, int64_t b) {
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
 Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<int64_t> staticOffsets,
-                                ArrayRef<int64_t> staticSizes,
-                                ArrayRef<int64_t> staticStrides) {
+                                ArrayRef<int64_t> leadingStaticOffsets,
+                                ArrayRef<int64_t> leadingStaticSizes,
+                                ArrayRef<int64_t> leadingStaticStrides) {
+  // A subview may specify only a leading subset of offset/sizes/strides in
+  // which case we complete with offset=0, sizes from memref type and strides=1.
   unsigned rank = sourceMemRefType.getRank();
-  (void)rank;
-  assert(staticOffsets.size() == rank &&
-         "unexpected staticOffsets size mismatch");
-  assert(staticSizes.size() == rank && "unexpected staticSizes size mismatch");
-  assert(staticStrides.size() == rank &&
-         "unexpected staticStrides size mismatch");
+  assert(leadingStaticOffsets.size() <= rank &&
+         "unexpected leadingStaticOffsets overflow");
+  assert(leadingStaticSizes.size() <= rank &&
+         "unexpected leadingStaticSizes overflow");
+  assert(leadingStaticStrides.size() <= rank &&
+         "unexpected leadingStaticStrides overflow");
+  auto staticOffsets = llvm::to_vector<4>(leadingStaticOffsets);
+  auto staticSizes = llvm::to_vector<4>(leadingStaticSizes);
+  auto staticStrides = llvm::to_vector<4>(leadingStaticStrides);
+  unsigned numTrailingOffsets = rank - staticOffsets.size();
+  unsigned numTrailingSizes = rank - staticSizes.size();
+  unsigned numTrailingStrides = rank - staticStrides.size();
+  staticOffsets.append(numTrailingOffsets, 0);
+  llvm::append_range(staticSizes,
+                     sourceMemRefType.getShape().take_back(numTrailingSizes));
+  staticStrides.append(numTrailingStrides, 1);
 
   // Extract source offset and strides.
   int64_t sourceOffset;
@@ -3197,7 +3211,7 @@ raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
 /// with `b` at location `loc`.
 SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
                                               OpBuilder &b, Location loc) {
-  std::array<unsigned, 3> ranks = op.getArrayAttrRanks();
+  std::array<unsigned, 3> ranks = op.getArrayAttrMaxRanks();
   assert(ranks[0] == ranks[1] && "expected offset and sizes of equal ranks");
   assert(ranks[1] == ranks[2] && "expected sizes and strides of equal ranks");
   SmallVector<Range, 8> res;
@@ -3484,16 +3498,18 @@ static ParseResult parseSubTensorOp(OpAsmParser &parser,
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
 Type SubTensorOp::inferResultType(RankedTensorType sourceRankedTensorType,
-                                  ArrayRef<int64_t> staticOffsets,
-                                  ArrayRef<int64_t> staticSizes,
-                                  ArrayRef<int64_t> staticStrides) {
+                                  ArrayRef<int64_t> leadingStaticOffsets,
+                                  ArrayRef<int64_t> leadingStaticSizes,
+                                  ArrayRef<int64_t> leadingStaticStrides) {
+  // A subtensor may specify only a leading subset of offset/sizes/strides in
+  // which case we complete with offset=0, sizes from memref type and strides=1.
   unsigned rank = sourceRankedTensorType.getRank();
-  (void)rank;
-  assert(staticOffsets.size() == rank &&
-         "unexpected staticOffsets size mismatch");
-  assert(staticSizes.size() == rank && "unexpected staticSizes size mismatch");
-  assert(staticStrides.size() == rank &&
-         "unexpected staticStrides size mismatch");
+  assert(leadingStaticSizes.size() <= rank &&
+         "unexpected leadingStaticSizes overflow");
+  auto staticSizes = llvm::to_vector<4>(leadingStaticSizes);
+  unsigned numTrailingSizes = rank - staticSizes.size();
+  llvm::append_range(staticSizes, sourceRankedTensorType.getShape().take_back(
+                                      numTrailingSizes));
   return RankedTensorType::get(staticSizes,
                                sourceRankedTensorType.getElementType());
 }
