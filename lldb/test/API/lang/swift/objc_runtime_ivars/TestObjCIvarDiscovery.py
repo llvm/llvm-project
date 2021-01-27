@@ -28,7 +28,6 @@ class TestObjCIVarDiscovery(TestBase):
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
-    @skipIf(bugnumber="rdar://73214894")
     @swiftTest
     def test_nodbg(self):
         self.build()
@@ -37,7 +36,6 @@ class TestObjCIVarDiscovery(TestBase):
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
-    @skipIf(bugnumber="rdar://73214894")
     @swiftTest
     def test_dbg(self):
         self.build()
