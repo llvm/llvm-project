@@ -98,6 +98,10 @@ New Compiler Flags
     -Wl,--gc-sections on ELF platforms to the linking command, and possibly
     adding -fdata-sections -ffunction-sections to the command generating
     the shared object).
+- New option ``-fbinutils-version=`` specifies the targeted binutils version.
+  For example, ``-fbinutils-version=2.35`` means compatibility with GNU as/ld
+  before 2.35 is not needed: new features can be used and there is no need to
+  work around old GNU as/ld bugs.
 
 Deprecated Compiler Flags
 -------------------------
