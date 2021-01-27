@@ -72,8 +72,8 @@ template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
-}
-} // end namespace llvm::cl
+} // namespace cl
+} // namespace llvm
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
