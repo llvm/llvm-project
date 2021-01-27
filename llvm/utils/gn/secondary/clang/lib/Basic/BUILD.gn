@@ -64,7 +64,6 @@ static_library("Basic") {
     "OpenCLOptions.cpp",
     "OpenMPKinds.cpp",
     "OperatorPrecedence.cpp",
-    "ProfileList.cpp",
     "SanitizerBlacklist.cpp",
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",
