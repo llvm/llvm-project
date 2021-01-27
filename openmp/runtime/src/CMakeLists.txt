@@ -50,6 +50,15 @@ if(${LIBOMP_USE_HWLOC})
   include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
 endif()
 
+# Building with time profiling support for libomptarget requires
+# LLVM directory includes.
+if(LIBOMPTARGET_PROFILING_SUPPORT)
+  include_directories(
+    ${LLVM_MAIN_INCLUDE_DIR}
+    ${LLVM_INCLUDE_DIR}
+  )
+endif()
+
 # Getting correct source files to build library
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
