@@ -82,6 +82,15 @@ TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
                  cl::value_desc("N"),
                  cl::desc("Repeat compilation N times for timing"));
 
+static cl::opt<std::string>
+    BinutilsVersion("binutils-version", cl::Hidden,
+                    cl::desc("Produced object files can use all ELF features "
+                             "supported by this binutils version and newer."
+                             "If -no-integrated-as is specified, the generated "
+                             "assembly will consider GNU as support."
+                             "'none' means that all ELF features can be used, "
+                             "regardless of binutils support"));
+
 static cl::opt<bool>
 NoIntegratedAssembler("no-integrated-as", cl::Hidden,
                       cl::desc("Disable integrated assembler"));
@@ -427,9 +436,24 @@ static int compileModule(char **argv, LLVMContext &Context) {
   case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
 
+  // Parse 'none' or '$major.$minor'. Disallow -binutils-version=0 because we
+  // use that to indicate the MC default.
+  if (!BinutilsVersion.empty() && BinutilsVersion != "none") {
+    StringRef V = BinutilsVersion.getValue();
+    unsigned Num;
+    if (V.consumeInteger(10, Num) || Num == 0 ||
+        !(V.empty() ||
+          (V.consume_front(".") && !V.consumeInteger(10, Num) && V.empty()))) {
+      WithColor::error(errs(), argv[0])
+          << "invalid -binutils-version, accepting 'none' or major.minor\n";
+      return 1;
+    }
+  }
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options.BinutilsVersion =
+        TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;
