@@ -411,6 +411,21 @@ std::error_code copy_file(const Twine &From, int ToFD);
 ///          platform-specific error_code.
 std::error_code resize_file(int FD, uint64_t Size);
 
+/// Resize \p FD to \p Size before mapping \a mapped_file_region::readwrite. On
+/// non-Windows, this calls \a resize_file(). On Windows, this is a no-op,
+/// since the subsequent mapping (via \c CreateFileMapping) automatically
+/// extends the file.
+inline std::error_code resize_file_before_mapping_readwrite(int FD,
+                                                            uint64_t Size) {
+#ifdef _WIN32
+  (void)FD;
+  (void)Size;
+  return std::error_code();
+#else
+  return resize_file(FD, Size);
+#endif
+}
+
 /// Compute an MD5 hash of a file's contents.
 ///
 /// @param FD Input file descriptor.
