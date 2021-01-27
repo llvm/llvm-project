@@ -1929,7 +1929,23 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
 }
 
 static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags,
                                   const std::string &WorkingDir) {
+  HeaderSearchOptions *HeaderSearchOpts = &Opts;
+  bool Success = true;
+
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
+
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
 
@@ -2929,7 +2945,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                                       LangOpts.IsHeaderFile);
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
   ParsePointerAuthArgs(LangOpts, Args);
@@ -3196,6 +3212,7 @@ void CompilerInvocation::generateCC1CommandLine(
                                    EXTRACTOR, TABLE_INDEX)
 
 #define DIAG_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
 #define LANG_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
 #define CODEGEN_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
 
@@ -3203,6 +3220,7 @@ void CompilerInvocation::generateCC1CommandLine(
 
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 #undef LANG_OPTION_WITH_MARSHALLING
+#undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 #undef GENERATE_OPTION_WITH_MARSHALLING
