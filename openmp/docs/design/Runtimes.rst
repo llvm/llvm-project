@@ -273,6 +273,62 @@ LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 
 .. _device_runtime:
 
+
+.. _remote_offloading_plugin:
+
+Remote Offloading Plugin:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The remote offloading plugin permits the execution of OpenMP target regions
+on devices in remote hosts in addition to the devices connected to the local
+host. All target devices on the remote host will be exposed to the
+application as if they were local devices, that is, the remote host CPU or
+its GPUs can be offloaded to with the appropriate device number. If the
+server is running on the same host, each device may be identified twice:
+once through the device plugins and once through the device plugins that the
+server application has access to.
+
+This plugin consists of ``libomptarget.rtl.rpc.so`` and
+``openmp-offloading-server`` which should be running on the (remote) host. The
+server application does not have to be running on a remote host, and can
+instead be used on the same host in order to debug memory mapping during offloading.
+These are implemented via gRPC/protobuf so these libraries are required to
+build and use this plugin. The server must also have access to the necessary
+target-specific plugins in order to perform the offloading.
+
+Due to the experimental nature of this plugin, the CMake variable
+``LIBOMPTARGET_ENABLE_EXPERIMENTAL_REMOTE_PLUGIN`` must be set in order to
+build this plugin. For example, the rpc plugin is not designed to be
+thread-safe, the server cannot concurrently handle offloading from multiple
+applications at once (it is synchronous) and will terminate after a single
+execution. Note that ``openmp-offloading-server`` is unable to
+remote offload onto a remote host itself and will error out if this is attempted.
+
+Remote offloading is configured via environment variables at runtime of the OpenMP application:
+    * ``LIBOMPTARGET_RPC_ADDRESS=<Address>:<Port>``
+    * ``LIBOMPTARGET_RPC_ALLOCATOR_MAX=<NumBytes>``
+    * ``LIBOMPTARGET_BLOCK_SIZE=<NumBytes>``
+    * ``LIBOMPTARGET_RPC_LATENCY=<Seconds>``
+
+LIBOMPTARGET_RPC_ADDRESS
+""""""""""""""""""""""""
+The address and port at which the server is running. This needs to be set for
+the server and the application, the default is ``0.0.0.0:50051``. A single
+OpenMP executable can offload onto multiple remote hosts by setting this to
+comma-seperated values of the addresses.
+
+LIBOMPTARGET_RPC_ALLOCATOR_MAX
+""""""""""""""""""""""""""""""
+After allocating this size, the protobuf allocator will clear. This can be set for both endpoints.
+
+LIBOMPTARGET_BLOCK_SIZE
+"""""""""""""""""""""""
+This is the maximum size of a single message while streaming data transfers between the two endpoints and can be set for both endpoints.
+
+LIBOMPTARGET_RPC_LATENCY
+""""""""""""""""""""""""
+This is the maximum amount of time the client will wait for a response from the server.
+
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 --------------------------------------------------------------------
 
