@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(WIN32)
+#include "FifoFiles.h"
+
+#if LLVM_ON_UNIX
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -21,8 +23,6 @@
 
 #include "lldb/lldb-defines.h"
 
-#include "FifoFiles.h"
-
 using namespace llvm;
 
 namespace lldb_vscode {
@@ -30,13 +30,13 @@ namespace lldb_vscode {
 FifoFile::FifoFile(StringRef path) : m_path(path) {}
 
 FifoFile::~FifoFile() {
-#if !defined(WIN32)
+#if LLVM_ON_UNIX
   unlink(m_path.c_str());
 #endif
 };
 
 Expected<std::shared_ptr<FifoFile>> CreateFifoFile(StringRef path) {
-#if defined(WIN32)
+#if !LLVM_ON_UNIX
   return createStringError(inconvertibleErrorCode(), "Unimplemented");
 #else
   if (int err = mkfifo(path.data(), 0600))

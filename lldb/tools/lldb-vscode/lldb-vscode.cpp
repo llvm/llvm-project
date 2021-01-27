@@ -3002,8 +3002,8 @@ EXAMPLES:
 // emitted to the debug adaptor.
 void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                llvm::StringRef comm_file, char *argv[]) {
-#if defined(WIN_32)
-  llvm::errs() << "runInTerminal is not supported on Windows\n";
+#if !LLVM_ON_UNIX
+  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
   exit(EXIT_FAILURE);
 #else
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
