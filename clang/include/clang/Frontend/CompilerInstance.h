@@ -172,11 +172,6 @@ class CompilerInstance : public ModuleLoader {
     }
   };
 
-  /// If the output doesn't support seeking (terminal, pipe). we switch
-  /// the stream to a buffer_ostream. These are the buffer and the original
-  /// stream.
-  std::unique_ptr<llvm::raw_fd_ostream> NonSeekStream;
-
   /// The list of active output files.
   std::list<OutputFile> OutputFiles;
 
