@@ -1183,7 +1183,8 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
 int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                    int Index, VectorType *SubTp) {
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
-      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
+      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
+      Kind == TTI::SK_Reverse) {
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
@@ -1233,6 +1234,15 @@ int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
       { TTI::SK_Broadcast, MVT::nxv8bf16, 1 },
       { TTI::SK_Broadcast, MVT::nxv4f32,  1 },
       { TTI::SK_Broadcast, MVT::nxv2f64,  1 },
+      // Handle the cases for vector.reverse with scalable vectors
+      { TTI::SK_Reverse, MVT::nxv16i8,  1 },
+      { TTI::SK_Reverse, MVT::nxv8i16,  1 },
+      { TTI::SK_Reverse, MVT::nxv4i32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2i64,  1 },
+      { TTI::SK_Reverse, MVT::nxv8f16,  1 },
+      { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
+      { TTI::SK_Reverse, MVT::nxv4f32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2f64,  1 },
     };
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
