@@ -179,14 +179,12 @@ def filter_by_shard(tests, run, shards, lit_config):
     # For clarity, generate a preview of the first few test indices in the shard
     # to accompany the arithmetic expression.
     preview_len = 3
-    preview = ", ".join([str(i + 1) for i in test_ixs[:preview_len]])
+    preview = ', '.join([str(i + 1) for i in test_ixs[:preview_len]])
     if len(test_ixs) > preview_len:
-        preview += ", ..."
-    # TODO(python3): string interpolation
-    msg = 'Selecting shard {run}/{shards} = size {sel_tests}/{total_tests} = ' \
-          'tests #({shards}*k)+{run} = [{preview}]'.format(
-              run=run, shards=shards, sel_tests=len(selected_tests),
-              total_tests=len(tests), preview=preview)
+        preview += ', ...'
+    msg = f'Selecting shard {run}/{shards} = ' \
+          f'size {len(selected_tests)}/{len(tests)} = ' \
+          f'tests #({shards}*k)+{run} = [{preview}]'
     lit_config.note(msg)
     return selected_tests
 
