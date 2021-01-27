@@ -43,9 +43,9 @@
 #define DW_EH_PE_indirect 0x80 // gcc extension
 
 // read a uleb128 encoded value and advance pointer
-static uintptr_t readULEB128(const uint8_t **data) {
-  uintptr_t result = 0;
-  uintptr_t shift = 0;
+static size_t readULEB128(const uint8_t **data) {
+  size_t result = 0;
+  size_t shift = 0;
   unsigned char byte;
   const uint8_t *p = *data;
   do {
@@ -211,8 +211,8 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
   const uint8_t *p = callSiteTableStart;
   while (p < callSiteTableEnd) {
     uintptr_t start = readEncodedPointer(&p, callSiteEncoding);
-    uintptr_t length = readEncodedPointer(&p, callSiteEncoding);
-    uintptr_t landingPad = readEncodedPointer(&p, callSiteEncoding);
+    size_t length = readEncodedPointer(&p, callSiteEncoding);
+    size_t landingPad = readEncodedPointer(&p, callSiteEncoding);
     readULEB128(&p); // action value not used for C code
     if (landingPad == 0)
       continue; // no landing pad for this entry
