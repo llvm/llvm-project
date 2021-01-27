@@ -27,9 +27,14 @@ program openacc_host_data_validity
   !$acc host_data use_device(aa, bb) if_present
   !$acc end host_data
 
+  !ERROR: At most one IF_PRESENT clause can appear on the HOST_DATA directive
+  !$acc host_data use_device(aa, bb) if_present if_present
+  !$acc end host_data
+
   !$acc host_data use_device(aa, bb) if(.true.) if_present
   !$acc end host_data
 
+  !ERROR: At most one IF clause can appear on the HOST_DATA directive
   !$acc host_data use_device(aa, bb) if(.true.) if(ifCondition)
   !$acc end host_data
 

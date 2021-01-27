@@ -506,7 +506,7 @@ def ACC_ExitData : Directive<"exit data"> {
 
 // 2.8
 def ACC_HostData : Directive<"host_data"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<ACCC_If>,
     VersionedClause<ACCC_IfPresent>
   ];
