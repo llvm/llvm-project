@@ -329,21 +329,6 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 } // namespace RISCVVType
 
-namespace RISCVVPseudosTable {
-
-struct PseudoInfo {
-#include "MCTargetDesc/RISCVBaseInfo.h"
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-};
-
-using namespace RISCV;
-
-#define GET_RISCVVPseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
-
-} // end namespace RISCVVPseudosTable
-
 } // namespace llvm
 
 #endif
