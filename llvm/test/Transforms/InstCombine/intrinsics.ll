@@ -22,9 +22,9 @@ declare double @llvm.nearbyint.f64(double %Val) nounwind readonly
 
 define void @powi(double %V, double *%P) {
 ; CHECK-LABEL: @powi(
-; CHECK-NEXT:    [[A:%.*]] = fdiv double 1.000000e+00, [[V:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fdiv fast double 1.000000e+00, [[V:%.*]]
 ; CHECK-NEXT:    store volatile double [[A]], double* [[P:%.*]], align 8
-; CHECK-NEXT:    [[D:%.*]] = fmul double [[V]], [[V]]
+; CHECK-NEXT:    [[D:%.*]] = fmul nnan double [[V]], [[V]]
 ; CHECK-NEXT:    store volatile double [[D]], double* [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
