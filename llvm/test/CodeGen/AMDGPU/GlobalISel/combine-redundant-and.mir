@@ -142,3 +142,24 @@ body:             |
     $sgpr0 = COPY %6(s32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...
+---
+name:            test_sext_inreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_sext_inreg
+    ; CHECK: %cst_1:_(s32) = G_CONSTANT i32 -5
+    ; CHECK: $sgpr0 = COPY %cst_1(s32)
+    ; CHECK: SI_RETURN_TO_EPILOG implicit $sgpr0
+    %cst_1:_(s32) = G_CONSTANT i32 -5
+
+    ; 000 ... 1011
+    %cst_11:_(s32) = G_CONSTANT i32 11
+
+    ; Sext from the 4th bit -> 111 ... 1011 = -5
+    %sext_inreg_11:_(s32) = G_SEXT_INREG %cst_11, 4
+
+    %and:_(s32) = G_AND %cst_1(s32), %sext_inreg_11(s32)
+    $sgpr0 = COPY %and(s32)
+    SI_RETURN_TO_EPILOG implicit $sgpr0
+...
