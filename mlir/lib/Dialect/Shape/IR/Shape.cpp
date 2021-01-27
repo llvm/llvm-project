@@ -572,6 +572,8 @@ OpFoldResult CstrRequireOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ShapeEqOp::fold(ArrayRef<Attribute> operands) {
+  if (lhs() == rhs())
+    return BoolAttr::get(true, getContext());
   auto lhs = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
   if (lhs == nullptr)
     return {};
