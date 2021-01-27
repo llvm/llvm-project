@@ -73,11 +73,26 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
   if (Label)
     DD->addArangeLabel(SymbolCU(this, Label));
 
-  unsigned idx = DD->getAddressPool().getIndex(Label);
-  Die.addValue(DIEValueAllocator, Attribute,
-               DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
-                                          : dwarf::DW_FORM_GNU_addr_index,
-               DIEInteger(idx));
+  if (Label->isInSection() || !DD->useAddrOffsetExpressions()) {
+    const MCSymbol *Base = DD->getSectionLabel(&Label->getSection());
+    if (Base == Label || !DD->useAddrOffsetExpressions()) {
+      unsigned idx = DD->getAddressPool().getIndex(Label);
+      Die.addValue(DIEValueAllocator, Attribute,
+                   DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
+                                              : dwarf::DW_FORM_GNU_addr_index,
+                   DIEInteger(idx));
+      return;
+    }
+  }
+
+  // Could be extended to work with DWARFv4 Split DWARF if that's important for
+  // someone. In that case DW_FORM_data would be used.
+  assert(DD->getDwarfVersion() >= 5 &&
+         "Addr+offset expressions are only valuable when using debug_addr (to "
+         "reduce relocations) available in DWARFv5 or higher");
+  auto *Loc = new (DIEValueAllocator) DIEBlock();
+  addPoolOpAddress(*Loc, Label);
+  addBlock(Die, Attribute, dwarf::DW_FORM_exprloc, Loc);
 }
 
 void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,

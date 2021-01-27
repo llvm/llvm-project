@@ -160,6 +160,10 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                clEnumValN(DwarfDebug::MinimizeAddrInV5::Ranges, "Ranges",
                           "Use rnglists for contiguous ranges if that allows "
                           "using a pre-existing base address"),
+               clEnumValN(DwarfDebug::MinimizeAddrInV5::Expressions,
+                          "Expressions",
+                          "Use exprloc addrx+offset expressions for any "
+                          "address with a prior base address"),
                clEnumValN(DwarfDebug::MinimizeAddrInV5::Disabled, "Disabled",
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
@@ -3397,7 +3401,10 @@ dwarf::Form DwarfDebug::getDwarfSectionOffsetForm() const {
 }
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
-  return SectionLabels.find(S)->second;
+  auto I = SectionLabels.find(S);
+  if (I == SectionLabels.end())
+    return nullptr;
+  return I->second;
 }
 void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
   if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)
