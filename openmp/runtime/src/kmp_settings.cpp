@@ -2576,6 +2576,11 @@ signed := + signed
 signed := - signed
 -----------------------------------------------------------------------------*/
 
+// Warning to issue for syntax error during parsing of OMP_PLACES
+static inline void __kmp_omp_places_syntax_warn(const char *var) {
+  KMP_WARNING(SyntaxErrorUsing, var, "\"cores\"");
+}
+
 static int __kmp_parse_subplace_list(const char *var, const char **scan) {
   const char *next;
 
@@ -2587,7 +2592,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     //
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2606,7 +2611,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2614,7 +2619,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     // Read count parameter
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2633,7 +2638,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2655,7 +2660,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     }
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2675,7 +2680,7 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
 
-    KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
@@ -2692,7 +2697,7 @@ static int __kmp_parse_place(const char *var, const char **scan) {
       return FALSE;
     }
     if (**scan != '}') {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip '}'
@@ -2706,7 +2711,7 @@ static int __kmp_parse_place(const char *var, const char **scan) {
     KMP_ASSERT(proc >= 0);
     *scan = next;
   } else {
-    KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
@@ -2734,7 +2739,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2742,7 +2747,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     // Read count parameter
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2761,7 +2766,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2783,7 +2788,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     }
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2803,7 +2808,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
 
-    KMP_WARNING(SyntaxErrorUsing, var, "\"threads\"");
+    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
 
@@ -2830,14 +2835,6 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
   if (rc) {
     return;
   }
-
-  // If OMP_PROC_BIND is not specified but OMP_PLACES is,
-  // then let OMP_PROC_BIND default to true.
-  if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
-    __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
-  }
-
-  //__kmp_affinity_num_places = 0;
 
   if (__kmp_match_str("threads", scan, &next)) {
     scan = next;
@@ -2881,9 +2878,14 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
       __kmp_affinity_type = affinity_explicit;
       __kmp_affinity_gran = affinity_gran_fine;
       __kmp_affinity_dups = FALSE;
-      if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
-        __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
-      }
+    } else {
+      // Syntax error fallback
+      __kmp_affinity_type = affinity_compact;
+      __kmp_affinity_gran = affinity_gran_core;
+      __kmp_affinity_dups = FALSE;
+    }
+    if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
+      __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
     }
     return;
   }
