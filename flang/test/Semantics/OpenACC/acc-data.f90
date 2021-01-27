@@ -63,6 +63,8 @@ program openacc_data_validity
 
   !$acc enter data create(aa) wait(wait1, wait2)
 
+  !$acc enter data create(aa) wait(wait1) wait(wait2)
+
   !$acc enter data attach(bb)
 
   !ERROR: At least one of COPYOUT, DELETE, DETACH clause must appear on the EXIT DATA directive
