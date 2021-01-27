@@ -507,7 +507,9 @@ static void resolvePrevailingInIndex(
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
 
-  thinLTOResolvePrevailingInIndex(Index, isPrevailing, recordNewLinkage,
+  // TODO Conf.VisibilityScheme can be lto::Config::ELF for ELF.
+  lto::Config Conf;
+  thinLTOResolvePrevailingInIndex(Conf, Index, isPrevailing, recordNewLinkage,
                                   GUIDPreservedSymbols);
 }
 

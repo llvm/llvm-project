@@ -968,13 +968,17 @@ static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
   return Flags;
 }
 
-/// Decode the flags for GlobalValue in the summary.
+// Decode the flags for GlobalValue in the summary. The bits for each attribute:
+//
+// linkage: [0,4), notEligibleToImport: 4, live: 5, local: 6, canAutoHide: 7,
+// visibility: [8, 10).
 static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
                                                             uint64_t Version) {
   // Summary were not emitted before LLVM 3.9, we don't need to upgrade Linkage
   // like getDecodedLinkage() above. Any future change to the linkage enum and
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
+  auto Visibility = GlobalValue::VisibilityTypes((RawFlags >> 8) & 3); // 2 bits
   RawFlags = RawFlags >> 4;
   bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
   // The Live flag wasn't introduced until version 3. For dead stripping
@@ -984,7 +988,8 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   bool Local = (RawFlags & 0x4);
   bool AutoHide = (RawFlags & 0x8);
 
-  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local, AutoHide);
+  return GlobalValueSummary::GVFlags(Linkage, Visibility, NotEligibleToImport,
+                                     Live, Local, AutoHide);
 }
 
 // Decode the flags for GlobalVariable in the summary

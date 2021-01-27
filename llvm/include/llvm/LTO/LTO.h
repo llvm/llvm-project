@@ -43,7 +43,7 @@ class ToolOutputFile;
 /// This is done for correctness (if value exported, ensure we always
 /// emit a copy), and compile-time optimization (allow drop of duplicates).
 void thinLTOResolvePrevailingInIndex(
-    ModuleSummaryIndex &Index,
+    const lto::Config &C, ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
