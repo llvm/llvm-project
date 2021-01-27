@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fms-extensions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fms-extensions -Wno-ignored-attributes -verify %s
 
 struct [[]] __attribute__((lockable)) __declspec(dllexport) A {}; // ok
 struct [[]] __declspec(dllexport) __attribute__((lockable)) B {}; // ok
