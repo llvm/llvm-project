@@ -1352,9 +1352,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
   // If attributes exist before the method, parse them.
   ParsedAttributes methodAttrs(AttrFactory);
-  if (getLangOpts().ObjC)
-    MaybeParseGNUAttributes(methodAttrs);
-  MaybeParseCXX11Attributes(methodAttrs);
+  MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
+                       methodAttrs);
 
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteObjCMethodDecl(getCurScope(), mType == tok::minus,
@@ -1379,9 +1378,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
   SmallVector<DeclaratorChunk::ParamInfo, 8> CParamInfo;
   if (Tok.isNot(tok::colon)) {
     // If attributes exist after the method, parse them.
-    if (getLangOpts().ObjC)
-      MaybeParseGNUAttributes(methodAttrs);
-    MaybeParseCXX11Attributes(methodAttrs);
+    MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
+                         methodAttrs);
 
     Selector Sel = PP.getSelectorTable().getNullarySelector(SelIdent);
     Decl *Result = Actions.ActOnMethodDeclaration(
@@ -1414,9 +1412,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
     // If attributes exist before the argument name, parse them.
     // Regardless, collect all the attributes we've parsed so far.
-    if (getLangOpts().ObjC)
-      MaybeParseGNUAttributes(paramAttrs);
-    MaybeParseCXX11Attributes(paramAttrs);
+    MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
+                         paramAttrs);
     ArgInfo.ArgAttrs = paramAttrs;
 
     // Code completion for the next piece of the selector.
@@ -1498,9 +1495,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
   // FIXME: Add support for optional parameter list...
   // If attributes exist after the method, parse them.
-  if (getLangOpts().ObjC)
-    MaybeParseGNUAttributes(methodAttrs);
-  MaybeParseCXX11Attributes(methodAttrs);
+  MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
+                       methodAttrs);
 
   if (KeyIdents.size() == 0)
     return nullptr;
