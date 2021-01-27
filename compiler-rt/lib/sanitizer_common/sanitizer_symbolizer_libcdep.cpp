@@ -356,7 +356,7 @@ void ParseSymbolizePCOutput(const char *str, SymbolizedStack *res) {
       InternalFree(info->function);
       info->function = 0;
     }
-    if (0 == internal_strcmp(info->file, "??")) {
+    if (info->file && 0 == internal_strcmp(info->file, "??")) {
       InternalFree(info->file);
       info->file = 0;
     }
