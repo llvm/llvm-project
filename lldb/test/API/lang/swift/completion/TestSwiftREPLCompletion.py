@@ -57,7 +57,8 @@ class SwiftCompletionTest(PExpectTest):
 
         # Try completing something that only has one result "vers" -> "version".
         self.child.send(":vers\t")
-        self.child.expect_exact(":version")
+        # Use list of strings to work when there are embedded ansi sequences.
+        self.child.expect_exact([":", "version"])
         self.child.sendline("")
 
         # Try completing something that has multiple completions.
@@ -70,14 +71,17 @@ class SwiftCompletionTest(PExpectTest):
 
         # Try completing something with subcommands.
         self.child.send(":breakpoi\t")
-        self.child.expect_exact(":breakpoint ")
+        # Use list of strings to work when there are embedded ansi sequences.
+        self.child.expect_exact([":", "breakpoint "])
         self.child.send("\t")
         self.child.expect_exact("Available completions:")
         self.child.expect_exact("command")
         self.child.send("comm\t")
-        self.child.expect_exact(":breakpoint command ")
+        # Use list of strings to work when there are embedded ansi sequences.
+        self.child.expect_exact([":", "breakpoint ", "command "])
         self.child.send("li\t")
-        self.child.expect_exact(":breakpoint command list")
+        # Use list of strings to work when there are embedded ansi sequences.
+        self.child.expect_exact([":", "breakpoint ", "command ", "list"])
         self.child.sendline("")
 
         self.quit()
