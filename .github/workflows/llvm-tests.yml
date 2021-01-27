@@ -1,8 +1,5 @@
 name: LLVM Tests
 
-env:
-  release_major: 12
-
 on:
   push:
     branches:
@@ -42,7 +39,38 @@ jobs:
       with:
         cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release
 
+  abi-dump-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
+      ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
+      BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
+      LLVM_VERSION_MAJOR: ${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
+      LLVM_VERSION_MINOR: ${{ steps.version.outputs.LLVM_VERSION_MINOR }}
+      LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Get LLVM version
+        id: version
+        uses: tstellar/actions/get-llvm-version@get-version
+
+      - name: Setup Variables
+        id: vars
+        run: |
+          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+            echo ::set-output name=BASELINE_VERSION_MAJOR::$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
+            echo ::set-output name=ABI_HEADERS::llvm-c
+          else
+            echo ::set-output name=BASELINE_VERSION_MAJOR::${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
+            echo ::set-output name=ABI_HEADERS::.
+          fi
+
   abi-dump:
+    needs: abi-dump-setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -51,11 +79,11 @@ jobs:
           - build-latest
         include:
           - name: build-baseline
-            # FIXME: Referencing the env context does not work here
-            # ref: llvmorg-${{ env.release_major }}.0.0
-            ref: llvmorg-12.0.0
+            llvm_version_major: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}
+            ref: llvmorg-${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}.0.0
             repo: llvm/llvm-project
           - name: build-latest
+            llvm_version_major: ${{ needs.abi-dump-setup.outputs.LLVM_VERSION_MAJOR }}
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
@@ -78,22 +106,44 @@ jobs:
         repo: ${{ matrix.repo }}
     - name: Configure
       run: |
-        mkdir build
-        cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g -Og" ../llvm
+        mkdir install
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g -Og" -DCMAKE_INSTALL_PREFIX=`pwd`/install llvm
     - name: Build
-      run: ninja -C build libLLVM-${{ env.release_major }}.so
+      # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
+      run: |
+        ninja -C build install-LLVM
+        ninja -C build install-LLVM
+        ninja -C build install-llvm-headers
     - name: Dump ABI
-      run: abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers llvm/include -o ${{ matrix.ref }}.abi.tar.gz build/lib/libLLVM-${{ env.release_major }}.so
+      run: |
+        if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
+          nm ./install/lib/libLLVM.so | awk "/T _LLVM/ || /T LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" | cut -d ' ' -f 3 > llvm.symbols
+          # Even though the -symbols-list option doesn't seem to filter out the symbols, I believe it speeds up processing, so I'm leaving it in.
+          export EXTRA_ARGS="-symbols-list llvm.symbols"
+        else
+          touch llvm.symbols
+        fi
+        abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
+        # Remove symbol versioning from dumps, so we can compare across major versions.
+        sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
+        tar -czf ${{ matrix.ref }}.abi.tar.gz ${{ matrix.ref }}.abi
     - name: Upload ABI file
       uses: actions/upload-artifact@v1
       with:
         name: ${{ matrix.name }}
         path: ${{ matrix.ref }}.abi.tar.gz
 
+    - name: Upload symbol list file
+      if: matrix.name == 'build-baseline'
+      uses: actions/upload-artifact@v1
+      with:
+        name: symbol-list
+        path: llvm.symbols
+
   abi-compare:
     runs-on: ubuntu-latest
     needs:
+      - abi-dump-setup
       - abi-dump
     steps:
       - name: Download baseline
@@ -104,10 +154,20 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: build-latest
+      - name: Download symbol list
+        uses: actions/download-artifact@v1
+        with:
+          name: symbol-list
+
       - name: Install abi-compliance-checker
         run: sudo apt-get install abi-compliance-checker
       - name: Compare ABI
-        run: abi-compliance-checker -l libLLVM-${{ env.release_major}}.so -old build-baseline/*.tar.gz -new build-latest/*.tar.gz
+        run: |
+          if [ -s symbol-list/llvm.symbols ]; then
+            # This option doesn't seem to work with the ABI dumper, so passing it here.
+            export EXTRA_ARGS="-symbols-list symbol-list/llvm.symbols"
+          fi
+          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.tar.gz -new build-latest/*.tar.gz || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
         uses: actions/upload-artifact@v1
