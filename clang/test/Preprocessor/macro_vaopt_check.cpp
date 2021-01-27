@@ -1,4 +1,20 @@
-// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++2a
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++20
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++11
+// RUN: %clang_cc1 -x c %s -Eonly -verify -Wno-all -pedantic -std=c99
+
+// Check that support for __VA_OPT__ can be detected by #ifdef.
+#ifndef __VA_OPT__
+#error should be defined
+#endif
+
+#ifdef __VA_OPT__
+#else
+#error should be defined
+#endif
+
+#if !defined(__VA_OPT__)
+#error should be defined
+#endif
 
 //expected-error@+1{{missing '('}}
 #define V1(...) __VA_OPT__  
@@ -62,3 +78,16 @@
 #define V1(...) __VA_OPT__  ((())
 #undef V1
 
+// __VA_OPT__ can't appear anywhere else.
+#if __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
+#endif
+
+#define BAD __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
+
+// Check defined(__VA_OPT__) doesn't leave __VA_OPT__ poisoned.
+#define Z(...) (0 __VA_OPT__(|| 1))
+#if defined(__VA_OPT__) && Z(hello)
+// OK
+#else
+#error bad
+#endif

@@ -115,22 +115,19 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 
   BuiltinInfo = std::make_unique<Builtin::Context>();
 
-  // "Poison" __VA_ARGS__, __VA_OPT__ which can only appear in the expansion of
-  // a macro. They get unpoisoned where it is allowed.
-  (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
-  SetPoisonReason(Ident__VA_ARGS__,diag::ext_pp_bad_vaargs_use);
-  if (getLangOpts().CPlusPlus20) {
-    (Ident__VA_OPT__ = getIdentifierInfo("__VA_OPT__"))->setIsPoisoned();
-    SetPoisonReason(Ident__VA_OPT__,diag::ext_pp_bad_vaopt_use);
-  } else {
-    Ident__VA_OPT__ = nullptr;
-  }
-
   // Initialize the pragma handlers.
   RegisterBuiltinPragmas();
 
   // Initialize builtin macros like __LINE__ and friends.
   RegisterBuiltinMacros();
+
+  // "Poison" __VA_ARGS__, __VA_OPT__ which can only appear in the expansion of
+  // a macro. They get unpoisoned where it is allowed. Note that we model
+  // __VA_OPT__ as a builtin macro to allow #ifdef and friends to detect it.
+  (Ident__VA_ARGS__ = getIdentifierInfo("__VA_ARGS__"))->setIsPoisoned();
+  SetPoisonReason(Ident__VA_ARGS__, diag::ext_pp_bad_vaargs_use);
+  Ident__VA_OPT__->setIsPoisoned();
+  SetPoisonReason(Ident__VA_OPT__, diag::ext_pp_bad_vaopt_use);
 
   if(LangOpts.Borland) {
     Ident__exception_info        = getIdentifierInfo("_exception_info");

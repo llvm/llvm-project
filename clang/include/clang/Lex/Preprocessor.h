@@ -447,6 +447,25 @@ public:
           ElseLoc(ElseLoc) {}
   };
 
+  class IfdefMacroNameScopeRAII {
+    Preprocessor &PP;
+    bool VAOPTWasPoisoned;
+
+  public:
+    IfdefMacroNameScopeRAII(Preprocessor &PP)
+        : PP(PP), VAOPTWasPoisoned(PP.Ident__VA_OPT__->isPoisoned()) {
+      PP.Ident__VA_OPT__->setIsPoisoned(false);
+    }
+    IfdefMacroNameScopeRAII(const IfdefMacroNameScopeRAII&) = delete;
+    IfdefMacroNameScopeRAII &operator=(const IfdefMacroNameScopeRAII&) = delete;
+    ~IfdefMacroNameScopeRAII() { Exit(); }
+
+    void Exit() {
+      if (VAOPTWasPoisoned)
+        PP.Ident__VA_OPT__->setIsPoisoned(true);
+    }
+  };
+
 private:
   friend class ASTReader;
   friend class MacroArgs;
