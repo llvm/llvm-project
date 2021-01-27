@@ -256,7 +256,7 @@ class DependencyOutputOpts<string base>
 class CodeGenOpts<string base>
   : KeyPathAndMacro<"CodeGenOpts.", base, "CODEGEN_"> {}
 class HeaderSearchOpts<string base>
-  : KeyPathAndMacro<"HeaderSearchOpts->", base> {}
+  : KeyPathAndMacro<"HeaderSearchOpts->", base, "HEADER_SEARCH_"> {}
 class PreprocessorOpts<string base>
   : KeyPathAndMacro<"PreprocessorOpts->", base> {}
 class FileSystemOpts<string base>
