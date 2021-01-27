@@ -123,6 +123,7 @@ NumaDomains                  "NUMA domains"
 ProcGroup                    "processor group"
 ProcGroups                   "processor groups"
 Unknown                      "unknown"
+NoLeaf31Support              "cpuid leaf 31 not supported"
 
 
 
@@ -383,8 +384,8 @@ StaticLibNotSupport          "Static %1$s does not support %2$s. Continuing with
 OBSOLETE                     "KMP_DYNAMIC_MODE=irml cannot be used with KMP_USE_IRML=0"
 IttUnknownGroup              "ittnotify: Unknown group \"%2$s\" specified in environment variable \"%1$s\"."
 IttEnvVarTooLong             "ittnotify: Environment variable \"%1$s\" too long: Actual lengths is %2$lu, max allowed length is %3$lu."
-AffUseGlobCpuidL11           "%1$s: Affinity capable, using global cpuid leaf 11 info"
-AffNotCapableUseLocCpuidL11  "%1$s: Affinity not capable, using local cpuid leaf 11 info"
+OBSOLETE                     "%1$s: Affinity capable, using global cpuid leaf 11 info"
+OBSOLETE                     "%1$s: Affinity not capable, using local cpuid leaf 11 info"
 AffInfoStr                   "%1$s: %2$s."
 AffInfoStrStr                "%1$s: %2$s - %3$s."
 OSProcToPhysicalThreadMap    "%1$s: OS proc to physical thread map:"
@@ -450,6 +451,10 @@ HierSchedInvalid             "Hierarchy ignored: unsupported level: %1$s."
 AffFormatDefault             "OMP: pid %1$s tid %2$s thread %3$s bound to OS proc set {%4$s}"
 APIDeprecated                "%1$s routine deprecated, please use %2$s instead."
 GompFeatureNotSupported      "libgomp compatibility layer does not support OpenMP feature: %1$s"
+AffHWSubsetManyDies          "KMP_HW_SUBSET ignored: too many Dies requested."
+AffUseGlobCpuidL             "%1$s: Affinity capable, using global cpuid leaf %2$d info"
+AffNotCapableUseLocCpuidL    "%1$s: Affinity not capable, using local cpuid leaf %2$d info"
+AffNotUsingHwloc             "%1$s: Affinity not capable, using hwloc."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-
