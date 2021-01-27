@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
+#include <stddef.h>
 
 #include <unwind.h>
 #if defined(__arm__) && !defined(__ARM_DWARF_EH__) &&                          \
