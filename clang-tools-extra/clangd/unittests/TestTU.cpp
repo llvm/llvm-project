@@ -154,8 +154,7 @@ RefSlab TestTU::headerRefs() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true,
-                                         /*CollectMainFileRefs=*/true);
+  auto Idx = std::make_unique<FileIndex>();
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
                       AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getCanonicalIncludes());

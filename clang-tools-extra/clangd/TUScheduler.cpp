@@ -596,8 +596,8 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
       FileName(FileName), ContextProvider(Opts.ContextProvider), CDB(CDB),
       Callbacks(Callbacks), Barrier(Barrier), Done(false),
       Status(FileName, Callbacks),
-      PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory,
-                   RunSync || !Opts.AsyncPreambleBuilds, Status, *this) {
+      PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
+                   Status, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
