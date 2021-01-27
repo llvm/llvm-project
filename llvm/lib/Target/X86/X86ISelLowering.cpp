@@ -51922,9 +51922,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return Res;
 }
 
-int X86TargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                            const AddrMode &AM, Type *Ty,
-                                            unsigned AS) const {
+InstructionCost X86TargetLowering::getScalingFactorCost(const DataLayout &DL,
+                                                        const AddrMode &AM,
+                                                        Type *Ty,
+                                                        unsigned AS) const {
   // Scaling factors are not free at all.
   // An indexed folded instruction, i.e., inst (reg1, reg2, scale),
   // will take 2 allocations in the out of order engine instead of 1

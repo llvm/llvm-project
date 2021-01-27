@@ -281,8 +281,9 @@ public:
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
 
-  int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                           bool HasBaseReg, int64_t Scale, unsigned AddrSpace) {
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;

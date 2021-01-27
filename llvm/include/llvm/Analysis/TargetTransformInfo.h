@@ -682,9 +682,10 @@ public:
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
   /// TODO: Handle pre/postinc as well.
-  int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                           bool HasBaseReg, int64_t Scale,
-                           unsigned AddrSpace = 0) const;
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
+                                       unsigned AddrSpace = 0) const;
 
   /// Return true if the loop strength reduce pass should make
   /// Instruction* based TTI queries to isLegalAddressingMode(). This is
@@ -1481,9 +1482,10 @@ public:
   virtual bool hasDivRemOp(Type *DataType, bool IsSigned) = 0;
   virtual bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) = 0;
   virtual bool prefersVectorizedAddressing() = 0;
-  virtual int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                   int64_t BaseOffset, bool HasBaseReg,
-                                   int64_t Scale, unsigned AddrSpace) = 0;
+  virtual InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                               int64_t BaseOffset,
+                                               bool HasBaseReg, int64_t Scale,
+                                               unsigned AddrSpace) = 0;
   virtual bool LSRWithInstrQueries() = 0;
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
@@ -1862,9 +1864,10 @@ public:
   bool prefersVectorizedAddressing() override {
     return Impl.prefersVectorizedAddressing();
   }
-  int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                           bool HasBaseReg, int64_t Scale,
-                           unsigned AddrSpace) override {
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
+                                       unsigned AddrSpace) override {
     return Impl.getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                                      AddrSpace);
   }

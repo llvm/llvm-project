@@ -270,9 +270,10 @@ public:
 
   bool prefersVectorizedAddressing() const { return true; }
 
-  int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                           bool HasBaseReg, int64_t Scale,
-                           unsigned AddrSpace) const {
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
+                                       unsigned AddrSpace) const {
     // Guess that all legal addressing mode are free.
     if (isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                               AddrSpace))
