@@ -322,8 +322,8 @@ private:
 namespace RISCVVIntrinsicsTable {
 
 struct RISCVVIntrinsicInfo {
-  unsigned int IntrinsicID;
-  unsigned int ExtendedOperand;
+  unsigned IntrinsicID;
+  uint8_t ExtendedOperand;
 };
 
 using namespace RISCV;
@@ -336,11 +336,11 @@ using namespace RISCV;
 namespace RISCVZvlssegTable {
 
 struct RISCVZvlsseg {
-  unsigned int IntrinsicID;
-  unsigned int SEW;
-  unsigned int LMUL;
-  unsigned int IndexLMUL;
-  unsigned int Pseudo;
+  unsigned IntrinsicID;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint8_t IndexLMUL;
+  uint16_t Pseudo;
 };
 
 using namespace RISCV;
