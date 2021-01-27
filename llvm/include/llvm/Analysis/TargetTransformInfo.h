@@ -263,9 +263,10 @@ public:
   };
 
   /// Estimate the cost of a GEP operation when lowered.
-  int getGEPCost(Type *PointeeType, const Value *Ptr,
-                 ArrayRef<const Value *> Operands,
-                 TargetCostKind CostKind = TCK_SizeAndLatency) const;
+  InstructionCost
+  getGEPCost(Type *PointeeType, const Value *Ptr,
+             ArrayRef<const Value *> Operands,
+             TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
@@ -1401,9 +1402,9 @@ class TargetTransformInfo::Concept {
 public:
   virtual ~Concept() = 0;
   virtual const DataLayout &getDataLayout() const = 0;
-  virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
-                         ArrayRef<const Value *> Operands,
-                         TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                                     ArrayRef<const Value *> Operands,
+                                     TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
@@ -1693,9 +1694,10 @@ public:
     return Impl.getDataLayout();
   }
 
-  int getGEPCost(Type *PointeeType, const Value *Ptr,
-                 ArrayRef<const Value *> Operands,
-                 enum TargetTransformInfo::TargetCostKind CostKind) override {
+  InstructionCost
+  getGEPCost(Type *PointeeType, const Value *Ptr,
+             ArrayRef<const Value *> Operands,
+             enum TargetTransformInfo::TargetCostKind CostKind) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);
   }
   unsigned getInliningThresholdMultiplier() override {

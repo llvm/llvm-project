@@ -47,9 +47,10 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  int getGEPCost(Type *PointeeType, const Value *Ptr,
-                 ArrayRef<const Value *> Operands,
-                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const {
+  InstructionCost
+  getGEPCost(Type *PointeeType, const Value *Ptr,
+             ArrayRef<const Value *> Operands,
+             TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const {
     // In the basic model, we just assume that all-constant GEPs will be folded
     // into their uses via addressing modes.
     for (unsigned Idx = 0, Size = Operands.size(); Idx != Size; ++Idx)
@@ -841,9 +842,10 @@ protected:
 public:
   using BaseT::getGEPCost;
 
-  int getGEPCost(Type *PointeeType, const Value *Ptr,
-                 ArrayRef<const Value *> Operands,
-                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
+  InstructionCost
+  getGEPCost(Type *PointeeType, const Value *Ptr,
+             ArrayRef<const Value *> Operands,
+             TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     // TODO: will remove this when pointers have an opaque type.
     assert(Ptr->getType()->getScalarType()->getPointerElementType() ==
