@@ -1,5 +1,6 @@
 set(PUBLIC_HEADERS
     libc.include.errno
     libc.include.math
+    libc.include.stdlib
     libc.include.sys_syscall
 )
