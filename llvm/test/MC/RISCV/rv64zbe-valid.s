@@ -12,12 +12,6 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zbe -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: bdecompress t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x48]
-bdecompress t0, t1, t2
-# CHECK-ASM-AND-OBJ: bcompress t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x08]
-bcompress t0, t1, t2
 # CHECK-ASM-AND-OBJ: bdecompressw t0, t1, t2
 # CHECK-ASM: encoding: [0xbb,0x62,0x73,0x48]
 bdecompressw t0, t1, t2
