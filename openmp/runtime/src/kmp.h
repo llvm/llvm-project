@@ -789,6 +789,7 @@ enum affinity_gran {
   affinity_gran_thread,
   affinity_gran_core,
   affinity_gran_tile,
+  affinity_gran_die,
   affinity_gran_numa,
   affinity_gran_package,
   affinity_gran_node,
@@ -805,6 +806,7 @@ enum affinity_top_method {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   affinity_top_method_apicid,
   affinity_top_method_x2apicid,
+  affinity_top_method_x2apicid_1f,
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
   affinity_top_method_cpuinfo, // KMP_CPUINFO_FILE is usable on Windows* OS, too
 #if KMP_GROUP_AFFINITY
@@ -889,6 +891,7 @@ typedef struct kmp_hws_item {
 } kmp_hws_item_t;
 
 extern kmp_hws_item_t __kmp_hws_socket;
+extern kmp_hws_item_t __kmp_hws_die;
 extern kmp_hws_item_t __kmp_hws_node;
 extern kmp_hws_item_t __kmp_hws_tile;
 extern kmp_hws_item_t __kmp_hws_core;
