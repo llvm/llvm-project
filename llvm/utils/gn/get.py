@@ -50,7 +50,6 @@ def main():
         print('  rm -rf /tmp/gn &&')
         print('  pushd /tmp && git clone https://gn.googlesource.com/gn &&')
         print('  cd gn && build/gen.py && ninja -C out gn && popd &&')
-        print('  mkdir -p llvm/utils/gn/bin/mac-arm64 &&')
         print('  cp /tmp/gn/out/gn somewhere/on/PATH')
         return 1
     dirname = os.path.join(os.path.dirname(__file__), 'bin', platform)
