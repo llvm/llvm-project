@@ -713,9 +713,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureSMemTimeInst, FeatureMadMacF32Insts, FeatureDsSrc2Insts,
-   FeatureFastDenormalF32, FeatureSupportsXNACK, FeatureUnalignedBufferAccess,
-   FeatureUnalignedDSAccess
-  ]
+   FeatureFastDenormalF32, FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
+   FeatureSupportsXNACK]
 >;
 
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",

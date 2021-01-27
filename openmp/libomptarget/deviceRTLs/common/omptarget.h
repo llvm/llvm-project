@@ -14,12 +14,13 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-#include "target_impl.h"
-#include "common/debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
+#include "common/allocator.h"
+#include "common/debug.h" // debug
 #include "common/state-queue.h"
 #include "common/support.h"
 #include "common/ompd-specific.h"
+#include "target_impl.h"
 
 #define OMPTARGET_NVPTX_VERSION 1.1
 
@@ -301,9 +302,9 @@ private:
 /// Memory manager for statically allocated memory.
 class omptarget_nvptx_SimpleMemoryManager {
 private:
-  ALIGN(128) struct MemDataTy {
+  struct MemDataTy {
     volatile unsigned keys[OMP_STATE_COUNT];
-  } MemData[MAX_SM];
+  } MemData[MAX_SM] ALIGN(128);
 
   INLINE static uint32_t hash(unsigned key) {
     return key & (OMP_STATE_COUNT - 1);
@@ -324,7 +325,6 @@ extern DEVICE omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 extern DEVICE uint32_t EXTERN_SHARED(usedMemIdx);
 extern DEVICE uint32_t EXTERN_SHARED(usedSlotIdx);
-
 #if _OPENMP
 extern DEVICE uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 #pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
@@ -332,7 +332,6 @@ extern DEVICE uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 extern DEVICE
     uint8_t EXTERN_SHARED(parallelLevel)[MAX_THREADS_PER_TEAM / WARPSIZE];
 #endif
-
 extern DEVICE uint16_t EXTERN_SHARED(threadLimit);
 extern DEVICE uint16_t EXTERN_SHARED(threadsInTeam);
 extern DEVICE uint16_t EXTERN_SHARED(nThreads);
@@ -348,7 +347,6 @@ extern DEVICE void *EXTERN_SHARED(ReductionScratchpadPtr);
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-
 extern volatile DEVICE
     omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
 

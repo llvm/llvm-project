@@ -91,7 +91,14 @@ static cl::opt<unsigned> SinkLoadBlocksThreshold(
              "the straight line is higher than this threshold."),
     cl::init(20), cl::Hidden);
 
+static cl::opt<bool>
+SinkInstsIntoLoop("sink-insts-to-avoid-spills",
+                  cl::desc("Sink instructions into loops to avoid "
+                           "register spills"),
+                  cl::init(false), cl::Hidden);
+
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
+STATISTIC(NumLoopSunk,  "Number of machine instructions sunk into a loop");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
 STATISTIC(NumPostRACopySink, "Number of copies sunk after RA");
@@ -216,6 +223,11 @@ namespace {
                                  bool &LocalUse) const;
     MachineBasicBlock *FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
                bool &BreakPHIEdge, AllSuccsCache &AllSuccessors);
+
+    void FindLoopSinkCandidates(MachineLoop *L, MachineBasicBlock *BB,
+                                SmallVectorImpl<MachineInstr *> &Candidates);
+    bool SinkIntoLoop(MachineLoop *L, MachineInstr &I);
+
     bool isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                               MachineBasicBlock *MBB,
                               MachineBasicBlock *SuccToSinkTo,
@@ -340,6 +352,60 @@ bool MachineSinking::AllUsesDominatedByBlock(Register Reg,
   return true;
 }
 
+/// Return true if this machine instruction loads from global offset table or
+/// constant pool.
+static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
+  assert(MI.mayLoad() && "Expected MI that loads!");
+
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything..
+  if (MI.memoperands_empty())
+    return true;
+
+  for (MachineMemOperand *MemOp : MI.memoperands())
+    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
+      if (PSV->isGOT() || PSV->isConstantPool())
+        return true;
+
+  return false;
+}
+
+void MachineSinking::FindLoopSinkCandidates(MachineLoop *L, MachineBasicBlock *BB,
+    SmallVectorImpl<MachineInstr *> &Candidates) {
+  for (auto &MI : *BB) {
+    LLVM_DEBUG(dbgs() << "LoopSink: Analysing candidate: " << MI);
+    if (!TII->shouldSink(MI)) {
+      LLVM_DEBUG(dbgs() << "LoopSink: Instruction not a candidate for this "
+                           "target\n");
+      continue;
+    }
+    if (!L->isLoopInvariant(MI)) {
+      LLVM_DEBUG(dbgs() << "LoopSink: Instruction is not loop invariant\n");
+      continue;
+    }
+    bool DontMoveAcrossStore = true;
+    if (!MI.isSafeToMove(AA, DontMoveAcrossStore)) {
+      LLVM_DEBUG(dbgs() << "LoopSink: Instruction not safe to move.\n");
+      continue;
+    }
+    if (MI.mayLoad() && !mayLoadFromGOTOrConstantPool(MI)) {
+      LLVM_DEBUG(dbgs() << "LoopSink: Dont sink GOT or constant pool loads\n");
+      continue;
+    }
+    if (MI.isConvergent())
+      continue;
+
+    const MachineOperand &MO = MI.getOperand(0);
+    if (!MO.isReg() || !MO.getReg() || !MO.isDef())
+      continue;
+    if (!MRI->hasOneDef(MO.getReg()))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "LoopSink: Instruction added as candidate.\n");
+    Candidates.push_back(&MI);
+  }
+}
+
 bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -387,6 +453,29 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     // If this iteration over the code changed anything, keep iterating.
     if (!MadeChange) break;
     EverMadeChange = true;
+  }
+
+  if (SinkInstsIntoLoop) {
+    SmallVector<MachineLoop *, 8> Loops(LI->begin(), LI->end());
+    for (auto *L : Loops) {
+      MachineBasicBlock *Preheader = LI->findLoopPreheader(L);
+      if (!Preheader) {
+        LLVM_DEBUG(dbgs() << "LoopSink: Can't find preheader\n");
+        continue;
+      }
+      SmallVector<MachineInstr *, 8> Candidates;
+      FindLoopSinkCandidates(L, Preheader, Candidates);
+
+      // Walk the candidates in reverse order so that we start with the use
+      // of a def-use chain, if there is any.
+      for (auto It = Candidates.rbegin(); It != Candidates.rend(); ++It) {
+        MachineInstr *I = *It;
+        if (!SinkIntoLoop(L, *I))
+          break;
+        EverMadeChange = true;
+        ++NumLoopSunk;
+      }
+    }
   }
 
   HasStoreCache.clear();
@@ -1096,6 +1185,73 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
   if (!SawStore)
     HasStoreCache[BlockPair] = false;
   return HasAliasedStore;
+}
+
+/// Sink instructions into loops if profitable. This especially tries to prevent
+/// register spills caused by register pressure if there is little to no
+/// overhead moving instructions into loops.
+bool MachineSinking::SinkIntoLoop(MachineLoop *L, MachineInstr &I) {
+  LLVM_DEBUG(dbgs() << "LoopSink: Finding sink block for: " << I);
+  MachineBasicBlock *Preheader = L->getLoopPreheader();
+  assert(Preheader && "Loop sink needs a preheader block");
+  MachineBasicBlock *SinkBlock = nullptr;
+  bool CanSink = true;
+  const MachineOperand &MO = I.getOperand(0);
+
+  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+    LLVM_DEBUG(dbgs() << "LoopSink:   Analysing use: " << MI);
+    if (!L->contains(&MI)) {
+      LLVM_DEBUG(dbgs() << "LoopSink:   Use not in loop, can't sink.\n");
+      CanSink = false;
+      break;
+    }
+
+    // FIXME: Come up with a proper cost model that estimates whether sinking
+    // the instruction (and thus possibly executing it on every loop
+    // iteration) is more expensive than a register.
+    // For now assumes that copies are cheap and thus almost always worth it.
+    if (!MI.isCopy()) {
+      LLVM_DEBUG(dbgs() << "LoopSink:   Use is not a copy\n");
+      CanSink = false;
+      break;
+    }
+    if (!SinkBlock) {
+      SinkBlock = MI.getParent();
+      LLVM_DEBUG(dbgs() << "LoopSink:   Setting sink block to: "
+                        << printMBBReference(*SinkBlock) << "\n");
+      continue;
+    }
+    SinkBlock = DT->findNearestCommonDominator(SinkBlock, MI.getParent());
+    if (!SinkBlock) {
+      LLVM_DEBUG(dbgs() << "LoopSink:   Can't find nearest dominator\n");
+      CanSink = false;
+      break;
+    }
+    LLVM_DEBUG(dbgs() << "LoopSink:   Setting nearest common dom block: " <<
+               printMBBReference(*SinkBlock) << "\n");
+  }
+
+  if (!CanSink) {
+    LLVM_DEBUG(dbgs() << "LoopSink: Can't sink instruction.\n");
+    return false;
+  }
+  if (!SinkBlock) {
+    LLVM_DEBUG(dbgs() << "LoopSink: Not sinking, can't find sink block.\n");
+    return false;
+  }
+  if (SinkBlock == Preheader) {
+    LLVM_DEBUG(dbgs() << "LoopSink: Not sinking, sink block is the preheader\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "LoopSink: Sinking instruction!\n");
+  SinkBlock->splice(SinkBlock->getFirstNonPHI(), Preheader, I);
+
+  // The instruction is moved from its basic block, so do not retain the
+  // debug information.
+  assert(!I.isDebugInstr() && "Should not sink debug inst");
+  I.setDebugLoc(DebugLoc());
+  return true;
 }
 
 /// SinkInstruction - Determine whether it is safe to sink the specified machine

@@ -760,11 +760,14 @@ void Prescanner::FortranInclude(const char *firstQuote) {
   std::string buf;
   llvm::raw_string_ostream error{buf};
   Provenance provenance{GetProvenance(nextLine_)};
-  std::optional<std::string> prependPath;
-  if (const SourceFile * currentFile{allSources_.GetSourceFile(provenance)}) {
-    prependPath = DirectoryName(currentFile->path());
+  const SourceFile *currentFile{allSources_.GetSourceFile(provenance)};
+  if (currentFile) {
+    allSources_.PushSearchPathDirectory(DirectoryName(currentFile->path()));
   }
-  const SourceFile *included{allSources_.Open(path, error, prependPath)};
+  const SourceFile *included{allSources_.Open(path, error)};
+  if (currentFile) {
+    allSources_.PopSearchPathDirectory();
+  }
   if (!included) {
     Say(provenance, "INCLUDE: %s"_err_en_US, error.str());
   } else if (included->bytes() > 0) {

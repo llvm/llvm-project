@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
+#include "common/allocator.h"
 #include "target_impl.h"
 
 // Implementations initially derived from hcc

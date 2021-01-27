@@ -24,9 +24,6 @@
 using namespace mlir;
 using namespace mlir::async;
 
-// Prefix for functions outlined from `async.execute` op regions.
-static constexpr const char kAsyncFnPrefix[] = "async_execute_fn";
-
 //===----------------------------------------------------------------------===//
 // Async Runtime C API declaration.
 //===----------------------------------------------------------------------===//

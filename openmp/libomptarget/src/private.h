@@ -73,7 +73,7 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
                                 void *);
 
-// Function pointer type for target_data_* functions (targetDataBegin,
+// Function pointer type for targetData* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
@@ -112,9 +112,9 @@ static inline void dumpTargetPointerMappings(const ident_t *Loc,
   for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
     SourceInfo Info(HostTargetMap.HstPtrName);
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8lu %-8ld %s at %s:%d:%d\n",
+         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-8" PRId64 " %s at %s:%d:%d\n",
          DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
-         (long unsigned)(HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin),
+         HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
          HostTargetMap.getRefCount(), Info.getName(), Info.getFilename(),
          Info.getLine(), Info.getColumn());
   }
@@ -152,7 +152,7 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     else
       type = "use_address";
 
-    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%ld] %s\n", type,
+    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", type,
          getNameFromMapping(varName).c_str(), ArgSizes[i], implicit);
   }
 }

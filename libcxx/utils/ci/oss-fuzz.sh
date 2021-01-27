@@ -14,7 +14,9 @@ for test in libcxx/test/libcxx/fuzzing/*.pass.cpp; do
     ${CXX} ${CXXFLAGS} \
         -std=c++14 \
         -DLIBCPP_OSS_FUZZ \
+        -D_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS \
         -nostdinc++ -cxx-isystem libcxx/include \
+        -lpthread -ldl \
         -o "${OUT}/${exe}" \
         ${test} \
         ${LIB_FUZZING_ENGINE}

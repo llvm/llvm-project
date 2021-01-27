@@ -1105,7 +1105,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       if (!argTy.isa<LLVM::LLVMPointerType>())
         return func.emitError(
             "llvm.sret attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttr(llvm::Attribute::AttrKind::StructRet);
+      llvmArg.addAttrs(llvm::AttrBuilder().addStructRetAttr(
+          llvmArg.getType()->getPointerElementType()));
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.byval")) {
@@ -1113,7 +1114,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       if (!argTy.isa<LLVM::LLVMPointerType>())
         return func.emitError(
             "llvm.byval attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttr(llvm::Attribute::AttrKind::ByVal);
+      llvmArg.addAttrs(llvm::AttrBuilder().addByValAttr(
+          llvmArg.getType()->getPointerElementType()));
     }
 
     valueMapping[mlirArg] = &llvmArg;

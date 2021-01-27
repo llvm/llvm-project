@@ -16,6 +16,7 @@
 #error "amdgcn target_impl.h expects to be compiled under __AMDGCN__"
 #endif
 
+#include "interface.h"
 #include "amdgcn_interface.h"
 #include "amdgcn_intrinsics.h"
 
@@ -34,20 +35,6 @@
 #define NOINLINE __attribute__((noinline)) DEVICE
 
 #ifdef _OPENMP
-
-// Follows the pattern in interface.h
-typedef enum omp_allocator_handle_t {
-  omp_null_allocator = 0,
-  omp_default_mem_alloc = 1,
-  omp_large_cap_mem_alloc = 2,
-  omp_const_mem_alloc = 3,
-  omp_high_bw_mem_alloc = 4,
-  omp_low_lat_mem_alloc = 5,
-  omp_cgroup_mem_alloc = 6,
-  omp_pteam_mem_alloc = 7,
-  omp_thread_mem_alloc = 8,
-  KMP_ALLOCATOR_MAX_HANDLE = UINTPTR_MAX
-} omp_allocator_handle_t;
 
 #define __p(STR) _Pragma(STR)
 #define __p2(STR) __p(#STR)

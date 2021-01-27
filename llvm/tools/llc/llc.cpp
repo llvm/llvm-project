@@ -82,6 +82,15 @@ TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
                  cl::value_desc("N"),
                  cl::desc("Repeat compilation N times for timing"));
 
+static cl::opt<std::string>
+    BinutilsVersion("binutils-version", cl::Hidden,
+                    cl::desc("Produced object files can use all ELF features "
+                             "supported by this binutils version and newer."
+                             "If -no-integrated-as is specified, the generated "
+                             "assembly will consider GNU as support."
+                             "'none' means that all ELF features can be used, "
+                             "regardless of binutils support"));
+
 static cl::opt<bool>
 NoIntegratedAssembler("no-integrated-as", cl::Hidden,
                       cl::desc("Disable integrated assembler"));
@@ -191,6 +200,25 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
 
 static int compileModule(char **, LLVMContext &);
 
+LLVM_ATTRIBUTE_NORETURN static void reportError(Twine Msg,
+                                                StringRef Filename = "") {
+  SmallString<256> Prefix;
+  if (!Filename.empty()) {
+    if (Filename == "-")
+      Filename = "<stdin>";
+    ("'" + Twine(Filename) + "': ").toStringRef(Prefix);
+  }
+  WithColor::error(errs(), "llc") << Prefix << Msg << "\n";
+  exit(1);
+}
+
+LLVM_ATTRIBUTE_NORETURN static void reportError(Error Err, StringRef Filename) {
+  assert(Err);
+  handleAllErrors(createFileError(Filename, std::move(Err)),
+                  [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
+  llvm_unreachable("reportError() should not return");
+}
+
 static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
                                                        Triple::OSType OS,
                                                        const char *ProgName) {
@@ -251,7 +279,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     OpenFlags |= sys::fs::OF_Text;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
   if (EC) {
-    WithColor::error() << EC.message() << '\n';
+    reportError(EC.message());
     return nullptr;
   }
 
@@ -344,18 +372,12 @@ int main(int argc, char **argv) {
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
                                    RemarksFormat, RemarksWithHotness,
                                    RemarksHotnessThreshold);
-  if (Error E = RemarksFileOrErr.takeError()) {
-    WithColor::error(errs(), argv[0]) << toString(std::move(E)) << '\n';
-    return 1;
-  }
+  if (Error E = RemarksFileOrErr.takeError())
+    reportError(std::move(E), RemarksFilename);
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
-  if (InputLanguage != "" && InputLanguage != "ir" &&
-      InputLanguage != "mir") {
-    WithColor::error(errs(), argv[0])
-        << "input language must be '', 'IR' or 'MIR'\n";
-    return 1;
-  }
+  if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
+    reportError("input language must be '', 'IR' or 'MIR'");
 
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
@@ -427,9 +449,24 @@ static int compileModule(char **argv, LLVMContext &Context) {
   case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
 
+  // Parse 'none' or '$major.$minor'. Disallow -binutils-version=0 because we
+  // use that to indicate the MC default.
+  if (!BinutilsVersion.empty() && BinutilsVersion != "none") {
+    StringRef V = BinutilsVersion.getValue();
+    unsigned Num;
+    if (V.consumeInteger(10, Num) || Num == 0 ||
+        !(V.empty() ||
+          (V.consume_front(".") && !V.consumeInteger(10, Num) && V.empty()))) {
+      WithColor::error(errs(), argv[0])
+          << "invalid -binutils-version, accepting 'none' or major.minor\n";
+      return 1;
+    }
+  }
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options.BinutilsVersion =
+        TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;
@@ -466,11 +503,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
       // On AIX, setting the relocation model to anything other than PIC is
       // considered a user error.
-      if (TheTriple.isOSAIX() && RM.hasValue() && *RM != Reloc::PIC_) {
-        WithColor::error(errs(), argv[0])
-            << "invalid relocation model, AIX only supports PIC.\n";
-        exit(1);
-      }
+      if (TheTriple.isOSAIX() && RM.hasValue() && *RM != Reloc::PIC_)
+        reportError("invalid relocation model, AIX only supports PIC",
+                    InputFilename);
 
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
@@ -543,10 +578,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
                                                sys::fs::OF_None);
-    if (EC) {
-      WithColor::error(errs(), argv[0]) << EC.message() << '\n';
-      return 1;
-    }
+    if (EC)
+      reportError(EC.message(), SplitDwarfOutputFile);
   }
 
   // Build up all of the passes that we want to do to the module.
@@ -562,12 +595,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
-  if (!NoVerify && verifyModule(*M, &errs())) {
-    std::string Prefix =
-        (Twine(argv[0]) + Twine(": ") + Twine(InputFilename)).str();
-    WithColor::error(errs(), Prefix) << "input module is broken!\n";
-    return 1;
-  }
+  if (!NoVerify && verifyModule(*M, &errs()))
+    reportError("input module cannot be verified", InputFilename);
 
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
@@ -626,10 +655,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
                    codegen::getFileType(), NoVerify, MMIWP)) {
-      WithColor::warning(errs(), argv[0])
-          << "target does not support generation of this"
-          << " file type!\n";
-      return 1;
+      reportError("target does not support generation of this file type");
     }
 
     const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())

@@ -10193,7 +10193,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
           Elt = SValInt.rotl(i*EltSize+EltSize).zextOrTrunc(EltSize);
         else
           Elt = SValInt.rotr(i*EltSize).zextOrTrunc(EltSize);
-        Elts.push_back(APValue(APSInt(Elt, EltTy->isSignedIntegerType())));
+        Elts.push_back(APValue(APSInt(Elt, !EltTy->isSignedIntegerType())));
       }
     } else {
       return Error(E);

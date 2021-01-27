@@ -61,11 +61,10 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
-  Optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
-
 protected:
   // Basic subtarget description.
   Triple TargetTriple;
+  AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen;
   InstrItineraryData InstrItins;
   int LDSBankCount;
@@ -235,8 +234,7 @@ public:
   }
 
   const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
-    assert(TargetID.hasValue() && "TargetID has not be initialized");
-    return *TargetID;
+    return TargetID;
   }
 
   // Nothing implemented, just prevent crashes on use.
@@ -510,7 +508,7 @@ public:
   }
 
   bool isXNACKEnabled() const {
-    return getTargetID().isXnackOnOrAny();
+    return TargetID.isXnackOnOrAny();
   }
 
   bool isCuModeEnabled() const {
@@ -573,7 +571,7 @@ public:
   }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !getTargetID().isSramEccOnOrAny();
+    return hasD16LoadStore() && !TargetID.isSramEccOnOrAny();
   }
 
   bool hasD16Images() const {

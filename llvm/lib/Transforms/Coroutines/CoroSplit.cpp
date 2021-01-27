@@ -158,6 +158,7 @@ private:
   void replaceCoroSuspends();
   void replaceCoroEnds();
   void replaceSwiftErrorOps();
+  void salvageDebugInfo();
   void handleFinalSuspend();
 };
 
@@ -631,6 +632,39 @@ void CoroCloner::replaceSwiftErrorOps() {
   ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
 }
 
+void CoroCloner::salvageDebugInfo() {
+  SmallVector<DbgDeclareInst *, 8> Worklist;
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  for (auto &BB : *NewF)
+    for (auto &I : BB)
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
+        Worklist.push_back(DDI);
+  for (DbgDeclareInst *DDI : Worklist) {
+    // This is a heuristic that detects declares left by CoroFrame.
+    bool LoadFromFramePtr = !isa<AllocaInst>(DDI->getAddress());
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, LoadFromFramePtr);
+  }
+  // Remove all salvaged dbg.declare intrinsics that became
+  // either unreachable or stale due to the CoroSplit transformation.
+  auto IsUnreachableBlock = [&](BasicBlock *BB) {
+    return BB->hasNPredecessors(0) && BB != &NewF->getEntryBlock();
+  };
+  for (DbgDeclareInst *DDI : Worklist) {
+    if (IsUnreachableBlock(DDI->getParent()))
+      DDI->eraseFromParent();
+    else if (auto *Alloca = dyn_cast_or_null<AllocaInst>(DDI->getAddress())) {
+      // Count all non-debuginfo uses in reachable blocks.
+      unsigned Uses = 0;
+      for (auto *User : DDI->getAddress()->users())
+        if (auto *I = dyn_cast<Instruction>(User))
+          if (!isa<AllocaInst>(I) && !IsUnreachableBlock(I->getParent()))
+            ++Uses;
+      if (!Uses)
+        DDI->eraseFromParent();
+    }
+  }
+}
+
 void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
@@ -903,6 +937,9 @@ void CoroCloner::create() {
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
+
+  // Salvage debug info that points into the coroutine frame.
+  salvageDebugInfo();
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.

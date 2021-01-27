@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
-#include "common/omptarget.h"
+#include "common/allocator.h"
 #include "common/device_environment.h"
+#include "common/omptarget.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // global device environment

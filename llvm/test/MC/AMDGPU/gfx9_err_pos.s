@@ -25,6 +25,14 @@ s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC1,DST)
 // CHECK-NEXT:{{^}}                                           ^
 
 //==============================================================================
+// exp target is not supported on this GPU
+
+exp pos4 v4, v3, v2, v1
+// CHECK: error: exp target is not supported on this GPU
+// CHECK-NEXT:{{^}}exp pos4 v4, v3, v2, v1
+// CHECK-NEXT:{{^}}    ^
+
+//==============================================================================
 // expected a 12-bit unsigned offset
 
 flat_load_dword v1, v[3:4] offset:-1

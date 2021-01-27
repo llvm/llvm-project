@@ -4,8 +4,8 @@
 define i1 @foo(i64* %0) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %top
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    andq $-2147483648, %rax # imm = 0x80000000
+; CHECK-NEXT:    movq $-2147483648, %rax # imm = 0x80000000
+; CHECK-NEXT:    testq %rax, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 top:

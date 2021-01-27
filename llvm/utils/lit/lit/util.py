@@ -109,32 +109,23 @@ def to_unicode(s):
     return s
 
 
-# TODO(yln): multiprocessing.cpu_count()
-# TODO(python3): len(os.sched_getaffinity(0)) and os.cpu_count()
-def detectCPUs():
-    """Detects the number of CPUs on a system.
-
-    Cribbed from pp.
+def usable_core_count():
+    """Return the number of cores the current process can use, if supported.
+    Otherwise, return the total number of cores (like `os.cpu_count()`).
+    Default to 1 if undetermined.
 
     """
-    # Linux, Unix and MacOS:
-    if hasattr(os, 'sysconf'):
-        if 'SC_NPROCESSORS_ONLN' in os.sysconf_names:
-            # Linux & Unix:
-            ncpus = os.sysconf('SC_NPROCESSORS_ONLN')
-            if isinstance(ncpus, int) and ncpus > 0:
-                return ncpus
-        else:  # OSX:
-            return int(subprocess.check_output(['sysctl', '-n', 'hw.ncpu'],
-                                               stderr=subprocess.STDOUT))
-    # Windows:
-    if 'NUMBER_OF_PROCESSORS' in os.environ:
-        ncpus = int(os.environ['NUMBER_OF_PROCESSORS'])
-        if ncpus > 0:
-            # With more than 32 processes, process creation often fails with
-            # "Too many open files".  FIXME: Check if there's a better fix.
-            return min(ncpus, 32)
-    return 1  # Default
+    try:
+        n = len(os.sched_getaffinity(0))
+    except AttributeError:
+        n = os.cpu_count() or 1
+
+    # On Windows, with more than 32 processes, process creation often fails with
+    # "Too many open files".  FIXME: Check if there's a better fix.
+    if platform.system() == 'Windows':
+        return min(n, 32)
+
+    return n
 
 
 def mkdir(path):

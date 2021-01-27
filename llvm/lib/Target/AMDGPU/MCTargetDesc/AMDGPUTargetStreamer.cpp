@@ -47,9 +47,8 @@ static void convertIsaVersionV2(uint32_t &Major, uint32_t &Minor,
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
-  if (HSAMD::fromString(std::string(HSAMetadataString), HSAMetadata))
+  if (HSAMD::fromString(HSAMetadataString, HSAMetadata))
     return false;
-
   return EmitHSAMetadata(HSAMetadata);
 }
 

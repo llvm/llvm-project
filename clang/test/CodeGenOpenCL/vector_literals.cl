@@ -63,3 +63,10 @@ void vector_literals_valid() {
   //CHECK: store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float>* %V2
   float4 V2 = (float4)(1);
 }
+
+void vector_literals_with_cast() {
+  // CHECK-LABEL: vector_literals_with_cast
+  // CHECK: store <2 x i32> <i32 12, i32 34>, <2 x i32>*
+  // CHECK: extractelement <2 x i32> %{{[0-9]+}}, i{{[0-9]+}} 0
+  unsigned int withCast = ((int2)((int2)(12, 34))).s0;
+}

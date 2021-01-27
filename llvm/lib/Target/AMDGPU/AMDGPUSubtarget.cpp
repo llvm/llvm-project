@@ -19,6 +19,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -87,7 +88,6 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   //
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
-  TargetID.emplace(*this);
 
   SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
 
@@ -164,12 +164,12 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
-  TargetID->setTargetIDFromFeaturesString(FS);
+  TargetID.setTargetIDFromFeaturesString(FS);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
-                    << TargetID->getXnackSetting() << '\n');
+                    << TargetID.getXnackSetting() << '\n');
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
-                    << TargetID->getSramEccSetting() << '\n');
+                    << TargetID.getSramEccSetting() << '\n');
 
   return *this;
 }
@@ -198,6 +198,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
     TargetTriple(TT),
+    TargetID(*this),
     Gen(INVALID),
     InstrItins(getInstrItineraryForCPU(GPU)),
     LDSBankCount(0),

@@ -5,12 +5,6 @@
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 
-# CHECK-ASM-AND-OBJ: c.not s0
-# CHECK-ASM: encoding: [0x01,0x60]
-c.not s0
-# CHECK-ASM-AND-OBJ: c.neg s0
-# CHECK-ASM: encoding: [0x01,0x64]
-c.neg s0
 # CHECK-ASM-AND-OBJ: c.zext.w s0
 # CHECK-ASM: encoding: [0x01,0x68]
 c.zext.w s0

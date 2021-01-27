@@ -209,7 +209,7 @@ static int32_t getParentIndex(int64_t type) {
 }
 
 /// Call the user-defined mapper function followed by the appropriate
-// target_data_* function (target_data_{begin,end,update}).
+// targetData* function (targetData{Begin,End,Update}).
 int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
                      int64_t arg_size, int64_t arg_type,
                      map_var_info_t arg_names, void *arg_mapper,
@@ -225,7 +225,7 @@ int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
 
   // Construct new arrays for args_base, args, arg_sizes and arg_types
   // using the information in MapperComponents and call the corresponding
-  // target_data_* function using these new arrays.
+  // targetData* function using these new arrays.
   std::vector<void *> MapperArgsBase(MapperComponents.Components.size());
   std::vector<void *> MapperArgs(MapperComponents.Components.size());
   std::vector<int64_t> MapperArgSizes(MapperComponents.Components.size());
@@ -764,8 +764,9 @@ static int targetDataNonContiguous(ident_t *loc, DeviceTy &Device,
     }
   } else {
     char *Ptr = (char *)ArgsBase + Offset;
-    DP("Transfer of non-contiguous : host ptr %lx offset %ld len %ld\n",
-       (uint64_t)Ptr, Offset, Size);
+    DP("Transfer of non-contiguous : host ptr " DPxMOD " offset %" PRIu64
+       " len %" PRIu64 "\n",
+       DPxPTR(Ptr), Offset, Size);
     Ret = targetDataContiguous(loc, Device, ArgsBase, Ptr, Size, ArgType);
   }
   return Ret;
@@ -894,7 +895,7 @@ uint64_t getLoopTripCount(int64_t DeviceId) {
     if (I != Device.LoopTripCnt.end()) {
       LoopTripCount = I->second;
       Device.LoopTripCnt.erase(I);
-      DP("loop trip count is %lu.\n", LoopTripCount);
+      DP("loop trip count is %" PRIu64 ".\n", LoopTripCount);
     }
   }
 

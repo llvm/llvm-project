@@ -1986,7 +1986,7 @@ def MemRefReinterpretCastOp:
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned resultRank = getResult().getType().cast<ShapedType>().getRank();
       return {1, resultRank, resultRank};
     }
@@ -2983,7 +2983,7 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
@@ -3097,7 +3097,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
@@ -3184,7 +3184,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getType().getRank();
       return {rank, rank, rank};
     }

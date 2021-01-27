@@ -61,6 +61,9 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1032 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1032 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1033 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1033 %s
 
+; FIXME: With the default attributes the eflags are not accurate for
+; xnack and sramecc. Subsequent Target-ID patches will address this.
+
 ; ARCH-R600: Format: elf32-amdgpu
 ; ARCH-R600: Arch: r600
 ; ARCH-R600: AddressSize: 32bit
