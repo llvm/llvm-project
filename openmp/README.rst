@@ -248,8 +248,8 @@ Options for ``libomptarget``
   out-of-tree builds.
 
 **LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER** = ``""``
-  Path of the folder that contains ``libomp.so``.  This is required for testing
-  out-of-tree builds.
+  Path of the folder that contains ``libomp.so``, and ``libLLVMSupport.so``
+  when profiling is enabled.  This is required for testing.
 
 Options for ``NVPTX device RTL``
 --------------------------------
