@@ -696,7 +696,7 @@
 // VCTOOLSDIR: "-triple" "{{[a-zA-Z0-9_-]*}}-pc-windows-msvc19.11.0"
 
 // Validate that built-in include paths are based on the supplied path
-// RUN: %clang_cl -vctoolsdir "/fake" -winsdkdir "/foo" -winsdkversion 10.0.12345.0 -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
+// RUN: %clang_cl --target=aarch64-pc-windows-msvc -vctoolsdir "/fake" -winsdkdir "/foo" -winsdkversion 10.0.12345.0 -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
 // FAKEDIR: "-internal-isystem" "/fake{{/|\\\\}}include"
 // FAKEDIR: "-internal-isystem" "/fake{{/|\\\\}}atlmfc{{/|\\\\}}include"
 // FAKEDIR: "-internal-isystem" "/foo{{/|\\\\}}Include{{/|\\\\}}10.0.12345.0{{/|\\\\}}ucrt"
