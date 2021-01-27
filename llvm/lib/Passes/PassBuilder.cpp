@@ -287,6 +287,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   MergeFunctions = false;
   UniqueLinkageNames = false;
 }
+extern cl::opt<bool> ExtraVectorizerPasses;
 
 extern cl::opt<bool> EnableConstraintElimination;
 extern cl::opt<bool> EnableGVNHoist;
@@ -1255,6 +1256,28 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Cleanup after the loop optimization passes.
   OptimizePM.addPass(InstCombinePass());
 
+  if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
+    // At higher optimization levels, try to clean up any runtime overlap and
+    // alignment checks inserted by the vectorizer. We want to track correlated
+    // runtime checks for two inner loops in the same outer loop, fold any
+    // common computations, hoist loop-invariant aspects out of any outer loop,
+    // and unswitch the runtime checks if possible. Once hoisted, we may have
+    // dead (or speculatable) control flows or more combining opportunities.
+    OptimizePM.addPass(EarlyCSEPass());
+    OptimizePM.addPass(CorrelatedValuePropagationPass());
+    OptimizePM.addPass(InstCombinePass());
+    LoopPassManager LPM(DebugLogging);
+    LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
+    LPM.addPass(
+        SimpleLoopUnswitchPass(/* NonTrivial */ Level == OptimizationLevel::O3));
+    OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
+    OptimizePM.addPass(createFunctionToLoopPassAdaptor(
+        std::move(LPM), EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true,
+        DebugLogging));
+    OptimizePM.addPass(SimplifyCFGPass());
+    OptimizePM.addPass(InstCombinePass());
+  }
+
   // Now that we've formed fast to execute loop structures, we do further
   // optimizations. These are run afterward as they might block doing complex
   // analyses and transforms such as what are needed for loop vectorization.
@@ -1274,8 +1297,12 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                          .sinkCommonInsts(true)));
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (PTO.SLPVectorization)
+  if (PTO.SLPVectorization) {
     OptimizePM.addPass(SLPVectorizerPass());
+    if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
+      OptimizePM.addPass(EarlyCSEPass());
+    }
+  }
 
   // Enhance/cleanup vector code.
   OptimizePM.addPass(VectorCombinePass());
