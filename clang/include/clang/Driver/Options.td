@@ -2145,18 +2145,24 @@ def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
 def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
-  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
+  MarshallingInfoNegativeFlag<LangOpts<"OpenMPUseTLS">, !strconcat("(bool)", fopenmp.KeyPath)>,
+  ShouldParseIf<fopenmp.KeyPath>;
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">, Flags<[NoXarchOption, CC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
+defm openmp_simd : BoolFOption<"openmp-simd",
+  LangOpts<"OpenMPSimd">, DefaultFalse,
+  PosFlag<SetTrue, [], "Emit OpenMP code only for SIMD-based constructs.">,
+  NegFlag<SetFalse>, BothFlags<[CC1Option, NoArgumentUnused]>>,
+  ShouldParseIf<!strconcat("!", fopenmp.KeyPath)>;
 def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
-  HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">;
-def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
+  HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
+  ShouldParseIf<fopenmp.KeyPath>;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
@@ -5367,9 +5373,12 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
 //===----------------------------------------------------------------------===//
 
 def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
-  HelpText<"Generate code only for an OpenMP target device.">;
+  HelpText<"Generate code only for an OpenMP target device.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPIsDevice">>,
+  ShouldParseIf<fopenmp.KeyPath>;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
-  HelpText<"Path to the IR file produced by the frontend for the host.">;
+  HelpText<"Path to the IR file produced by the frontend for the host.">,
+  MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

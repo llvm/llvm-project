@@ -477,6 +477,12 @@ static void FixupInvocation(CompilerInvocation &Invocation,
           << A->getSpelling() << T.getTriple();
   }
 
+  // Report if OpenMP host file does not exist.
+  if (!LangOpts.OMPHostIRFile.empty() &&
+      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+    Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
+        << LangOpts.OMPHostIRFile;
+
   if (!CodeGenOpts.ProfileRemappingFile.empty() && CodeGenOpts.LegacyPassManager)
     Diags.Report(diag::err_drv_argument_only_allowed_with)
         << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
@@ -2382,13 +2388,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   bool IsSimdSpecified =
       Args.hasFlag(options::OPT_fopenmp_simd, options::OPT_fno_openmp_simd,
                    /*Default=*/false);
-  Opts.OpenMPSimd = !Opts.OpenMP && IsSimdSpecified;
-  Opts.OpenMPUseTLS =
-      Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
-  Opts.OpenMPIsDevice =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
-  Opts.OpenMPIRBuilder =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
 
@@ -2460,15 +2459,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
