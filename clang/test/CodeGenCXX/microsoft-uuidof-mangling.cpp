@@ -60,14 +60,12 @@ int main(int argc, const char * argv[])
 // CHECK-V11: call void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofzsrT_6memberE(
 // CHECK-V12: call void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofXsrT_6memberEEE(
 // CHECK-V11: call void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofzL_ZN9HasMember6memberEEE(
-// CHECK-V12: call void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofXL_ZN9HasMember6memberEEEEE(
-//    TODO: the above mangling is wrong -- the X/E shouldn't be emitted:       ^                     ^
+// CHECK-V12: call void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofL_ZN9HasMember6memberEEEE(
 // CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
 // CHECK-V11: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidoftT_E(
 // CHECK-V12: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidofT_EE(
 // CHECK-V11: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofzsrT_6memberE(
 // CHECK-V12: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofXsrT_6memberEEE(
 // CHECK-V11: define linkonce_odr void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofzL_ZN9HasMember6memberEEE(
-// CHECK-V12: define linkonce_odr void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofXL_ZN9HasMember6memberEEEEE(
-//    TODO: the above mangling is wrong -- the X/E shouldn't be emitted:                      ^                     ^
+// CHECK-V12: define linkonce_odr void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofL_ZN9HasMember6memberEEEE(
 // CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC2Ev
