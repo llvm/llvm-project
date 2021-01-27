@@ -492,9 +492,11 @@ def ACC_EnterData : Directive<"enter data"> {
 // 2.14.7
 def ACC_ExitData : Directive<"exit data"> {
   let allowedClauses = [
+    VersionedClause<ACCC_Wait>
+  ];
+  let allowedOnceClauses = [
     VersionedClause<ACCC_Async>,
     VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Wait>,
     VersionedClause<ACCC_Finalize>
   ];
   let requiredClauses = [
