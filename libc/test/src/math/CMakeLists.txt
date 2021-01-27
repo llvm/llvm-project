@@ -924,18 +924,26 @@ add_fp_unittest(
     libc.utils.FPUtil.fputil
 )
 
-add_fp_unittest(
-  sqrtl_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    sqrtl_test.cpp
-  DEPENDS
-    libc.include.math
-    libc.src.math.sqrtl
-    libc.utils.FPUtil.fputil
-)
+# The quad precision test for sqrt against MPFR currently suffers
+# from insufficient precision in MPFR calculations leading to
+# https://hal.archives-ouvertes.fr/hal-01091186/document. We will
+# renable after fixing the precision issue.
+if(${LIBC_TARGET_MACHINE} MATCHES "x86_64")
+  add_fp_unittest(
+    sqrtl_test
+    NEED_MPFR
+    SUITE
+      libc_math_unittests
+    SRCS
+      sqrtl_test.cpp
+    DEPENDS
+      libc.include.math
+      libc.src.math.sqrtl
+      libc.utils.FPUtil.fputil
+  )
+else()
+  message(STATUS "Skipping sqrtl_test")
+endif()
 
 add_fp_unittest(
   remquof_test
