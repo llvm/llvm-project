@@ -1247,11 +1247,73 @@ private:
                                        valueList, blockList);
   }
 
+  void genFIR(const Fortran::parser::AssociateConstruct &) {
+    Fortran::lower::StatementContext stmtCtx;
+    for (auto &e : getEval().getNestedEvaluations()) {
+      if (auto *stmt = e.getIf<Fortran::parser::AssociateStmt>()) {
+        localSymbols.pushScope();
+        for (auto &assoc :
+             std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
+          auto &sym = *std::get<Fortran::parser::Name>(assoc.t).symbol;
+          const auto &selector =
+              *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
+          if (Fortran::evaluate::IsVariable(selector) &&
+              !Fortran::evaluate::UnwrapWholeSymbolDataRef(selector) &&
+              !Fortran::evaluate::HasVectorSubscript(selector)) {
+            TODO("subobject association selector");
+          }
+          genExprAddr(selector, stmtCtx)
+              .match(
+                  [&](const fir::UnboxedValue value) {
+                    localSymbols.addSymbol(sym, value);
+                  },
+                  [&](const fir::CharBoxValue &value) {
+                    localSymbols.addCharSymbol(sym, value.getAddr(),
+                                               value.getLen());
+                  },
+                  [&](const fir::ArrayBoxValue &value) {
+                    if (value.getLBounds().empty())
+                      localSymbols.addSymbolWithShape(sym, value.getAddr(),
+                                                      value.getExtents());
+                    else
+                      localSymbols.addSymbolWithBounds(sym, value.getAddr(),
+                                                       value.getExtents(),
+                                                       value.getLBounds());
+                  },
+                  [&](const fir::CharArrayBoxValue &value) {
+                    if (value.getLBounds().empty())
+                      localSymbols.addCharSymbolWithShape(sym, value.getAddr(),
+                                                          value.getLen(),
+                                                          value.getExtents());
+                    else
+                      localSymbols.addCharSymbolWithBounds(
+                          sym, value.getAddr(), value.getLen(),
+                          value.getExtents(), value.getLBounds());
+                  },
+                  [&](const fir::BoxValue &) {
+                    TODO("association selector of derived type");
+                  },
+                  [&](const auto &) {
+                    mlir::emitError(toLocation(),
+                                    "unexpected association selector");
+                  });
+        }
+      } else if (e.getIf<Fortran::parser::EndAssociateStmt>()) {
+        stmtCtx.finalize();
+        localSymbols.popScope();
+      } else {
+        genFIR(e);
+      }
+    }
+  }
+
   // Nop statements - No code, or code is generated elsewhere.
+  void genFIR(const Fortran::parser::AssociateStmt &) {}         // nop
   void genFIR(const Fortran::parser::CaseStmt &) {}              // nop
   void genFIR(const Fortran::parser::ContinueStmt &) {}          // nop
   void genFIR(const Fortran::parser::ElseIfStmt &) {}            // nop
   void genFIR(const Fortran::parser::ElseStmt &) {}              // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}      // nop
   void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
   void genFIR(const Fortran::parser::EndForallStmt &) {}         // nop
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}       // nop
@@ -1265,10 +1327,6 @@ private:
   void genFIR(const Fortran::parser::IfStmt &stmt) {}            // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
-
-  void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::AssociateStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::EndAssociateStmt &) { TODO(""); }
 
   void genFIR(const Fortran::parser::BlockConstruct &) { TODO(""); }
   void genFIR(const Fortran::parser::BlockStmt &) { TODO(""); }
