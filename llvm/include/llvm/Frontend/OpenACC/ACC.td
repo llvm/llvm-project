@@ -477,10 +477,12 @@ def ACC_Wait : Directive<"wait"> {
 
 // 2.14.6
 def ACC_EnterData : Directive<"enter data"> {
+  let allowedClauses = [
+    VersionedClause<ACCC_Wait>
+  ];
   let allowedOnceClauses = [
     VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Wait>
+    VersionedClause<ACCC_If>
   ];
   let requiredClauses = [
     VersionedClause<ACCC_Attach>,
@@ -529,7 +531,8 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
     VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_Attach>
+    VersionedClause<ACCC_Attach>,
+    VersionedClause<ACCC_Wait>
   ];
   let allowedOnceClauses = [
     VersionedClause<ACCC_Async>,
@@ -544,7 +547,6 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Tile>,
     VersionedClause<ACCC_Vector>,
     VersionedClause<ACCC_VectorLength>,
-    VersionedClause<ACCC_Wait>,
     VersionedClause<ACCC_Worker>
   ];
   let allowedExclusiveClauses = [
