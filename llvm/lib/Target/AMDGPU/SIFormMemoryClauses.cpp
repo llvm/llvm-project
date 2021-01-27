@@ -53,6 +53,11 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
+  }
+
 private:
   template <typename Callable>
   void forAllLanes(Register Reg, LaneBitmask LaneMask, Callable Func) const;

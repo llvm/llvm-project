@@ -13,18 +13,16 @@
 #define _TARGET_IMPL_H_
 
 #include <assert.h>
-#include <cuda.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "nvptx_interface.h"
 
-#define DEVICE __device__
-#define INLINE __forceinline__ DEVICE
-#define NOINLINE __noinline__ DEVICE
-#define SHARED __shared__
-#define ALIGN(N) __align__(N)
+#define DEVICE
+#define INLINE inline __attribute__((always_inline))
+#define NOINLINE __attribute__((noinline))
+#define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
@@ -95,10 +93,6 @@ DEVICE double __kmpc_impl_get_wtime();
 
 INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __builtin_ffs(x); }
 INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
-
-#ifndef CUDA_VERSION
-#error CUDA_VERSION macro is undefined, something wrong with cuda.
-#endif
 
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask();
 
