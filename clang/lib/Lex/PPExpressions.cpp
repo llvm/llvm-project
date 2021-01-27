@@ -104,6 +104,9 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
   SourceLocation beginLoc(PeekTok.getLocation());
   Result.setBegin(beginLoc);
 
+  // __VA_OPT__ is allowed as the operand of 'defined'.
+  Preprocessor::IfdefMacroNameScopeRAII IfdefMacroNameScope(PP);
+
   // Get the next token, don't expand it.
   PP.LexUnexpandedNonComment(PeekTok);
 
@@ -121,6 +124,8 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     PP.setCodeCompletionReached();
     PP.LexUnexpandedNonComment(PeekTok);
   }
+
+  IfdefMacroNameScope.Exit();
 
   // If we don't have a pp-identifier now, this is an error.
   if (PP.CheckMacroName(PeekTok, MU_Other))
