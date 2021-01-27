@@ -648,25 +648,30 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
   for (OutputFile &OF : OutputFiles) {
-    if (!OF.TempFilename.empty()) {
-      if (EraseFiles) {
+    if (EraseFiles) {
+      if (!OF.TempFilename.empty()) {
         llvm::sys::fs::remove(OF.TempFilename);
-      } else {
-        SmallString<128> NewOutFile(OF.Filename);
-
-        // If '-working-directory' was passed, the output filename should be
-        // relative to that.
-        FileMgr->FixupRelativePath(NewOutFile);
-        if (std::error_code ec =
-                llvm::sys::fs::rename(OF.TempFilename, NewOutFile)) {
-          getDiagnostics().Report(diag::err_unable_to_rename_temp)
-            << OF.TempFilename << OF.Filename << ec.message();
-
-          llvm::sys::fs::remove(OF.TempFilename);
-        }
+        continue;
       }
-    } else if (!OF.Filename.empty() && EraseFiles)
-      llvm::sys::fs::remove(OF.Filename);
+      if (!OF.Filename.empty())
+        llvm::sys::fs::remove(OF.Filename);
+      continue;
+    }
+
+    if (OF.TempFilename.empty())
+      continue;
+
+    // If '-working-directory' was passed, the output filename should be
+    // relative to that.
+    SmallString<128> NewOutFile(OF.Filename);
+    FileMgr->FixupRelativePath(NewOutFile);
+    std::error_code EC = llvm::sys::fs::rename(OF.TempFilename, NewOutFile);
+    if (!EC)
+      continue;
+    getDiagnostics().Report(diag::err_unable_to_rename_temp)
+        << OF.TempFilename << OF.Filename << EC.message();
+
+    llvm::sys::fs::remove(OF.TempFilename);
   }
   OutputFiles.clear();
   if (DeleteBuiltModules) {
