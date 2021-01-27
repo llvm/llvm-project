@@ -13,4 +13,4 @@ config.test_source_root = config.test_exec_root
 
 # Disable GWP-ASan for scudo internal tests.
 if config.gwp_asan:
-  config.environment['GWP_ASAN_OPTIONS'] = 'Enabled=false'
+  config.environment['SCUDO_OPTIONS'] = 'GWP_ASAN_Enabled=0'
