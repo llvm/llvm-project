@@ -2656,6 +2656,61 @@ private:
                            IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                            ParsedAttr::Syntax Syntax);
 
+  enum ParseAttrKindMask {
+    PAKM_GNU = 1 << 0,
+    PAKM_Declspec = 1 << 1,
+    PAKM_CXX11 = 1 << 2,
+  };
+
+  /// \brief Parse attributes based on what syntaxes are desired, allowing for
+  /// the order to vary. e.g. with PAKM_GNU | PAKM_Declspec:
+  /// __attribute__((...)) __declspec(...) __attribute__((...)))
+  /// Note that Microsoft attributes (spelled with single square brackets) are
+  /// not supported by this because of parsing ambiguities with other
+  /// constructs.
+  ///
+  /// There are some attribute parse orderings that should not be allowed in
+  /// arbitrary order. e.g.,
+  ///
+  ///   [[]] __attribute__(()) int i; // OK
+  ///   __attribute__(()) [[]] int i; // Not OK
+  ///
+  /// Such situations should use the specific attribute parsing functionality.
+  void ParseAttributes(unsigned WhichAttrKinds,
+                       ParsedAttributesWithRange &Attrs,
+                       SourceLocation *End = nullptr,
+                       LateParsedAttrList *LateAttrs = nullptr);
+  void ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
+                       SourceLocation *End = nullptr,
+                       LateParsedAttrList *LateAttrs = nullptr) {
+    ParsedAttributesWithRange AttrsWithRange(AttrFactory);
+    ParseAttributes(WhichAttrKinds, AttrsWithRange, End, LateAttrs);
+    Attrs.takeAllFrom(AttrsWithRange);
+  }
+  /// \brief Possibly parse attributes based on what syntaxes are desired,
+  /// allowing for the order to vary.
+  bool MaybeParseAttributes(unsigned WhichAttrKinds,
+                            ParsedAttributesWithRange &Attrs,
+                            SourceLocation *End = nullptr,
+                            LateParsedAttrList *LateAttrs = nullptr) {
+    if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
+        standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      return true;
+    }
+    return false;
+  }
+  bool MaybeParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
+                            SourceLocation *End = nullptr,
+                            LateParsedAttrList *LateAttrs = nullptr) {
+    if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
+        standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      return true;
+    }
+    return false;
+  }
+
   void MaybeParseGNUAttributes(Declarator &D,
                                LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.is(tok::kw___attribute)) {
@@ -2665,11 +2720,14 @@ private:
       D.takeAttributes(attrs, endLoc);
     }
   }
-  void MaybeParseGNUAttributes(ParsedAttributes &attrs,
+  bool MaybeParseGNUAttributes(ParsedAttributes &attrs,
                                SourceLocation *endLoc = nullptr,
                                LateParsedAttrList *LateAttrs = nullptr) {
-    if (Tok.is(tok::kw___attribute))
+    if (Tok.is(tok::kw___attribute)) {
       ParseGNUAttributes(attrs, endLoc, LateAttrs);
+      return true;
+    }
+    return false;
   }
   void ParseGNUAttributes(ParsedAttributes &attrs,
                           SourceLocation *endLoc = nullptr,
@@ -2706,12 +2764,15 @@ private:
     }
     return false;
   }
-  void MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
+  bool MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
                                  SourceLocation *endLoc = nullptr,
                                  bool OuterMightBeMessageSend = false) {
     if (standardAttributesAllowed() &&
-      isCXX11AttributeSpecifier(false, OuterMightBeMessageSend))
+        isCXX11AttributeSpecifier(false, OuterMightBeMessageSend)) {
       ParseCXX11Attributes(attrs, endLoc);
+      return true;
+    }
+    return false;
   }
 
   void ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
@@ -2736,11 +2797,14 @@ private:
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
   void ParseMicrosoftAttributes(ParsedAttributes &attrs,
                                 SourceLocation *endLoc = nullptr);
-  void MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
+  bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
                                     SourceLocation *End = nullptr) {
     const auto &LO = getLangOpts();
-    if (LO.DeclSpecKeyword && Tok.is(tok::kw___declspec))
+    if (LO.DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
       ParseMicrosoftDeclSpecs(Attrs, End);
+      return true;
+    }
+    return false;
   }
   void ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
                                SourceLocation *End = nullptr);
