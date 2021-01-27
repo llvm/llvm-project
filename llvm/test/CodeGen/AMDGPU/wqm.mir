@@ -99,7 +99,7 @@ body:             |
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %6, %7, 0, 0, 0, 0, 0, 0, implicit $exec
     %16:vgpr_32 = COPY %8.sub1
     %11:vgpr_32 = COPY %16
-    %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec
+    %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
     %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
     early-clobber %15:vgpr_32 = WWM killed %13, implicit $exec
