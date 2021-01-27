@@ -94,6 +94,9 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
     return;
   }
 
+  // Report the diagnostics from parsing
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
