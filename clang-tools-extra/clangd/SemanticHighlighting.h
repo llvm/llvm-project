@@ -64,12 +64,34 @@ enum class HighlightingKind {
 
   LastKind = InactiveCode
 };
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K);
+
+enum class HighlightingModifier {
+  Declaration,
+  // FIXME: Definition (needs findExplicitReferences support)
+  Deprecated,
+  Deduced,
+  Readonly,
+  Static,
+  Abstract,
+
+  LastModifier = Abstract
+};
+static_assert(static_cast<unsigned>(HighlightingModifier::LastModifier) < 32,
+              "Increase width of modifiers bitfield!");
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K);
 
 // Contains all information needed for the highlighting a token.
 struct HighlightingToken {
   HighlightingKind Kind;
+  uint32_t Modifiers = 0;
   Range R;
+
+  HighlightingToken &addModifier(HighlightingModifier M) {
+    Modifiers |= 1 << static_cast<unsigned>(M);
+    return *this;
+  }
 };
 
 bool operator==(const HighlightingToken &L, const HighlightingToken &R);
@@ -90,6 +112,7 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
 
 std::vector<SemanticToken> toSemanticTokens(llvm::ArrayRef<HighlightingToken>);
 llvm::StringRef toSemanticTokenType(HighlightingKind Kind);
+llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier);
 std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Before,
                                            llvm::ArrayRef<SemanticToken> After);
 

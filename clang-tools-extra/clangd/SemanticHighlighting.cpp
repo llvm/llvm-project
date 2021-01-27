@@ -15,6 +15,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -118,17 +120,83 @@ llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
   return llvm::None;
 }
 
-llvm::Optional<HighlightingKind> kindForReference(const ReferenceLoc &R) {
-  llvm::Optional<HighlightingKind> Result;
-  for (const NamedDecl *Decl : R.Targets) {
-    if (!canHighlightName(Decl->getDeclName()))
-      return llvm::None;
-    auto Kind = kindForDecl(Decl);
-    if (!Kind || (Result && Kind != Result))
-      return llvm::None;
-    Result = Kind;
+// Whether T is const in a loose sense - is a variable with this type readonly?
+bool isConst(QualType T) {
+  if (T.isNull() || T->isDependentType())
+    return false;
+  T = T.getNonReferenceType();
+  if (T.isConstQualified())
+    return true;
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return isConst(AT->getElementType());
+  if (isConst(T->getPointeeType()))
+    return true;
+  return false;
+}
+
+// Whether D is const in a loose sense (should it be highlighted as such?)
+// FIXME: This is separate from whether *a particular usage* can mutate D.
+//        We may want V in V.size() to be readonly even if V is mutable.
+bool isConst(const Decl *D) {
+  if (llvm::isa<EnumConstantDecl>(D) || llvm::isa<NonTypeTemplateParmDecl>(D))
+    return true;
+  if (llvm::isa<FieldDecl>(D) || llvm::isa<VarDecl>(D) ||
+      llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
+    if (isConst(llvm::cast<ValueDecl>(D)->getType()))
+      return true;
   }
-  return Result;
+  if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
+    if (OCPD->isReadOnly())
+      return true;
+  }
+  if (const auto *MPD = llvm::dyn_cast<MSPropertyDecl>(D)) {
+    if (!MPD->hasSetter())
+      return true;
+  }
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
+    if (CMD->isConst())
+      return true;
+  }
+  return false;
+}
+
+// "Static" means many things in C++, only some get the "static" modifier.
+//
+// Meanings that do:
+// - Members associated with the class rather than the instance.
+//   This is what 'static' most often means across languages.
+// - static local variables
+//   These are similarly "detached from their context" by the static keyword.
+//   In practice, these are rarely used inside classes, reducing confusion.
+//
+// Meanings that don't:
+// - Namespace-scoped variables, which have static storage class.
+//   This is implicit, so the keyword "static" isn't so strongly associated.
+//   If we want a modifier for these, "global scope" is probably the concept.
+// - Namespace-scoped variables/functions explicitly marked "static".
+//   There the keyword changes *linkage* , which is a totally different concept.
+//   If we want to model this, "file scope" would be a nice modifier.
+//
+// This is confusing, and maybe we should use another name, but because "static"
+// is a standard LSP modifier, having one with that name has advantages.
+bool isStatic(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isStatic();
+  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
+    return VD->isStaticDataMember() || VD->isStaticLocal();
+  if (const auto *OPD = llvm::dyn_cast<ObjCPropertyDecl>(D))
+    return OPD->isClassProperty();
+  if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
+    return OMD->isClassMethod();
+  return false;
+}
+
+bool isAbstract(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isPure();
+  if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
+    return CRD->hasDefinition() && CRD->isAbstract();
+  return false;
 }
 
 // For a macro usage `DUMP(foo)`, we want:
@@ -182,18 +250,24 @@ public:
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
         LangOpts(AST.getLangOpts()) {}
 
-  void addToken(HighlightingToken T) { Tokens.push_back(T); }
-
-  void addToken(SourceLocation Loc, HighlightingKind Kind) {
+  HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
-      return;
+      return Dummy;
     const auto *Tok = TB.spelledTokenAt(Loc);
     assert(Tok);
+    return addToken(
+        halfOpenToRange(SourceMgr,
+                        Tok->range(SourceMgr).toCharRange(SourceMgr)),
+        Kind);
+  }
 
-    auto Range = halfOpenToRange(SourceMgr,
-                                 Tok->range(SourceMgr).toCharRange(SourceMgr));
-    Tokens.push_back(HighlightingToken{Kind, std::move(Range)});
+  HighlightingToken &addToken(Range R, HighlightingKind Kind) {
+    HighlightingToken HT;
+    HT.R = std::move(R);
+    HT.Kind = Kind;
+    Tokens.push_back(std::move(HT));
+    return Tokens.back();
   }
 
   std::vector<HighlightingToken> collect(ParsedAST &AST) && {
@@ -248,10 +322,13 @@ public:
               MainCode.drop_front(*StartOfLine).take_until([](char C) {
                 return C == '\n';
               });
-          WithInactiveLines.push_back(
-              {HighlightingKind::InactiveCode,
-               {Position{Line, 0},
-                Position{Line, static_cast<int>(lspLength(LineText))}}});
+          HighlightingToken HT;
+          WithInactiveLines.emplace_back();
+          WithInactiveLines.back().Kind = HighlightingKind::InactiveCode;
+          WithInactiveLines.back().R.start.line = Line;
+          WithInactiveLines.back().R.end.line = Line;
+          WithInactiveLines.back().R.end.character =
+              static_cast<int>(lspLength(LineText));
         } else {
           elog("Failed to convert position to offset: {0}",
                StartOfLine.takeError());
@@ -277,6 +354,7 @@ private:
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
+  HighlightingToken Dummy; // returned from addToken(InvalidLoc)
 };
 
 /// Produces highlightings, which are not captured by findExplicitReferences,
@@ -288,7 +366,8 @@ public:
 
   bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
     if (auto K = kindForType(L.getTypePtr()))
-      H.addToken(L.getBeginLoc(), *K);
+      H.addToken(L.getBeginLoc(), *K)
+          .addModifier(HighlightingModifier::Deduced);
     return true;
   }
 
@@ -297,7 +376,8 @@ public:
     if (!AT)
       return true;
     if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull()))
-      H.addToken(D->getTypeSpecStartLoc(), *K);
+      H.addToken(D->getTypeSpecStartLoc(), *K)
+          .addModifier(HighlightingModifier::Deduced);
     return true;
   }
 
@@ -391,16 +471,42 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.
   findExplicitReferences(C, [&](ReferenceLoc R) {
-    if (auto Kind = kindForReference(R))
-      Builder.addToken(R.NameLoc, *Kind);
+    for (const NamedDecl *Decl : R.Targets) {
+      if (!canHighlightName(Decl->getDeclName()))
+        continue;
+      auto Kind = kindForDecl(Decl);
+      if (!Kind)
+        continue;
+      auto &Tok = Builder.addToken(R.NameLoc, *Kind);
+
+      // The attribute tests don't want to look at the template.
+      if (auto *TD = dyn_cast<TemplateDecl>(Decl)) {
+        if (auto *Templated = TD->getTemplatedDecl())
+          Decl = Templated;
+      }
+      if (isConst(Decl))
+        Tok.addModifier(HighlightingModifier::Readonly);
+      if (isStatic(Decl))
+        Tok.addModifier(HighlightingModifier::Static);
+      if (isAbstract(Decl))
+        Tok.addModifier(HighlightingModifier::Abstract);
+      if (Decl->isDeprecated())
+        Tok.addModifier(HighlightingModifier::Deprecated);
+      if (R.IsDecl)
+        Tok.addModifier(HighlightingModifier::Declaration);
+    }
   });
   // Add highlightings for macro references.
-  for (const auto &SIDToRefs : AST.getMacros().MacroRefs) {
+  auto AddMacro = [&](const MacroOccurrence &M) {
+    auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    if (M.IsDefinition)
+      T.addModifier(HighlightingModifier::Declaration);
+  };
+  for (const auto &SIDToRefs : AST.getMacros().MacroRefs)
     for (const auto &M : SIDToRefs.second)
-      Builder.addToken({HighlightingKind::Macro, M.Rng});
-  }
+      AddMacro(M);
   for (const auto &M : AST.getMacros().UnknownMacros)
-    Builder.addToken({HighlightingKind::Macro, M.Rng});
+    AddMacro(M);
 
   return std::move(Builder).collect(AST);
 }
@@ -449,6 +555,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "InactiveCode";
   }
   llvm_unreachable("invalid HighlightingKind");
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
+  switch (K) {
+  case HighlightingModifier::Declaration:
+    return OS << "decl"; // abbrevation for common case
+  default:
+    return OS << toSemanticTokenModifier(K);
+  }
 }
 
 std::vector<LineHighlightings>
@@ -510,10 +624,12 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
 }
 
 bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind) == std::tie(R.R, R.Kind);
+  return std::tie(L.R, L.Kind, L.Modifiers) ==
+         std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind) < std::tie(R.R, R.Kind);
+  return std::tie(L.R, L.Kind, R.Modifiers) <
+         std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator==(const LineHighlightings &L, const LineHighlightings &R) {
   return std::tie(L.Line, L.Tokens) == std::tie(R.Line, R.Tokens);
@@ -544,6 +660,7 @@ toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens) {
     assert(Tok.R.end.line == Tok.R.start.line);
     Out.length = Tok.R.end.character - Tok.R.start.character;
     Out.tokenType = static_cast<unsigned>(Tok.Kind);
+    Out.tokenModifiers = Tok.Modifiers;
 
     Last = &Tok;
   }
@@ -575,7 +692,6 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::Typedef:
     return "type";
   case HighlightingKind::DependentType:
-    return "dependent"; // nonstandard
   case HighlightingKind::DependentName:
     return "dependent"; // nonstandard
   case HighlightingKind::Namespace:
@@ -592,6 +708,23 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "comment";
   }
   llvm_unreachable("unhandled HighlightingKind");
+}
+
+llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
+  switch (Modifier) {
+  case HighlightingModifier::Declaration:
+    return "declaration";
+  case HighlightingModifier::Deprecated:
+    return "deprecated";
+  case HighlightingModifier::Readonly:
+    return "readonly";
+  case HighlightingModifier::Static:
+    return "static";
+  case HighlightingModifier::Deduced:
+    return "deduced"; // nonstandard
+  case HighlightingModifier::Abstract:
+    return "abstract";
+  }
 }
 
 std::vector<TheiaSemanticHighlightingInformation>
