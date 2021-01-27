@@ -1455,7 +1455,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
   }
 
-  unsigned NF = 1;
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
@@ -1464,8 +1463,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Other, MVT::Glue);
     SDValue Load = DAG.getNode(RISCVISD::VLEFF, DL, VTs, Op.getOperand(0),
                                Op.getOperand(2), Op.getOperand(3));
-    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
-    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    SDValue ReadVL =
+        SDValue(DAG.getMachineNode(RISCV::PseudoReadVL, DL, Op->getValueType(1),
+                                   Load.getValue(2)),
+                0);
     return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
   }
   case Intrinsic::riscv_vleff_mask: {
@@ -1474,91 +1475,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue Load = DAG.getNode(RISCVISD::VLEFF_MASK, DL, VTs, Op.getOperand(0),
                                Op.getOperand(2), Op.getOperand(3),
                                Op.getOperand(4), Op.getOperand(5));
-    VTs = DAG.getVTList(Op->getValueType(1), MVT::Other);
-    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs, Load.getValue(2));
+    SDValue ReadVL =
+        SDValue(DAG.getMachineNode(RISCV::PseudoReadVL, DL, Op->getValueType(1),
+                                   Load.getValue(2)),
+                0);
     return DAG.getMergeValues({Load, ReadVL, Load.getValue(1)}, DL);
-  }
-  case Intrinsic::riscv_vlseg8ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg7ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg6ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg5ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg4ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg3ff:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg2ff: {
-    NF++;
-    SDLoc DL(Op);
-    SmallVector<EVT, 8> EVTs(NF, Op.getValueType());
-    EVTs.push_back(MVT::Other);
-    EVTs.push_back(MVT::Glue);
-    SDVTList VTs = DAG.getVTList(EVTs);
-    SDValue Load =
-        DAG.getNode(RISCVISD::VLSEGFF, DL, VTs, Op.getOperand(0),
-                    Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
-    VTs = DAG.getVTList(Op->getValueType(NF), MVT::Other);
-    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs,
-                                 /*Glue*/ Load.getValue(NF + 1));
-    SmallVector<SDValue, 8> Results;
-    for (unsigned i = 0; i < NF; ++i)
-      Results.push_back(Load.getValue(i));
-    Results.push_back(ReadVL);
-    Results.push_back(Load.getValue(NF)); // Chain.
-    return DAG.getMergeValues(Results, DL);
-  }
-  case Intrinsic::riscv_vlseg8ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg7ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg6ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg5ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg4ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg3ff_mask:
-    NF++;
-    LLVM_FALLTHROUGH;
-  case Intrinsic::riscv_vlseg2ff_mask: {
-    NF++;
-    SDLoc DL(Op);
-    SmallVector<EVT, 8> EVTs(NF, Op.getValueType());
-    EVTs.push_back(MVT::Other);
-    EVTs.push_back(MVT::Glue);
-    SDVTList VTs = DAG.getVTList(EVTs);
-    SmallVector<SDValue, 13> LoadOps;
-    LoadOps.push_back(Op.getOperand(0)); // Chain.
-    LoadOps.push_back(Op.getOperand(1)); // Intrinsic ID.
-    for (unsigned i = 0; i < NF; ++i)
-      LoadOps.push_back(Op.getOperand(2 + i)); // MaskedOff.
-    LoadOps.push_back(Op.getOperand(2 + NF));  // Base.
-    LoadOps.push_back(Op.getOperand(3 + NF));  // Mask.
-    LoadOps.push_back(Op.getOperand(4 + NF));  // VL.
-    SDValue Load = DAG.getNode(RISCVISD::VLSEGFF_MASK, DL, VTs, LoadOps);
-    VTs = DAG.getVTList(Op->getValueType(NF), MVT::Other);
-    SDValue ReadVL = DAG.getNode(RISCVISD::READ_VL, DL, VTs,
-                                 /*Glue*/ Load.getValue(NF + 1));
-    SmallVector<SDValue, 8> Results;
-    for (unsigned i = 0; i < NF; ++i)
-      Results.push_back(Load.getValue(i));
-    Results.push_back(ReadVL);
-    Results.push_back(Load.getValue(NF)); // Chain.
-    return DAG.getMergeValues(Results, DL);
   }
   }
 }
@@ -4088,9 +4009,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TRUNCATE_VECTOR)
   NODE_NAME_CASE(VLEFF)
   NODE_NAME_CASE(VLEFF_MASK)
-  NODE_NAME_CASE(VLSEGFF)
-  NODE_NAME_CASE(VLSEGFF_MASK)
-  NODE_NAME_CASE(READ_VL)
   NODE_NAME_CASE(VSLIDEUP)
   NODE_NAME_CASE(VSLIDEDOWN)
   NODE_NAME_CASE(VID)

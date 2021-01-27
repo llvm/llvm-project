@@ -99,11 +99,6 @@ enum NodeType : unsigned {
   // Unit-stride fault-only-first load
   VLEFF,
   VLEFF_MASK,
-  // Unit-stride fault-only-first segment load
-  VLSEGFF,
-  VLSEGFF_MASK,
-  // read vl CSR
-  READ_VL,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
   // pass-thru operand, the second is the source vector, and the third is the
   // XLenVT index (either constant or non-constant).
