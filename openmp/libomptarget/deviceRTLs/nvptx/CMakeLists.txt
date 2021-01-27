@@ -10,6 +10,15 @@
 #
 ##===----------------------------------------------------------------------===##
 
+# By default we will not build NVPTX deviceRTL on a non-CUDA
+set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
+  "Whether build NVPTX deviceRTL on non-CUDA system.")
+
+if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
+  libomptarget_say("Not building NVPTX deviceRTL by default on non-CUDA system.")
+  return()
+endif()
+
 # Check if we can create an LLVM bitcode implementation of the runtime library
 # that could be inlined in the user application. For that we need to find
 # a Clang compiler capable of compiling our CUDA files to LLVM bitcode and
