@@ -896,7 +896,29 @@ static Value getExpandedInitTensor(OpBuilder &builder,
 }
 
 namespace {
-struct FoldWithTensorReshapeOp : public OpRewritePattern<TensorReshapeOp> {
+/// Since `init_tensor` operation creates a tensor needed only for its shape, a
+/// subtensor of this is also needed only for its shape. The result can be
+/// replaced by a new init_tensor operation of the same size as the subtensor
+/// op.
+struct FoldInitTensorWithSubTensorOp : public OpRewritePattern<SubTensorOp> {
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubTensorOp subtensorOp,
+                                PatternRewriter &rewriter) const override {
+    if (!subtensorOp.source().getDefiningOp<linalg::InitTensorOp>())
+      return failure();
+    rewriter.replaceOpWithNewOp<linalg::InitTensorOp>(
+        subtensorOp, subtensorOp.sizes(),
+        llvm::to_vector<4>(llvm::map_range(
+            subtensorOp.static_sizes(),
+            [](Attribute attr) { return attr.cast<IntegerAttr>().getInt(); })),
+        subtensorOp.getSourceType().getElementType());
+    return success();
+  }
+};
+
+struct FoldInitTensorWithTensorReshapeOp
+    : public OpRewritePattern<TensorReshapeOp> {
   using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
@@ -921,8 +943,9 @@ struct FoldWithTensorReshapeOp : public OpRewritePattern<TensorReshapeOp> {
 
 void InitTensorOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<FoldWithTensorReshapeOp, ReplaceDimOfInitTensorOp,
-                 ReplaceStaticShapeDims>(context);
+  results
+      .insert<FoldInitTensorWithSubTensorOp, FoldInitTensorWithTensorReshapeOp,
+              ReplaceDimOfInitTensorOp, ReplaceStaticShapeDims>(context);
 }
 
 //===----------------------------------------------------------------------===//
