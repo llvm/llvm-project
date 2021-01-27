@@ -457,12 +457,25 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
 }
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
-// memory. They should have been removed by now.
-static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
+// memory. They should have been removed by now, except CFI Saved Reg spills.
+static bool allStackObjectsAreDead(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
-    if (!MFI.isDeadObjectIndex(I))
+    if (!MFI.isDeadObjectIndex(I)) {
+      // determineCalleeSaves() might have added the SGPRSpill stack IDs for
+      // CFI saves into scratch VGPR, ignore them
+      if (MFI.getStackID(I) == TargetStackID::SGPRSpill &&
+          TRI->isCFISavedRegsSpillEnabled() &&
+          (I == FuncInfo->ReturnAddressSaveIndex ||
+           I == FuncInfo->EXECSaveIndex)) {
+        continue;
+      }
       return false;
+    }
   }
 
   return true;
@@ -482,8 +495,8 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
 
   Register ScratchRsrcReg = MFI->getScratchRSrcReg();
 
-  if (!ScratchRsrcReg || (!MRI.isPhysRegUsed(ScratchRsrcReg) &&
-                          allStackObjectsAreDead(MF.getFrameInfo())))
+  if (!ScratchRsrcReg ||
+      (!MRI.isPhysRegUsed(ScratchRsrcReg) && allStackObjectsAreDead(MF)))
     return Register();
 
   if (ST.hasSGPRInitBug() ||
@@ -1522,7 +1535,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   // FIXME: The other checks should be redundant with allStackObjectsAreDead,
   // but currently hasNonSpillStackObjects is set only from source
   // allocas. Stack temps produced from legalization are not counted currently.
-  if (!allStackObjectsAreDead(MFI)) {
+  if (!allStackObjectsAreDead(MF)) {
     assert(RS && "RegScavenger required if spilling");
 
     if (FuncInfo->isEntryFunction()) {
@@ -1591,8 +1604,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   //
   // FIXME: Is this really hasReservedCallFrame?
   const bool WillHaveFP =
-      FrameInfo.hasCalls() &&
-      (SavedVGPRs.any() || !allStackObjectsAreDead(FrameInfo));
+      FrameInfo.hasCalls() && (SavedVGPRs.any() || !allStackObjectsAreDead(MF));
 
   // VGPRs used for SGPR spilling need to be specially inserted in the prolog,
   // so don't allow the default insertion to handle them.
