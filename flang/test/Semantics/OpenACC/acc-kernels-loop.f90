@@ -122,6 +122,11 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
+  !$acc kernels loop wait(wait1) wait(wait2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
   !$acc kernels loop wait(1, 2) async(3)
   do i = 1, N
     a(i) = 3.14
