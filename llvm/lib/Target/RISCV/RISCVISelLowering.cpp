@@ -481,12 +481,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 }
 
-EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
+EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
+                                            LLVMContext &Context,
                                             EVT VT) const {
   if (!VT.isVector())
     return getPointerTy(DL);
-  if (Subtarget.hasStdExtV())
-    return MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+  if (Subtarget.hasStdExtV() && VT.isScalableVector())
+    return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
 
