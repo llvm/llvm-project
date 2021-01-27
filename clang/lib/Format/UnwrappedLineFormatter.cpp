@@ -371,7 +371,7 @@ private:
         if (Previous->is(tok::comment))
           Previous = Previous->getPreviousNonComment();
         if (Previous) {
-          if (Previous->is(tok::greater))
+          if (Previous->is(tok::greater) && !I[-1]->InPPDirective)
             return 0;
           if (Previous->is(tok::identifier)) {
             const FormatToken *PreviousPrevious =

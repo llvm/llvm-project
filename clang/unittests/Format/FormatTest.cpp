@@ -10248,6 +10248,21 @@ TEST_F(FormatTest, SplitEmptyClass) {
                "{\n"
                "};",
                Style);
+
+  verifyFormat("#include \"stdint.h\"\n"
+               "namespace rep {}",
+               Style);
+  verifyFormat("#include <stdint.h>\n"
+               "namespace rep {}",
+               Style);
+  verifyFormat("#include <stdint.h>\n"
+               "namespace rep {}",
+               "#include <stdint.h>\n"
+               "namespace rep {\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, SplitEmptyStruct) {
