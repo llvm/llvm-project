@@ -323,13 +323,16 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
 
 /// RegisterBuiltinMacro - Register the specified identifier in the identifier
 /// table and mark it as a builtin macro to be expanded.
-static IdentifierInfo *RegisterBuiltinMacro(Preprocessor &PP, const char *Name){
+static IdentifierInfo *RegisterBuiltinMacro(Preprocessor &PP, const char *Name,
+                                            bool Disabled = false) {
   // Get the identifier.
   IdentifierInfo *Id = PP.getIdentifierInfo(Name);
 
   // Mark it as being a macro that is builtin.
   MacroInfo *MI = PP.AllocateMacroInfo(SourceLocation());
   MI->setIsBuiltinMacro();
+  if (Disabled)
+    MI->DisableMacro();
   PP.appendDefMacroDirective(Id, MI);
   return Id;
 }
@@ -343,6 +346,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__TIME__ = RegisterBuiltinMacro(*this, "__TIME__");
   Ident__COUNTER__ = RegisterBuiltinMacro(*this, "__COUNTER__");
   Ident_Pragma  = RegisterBuiltinMacro(*this, "_Pragma");
+  Ident__VA_OPT__ = RegisterBuiltinMacro(*this, "__VA_OPT__", true);
 
   // C++ Standing Document Extensions.
   if (getLangOpts().CPlusPlus)
