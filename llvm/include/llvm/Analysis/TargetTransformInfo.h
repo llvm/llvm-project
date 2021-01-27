@@ -816,16 +816,19 @@ public:
 
   /// Return the expected cost of materializing for the given integer
   /// immediate of the specified type.
-  int getIntImmCost(const APInt &Imm, Type *Ty, TargetCostKind CostKind) const;
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TargetCostKind CostKind) const;
 
   /// Return the expected cost of materialization for the given integer
   /// immediate of the specified type for a given instruction. The cost can be
   /// zero if the immediate can be folded into the specified instruction.
-  int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm, Type *Ty,
-                        TargetCostKind CostKind,
-                        Instruction *Inst = nullptr) const;
-  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty, TargetCostKind CostKind) const;
+  InstructionCost getIntImmCostInst(unsigned Opc, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr) const;
+  InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty,
+                                      TargetCostKind CostKind) const;
 
   /// Return the expected cost for the given integer when optimising
   /// for size. This is different than the other integer immediate cost
@@ -1520,14 +1523,15 @@ public:
   virtual InstructionCost getFPOpCost(Type *Ty) = 0;
   virtual int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                     const APInt &Imm, Type *Ty) = 0;
-  virtual int getIntImmCost(const APInt &Imm, Type *Ty,
-                            TargetCostKind CostKind) = 0;
-  virtual int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm,
-                                Type *Ty, TargetCostKind CostKind,
-                                Instruction *Inst = nullptr) = 0;
-  virtual int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                  const APInt &Imm, Type *Ty,
-                                  TargetCostKind CostKind) = 0;
+  virtual InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                        TargetCostKind CostKind) = 0;
+  virtual InstructionCost getIntImmCostInst(unsigned Opc, unsigned Idx,
+                                            const APInt &Imm, Type *Ty,
+                                            TargetCostKind CostKind,
+                                            Instruction *Inst = nullptr) = 0;
+  virtual InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                              const APInt &Imm, Type *Ty,
+                                              TargetCostKind CostKind) = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
@@ -1948,17 +1952,19 @@ public:
                             Type *Ty) override {
     return Impl.getIntImmCodeSizeCost(Opc, Idx, Imm, Ty);
   }
-  int getIntImmCost(const APInt &Imm, Type *Ty,
-                    TargetCostKind CostKind) override {
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TargetCostKind CostKind) override {
     return Impl.getIntImmCost(Imm, Ty, CostKind);
   }
-  int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm, Type *Ty,
-                        TargetCostKind CostKind,
-                        Instruction *Inst = nullptr) override {
+  InstructionCost getIntImmCostInst(unsigned Opc, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr) override {
     return Impl.getIntImmCostInst(Opc, Idx, Imm, Ty, CostKind, Inst);
   }
-  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty, TargetCostKind CostKind) override {
+  InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty,
+                                      TargetCostKind CostKind) override {
     return Impl.getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {

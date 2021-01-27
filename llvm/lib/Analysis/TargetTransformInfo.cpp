@@ -544,27 +544,29 @@ int TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
   return Cost;
 }
 
-int TargetTransformInfo::getIntImmCost(const APInt &Imm, Type *Ty,
-                                       TTI::TargetCostKind CostKind) const {
-  int Cost = TTIImpl->getIntImmCost(Imm, Ty, CostKind);
+InstructionCost
+TargetTransformInfo::getIntImmCost(const APInt &Imm, Type *Ty,
+                                   TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost = TTIImpl->getIntImmCost(Imm, Ty, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-int TargetTransformInfo::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                           const APInt &Imm, Type *Ty,
-                                           TTI::TargetCostKind CostKind,
-                                           Instruction *Inst) const {
-  int Cost = TTIImpl->getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
+InstructionCost TargetTransformInfo::getIntImmCostInst(
+    unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty,
+    TTI::TargetCostKind CostKind, Instruction *Inst) const {
+  InstructionCost Cost =
+      TTIImpl->getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-int
+InstructionCost
 TargetTransformInfo::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                          const APInt &Imm, Type *Ty,
                                          TTI::TargetCostKind CostKind) const {
-  int Cost = TTIImpl->getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
+  InstructionCost Cost =
+      TTIImpl->getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
