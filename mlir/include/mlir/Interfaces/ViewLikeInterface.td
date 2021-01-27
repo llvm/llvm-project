@@ -35,7 +35,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     Common interface for ops that allow specifying mixed dynamic and static
     offsets, sizes and strides variadic operands.
     Ops that implement this interface need to expose the following methods:
-      1. `getArrayAttrRanks` to specify the length of static integer
+      1. `getArrayAttrMaxRanks` to specify the length of static integer
           attributes.
       2. `offsets`, `sizes` and `strides` variadic operands.
       3. `static_offsets`, resp. `static_sizes` and `static_strides` integer
@@ -45,9 +45,9 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
 
     The invariants of this interface are:
       1. `static_offsets`, `static_sizes` and `static_strides` have length
-          exactly `getArrayAttrRanks()`[0] (resp. [1], [2]).
+          at most `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
       2. `offsets`, `sizes` and `strides` have each length at most
-         `getArrayAttrRanks()`[0] (resp. [1], [2]).
+         length `static_offsets` (resp. `static_sizes`, `static_strides`).
       3. if an entry of `static_offsets` (resp. `static_sizes`,
          `static_strides`) is equal to a special sentinel value, namely
          `ShapedType::kDynamicStrideOrOffset` (resp. `ShapedType::kDynamicSize`,
@@ -81,7 +81,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         and `static_strides` attributes.
       }],
       /*retTy=*/"std::array<unsigned, 3>",
-      /*methodName=*/"getArrayAttrRanks",
+      /*methodName=*/"getArrayAttrMaxRanks",
       /*args=*/(ins)
     >,
     InterfaceMethod<
@@ -166,9 +166,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         SmallVector<OpFoldResult, 4> res;
-        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
         unsigned numDynamic = 0;
-        unsigned count = ranks[getOffsetOperandGroupPosition()];
+        unsigned count = $_op.static_offsets().size();
         for (unsigned idx = 0; idx < count; ++idx) {
           if (isDynamicOffset(idx))
             res.push_back($_op.offsets()[numDynamic++]);
@@ -188,9 +187,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         SmallVector<OpFoldResult, 4> res;
-        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
         unsigned numDynamic = 0;
-        unsigned count = ranks[getSizeOperandGroupPosition()];
+        unsigned count = $_op.static_sizes().size();
         for (unsigned idx = 0; idx < count; ++idx) {
           if (isDynamicSize(idx))
             res.push_back($_op.sizes()[numDynamic++]);
@@ -210,9 +208,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         SmallVector<OpFoldResult, 4> res;
-        std::array<unsigned, 3> ranks = $_op.getArrayAttrRanks();
         unsigned numDynamic = 0;
-        unsigned count = ranks[getStrideOperandGroupPosition()];
+        unsigned count = $_op.static_strides().size();
         for (unsigned idx = 0; idx < count; ++idx) {
           if (isDynamicStride(idx))
             res.push_back($_op.strides()[numDynamic++]);
