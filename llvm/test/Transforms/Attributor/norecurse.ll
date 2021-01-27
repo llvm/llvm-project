@@ -34,29 +34,21 @@ define i32 @self_rec() {
 }
 
 define i32 @indirect_rec() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@indirect_rec
-; NOT_CGSCC_NPM-SAME: () [[ATTR2:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@indirect_rec
-; IS__CGSCC_NPM-SAME: () [[ATTR1:#.*]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@indirect_rec
+; CHECK-SAME: () [[ATTR2:#.*]] {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @indirect_rec2() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %a = call i32 @indirect_rec2()
   ret i32 %a
 }
 define i32 @indirect_rec2() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@indirect_rec2
-; NOT_CGSCC_NPM-SAME: () [[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@indirect_rec2
-; IS__CGSCC_NPM-SAME: () [[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@indirect_rec2
+; CHECK-SAME: () [[ATTR2]] {
+; CHECK-NEXT:    [[A:%.*]] = call i32 @indirect_rec() [[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %a = call i32 @indirect_rec()
   ret i32 %a
@@ -65,7 +57,7 @@ define i32 @indirect_rec2() {
 define i32 @extern() {
 ; CHECK: Function Attrs: nosync readnone
 ; CHECK-LABEL: define {{[^@]+}}@extern
-; CHECK-SAME: () [[ATTR2:#.*]] {
+; CHECK-SAME: () [[ATTR3:#.*]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @k()
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -78,17 +70,11 @@ define i32 @extern() {
 declare i32 @k() readnone
 
 define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
-; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
-; NOT_CGSCC_NPM-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR5:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR10:#.*]]
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
-; IS__CGSCC_NPM-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR4:#.*]] {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR7:#.*]]
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@intrinsic
+; CHECK-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR5:#.*]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR10:#.*]]
+; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
   ret void
@@ -107,7 +93,7 @@ define internal i32 @called_by_norecurse() {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@called_by_norecurse
-; IS__CGSCC____-SAME: () [[ATTR5:#.*]] {
+; IS__CGSCC____-SAME: () [[ATTR6:#.*]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @k()
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
@@ -123,7 +109,7 @@ define void @m() norecurse {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@m
-; IS__CGSCC____-SAME: () [[ATTR5]] {
+; IS__CGSCC____-SAME: () [[ATTR6]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse()
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -134,7 +120,7 @@ define void @m() norecurse {
 define internal i32 @called_by_norecurse_indirectly() {
 ; CHECK: Function Attrs: nosync readnone
 ; CHECK-LABEL: define {{[^@]+}}@called_by_norecurse_indirectly
-; CHECK-SAME: () [[ATTR2]] {
+; CHECK-SAME: () [[ATTR3]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @k()
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -150,7 +136,7 @@ define internal i32 @o() {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@o
-; IS__CGSCC____-SAME: () [[ATTR5]] {
+; IS__CGSCC____-SAME: () [[ATTR6]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse_indirectly()
 ; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
@@ -166,7 +152,7 @@ define i32 @p() norecurse {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@p
-; IS__CGSCC____-SAME: () [[ATTR5]] {
+; IS__CGSCC____-SAME: () [[ATTR6]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @o()
 ; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
@@ -175,48 +161,20 @@ define i32 @p() norecurse {
 }
 
 define void @f(i32 %x)  {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
-; IS__TUNIT____-LABEL: define {{[^@]+}}@f
-; IS__TUNIT____-SAME: (i32 [[X:%.*]]) [[ATTR7:#.*]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; IS__TUNIT____-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
-; IS__TUNIT____-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    call void @g() [[ATTR8:#.*]]
-; IS__TUNIT____-NEXT:    br label [[IF_END]]
-; IS__TUNIT____:       if.end:
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) [[ATTR7:#.*]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
-; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
-; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__CGSCC_OPM:       if.then:
-; IS__CGSCC_OPM-NEXT:    br label [[IF_END]]
-; IS__CGSCC_OPM:       if.end:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_NPM-SAME: (i32 [[X:%.*]]) [[ATTR0:#.*]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
-; IS__CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__CGSCC_NPM:       if.then:
-; IS__CGSCC_NPM-NEXT:    br label [[IF_END]]
-; IS__CGSCC_NPM:       if.end:
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@f
+; CHECK-SAME: (i32 [[X:%.*]]) [[ATTR7:#.*]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @g() [[ATTR8:#.*]]
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %x.addr = alloca i32, align 4
@@ -234,24 +192,12 @@ if.end:
 }
 
 define void @g() norecurse {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__TUNIT____-LABEL: define {{[^@]+}}@g
-; IS__TUNIT____-SAME: () [[ATTR8]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_OPM-SAME: () [[ATTR8:#.*]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    call void @f(i32 noundef 0) [[ATTR7]]
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_NPM-SAME: () [[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@g
+; CHECK-SAME: () [[ATTR8]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @f(i32 noundef 0) [[ATTR7]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @f(i32 0)
@@ -279,7 +225,7 @@ define i32 @eval_func1(i32 (i32)* , i32) local_unnamed_addr {
 define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr null_pointer_is_valid{
 ; CHECK: Function Attrs: null_pointer_is_valid
 ; CHECK-LABEL: define {{[^@]+}}@eval_func2
-; CHECK-SAME: (i32 (i32)* nocapture nofree [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr [[ATTR6:#.*]] {
+; CHECK-SAME: (i32 (i32)* nocapture nofree [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr [[ATTR9:#.*]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 [[TMP0]](i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

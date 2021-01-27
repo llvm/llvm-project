@@ -614,22 +614,26 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   StringRef Assembly =
       "declare void @nounwind_readonly(i32*) nounwind readonly "
       "declare void @nounwind_argmemonly(i32*) nounwind argmemonly "
+      "declare void @nounwind_willreturn(i32*) nounwind willreturn "
       "declare void @throws_but_readonly(i32*) readonly "
       "declare void @throws_but_argmemonly(i32*) argmemonly "
-      "declare void @nounwind_willreturn(i32*) nounwind willreturn"
+      "declare void @throws_but_willreturn(i32*) willreturn "
       " "
       "declare void @unknown(i32*) "
       " "
       "define void @f(i32* %p) { "
       "  call void @nounwind_readonly(i32* %p) "
       "  call void @nounwind_argmemonly(i32* %p) "
+      "  call void @nounwind_willreturn(i32* %p)"
       "  call void @throws_but_readonly(i32* %p) "
       "  call void @throws_but_argmemonly(i32* %p) "
+      "  call void @throws_but_willreturn(i32* %p) "
       "  call void @unknown(i32* %p) nounwind readonly "
       "  call void @unknown(i32* %p) nounwind argmemonly "
+      "  call void @unknown(i32* %p) nounwind willreturn "
       "  call void @unknown(i32* %p) readonly "
       "  call void @unknown(i32* %p) argmemonly "
-      "  call void @nounwind_willreturn(i32* %p)"
+      "  call void @unknown(i32* %p) willreturn "
       "  ret void "
       "} ";
 
@@ -643,15 +647,18 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
 
   auto &BB = F->getEntryBlock();
   bool ExpectedAnswers[] = {
-      true,  // call void @nounwind_readonly(i32* %p)
-      true,  // call void @nounwind_argmemonly(i32* %p)
+      false, // call void @nounwind_readonly(i32* %p)
+      false, // call void @nounwind_argmemonly(i32* %p)
+      true,  // call void @nounwind_willreturn(i32* %p)
       false, // call void @throws_but_readonly(i32* %p)
       false, // call void @throws_but_argmemonly(i32* %p)
-      true,  // call void @unknown(i32* %p) nounwind readonly
-      true,  // call void @unknown(i32* %p) nounwind argmemonly
+      false, // call void @throws_but_willreturn(i32* %p)
+      false, // call void @unknown(i32* %p) nounwind readonly
+      false, // call void @unknown(i32* %p) nounwind argmemonly
+      true,  // call void @unknown(i32* %p) nounwind willreturn
       false, // call void @unknown(i32* %p) readonly
       false, // call void @unknown(i32* %p) argmemonly
-      true,  // call void @nounwind_willreturn(i32* %p)
+      false, // call void @unknown(i32* %p) willreturn
       false, // ret void
   };
 

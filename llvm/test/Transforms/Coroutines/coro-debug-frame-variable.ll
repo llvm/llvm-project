@@ -37,22 +37,18 @@
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC:[0-9]+]]
 ; CHECK:         call void @llvm.dbg.declare(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC]]
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC]]
-; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP]], metadata ![[IVAR]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC]]
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
 ; CHECK:       entry.resume:
-; CHECK:         %j = alloca i32, align 4
-; CHECK:         [[IGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
-; CHECK:         [[XGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 6
+; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca %f.Frame*
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[XVAR_RESUME:[0-9]+]],   metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
+; CHECK:         %[[J:.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* %[[J]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       init.ready:
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
-; CHECK:         call void @llvm.dbg.declare(metadata [10 x i32]* [[XGEP_RESUME]], metadata ![[XVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME]]
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata [10 x i32]* [[XGEP_RESUME]], metadata ![[XVAR_RESUME]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC_RESUME]]
-; CHECK:         call void @llvm.dbg.value(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME]], metadata !DIExpression(DW_OP_deref)), !dbg ![[IDBGLOC_RESUME]]
-; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ;
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"
 ; CHECK: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
@@ -61,10 +57,10 @@
 ; CHECK: ![[JVAR]] = !DILocalVariable(name: "j"
 ; CHECK: ![[JDBGLOC]] = !DILocation(line: 32, column: 7, scope: ![[SCOPE]])
 
-; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
-; CHECK: ![[RESUME_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
-; CHECK: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE]])
 ; CHECK: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
+; CHECK: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE:[0-9]+]])
+; CHECK: ![[RESUME_SCOPE]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
+; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
 ; CHECK: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_SCOPE]])
 define void @f() {

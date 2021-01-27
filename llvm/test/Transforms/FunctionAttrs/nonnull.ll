@@ -331,7 +331,7 @@ declare void @use1nonnull(i8* nonnull %x);
 declare void @use2nonnull(i8* nonnull %x, i8* nonnull %y);
 declare void @use3nonnull(i8* nonnull %x, i8* nonnull %y, i8* nonnull %z);
 
-declare i8 @use1safecall(i8* %x) readonly nounwind ; readonly+nounwind guarantees that execution continues to successor
+declare i8 @use1safecall(i8* %x) nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
 ; Can't extend non-null to parent for any argument because the 2nd call is not guaranteed to execute.
 

@@ -415,7 +415,7 @@ lpad:
 }
 
 declare i8* @malloc(i32)
-declare void @free(i8*)
+declare void @free(i8*) willreturn
 declare void @print(i32)
 declare void @foo()
 

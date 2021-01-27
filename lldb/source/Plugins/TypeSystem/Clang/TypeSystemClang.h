@@ -1137,7 +1137,7 @@ public:
   /// These ASTs are isolated from the main scratch AST and are each
   /// dedicated to a special language option/feature that makes the contained
   /// AST nodes incompatible with other AST nodes.
-  enum class IsolatedASTKind {
+  enum IsolatedASTKind {
     /// The isolated AST for declarations/types from expressions that imported
     /// type information from a C++ module. The templates from a C++ module
     /// often conflict with the templates we generate from debug information,
@@ -1232,10 +1232,13 @@ private:
   /// imported types.
   std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
 
+  // FIXME: GCC 5.x doesn't support enum as map keys.
+  typedef int IsolatedASTKey;
+
   /// Map from IsolatedASTKind to their actual TypeSystemClang instance.
   /// This map is lazily filled with sub-ASTs and should be accessed via
   /// `GetSubAST` (which lazily fills this map).
-  std::unordered_map<IsolatedASTKind, std::unique_ptr<TypeSystemClang>>
+  std::unordered_map<IsolatedASTKey, std::unique_ptr<TypeSystemClang>>
       m_isolated_asts;
 };
 

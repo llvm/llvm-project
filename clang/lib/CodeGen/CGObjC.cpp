@@ -2894,45 +2894,57 @@ typedef llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
   ValueTransform;
 
 /// Insert code immediately after a call.
+
+// FIXME: We should find a way to emit the runtime call immediately
+// after the call is emitted to eliminate the need for this function.
 static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
                                               llvm::Value *value,
                                               ValueTransform doAfterCall,
                                               ValueTransform doFallback) {
-  if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
-    CGBuilderTy::InsertPoint ip = CGF.Builder.saveIP();
+  CGBuilderTy::InsertPoint ip = CGF.Builder.saveIP();
 
+  if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
     CGF.Builder.SetInsertPoint(call->getParent(),
                                ++llvm::BasicBlock::iterator(call));
     value = doAfterCall(CGF, value);
-
-    CGF.Builder.restoreIP(ip);
-    return value;
   } else if (llvm::InvokeInst *invoke = dyn_cast<llvm::InvokeInst>(value)) {
-    CGBuilderTy::InsertPoint ip = CGF.Builder.saveIP();
-
     // Place the retain at the beginning of the normal destination block.
     llvm::BasicBlock *BB = invoke->getNormalDest();
     CGF.Builder.SetInsertPoint(BB, BB->begin());
     value = doAfterCall(CGF, value);
 
-    CGF.Builder.restoreIP(ip);
-    return value;
-
   // Bitcasts can arise because of related-result returns.  Rewrite
   // the operand.
   } else if (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(value)) {
+    // Change the insert point to avoid emitting the fall-back call after the
+    // bitcast.
+    CGF.Builder.SetInsertPoint(bitcast->getParent(), bitcast->getIterator());
     llvm::Value *operand = bitcast->getOperand(0);
     operand = emitARCOperationAfterCall(CGF, operand, doAfterCall, doFallback);
     bitcast->setOperand(0, operand);
-    return bitcast;
-
-  // Generic fall-back case.
+    value = bitcast;
   } else {
-    // Retain using the non-block variant: we never need to do a copy
-    // of a block that's been returned to us.
-    return doFallback(CGF, value);
+    auto *phi = dyn_cast<llvm::PHINode>(value);
+    if (phi && phi->getNumIncomingValues() == 2 &&
+        isa<llvm::ConstantPointerNull>(phi->getIncomingValue(1)) &&
+        isa<llvm::CallBase>(phi->getIncomingValue(0))) {
+      // Handle phi instructions that are generated when it's necessary to check
+      // whether the receiver of a message is null.
+      llvm::Value *inVal = phi->getIncomingValue(0);
+      inVal = emitARCOperationAfterCall(CGF, inVal, doAfterCall, doFallback);
+      phi->setIncomingValue(0, inVal);
+      value = phi;
+    } else {
+      // Generic fall-back case.
+      // Retain using the non-block variant: we never need to do a copy
+      // of a block that's been returned to us.
+      value = doFallback(CGF, value);
+    }
   }
+
+  CGF.Builder.restoreIP(ip);
+  return value;
 }
 
 /// Given that the given expression is some sort of call (which does
