@@ -436,11 +436,13 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
 defvar cpp11 = LangOpts<"CPlusPlus11">;
+defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar c99 = LangOpts<"C99">;
 defvar c2x = LangOpts<"C2x">;
 defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
+defvar cuda = LangOpts<"CUDA">;
 defvar render_script = LangOpts<"RenderScript">;
 defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
@@ -993,8 +995,10 @@ defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable Apple gcc-compatible #pragma pack handling">,
   NegFlag<SetFalse>>;
-def fxl_pragma_pack : Flag<["-"], "fxl-pragma-pack">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable IBM XL #pragma pack handling">;
+defm xl_pragma_pack : BoolFOption<"xl-pragma-pack",
+  LangOpts<"XLPragmaPack">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Enable IBM XL #pragma pack handling">,
+  NegFlag<SetFalse>>;
 def shared_libsan : Flag<["-"], "shared-libsan">,
   HelpText<"Dynamically link the sanitizer runtime">;
 def static_libsan : Flag<["-"], "static-libsan">,
@@ -1271,8 +1275,6 @@ def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tr
     Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Print a template comparison tree for differing templates">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowTemplateTree">>;
-def fdeclspec : Flag<["-"], "fdeclspec">, Group<f_clang_Group>,
-  HelpText<"Allow __declspec as a keyword">, Flags<[CC1Option]>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
 def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
@@ -1344,14 +1346,21 @@ def fdenormal_fp_math_EQ : Joined<["-"], "fdenormal-fp-math=">, Group<f_Group>, 
 def ffp_model_EQ : Joined<["-"], "ffp-model=">, Group<f_Group>, Flags<[NoXarchOption]>,
   HelpText<"Controls the semantics of floating-point calculations.">;
 def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Specifies the exception behavior of floating-point operations.">;
+  HelpText<"Specifies the exception behavior of floating-point operations.">,
+  Values<"ignore,maytrap,strict">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["FPE_Ignore", "FPE_MayTrap", "FPE_Strict"]>,
+  MarshallingInfoString<LangOpts<"FPExceptionMode">, "FPE_Ignore">, AutoNormalizeEnum;
 defm fast_math : OptInFFlag<"fast-math", "Allow aggressive, lossy floating-point optimizations", "", "", [],
   LangOpts<"FastMath">, [cl_fast_relaxed_math.KeyPath]>;
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">, Flags<[CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
   MarshallingInfoFlag<LangOpts<"UnsafeFPMath">>,
   ImpliedByAnyOf<[cl_unsafe_math_optimizations.KeyPath, ffast_math.KeyPath]>;
-defm math_errno : OptInFFlag<"math-errno", "Require math functions to indicate errors by setting errno">;
+defm math_errno : BoolFOption<"math-errno",
+  LangOpts<"MathErrno">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Require math functions to indicate errors by setting errno">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<!strconcat("!", open_cl.KeyPath)>;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
 def fno_signaling_math : Flag<["-"], "fno-signaling-math">, Group<f_Group>;
@@ -1850,6 +1859,19 @@ def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>, Flags<
                     "PPTMK_FullGeneralityVirtualInheritance"]>,
   MarshallingInfoString<LangOpts<"MSPointerToMemberRepresentationMethod">, "PPTMK_BestCase">,
   AutoNormalizeEnum;
+// __declspec is enabled by default for the PS4 by the driver, and also
+// enabled for Microsoft Extensions or Borland Extensions, here.
+//
+// FIXME: __declspec is also currently enabled for CUDA, but isn't really a
+// CUDA extension. However, it is required for supporting
+// __clang_cuda_builtin_vars.h, which uses __declspec(property). Once that has
+// been rewritten in terms of something more generic, remove the Opts.CUDA
+// term here.
+defm declspec : BoolOption<"f", "declspec",
+  LangOpts<"DeclSpecKeyword">, DefaultFalse,
+  PosFlag<SetTrue, [], "Allow", [fms_extensions.KeyPath, fborland_extensions.KeyPath, cuda.KeyPath]>,
+  NegFlag<SetFalse, [], "Disallow">,
+  BothFlags<[CC1Option], " __declspec as a keyword">>, Group<f_clang_Group>;
 def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">, Group<i_Group>,
   Flags<[NoXarchOption, CC1Option]>, MetaVarName<"<directory>">,
   HelpText<"Specify the module cache path">;
@@ -1976,7 +1998,6 @@ def fmudflapth : Flag<["-"], "fmudflapth">, Group<f_Group>;
 def fmudflap : Flag<["-"], "fmudflap">, Group<f_Group>;
 def fnested_functions : Flag<["-"], "fnested-functions">, Group<f_Group>;
 def fnext_runtime : Flag<["-"], "fnext-runtime">, Group<f_Group>;
-def fno_xl_pragma_pack : Flag<["-"], "fno-xl-pragma-pack">, Group<f_Group>;
 def fno_asm : Flag<["-"], "fno-asm">, Group<f_Group>;
 def fno_asynchronous_unwind_tables : Flag<["-"], "fno-asynchronous-unwind-tables">, Group<f_Group>;
 def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, Group<f_Group>,
@@ -1997,8 +2018,6 @@ defm digraphs : BoolFOption<"digraphs",
   PosFlag<SetTrue, [], "Enable alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:' (default)">,
   NegFlag<SetFalse, [], "Disallow alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:'">,
   BothFlags<[CC1Option]>>;
-def fno_declspec : Flag<["-"], "fno-declspec">, Group<f_clang_Group>,
-  HelpText<"Disallow __declspec as a keyword">, Flags<[CC1Option]>;
 def fno_eliminate_unused_debug_symbols : Flag<["-"], "fno-eliminate-unused-debug-symbols">, Group<f_Group>;
 def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>, Flags<[CC1Option]>;
@@ -2084,10 +2103,10 @@ defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable C++14 sized global deallocation functions">,
   NegFlag<SetFalse>>;
-def faligned_allocation : Flag<["-"], "faligned-allocation">, Flags<[CC1Option]>,
-  HelpText<"Enable C++17 aligned allocation functions">, Group<f_Group>;
-def fno_aligned_allocation: Flag<["-"], "fno-aligned-allocation">,
-  Group<f_Group>, Flags<[CC1Option]>;
+defm aligned_allocation : BoolFOption<"aligned-allocation",
+  LangOpts<"AlignedAllocation">, Default<cpp17.KeyPath>,
+  PosFlag<SetTrue, [], "Enable C++17 aligned allocation functions">,
+  NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
 def fnew_alignment_EQ : Joined<["-"], "fnew-alignment=">,
   HelpText<"Specifies the largest alignment guaranteed by '::operator new(size_t)'">,
   MetaVarName<"<align>">, Group<f_Group>, Flags<[CC1Option]>,
@@ -2243,10 +2262,10 @@ defm short_enums : BoolFOption<"short-enums",
   PosFlag<SetTrue, [CC1Option], "Allocate to an enum type only as many bytes as it"
            " needs for the declared range of possible values">,
   NegFlag<SetFalse>>;
-def fchar8__t : Flag<["-"], "fchar8_t">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable C++ builtin type char8_t">;
-def fno_char8__t : Flag<["-"], "fno-char8_t">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Disable C++ builtin type char8_t">;
+defm char8__t : BoolFOption<"char8_t",
+  LangOpts<"Char8">, Default<cpp20.KeyPath>,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[CC1Option], " C++ builtin type char8_t">>;
 def fshort_wchar : Flag<["-"], "fshort-wchar">, Group<f_Group>,
   HelpText<"Force wchar_t to be a short unsigned int">;
 def fno_short_wchar : Flag<["-"], "fno-short-wchar">, Group<f_Group>,
@@ -2269,7 +2288,10 @@ defm spell_checking : BoolFOption<"spell-checking",
   NegFlag<SetFalse, [CC1Option], "Disable spell-checking">, PosFlag<SetTrue>>;
 def fspell_checking_limit_EQ : Joined<["-"], "fspell-checking-limit=">, Group<f_Group>;
 def fsigned_bitfields : Flag<["-"], "fsigned-bitfields">, Group<f_Group>;
-defm signed_char : OptOutFFlag<"signed-char", "char is signed", "char is unsigned">;
+defm signed_char : BoolFOption<"signed-char",
+  LangOpts<"CharIsSigned">, DefaultTrue,
+  NegFlag<SetFalse, [CC1Option], "char is unsigned">, PosFlag<SetTrue, [], "char is signed">>,
+  ShouldParseIf<!strconcat("!", open_cl.KeyPath)>;
 def fsplit_stack : Flag<["-"], "fsplit-stack">, Group<f_Group>;
 def fstack_protector_all : Flag<["-"], "fstack-protector-all">, Group<f_Group>,
   HelpText<"Enable stack protectors for all functions">;
@@ -2874,7 +2896,9 @@ def mno_stack_arg_probe : Flag<["-"], "mno-stack-arg-probe">, Group<m_Group>, Fl
   HelpText<"Disable stack probes which are enabled by default">,
   MarshallingInfoFlag<CodeGenOpts<"NoStackArgProbe">>;
 def mthread_model : Separate<["-"], "mthread-model">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">;
+  HelpText<"The thread model to use, e.g. posix, single (posix by default)">, Values<"posix,single">,
+  NormalizedValues<["POSIX", "Single"]>, NormalizedValuesScope<"LangOptions::ThreadModelKind">,
+  MarshallingInfoString<LangOpts<"ThreadModel">, "POSIX">, AutoNormalizeEnum;
 def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Set EABI type, e.g. 4, 5 or gnu (default depends on triple)">, Values<"default,4,5,gnu">,
   MarshallingInfoString<TargetOpts<"EABIVersion">, "Default">,
@@ -2995,7 +3019,9 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">,
-  Values<"128,256,512,1024,2048,scalable">;
+  Values<"128,256,512,1024,2048,scalable">,
+  NormalizedValues<["128", "256", "512", "1024", "2048", "0"]>,
+  MarshallingInfoString<LangOpts<"ArmSveVectorBits">, "0">, AutoNormalizeEnum;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
@@ -3064,7 +3090,8 @@ def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">, Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable the extended Altivec ABI on AIX (AIX only). Uses volatile and nonvolatile vector registers">;
+  HelpText<"Enable the extended Altivec ABI on AIX (AIX only). Uses volatile and nonvolatile vector registers">,
+  MarshallingInfoFlag<LangOpts<"EnableAIXExtendedAltivecABI">>;
 def mabi_EQ_vec_default : Flag<["-"], "mabi=vec-default">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the default Altivec ABI on AIX (AIX only). Uses only volatile vector registers.">;
 def mvsx : Flag<["-"], "mvsx">, Group<m_ppc_Features_Group>;
@@ -5007,11 +5034,13 @@ def print_stats : Flag<["-"], "print-stats">,
 def stats_file : Joined<["-"], "stats-file=">,
   HelpText<"Filename to write statistics to">,
   MarshallingInfoString<FrontendOpts<"StatsFile">>;
-def fdump_record_layouts : Flag<["-"], "fdump-record-layouts">,
-  HelpText<"Dump record layout information">;
 def fdump_record_layouts_simple : Flag<["-"], "fdump-record-layouts-simple">,
   HelpText<"Dump record layout information in a simple form used for testing">,
   MarshallingInfoFlag<LangOpts<"DumpRecordLayoutsSimple">>;
+def fdump_record_layouts : Flag<["-"], "fdump-record-layouts">,
+  HelpText<"Dump record layout information">,
+  MarshallingInfoFlag<LangOpts<"DumpRecordLayouts">>,
+  ImpliedByAnyOf<[fdump_record_layouts_simple.KeyPath]>;
 def fix_what_you_can : Flag<["-"], "fix-what-you-can">,
   HelpText<"Apply fix-it advice even in the presence of unfixable errors">,
   MarshallingInfoFlag<FrontendOpts<"FixWhatYouCan">>;
@@ -5045,7 +5074,9 @@ def building_pch_with_obj : Flag<["-"], "building-pch-with-obj">,
   MarshallingInfoFlag<LangOpts<"BuildingPCHWithObjectFile">>;
 
 def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
-  HelpText<"Aligned allocation/deallocation functions are unavailable">;
+  HelpText<"Aligned allocation/deallocation functions are unavailable">,
+  MarshallingInfoFlag<LangOpts<"AlignedAllocationUnavailable">>,
+  ShouldParseIf<faligned_allocation.KeyPath>;
 
 //===----------------------------------------------------------------------===//
 // Language Options
@@ -5075,7 +5106,9 @@ def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
   HelpText<"Name of the split dwarf debug info file to encode in the object file">,
   MarshallingInfoString<CodeGenOpts<"SplitDwarfFile">>;
 def fno_wchar : Flag<["-"], "fno-wchar">,
-  HelpText<"Disable C++ builtin type wchar_t">;
+  HelpText<"Disable C++ builtin type wchar_t">,
+  MarshallingInfoNegativeFlag<LangOpts<"WChar">, cplusplus.KeyPath>,
+  ShouldParseIf<cplusplus.KeyPath>;
 def fconstant_string_class : Separate<["-"], "fconstant-string-class">,
   MetaVarName<"<class name>">,
   HelpText<"Specify the class to use for constant Objective-C string objects.">,
@@ -5100,7 +5133,8 @@ def function_alignment : Separate<["-"], "function-alignment">,
     HelpText<"default alignment for functions">,
     MarshallingInfoStringInt<LangOpts<"FunctionAlignment">>;
 def pic_level : Separate<["-"], "pic-level">,
-  HelpText<"Value for __PIC__">;
+  HelpText<"Value for __PIC__">,
+  MarshallingInfoStringInt<LangOpts<"PICLevel">>;
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
@@ -5187,10 +5221,10 @@ def fdebugger_cast_result_to_id : Flag<["-"], "fdebugger-cast-result-to-id">,
 def fdebugger_objc_literal : Flag<["-"], "fdebugger-objc-literal">,
   HelpText<"Enable special debugger support for Objective-C subscripting and literals">,
   MarshallingInfoFlag<LangOpts<"DebuggerObjCLiteral">>;
-def fdeprecated_macro : Flag<["-"], "fdeprecated-macro">,
-  HelpText<"Defines the __DEPRECATED macro">;
-def fno_deprecated_macro : Flag<["-"], "fno-deprecated-macro">,
-  HelpText<"Undefines the __DEPRECATED macro">;
+defm deprecated_macro : BoolOption<"f", "deprecated-macro",
+  LangOpts<"Deprecated">, DefaultFalse,
+  PosFlag<SetTrue, [], "Defines">, NegFlag<SetFalse, [], "Undefines">,
+  BothFlags<[], " the __DEPRECATED macro">>;
 def fobjc_subscripting_legacy_runtime : Flag<["-"], "fobjc-subscripting-legacy-runtime">,
   HelpText<"Allow Objective-C array and dictionary subscripting in legacy runtime">;
 // TODO: Enforce values valid for MSVtorDispMode.

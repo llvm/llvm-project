@@ -432,6 +432,9 @@ static void FixupInvocation(CompilerInvocation &Invocation,
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
 
+  if (Args.hasArg(OPT_fconcepts_ts))
+    Diags.Report(diag::warn_fe_concepts_ts_flag);
+
   if (LangOpts.NewAlignOverride &&
       !llvm::isPowerOf2_32(LangOpts.NewAlignOverride)) {
     Arg *A = Args.getLastArg(OPT_fnew_alignment_EQ);
@@ -2076,11 +2079,6 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
 
   // OpenCL has half keyword
   Opts.Half = Opts.OpenCL;
-
-  // C++ has wchar_t keyword.
-  Opts.WChar = Opts.CPlusPlus;
-
-  Opts.AlignedAllocation = Opts.CPlusPlus17;
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -2356,46 +2354,15 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                              Opts.SYCLIsDevice ||
                              Args.hasArg(OPT_fconvergent_functions);
 
-  Opts.CharIsSigned = Opts.OpenCL || !Args.hasArg(OPT_fno_signed_char);
-  Opts.WChar = Opts.CPlusPlus && !Args.hasArg(OPT_fno_wchar);
-  Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus20);
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
-  Opts.AlignedAllocation =
-      Args.hasFlag(OPT_faligned_allocation, OPT_fno_aligned_allocation,
-                   Opts.AlignedAllocation);
-  Opts.AlignedAllocationUnavailable =
-      Opts.AlignedAllocation && Args.hasArg(OPT_aligned_alloc_unavailable);
-  if (Args.hasArg(OPT_fconcepts_ts))
-    Diags.Report(diag::warn_fe_concepts_ts_flag);
-  Opts.MathErrno = !Opts.OpenCL && Args.hasArg(OPT_fmath_errno);
   Opts.LongDoubleSize = Args.hasArg(OPT_mlong_double_128)
                             ? 128
                             : Args.hasArg(OPT_mlong_double_64) ? 64 : 0;
-  Opts.EnableAIXExtendedAltivecABI = Args.hasArg(OPT_mabi_EQ_vec_extabi);
-  Opts.PICLevel = getLastArgIntValue(Args, OPT_pic_level, 0, Diags);
-  Opts.DumpRecordLayouts = Opts.DumpRecordLayoutsSimple
-                        || Args.hasArg(OPT_fdump_record_layouts);
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
-  Opts.XLPragmaPack = Args.hasArg(OPT_fxl_pragma_pack);
   llvm::sort(Opts.ModuleFeatures);
-
-  Opts.ArmSveVectorBits =
-      getLastArgIntValue(Args, options::OPT_msve_vector_bits_EQ, 0, Diags);
-
-  // __declspec is enabled by default for the PS4 by the driver, and also
-  // enabled for Microsoft Extensions or Borland Extensions, here.
-  //
-  // FIXME: __declspec is also currently enabled for CUDA, but isn't really a
-  // CUDA extension. However, it is required for supporting
-  // __clang_cuda_builtin_vars.h, which uses __declspec(property). Once that has
-  // been rewritten in terms of something more generic, remove the Opts.CUDA
-  // term here.
-  Opts.DeclSpecKeyword =
-      Args.hasFlag(OPT_fdeclspec, OPT_fno_declspec,
-                   (Opts.MicrosoftExt || Opts.Borland || Opts.CUDA));
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
@@ -2519,11 +2486,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
       Args.hasArg(options::OPT_fopenmp_cuda_force_full_runtime);
 
-  // Record whether the __DEPRECATED define was requested.
-  Opts.Deprecated = Args.hasFlag(OPT_fdeprecated_macro,
-                                 OPT_fno_deprecated_macro,
-                                 Opts.Deprecated);
-
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
@@ -2553,20 +2515,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
-
-  LangOptions::FPExceptionModeKind FPEB = LangOptions::FPE_Ignore;
-  if (Arg *A = Args.getLastArg(OPT_ffp_exception_behavior_EQ)) {
-    StringRef Val = A->getValue();
-    if (Val.equals("ignore"))
-      FPEB = LangOptions::FPE_Ignore;
-    else if (Val.equals("maytrap"))
-      FPEB = LangOptions::FPE_MayTrap;
-    else if (Val.equals("strict"))
-      FPEB = LangOptions::FPE_Strict;
-    else
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
-  }
-  Opts.setFPExceptionMode(FPEB);
 
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
@@ -2643,16 +2591,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       }
     }
   }
-
-  std::string ThreadModel =
-      std::string(Args.getLastArgValue(OPT_mthread_model, "posix"));
-  if (ThreadModel != "posix" && ThreadModel != "single")
-    Diags.Report(diag::err_drv_invalid_value)
-        << Args.getLastArg(OPT_mthread_model)->getAsString(Args) << ThreadModel;
-  Opts.setThreadModel(
-      llvm::StringSwitch<LangOptions::ThreadModelKind>(ThreadModel)
-          .Case("posix", LangOptions::ThreadModelKind::POSIX)
-          .Case("single", LangOptions::ThreadModelKind::Single));
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
