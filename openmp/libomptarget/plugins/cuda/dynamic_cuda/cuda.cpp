@@ -15,6 +15,9 @@
 #include "Debug.h"
 #include "dlwrap.h"
 
+#include <string>
+#include <unordered_map>
+
 #include <dlfcn.h>
 
 DLWRAP_INTERNAL(cuInit, 1);
@@ -67,6 +70,21 @@ DLWRAP_FINALIZE();
 static bool checkForCUDA() {
   // return true if dlopen succeeded and all functions found
 
+  // Prefer _v2 versions of functions if found in the library
+  std::unordered_map<std::string, const char *> TryFirst = {
+      {"cuMemAlloc", "cuMemAlloc_v2"},
+      {"cuMemFree", "cuMemFree_v2"},
+      {"cuMemcpyDtoH", "cuMemcpyDtoH_v2"},
+      {"cuMemcpyHtoD", "cuMemcpyHtoD_v2"},
+      {"cuStreamDestroy", "cuStreamDestroy_v2"},
+      {"cuModuleGetGlobal", "cuModuleGetGlobal_v2"},
+      {"cuMemcpyDtoHAsync", "cuMemcpyDtoHAsync_v2"},
+      {"cuMemcpyDtoDAsync", "cuMemcpyDtoDAsync_v2"},
+      {"cuMemcpyHtoDAsync", "cuMemcpyHtoDAsync_v2"},
+      {"cuDevicePrimaryCtxRelease", "cuDevicePrimaryCtxRelease_v2"},
+      {"cuDevicePrimaryCtxSetFlags", "cuDevicePrimaryCtxSetFlags_v2"},
+  };
+
   const char *CudaLib = DYNAMIC_CUDA_PATH;
   void *DynlibHandle = dlopen(CudaLib, RTLD_NOW);
   if (!DynlibHandle) {
@@ -77,11 +95,23 @@ static bool checkForCUDA() {
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
+    auto It = TryFirst.find(Sym);
+    if (It != TryFirst.end()) {
+      const char *First = It->second;
+      void *P = dlsym(DynlibHandle, First);
+      if (P) {
+        DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
+        *dlwrap::pointer(I) = P;
+        continue;
+      }
+    }
+
     void *P = dlsym(DynlibHandle, Sym);
     if (P == nullptr) {
       DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
       return false;
     }
+    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
 
     *dlwrap::pointer(I) = P;
   }

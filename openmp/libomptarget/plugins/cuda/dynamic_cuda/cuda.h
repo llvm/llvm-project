@@ -49,18 +49,6 @@ typedef enum CUctx_flags_enum {
   CU_CTX_SCHED_MASK = 0x07,
 } CUctx_flags;
 
-#define cuMemFree cuMemFree_v2
-#define cuMemAlloc cuMemAlloc_v2
-#define cuMemcpyDtoH cuMemcpyDtoH_v2
-#define cuMemcpyHtoD cuMemcpyHtoD_v2
-#define cuStreamDestroy cuStreamDestroy_v2
-#define cuModuleGetGlobal cuModuleGetGlobal_v2
-#define cuMemcpyDtoHAsync cuMemcpyDtoHAsync_v2
-#define cuMemcpyDtoDAsync cuMemcpyDtoDAsync_v2
-#define cuMemcpyHtoDAsync cuMemcpyHtoDAsync_v2
-#define cuDevicePrimaryCtxRelease cuDevicePrimaryCtxRelease_v2
-#define cuDevicePrimaryCtxSetFlags cuDevicePrimaryCtxSetFlags_v2
-
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
