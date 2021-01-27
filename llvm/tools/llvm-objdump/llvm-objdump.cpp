@@ -1479,8 +1479,7 @@ getRelocsMap(object::ObjectFile const &Obj) {
     if (Relocated == Obj.section_end() || !checkSectionFilter(*Relocated).Keep)
       continue;
     std::vector<RelocationRef> &V = Ret[*Relocated];
-    for (const RelocationRef &R : Sec.relocations())
-      V.push_back(R);
+    append_range(V, Sec.relocations());
     // Sort relocations by address.
     llvm::stable_sort(V, isRelocAddressLess);
   }
