@@ -2928,13 +2928,8 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
   ++NumIf;
   Token DirectiveTok = Result;
 
-  // __VA_OPT__ is allowed as the operand of #if[n]def.
-  IfdefMacroNameScopeRAII IfdefMacroNameScope(*this);
-
   Token MacroNameTok;
   ReadMacroName(MacroNameTok);
-
-  IfdefMacroNameScope.Exit();
 
   // Error reading macro name?  If so, diagnostic already issued.
   if (MacroNameTok.is(tok::eod)) {
