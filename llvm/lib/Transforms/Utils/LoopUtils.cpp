@@ -1587,7 +1587,8 @@ struct PointerBounds {
 /// in \p TheLoop.  \return the values for the bounds.
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
-                                  SCEVExpander &Exp, ScalarEvolution *SE) {
+                                  SCEVExpander &Exp) {
+  ScalarEvolution *SE = Exp.getSE();
   // TODO: Add helper to retrieve pointers to CG.
   Value *Ptr = CG->RtCheck.Pointers[CG->Members[0]].PointerValue;
   const SCEV *Sc = SE->getSCEV(Ptr);
@@ -1626,16 +1627,15 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
 /// lower bounds for both pointers in the check.
 static SmallVector<std::pair<PointerBounds, PointerBounds>, 4>
 expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
-             Instruction *Loc, ScalarEvolution *SE, SCEVExpander &Exp) {
+             Instruction *Loc, SCEVExpander &Exp) {
   SmallVector<std::pair<PointerBounds, PointerBounds>, 4> ChecksWithBounds;
 
   // Here we're relying on the SCEV Expander's cache to only emit code for the
   // same bounds once.
   transform(PointerChecks, std::back_inserter(ChecksWithBounds),
             [&](const RuntimePointerCheck &Check) {
-              PointerBounds First = expandBounds(Check.first, L, Loc, Exp, SE),
-                            Second =
-                                expandBounds(Check.second, L, Loc, Exp, SE);
+              PointerBounds First = expandBounds(Check.first, L, Loc, Exp),
+                            Second = expandBounds(Check.second, L, Loc, Exp);
               return std::make_pair(First, Second);
             });
 
@@ -1645,12 +1645,10 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
 std::pair<Instruction *, Instruction *> llvm::addRuntimeChecks(
     Instruction *Loc, Loop *TheLoop,
     const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-    ScalarEvolution *SE) {
+    SCEVExpander &Exp) {
   // TODO: Move noalias annotation code from LoopVersioning here and share with LV if possible.
   // TODO: Pass  RtPtrChecking instead of PointerChecks and SE separately, if possible
-  const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
-  SCEVExpander Exp(*SE, DL, "induction");
-  auto ExpandedChecks = expandBounds(PointerChecks, TheLoop, Loc, SE, Exp);
+  auto ExpandedChecks = expandBounds(PointerChecks, TheLoop, Loc, Exp);
 
   LLVMContext &Ctx = Loc->getContext();
   Instruction *FirstInst = nullptr;

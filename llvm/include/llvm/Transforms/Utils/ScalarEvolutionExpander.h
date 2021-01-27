@@ -199,6 +199,8 @@ public:
     ChainedPhis.clear();
   }
 
+  ScalarEvolution *getSE() { return &SE; }
+
   /// Return a vector containing all instructions inserted during expansion.
   SmallVector<Instruction *, 32> getAllInsertedInstructions() const {
     SmallVector<Instruction *, 32> Result;
