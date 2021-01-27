@@ -199,7 +199,7 @@ public:
     if (Opt.Subs.empty())
       addLiteralOption(Opt, &*TopLevelSubCommand, Name);
     else {
-      for (auto SC : Opt.Subs)
+      for (auto *SC : Opt.Subs)
         addLiteralOption(Opt, SC, Name);
     }
   }
@@ -260,7 +260,7 @@ public:
     if (O->Subs.empty()) {
       addOption(O, &*TopLevelSubCommand);
     } else {
-      for (auto SC : O->Subs)
+      for (auto *SC : O->Subs)
         addOption(O, SC);
     }
   }
@@ -277,10 +277,10 @@ public:
       auto I = Sub.OptionsMap.find(Name);
       if (I != End && I->getValue() == O)
         Sub.OptionsMap.erase(I);
-      }
+    }
 
     if (O->getFormattingFlag() == cl::Positional)
-      for (auto Opt = Sub.PositionalOpts.begin();
+      for (auto *Opt = Sub.PositionalOpts.begin();
            Opt != Sub.PositionalOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.PositionalOpts.erase(Opt);
@@ -288,7 +288,7 @@ public:
         }
       }
     else if (O->getMiscFlags() & cl::Sink)
-      for (auto Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
+      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.SinkOpts.erase(Opt);
           break;
@@ -303,10 +303,10 @@ public:
       removeOption(O, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           removeOption(O, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           removeOption(O, SC);
       }
     }
@@ -342,10 +342,10 @@ public:
       updateArgStr(O, NewName, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           updateArgStr(O, NewName, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           updateArgStr(O, NewName, SC);
       }
     }
@@ -541,7 +541,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   if (I == Sub.OptionsMap.end())
     return nullptr;
 
-  auto O = I->second;
+  auto *O = I->second;
   if (O->getFormattingFlag() == cl::AlwaysPrefix)
     return nullptr;
 
@@ -553,7 +553,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
 SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
   if (Name.empty())
     return &*TopLevelSubCommand;
-  for (auto S : RegisteredSubCommands) {
+  for (auto *S : RegisteredSubCommands) {
     if (S == &*AllSubCommands)
       continue;
     if (S->getName().empty())
@@ -599,7 +599,7 @@ static Option *LookupNearestOption(StringRef Arg,
 
     bool PermitValue = O->getValueExpectedFlag() != cl::ValueDisallowed;
     StringRef Flag = PermitValue ? LHS : Arg;
-    for (auto Name : OptionNames) {
+    for (const auto &Name : OptionNames) {
       unsigned Distance = StringRef(Name).edit_distance(
           Flag, /*AllowReplacements=*/true, /*MaxEditDistance=*/BestDistance);
       if (!Best || Distance < BestDistance) {
@@ -1312,7 +1312,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
 void CommandLineParser::ResetAllOptionOccurrences() {
   // So that we can parse different command lines multiple times in succession
   // we reset all option values to look like they have never been seen before.
-  for (auto SC : RegisteredSubCommands) {
+  for (auto *SC : RegisteredSubCommands) {
     for (auto &O : SC->OptionsMap)
       O.second->reset();
   }
@@ -1368,7 +1368,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
-  for (auto O: DefaultOptions) {
+  for (auto *O: DefaultOptions) {
     addOption(O, true);
   }
 
@@ -2203,7 +2203,7 @@ public:
              << " [options]";
     }
 
-    for (auto Opt : PositionalOpts) {
+    for (auto *Opt : PositionalOpts) {
       if (Opt->hasArgStr())
         outs() << " --" << Opt->ArgStr;
       outs() << " " << Opt->HelpStr;
@@ -2239,7 +2239,7 @@ public:
     printOptions(Opts, MaxArgLen);
 
     // Print any extra help the user has declared.
-    for (auto I : GlobalParser->MoreHelp)
+    for (const auto &I : GlobalParser->MoreHelp)
       outs() << I;
     GlobalParser->MoreHelp.clear();
   }
