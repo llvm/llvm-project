@@ -17,7 +17,7 @@ program p
      a3(j) = sin(real(k))
   end do
 
-  ! CHECK: %[[undef:.*]] = fir.undefined !fir.len
+  ! CHECK: %[[undef:.*]] = fir.undefined index
   ! CHECK: %[[slice:.*]] = fir.slice %{{.*}}, %[[undef]], %[[undef]], %
   ! CHECK: fir.array_coor %[[a1]](%{{.*}}) [%[[slice]]] %{{.*}}, %[[index:.*]] :
   ! CHECK: fir.array_coor %[[a2]](%{{.*}}) %[[index]] :
