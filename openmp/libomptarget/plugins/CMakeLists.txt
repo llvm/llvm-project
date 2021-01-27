@@ -46,6 +46,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
         dl
+        ${OPENMP_PTHREAD_LIB}
         "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
 
       list(APPEND LIBOMPTARGET_TESTED_PLUGINS
