@@ -1089,6 +1089,20 @@
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
 
+// Check that we pass --no-rosegment for pre-29 Android versions and do not for
+// 29+.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android28 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-28 %s
+// CHECK-ANDROID-ROSEGMENT-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-28: "--no-rosegment"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android29 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ROSEGMENT-29 %s
+// CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
+
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android21 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-NOEXECSTACK %s
