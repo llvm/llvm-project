@@ -381,9 +381,18 @@ void UnmapOrDie(void *addr, uptr size) {
   UnmapOrDieVmar(addr, size, _zx_vmar_root_self());
 }
 
-// This is used on the shadow mapping, which cannot be changed.
-// Zircon doesn't have anything like MADV_DONTNEED.
-void ReleaseMemoryPagesToOS(uptr beg, uptr end) {}
+void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
+  uptr beg_aligned = RoundUpTo(beg, PAGE_SIZE);
+  uptr end_aligned = RoundDownTo(end, PAGE_SIZE);
+  if (beg_aligned < end_aligned) {
+    zx_handle_t root_vmar = _zx_vmar_root_self();
+    CHECK_NE(root_vmar, ZX_HANDLE_INVALID);
+    zx_status_t status =
+        _zx_vmar_op_range(root_vmar, ZX_VMAR_OP_DECOMMIT, beg_aligned,
+                          end_aligned - beg_aligned, nullptr, 0);
+    CHECK_EQ(status, ZX_OK);
+  }
+}
 
 void DumpProcessMap() {
   // TODO(mcgrathr): write it
