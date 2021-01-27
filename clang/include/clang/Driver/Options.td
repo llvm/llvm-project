@@ -435,12 +435,17 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
 
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
+defvar cpp11 = LangOpts<"CPlusPlus11">;
+defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar c99 = LangOpts<"C99">;
+defvar c2x = LangOpts<"C2x">;
 defvar lang_std = LangOpts<"LangStd">;
 defvar open_cl = LangOpts<"OpenCL">;
 defvar render_script = LangOpts<"RenderScript">;
 defvar hip = LangOpts<"HIP">;
 defvar gnu_mode = LangOpts<"GNUMode">;
+defvar asm_preprocessor = LangOpts<"AsmPreprocessor">;
+defvar cpp_modules = LangOpts<"CPlusPlusModules">;
 
 defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPath, ")");
 
@@ -997,20 +1002,16 @@ def static_libsan : Flag<["-"], "static-libsan">,
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
-defm asm_blocks : OptInFFlag<"asm-blocks", "">;
-
 def fassume_sane_operator_new : Flag<["-"], "fassume-sane-operator-new">, Group<f_Group>;
 def fastcp : Flag<["-"], "fastcp">, Group<f_Group>;
 def fastf : Flag<["-"], "fastf">, Group<f_Group>;
 def fast : Flag<["-"], "fast">, Group<f_Group>;
 def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Group<f_Group>;
 
-def fdouble_square_bracket_attributes : Flag<[ "-" ], "fdouble-square-bracket-attributes">,
-  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Enable '[[]]' attributes in all C and C++ language modes">;
-def fno_double_square_bracket_attributes : Flag<[ "-" ], "fno-double-square-bracket-attributes">,
-  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Disable '[[]]' attributes in all C and C++ language modes">;
+defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attributes",
+  LangOpts<"DoubleSquareBracketAttributes">, Default<!strconcat(cpp11.KeyPath, "||", c2x.KeyPath)>,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[NoXarchOption, CC1Option], " '[[]]' attributes in all C and C++ language modes">>;
 
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
@@ -1018,7 +1019,10 @@ defm autolink : BoolFOption<"autolink",
   PosFlag<SetTrue>>;
 
 // C++ Coroutines TS
-defm coroutines_ts : OptInFFlag<"coroutines-ts", "Enable support for the C++ Coroutines TS">;
+defm coroutines_ts : BoolFOption<"coroutines-ts",
+  LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
+  PosFlag<SetTrue, [CC1Option], "Enable support for the C++ Coroutines TS">,
+  NegFlag<SetFalse>>;
 
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
@@ -1273,8 +1277,10 @@ def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Gr
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
 def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
   HelpText<"Do not discard value names in LLVM IR">, Flags<[NoXarchOption]>;
-def fdollars_in_identifiers : Flag<["-"], "fdollars-in-identifiers">, Group<f_Group>,
-  HelpText<"Allow '$' in identifiers">, Flags<[CC1Option]>;
+defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
+  LangOpts<"DollarIdents">, Default<!strconcat("!", asm_preprocessor.KeyPath)>,
+  PosFlag<SetTrue, [], "Allow">, NegFlag<SetFalse, [], "Disallow">,
+  BothFlags<[CC1Option], " '$' in identifiers">>;
 def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
 def fno_dwarf2_cfi_asm : Flag<["-"], "fno-dwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
 defm dwarf_directory_asm : BoolFOption<"dwarf-directory-asm",
@@ -1358,7 +1364,10 @@ defm keep_static_consts : BoolFOption<"keep-static-consts",
   CodeGenOpts<"KeepStaticConsts">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Keep">, NegFlag<SetFalse, [], "Don't keep">,
   BothFlags<[NoXarchOption], " static const variables if unused">>;
-defm fixed_point : OptInFFlag<"fixed-point", "Enable", "Disable", " fixed point types">;
+defm fixed_point : BoolFOption<"fixed-point",
+  LangOpts<"FixedPoint">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[], " fixed point types">>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
 defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
   LangOpts<"RegisterStaticDestructors">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Disable C++ static destructor registration">,
@@ -1810,11 +1819,15 @@ defm merge_all_constants : BoolFOption<"merge-all-constants",
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Format message diagnostics so that they fit within N columns">,
   MarshallingInfoStringInt<DiagnosticOpts<"MessageLength">>;
-def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
-  HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
+def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">,
+  MarshallingInfoFlag<LangOpts<"MicrosoftExt">>, ImpliedByAnyOf<[fms_compatibility.KeyPath]>;
+defm asm_blocks : BoolFOption<"asm-blocks",
+  LangOpts<"AsmBlocks">, Default<fms_extensions.KeyPath>,
+  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
 def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"MSVolatile">>;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>, Flags<[NoXarchOption, CoreOption]>,
@@ -1858,9 +1871,6 @@ def fmodules_prune_after : Joined<["-"], "fmodules-prune-after=">, Group<i_Group
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) after which a module file will be considered unused">,
   MarshallingInfoStringInt<HeaderSearchOpts<"ModuleCachePruneAfter">, "31 * 24 * 60 * 60">;
-def fmodules_search_all : Flag <["-"], "fmodules-search-all">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Search even non-imported modules to resolve references">;
 def fbuild_session_timestamp : Joined<["-"], "fbuild-session-timestamp=">,
   Group<i_Group>, Flags<[CC1Option]>, MetaVarName<"<time since Epoch in seconds>">,
   HelpText<"Time when the current build session started">,
@@ -1912,9 +1922,6 @@ defm pch_codegen: OptInFFlag<"pch-codegen", "Generate ", "Do not generate ",
 defm pch_debuginfo: OptInFFlag<"pch-debuginfo", "Generate ", "Do not generate ",
   "debug info for types in an object file built from this PCH and do not generate them elsewhere">;
 
-def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Enable the 'modules' language feature">;
 def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
   Flags<[NoXarchOption, CC1Option]>,
   HelpText<"Implicitly search the file system for module map files.">,
@@ -1922,6 +1929,10 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
 def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">,
   MarshallingInfoFlag<LangOpts<"ModulesTS">>;
+defm modules : BoolFOption<"modules",
+  LangOpts<"Modules">, Default<!strconcat(fmodules_ts.KeyPath, "||", cpp_modules.KeyPath)>,
+  PosFlag<SetTrue, [CC1Option], "Enable the 'modules' language feature">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption]>>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[NoXarchOption,CC1Option]>, MetaVarName<"<name>">,
@@ -1942,15 +1953,19 @@ def fmodule_file : Joined<["-"], "fmodule-file=">,
   HelpText<"Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.">;
 def fmodules_ignore_macro : Joined<["-"], "fmodules-ignore-macro=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Ignore the definition of the given macro when building and loading modules">;
-def fmodules_decluse : Flag <["-"], "fmodules-decluse">, Group<f_Group>,
-  Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Require declaration of modules used within a module">;
 def fmodules_strict_decluse : Flag <["-"], "fmodules-strict-decluse">, Group<f_Group>,
   Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Like -fmodules-decluse but requires all headers to be in modules">,
   MarshallingInfoFlag<LangOpts<"ModulesStrictDeclUse">>;
-def fno_modules_search_all : Flag <["-"], "fno-modules-search-all">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>;
+defm modules_decluse : BoolFOption<"modules-decluse",
+  LangOpts<"ModulesDeclUse">, Default<fmodules_strict_decluse.KeyPath>,
+  PosFlag<SetTrue, [CC1Option], "Require declaration of modules used within a module">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption]>>;
+defm modules_search_all : BoolFOption<"modules-search-all",
+  LangOpts<"ModulesSearchAll">, DefaultFalse,
+  PosFlag<SetTrue, [], "Search even non-imported modules to resolve references">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption, CC1Option]>>,
+  ShouldParseIf<fmodules.KeyPath>;
 defm implicit_modules : BoolFOption<"implicit-modules",
   LangOpts<"ImplicitModules">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue>, BothFlags<[NoXarchOption]>>;
@@ -1984,8 +1999,6 @@ defm digraphs : BoolFOption<"digraphs",
   BothFlags<[CC1Option]>>;
 def fno_declspec : Flag<["-"], "fno-declspec">, Group<f_clang_Group>,
   HelpText<"Disallow __declspec as a keyword">, Flags<[CC1Option]>;
-def fno_dollars_in_identifiers : Flag<["-"], "fno-dollars-in-identifiers">, Group<f_Group>,
-  HelpText<"Disallow '$' in identifiers">, Flags<[CC1Option]>;
 def fno_eliminate_unused_debug_symbols : Flag<["-"], "fno-eliminate-unused-debug-symbols">, Group<f_Group>;
 def fno_inline_functions : Flag<["-"], "fno-inline-functions">, Group<f_clang_Group>, Flags<[CC1Option]>;
 def fno_inline : Flag<["-"], "fno-inline">, Group<f_clang_Group>, Flags<[CC1Option]>;
@@ -2001,13 +2014,9 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     MarshallingInfoString<CodeGenOpts<"VecLib">, "NoLibrary">, AutoNormalizeEnum;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
-def fno_modules : Flag <["-"], "fno-modules">, Group<f_Group>,
-  Flags<[NoXarchOption]>;
 def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
   Flags<[NoXarchOption]>;
 def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module_maps>;
-def fno_modules_decluse : Flag <["-"], "fno-modules-decluse">, Group<f_Group>,
-  Flags<[NoXarchOption]>;
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>,
   Flags<[NoXarchOption]>;
 def fmodule_file_deps : Flag <["-"], "fmodule-file-deps">, Group<f_Group>,
@@ -2023,7 +2032,7 @@ def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>, Flags<[CC1Opti
 def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>;
 def fno_operator_names : Flag<["-"], "fno-operator-names">, Group<f_Group>,
   HelpText<"Do not treat C++ operator name keywords as synonyms for operators">,
-  Flags<[CC1Option]>;
+  Flags<[CC1Option]>, MarshallingInfoNegativeFlag<LangOpts<"CXXOperatorNames">, cplusplus.KeyPath>;
 def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">,
   MarshallingInfoFlag<DiagnosticOpts<"AbsolutePath">>;
@@ -2220,8 +2229,14 @@ def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Override the default ABI to return small structs in registers">;
-defm rtti : OptOutFFlag<"rtti", "", "Disable generation of rtti information">;
-defm rtti_data : OptOutFFlag<"rtti-data", "", "Disable generation of RTTI data">;
+defm rtti : BoolFOption<"rtti",
+  LangOpts<"RTTI">, Default<cplusplus.KeyPath>,
+  NegFlag<SetFalse, [CC1Option], "Disable generation of rtti information">,
+  PosFlag<SetTrue>>, ShouldParseIf<cplusplus.KeyPath>;
+defm rtti_data : BoolFOption<"rtti-data",
+  LangOpts<"RTTIData">, Default<frtti.KeyPath>,
+  NegFlag<SetFalse, [CC1Option], "Disable generation of RTTI data">,
+  PosFlag<SetTrue>>, ShouldParseIf<frtti.KeyPath>;
 def : Flag<["-"], "fsched-interblock">, Group<clang_ignored_f_Group>;
 defm short_enums : BoolFOption<"short-enums",
   LangOpts<"ShortEnums">, DefaultFalse,
@@ -4201,9 +4216,11 @@ def mfpmath : Separate<["-"], "mfpmath">,
   HelpText<"Which unit to use for fp math">,
   MarshallingInfoString<TargetOpts<"FPMath">>;
 
-def fpadding_on_unsigned_fixed_point : Flag<["-"], "fpadding-on-unsigned-fixed-point">,
-  HelpText<"Force each unsigned fixed point type to have an extra bit of padding to align their scales with those of signed fixed point types">;
-def fno_padding_on_unsigned_fixed_point : Flag<["-"], "fno-padding-on-unsigned-fixed-point">;
+defm padding_on_unsigned_fixed_point : BoolOption<"f", "padding-on-unsigned-fixed-point",
+  LangOpts<"PaddingOnUnsignedFixedPoint">, DefaultFalse,
+  PosFlag<SetTrue, [], "Force each unsigned fixed point type to have an extra bit of padding to align their scales with those of signed fixed point types">,
+  NegFlag<SetFalse>>,
+  ShouldParseIf<ffixed_point.KeyPath>;
 
 //===----------------------------------------------------------------------===//
 // Analyzer Options
@@ -4845,10 +4862,14 @@ def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   HelpText<"Embed the contents of all files read by this compilation into "
            "the produced module file.">,
   MarshallingInfoFlag<FrontendOpts<"ModulesEmbedAllFiles">>;
+// FIXME: We only need this in C++ modules / Modules TS if we might textually
+// enter a different module (eg, when building a header unit).
 def fmodules_local_submodule_visibility :
   Flag<["-"], "fmodules-local-submodule-visibility">,
   HelpText<"Enforce name visibility rules across submodules of the same "
-           "top-level module.">;
+           "top-level module.">,
+  MarshallingInfoFlag<LangOpts<"ModulesLocalVisibility">>,
+  ImpliedByAnyOf<[fmodules_ts.KeyPath, cpp_modules.KeyPath]>;
 def fmodules_codegen :
   Flag<["-"], "fmodules-codegen">,
   HelpText<"Generate code for uses of this module that assumes an explicit "

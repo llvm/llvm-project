@@ -2017,6 +2017,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.HexFloats = Std.hasHexFloats();
   Opts.ImplicitInt = Std.hasImplicitInt();
 
+  Opts.CPlusPlusModules = Opts.CPlusPlus20;
+
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
   if (LangStd == LangStandard::lang_opencl10)
@@ -2078,14 +2080,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   // C++ has wchar_t keyword.
   Opts.WChar = Opts.CPlusPlus;
 
-  Opts.CXXOperatorNames = Opts.CPlusPlus;
-
   Opts.AlignedAllocation = Opts.CPlusPlus17;
-
-  Opts.DollarIdents = !Opts.AsmPreprocessor;
-
-  // Enable [[]] attributes in C++11 and C2x by default.
-  Opts.DoubleSquareBracketAttributes = Opts.CPlusPlus11 || Opts.C2x;
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -2263,9 +2258,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-  if (Args.hasArg(OPT_fno_operator_names))
-    Opts.CXXOperatorNames = 0;
-
   if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
       StringRef value = arg->getValue();
@@ -2337,8 +2329,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   else if (Args.hasArg(OPT_fwrapv))
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
 
-  Opts.MicrosoftExt = Opts.MSVCCompat || Args.hasArg(OPT_fms_extensions);
-  Opts.AsmBlocks = Args.hasArg(OPT_fasm_blocks) || Opts.MicrosoftExt;
   Opts.MSCompatibilityVersion = 0;
   if (const Arg *A = Args.getLastArg(OPT_fms_compatibility_version)) {
     VersionTuple VT;
@@ -2359,48 +2349,13 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
-  Opts.DollarIdents = Args.hasFlag(OPT_fdollars_in_identifiers,
-                                   OPT_fno_dollars_in_identifiers,
-                                   Opts.DollarIdents);
-
-  // -ffixed-point
-  Opts.FixedPoint =
-      Args.hasFlag(OPT_ffixed_point, OPT_fno_fixed_point, /*Default=*/false) &&
-      !Opts.CPlusPlus;
-  Opts.PaddingOnUnsignedFixedPoint =
-      Args.hasFlag(OPT_fpadding_on_unsigned_fixed_point,
-                   OPT_fno_padding_on_unsigned_fixed_point,
-                   /*Default=*/false) &&
-      Opts.FixedPoint;
-
-  Opts.RTTI = Opts.CPlusPlus && !Args.hasArg(OPT_fno_rtti);
-  Opts.RTTIData = Opts.RTTI && !Args.hasArg(OPT_fno_rtti_data);
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
-  Opts.Coroutines = Opts.CPlusPlus20 || Args.hasArg(OPT_fcoroutines_ts);
 
   Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
                              Opts.SYCLIsDevice ||
                              Args.hasArg(OPT_fconvergent_functions);
 
-  Opts.DoubleSquareBracketAttributes =
-      Args.hasFlag(OPT_fdouble_square_bracket_attributes,
-                   OPT_fno_double_square_bracket_attributes,
-                   Opts.DoubleSquareBracketAttributes);
-
-  Opts.CPlusPlusModules = Opts.CPlusPlus20;
-  Opts.Modules =
-      Args.hasArg(OPT_fmodules) || Opts.ModulesTS || Opts.CPlusPlusModules;
-  Opts.ModulesDeclUse =
-      Args.hasArg(OPT_fmodules_decluse) || Opts.ModulesStrictDeclUse;
-  // FIXME: We only need this in C++ modules / Modules TS if we might textually
-  // enter a different module (eg, when building a header unit).
-  Opts.ModulesLocalVisibility =
-      Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS ||
-      Opts.CPlusPlusModules;
-  Opts.ModulesSearchAll = Opts.Modules &&
-    !Args.hasArg(OPT_fno_modules_search_all) &&
-    Args.hasArg(OPT_fmodules_search_all);
   Opts.CharIsSigned = Opts.OpenCL || !Args.hasArg(OPT_fno_signed_char);
   Opts.WChar = Opts.CPlusPlus && !Args.hasArg(OPT_fno_wchar);
   Opts.Char8 = Args.hasFlag(OPT_fchar8__t, OPT_fno_char8__t, Opts.CPlusPlus20);
