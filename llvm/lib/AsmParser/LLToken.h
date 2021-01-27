@@ -210,7 +210,6 @@ enum Kind {
   kw_nonlazybind,
   kw_nomerge,
   kw_nonnull,
-  kw_noprofile,
   kw_noredzone,
   kw_noreturn,
   kw_nosync,
