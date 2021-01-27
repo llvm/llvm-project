@@ -2220,9 +2220,7 @@ public:
                                              : sel.gen(base.GetComponent());
                   auto v = fir::getBase(asScalar(e));
                   trips.push_back(v);
-                  // Use LenType to distinguish this as a placeholder operand.
-                  auto undef = builder.create<fir::UndefOp>(
-                      loc, fir::LenType::get(v.getContext()));
+                  auto undef = builder.create<fir::UndefOp>(loc, idxTy);
                   trips.push_back(undef);
                   trips.push_back(undef);
                   auto currentPC = pc;
