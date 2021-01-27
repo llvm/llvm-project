@@ -75,7 +75,7 @@ public:
 
   int getInlinerVectorBonusPercent() const { return 150; }
 
-  unsigned getMemcpyCost(const Instruction *I) const {
+  InstructionCost getMemcpyCost(const Instruction *I) const {
     return TTI::TCC_Expensive;
   }
 
