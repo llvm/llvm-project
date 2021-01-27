@@ -339,28 +339,30 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-defaultlib:oldnames");
   }
 
-  if (!llvm::sys::Process::GetEnv("LIB")) {
-    // If the VC environment hasn't been configured (perhaps because the user
-    // did not run vcvarsall), try to build a consistent link environment.  If
-    // the environment variable is set however, assume the user knows what
-    // they're doing.
+  // If the VC environment hasn't been configured (perhaps because the user
+  // did not run vcvarsall), try to build a consistent link environment.  If
+  // the environment variable is set however, assume the user knows what
+  // they're doing. If the user passes /vctoolsdir or /winsdkdir, trust that
+  // over env vars.
+  if (!llvm::sys::Process::GetEnv("LIB") ||
+      Args.getLastArg(options::OPT__SLASH_vctoolsdir)) {
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-libpath:") +
         TC.getSubDirectoryPath(
             toolchains::MSVCToolChain::SubDirectoryType::Lib)));
-
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-libpath:") +
         TC.getSubDirectoryPath(toolchains::MSVCToolChain::SubDirectoryType::Lib,
                                "atlmfc")));
-
+  }
+  if (!llvm::sys::Process::GetEnv("LIB") ||
+      Args.getLastArg(options::OPT__SLASH_winsdkdir)) {
     if (TC.useUniversalCRT()) {
       std::string UniversalCRTLibPath;
       if (TC.getUniversalCRTLibraryPath(Args, UniversalCRTLibPath))
         CmdArgs.push_back(
             Args.MakeArgString(Twine("-libpath:") + UniversalCRTLibPath));
     }
-
     std::string WindowsSdkLibPath;
     if (TC.getWindowsSDKLibraryPath(Args, WindowsSdkLibPath))
       CmdArgs.push_back(
@@ -1115,7 +1117,7 @@ static bool getWindowsSDKDirViaCommandLine(const ArgList &Args,
 static bool getWindowsSDKDir(const ArgList &Args, std::string &Path, int &Major,
                              std::string &WindowsSDKIncludeVersion,
                              std::string &WindowsSDKLibVersion) {
-  // Trust /winsdkdir: and /winsdkversion: if present.
+  // Trust /winsdkdir and /winsdkversion if present.
   if (getWindowsSDKDirViaCommandLine(
           Args, Path, Major, WindowsSDKIncludeVersion)) {
     WindowsSDKLibVersion = WindowsSDKIncludeVersion;
@@ -1213,8 +1215,8 @@ bool MSVCToolChain::useUniversalCRT() const {
 
 static bool getUniversalCRTSdkDir(const ArgList &Args, std::string &Path,
                                   std::string &UCRTVersion) {
-  // If /winsdkdir: is passed, use it as location for the UCRT too.
-  // FIXME: Should there be a dedicated /ucrtdir: to override /winsdkdir:?
+  // If /winsdkdir is passed, use it as location for the UCRT too.
+  // FIXME: Should there be a dedicated /ucrtdir to override /winsdkdir?
   int Major;
   if (getWindowsSDKDirViaCommandLine(Args, Path, Major, UCRTVersion))
     return true;
