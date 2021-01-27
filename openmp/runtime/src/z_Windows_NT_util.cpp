@@ -239,9 +239,10 @@ static void __kmp_win32_cond_wait(kmp_win32_cond_t *cv, kmp_win32_mutex_t *mx,
       old_f = flag->unset_sleeping();
       KMP_DEBUG_ASSERT(old_f & KMP_BARRIER_SLEEP_STATE);
       TCW_PTR(th->th.th_sleep_loc, NULL);
-      KF_TRACE(50, ("__kmp_win32_cond_wait: exiting, condition "
-                    "fulfilled: flag's loc(%p): %u => %u\n",
-                    flag->get(), old_f, *(flag->get())));
+      KF_TRACE(50,
+               ("__kmp_win32_cond_wait: exiting, condition "
+                "fulfilled: flag's loc(%p): %u => %u\n",
+                flag->get(), (unsigned int)old_f, (unsigned int)flag->load()));
 
       __kmp_win32_mutex_lock(&cv->waiters_count_lock_);
       KMP_DEBUG_ASSERT(cv->waiters_count_ > 0);
@@ -380,8 +381,8 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   }
 
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for flag's"
-               " loc(%p)==%d\n",
-               th_gtid, flag->get(), *(flag->get())));
+               " loc(%p)==%u\n",
+               th_gtid, flag->get(), (unsigned int)flag->load()));
 
   if (flag->done_check_val(old_spin)) {
     old_spin = flag->unset_sleeping();
@@ -493,7 +494,8 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
     if (!flag->is_sleeping_val(old_spin)) {
       KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
                    "awake: flag's loc(%p): %u => %u\n",
-                   gtid, target_gtid, flag->get(), old_spin, *(flag->get())));
+                   gtid, target_gtid, flag->get(), (unsigned int)old_spin,
+                   (unsigned int)flag->load()));
       __kmp_unlock_suspend_mx(th);
       return;
     }
@@ -591,7 +593,8 @@ void __kmp_affinity_bind_thread(int proc) {
 }
 
 void __kmp_affinity_determine_capable(const char *env_var) {
-// All versions of Windows* OS (since Win '95) support SetThreadAffinityMask().
+  // All versions of Windows* OS (since Win '95) support
+  // SetThreadAffinityMask().
 
 #if KMP_GROUP_AFFINITY
   KMP_AFFINITY_ENABLE(__kmp_num_proc_groups * sizeof(DWORD_PTR));
@@ -950,8 +953,7 @@ kmp_uint64 __kmp_now_nsec() {
   return 1e9 * __kmp_win32_tick * now.QuadPart;
 }
 
-extern "C"
-void *__stdcall __kmp_launch_worker(void *arg) {
+extern "C" void *__stdcall __kmp_launch_worker(void *arg) {
   volatile void *stack_data;
   void *exit_val;
   void *padding = 0;
