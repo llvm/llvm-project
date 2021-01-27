@@ -2694,7 +2694,7 @@ private:
                             SourceLocation *End = nullptr,
                             LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
-        standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+        (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
       ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
       return true;
     }
@@ -2704,7 +2704,7 @@ private:
                             SourceLocation *End = nullptr,
                             LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
-        standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+        (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
       ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
       return true;
     }
