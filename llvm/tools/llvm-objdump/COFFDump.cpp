@@ -454,8 +454,7 @@ static bool getPDataSection(const COFFObjectFile *Obj,
       continue;
 
     const coff_section *Pdata = Obj->getCOFFSection(Section);
-    for (const RelocationRef &Reloc : Section.relocations())
-      Rels.push_back(Reloc);
+    append_range(Rels, Section.relocations());
 
     // Sort relocations by address.
     llvm::sort(Rels, isRelocAddressLess);
