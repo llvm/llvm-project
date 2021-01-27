@@ -42,12 +42,13 @@ if (Protobuf_FOUND AND gRPC_FOUND AND PROTOC AND GRPC_CPP_PLUGIN)
   set(GRPC_INCLUDE_DIR
       ${directory}
   )
+
+  set(RPC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+  set(RPC_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/)
+  
+  add_subdirectory(src)
+  add_subdirectory(server)
 else()
   libomptarget_say("Not building remote offloading plugin: required libraries were not found.")
 endif()
 
-set(RPC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/)
-set(RPC_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/)
-
-add_subdirectory(src)
-add_subdirectory(server)
