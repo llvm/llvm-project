@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - | FileCheck %s
+; RUN: llc -mtriple=i686-apple-darwin %s -o - | FileCheck %s --check-prefix=CHECK-32
 
 
 define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
@@ -14,6 +15,10 @@ define void @simple(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: popq    %rbp
 ; CHECK: btrq    $60, %rbp
 ; CHECK: retq
+
+; CHECK-32-LABEL: simple:
+; CHECK-32: movl 8(%ebp), [[TMP:%.*]]
+; CHECK-32: movl [[TMP]], {{.*}}(%ebp)
 
   ret void
 }
@@ -76,6 +81,9 @@ define void @use_input_context(i8* swiftasync %ctx, i8** %ptr) "frame-pointer"="
 define i8** @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
 ; CHECK: leaq    -8(%rbp), %rax
+
+; CHECK-32-LABEL: context_in_func
+; CHECK-32: movl %esp, %eax
 
   %ptr = call i8** @llvm.swift.async.context.addr()
   ret i8** %ptr
