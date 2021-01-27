@@ -1223,8 +1223,9 @@ public:
   /// The 'SE' parameter holds pointer for the scalar evolution object which
   /// is used in order to get the Ptr step value in case of constant stride.
   /// The 'Ptr' parameter holds SCEV of the access pointer.
-  int getAddressComputationCost(Type *Ty, ScalarEvolution *SE = nullptr,
-                                const SCEV *Ptr = nullptr) const;
+  InstructionCost getAddressComputationCost(Type *Ty,
+                                            ScalarEvolution *SE = nullptr,
+                                            const SCEV *Ptr = nullptr) const;
 
   /// \returns The cost, if any, of keeping values of the given types alive
   /// over a callsite.
@@ -1628,8 +1629,8 @@ public:
                                            ArrayRef<Type *> Tys,
                                            TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getNumberOfParts(Type *Tp) = 0;
-  virtual int getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                        const SCEV *Ptr) = 0;
+  virtual InstructionCost
+  getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr) = 0;
   virtual unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
@@ -2135,8 +2136,8 @@ public:
   unsigned getNumberOfParts(Type *Tp) override {
     return Impl.getNumberOfParts(Tp);
   }
-  int getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                const SCEV *Ptr) override {
+  InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                            const SCEV *Ptr) override {
     return Impl.getAddressComputationCost(Ty, SE, Ptr);
   }
   unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) override {
