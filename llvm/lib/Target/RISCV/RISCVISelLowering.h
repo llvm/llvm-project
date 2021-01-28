@@ -106,6 +106,10 @@ enum NodeType : unsigned {
   VSLIDEDOWN,
   // Matches the semantics of the unmasked vid.v instruction.
   VID,
+  // Matches the semantics of the vfcnvt.rod function (Convert double-width
+  // float to single-width float, rounding towards odd). Takes a double-width
+  // float vector and produces a single-width float vector.
+  VFNCVT_ROD,
 };
 } // namespace RISCVISD
 
