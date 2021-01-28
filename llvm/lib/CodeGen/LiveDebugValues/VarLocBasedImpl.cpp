@@ -932,8 +932,7 @@ void VarLocBasedLDV::collectIDsForRegs(VarLocSet &Collected,
                                         const VarLocSet &CollectFrom) const {
   assert(!Regs.empty() && "Nothing to collect");
   SmallVector<uint32_t, 32> SortedRegs;
-  for (Register Reg : Regs)
-    SortedRegs.push_back(Reg);
+  append_range(SortedRegs, Regs);
   array_pod_sort(SortedRegs.begin(), SortedRegs.end());
   auto It = CollectFrom.find(LocIndex::rawIndexForReg(SortedRegs.front()));
   auto End = CollectFrom.end();
