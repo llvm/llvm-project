@@ -42,6 +42,9 @@ struct TestLinalgCodegenStrategy
     // clang-format on
   }
 
+  template <typename LinalgNamedOp>
+  void applyStrategyToNamedLinalgOp();
+
   void runOnFunction() override;
 
   ListOption<int64_t> tileSizes{*this, "tile-sizes",
@@ -91,11 +94,21 @@ struct TestLinalgCodegenStrategy
       *this, "unroll-vector-transfers",
       llvm::cl::desc("Enable full unrolling of vector.transfer operations"),
       llvm::cl::init(false)};
+  Option<std::string> anchorOpName{
+      *this, "anchor-op",
+      llvm::cl::desc(
+          "Which single linalg op is the anchor for the codegen strategy to "
+          "latch on:\n"
+          "\tlinalg.matmul: anchor on linalg.matmul\n"
+          "\tlinalg.matmul_column_major: anchor on linalg.matmul_column_major\n"
+          "\tlinalg.copy: anchor on linalg.copy\n"
+          "\tlinalg.fill: anchor on linalg.fill\n"),
+      llvm::cl::init("")};
 };
 } // end anonymous namespace
 
-/// Apply transformations specified as patterns.
-void TestLinalgCodegenStrategy::runOnFunction() {
+template <typename LinalgNamedOp>
+void TestLinalgCodegenStrategy::applyStrategyToNamedLinalgOp() {
   LinalgTilingOptions tilingOptions;
   if (!tileSizes.empty())
     tilingOptions = tilingOptions.setTileSizes(tileSizes);
@@ -121,25 +134,40 @@ void TestLinalgCodegenStrategy::runOnFunction() {
           .Default(vector::VectorTransferSplit::None);
 
   CodegenStrategy strategy;
-  strategy.tileIf<MatmulOp>(!tileSizes.empty(), tilingOptions)
-      .promoteIf<MatmulOp>(promote,
-                           LinalgPromotionOptions()
-                               .setAlignment(16)
-                               .setUseFullTileBuffersByDefault(promoteFullTile))
-      .tileIf<MatmulOp>(!registerTileSizes.empty(), registerTilingOptions)
-      .promoteIf<MatmulOp>(registerPromote, LinalgPromotionOptions()
-                                                .setAlignment(16)
-                                                .setUseFullTileBuffersByDefault(
-                                                    registerPromoteFullTile))
-      .vectorizeIf<MatmulOp>(vectorize)
+  strategy.template tileIf<LinalgNamedOp>(!tileSizes.empty(), tilingOptions)
+      .template promoteIf<LinalgNamedOp>(
+          promote, LinalgPromotionOptions()
+                       .setAlignment(16)
+                       .setUseFullTileBuffersByDefault(promoteFullTile))
+      .template tileIf<LinalgNamedOp>(!registerTileSizes.empty(),
+                                      registerTilingOptions)
+      .template promoteIf<LinalgNamedOp>(
+          registerPromote,
+          LinalgPromotionOptions()
+              .setAlignment(16)
+              .setUseFullTileBuffersByDefault(registerPromoteFullTile))
+      .template vectorizeIf<LinalgNamedOp>(vectorize)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)
               .setVectorTransferSplit(vectorTransferSplit))
       .setVectorTransferToSCFOptions(
           VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
-
   strategy.transform(getFunction());
+}
+
+/// Apply transformations specified as patterns.
+void TestLinalgCodegenStrategy::runOnFunction() {
+  if (anchorOpName == MatmulOp::getOperationName())
+    applyStrategyToNamedLinalgOp<MatmulOp>();
+  else if (anchorOpName == MatmulColumnMajorOp::getOperationName())
+    applyStrategyToNamedLinalgOp<MatmulColumnMajorOp>();
+  else if (anchorOpName == CopyOp::getOperationName())
+    applyStrategyToNamedLinalgOp<CopyOp>();
+  else if (anchorOpName == FillOp::getOperationName())
+    applyStrategyToNamedLinalgOp<FillOp>();
+  else
+    llvm_unreachable("Unsupported anchor op");
 }
 
 namespace mlir {

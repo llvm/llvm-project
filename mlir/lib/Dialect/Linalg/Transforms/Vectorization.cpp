@@ -68,8 +68,8 @@ static bool hasMultiplyAddBody(Region &r) {
 // TODO: Should be Tablegen'd from a single source that generates the op itself.
 static LogicalResult isContraction(Operation *op) {
   // TODO: interface for named ops.
-  if (isa<linalg::BatchMatmulOp, linalg::MatmulOp, linalg::MatvecOp,
-          linalg::VecmatOp, linalg::DotOp>(op))
+  if (isa<linalg::BatchMatmulOp, linalg::MatmulOp, linalg::MatmulColumnMajorOp,
+          linalg::MatvecOp, linalg::VecmatOp, linalg::DotOp>(op))
     return success();
 
   auto genericOp = dyn_cast<linalg::GenericOp>(op);
