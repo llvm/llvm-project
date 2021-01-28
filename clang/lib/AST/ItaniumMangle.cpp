@@ -203,6 +203,36 @@ public:
     disc = discriminator-2;
     return true;
   }
+
+  StringRef getLambdaString(const CXXRecordDecl *Lambda) override {
+    // This function matches the one in MicrosoftMangle, which returns
+    // the string that is used in lambda mangled names.
+    assert(Lambda->isLambda() && "RD must be a lambda!");
+    llvm::SmallString<10> Name("<lambda");
+    Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
+    unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
+    unsigned LambdaId;
+    const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
+    const FunctionDecl *Func =
+        Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
+
+    if (Func) {
+      unsigned DefaultArgNo =
+          Func->getNumParams() - Parm->getFunctionScopeIndex();
+      Name += llvm::utostr(DefaultArgNo);
+      Name += "_";
+    }
+
+    if (LambdaManglingNumber)
+      LambdaId = LambdaManglingNumber;
+    else
+      LambdaId = getAnonymousStructIdForDebugInfo(Lambda);
+
+    Name += llvm::utostr(LambdaId);
+    Name += '>';
+    return StringRef(Name);
+  }
+
   /// @}
 };
 
