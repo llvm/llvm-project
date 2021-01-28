@@ -297,12 +297,11 @@ char ARMConstantIslands::ID = 0;
 void ARMConstantIslands::verify() {
 #ifndef NDEBUG
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
-  assert(std::is_sorted(MF->begin(), MF->end(),
-                        [&BBInfo](const MachineBasicBlock &LHS,
+  assert(is_sorted(*MF, [&BBInfo](const MachineBasicBlock &LHS,
                                   const MachineBasicBlock &RHS) {
-                          return BBInfo[LHS.getNumber()].postOffset() <
-                                 BBInfo[RHS.getNumber()].postOffset();
-                        }));
+    return BBInfo[LHS.getNumber()].postOffset() <
+           BBInfo[RHS.getNumber()].postOffset();
+  }));
   LLVM_DEBUG(dbgs() << "Verifying " << CPUsers.size() << " CP users.\n");
   for (unsigned i = 0, e = CPUsers.size(); i != e; ++i) {
     CPUser &U = CPUsers[i];
