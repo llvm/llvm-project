@@ -150,6 +150,14 @@ int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
+unsigned getMIMGNSALimit(const MCSubtargetInfo &STI) {
+  if (isGFX11Plus(STI))
+    return 5;
+  if (isGFX10Plus(STI))
+    return 13;
+  return 0;
+}
+
 struct MUBUFInfo {
   uint16_t Opcode;
   uint16_t BaseOpcode;
@@ -808,12 +816,13 @@ struct ExpTgt {
 };
 
 static constexpr ExpTgt ExpTgtInfo[] = {
-  {{"null"},  ET_NULL,   ET_NULL_MAX_IDX},
-  {{"mrtz"},  ET_MRTZ,   ET_MRTZ_MAX_IDX},
-  {{"prim"},  ET_PRIM,   ET_PRIM_MAX_IDX},
-  {{"mrt"},   ET_MRT0,   ET_MRT_MAX_IDX},
-  {{"pos"},   ET_POS0,   ET_POS_MAX_IDX},
-  {{"param"}, ET_PARAM0, ET_PARAM_MAX_IDX},
+  {{"null"},           ET_NULL,            ET_NULL_MAX_IDX},
+  {{"mrtz"},           ET_MRTZ,            ET_MRTZ_MAX_IDX},
+  {{"prim"},           ET_PRIM,            ET_PRIM_MAX_IDX},
+  {{"mrt"},            ET_MRT0,            ET_MRT_MAX_IDX},
+  {{"pos"},            ET_POS0,            ET_POS_MAX_IDX},
+  {{"dual_src_blend"}, ET_DUAL_SRC_BLEND0, ET_DUAL_SRC_BLEND_MAX_IDX},
+  {{"param"},          ET_PARAM0,          ET_PARAM_MAX_IDX},
 };
 
 bool getTgtName(unsigned Id, StringRef &Name, int &Index) {
@@ -851,7 +860,20 @@ unsigned getTgtId(const StringRef Name) {
 }
 
 bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI) {
-  return (Id != ET_POS4 && Id != ET_PRIM) || isGFX10Plus(STI);
+  switch (Id) {
+  case ET_NULL:
+    return !isGFX11Plus(STI);
+  case ET_POS4:
+  case ET_PRIM:
+    return isGFX10Plus(STI);
+  case ET_DUAL_SRC_BLEND0:
+  case ET_DUAL_SRC_BLEND1:
+    return isGFX11Plus(STI);
+  default:
+    if (Id >= ET_PARAM0 && Id <= ET_PARAM31)
+      return !isGFX11Plus(STI);
+    return true;
+  }
 }
 
 } // namespace Exp

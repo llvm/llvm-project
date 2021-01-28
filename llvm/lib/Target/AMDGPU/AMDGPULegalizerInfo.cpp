@@ -4219,7 +4219,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       }
 
       // See also below in the non-a16 branch
-      const bool UseNSA = PackedRegs.size() >= 3 && ST.hasNSAEncoding();
+      const bool UseNSA = ST.hasNSAEncoding() &&
+        PackedRegs.size() >= 3 &&
+        PackedRegs.size() <= AMDGPU::getMIMGNSALimit(ST);
 
       if (!UseNSA && PackedRegs.size() > 1) {
         LLT PackedAddrTy = LLT::vector(2 * PackedRegs.size(), 16);
@@ -4256,7 +4258,16 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     //
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
-    const bool UseNSA = CorrectedNumVAddrs >= 3 && ST.hasNSAEncoding();
+    //
+    // Disable NSA if it has more registers than can be addressed.
+    //
+    // TODO: we can actually allow partial NSA where the final register is a
+    // contiguous set of the remaining addresses.
+    // This could help where there are more addresses than supported.
+    //
+    const bool UseNSA = ST.hasNSAEncoding() &&
+      CorrectedNumVAddrs >= 3 &&
+      CorrectedNumVAddrs <= AMDGPU::getMIMGNSALimit(ST);
 
     if (!UseNSA && Intr->NumVAddrs > 1)
       convertImageAddrToPacked(B, MI, ArgOffset + Intr->VAddrStart,

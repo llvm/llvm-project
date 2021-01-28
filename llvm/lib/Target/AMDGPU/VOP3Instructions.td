@@ -520,6 +520,8 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
                           IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 class PermlanePat<SDPatternOperator permlane,

@@ -212,8 +212,20 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
 // Shrink NSA encoded instructions with contiguous VGPRs to non-NSA encoding.
 void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-  if (!Info || Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+  if (!Info)
     return;
+
+  uint8_t NewEncoding;
+  switch (Info->MIMGEncoding) {
+  case AMDGPU::MIMGEncGfx10NSA:
+    NewEncoding = AMDGPU::MIMGEncGfx10Default;
+    break;
+  case AMDGPU::MIMGEncGfx11NSA:
+    NewEncoding = AMDGPU::MIMGEncGfx11Default;
+    break;
+  default:
+    return;
+  }
 
   MachineFunction *MF = MI.getParent()->getParent();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -282,7 +294,7 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   }
 
   unsigned NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, AMDGPU::MIMGEncGfx10Default,
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, NewEncoding,
                             Info->VDataDwords, NewAddrDwords);
   MI.setDesc(TII->get(NewOpcode));
   MI.getOperand(VAddr0Idx).setReg(RC->getRegister(VgprBase));
