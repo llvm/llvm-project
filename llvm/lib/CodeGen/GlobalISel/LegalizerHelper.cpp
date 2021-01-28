@@ -1758,22 +1758,68 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::widenScalarAddoSubo(MachineInstr &MI, unsigned TypeIdx,
-                                     LLT WideTy) {
+LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT WideTy) {
   if (TypeIdx == 1)
     return UnableToLegalize; // TODO
-  unsigned Op = MI.getOpcode();
-  unsigned Opcode = Op == TargetOpcode::G_UADDO || Op == TargetOpcode::G_SADDO
-                        ? TargetOpcode::G_ADD
-                        : TargetOpcode::G_SUB;
-  unsigned ExtOpcode =
-      Op == TargetOpcode::G_UADDO || Op == TargetOpcode::G_USUBO
-          ? TargetOpcode::G_ZEXT
-          : TargetOpcode::G_SEXT;
+
+  unsigned Opcode;
+  unsigned ExtOpcode;
+  Optional<Register> CarryIn = None;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case TargetOpcode::G_SADDO:
+    Opcode = TargetOpcode::G_ADD;
+    ExtOpcode = TargetOpcode::G_SEXT;
+    break;
+  case TargetOpcode::G_SSUBO:
+    Opcode = TargetOpcode::G_SUB;
+    ExtOpcode = TargetOpcode::G_SEXT;
+    break;
+  case TargetOpcode::G_UADDO:
+    Opcode = TargetOpcode::G_ADD;
+    ExtOpcode = TargetOpcode::G_ZEXT;
+    break;
+  case TargetOpcode::G_USUBO:
+    Opcode = TargetOpcode::G_SUB;
+    ExtOpcode = TargetOpcode::G_ZEXT;
+    break;
+  case TargetOpcode::G_SADDE:
+    Opcode = TargetOpcode::G_UADDE;
+    ExtOpcode = TargetOpcode::G_SEXT;
+    CarryIn = MI.getOperand(4).getReg();
+    break;
+  case TargetOpcode::G_SSUBE:
+    Opcode = TargetOpcode::G_USUBE;
+    ExtOpcode = TargetOpcode::G_SEXT;
+    CarryIn = MI.getOperand(4).getReg();
+    break;
+  case TargetOpcode::G_UADDE:
+    Opcode = TargetOpcode::G_UADDE;
+    ExtOpcode = TargetOpcode::G_ZEXT;
+    CarryIn = MI.getOperand(4).getReg();
+    break;
+  case TargetOpcode::G_USUBE:
+    Opcode = TargetOpcode::G_USUBE;
+    ExtOpcode = TargetOpcode::G_ZEXT;
+    CarryIn = MI.getOperand(4).getReg();
+    break;
+  }
+
   auto LHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(2)});
   auto RHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(3)});
   // Do the arithmetic in the larger type.
-  auto NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSExt, RHSExt});
+  Register NewOp;
+  if (CarryIn) {
+    LLT CarryOutTy = MRI.getType(MI.getOperand(1).getReg());
+    NewOp = MIRBuilder
+                .buildInstr(Opcode, {WideTy, CarryOutTy},
+                            {LHSExt, RHSExt, *CarryIn})
+                .getReg(0);
+  } else {
+    NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSExt, RHSExt}).getReg(0);
+  }
   LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
   auto TruncOp = MIRBuilder.buildTrunc(OrigTy, NewOp);
   auto ExtOp = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {TruncOp});
@@ -1846,7 +1892,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_SSUBO:
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_USUBO:
-    return widenScalarAddoSubo(MI, TypeIdx, WideTy);
+  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SSUBE:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBE:
+    return widenScalarAddSubOverflow(MI, TypeIdx, WideTy);
   case TargetOpcode::G_SADDSAT:
   case TargetOpcode::G_SSUBSAT:
   case TargetOpcode::G_SSHLSAT:
