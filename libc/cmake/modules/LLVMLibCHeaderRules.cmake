@@ -89,14 +89,15 @@ function(add_gen_header target_name)
 
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND $<TARGET_FILE:libc-hdrgen> -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
+    COMMAND ${LIBC_TABLEGEN_EXE} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
             --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
            ${ENTRYPOINT_NAME_LIST_ARG}
            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${in_file} ${fq_data_files} ${td_includes}
-            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
+            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+            ${LIBC_TABLEGEN_EXE} ${LIBC_TABLEGEN_TARGET}
   )
 
   get_fq_target_name(${target_name} fq_target_name)
