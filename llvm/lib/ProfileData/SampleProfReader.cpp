@@ -222,8 +222,6 @@ std::error_code SampleProfileReaderText::readImpl() {
   sampleprof_error Result = sampleprof_error::success;
 
   InlineCallStack InlineStack;
-  int CSProfileCount = 0;
-  int RegularProfileCount = 0;
   uint32_t ProbeProfileCount = 0;
 
   // SeenMetadata tracks whether we have processed metadata for the current
@@ -257,11 +255,9 @@ std::error_code SampleProfileReaderText::readImpl() {
       SampleContext FContext(FName);
       if (FContext.hasContext())
         ++CSProfileCount;
-      else
-        ++RegularProfileCount;
       Profiles[FContext] = FunctionSamples();
       FunctionSamples &FProfile = Profiles[FContext];
-      FProfile.setName(FContext.getName());
+      FProfile.setName(FContext.getNameWithoutContext());
       FProfile.setContext(FContext);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
@@ -324,13 +320,14 @@ std::error_code SampleProfileReaderText::readImpl() {
     }
   }
 
-  assert((RegularProfileCount == 0 || CSProfileCount == 0) &&
+  assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
   ProfileIsCS = (CSProfileCount > 0);
   assert((ProbeProfileCount == 0 || ProbeProfileCount == Profiles.size()) &&
          "Cannot have both probe-based profiles and regular profiles");
   ProfileIsProbeBased = (ProbeProfileCount > 0);
   FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
+  FunctionSamples::ProfileIsCS = ProfileIsCS;
 
   if (Result == sampleprof_error::success)
     computeSummary();
@@ -546,11 +543,15 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
   if (std::error_code EC = FName.getError())
     return EC;
 
-  Profiles[*FName] = FunctionSamples();
-  FunctionSamples &FProfile = Profiles[*FName];
-  FProfile.setName(*FName);
-
+  SampleContext FContext(*FName);
+  Profiles[FContext] = FunctionSamples();
+  FunctionSamples &FProfile = Profiles[FContext];
+  FProfile.setName(FContext.getNameWithoutContext());
+  FProfile.setContext(FContext);
   FProfile.addHeadSamples(*NumHeadSamples);
+
+  if (FContext.hasContext())
+    CSProfileCount++;
 
   if (std::error_code EC = readProfile(FProfile))
     return EC;
@@ -654,40 +655,44 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         return EC;
     }
     assert(Data == End && "More data is read than expected");
-    return sampleprof_error::success;
-  }
-
-  if (Remapper) {
-    for (auto Name : FuncsToUse) {
-      Remapper->insert(Name);
-    }
-  }
-
-  if (useMD5()) {
-    for (auto Name : FuncsToUse) {
-      auto GUID = std::to_string(MD5Hash(Name));
-      auto iter = FuncOffsetTable.find(StringRef(GUID));
-      if (iter == FuncOffsetTable.end())
-        continue;
-      const uint8_t *FuncProfileAddr = Start + iter->second;
-      assert(FuncProfileAddr < End && "out of LBRProfile section");
-      if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-        return EC;
-    }
   } else {
-    for (auto NameOffset : FuncOffsetTable) {
-      auto FuncName = NameOffset.first;
-      if (!FuncsToUse.count(FuncName) &&
-          (!Remapper || !Remapper->exist(FuncName)))
-        continue;
-      const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-      assert(FuncProfileAddr < End && "out of LBRProfile section");
-      if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-        return EC;
+    if (Remapper) {
+      for (auto Name : FuncsToUse) {
+        Remapper->insert(Name);
+      }
     }
+
+    if (useMD5()) {
+      for (auto Name : FuncsToUse) {
+        auto GUID = std::to_string(MD5Hash(Name));
+        auto iter = FuncOffsetTable.find(StringRef(GUID));
+        if (iter == FuncOffsetTable.end())
+          continue;
+        const uint8_t *FuncProfileAddr = Start + iter->second;
+        assert(FuncProfileAddr < End && "out of LBRProfile section");
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
+      }
+    } else {
+      for (auto NameOffset : FuncOffsetTable) {
+        SampleContext FContext(NameOffset.first);
+        auto FuncName = FContext.getNameWithoutContext();
+        if (!FuncsToUse.count(FuncName) &&
+            (!Remapper || !Remapper->exist(FuncName)))
+          continue;
+        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+        assert(FuncProfileAddr < End && "out of LBRProfile section");
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
+      }
+    }
+    Data = End;
   }
 
-  Data = End;
+  assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
+         "Cannot have both context-sensitive and regular profile");
+  ProfileIsCS = (CSProfileCount > 0);
+  FunctionSamples::ProfileIsCS = ProfileIsCS;
   return sampleprof_error::success;
 }
 
@@ -887,7 +892,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
     if (std::error_code EC = Checksum.getError())
       return EC;
 
-    Profiles[*FName].setFunctionHash(*Checksum);
+    SampleContext FContext(*FName);
+    Profiles[FContext].setFunctionHash(*Checksum);
   }
   return sampleprof_error::success;
 }

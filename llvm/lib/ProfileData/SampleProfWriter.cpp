@@ -147,7 +147,7 @@ std::error_code SampleProfileWriterExtBinaryBase::write(
 std::error_code
 SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   uint64_t Offset = OutputStream->tell();
-  StringRef Name = S.getName();
+  StringRef Name = S.getNameWithContext(true);
   FuncOffsetTable[Name] = Offset - SecLBRProfileStart;
   encodeULEB128(S.getHeadSamples(), *OutputStream);
   return writeBody(S);
@@ -635,7 +635,7 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
 std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   auto &OS = *OutputStream;
 
-  if (std::error_code EC = writeNameIdx(S.getName()))
+  if (std::error_code EC = writeNameIdx(S.getNameWithContext(true)))
     return EC;
 
   encodeULEB128(S.getTotalSamples(), OS);
