@@ -189,4 +189,35 @@ DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
 DEVICE void *__kmpc_impl_malloc(size_t) { return nullptr; }
 DEVICE void __kmpc_impl_free(void *) {}
 
+DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
+  lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
+  hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
+}
+
+DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
+  return (((uint64_t)hi) << 32) | (uint64_t)lo;
+}
+
+DEVICE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+
+DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+  // AMDGCN doesn't need to sync threads in a warp
+}
+
+DEVICE void __kmpc_impl_threadfence() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+}
+
+DEVICE void __kmpc_impl_threadfence_block() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+}
+
+DEVICE void __kmpc_impl_threadfence_system() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
+}
+
+// Calls to the AMDGCN layer (assuming 1D layout)
+DEVICE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+DEVICE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
+
 #pragma omp end declare target
