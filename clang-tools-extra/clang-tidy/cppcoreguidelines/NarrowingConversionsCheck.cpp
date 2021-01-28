@@ -111,12 +111,12 @@ static bool getFloatingConstantExprValue(const ASTContext &Context,
 namespace {
 
 struct IntegerRange {
-  bool Contains(const IntegerRange &From) const {
+  bool contains(const IntegerRange &From) const {
     return llvm::APSInt::compareValues(Lower, From.Lower) <= 0 &&
            llvm::APSInt::compareValues(Upper, From.Upper) >= 0;
   }
 
-  bool Contains(const llvm::APSInt &Value) const {
+  bool contains(const llvm::APSInt &Value) const {
     return llvm::APSInt::compareValues(Lower, Value) <= 0 &&
            llvm::APSInt::compareValues(Upper, Value) >= 0;
   }
@@ -160,14 +160,14 @@ static bool isWideEnoughToHold(const ASTContext &Context,
                                const BuiltinType &ToType) {
   IntegerRange FromIntegerRange = createFromType(Context, FromType);
   IntegerRange ToIntegerRange = createFromType(Context, ToType);
-  return ToIntegerRange.Contains(FromIntegerRange);
+  return ToIntegerRange.contains(FromIntegerRange);
 }
 
 static bool isWideEnoughToHold(const ASTContext &Context,
                                const llvm::APSInt &IntegerConstant,
                                const BuiltinType &ToType) {
   IntegerRange ToIntegerRange = createFromType(Context, ToType);
-  return ToIntegerRange.Contains(IntegerConstant);
+  return ToIntegerRange.contains(IntegerConstant);
 }
 
 static llvm::SmallString<64> getValueAsString(const llvm::APSInt &Value,

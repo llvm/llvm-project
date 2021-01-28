@@ -65,8 +65,8 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void BadSignalToKillThreadCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *pp, Preprocessor *ModuleExpanderPP) {
-  PP = pp;
+    const SourceManager &SM, Preprocessor *Pp, Preprocessor *ModuleExpanderPP) {
+  PP = Pp;
 }
 
 } // namespace bugprone

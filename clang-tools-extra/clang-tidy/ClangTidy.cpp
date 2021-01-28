@@ -67,7 +67,7 @@ public:
   AnalyzerDiagnosticConsumer(ClangTidyContext &Context) : Context(Context) {}
 
   void FlushDiagnosticsImpl(std::vector<const ento::PathDiagnostic *> &Diags,
-                            FilesMade *filesMade) override {
+                            FilesMade *FilesMade) override {
     for (const ento::PathDiagnostic *PD : Diags) {
       SmallString<64> CheckName(AnalyzerCheckNamePrefix);
       CheckName += PD->getCheckerName();
@@ -186,7 +186,7 @@ public:
       reportNote(Note);
   }
 
-  void Finish() {
+  void finish() {
     if (ApplyFixes && TotalFixes > 0) {
       Rewriter Rewrite(SourceMgr, LangOpts);
       for (const auto &FileAndReplacements : FileReplacements) {
@@ -596,7 +596,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
     // Return to the initial directory to correctly resolve next Error.
     FileSystem.setCurrentWorkingDirectory(InitialWorkingDir.get());
   }
-  Reporter.Finish();
+  Reporter.finish();
   WarningsAsErrorsCount += Reporter.getWarningsAsErrorsCount();
 }
 
