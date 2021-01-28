@@ -33,7 +33,7 @@ struct Transformation {
 /// SFINAE: Enqueue helper for ConcreteOpType that have a `getOperationName`.
 template <template <typename> class PatternType, typename ConcreteOpType,
           typename OptionsType,
-          typename std::enable_if<std::is_member_function_pointer<
+          typename = std::enable_if<std::is_member_function_pointer<
               decltype(&ConcreteOpType::getOperationName)>::value>>
 void sfinae_enqueue(OwningRewritePatternList &patterList, OptionsType options,
                     MLIRContext *context, StringRef opName,
