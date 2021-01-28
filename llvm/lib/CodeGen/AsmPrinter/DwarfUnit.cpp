@@ -316,8 +316,11 @@ unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
 }
 
 void DwarfUnit::addPoolOpAddress(DIEValueList &Die, const MCSymbol *Label) {
+  bool UseAddrOffsetFormOrExpressions =
+      DD->useAddrOffsetForm() || DD->useAddrOffsetExpressions();
+
   const MCSymbol *Base = nullptr;
-  if (Label->isInSection() && DD->useAddrOffsetExpressions())
+  if (Label->isInSection() && UseAddrOffsetFormOrExpressions)
     Base = DD->getSectionLabel(&Label->getSection());
 
   uint32_t Index = DD->getAddressPool().getIndex(Base ? Base : Label);
