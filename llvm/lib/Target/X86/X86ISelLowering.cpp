@@ -43184,7 +43184,7 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
       SDValue Op10 = Ops1.front(), Op11 = Ops1.back();
       SmallVector<int, 2> ShuffleMask0, ShuffleMask1;
       if (Op00.getValueType() == SrcVT && Op01.getValueType() == SrcVT &&
-          Op11.getValueType() == SrcVT && Op11.getValueType() == SrcVT &&
+          Op10.getValueType() == SrcVT && Op11.getValueType() == SrcVT &&
           scaleShuffleElements(Mask0, 2, ShuffleMask0) &&
           scaleShuffleElements(Mask1, 2, ShuffleMask1)) {
         if ((Op00 == Op11) && (Op01 == Op10)) {
