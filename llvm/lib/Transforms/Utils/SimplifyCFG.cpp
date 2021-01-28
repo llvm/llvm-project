@@ -6561,20 +6561,10 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
 bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   bool Changed = simplifyOnceImpl(BB);
 
-  assert((!RequireAndPreserveDomTree ||
-          (DTU &&
-           DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full))) &&
-         "Failed to maintain validity of domtree!");
-
   return Changed;
 }
 
 bool SimplifyCFGOpt::run(BasicBlock *BB) {
-  assert((!RequireAndPreserveDomTree ||
-          (DTU &&
-           DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full))) &&
-         "Original domtree is invalid?");
-
   bool Changed = false;
 
   // Repeated simplify BB as long as resimplification is requested.
@@ -6592,7 +6582,7 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
                        ArrayRef<WeakVH> LoopHeaders) {
-  return SimplifyCFGOpt(TTI, RequireAndPreserveDomTree ? DTU : nullptr,
-                        BB->getModule()->getDataLayout(), LoopHeaders, Options)
+  return SimplifyCFGOpt(TTI, DTU, BB->getModule()->getDataLayout(), LoopHeaders,
+                        Options)
       .run(BB);
 }
