@@ -826,7 +826,7 @@ bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
 // from PatFrags in tablegen.
 bool RISCVDAGToDAGISel::isUnneededShiftMask(SDNode *N, unsigned Width) const {
   assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
-  assert(Width >= 5 && N->getValueSizeInBits(0) >= (1 << Width) &&
+  assert(Width >= 5 && N->getValueSizeInBits(0) >= (1ULL << Width) &&
          "Unexpected width");
   const APInt &Val = N->getConstantOperandAPInt(1);
 
