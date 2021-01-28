@@ -855,3 +855,27 @@ void DIELocList::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 
 LLVM_DUMP_METHOD
 void DIELocList::print(raw_ostream &O) const { O << "LocList: " << Index; }
+
+//===----------------------------------------------------------------------===//
+// DIEAddrOffset Implementation
+//===----------------------------------------------------------------------===//
+
+unsigned DIEAddrOffset::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
+  return Addr.SizeOf(AP, dwarf::DW_FORM_addrx) +
+         Offset.SizeOf(AP, dwarf::DW_FORM_data4);
+}
+
+/// EmitValue - Emit label value.
+///
+void DIEAddrOffset::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
+  Addr.emitValue(AP, dwarf::DW_FORM_addrx);
+  Offset.emitValue(AP, dwarf::DW_FORM_data4);
+}
+
+LLVM_DUMP_METHOD
+void DIEAddrOffset::print(raw_ostream &O) const {
+  O << "AddrOffset: ";
+  Addr.print(O);
+  O << " + ";
+  Offset.print(O);
+}

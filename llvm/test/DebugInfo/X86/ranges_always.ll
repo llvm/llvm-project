@@ -3,11 +3,16 @@
 ; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=RNG \
 ; RUN:     --implicit-check-not=DW_TAG --implicit-check-not=NULL --implicit-check-not=_pc %s
 
-
 ; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o - -minimize-addr-in-v5=Expressions \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
-; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=EXPR \
+; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=EXPRORFORM --check-prefix=EXPR\
 ; RUN:     --implicit-check-not=DW_TAG --implicit-check-not=NULL --implicit-check-not=_pc %s
+
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o - -minimize-addr-in-v5=Form \
+; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
+; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=EXPRORFORM --check-prefix=FORM \
+; RUN:     --implicit-check-not=DW_TAG --implicit-check-not=NULL --implicit-check-not=_pc %s
+
 
 ; Generated from the following source. f4 is used to put a hole in the CU
 ; ranges while keeping f2 and f4 in the same section (as opposed to
@@ -44,7 +49,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 ; RNG:     DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x2) rangelist = [[CU_RANGE:.*]]
-; EXPR:    DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = [[CU_RANGE:.*]]
+; EXPRORFORM: DW_AT_ranges [DW_FORM_rnglistx]   (indexed (0x0) rangelist = [[CU_RANGE:.*]]
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name {{.*}} "f2"
 ; CHECK:   DW_TAG_subprogram
@@ -52,25 +57,29 @@
 ; CHECK:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 ; CHECK:     DW_TAG_inlined_subroutine
 ; EXPR:        DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x9, DW_OP_plus)
-; EXPR:        DW_AT_high_pc [DW_FORM_data4]   (0x00000005)
+; FORM:        DW_AT_low_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x9 address = 0x0000000000000009 ".text")
+; EXPRORFORM:  DW_AT_high_pc [DW_FORM_data4]   (0x00000005)
 ; RNG:         DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = [[INL_RANGE:.*]]
 ; CHECK:     DW_TAG_call_site
 ; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000009 ".text")
 ; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x9, DW_OP_plus)
+; FORM:        DW_AT_call_return_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x9 address = 0x0000000000000009 ".text")
 ; CHECK:     DW_TAG_call_site
 ; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000002) address = 0x000000000000000e ".text")
 ; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0xe, DW_OP_plus)
+; FORM:        DW_AT_call_return_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0xe address = 0x000000000000000e ".text")
 ; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name {{.*}} "f1"
 ; CHECK:   DW_TAG_subprogram
 ; EXPR:      DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x20, DW_OP_plus)
-; EXPR:      DW_AT_high_pc [DW_FORM_data4]   (0x00000006)
+; FORM:      DW_AT_low_pc [DW_FORM_LLVM_addrx_offset] (indexed (00000000) + 0x20 address = 0x0000000000000020 ".text")
+; EXPRORFORM: DW_AT_high_pc [DW_FORM_data4]   (0x00000006)
 ; RNG:       DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = [[F5_RANGE:.*]]
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (
 ; RNG-SAME: 00000003
-; EXPR-SAME: 00000001
+; EXPRORFORM-SAME: 00000001
 ; CHECK: ) address = 0x0000000000000000 ".other")
 ; CHECK:     DW_AT_high_pc [DW_FORM_data4]   (0x00000006)
 ; CHECK:   NULL
@@ -86,7 +95,7 @@
 
 ; CHECK-LABEL: .debug_rnglists contents:
 ; RNG: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000003
-; EXPR: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000001
+; EXPRORFORM: 0x00000000: range list header: {{.*}}, offset_entry_count = 0x00000001
 ; CHECK: ranges:
 ; RNG-NEXT:   [[INL_RANGE]]: [DW_RLE_base_addressx]:  0x0000000000000000
 ; RNG-NEXT:                  [DW_RLE_offset_pair  ]
@@ -100,7 +109,7 @@
 ; CHECK-NEXT:               [DW_RLE_offset_pair  ]
 ; CHECK-NEXT:               [DW_RLE_offset_pair  ]
 ; RNG-NEXT:                 [DW_RLE_startx_length]:  0x0000000000000003
-; EXPR-NEXT:                [DW_RLE_startx_length]:  0x0000000000000001
+; EXPRORFORM-NEXT:          [DW_RLE_startx_length]:  0x0000000000000001
 ; CHECK-NEXT:               [DW_RLE_end_of_list  ]
 
 ; Function Attrs: noinline optnone uwtable mustprogress
