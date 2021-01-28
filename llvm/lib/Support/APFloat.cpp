@@ -3748,7 +3748,7 @@ namespace {
     exp += FirstSignificant;
     buffer.erase(&buffer[0], &buffer[FirstSignificant]);
   }
-}
+} // namespace
 
 void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding, bool TruncateZero) const {
@@ -4777,7 +4777,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
   return DoubleAPFloat(semPPCDoubleDouble, std::move(First), std::move(Second));
 }
 
-} // End detail namespace
+} // namespace detail
 
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
   if (usesLayout<IEEEFloat>(Semantics)) {
