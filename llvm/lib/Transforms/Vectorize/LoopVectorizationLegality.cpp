@@ -605,11 +605,6 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
-  // Look for the attribute signaling the absence of NaNs.
-  Function &F = *Header->getParent();
-  HasFunNoNaNAttr =
-      F.getFnAttribute("no-nans-fp-math").getValueAsString() == "true";
-
   // For each block in the loop.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for hazards.
@@ -673,7 +668,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         InductionDescriptor ID;
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
-          if (ID.hasUnsafeAlgebra() && !HasFunNoNaNAttr)
+          if (ID.hasUnsafeAlgebra())
             Requirements->addUnsafeAlgebraInst(ID.getUnsafeAlgebraInst());
           continue;
         }

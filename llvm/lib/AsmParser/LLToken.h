@@ -384,6 +384,7 @@ enum Kind {
   kw_flags,
   kw_blockcount,
   kw_linkage,
+  kw_visibility,
   kw_notEligibleToImport,
   kw_live,
   kw_dsoLocal,

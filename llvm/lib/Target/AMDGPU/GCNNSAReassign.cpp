@@ -190,6 +190,14 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
       if (MRI->getRegClass(Reg) != &AMDGPU::VGPR_32RegClass || Op.getSubReg())
         return NSA_Status::FIXED;
 
+      // InlineSpiller does not call LRM::assign() after an LI split leaving
+      // it in an inconsistent state, so we cannot call LRM::unassign().
+      // See llvm bug #48911.
+      // Skip reassign if a register has originated from such split.
+      // FIXME: Remove the workaround when bug #48911 is fixed.
+      if (VRM->getPreSplitReg(Reg))
+        return NSA_Status::FIXED;
+
       const MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
 
       if (Def && Def->isCopy() && Def->getOperand(1).getReg() == PhysReg)

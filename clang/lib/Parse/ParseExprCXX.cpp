@@ -1338,12 +1338,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     SourceLocation DeclEndLoc = RParenLoc;
 
     // GNU-style attributes must be parsed before the mutable specifier to be
-    // compatible with GCC.
-    MaybeParseGNUAttributes(Attr, &DeclEndLoc);
-
-    // MSVC-style attributes must be parsed before the mutable specifier to be
-    // compatible with MSVC.
-    MaybeParseMicrosoftDeclSpecs(Attr, &DeclEndLoc);
+    // compatible with GCC. MSVC-style attributes must be parsed before the
+    // mutable specifier to be compatible with MSVC.
+    MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attr);
 
     // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update the
     // DeclEndLoc.

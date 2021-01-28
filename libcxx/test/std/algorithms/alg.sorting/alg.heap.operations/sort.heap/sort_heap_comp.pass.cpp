@@ -8,69 +8,63 @@
 
 // <algorithm>
 
-// template<RandomAccessIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
-//   requires ShuffleIterator<Iter> && CopyConstructible<Compare>
-//   void
+// template<RandomAccessIterator Iter>
+//   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
+//   constexpr void  // constexpr in C++20
 //   sort_heap(Iter first, Iter last, Compare comp);
 
 #include <algorithm>
-#include <functional>
-#include <random>
 #include <cassert>
-#include <memory>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-struct indirect_less
+#include "test_macros.h"
+#include "test_iterators.h"
+#include "MoveOnly.h"
+
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    template <class P>
-    bool operator()(const P& x, const P& y)
-        {return *x < *y;}
-};
+    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    for (int n = 0; n < 15; ++n) {
+        std::make_heap(work, work+n, std::greater<T>());
+        std::sort_heap(Iter(work), Iter(work+n), std::greater<T>());
+        assert(std::is_sorted(work, work+n, std::greater<T>()));
+        assert(std::is_permutation(work, work+n, orig));
+        std::copy(orig, orig+n, work);
+    }
 
-std::mt19937 randomness;
-
-void test(int N)
-{
-    int* ia = new int [N];
-    for (int i = 0; i < N; ++i)
-        ia[i] = i;
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N, std::greater<int>());
-    std::sort_heap(ia, ia+N, std::greater<int>());
-    assert(std::is_sorted(ia, ia+N, std::greater<int>()));
-
-    typedef random_access_iterator<int *> RI;
-    std::shuffle(RI(ia), RI(ia+N), randomness);
-    std::make_heap(RI(ia), RI(ia+N), std::greater<int>());
-    std::sort_heap(RI(ia), RI(ia+N), std::greater<int>());
-    assert(std::is_sorted(RI(ia), RI(ia+N), std::greater<int>()));
-    delete [] ia;
+    {
+        T input[] = {1, 3, 2, 5, 4};
+        assert(std::is_heap(input, input + 5, std::greater<T>()));
+        std::sort_heap(Iter(input), Iter(input + 5), std::greater<T>());
+        assert(input[0] == 5);
+        assert(input[1] == 4);
+        assert(input[2] == 3);
+        assert(input[3] == 2);
+        assert(input[4] == 1);
+    }
+    return true;
 }
 
 int main(int, char**)
 {
-    test(0);
-    test(1);
-    test(2);
-    test(3);
-    test(10);
-    test(1000);
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
 
 #if TEST_STD_VER >= 11
-    {
-    const int N = 1000;
-    std::unique_ptr<int>* ia = new std::unique_ptr<int> [N];
-    for (int i = 0; i < N; ++i)
-        ia[i].reset(new int(i));
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N, indirect_less());
-    std::sort_heap(ia, ia+N, indirect_less());
-    assert(std::is_sorted(ia, ia+N, indirect_less()));
-    delete [] ia;
-    }
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
 #endif
 
-  return 0;
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

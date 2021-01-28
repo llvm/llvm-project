@@ -785,6 +785,7 @@ void DIEBlock::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_block1: Asm->emitInt8(Size);    break;
   case dwarf::DW_FORM_block2: Asm->emitInt16(Size);   break;
   case dwarf::DW_FORM_block4: Asm->emitInt32(Size);   break;
+  case dwarf::DW_FORM_exprloc:
   case dwarf::DW_FORM_block:
     Asm->emitULEB128(Size);
     break;
@@ -803,6 +804,7 @@ unsigned DIEBlock::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_block1: return Size + sizeof(int8_t);
   case dwarf::DW_FORM_block2: return Size + sizeof(int16_t);
   case dwarf::DW_FORM_block4: return Size + sizeof(int32_t);
+  case dwarf::DW_FORM_exprloc:
   case dwarf::DW_FORM_block:  return Size + getULEB128Size(Size);
   case dwarf::DW_FORM_data16: return 16;
   default: llvm_unreachable("Improper form for block");
@@ -853,3 +855,27 @@ void DIELocList::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 
 LLVM_DUMP_METHOD
 void DIELocList::print(raw_ostream &O) const { O << "LocList: " << Index; }
+
+//===----------------------------------------------------------------------===//
+// DIEAddrOffset Implementation
+//===----------------------------------------------------------------------===//
+
+unsigned DIEAddrOffset::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
+  return Addr.SizeOf(AP, dwarf::DW_FORM_addrx) +
+         Offset.SizeOf(AP, dwarf::DW_FORM_data4);
+}
+
+/// EmitValue - Emit label value.
+///
+void DIEAddrOffset::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
+  Addr.emitValue(AP, dwarf::DW_FORM_addrx);
+  Offset.emitValue(AP, dwarf::DW_FORM_data4);
+}
+
+LLVM_DUMP_METHOD
+void DIEAddrOffset::print(raw_ostream &O) const {
+  O << "AddrOffset: ";
+  Addr.print(O);
+  O << " + ";
+  Offset.print(O);
+}

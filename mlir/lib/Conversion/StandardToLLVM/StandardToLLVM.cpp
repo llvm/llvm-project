@@ -212,7 +212,6 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
   return LLVM::LLVMPointerType::get(converted);
 }
 
-
 // Function types are converted to LLVM Function types by recursively converting
 // argument and result types.  If MLIR Function has zero results, the LLVM
 // Function has one VoidType result.  If MLIR Function has more than one result,
@@ -525,10 +524,11 @@ MemRefDescriptor::fromStaticShape(OpBuilder &builder, Location loc,
   auto result = getStridesAndOffset(type, strides, offset);
   (void)result;
   assert(succeeded(result) && "unexpected failure in stride computation");
-  assert(offset != MemRefType::getDynamicStrideOrOffset() &&
+  assert(!MemRefType::isDynamicStrideOrOffset(offset) &&
          "expected static offset");
-  assert(!llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) &&
-         "expected static strides");
+  assert(!llvm::any_of(strides, [](int64_t stride) {
+    return MemRefType::isDynamicStrideOrOffset(stride);
+  }) && "expected static strides");
 
   auto convertedType = typeConverter.convertType(type);
   assert(convertedType && "unexpected failure in memref type conversion");
@@ -1044,14 +1044,14 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 
   Value index;
   if (offset != 0) // Skip if offset is zero.
-    index = offset == MemRefType::getDynamicStrideOrOffset()
+    index = MemRefType::isDynamicStrideOrOffset(offset)
                 ? memRefDescriptor.offset(rewriter, loc)
                 : createIndexConstant(rewriter, loc, offset);
 
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride = strides[i] == MemRefType::getDynamicStrideOrOffset()
+      Value stride = MemRefType::isDynamicStrideOrOffset(strides[i])
                          ? memRefDescriptor.stride(rewriter, loc, i)
                          : createIndexConstant(rewriter, loc, strides[i]);
       increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
@@ -3308,7 +3308,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
         extracted);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
-    // Copy the buffer pointer from the old descriptor to the new one.
+    // Copy the aligned pointer from the old descriptor to the new one.
     extracted = sourceMemRef.alignedPtr(rewriter, loc);
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
@@ -3487,7 +3487,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
                   ArrayRef<int64_t> strides, Value nextSize,
                   Value runningStride, unsigned idx) const {
     assert(idx < strides.size());
-    if (strides[idx] != MemRefType::getDynamicStrideOrOffset())
+    if (!MemRefType::isDynamicStrideOrOffset(strides[idx]))
       return createIndexConstant(rewriter, loc, strides[idx]);
     if (nextSize)
       return runningStride

@@ -67,7 +67,7 @@ struct NamedBufferAlloc {
   const Twine &Name;
   NamedBufferAlloc(const Twine &Name) : Name(Name) {}
 };
-}
+} // namespace
 
 void *operator new(size_t N, const NamedBufferAlloc &Alloc) {
   SmallString<256> NameBuf;
@@ -101,7 +101,7 @@ public:
     return MemoryBuffer::MemoryBuffer_Malloc;
   }
 };
-}
+} // namespace
 
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
@@ -219,7 +219,7 @@ public:
     return MemoryBuffer::MemoryBuffer_MMap;
   }
 };
-}
+} // namespace
 
 static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 getMemoryBufferForStream(sys::fs::file_t FD, const Twine &BufferName) {

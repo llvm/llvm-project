@@ -3748,7 +3748,7 @@ namespace {
     exp += FirstSignificant;
     buffer.erase(&buffer[0], &buffer[FirstSignificant]);
   }
-}
+} // namespace
 
 void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding, bool TruncateZero) const {
@@ -4761,7 +4761,8 @@ bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
   return Ret;
 }
 
-DoubleAPFloat scalbn(DoubleAPFloat Arg, int Exp, APFloat::roundingMode RM) {
+DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
+                     APFloat::roundingMode RM) {
   assert(Arg.Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
   return DoubleAPFloat(semPPCDoubleDouble, scalbn(Arg.Floats[0], Exp, RM),
                        scalbn(Arg.Floats[1], Exp, RM));
@@ -4777,7 +4778,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
   return DoubleAPFloat(semPPCDoubleDouble, std::move(First), std::move(Second));
 }
 
-} // End detail namespace
+} // namespace detail
 
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
   if (usesLayout<IEEEFloat>(Semantics)) {

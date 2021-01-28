@@ -23,6 +23,7 @@ static_library("Object") {
     "ELF.cpp",
     "ELFObjectFile.cpp",
     "Error.cpp",
+    "FaultMapParser.cpp",
     "IRObjectFile.cpp",
     "IRSymtab.cpp",
     "MachOObjectFile.cpp",

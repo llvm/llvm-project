@@ -610,7 +610,7 @@ static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
   {                                                                            \
     static std::atomic<bool> TABLE##Checked(false);                            \
     if (!TABLE##Checked.load(std::memory_order_relaxed)) {                     \
-      assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&             \
+      assert(is_sorted(TABLE) &&                                               \
              "All lookup tables must be sorted for efficient access!");        \
       TABLE##Checked.store(true, std::memory_order_relaxed);                   \
     }                                                                          \

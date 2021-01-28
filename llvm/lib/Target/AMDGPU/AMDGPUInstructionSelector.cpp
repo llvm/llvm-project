@@ -136,20 +136,29 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
       const TargetRegisterClass *SrcRC
         = TRI.getConstrainedRegClassForOperand(Src, *MRI);
 
-      Register MaskedReg = MRI->createVirtualRegister(SrcRC);
+      Optional<ValueAndVReg> ConstVal =
+          getConstantVRegValWithLookThrough(SrcReg, *MRI, true, true);
+      if (ConstVal) {
+        unsigned MovOpc =
+            STI.isWave64() ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+        BuildMI(*BB, &I, DL, TII.get(MovOpc), DstReg)
+            .addImm(ConstVal->Value.getBoolValue() ? -1 : 0);
+      } else {
+        Register MaskedReg = MRI->createVirtualRegister(SrcRC);
 
-      // We can't trust the high bits at this point, so clear them.
+        // We can't trust the high bits at this point, so clear them.
 
-      // TODO: Skip masking high bits if def is known boolean.
+        // TODO: Skip masking high bits if def is known boolean.
 
-      unsigned AndOpc = TRI.isSGPRClass(SrcRC) ?
-        AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
-      BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
-        .addImm(1)
-        .addReg(SrcReg);
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
-        .addImm(0)
-        .addReg(MaskedReg);
+        unsigned AndOpc =
+            TRI.isSGPRClass(SrcRC) ? AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
+        BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
+            .addImm(1)
+            .addReg(SrcReg);
+        BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
+            .addImm(0)
+            .addReg(MaskedReg);
+      }
 
       if (!MRI->getRegClassOrNull(SrcReg))
         MRI->setRegClass(SrcReg, SrcRC);

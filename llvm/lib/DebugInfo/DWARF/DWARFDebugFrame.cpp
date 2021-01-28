@@ -25,7 +25,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace dwarf;

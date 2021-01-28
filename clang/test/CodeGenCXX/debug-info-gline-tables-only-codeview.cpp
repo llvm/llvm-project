@@ -25,6 +25,6 @@ void test() {
   // CHECK: ![[C]] = !DICompositeType(tag: DW_TAG_structure_type, name: "C",
   // CHECK-SAME:                      flags: DIFlagFwdDecl
   // CHECK-NOT: identifier
-  // CHECK: ![[MTYPE]] = !DISubroutineType(types: !{{.*}})
+  // CHECK: ![[MTYPE]] = !DISubroutineType({{.*}}types: !{{.*}})
   c.m();
 }

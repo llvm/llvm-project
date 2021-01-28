@@ -16,6 +16,9 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
+
+#include "common/omptarget.h"
+#include "target_interface.h"
 #include "common/support.h"
 #include "target_impl.h"
 

@@ -59,6 +59,7 @@ target_link_libraries(omptarget.rtl.cuda
   MemoryManager
   ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
+  ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   "-Wl,-z,defs")
 
