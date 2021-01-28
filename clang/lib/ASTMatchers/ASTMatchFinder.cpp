@@ -295,7 +295,7 @@ public:
     if (!match(*Node->getBody()))
       return false;
 
-    return true;
+    return VisitorBase::TraverseStmt(Node->getBody());
   }
 
   bool shouldVisitTemplateInstantiations() const { return true; }
