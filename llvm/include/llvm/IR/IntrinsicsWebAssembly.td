@@ -348,6 +348,14 @@ def int_wasm_promote_low :
   Intrinsic<[llvm_v2f64_ty], [llvm_v4f32_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
+// TODO: Remove these if possible if they are merged to the spec.
+def int_wasm_widen_signed :
+  Intrinsic<[llvm_v4i32_ty], [llvm_v16i8_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+def int_wasm_widen_unsigned :
+  Intrinsic<[llvm_v4i32_ty], [llvm_v16i8_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//
