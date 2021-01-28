@@ -3853,6 +3853,78 @@ void binop()
   }
 }
 
+TEST(IgnoringImpCasts, PathologicalLambda) {
+
+  // Test that deeply nested lambdas are not a performance penalty
+  StringRef Code = R"cpp(
+void f() {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+    int i = 42;
+    (void)i;
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+}
+  )cpp";
+
+  EXPECT_TRUE(matches(Code, integerLiteral(equals(42))));
+  EXPECT_TRUE(matches(Code, functionDecl(hasDescendant(integerLiteral(equals(42))))));
+}
+
 TEST(IgnoringImpCasts, MatchesImpCasts) {
   // This test checks that ignoringImpCasts matches when implicit casts are
   // present and its inner matcher alone does not match.
