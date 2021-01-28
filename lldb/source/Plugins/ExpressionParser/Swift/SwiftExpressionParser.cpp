@@ -124,7 +124,7 @@ public:
       : m_persistent_variable_sp(persistent_variable_sp) {}
 
   static constexpr unsigned Type() { return 'Pers'; }
-  virtual unsigned GetType() { return Type(); }
+  unsigned GetType() override { return Type(); }
   lldb::ExpressionVariableSP m_persistent_variable_sp;
 };
 
@@ -135,7 +135,7 @@ public:
       : m_variable_sp(variable_sp) {}
 
   static constexpr unsigned Type() { return 'Vari'; }
-  virtual unsigned GetType() { return Type(); }
+  unsigned GetType() override { return Type(); }
   lldb::VariableSP m_variable_sp;
 };
 
@@ -162,10 +162,8 @@ public:
         m_sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
   }
 
-  virtual ~LLDBNameLookup() {}
-
-  virtual swift::SILValue emitLValueForVariable(swift::VarDecl *var,
-                                                swift::SILBuilder &builder) {
+  swift::SILValue emitLValueForVariable(swift::VarDecl *var,
+                                        swift::SILBuilder &builder) override {
     SwiftSILManipulator manipulator(builder);
 
     swift::Identifier variable_name = var->getName();
@@ -204,9 +202,7 @@ public:
                      SymbolContext &sc, ExecutionContextScope &exe_scope)
       : LLDBNameLookup(source_file, variable_map, sc, exe_scope) {}
 
-  virtual ~LLDBExprNameLookup() {}
-
-  virtual bool shouldGlobalize(swift::Identifier Name, swift::DeclKind Kind) {
+  bool shouldGlobalize(swift::Identifier Name, swift::DeclKind Kind) override {
     // Extensions have to be globalized, there's no way to mark them
     // as local to the function, since their name is the name of the
     // thing being extended...
@@ -228,7 +224,7 @@ public:
     return false;
   }
 
-  virtual void didGlobalize(swift::Decl *decl) {
+  void didGlobalize(swift::Decl *decl) override {
     swift::ValueDecl *value_decl = swift::dyn_cast<swift::ValueDecl>(decl);
     if (value_decl) {
       // It seems weird to be asking this again, but some DeclKinds
@@ -241,9 +237,9 @@ public:
     }
   }
 
-  virtual bool lookupOverrides(swift::DeclBaseName Name, swift::DeclContext *DC,
-                               swift::SourceLoc Loc, bool IsTypeLookup,
-                               ResultVector &RV) {
+  bool lookupOverrides(swift::DeclBaseName Name, swift::DeclContext *DC,
+                       swift::SourceLoc Loc, bool IsTypeLookup,
+                       ResultVector &RV) override {
     static unsigned counter = 0;
     unsigned count = counter++;
 
@@ -255,9 +251,9 @@ public:
     return false;
   }
 
-  virtual bool lookupAdditions(swift::DeclBaseName Name, swift::DeclContext *DC,
-                               swift::SourceLoc Loc, bool IsTypeLookup,
-                               ResultVector &RV) {
+  bool lookupAdditions(swift::DeclBaseName Name, swift::DeclContext *DC,
+                       swift::SourceLoc Loc, bool IsTypeLookup,
+                       ResultVector &RV) override {
     static unsigned counter = 0;
     unsigned count = counter++;
 
@@ -359,7 +355,7 @@ public:
     return results.size() > 0;
   }
 
-  virtual swift::Identifier getPreferredPrivateDiscriminator() {
+  swift::Identifier getPreferredPrivateDiscriminator() override {
     if (m_sc.comp_unit) {
       if (lldb_private::Module *module = m_sc.module_sp.get()) {
         if (lldb_private::SymbolFile *symbol_file =
@@ -386,23 +382,21 @@ public:
                      SymbolContext &sc, ExecutionContextScope &exe_scope)
       : LLDBNameLookup(source_file, variable_map, sc, exe_scope) {}
 
-  virtual ~LLDBREPLNameLookup() {}
-
-  virtual bool shouldGlobalize(swift::Identifier Name, swift::DeclKind kind) {
+  bool shouldGlobalize(swift::Identifier Name, swift::DeclKind kind) override {
     return false;
   }
 
-  virtual void didGlobalize (swift::Decl *Decl) {}
+  void didGlobalize(swift::Decl *Decl) override {}
 
-  virtual bool lookupOverrides(swift::DeclBaseName Name, swift::DeclContext *DC,
-                               swift::SourceLoc Loc, bool IsTypeLookup,
-                               ResultVector &RV) {
+  bool lookupOverrides(swift::DeclBaseName Name, swift::DeclContext *DC,
+                       swift::SourceLoc Loc, bool IsTypeLookup,
+                       ResultVector &RV) override {
     return false;
   }
 
-  virtual bool lookupAdditions(swift::DeclBaseName Name, swift::DeclContext *DC,
-                               swift::SourceLoc Loc, bool IsTypeLookup,
-                               ResultVector &RV) {
+  bool lookupAdditions(swift::DeclBaseName Name, swift::DeclContext *DC,
+                       swift::SourceLoc Loc, bool IsTypeLookup,
+                       ResultVector &RV) override {
     static unsigned counter = 0;
     unsigned count = counter++;
 
@@ -441,7 +435,7 @@ public:
     return !persistent_decl_results.empty();
   }
 
-  virtual swift::Identifier getPreferredPrivateDiscriminator() {
+  swift::Identifier getPreferredPrivateDiscriminator() override {
     return swift::Identifier();
   }
 };

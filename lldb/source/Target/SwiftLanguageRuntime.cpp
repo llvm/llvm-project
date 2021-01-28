@@ -1496,9 +1496,11 @@ public:
 
   typedef std::unique_ptr<TypeProjection> TypeProjectionUP;
 
-  bool IsScripted() { return false; }
+  bool IsScripted() override { return false; }
 
-  std::string GetDescription() { return "projection synthetic children"; }
+  std::string GetDescription() override {
+    return "projection synthetic children";
+  }
 
   ProjectionSyntheticChildren(const Flags &flags, TypeProjectionUP &&projection)
       : SyntheticChildren(flags), m_projection(std::move(projection)) {}
@@ -1571,7 +1573,8 @@ protected:
   };
 
 public:
-  SyntheticChildrenFrontEnd::AutoPointer GetFrontEnd(ValueObject &backend) {
+  SyntheticChildrenFrontEnd::AutoPointer
+  GetFrontEnd(ValueObject &backend) override {
     return SyntheticChildrenFrontEnd::AutoPointer(
         new ProjectionFrontEndProvider(backend, m_projection));
   }
@@ -1876,7 +1879,7 @@ public:
 
   ~CommandObjectSwift_Demangle() {}
 
-  virtual Options *GetOptions() { return &m_options; }
+  Options *GetOptions() override { return &m_options; }
 
   class CommandOptions : public Options {
   public:
@@ -1943,7 +1946,7 @@ protected:
     }
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       const char *arg = command.GetArgumentAtIndex(i);
       if (arg && *arg) {
@@ -1976,7 +1979,7 @@ public:
 
   ~CommandObjectSwift_RefCount() {}
 
-  virtual Options *GetOptions() { return nullptr; }
+  Options *GetOptions() override { return nullptr; }
 
 private:
   enum class ReferenceCountType {
@@ -2024,7 +2027,8 @@ private:
   }
 
 protected:
-  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) {
+  bool DoExecute(llvm::StringRef command,
+                 CommandReturnObject &result) override {
     StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
     options.SetLanguage(lldb::eLanguageTypeSwift);

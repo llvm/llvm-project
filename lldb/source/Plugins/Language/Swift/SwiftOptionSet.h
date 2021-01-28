@@ -31,17 +31,10 @@ struct SwiftOptionSetSummaryProvider : public TypeSummaryImpl {
   static bool WouldEvenConsiderFormatting(CompilerType);
 
   SwiftOptionSetSummaryProvider(CompilerType);
-
-  virtual ~SwiftOptionSetSummaryProvider() = default;
-
-  virtual bool FormatObject(ValueObject *valobj, std::string &dest,
-                            const TypeSummaryOptions &options);
-
-  virtual std::string GetDescription();
-
-  virtual bool IsScripted() { return false; }
-
-  virtual bool DoesPrintChildren(ValueObject *valobj) const;
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options) override;
+  std::string GetDescription() override;
+  bool DoesPrintChildren(ValueObject *valobj) const override;
 
 private:
   SwiftOptionSetSummaryProvider(const SwiftOptionSetSummaryProvider &) = delete;
