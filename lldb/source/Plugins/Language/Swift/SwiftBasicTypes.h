@@ -26,9 +26,7 @@ public:
   SwiftBasicTypeSyntheticFrontEnd(ValueObject &backend)
       : SyntheticValueProviderFrontEnd(backend) {}
 
-  ~SwiftBasicTypeSyntheticFrontEnd() {}
-
-  virtual lldb::ValueObjectSP GetSyntheticValue();
+  lldb::ValueObjectSP GetSyntheticValue() override;
 };
 
 SyntheticChildrenFrontEnd *

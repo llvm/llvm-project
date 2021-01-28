@@ -29,7 +29,7 @@ public:
     assert(descriptor_sp.get());
   }
 
-  bool IsScripted() { return false; }
+  bool IsScripted() override { return false; }
 
   size_t GetNumIVars() { return m_descriptor_sp->GetNumIVars(); }
 
@@ -38,7 +38,7 @@ public:
     return m_descriptor_sp->GetIVarAtIndex(idx);
   }
 
-  std::string GetDescription();
+  std::string GetDescription() override;
 
   class FrontEnd : public SyntheticChildrenFrontEnd {
   private:
@@ -47,17 +47,11 @@ public:
   public:
     FrontEnd(ObjCRuntimeSyntheticProvider *prv, ValueObject &backend);
 
-    virtual ~FrontEnd() {}
-
-    virtual size_t CalculateNumChildren();
-
-    virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx);
-
-    virtual bool Update() { return false; }
-
-    virtual bool MightHaveChildren() { return true; }
-
-    virtual size_t GetIndexOfChildWithName(ConstString name);
+    size_t CalculateNumChildren() override;
+    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    bool Update() override { return false; }
+    bool MightHaveChildren() override { return true; }
+    size_t GetIndexOfChildWithName(ConstString name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -71,7 +65,7 @@ public:
   };
 
   virtual SyntheticChildrenFrontEnd::AutoPointer
-  GetFrontEnd(ValueObject &backend) {
+  GetFrontEnd(ValueObject &backend) override {
     return SyntheticChildrenFrontEnd::AutoPointer(new FrontEnd(this, backend));
   }
 

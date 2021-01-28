@@ -125,9 +125,9 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
 
     MyConsumer(swift::ObjCSelector selector) : selectorToLookup(selector) {}
 
-    virtual void foundDecl(swift::ValueDecl *VD,
+     void foundDecl(swift::ValueDecl *VD,
                            swift::DeclVisibilityKind Reason,
-                           swift::DynamicLookupInfo) {
+                           swift::DynamicLookupInfo) override{
       if (result)
         return; // Take the first result.
       swift::ClassDecl *cls = llvm::dyn_cast<swift::ClassDecl>(VD);

@@ -53,19 +53,15 @@ protected:
 
 class SwiftArrayEmptyBufferHandler : public SwiftArrayBufferHandler {
 public:
-  virtual size_t GetCount() { return 0; }
+  size_t GetCount() override { return 0; }
+  size_t GetCapacity() override { return 0; }
+  lldb_private::CompilerType GetElementType() override { return m_elem_type; }
 
-  virtual size_t GetCapacity() { return 0; }
-
-  virtual lldb_private::CompilerType GetElementType() { return m_elem_type; }
-
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t) {
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override {
     return lldb::ValueObjectSP();
   }
 
-  virtual ~SwiftArrayEmptyBufferHandler() {}
-
-  virtual bool IsValid() { return true; }
+  bool IsValid() override { return true; }
 
 protected:
   SwiftArrayEmptyBufferHandler(CompilerType elem_type)
@@ -78,17 +74,11 @@ private:
 
 class SwiftArrayNativeBufferHandler : public SwiftArrayBufferHandler {
 public:
-  virtual size_t GetCount();
-
-  virtual size_t GetCapacity();
-
-  virtual lldb_private::CompilerType GetElementType();
-
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t);
-
-  virtual bool IsValid();
-
-  virtual ~SwiftArrayNativeBufferHandler() {}
+  size_t GetCount() override;
+  size_t GetCapacity() override;
+  lldb_private::CompilerType GetElementType() override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  bool IsValid() override;
 
 protected:
   SwiftArrayNativeBufferHandler(ValueObject &valobj, lldb::addr_t native_ptr,
@@ -109,17 +99,11 @@ private:
 
 class SwiftArrayBridgedBufferHandler : public SwiftArrayBufferHandler {
 public:
-  virtual size_t GetCount();
-
-  virtual size_t GetCapacity();
-
-  virtual lldb_private::CompilerType GetElementType();
-
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t);
-
-  virtual bool IsValid();
-
-  virtual ~SwiftArrayBridgedBufferHandler() {}
+  size_t GetCount() override;
+  size_t GetCapacity() override;
+  lldb_private::CompilerType GetElementType() override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  bool IsValid() override;
 
 protected:
   SwiftArrayBridgedBufferHandler(lldb::ProcessSP, lldb::addr_t);
@@ -133,17 +117,11 @@ private:
 
 class SwiftArraySliceBufferHandler : public SwiftArrayBufferHandler {
 public:
-  virtual size_t GetCount();
-
-  virtual size_t GetCapacity();
-
-  virtual lldb_private::CompilerType GetElementType();
-
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t);
-
-  virtual bool IsValid();
-
-  virtual ~SwiftArraySliceBufferHandler() {}
+  size_t GetCount() override;
+  size_t GetCapacity() override;
+  lldb_private::CompilerType GetElementType() override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  bool IsValid() override;
 
 protected:
   SwiftArraySliceBufferHandler(ValueObject &valobj, CompilerType elem_type);
@@ -162,26 +140,20 @@ private:
 
 class SwiftSyntheticFrontEndBufferHandler : public SwiftArrayBufferHandler {
 public:
-  virtual size_t GetCount();
-
-  virtual size_t GetCapacity();
-
-  virtual lldb_private::CompilerType GetElementType();
-
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t);
-
-  virtual bool IsValid();
-
-  virtual ~SwiftSyntheticFrontEndBufferHandler() {}
+  size_t GetCount() override;
+  size_t GetCapacity() override;
+  lldb_private::CompilerType GetElementType() override;
+  lldb::ValueObjectSP GetElementAtIndex(size_t) override;
+  bool IsValid() override;
 
 protected:
   SwiftSyntheticFrontEndBufferHandler(lldb::ValueObjectSP valobj_sp);
   friend class SwiftArrayBufferHandler;
 
 private:
-  lldb::ValueObjectSP m_valobj_sp; // reader beware: this entails you must only
-                                   // pass self-rooted valueobjects to this
-                                   // class
+  ///  Reader beware: this entails you must only pass self-rooted valueobjects
+  ///  to this class.
+  lldb::ValueObjectSP m_valobj_sp;
   std::unique_ptr<SyntheticChildrenFrontEnd> m_frontend;
 };
 
@@ -191,19 +163,11 @@ bool Array_SummaryProvider(ValueObject &valobj, Stream &stream,
 class ArraySyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   ArraySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
-
-  virtual size_t CalculateNumChildren();
-
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx);
-
-  virtual bool Update();
-
-  virtual bool MightHaveChildren();
-
-  virtual size_t GetIndexOfChildWithName(ConstString name);
-
-  virtual ~ArraySyntheticFrontEnd() = default;
-
+  size_t CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  bool Update() override;
+  bool MightHaveChildren() override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
   bool IsValid();
 
 private:

@@ -80,18 +80,11 @@ struct SwiftOptionalSummaryProvider : public TypeSummaryImpl {
   SwiftOptionalSummaryProvider(const TypeSummaryImpl::Flags &flags)
       : TypeSummaryImpl(TypeSummaryImpl::Kind::eInternal, flags) {}
 
-  virtual ~SwiftOptionalSummaryProvider() {}
-
-  virtual bool FormatObject(ValueObject *valobj, std::string &dest,
-                            const TypeSummaryOptions &options);
-
-  virtual std::string GetDescription();
-
-  virtual bool IsScripted() { return false; }
-
-  virtual bool DoesPrintChildren(ValueObject *valobj) const;
-
-  virtual bool DoesPrintValue(ValueObject *valobj) const;
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options) override;
+  std::string GetDescription() override;
+  bool DoesPrintChildren(ValueObject *valobj) const override;
+  bool DoesPrintValue(ValueObject *valobj) const override;
 
 private:
   SwiftOptionalSummaryProvider(const SwiftOptionalSummaryProvider &) = delete;
@@ -105,19 +98,12 @@ class SwiftOptionalSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   SwiftOptionalSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  virtual size_t CalculateNumChildren();
-
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx);
-
-  virtual bool Update();
-
-  virtual bool MightHaveChildren();
-
-  virtual size_t GetIndexOfChildWithName(ConstString name);
-
-  virtual lldb::ValueObjectSP GetSyntheticValue();
-
-  virtual ~SwiftOptionalSyntheticFrontEnd() = default;
+  size_t CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  bool Update() override;
+  bool MightHaveChildren() override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
+  lldb::ValueObjectSP GetSyntheticValue() override;
 
 private:
   bool m_is_none;

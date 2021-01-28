@@ -130,21 +130,14 @@ public:
 
 class HashedSyntheticChildrenFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  HashedSyntheticChildrenFrontEnd(
-    const HashedCollectionConfig &config,
-    lldb::ValueObjectSP valobj_sp);
+  HashedSyntheticChildrenFrontEnd(const HashedCollectionConfig &config,
+                                  lldb::ValueObjectSP valobj_sp);
 
-  virtual size_t CalculateNumChildren();
-
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx);
-
-  virtual bool Update();
-
-  virtual bool MightHaveChildren();
-
-  virtual size_t GetIndexOfChildWithName(ConstString name);
-
-  virtual ~HashedSyntheticChildrenFrontEnd() = default;
+  size_t CalculateNumChildren() override;
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  bool Update() override;
+  bool MightHaveChildren() override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   const HashedCollectionConfig &m_config;
