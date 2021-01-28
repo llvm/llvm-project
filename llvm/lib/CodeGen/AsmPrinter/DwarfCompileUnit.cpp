@@ -100,9 +100,9 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
     addPoolOpAddress(*Loc, Label);
     addBlock(Die, Attribute, dwarf::DW_FORM_exprloc, Loc);
   } else
-    Die.addValue(
-        DIEValueAllocator, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
-        new DIEAddrOffset(DD->getAddressPool().getIndex(Base), Label, Base));
+    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
+                 new (DIEValueAllocator) DIEAddrOffset(
+                     DD->getAddressPool().getIndex(Base), Label, Base));
 }
 
 void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,
