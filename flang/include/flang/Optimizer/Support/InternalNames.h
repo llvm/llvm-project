@@ -41,8 +41,7 @@ struct NameUniquer {
     INTRINSIC_TYPE_DESC,
     PROCEDURE,
     TYPE_DESC,
-    VARIABLE,
-    BLOCK_DATA_NAME
+    VARIABLE
   };
 
   /// Components of an unparsed unique name
