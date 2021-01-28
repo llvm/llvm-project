@@ -591,20 +591,23 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
     //  %Ptr1 = extractelement <16 x i32*> %Ptrs, i32 1
     //  %store i32 %Elt1, i32* %Ptr1
     //
-    BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt, "cond.store");
-    Builder.SetInsertPoint(InsertPt);
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false);
 
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.store");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
 
     // Create "else" block, fill it in the next iteration
-    BasicBlock *NewIfBlock = CondBlock->splitBasicBlock(InsertPt, "else");
-    Builder.SetInsertPoint(InsertPt);
-    Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
-    OldBr->eraseFromParent();
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
     IfBlock = NewIfBlock;
+
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
