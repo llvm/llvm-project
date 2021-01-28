@@ -346,22 +346,23 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
-    BasicBlock *CondBlock =
-        IfBlock->splitBasicBlock(InsertPt->getIterator(), "cond.store");
-    Builder.SetInsertPoint(InsertPt);
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false);
 
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.store");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
     Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
 
     // Create "else" block, fill it in the next iteration
-    BasicBlock *NewIfBlock =
-        CondBlock->splitBasicBlock(InsertPt->getIterator(), "else");
-    Builder.SetInsertPoint(InsertPt);
-    Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
-    OldBr->eraseFromParent();
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
     IfBlock = NewIfBlock;
+
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
