@@ -51,33 +51,44 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // dst = phi(v0, v1)
   //
 
-  // Move all instructions following Call to newly created block JoinBB.
-  // Create phi and replace all uses.
-  BasicBlock *JoinBB = llvm::SplitBlock(&CurrBB, Call->getNextNode());
-  IRBuilder<> Builder(JoinBB, JoinBB->begin());
   Type *Ty = Call->getType();
+  IRBuilder<> Builder(Call->getNextNode());
+
+  // Split CurrBB right after the call, create a 'then' block (that branches
+  // back to split-off tail of CurrBB) into which we'll insert a libcall.
+  Instruction *LibCallTerm = SplitBlockAndInsertIfThen(
+      Builder.getTrue(), Call->getNextNode(), /*Unreachable=*/false,
+      /*BranchWeights*/ nullptr);
+
+  auto *CurrBBTerm = cast<BranchInst>(CurrBB.getTerminator());
+  // We want an 'else' block though, not a 'then' block.
+  cast<BranchInst>(CurrBBTerm)->swapSuccessors();
+
+  // Create phi that will merge results of either sqrt and replace all uses.
+  BasicBlock *JoinBB = LibCallTerm->getSuccessor(0);
+  JoinBB->setName(CurrBB.getName() + ".split");
+  Builder.SetInsertPoint(JoinBB, JoinBB->begin());
   PHINode *Phi = Builder.CreatePHI(Ty, 2);
   Call->replaceAllUsesWith(Phi);
 
-  // Create basic block LibCallBB and insert a call to library function sqrt.
-  BasicBlock *LibCallBB = BasicBlock::Create(CurrBB.getContext(), "call.sqrt",
-                                             CurrBB.getParent(), JoinBB);
-  Builder.SetInsertPoint(LibCallBB);
+  // Finally, insert the libcall into 'else' block.
+  BasicBlock *LibCallBB = LibCallTerm->getParent();
+  LibCallBB->setName("call.sqrt");
+  Builder.SetInsertPoint(LibCallTerm);
   Instruction *LibCall = Call->clone();
   Builder.Insert(LibCall);
-  Builder.CreateBr(JoinBB);
 
   // Add attribute "readnone" so that backend can use a native sqrt instruction
-  // for this call. Insert a FP compare instruction and a conditional branch
-  // at the end of CurrBB.
+  // for this call.
   Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
-  CurrBB.getTerminator()->eraseFromParent();
-  Builder.SetInsertPoint(&CurrBB);
+
+  // Insert a FP compare instruction and use it as the CurrBB branch condition.
+  Builder.SetInsertPoint(CurrBBTerm);
   Value *FCmp = TTI->isFCmpOrdCheaperThanFCmpZero(Ty)
                     ? Builder.CreateFCmpORD(Call, Call)
                     : Builder.CreateFCmpOGE(Call->getOperand(0),
                                             ConstantFP::get(Ty, 0.0));
-  Builder.CreateCondBr(FCmp, JoinBB, LibCallBB);
+  CurrBBTerm->setCondition(FCmp);
 
   // Add phi operands.
   Phi->addIncoming(Call, &CurrBB);
