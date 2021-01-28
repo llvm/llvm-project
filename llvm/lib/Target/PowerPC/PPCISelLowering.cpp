@@ -8613,7 +8613,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
           PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
           DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
       return DAG.getBitcast(Op.getValueType(), SplatNode);
-    } else { // We may lose precision, so we have to use XXSPLTI32DX.
+    } else if (APSplatBits.getBitWidth() == 64) {
+      // We may lose precision, so we have to use XXSPLTI32DX.
 
       uint32_t Hi =
           (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
