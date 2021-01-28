@@ -107,8 +107,12 @@ struct TestLinalgCodegenStrategy
 };
 } // end anonymous namespace
 
-template <typename LinalgNamedOp>
-void TestLinalgCodegenStrategy::applyStrategyToNamedLinalgOp() {
+/// Apply transformations specified as patterns.
+void TestLinalgCodegenStrategy::runOnFunction() {
+  linalg::LinalgTransformationFilter::FilterFunction filterOpName =
+      [&](Operation *op) -> LogicalResult {
+    return success(op->getName().getStringRef() == anchorOpName);
+  };
   LinalgTilingOptions tilingOptions;
   if (!tileSizes.empty())
     tilingOptions = tilingOptions.setTileSizes(tileSizes);
@@ -134,19 +138,20 @@ void TestLinalgCodegenStrategy::applyStrategyToNamedLinalgOp() {
           .Default(vector::VectorTransferSplit::None);
 
   CodegenStrategy strategy;
-  strategy.template tileIf<LinalgNamedOp>(!tileSizes.empty(), tilingOptions)
-      .template promoteIf<LinalgNamedOp>(
-          promote, LinalgPromotionOptions()
-                       .setAlignment(16)
-                       .setUseFullTileBuffersByDefault(promoteFullTile))
-      .template tileIf<LinalgNamedOp>(!registerTileSizes.empty(),
-                                      registerTilingOptions)
-      .template promoteIf<LinalgNamedOp>(
-          registerPromote,
+  strategy.tileIf<LinalgOp>(!tileSizes.empty(), anchorOpName, tilingOptions)
+      .promoteIf<LinalgOp>(promote, anchorOpName,
+                           LinalgPromotionOptions()
+                               .setAlignment(16)
+                               .setUseFullTileBuffersByDefault(promoteFullTile),
+                           filterOpName)
+      .tileIf<LinalgOp>(!registerTileSizes.empty(), anchorOpName,
+                        registerTilingOptions)
+      .promoteIf<LinalgOp>(
+          registerPromote, anchorOpName,
           LinalgPromotionOptions()
               .setAlignment(16)
               .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .template vectorizeIf<LinalgNamedOp>(vectorize)
+      .vectorizeIf<LinalgOp>(vectorize, anchorOpName)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)
@@ -154,20 +159,6 @@ void TestLinalgCodegenStrategy::applyStrategyToNamedLinalgOp() {
       .setVectorTransferToSCFOptions(
           VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
   strategy.transform(getFunction());
-}
-
-/// Apply transformations specified as patterns.
-void TestLinalgCodegenStrategy::runOnFunction() {
-  if (anchorOpName == MatmulOp::getOperationName())
-    applyStrategyToNamedLinalgOp<MatmulOp>();
-  else if (anchorOpName == MatmulColumnMajorOp::getOperationName())
-    applyStrategyToNamedLinalgOp<MatmulColumnMajorOp>();
-  else if (anchorOpName == CopyOp::getOperationName())
-    applyStrategyToNamedLinalgOp<CopyOp>();
-  else if (anchorOpName == FillOp::getOperationName())
-    applyStrategyToNamedLinalgOp<FillOp>();
-  else
-    llvm_unreachable("Unsupported anchor op");
 }
 
 namespace mlir {

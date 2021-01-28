@@ -1,12 +1,11 @@
 // RUN: export M=24 && export K=64 && export N=192 && export ITERS=10 && \
 // RUN: cat %s | sed 's@${M}@'"$M"'@g'| sed 's@${K}@'"$K"'@g' | sed 's@${N}@'"$N"'@g'| sed 's@${ITERS}@'"$ITERS"'@g'| \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.matmul_column_major register-tile-sizes=16,0,32 vectorize" | \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.fill register-tile-sizes=4,16 vectorize" | \
-
-// TODO: linalg.copy vectorization in the presence of permutation map fails. Enable when addressed.
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.copy register-tile-sizes=4,16 vectorize" | \
-
+// TODO: extend vectorization with interfaces so that it works with sexti
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.matmul_i8_i8_i32 register-tile-sizes=12,32,16" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.fill register-tile-sizes=4,32 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.copy register-tile-sizes=4,32 vectorize" | \
 // RUN: mlir-opt -canonicalize -convert-vector-to-scf -lower-affine -convert-linalg-to-loops | \
+
 // RUN: mlir-opt -canonicalize -convert-scf-to-std -convert-vector-to-llvm | \
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
 // Activate to dump assembly
@@ -15,22 +14,20 @@
 // Use tee to both print to stderr and FileCheck
 // RUN: tee -a /dev/stderr | FileCheck %s
 
-!elem_type_a = type f32
-!elem_type_b = type f32
-!elem_type_c = type f32
+
+!elem_type_a = type i8
+!elem_type_b = type i8
+!elem_type_c = type i32
 !row_major_A = type memref<${M}x${K}x!elem_type_a>
 !row_major_B = type memref<${K}x${N}x!elem_type_b>
 !row_major_C = type memref<${M}x${N}x!elem_type_c>
-!column_major_A = type memref<${K}x${M}x!elem_type_a>
-!column_major_B = type memref<${N}x${K}x!elem_type_b>
-!column_major_C = type memref<${N}x${M}x!elem_type_c>
 
-func @matmul_column_major(%a: !column_major_A, %b: !column_major_B, %c: !column_major_C)
+func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
 // TODO: activate manually for now.
 // attributes { passthrough = [["target-cpu", "skylake-avx512"], ["prefer-vector-width", "512"]]}
 {
-  linalg.matmul_column_major ins(%a, %b : !column_major_A, !column_major_B)
-    outs(%c: !column_major_C)
+  linalg.matmul_i8_i8_i32 ins(%a, %b : !row_major_A, !row_major_B)
+    outs(%c: !row_major_C)
   return
 }
 
@@ -55,42 +52,47 @@ func @print_perf(%iters: index, %total_time: f64) {
 }
 
 func @main() {
-  %f0 = constant 0.0 : !elem_type_c
-  %f1 = constant 1.0 : !elem_type_a
+  %v0 = constant 0 : !elem_type_c
+  %v1 = constant 1 : !elem_type_a
 
-  %cA = alloc() : !column_major_A
-  %cB = alloc() : !column_major_B
-  %cC = alloc() : !column_major_C
+  %A = alloc() : !row_major_A
+  %B = alloc() : !row_major_B
+  %C = alloc() : !row_major_C
 
-  linalg.fill(%cA, %f1) : !column_major_A, !elem_type_a
-  linalg.fill(%cB, %f1) : !column_major_B, !elem_type_b
-  linalg.fill(%cC, %f0) : !column_major_C, !elem_type_c
+  linalg.fill(%A, %v1) : !row_major_A, !elem_type_a
+  linalg.fill(%B, %v1) : !row_major_B, !elem_type_b
+  linalg.fill(%C, %v0) : !row_major_C, !elem_type_c
 
   %c0 = constant 0: index
   %c1 = constant 1: index
   %iters = constant ${ITERS}: index
 
-  /// Run and dump performance for matmul_column_major.
-  %t_start_matmul_column_major = call @rtclock() : () -> f64
+  /// Run and dump performance for matmul.
+  /// Preheating run:
+  scf.for %arg0 = %c0 to %iters step %c1 {
+    linalg.fill(%C, %v0) : !row_major_C, !elem_type_c
+    call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
+  }
+  %t_start_matmul = call @rtclock() : () -> f64
   scf.for %arg0 = %c0 to %iters step %c1 {
     // linalg.matmul writes %C in place, need to reset it to zero every time.
     // This is accounts for about 10-15% perf hit on small sizes.
     // Once linalg on tensors is ready, fusing fill at teh register level will
     // be easy.
-    linalg.fill(%cC, %f0) : !column_major_C, !elem_type_c
-    call @matmul_column_major(%cA, %cB, %cC) : (!column_major_A, !column_major_B, !column_major_C) -> ()
+    linalg.fill(%C, %v0) : !row_major_C, !elem_type_c
+    call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
   }
-  %t_end_matmul_column_major = call @rtclock() : () -> f64
-  %tmatmul_column_major = subf %t_end_matmul_column_major, %t_start_matmul_column_major: f64
-  call @print_perf(%iters, %tmatmul_column_major) : (index, f64) -> ()
+  %t_end_matmul = call @rtclock() : () -> f64
+  %tmatmul = subf %t_end_matmul, %t_start_matmul: f64
+  call @print_perf(%iters, %tmatmul) : (index, f64) -> ()
 
-  %res = load %cC[%c0, %c0]: !column_major_C
+  %res = load %C[%c0, %c0]: !row_major_C
   // CHECK: 64
   vector.print %res: !elem_type_c
 
-  dealloc %cA : !column_major_A
-  dealloc %cB : !column_major_B
-  dealloc %cC : !column_major_C
+  dealloc %A : !row_major_A
+  dealloc %B : !row_major_B
+  dealloc %C : !row_major_C
 
   return
 }
