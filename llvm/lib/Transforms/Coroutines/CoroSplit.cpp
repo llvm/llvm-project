@@ -652,7 +652,7 @@ void CoroCloner::salvageDebugInfo() {
   for (DbgDeclareInst *DDI : Worklist) {
     if (IsUnreachableBlock(DDI->getParent()))
       DDI->eraseFromParent();
-    else if (auto *Alloca = dyn_cast_or_null<AllocaInst>(DDI->getAddress())) {
+    else if (dyn_cast_or_null<AllocaInst>(DDI->getAddress())) {
       // Count all non-debuginfo uses in reachable blocks.
       unsigned Uses = 0;
       for (auto *User : DDI->getAddress()->users())
