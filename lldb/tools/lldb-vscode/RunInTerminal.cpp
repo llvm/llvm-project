@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(WIN32)
+#include "RunInTerminal.h"
+
+#if LLVM_ON_UNIX
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -20,8 +22,6 @@
 #include "llvm/Support/FileSystem.h"
 
 #include "lldb/lldb-defines.h"
-
-#include "RunInTerminal.h"
 
 using namespace llvm;
 

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "VSCode.h"
+
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -14,7 +16,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#if defined(_WIN32)
+#if !LLVM_ON_UNIX
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
 // We also need to #undef GetObject (which is defined to GetObjectW) because
@@ -52,9 +54,8 @@
 
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "VSCode.h"
 
-#if defined(_WIN32)
+#if !LLVM_ON_UNIX
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
@@ -131,7 +132,7 @@ SOCKET AcceptConnection(int portno) {
           *g_vsc.log << "error: accept (" << strerror(errno) << ")"
                      << std::endl;
     }
-#if defined(_WIN32)
+#if !LLVM_ON_UNIX
     closesocket(sockfd);
 #else
     close(sockfd);
@@ -3084,7 +3085,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-#if !defined(_WIN32)
+#if LLVM_ON_UNIX
   if (input_args.hasArg(OPT_wait_for_debugger)) {
     printf("Paused waiting for debugger to attach (pid = %i)...\n", getpid());
     pause();

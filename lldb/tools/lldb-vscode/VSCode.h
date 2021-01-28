@@ -9,6 +9,8 @@
 #ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 #define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+
 #include <condition_variable>
 #include <iosfwd>
 #include <map>
