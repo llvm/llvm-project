@@ -120,7 +120,7 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
 /// Return success if either:
 ///   1. The operand is already statically shaped, `result` is left unchanged.
 ///   2. The operand is (partially) dynamic, `result` is the result of a freshly
-///      created SimplePadOp.
+///      created PadTensorOp.
 /// Return failure if the operand cannot be padded to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
     PatternRewriter &rewriter, linalg::LinalgOp opToPad, Value operand,
@@ -151,8 +151,8 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   Value pad = options.paddingValueComputationFunction(rewriter, opToPad);
   auto staticTensorType =
       RankedTensorType::get(staticSizes, tensorType.getElementType());
-  result = rewriter.create<linalg::SimplePadOp>(opToPad->getLoc(),
-                                                staticTensorType, operand, pad);
+  result = linalg::PadTensorOp::createPadHighOp(staticTensorType, operand, pad,
+                                                opToPad->getLoc(), rewriter);
   return success();
 }
 
