@@ -284,9 +284,7 @@ public:
   /// vector.
   static void FindPredecessorBlocks(MachineBasicBlock *BB,
                                     SmallVectorImpl<MachineBasicBlock*> *Preds){
-    for (MachineBasicBlock::pred_iterator PI = BB->pred_begin(),
-           E = BB->pred_end(); PI != E; ++PI)
-      Preds->push_back(*PI);
+    append_range(*Preds, BB->predecessors());
   }
 
   /// GetUndefVal - Create an IMPLICIT_DEF instruction with a new register.
