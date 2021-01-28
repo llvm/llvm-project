@@ -151,11 +151,11 @@ public:
   /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
   /// optimal performance.
   ///
-  /// When information about the file (diagnostics, syntax highlighting) is
+  /// When information about the file (e.g. diagnostics) is
   /// published to clients, this should be wrapped in Publish, e.g.
   ///   void onMainAST(...) {
-  ///     Highlights = computeHighlights();
-  ///     Publish([&] { notifyHighlights(Path, Highlights); });
+  ///     Diags = renderDiagnostics();
+  ///     Publish([&] { notifyDiagnostics(Path, Diags); });
   ///   }
   /// This guarantees that clients will see results in the correct sequence if
   /// the file is concurrently closed and/or reopened. (The lambda passed to
