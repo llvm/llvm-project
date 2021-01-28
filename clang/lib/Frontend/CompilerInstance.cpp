@@ -1264,23 +1264,72 @@ static bool compileModule(CompilerInstance &ImportingInstance,
   return Result;
 }
 
+/// Read the AST right after compiling the module.
+static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
+                                      SourceLocation ImportLoc,
+                                      SourceLocation ModuleNameLoc,
+                                      Module *Module, StringRef ModuleFileName,
+                                      bool *OutOfDate) {
+  DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
+
+  unsigned ModuleLoadCapabilities = ASTReader::ARR_Missing;
+  if (OutOfDate)
+    ModuleLoadCapabilities |= ASTReader::ARR_OutOfDate;
+
+  // Try to read the module file, now that we've compiled it.
+  ASTReader::ASTReadResult ReadResult =
+      ImportingInstance.getASTReader()->ReadAST(
+          ModuleFileName, serialization::MK_ImplicitModule, ImportLoc,
+          ModuleLoadCapabilities);
+  if (ReadResult == ASTReader::Success)
+    return true;
+
+  // The caller wants to handle out-of-date failures.
+  if (OutOfDate && ReadResult == ASTReader::OutOfDate) {
+    *OutOfDate = true;
+    return false;
+  }
+
+  // The ASTReader didn't diagnose the error, so conservatively report it.
+  if (ReadResult == ASTReader::Missing || !Diags.hasErrorOccurred())
+    Diags.Report(ModuleNameLoc, diag::err_module_not_built)
+      << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
+
+  return false;
+}
+
 /// Compile a module in a separate compiler instance and read the AST,
 /// returning true if the module compiles without errors.
+static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
+                                        SourceLocation ImportLoc,
+                                        SourceLocation ModuleNameLoc,
+                                        Module *Module,
+                                        StringRef ModuleFileName) {
+  if (!compileModule(ImportingInstance, ModuleNameLoc, Module,
+                     ModuleFileName)) {
+    ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
+                                              diag::err_module_not_built)
+        << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
+    return false;
+  }
+
+  return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
+                                   Module, ModuleFileName,
+                                   /*OutOfDate=*/nullptr);
+}
+
+/// Compile a module in a separate compiler instance and read the AST,
+/// returning true if the module compiles without errors, using a lock manager
+/// to avoid building the same module in multiple compiler instances.
 ///
 /// Uses a lock file manager and exponential backoff to reduce the chances that
 /// multiple instances will compete to create the same module.  On timeout,
 /// deletes the lock file in order to avoid deadlock from crashing processes or
 /// bugs in the lock file manager.
-static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
-                                    SourceLocation ImportLoc,
-                                    SourceLocation ModuleNameLoc,
-                                    Module *Module, StringRef ModuleFileName) {
+static bool compileModuleAndReadASTBehindLock(
+    CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
+    SourceLocation ModuleNameLoc, Module *Module, StringRef ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
-
-  auto diagnoseBuildFailure = [&] {
-    Diags.Report(ModuleNameLoc, diag::err_module_not_built)
-        << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
-  };
 
   // FIXME: have LockFileManager return an error_code so that we can
   // avoid the mkdir when the directory already exists.
@@ -1288,7 +1337,6 @@ static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
   llvm::sys::fs::create_directories(Dir);
 
   while (1) {
-    unsigned ModuleLoadCapabilities = ASTReader::ARR_Missing;
     llvm::LockFileManager Locked(ModuleFileName);
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:
@@ -1302,55 +1350,42 @@ static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
       LLVM_FALLTHROUGH;
     case llvm::LockFileManager::LFS_Owned:
       // We're responsible for building the module ourselves.
-      if (!compileModule(ImportingInstance, ModuleNameLoc, Module,
-                         ModuleFileName)) {
-        diagnoseBuildFailure();
-        return false;
-      }
-      break;
+      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
+                                         ModuleNameLoc, Module, ModuleFileName);
 
     case llvm::LockFileManager::LFS_Shared:
-      // Someone else is responsible for building the module. Wait for them to
-      // finish.
-      switch (Locked.waitForUnlock()) {
-      case llvm::LockFileManager::Res_Success:
-        ModuleLoadCapabilities |= ASTReader::ARR_OutOfDate;
-        break;
-      case llvm::LockFileManager::Res_OwnerDied:
-        continue; // try again to get the lock.
-      case llvm::LockFileManager::Res_Timeout:
-        // Since ModuleCache takes care of correctness, we try waiting for
-        // another process to complete the build so clang does not do it done
-        // twice. If case of timeout, build it ourselves.
-        Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
-            << Module->Name;
-        // Clear the lock file so that future invocations can make progress.
-        Locked.unsafeRemoveLockFile();
-        continue;
-      }
-      break;
+      break; // The interesting case.
     }
 
-    // Try to read the module file, now that we've compiled it.
-    ASTReader::ASTReadResult ReadResult =
-        ImportingInstance.getASTReader()->ReadAST(
-            ModuleFileName, serialization::MK_ImplicitModule, ImportLoc,
-            ModuleLoadCapabilities);
-
-    if (ReadResult == ASTReader::OutOfDate &&
-        Locked == llvm::LockFileManager::LFS_Shared) {
-      // The module may be out of date in the presence of file system races,
-      // or if one of its imports depends on header search paths that are not
-      // consistent with this ImportingInstance.  Try again...
+    // Someone else is responsible for building the module. Wait for them to
+    // finish.
+    switch (Locked.waitForUnlock()) {
+    case llvm::LockFileManager::Res_Success:
+      break; // The interesting case.
+    case llvm::LockFileManager::Res_OwnerDied:
+      continue; // try again to get the lock.
+    case llvm::LockFileManager::Res_Timeout:
+      // Since ModuleCache takes care of correctness, we try waiting for
+      // another process to complete the build so clang does not do it done
+      // twice. If case of timeout, build it ourselves.
+      Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
+          << Module->Name;
+      // Clear the lock file so that future invocations can make progress.
+      Locked.unsafeRemoveLockFile();
       continue;
-    } else if (ReadResult == ASTReader::Missing) {
-      diagnoseBuildFailure();
-    } else if (ReadResult != ASTReader::Success &&
-               !Diags.hasErrorOccurred()) {
-      // The ASTReader didn't diagnose the error, so conservatively report it.
-      diagnoseBuildFailure();
     }
-    return ReadResult == ASTReader::Success;
+
+    // Read the module that was just written by someone else.
+    bool OutOfDate = false;
+    if (readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
+                                  Module, ModuleFileName, &OutOfDate))
+      return true;
+    if (!OutOfDate)
+      return false;
+
+    // The module may be out of date in the presence of file system races,
+    // or if one of its imports depends on header search paths that are not
+    // consistent with this ImportingInstance.  Try again...
   }
 }
 
@@ -1831,8 +1866,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   }
 
   // Try to compile and then read the AST.
-  if (!compileModuleAndReadAST(*this, ImportLoc, ModuleNameLoc, M,
-                               ModuleFilename)) {
+  if (!compileModuleAndReadASTBehindLock(*this, ImportLoc, ModuleNameLoc, M,
+                                         ModuleFilename)) {
     assert(getDiagnostics().hasErrorOccurred() &&
            "undiagnosed error in compileModuleAndReadAST");
     if (getPreprocessorOpts().FailedModules)
