@@ -760,4 +760,10 @@ main:
     # CHECK: f64x2.promote_low_f32x4 # encoding: [0xfd,0x69]
     f64x2.promote_low_f32x4
 
+    # CHECK: i32x4.widen_i8x16_s 3 # encoding: [0xfd,0x67,0x03]
+    i32x4.widen_i8x16_s 3
+
+    # CHECK: i32x4.widen_i8x16_u 3 # encoding: [0xfd,0x68,0x03]
+    i32x4.widen_i8x16_u 3
+
     end_function
