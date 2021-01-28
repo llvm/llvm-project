@@ -222,6 +222,70 @@ void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo,
   CurDAG->RemoveDeadNode(Node);
 }
 
+void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node) {
+  SDLoc DL(Node);
+  unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+  unsigned NF = Node->getNumValues() - 2; // Do not count Chain and Glue.
+  EVT VT = Node->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 5> Operands;
+  Operands.push_back(Node->getOperand(2)); // Base pointer.
+  Operands.push_back(Node->getOperand(3)); // VL.
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); // Chain.
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, ScalarSize, static_cast<unsigned>(LMUL),
+      static_cast<unsigned>(RISCVVLMUL::LMUL_1));
+  SDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other,
+                                        MVT::Glue, Operands);
+  SDValue SuperReg = SDValue(Load, 0);
+  for (unsigned I = 0; I < NF; ++I)
+    ReplaceUses(SDValue(Node, I),
+                CurDAG->getTargetExtractSubreg(getSubregIndexByEVT(VT, I), DL,
+                                               VT, SuperReg));
+
+  ReplaceUses(SDValue(Node, NF), SDValue(Load, 1));     // Chain.
+  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 2)); // Glue.
+  CurDAG->RemoveDeadNode(Node);
+}
+
+void RISCVDAGToDAGISel::selectVLSEGFFMask(SDNode *Node) {
+  SDLoc DL(Node);
+  unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+  unsigned NF = Node->getNumValues() - 2; // Do not count Chain and Glue.
+  EVT VT = Node->getValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  MVT XLenVT = Subtarget->getXLenVT();
+  RISCVVLMUL LMUL = getLMUL(VT);
+  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+  SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
+  SDValue MaskedOff = createTuple(*CurDAG, Regs, NF, LMUL);
+  SmallVector<SDValue, 7> Operands;
+  Operands.push_back(MaskedOff);
+  Operands.push_back(Node->getOperand(NF + 2)); // Base pointer.
+  Operands.push_back(Node->getOperand(NF + 3)); // Mask.
+  Operands.push_back(Node->getOperand(NF + 4)); // VL.
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); /// Chain.
+  const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
+      IntNo, ScalarSize, static_cast<unsigned>(LMUL),
+      static_cast<unsigned>(RISCVVLMUL::LMUL_1));
+  SDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other,
+                                        MVT::Glue, Operands);
+  SDValue SuperReg = SDValue(Load, 0);
+  for (unsigned I = 0; I < NF; ++I)
+    ReplaceUses(SDValue(Node, I),
+                CurDAG->getTargetExtractSubreg(getSubregIndexByEVT(VT, I), DL,
+                                               VT, SuperReg));
+
+  ReplaceUses(SDValue(Node, NF), SDValue(Load, 1));     // Chain.
+  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 2)); // Glue.
+  CurDAG->RemoveDeadNode(Node);
+}
+
 void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned IntNo) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumValues() - 1;
@@ -698,6 +762,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     }
     break;
+  }
+  case RISCVISD::VLSEGFF: {
+    selectVLSEGFF(Node);
+    return;
+  }
+  case RISCVISD::VLSEGFF_MASK: {
+    selectVLSEGFFMask(Node);
+    return;
   }
   }
 

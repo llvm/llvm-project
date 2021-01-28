@@ -454,8 +454,7 @@ void GIMatchTreeOpcodePartitioner::repartition(
         // predicates for one instruction in the same DAG. That should be
         // impossible.
         assert(AllOpcodes && "Conflicting opcode predicates");
-        for (const CodeGenInstruction *Expected : OpcodeP->getInstrs())
-          OpcodesForThisPredicate.push_back(Expected);
+        append_range(OpcodesForThisPredicate, OpcodeP->getInstrs());
       }
 
       for (const CodeGenInstruction *Expected : OpcodesForThisPredicate) {

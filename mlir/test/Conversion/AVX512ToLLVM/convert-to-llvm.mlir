@@ -16,3 +16,13 @@ func @avx512_mask_rndscale(%a: vector<16xf32>, %b: vector<8xf64>, %i32: i32, %i1
   // Keep results alive.
   return %0, %1, %2, %3 : vector<16xf32>, vector<8xf64>, vector<16xf32>, vector<8xf64>
 }
+
+func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
+  -> (i16, i16, i8, i8)
+{
+  // CHECK: llvm_avx512.vp2intersect.d.512
+  %0, %1 = avx512.vp2intersect %a, %a : vector<16xi32>
+  // CHECK: llvm_avx512.vp2intersect.q.512
+  %2, %3 = avx512.vp2intersect %b, %b : vector<8xi64>
+  return %0, %1, %2, %3 : i16, i16, i8, i8
+}
