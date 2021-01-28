@@ -181,7 +181,12 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
     // the topmost function, which suits our needs better.
     auto ResOrErr = Symbolizer.symbolizeInlinedCode(
         ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get().getFrame(0));
+    if (!ResOrErr || ResOrErr->getNumberOfFrames() == 0) {
+      error(ResOrErr);
+      Printer << DILineInfo();
+    } else {
+      Printer << ResOrErr->getFrame(0);
+    }
   } else {
     auto ResOrErr = Symbolizer.symbolizeCode(
         ModuleName, {Offset, object::SectionedAddress::UndefSection});
