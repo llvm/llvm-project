@@ -51,20 +51,20 @@
 ; CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000000 ".text")
 ; CHECK:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 ; CHECK:     DW_TAG_inlined_subroutine
-; EXPR:        DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_const4u 0x9, DW_OP_plus)
+; EXPR:        DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x9, DW_OP_plus)
 ; EXPR:        DW_AT_high_pc [DW_FORM_data4]   (0x00000005)
 ; RNG:         DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = [[INL_RANGE:.*]]
 ; CHECK:     DW_TAG_call_site
 ; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000009 ".text")
-; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_const4u 0x9, DW_OP_plus)
+; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x9, DW_OP_plus)
 ; CHECK:     DW_TAG_call_site
 ; RNG:         DW_AT_call_return_pc [DW_FORM_addrx]  (indexed (00000002) address = 0x000000000000000e ".text")
-; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_const4u 0xe, DW_OP_plus)
+; EXPR:        DW_AT_call_return_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0xe, DW_OP_plus)
 ; CHECK:     NULL
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name {{.*}} "f1"
 ; CHECK:   DW_TAG_subprogram
-; EXPR:      DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0, DW_OP_const4u 0x20, DW_OP_plus)
+; EXPR:      DW_AT_low_pc [DW_FORM_exprloc] (DW_OP_addrx 0x0, DW_OP_const4u 0x20, DW_OP_plus)
 ; EXPR:      DW_AT_high_pc [DW_FORM_data4]   (0x00000006)
 ; RNG:       DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = [[F5_RANGE:.*]]
 ; CHECK:   DW_TAG_subprogram
