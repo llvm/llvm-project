@@ -126,14 +126,14 @@ set(cuda_src_files
 )
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -S -x c++
-              -target nvptx64
-              -Xclang -emit-llvm-bc
-              -Xclang -aux-triple -Xclang ${aux_triple}
-              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
-              -D__CUDACC__
-              -I${devicertl_base_directory}
-              -I${devicertl_nvptx_directory}/src)
+set(bc_flags -S -x c++ -O1 -std=c++14
+             -target nvptx64
+             -Xclang -emit-llvm-bc
+             -Xclang -aux-triple -Xclang ${aux_triple}
+             -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
+             -D__CUDACC__
+             -I${devicertl_base_directory}
+             -I${devicertl_nvptx_directory}/src)
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})
   list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=-1)
