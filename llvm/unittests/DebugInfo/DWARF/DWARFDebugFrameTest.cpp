@@ -343,7 +343,7 @@ TEST(DWARFDebugFrame, DumpUnwindLocations) {
   // Test constructing unwind locations and dumping each kind.
   constexpr int32_t PlusOff = 8;
   constexpr int32_t MinusOff = -8;
-  constexpr uint32_t RegNum = 12;
+  constexpr uint8_t RegNum = 12;
   expectDumpResult(dwarf::UnwindLocation::createUnspecified(), "unspecified");
   expectDumpResult(dwarf::UnwindLocation::createUndefined(), "undefined");
   expectDumpResult(dwarf::UnwindLocation::createSame(), "same");
@@ -910,9 +910,9 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_offset) {
   //   Reg1 = [CFA-8]
   //   Reg2 = [CFA-16]
   //   Reg3 = [CFA+8]
-  constexpr uint32_t Reg1 = 14;
-  constexpr uint32_t Reg2 = 15;
-  constexpr uint32_t Reg3 = 16;
+  constexpr uint8_t Reg1 = 14;
+  constexpr uint8_t Reg2 = 15;
+  constexpr uint8_t Reg3 = 16;
   constexpr uint8_t Neg1SLEB = 0x7f;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE,
@@ -966,8 +966,8 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_offset) {
   //   Reg1 = [CFA-8]
   //   Reg2 = [CFA-16]
   //   Reg3 = [CFA+8]
-  constexpr uint32_t Reg1 = 14;
-  constexpr uint32_t Reg2 = 15;
+  constexpr uint8_t Reg1 = 14;
+  constexpr uint8_t Reg2 = 15;
   constexpr uint8_t Neg1SLEB = 0x7f;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE, {dwarf::DW_CFA_val_offset, Reg1, 1,
@@ -1016,7 +1016,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_nop) {
   // unwind rules for the follwing registers:
   //   Reg1 = [CFA-8]
   // The opcodes for setting Reg1 are preceded by a DW_CFA_nop.
-  constexpr uint32_t Reg1 = 14;
+  constexpr uint8_t Reg1 = 14;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE, {dwarf::DW_CFA_nop, dwarf::DW_CFA_offset | Reg1, 1}),
       Succeeded());
@@ -1079,9 +1079,9 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
   //  - remember the state where only Reg1 was set
   //  - push a row (automatically at the end of instruction parsing)
   // Then we verify that all registers are correct in all generated rows.
-  constexpr uint32_t Reg1 = 14;
-  constexpr uint32_t Reg2 = 15;
-  constexpr uint32_t Reg3 = 16;
+  constexpr uint8_t Reg1 = 14;
+  constexpr uint8_t Reg2 = 15;
+  constexpr uint8_t Reg3 = 16;
   EXPECT_THAT_ERROR(
       parseCFI(TestFDE,
                {dwarf::DW_CFA_offset | Reg1, 1, dwarf::DW_CFA_advance_loc | 4,
@@ -1159,7 +1159,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_undefined) {
   // follwing rows:
   // 0x1000: CFA=reg12+32: Reg1=undefined
   // Then we verify that all registers are correct in all generated rows.
-  constexpr uint32_t Reg1 = 14;
+  constexpr uint8_t Reg1 = 14;
   EXPECT_THAT_ERROR(parseCFI(TestFDE, {dwarf::DW_CFA_undefined, Reg1}),
                     Succeeded());
 
@@ -1204,7 +1204,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_same_value) {
   // follwing rows:
   // 0x1000: CFA=reg12+32: Reg1=same
   // Then we verify that all registers are correct in all generated rows.
-  constexpr uint32_t Reg1 = 14;
+  constexpr uint8_t Reg1 = 14;
   EXPECT_THAT_ERROR(parseCFI(TestFDE, {dwarf::DW_CFA_same_value, Reg1}),
                     Succeeded());
 
