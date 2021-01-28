@@ -83,6 +83,7 @@ enum TypeID {
   LabelTyID,     ///< Labels
   MetadataTyID,  ///< Metadata
   X86_MMXTyID,   ///< MMX vectors (64 bits, X86 specific)
+  X86_AMXTyID,   ///< AMX vectors (8192 bits, X86 specific)
   TokenTyID,     ///< Tokens
 
   // Derived types... see DerivedTypes.h file.
