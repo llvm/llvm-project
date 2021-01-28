@@ -638,13 +638,13 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
       std::max(maxArgAttrs, unsigned(intrinsic.ArgumentAttributes.size()));
     unsigned &N = UniqAttributes[&intrinsic];
     if (N) continue;
-    assert(AttrNum < 256 && "Too many unique attributes for table!");
     N = ++AttrNum;
+    assert(N < 65536 && "Too many unique attributes for table!");
   }
 
   // Emit an array of AttributeList.  Most intrinsics will have at least one
   // entry, for the function itself (index ~1), which is usually nounwind.
-  OS << "  static const uint8_t IntrinsicsToAttributesMap[] = {\n";
+  OS << "  static const uint16_t IntrinsicsToAttributesMap[] = {\n";
 
   for (unsigned i = 0, e = Ints.size(); i != e; ++i) {
     const CodeGenIntrinsic &intrinsic = Ints[i];
