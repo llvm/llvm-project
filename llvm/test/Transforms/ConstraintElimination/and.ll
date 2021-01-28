@@ -135,3 +135,30 @@ exit:
 
   ret i32 20
 }
+
+define i4 @and_compare_undef(i16 %N, i16 %step) {
+; CHECK-LABEL: @and_compare_undef(
+; CHECK-NEXT:  step.check:
+; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
+; CHECK-NEXT:    [[B1:%.*]] = add i16 undef, -1
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[B1]], [[N:%.*]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
+; CHECK:       ptr.check:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i4 3
+;
+step.check:
+  %step.pos = icmp uge i16 %step, 0
+  %B1 = add i16 undef, -1
+  %step.ult.N = icmp ult i16 %B1, %N
+  %and.step = and i1 %step.pos, %step.ult.N
+  br i1 %and.step, label %ptr.check, label %exit
+
+ptr.check:
+  br label %exit
+
+exit:
+  ret i4 3
+}

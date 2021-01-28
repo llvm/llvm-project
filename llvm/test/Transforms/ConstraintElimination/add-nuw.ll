@@ -335,5 +335,70 @@ if.end:                                           ; preds = %entry
 }
 
 
+define i1 @test_n_must_ule_1_due_to_nuw(i8 %n, i8 %i) {
+entry:
+  %sub.n.1 = add nuw i8 %n, -1
+  %add = add nuw i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
+
+define i1 @test_n_unknown_missing_nuw(i8 %n, i8 %i) {
+entry:
+  %sub.n.1 = add i8 %n, -1
+  %add = add i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
+define i1 @test_n_must_ule_2_due_to_nuw(i8 %n, i8 %i) {
+entry:
+  %sub.n.1 = add nuw i8 %n, -2
+  %add = add nuw i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 2
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 2
+  ret i1 %f
+}
+
+
+define i1 @test_n_unknown_missing_nuw2(i8 %n, i8 %i) {
+entry:
+  %sub.n.1 = add i8 %n, -2
+  %add = add i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
 declare void @use(i1)
-declare void @llvm.trap()
