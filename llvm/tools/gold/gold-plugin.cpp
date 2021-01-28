@@ -765,6 +765,9 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
 
     case LDPR_PREVAILING_DEF_IRONLY_EXP:
       R.Prevailing = !isUndefined(Sym);
+      // Identify symbols exported dynamically, and that therefore could be
+      // referenced by a shared library not visible to the linker.
+      R.ExportDynamic = true;
       if (!Res.CanOmitFromDynSym)
         R.VisibleToRegularObj = true;
       break;

@@ -1009,7 +1009,10 @@ void ThinLTOCodeGenerator::run() {
   // linker option in the old LTO API, but this call allows it to be specified
   // via the internal option. Must be done before WPD below.
   updateVCallVisibilityInIndex(*Index,
-                               /* WholeProgramVisibilityEnabledInLTO */ false);
+                               /* WholeProgramVisibilityEnabledInLTO */ false,
+                               // FIXME: This needs linker information via a
+                               // TBD new interface.
+                               /* DynamicExportSymbols */ {});
 
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead
