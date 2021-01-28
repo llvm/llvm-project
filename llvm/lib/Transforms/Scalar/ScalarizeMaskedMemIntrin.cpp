@@ -801,10 +801,13 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
-    BasicBlock *CondBlock =
-        IfBlock->splitBasicBlock(InsertPt->getIterator(), "cond.store");
-    Builder.SetInsertPoint(InsertPt);
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false);
 
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.store");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
     Builder.CreateAlignedStore(OneElt, Ptr, Align(1));
 
@@ -814,14 +817,12 @@ static void scalarizeMaskedCompressStore(CallInst *CI, bool &ModifiedDT) {
       NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, 1);
 
     // Create "else" block, fill it in the next iteration
-    BasicBlock *NewIfBlock =
-        CondBlock->splitBasicBlock(InsertPt->getIterator(), "else");
-    Builder.SetInsertPoint(InsertPt);
-    Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
-    OldBr->eraseFromParent();
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
     BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
+
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
 
     // Add a PHI for the pointer if this isn't the last iteration.
     if ((Idx + 1) != VectorWidth) {
