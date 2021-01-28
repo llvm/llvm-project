@@ -2062,7 +2062,8 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
     if (const CXXRecordDecl *RD = MD->getParent()) {
-      if (RD->isLambda()) {
+      if (RD->isLambda() &&
+          declaresSameEntity(RD->getLambdaCallOperator(), MD)) {
         VisitBody = VisitBody && getDerived().shouldVisitLambdaBody();
       }
     }
