@@ -40,7 +40,64 @@ define amdgpu_kernel void @set_inactive_64(i64 addrspace(1)* %out, i64 %in) {
   ret void
 }
 
+define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 x i32> inreg %desc) {
+; GCN-LABEL: set_inactive_scc:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_buffer_load_dword s2, s[4:7], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_cmp_lg_u32 s2, 56
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    s_cselect_b32 s0, 1, 0
+; GCN-NEXT:    s_not_b64 exec, exec
+; GCN-NEXT:    v_mov_b32_e32 v0, 42
+; GCN-NEXT:    s_not_b64 exec, exec
+; GCN-NEXT:    s_and_b32 s0, s0, 1
+; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cbranch_scc0 BB2_2
+; GCN-NEXT:  ; %bb.1: ; %.one
+; GCN-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    buffer_store_dword v1, off, s[4:7], 0
+; GCN-NEXT:    s_branch BB2_3
+; GCN-NEXT:  BB2_2:
+; GCN-NEXT:    s_mov_b32 s0, -1
+; GCN-NEXT:  BB2_3: ; %Flow
+; GCN-NEXT:    s_xor_b32 s0, s0, -1
+; GCN-NEXT:    s_and_b32 s0, s0, 1
+; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cbranch_scc1 BB2_5
+; GCN-NEXT:  ; %bb.4: ; %.zero
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-NEXT:  BB2_5: ; %.exit
+; GCN-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 0, i32 0)
+  %cmp = icmp eq i32 %val, 56
+  %tmp = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 42) #0
+  br i1 %cmp, label %.zero, label %.one
+
+.zero:
+  store i32 %tmp, i32 addrspace(1)* %out
+  br label %.exit
+
+.one:
+  %tmp.1 = add i32 %tmp, 1
+  store i32 %tmp.1, i32 addrspace(1)* %out
+  br label %.exit
+
+.exit:
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
 declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64) #0
+declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32)
 
 attributes #0 = { convergent readnone }
