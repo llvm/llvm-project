@@ -283,6 +283,19 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   return success();
 }
 
+static ValueRange getTiledOpResult(TiledLinalgOp tiledOp) {
+  if (tiledOp.loops.empty())
+    return tiledOp.op.getOperation()->getResults();
+  return tiledOp.loops.front()->getResults();
+}
+
+static ValueRange
+getTiledAndFusedOpResult(TiledAndFusedLinalgOps tiledAndFusedOp) {
+  if (tiledAndFusedOp.fusedLoops.empty())
+    return tiledAndFusedOp.op.getOperation()->getResults();
+  return tiledAndFusedOp.fusedLoops.front()->getResults();
+}
+
 mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
     StringRef opName, MLIRContext *context,
     const LinalgDependenceGraph &dependenceGraph,
@@ -300,8 +313,6 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   if (!linalgOp)
     return failure();
   if (failed(marker.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-  if (!linalgOp.hasBufferSemantics())
     return failure();
 
   DenseSet<Operation *> producers;
@@ -359,9 +370,11 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
         tileLinalgOp(rewriter, tiledAndFusedOps->op, unfusedTilingOptions);
     if (!unfusedTiledOp)
       return failure();
-    rewriter.eraseOp(tiledAndFusedOps->op);
+    rewriter.replaceOp(tiledAndFusedOps->op,
+                       getTiledOpResult(unfusedTiledOp.getValue()));
     tiledAndFusedOps->op = unfusedTiledOp->op;
   }
+  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.getValue()));
 
   marker.replaceLinalgTransformationFilter(rewriter,
                                            tiledAndFusedOps->op.getOperation());

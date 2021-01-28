@@ -20,30 +20,14 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-namespace {
-struct TestLinalgFusionTransforms
-    : public PassWrapper<TestLinalgFusionTransforms, FunctionPass> {
-  TestLinalgFusionTransforms() = default;
-  TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect,
-                    StandardOpsDialect>();
-  }
-
-  void runOnFunction() override;
-};
-} // namespace
-
+template <LinalgTilingLoopType LoopType>
 static void fillFusionPatterns(MLIRContext *context,
                                const LinalgDependenceGraph &dependenceGraph,
                                OwningRewritePatternList &patterns) {
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>,
                   LinalgTileAndFusePattern<ConvOp>>(
       context, dependenceGraph,
-      LinalgTilingOptions()
-          .setTileSizes({32, 64, 16})
-          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({2}),
       LinalgTransformationFilter(
           Identifier::get("basic_fusion", context),
@@ -57,9 +41,7 @@ static void fillFusionPatterns(MLIRContext *context,
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
-      LinalgTilingOptions()
-          .setTileSizes({32, 64, 16})
-          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0}),
       LinalgTransformationFilter(Identifier::get("lhs_fusion", context),
                                  Identifier::get("after_lhs_fusion", context)),
@@ -72,9 +54,7 @@ static void fillFusionPatterns(MLIRContext *context,
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
-      LinalgTilingOptions()
-          .setTileSizes({32, 64, 16})
-          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({1}),
       LinalgTransformationFilter(Identifier::get("rhs_fusion", context),
                                  Identifier::get("after_rhs_fusion", context)),
@@ -87,9 +67,7 @@ static void fillFusionPatterns(MLIRContext *context,
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
-      LinalgTilingOptions()
-          .setTileSizes({32, 64, 16})
-          .setLoopType(LinalgTilingLoopType::ParallelLoops),
+      LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 2}),
       LinalgTransformationFilter(
           Identifier::get("two_operand_fusion", context),
@@ -103,8 +81,7 @@ static void fillFusionPatterns(MLIRContext *context,
 
   patterns.insert<LinalgTileAndFusePattern<GenericOp>>(
       context, dependenceGraph,
-      LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(
-          LinalgTilingLoopType::ParallelLoops),
+      LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 1}),
       LinalgTransformationFilter(
           Identifier::get("transpose_fusion", context),
@@ -117,18 +94,30 @@ static void fillFusionPatterns(MLIRContext *context,
           Identifier::get("after_transpose_fusion_original", context)));
 }
 
-static void applyFusionPatterns(MLIRContext *context, FuncOp funcOp) {
-  OwningRewritePatternList fusionPatterns;
-  Aliases alias;
-  LinalgDependenceGraph dependenceGraph =
-      LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
-  fillFusionPatterns(context, dependenceGraph, fusionPatterns);
-  applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
-}
+namespace {
+template <LinalgTilingLoopType LoopType = LinalgTilingLoopType::ParallelLoops>
+struct TestLinalgFusionTransforms
+    : public PassWrapper<TestLinalgFusionTransforms<LoopType>, FunctionPass> {
+  TestLinalgFusionTransforms() = default;
+  TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}
 
-void TestLinalgFusionTransforms::runOnFunction() {
-  applyFusionPatterns(&getContext(), getFunction());
-}
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect,
+                    StandardOpsDialect>();
+  }
+
+  void runOnFunction() override {
+    MLIRContext *context = &this->getContext();
+    FuncOp funcOp = this->getFunction();
+    OwningRewritePatternList fusionPatterns;
+    Aliases alias;
+    LinalgDependenceGraph dependenceGraph =
+        LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
+    fillFusionPatterns<LoopType>(context, dependenceGraph, fusionPatterns);
+    applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
+  }
+};
+} // namespace
 
 static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
   OpBuilder b(f);
@@ -237,7 +226,7 @@ struct TestLinalgTileAndFuseSequencePass
     LinalgDependenceGraph dependenceGraph(aliases, linalgOps);
     OpBuilder builder(funcOp.getContext());
     linalg::LinalgTilingLoopType loopType = LinalgTilingLoopType::ParallelLoops;
-    if (llvm::all_of(linalgOps, [](LinalgOp linalgOp) {
+    if (llvm::any_of(linalgOps, [](LinalgOp linalgOp) {
           return linalgOp.hasTensorSemantics();
         }))
       loopType = LinalgTilingLoopType::Loops;
@@ -260,9 +249,16 @@ struct TestLinalgTileAndFuseSequencePass
 namespace mlir {
 namespace test {
 void registerTestLinalgFusionTransforms() {
-  PassRegistration<TestLinalgFusionTransforms> testFusionTransformsPass(
+  PassRegistration<TestLinalgFusionTransforms<>> testFusionTransformsPass(
       "test-linalg-fusion-transform-patterns",
       "Test Linalg fusion transformation patterns by applying them greedily.");
+}
+void registerTestLinalgTensorFusionTransforms() {
+  PassRegistration<TestLinalgFusionTransforms<LinalgTilingLoopType::Loops>>
+      testTensorFusionTransformsPass(
+          "test-linalg-tensor-fusion-transform-patterns",
+          "Test Linalg on tensor fusion transformation "
+          "patterns by applying them greedily.");
 }
 void registerTestLinalgGreedyFusion() {
   PassRegistration<TestLinalgGreedyFusion> testFusionTransformsPass(
