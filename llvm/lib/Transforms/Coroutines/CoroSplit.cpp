@@ -639,11 +639,9 @@ void CoroCloner::salvageDebugInfo() {
     for (auto &I : BB)
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
         Worklist.push_back(DDI);
-  for (DbgDeclareInst *DDI : Worklist) {
-    // This is a heuristic that detects declares left by CoroFrame.
-    bool LoadFromFramePtr = !isa<AllocaInst>(DDI->getAddress());
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, LoadFromFramePtr);
-  }
+  for (DbgDeclareInst *DDI : Worklist)
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI);
+
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
   auto IsUnreachableBlock = [&](BasicBlock *BB) {
