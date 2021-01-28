@@ -32,7 +32,7 @@
 #include "ompt-specific.h"
 #endif
 
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
 #include "llvm/Support/TimeProfiler.h"
 static char *ProfileTraceFile = nullptr;
 #endif
@@ -5740,7 +5740,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
 /* ------------------------------------------------------------------------ */
 
 void *__kmp_launch_thread(kmp_info_t *this_thr) {
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
   ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
@@ -5848,7 +5848,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   KA_TRACE(10, ("__kmp_launch_thread: T#%d done\n", gtid));
   KMP_MB();
 
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
   llvm::timeTraceProfilerFinishThread();
 #endif
   return this_thr;
