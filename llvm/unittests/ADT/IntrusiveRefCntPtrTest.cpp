@@ -115,7 +115,7 @@ static_assert(!std::is_convertible<IntrusiveRefCntPtr<X> &&,
               "X&& -> Z should be rejected with SFINAE");
 static_assert(!std::is_convertible<const IntrusiveRefCntPtr<X> &,
                                    IntrusiveRefCntPtr<Z>>::value,
-              "cosnt X& -> Z should be rejected with SFINAE");
+              "const X& -> Z should be rejected with SFINAE");
 static_assert(
     !std::is_convertible<std::unique_ptr<X>, IntrusiveRefCntPtr<Z>>::value,
     "X -> Z should be rejected with SFINAE");
