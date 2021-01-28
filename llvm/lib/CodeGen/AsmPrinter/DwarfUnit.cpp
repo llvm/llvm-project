@@ -319,22 +319,18 @@ void DwarfUnit::addPoolOpAddress(DIEValueList &Die, const MCSymbol *Label) {
   const MCSymbol *Base = nullptr;
   if (Label->isInSection() && DD->useAddrOffsetExpressions())
     Base = DD->getSectionLabel(&Label->getSection());
-  if (!Base) {
-    uint32_t Index = DD->getAddressPool().getIndex(Label);
-    if (DD->getDwarfVersion() >= 5) {
-      addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addrx);
-      addUInt(Die, dwarf::DW_FORM_addrx, Index);
-    } else {
-      addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
-      addUInt(Die, dwarf::DW_FORM_GNU_addr_index, Index);
-    }
-    return;
+
+  uint32_t Index = DD->getAddressPool().getIndex(Base ? Base : Label);
+
+  if (DD->getDwarfVersion() >= 5) {
+    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addrx);
+    addUInt(Die, dwarf::DW_FORM_addrx, Index);
+  } else {
+    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
+    addUInt(Die, dwarf::DW_FORM_GNU_addr_index, Index);
   }
 
-  addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
-  addUInt(Die, dwarf::DW_FORM_GNU_addr_index,
-          DD->getAddressPool().getIndex(Base));
-  if (Base != Label) {
+  if (Base && Base != Label) {
     addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_const4u);
     addLabelDelta(Die, (dwarf::Attribute)0, Label, Base);
     addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
