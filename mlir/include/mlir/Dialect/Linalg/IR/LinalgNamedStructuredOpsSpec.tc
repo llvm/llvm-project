@@ -3,6 +3,11 @@ def matmul(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
   C(m, n) = std_addf<k>(std_mulf(A(m, k), B(k, n)));
 }
 
+ods_def<MatmulColumnMajorOp>:
+def matmul_column_major(A: f32(K, M), B: f32(N, K)) -> (C: f32(N, M)) {
+  C(n, m) = std_addf<k>(std_mulf(A(k, m), B(n, k)));
+}
+
 ods_def<MatvecOp>:
 def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
   x(m) = std_addf<n>(std_mulf(A(m, n), y(n)));
