@@ -229,6 +229,8 @@ def remark_module_build : Remark<"building module '%0' as '%1'">,
   InGroup<ModuleBuild>;
 def remark_module_build_done : Remark<"finished building module '%0'">,
   InGroup<ModuleBuild>;
+def remark_module_lock : Remark<"locking '%0' to build module '%1'">,
+  InGroup<ModuleLock>;
 def err_modules_embed_file_not_found :
   Error<"file '%0' specified by '-fmodules-embed-file=' not found">,
   DefaultFatal;
