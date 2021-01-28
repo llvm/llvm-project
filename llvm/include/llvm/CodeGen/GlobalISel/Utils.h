@@ -171,15 +171,11 @@ struct DefinitionAndSourceRegister {
 
 /// Find the def instruction for \p Reg, and underlying value Register folding
 /// away any copies.
-///
-/// Also walks through hints such as G_ASSERT_ZEXT.
 Optional<DefinitionAndSourceRegister>
 getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
 /// Find the def instruction for \p Reg, folding away any trivial copies. May
 /// return nullptr if \p Reg is not a generic virtual register.
-///
-/// Also walks through hints such as G_ASSERT_ZEXT.
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
 
@@ -187,9 +183,8 @@ MachineInstr *getDefIgnoringCopies(Register Reg,
 /// will be an output register of the instruction that getDefIgnoringCopies
 /// returns. May return an invalid register if \p Reg is not a generic virtual
 /// register.
-///
-/// Also walks through hints such as G_ASSERT_ZEXT.
-Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
+Register getSrcRegIgnoringCopies(Register Reg,
+                                 const MachineRegisterInfo &MRI);
 
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);

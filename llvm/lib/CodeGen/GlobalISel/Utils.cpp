@@ -375,13 +375,11 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
   if (!DstTy.isValid())
     return None;
-  unsigned Opc = DefMI->getOpcode();
-  while (Opc == TargetOpcode::COPY || isPreISelGenericOptimizationHint(Opc)) {
+  while (DefMI->getOpcode() == TargetOpcode::COPY) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())
       break;
-    Opc = DefMI->getOpcode();
     DefMI = MRI.getVRegDef(SrcReg);
     DefSrcReg = SrcReg;
   }
