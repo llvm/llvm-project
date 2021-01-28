@@ -18847,7 +18847,8 @@ ARMTargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
 }
 
 bool ARMTargetLowering::isLegalInterleavedAccessType(
-    unsigned Factor, FixedVectorType *VecTy, const DataLayout &DL) const {
+    unsigned Factor, FixedVectorType *VecTy, Align Alignment,
+    const DataLayout &DL) const {
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
@@ -18869,6 +18870,9 @@ bool ARMTargetLowering::isLegalInterleavedAccessType(
 
   // Ensure the element type is legal.
   if (ElSize != 8 && ElSize != 16 && ElSize != 32)
+    return false;
+  // And the alignment if high enough under MVE.
+  if (Subtarget->hasMVEIntegerOps() && Alignment < ElSize / 8)
     return false;
 
   // Ensure the total vector size is 64 or a multiple of 128. Types larger than
@@ -18910,11 +18914,12 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   Type *EltTy = VecTy->getElementType();
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
+  Align Alignment = LI->getAlign();
 
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!isLegalInterleavedAccessType(Factor, VecTy, DL))
+  if (!isLegalInterleavedAccessType(Factor, VecTy, Alignment, DL))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VecTy, DL);
@@ -19063,11 +19068,12 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
+  Align Alignment = SI->getAlign();
 
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!isLegalInterleavedAccessType(Factor, SubVecTy, DL))
+  if (!isLegalInterleavedAccessType(Factor, SubVecTy, Alignment, DL))
     return false;
 
   unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL);
