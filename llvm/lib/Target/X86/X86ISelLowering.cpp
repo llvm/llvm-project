@@ -36916,11 +36916,18 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
     Res = DAG.getNode(SrcOpc0, DL, SrcVT0, DAG.getBitcast(SrcVT0, Res));
     return DAG.getBitcast(VT, Res);
   }
+  case X86ISD::VPERMILPI:
+    // TODO: Handle v4f64 permutes with different low/high lane masks.
+    if (SrcVT0 == MVT::v4f64) {
+      uint64_t Mask = Src0.getConstantOperandVal(1);
+      if ((Mask & 0x3) != ((Mask >> 2) & 0x3))
+        break;
+    }
+    LLVM_FALLTHROUGH;
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
   case X86ISD::PSHUFD:
-  case X86ISD::VPERMILPI:
     if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
       SDValue LHS = DAG.getBitcast(VT, Src0.getOperand(0));
       SDValue RHS =
