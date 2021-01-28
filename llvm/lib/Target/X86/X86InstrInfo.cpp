@@ -6788,7 +6788,8 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 
   // ENDBR instructions should not be scheduled around.
   unsigned Opcode = MI.getOpcode();
-  if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32)
+  if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
+      Opcode == X86::PLDTILECFG)
     return true;
 
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
