@@ -86,8 +86,7 @@ static void getBackwardSliceImpl(Operation *op,
     return;
 
   assert((op->getNumRegions() == 0 ||
-          isa<AffineForOp, scf::ForOp, linalg::LinalgOp, linalg::PadTensorOp>(
-              op)) &&
+          isa<AffineForOp, scf::ForOp, linalg::LinalgOp>(op)) &&
          "unexpected generic op with regions");
 
   // Evaluate whether we should keep this def.
