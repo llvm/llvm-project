@@ -10,7 +10,6 @@ class TestSwiftAsyncFnArgs(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(bugnumber="rdar://73214365")
     def test(self):
         """Test function arguments in async functions"""
         self.build()
