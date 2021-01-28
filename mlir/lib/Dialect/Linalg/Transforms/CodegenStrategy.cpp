@@ -37,8 +37,10 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   for (const std::unique_ptr<Transformation> &t : transformationSequence) {
     auto nextState = Identifier::get(std::to_string(++stepCount), context);
     auto marker = (currentState == zeroState)
-                      ? linalg::LinalgMarker({}, nextState)
-                      : linalg::LinalgMarker(currentState, nextState);
+                      ? linalg::LinalgTransformationFilter(
+                            t->filter, ArrayRef<Identifier>{}, nextState)
+                      : linalg::LinalgTransformationFilter(
+                            t->filter, currentState, nextState);
     stage1Patterns.emplace_back(t->buildRewritePatterns(context, marker));
     currentState = nextState;
   }
@@ -47,15 +49,17 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
       linalg::getLinalgTilingCanonicalizationPatterns(context);
   stage2Patterns.insert<AffineMinSCFCanonicalizationPattern>(context);
 
-  auto stage3Transforms = [](Operation *op) {
+  auto stage3Transforms = [&](Operation *op) {
     // Some of these may be too aggressive as a stage 3 that is applied on each
     // stage 1 application and may have to be split out to post staged patterns
     // application (in which case they could just be passes, TBD).
-    op->walk([&](LoopLikeOpInterface loopLike) {
-      LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
-      if (failed(moveLoopInvariantCode(loopLike)))
-        llvm_unreachable("unexpected LICM failure");
-    });
+    if (enableLICM) {
+      op->walk([&](LoopLikeOpInterface loopLike) {
+        LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
+        if (failed(moveLoopInvariantCode(loopLike)))
+          llvm_unreachable("unexpected LICM failure");
+      });
+    }
     promoteSingleIterationLoops(cast<FuncOp>(op));
     hoistViewAllocOps(cast<FuncOp>(op));
     hoistRedundantVectorTransfers(cast<FuncOp>(op));
