@@ -3220,6 +3220,12 @@ void func14() {
   float i = 42.0;
 }
 
+void func15() {
+  int count = 0;
+  auto l = [&] { ++count; };
+  (void)l;
+}
+
 )cpp";
 
   EXPECT_TRUE(
@@ -3402,6 +3408,15 @@ void func14() {
       Code,
       traverse(TK_IgnoreUnlessSpelledInSource,
                functionDecl(hasName("func14"), hasDescendant(floatLiteral()))),
+      langCxx20OrLater()));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               compoundStmt(
+                   hasDescendant(varDecl(hasName("count")).bind("countVar")),
+                   hasDescendant(
+                       declRefExpr(to(varDecl(equalsBoundNode("countVar"))))))),
       langCxx20OrLater()));
 
   Code = R"cpp(
