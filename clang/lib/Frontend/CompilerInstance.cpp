@@ -1331,6 +1331,9 @@ static bool compileModuleAndReadASTBehindLock(
     SourceLocation ModuleNameLoc, Module *Module, StringRef ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
+  Diags.Report(ModuleNameLoc, diag::remark_module_lock)
+      << ModuleFileName << Module->Name;
+
   // FIXME: have LockFileManager return an error_code so that we can
   // avoid the mkdir when the directory already exists.
   StringRef Dir = llvm::sys::path::parent_path(ModuleFileName);
@@ -1387,6 +1390,25 @@ static bool compileModuleAndReadASTBehindLock(
     // or if one of its imports depends on header search paths that are not
     // consistent with this ImportingInstance.  Try again...
   }
+}
+
+/// Compile a module in a separate compiler instance and read the AST,
+/// returning true if the module compiles without errors, potentially using a
+/// lock manager to avoid building the same module in multiple compiler
+/// instances.
+static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
+                                    SourceLocation ImportLoc,
+                                    SourceLocation ModuleNameLoc,
+                                    Module *Module, StringRef ModuleFileName) {
+  return ImportingInstance.getInvocation()
+                 .getFrontendOpts()
+                 .BuildingImplicitModuleUsesLock
+             ? compileModuleAndReadASTBehindLock(ImportingInstance, ImportLoc,
+                                                 ModuleNameLoc, Module,
+                                                 ModuleFileName)
+             : compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
+                                           ModuleNameLoc, Module,
+                                           ModuleFileName);
 }
 
 /// Diagnose differences between the current definition of the given
@@ -1866,8 +1888,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   }
 
   // Try to compile and then read the AST.
-  if (!compileModuleAndReadASTBehindLock(*this, ImportLoc, ModuleNameLoc, M,
-                                         ModuleFilename)) {
+  if (!compileModuleAndReadAST(*this, ImportLoc, ModuleNameLoc, M,
+                               ModuleFilename)) {
     assert(getDiagnostics().hasErrorOccurred() &&
            "undiagnosed error in compileModuleAndReadAST");
     if (getPreprocessorOpts().FailedModules)
