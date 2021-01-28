@@ -492,6 +492,16 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
   return dialect.get();
 }
 
+llvm::hash_code MLIRContext::getRegistryHash() {
+  llvm::hash_code hash(0);
+  // Factor in number of loaded dialects, attributes, operations, types.
+  hash = llvm::hash_combine(hash, impl->loadedDialects.size());
+  hash = llvm::hash_combine(hash, impl->registeredAttributes.size());
+  hash = llvm::hash_combine(hash, impl->registeredOperations.size());
+  hash = llvm::hash_combine(hash, impl->registeredTypes.size());
+  return hash;
+}
+
 bool MLIRContext::allowsUnregisteredDialects() {
   return impl->allowUnregisteredDialects;
 }
