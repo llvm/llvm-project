@@ -84,7 +84,7 @@ struct DriverOptions {
   bool verbose{false}; // -v
   bool compileOnly{false}; // -c
   std::string outputPath; // -o path
-  std::vector<std::string> searchDirectories{"."s}; // -I dir
+  std::vector<std::string> searchDirectories; // -I dir
   std::string moduleDirectory{"."s}; // -module dir
   std::string moduleFileSuffix{".mod"}; // -moduleSuffix suff
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
