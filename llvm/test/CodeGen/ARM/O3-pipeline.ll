@@ -55,7 +55,6 @@
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Exception handling preparation
 ; CHECK-NEXT:      Merge internal globals
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
