@@ -45,12 +45,15 @@ static void fillFusionPatterns(MLIRContext *context,
           .setTileSizes({32, 64, 16})
           .setLoopType(LinalgTilingLoopType::ParallelLoops),
       LinalgFusionOptions().setIndicesToFuse({2}),
-      LinalgMarker(Identifier::get("basic_fusion", context),
-                   Identifier::get("after_basic_fusion", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_basic_fusion_producer", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_basic_fusion_original", context)));
+      LinalgTransformationFilter(
+          Identifier::get("basic_fusion", context),
+          Identifier::get("after_basic_fusion", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_basic_fusion_producer", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_basic_fusion_original", context)));
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
@@ -58,12 +61,14 @@ static void fillFusionPatterns(MLIRContext *context,
           .setTileSizes({32, 64, 16})
           .setLoopType(LinalgTilingLoopType::ParallelLoops),
       LinalgFusionOptions().setIndicesToFuse({0}),
-      LinalgMarker(Identifier::get("lhs_fusion", context),
-                   Identifier::get("after_lhs_fusion", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_lhs_fusion_producer", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_lhs_fusion_original", context)));
+      LinalgTransformationFilter(Identifier::get("lhs_fusion", context),
+                                 Identifier::get("after_lhs_fusion", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_lhs_fusion_producer", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_lhs_fusion_original", context)));
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
@@ -71,12 +76,14 @@ static void fillFusionPatterns(MLIRContext *context,
           .setTileSizes({32, 64, 16})
           .setLoopType(LinalgTilingLoopType::ParallelLoops),
       LinalgFusionOptions().setIndicesToFuse({1}),
-      LinalgMarker(Identifier::get("rhs_fusion", context),
-                   Identifier::get("after_rhs_fusion", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_rhs_fusion_producer", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_rhs_fusion_original", context)));
+      LinalgTransformationFilter(Identifier::get("rhs_fusion", context),
+                                 Identifier::get("after_rhs_fusion", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_rhs_fusion_producer", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_rhs_fusion_original", context)));
 
   patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
@@ -84,12 +91,13 @@ static void fillFusionPatterns(MLIRContext *context,
           .setTileSizes({32, 64, 16})
           .setLoopType(LinalgTilingLoopType::ParallelLoops),
       LinalgFusionOptions().setIndicesToFuse({0, 2}),
-      LinalgMarker(Identifier::get("two_operand_fusion", context),
-                   Identifier::get("after_two_operand_fusion", context)),
-      LinalgMarker(
+      LinalgTransformationFilter(
+          Identifier::get("two_operand_fusion", context),
+          Identifier::get("after_two_operand_fusion", context)),
+      LinalgTransformationFilter(
           ArrayRef<Identifier>(),
           Identifier::get("after_two_operand_fusion_producer", context)),
-      LinalgMarker(
+      LinalgTransformationFilter(
           ArrayRef<Identifier>(),
           Identifier::get("after_two_operand_fusion_original", context)));
 
@@ -98,11 +106,13 @@ static void fillFusionPatterns(MLIRContext *context,
       LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(
           LinalgTilingLoopType::ParallelLoops),
       LinalgFusionOptions().setIndicesToFuse({0, 1}),
-      LinalgMarker(Identifier::get("transpose_fusion", context),
-                   Identifier::get("after_transpose_fusion", context)),
-      LinalgMarker(ArrayRef<Identifier>(),
-                   Identifier::get("after_transpose_fusion_producer", context)),
-      LinalgMarker(
+      LinalgTransformationFilter(
+          Identifier::get("transpose_fusion", context),
+          Identifier::get("after_transpose_fusion", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_transpose_fusion_producer", context)),
+      LinalgTransformationFilter(
           ArrayRef<Identifier>(),
           Identifier::get("after_transpose_fusion_original", context)));
 }

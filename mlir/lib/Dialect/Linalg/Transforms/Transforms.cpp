@@ -46,14 +46,23 @@ using namespace mlir::linalg;
 const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<Identifier> matchDisjunction,
-                                         Optional<Identifier> replacement)
-    : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
+mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
+    ArrayRef<Identifier> matchDisjunction, Optional<Identifier> replacement)
+    : LinalgTransformationFilter([](Operation *) { return success(); },
+                                 matchDisjunction, replacement) {}
+
+mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
+    FilterFunction f, ArrayRef<Identifier> matchDisjunction,
+    Optional<Identifier> replacement)
+    : filter(f),
+      matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement) {}
 
-LogicalResult
-mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
-                                           Operation *op) const {
+LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
+    PatternRewriter &rewriter, Operation *op) const {
+  if (filter && failed(filter(op)))
+    return failure();
+
   auto attr = op->template getAttrOfType<StringAttr>(
       LinalgTransforms::kLinalgTransformMarker);
 
@@ -81,8 +90,9 @@ mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
   });
 }
 
-void mlir::linalg::LinalgMarker::replaceLinalgMarker(PatternRewriter &rewriter,
-                                                     Operation *op) const {
+void mlir::linalg::LinalgTransformationFilter::
+    replaceLinalgTransformationFilter(PatternRewriter &rewriter,
+                                      Operation *op) const {
   if (replacement.hasValue())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
                 rewriter.getStringAttr(replacement.getValue()));
@@ -219,12 +229,13 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
 /// Linalg base tiling pattern.
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-    LinalgMarker marker, PatternBenefit benefit)
+    LinalgTransformationFilter marker, PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       options(options) {}
 
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    LinalgTilingOptions options, LinalgMarker marker, PatternBenefit benefit)
+    LinalgTilingOptions options, LinalgTransformationFilter marker,
+    PatternBenefit benefit)
     : RewritePattern(benefit, MatchAnyOpTypeTag()), marker(marker),
       options(options) {}
 
@@ -250,9 +261,9 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     // Return relevant information to derived pattern.
     result = *res;
     // Replace marker on both tiledOp and tiledAndPaddedOp, if necessary.
-    marker.replaceLinalgMarker(rewriter, tiledOp);
+    marker.replaceLinalgTransformationFilter(rewriter, tiledOp);
     if (tiledOp != res->op)
-      marker.replaceLinalgMarker(rewriter, res->op);
+      marker.replaceLinalgTransformationFilter(rewriter, res->op);
   });
 
   // Consider padding on the fly only if the op has tensor semantics.
@@ -276,8 +287,8 @@ mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
     StringRef opName, MLIRContext *context,
     const LinalgDependenceGraph &dependenceGraph,
     LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-    LinalgMarker marker, LinalgMarker fusedOpMarker,
-    LinalgMarker originalOpMarker, PatternBenefit benefit)
+    LinalgTransformationFilter marker, LinalgTransformationFilter fusedOpMarker,
+    LinalgTransformationFilter originalOpMarker, PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context),
       dependenceGraph(dependenceGraph), tilingOptions(tilingOptions),
       fusionOptions(fusionOptions), marker(marker),
@@ -352,23 +363,26 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     tiledAndFusedOps->op = unfusedTiledOp->op;
   }
 
-  marker.replaceLinalgMarker(rewriter, tiledAndFusedOps->op.getOperation());
+  marker.replaceLinalgTransformationFilter(rewriter,
+                                           tiledAndFusedOps->op.getOperation());
   for (auto fusedOp : tiledAndFusedOps->fusedProducers) {
-    fusedOpMarker.replaceLinalgMarker(rewriter, fusedOp.getOperation());
+    fusedOpMarker.replaceLinalgTransformationFilter(rewriter,
+                                                    fusedOp.getOperation());
   }
   for (auto origProducerOp : ArrayRef<LinalgOp>(fusionOps).drop_back()) {
-    originalOpMarker.replaceLinalgMarker(rewriter,
-                                         origProducerOp.getOperation());
+    originalOpMarker.replaceLinalgTransformationFilter(
+        rewriter, origProducerOp.getOperation());
   }
-  rewriter.updateRootInPlace(
-      op, [&]() { originalOpMarker.replaceLinalgMarker(rewriter, op); });
+  rewriter.updateRootInPlace(op, [&]() {
+    originalOpMarker.replaceLinalgTransformationFilter(rewriter, op);
+  });
   return success();
 }
 
 /// Linalg base interchange pattern.
 mlir::linalg::LinalgBaseInterchangePattern::LinalgBaseInterchangePattern(
     StringRef opName, MLIRContext *context,
-    ArrayRef<unsigned> interchangeVector, LinalgMarker marker,
+    ArrayRef<unsigned> interchangeVector, LinalgTransformationFilter marker,
     PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
@@ -388,14 +402,14 @@ LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
   rewriter.updateRootInPlace(op, [&]() {
     interchange(linalgOp, interchangeVector);
     // New marker if specified.
-    marker.replaceLinalgMarker(rewriter, op);
+    marker.replaceLinalgTransformationFilter(rewriter, op);
   });
   return success();
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
-    LinalgMarker marker, PatternBenefit benefit)
+    LinalgTransformationFilter marker, PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       options(options) {}
 
@@ -417,12 +431,12 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     return op->emitError("subview promotion failed");
   }
   rewriter.finalizeRootUpdate(op);
-  marker.replaceLinalgMarker(rewriter, op);
+  marker.replaceLinalgTransformationFilter(rewriter, op);
   return success();
 }
 
 mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    StringRef opName, MLIRContext *context, LinalgMarker marker,
+    StringRef opName, MLIRContext *context, LinalgTransformationFilter marker,
     PatternBenefit benefit)
     : RewritePattern(opName, {}, benefit, context), marker(marker) {}
 

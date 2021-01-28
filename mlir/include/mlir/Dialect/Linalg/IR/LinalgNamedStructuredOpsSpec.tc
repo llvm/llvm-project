@@ -8,6 +8,13 @@ def matmul_column_major(A: f32(K, M), B: f32(N, K)) -> (C: f32(N, M)) {
   C(n, m) = std_addf<k>(std_mulf(A(k, m), B(n, k)));
 }
 
+ods_def<MatmulI8I8I32Op>:
+def matmul_i8_i8_i32(A: i8(M, K), B: i8(K, N)) -> (C: i32(M, N)) {
+  // TODO: ideally something closer to
+  //   C(m, n) += cast<i32>(A(m, k)) * cast<i32>(B(k, n))
+  C(m, n) = std_addi<k>(std_sexti32(std_muli(A(m, k), B(k, n))));
+}
+
 ods_def<MatvecOp>:
 def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
   x(m) = std_addf<n>(std_mulf(A(m, n), y(n)));
