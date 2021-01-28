@@ -7,15 +7,15 @@ if(${LIBC_TARGET_MACHINE} MATCHES "x86|x86_64")
   list(SORT ALL_CPU_FEATURES)
 endif()
 
-# Function to check whether the host supports the provided set of features.
+# Function to check whether the target CPU supports the provided set of features.
 # Usage:
-# host_supports(
+# cpu_supports(
 #   <output variable>
 #   <list of cpu features>
 # )
-function(host_supports output_var features)
-  _intersection(a "${HOST_CPU_FEATURES}" "${features}")
-  if("${a}" STREQUAL "${features}")
+function(cpu_supports output_var features)
+  _intersection(var "${LIBC_CPU_FEATURES}" "${features}")
+  if("${var}" STREQUAL "${features}")
     set(${output_var} TRUE PARENT_SCOPE)
   else()
     unset(${output_var} PARENT_SCOPE)
@@ -126,12 +126,22 @@ function(_check_defined_cpu_feature output_var)
   endif()
 endfunction()
 
-# Populates the HOST_CPU_FEATURES list.
-# Use -march=native only when the compiler supports it.
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-if(COMPILER_SUPPORTS_MARCH_NATIVE)
-  _check_defined_cpu_feature(HOST_CPU_FEATURES MARCH native)
+set(LIBC_CPU_FEATURES "" CACHE PATH "supported CPU features")
+
+if(CMAKE_CROSSCOMPILING)
+  _intersection(cpu_features "${ALL_CPU_FEATURES}" "${LIBC_CPU_FEATURES}")
+  if(NOT "${cpu_features}" STREQUAL "${LIBC_CPU_FEATURES}")
+    message(FATAL_ERROR "Unsupported CPU features: ${cpu_features}")
+  endif()
+  set(LIBC_CPU_FEATURES "${cpu_features}")
 else()
-  _check_defined_cpu_feature(HOST_CPU_FEATURES)
+  # Populates the LIBC_CPU_FEATURES list.
+  # Use -march=native only when the compiler supports it.
+  include(CheckCXXCompilerFlag)
+  CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+  if(COMPILER_SUPPORTS_MARCH_NATIVE)
+    _check_defined_cpu_feature(LIBC_CPU_FEATURES MARCH native)
+  else()
+    _check_defined_cpu_feature(LIBC_CPU_FEATURES)
+  endif()
 endif()
