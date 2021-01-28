@@ -101,23 +101,11 @@ entry:
   ret <8 x i16> <i16 291, i16 undef, i16 undef, i16 364, i16 undef, i16 1, i16 173, i16 undef>
 }
 
-define dso_local <16 x i8> @test_xxsplti32dx_10() {
-; CHECK-LABEL: test_xxsplti32dx_10:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor vs34, vs34, vs34
-; CHECK-NEXT:    xxsplti32dx vs34, 0, 1207959552
-; CHECK-NEXT:    blr
-entry:
-  ret <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 72, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 72>
-}
-
-; FIXME: It appears that there is something wrong with the computation
-;        of the 64-bit constant to splat so we cannot emit xxsplti32dx for
-;        this test case for now.
 define dso_local <16 x i8> @constSplatBug() {
 ; CHECK-LABEL: constSplatBug:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plxv vs34, .LCPI10_0@PCREL(0), 1
+; CHECK-NEXT:    xxlxor vs34, vs34, vs34
+; CHECK-NEXT:    xxsplti32dx vs34, 0, 1191182336
 ; CHECK-NEXT:    blr
 entry:
   ret <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 71>
