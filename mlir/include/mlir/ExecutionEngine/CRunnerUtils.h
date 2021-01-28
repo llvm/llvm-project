@@ -210,6 +210,12 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 
 //===----------------------------------------------------------------------===//
+// Small runtime support library for timing execution and printing GFLOPS
+//===----------------------------------------------------------------------===//
+extern "C" MLIR_CRUNNERUTILS_EXPORT void print_flops(double flops);
+extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
+
+//===----------------------------------------------------------------------===//
 // Small runtime support library for sparse tensors.
 //===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void *openTensorC(char *filename,
