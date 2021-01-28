@@ -194,13 +194,6 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
       return "static_high";
     }
 
-    RankedTensorType getSourceType() {
-      return source().getType().cast<RankedTensorType>();
-    }
-    RankedTensorType getResultType() {
-      return getResult().getType().cast<RankedTensorType>();
-    }
-
     // Infer the shape of the result tensor given the static shapes
     // and element type of the result tensor.
     static RankedTensorType inferResultType(RankedTensorType sourceType,
@@ -492,6 +485,38 @@ def Linalg_SliceOp : Linalg_Op<"slice", [
   }];
 
   let hasFolder = 1;
+}
+
+def Linalg_SimplePadOp : Linalg_Op<"simple_pad", [NoSideEffect]> {
+  let summary = "TODO: replace with pad_tensors when ready.";
+
+  let description = [{
+    `linalg.simple_pad` is a tmp placeholder for padding and packing on tensors.
+    Its semantics are to pad a partially dynamic tensor to a fully static tensor
+    where the static sizes are assumed to be greater than the dynamic sizes. The
+    op perforrms "high" padding (i.e. it adds trailing padding values until the 
+    desired size is met).
+  }];
+
+  let arguments = (ins AnyRankedTensor:$tensor, AnyType:$padding);
+  let results = (outs AnyRankedTensor:$result);
+
+  // TODO: verify all static result, some dynamic input, static shapes match,
+  // element types match, ranks match etc. Use pad_tensors when ready but for
+  // now just let it ne fully specified by traits.
+  let verifier = ?;
+
+  let extraClassDeclaration = [{
+    RankedTensorType getSourceType() {
+      return tensor().getType().cast<RankedTensorType>(); }
+    RankedTensorType getResultType() {
+      return getResult().getType().cast<RankedTensorType>(); }
+   }];
+
+  let assemblyFormat = [{
+    $tensor `pad` $padding attr-dict `:`
+      type($tensor) `to` type($result) `pad` type($padding)
+  }];
 }
 
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
