@@ -17,6 +17,7 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -819,6 +820,21 @@ bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
     return true;
   }
   return false;
+}
+
+// Helper to detect unneeded and instructions on shift amounts. Called
+// from PatFrags in tablegen.
+bool RISCVDAGToDAGISel::isUnneededShiftMask(SDNode *N, unsigned Width) const {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
+  assert(Width >= 5 && N->getValueSizeInBits(0) >= (1 << Width) &&
+         "Unexpected width");
+  const APInt &Val = N->getConstantOperandAPInt(1);
+
+  if (Val.countTrailingOnes() >= Width)
+    return true;
+
+  APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+  return Mask.countTrailingOnes() >= Width;
 }
 
 // Match (srl (and val, mask), imm) where the result would be a
