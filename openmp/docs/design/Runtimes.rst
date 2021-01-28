@@ -48,7 +48,10 @@ similar to Clang's ``-ftime-trace`` option. This generates a JSON file based on
 `Speedscope App`_. Building this feature depends on the `LLVM Support Library`_
 for time trace output. Using this library is enabled by default when building
 using the CMake option ``OPENMP_ENABLE_LIBOMPTARGET_PROFILING``. The output will
-be saved to the filename specified by the environment variable.
+be saved to the filename specified by the environment variable. For multi-threaded
+applications, profiling in ``libomp`` is also needed. Setting the CMake option
+``OPENMP_ENABLE_LIBOMP_PROFILING=ON`` to enable the feature. Note that this will
+turn ``libomp`` into a C++ library.
 
 .. _`Chrome Tracing`: https://www.chromium.org/developers/how-tos/trace-event-profiling-tool
 
