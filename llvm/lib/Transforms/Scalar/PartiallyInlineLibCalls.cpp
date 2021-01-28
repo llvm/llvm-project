@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
@@ -30,7 +32,7 @@ DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                          BasicBlock &CurrBB, Function::iterator &BB,
-                         const TargetTransformInfo *TTI) {
+                         const TargetTransformInfo *TTI, DomTreeUpdater *DTU) {
   // There is no need to change the IR, since backend will emit sqrt
   // instruction if the call has already been marked read-only.
   if (Call->onlyReadsMemory())
@@ -58,7 +60,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // back to split-off tail of CurrBB) into which we'll insert a libcall.
   Instruction *LibCallTerm = SplitBlockAndInsertIfThen(
       Builder.getTrue(), Call->getNextNode(), /*Unreachable=*/false,
-      /*BranchWeights*/ nullptr);
+      /*BranchWeights*/ nullptr, DTU);
 
   auto *CurrBBTerm = cast<BranchInst>(CurrBB.getTerminator());
   // We want an 'else' block though, not a 'then' block.
@@ -99,7 +101,12 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 }
 
 static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
-                                       const TargetTransformInfo *TTI) {
+                                       const TargetTransformInfo *TTI,
+                                       DominatorTree *DT) {
+  Optional<DomTreeUpdater> DTU;
+  if (DT)
+    DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
   bool Changed = false;
 
   Function::iterator CurrBB;
@@ -128,7 +135,8 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrtf:
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
-            optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI))
+            optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
+                         DTU.hasValue() ? DTU.getPointer() : nullptr))
           break;
         continue;
       default:
@@ -147,9 +155,12 @@ PreservedAnalyses
 PartiallyInlineLibCallsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI))
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI, DT))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 namespace {
@@ -165,6 +176,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -176,7 +188,10 @@ public:
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return runPartiallyInlineLibCalls(F, TLI, TTI);
+    DominatorTree *DT = nullptr;
+    if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+      DT = &DTWP->getDomTree();
+    return runPartiallyInlineLibCalls(F, TLI, TTI, DT);
   }
 };
 }
@@ -187,6 +202,7 @@ INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
                       "Partially inline calls to library functions", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(PartiallyInlineLibCallsLegacyPass,
                     "partially-inline-libcalls",
