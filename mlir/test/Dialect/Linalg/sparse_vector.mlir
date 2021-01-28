@@ -54,11 +54,11 @@
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
-func @scale_d(%arga: tensor<1024xf32>, %scale: f32) -> tensor<1024xf32> {
+func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_scale_d
     ins(%arga: tensor<1024xf32>)
-    outs(%arga: tensor<1024xf32>) {
-      ^bb(%a: f32, %s : f32):
+    outs(%argx: tensor<1024xf32>) {
+      ^bb(%a: f32, %x: f32):
         %0 = mulf %a, %scale : f32
         linalg.yield %0 : f32
   } -> tensor<1024xf32>
@@ -134,11 +134,11 @@ func @scale_d(%arga: tensor<1024xf32>, %scale: f32) -> tensor<1024xf32> {
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
-func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>) -> tensor<1024xf32> {
+func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_mul_s
     ins(%arga, %argb: tensor<1024xf32>, tensor<1024xf32>)
-    outs(%arga: tensor<1024xf32>) {
-      ^bb(%a: f32, %b: f32, %s : f32):
+    outs(%argx: tensor<1024xf32>) {
+      ^bb(%a: f32, %b: f32, %x: f32):
         %0 = mulf %a, %b : f32
         linalg.yield %0 : f32
   } -> tensor<1024xf32>
@@ -208,7 +208,7 @@ func @reduction_d(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tenso
   %0 = linalg.generic #trait_reduction_d
     ins(%arga, %argb: tensor<1024xf32>, tensor<1024xf32>)
     outs(%argx: tensor<f32>) {
-      ^bb(%a: f32, %b : f32, %x : f32):
+      ^bb(%a: f32, %b: f32, %x: f32):
         %0 = mulf %a, %b : f32
         %1 = addf %x, %0 : f32
         linalg.yield %1 : f32
@@ -288,8 +288,8 @@ func @reduction_d(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tenso
 // CHECK-VEC2:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c16]] {
 // CHECK-VEC2:           %[[sub:.*]] = subi %[[s]], %[[j]] : index
 // CHECK-VEC2:           %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
-// CHECK-VEC2:           %[[lj:.*]] = vector.maskedload %{{.*}}[%arg3], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
-// CHECK-VEC2:           %[[la:.*]] = vector.maskedload %{{.*}}[%arg3], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC2:           %[[lj:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
+// CHECK-VEC2:           %[[la:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 // CHECK-VEC2:           %[[lb:.*]] = vector.gather %{{.*}}[%[[lj]]], %[[mask]], %{{.*}} : memref<512x1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 // CHECK-VEC2:           %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
 // CHECK-VEC2:           vector.scatter %{{.*}}[%[[lj]]], %[[mask]], %[[m]] : memref<512x1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
@@ -297,11 +297,11 @@ func @reduction_d(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tenso
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
-func @mul_ds(%arga: tensor<512x1024xf32>, %argb: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
+func @mul_ds(%arga: tensor<512x1024xf32>, %argb: tensor<512x1024xf32>, %argx: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
   %0 = linalg.generic #trait_mul_ds
     ins(%arga, %argb: tensor<512x1024xf32>, tensor<512x1024xf32>)
-    outs(%arga: tensor<512x1024xf32>) {
-      ^bb(%a: f32, %b: f32, %s : f32):
+    outs(%argx: tensor<512x1024xf32>) {
+      ^bb(%a: f32, %b: f32, %x: f32):
         %0 = mulf %a, %b : f32
         linalg.yield %0 : f32
   } -> tensor<512x1024xf32>

@@ -48,12 +48,12 @@
 // CHECK-PAR4:           scf.parallel
 // CHECK-PAR4:         return
 //
-func @scale_dd(%scale: f32, %arga: tensor<?x?xf32>) -> tensor<?x?xf32> {
+func @scale_dd(%scale: f32, %arga: tensor<?x?xf32>, %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic #trait_dd
      ins(%arga: tensor<?x?xf32>)
-    outs(%arga: tensor<?x?xf32>) {
-      ^bb(%a: f32, %s: f32):
-        %0 = mulf %a, %scale  : f32
+    outs(%argx: tensor<?x?xf32>) {
+      ^bb(%a: f32, %x: f32):
+        %0 = mulf %a, %scale : f32
         linalg.yield %0 : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -98,12 +98,12 @@ func @scale_dd(%scale: f32, %arga: tensor<?x?xf32>) -> tensor<?x?xf32> {
 // CHECK-PAR4:           scf.parallel
 // CHECK-PAR4:         return
 //
-func @scale_ss(%scale: f32, %arga: tensor<?x?xf32>) -> tensor<?x?xf32> {
+func @scale_ss(%scale: f32, %arga: tensor<?x?xf32>, %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic #trait_ss
      ins(%arga: tensor<?x?xf32>)
-    outs(%arga: tensor<?x?xf32>) {
-      ^bb(%a: f32, %s: f32):
-        %0 = mulf %a, %scale  : f32
+    outs(%argx: tensor<?x?xf32>) {
+      ^bb(%a: f32, %x: f32):
+        %0 = mulf %a, %scale : f32
         linalg.yield %0 : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -153,7 +153,7 @@ func @scale_ss(%scale: f32, %arga: tensor<?x?xf32>) -> tensor<?x?xf32> {
 func @matvec(%argA: tensor<16x32xf32>, %argb: tensor<32xf32>, %argx: tensor<16xf32>) -> tensor<16xf32> {
   %0 = linalg.generic #trait_matvec
       ins(%argA, %argb : tensor<16x32xf32>, tensor<32xf32>)
-     outs(%argx : tensor<16xf32>) {
+     outs(%argx: tensor<16xf32>) {
     ^bb(%A: f32, %b: f32, %x: f32):
       %0 = mulf %A, %b : f32
       %1 = addf %0, %x : f32
