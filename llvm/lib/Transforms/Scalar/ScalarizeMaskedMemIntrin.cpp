@@ -695,10 +695,13 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
-    BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt->getIterator(),
-                                                     "cond.load");
-    Builder.SetInsertPoint(InsertPt);
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false);
 
+    BasicBlock *CondBlock = ThenTerm->getParent();
+    CondBlock->setName("cond.load");
+
+    Builder.SetInsertPoint(CondBlock->getTerminator());
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
@@ -708,16 +711,13 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
       NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, 1);
 
     // Create "else" block, fill it in the next iteration
-    BasicBlock *NewIfBlock =
-        CondBlock->splitBasicBlock(InsertPt->getIterator(), "else");
-    Builder.SetInsertPoint(InsertPt);
-    Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
-    OldBr->eraseFromParent();
+    BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
+    NewIfBlock->setName("else");
     BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
+    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
     PHINode *ResultPhi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     ResultPhi->addIncoming(NewVResult, CondBlock);
     ResultPhi->addIncoming(VResult, PrevIfBlock);
