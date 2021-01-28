@@ -51,10 +51,11 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
     // Some of these may be too aggressive as a stage 3 that is applied on each
     // stage 1 application and may have to be split out to post staged patterns
     // application (in which case they could just be passes, TBD).
-    PassManager pm(op->getContext());
-    pm.addPass(createLoopInvariantCodeMotionPass());
-    if (failed(pm.run(op->getParentOfType<ModuleOp>())))
-      llvm_unreachable("Unexpected failure in cleanup pass pipeline.");
+    op->walk([&](LoopLikeOpInterface loopLike) {
+      LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
+      if (failed(moveLoopInvariantCode(loopLike)))
+        llvm_unreachable("unexpected LICM failure");
+    });
     promoteSingleIterationLoops(cast<FuncOp>(op));
     hoistViewAllocOps(cast<FuncOp>(op));
     hoistRedundantVectorTransfers(cast<FuncOp>(op));
@@ -67,13 +68,11 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   // Post staged patterns transforms
   //===--------------------------------------------------------------------===//
 
-  ModuleOp module = func->getParentOfType<ModuleOp>();
-
   // Programmatic splitting of slow/fast path vector transfers.
   OwningRewritePatternList patterns;
   patterns.insert<vector::VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, std::move(patterns));
+  applyPatternsAndFoldGreedily(func, std::move(patterns));
 
   // Programmatic controlled lowering of vector.contract only.
   OwningRewritePatternList vectorContractLoweringPatterns;
@@ -81,17 +80,16 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
       .insert<ContractionOpToOuterProductOpLowering,
               ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           vectorTransformsOptions, context);
-  applyPatternsAndFoldGreedily(module,
-                               std::move(vectorContractLoweringPatterns));
+  applyPatternsAndFoldGreedily(func, std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
   OwningRewritePatternList vectorToLoopsPatterns;
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
                                         vectorToSCFOptions);
-  applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));
+  applyPatternsAndFoldGreedily(func, std::move(vectorToLoopsPatterns));
 
   // Ensure we drop the marker in the end.
-  module.walk([](LinalgOp op) {
+  func.walk([](LinalgOp op) {
     op.removeAttr(LinalgTransforms::kLinalgTransformMarker);
   });
 }
