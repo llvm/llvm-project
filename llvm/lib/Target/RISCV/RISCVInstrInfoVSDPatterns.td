@@ -514,6 +514,14 @@ defm "" : VPatBinaryFPSDNode_VV_VF<fmul, "PseudoVFMUL">;
 defm "" : VPatBinaryFPSDNode_VV_VF<fdiv, "PseudoVFDIV">;
 defm "" : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
 
+// 14.10. Vector Floating-Point Sign-Injection Instructions
+// Handle fneg with VFSGNJN using the same input for both operands.
+foreach vti = AllFloatVectors in {
+  def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
+            (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
+}
+
 // 14.11. Vector Floating-Point Compare Instructions
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
