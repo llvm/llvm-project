@@ -3707,7 +3707,9 @@ TEST(MemorySanitizer, getgrent_r) {
   EXPECT_NOT_POISONED(grp.gr_gid);
   EXPECT_NOT_POISONED(grpres);
 }
+#endif
 
+#ifdef __GLIBC__
 TEST(MemorySanitizer, fgetgrent_r) {
   FILE *fp = fopen("/etc/group", "r");
   struct group grp;
