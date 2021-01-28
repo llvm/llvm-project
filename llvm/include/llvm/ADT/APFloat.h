@@ -687,7 +687,6 @@ public:
 
   bool getExactInverse(APFloat *inv) const;
 
-  friend int ilogb(const DoubleAPFloat &Arg);
   friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
   friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
   friend hash_code hash_value(const DoubleAPFloat &Arg);
