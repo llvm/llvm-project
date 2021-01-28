@@ -151,10 +151,18 @@ Sections:
     Sections:  []
     NoHeaders: [[NOHEADERS]]
 
-## Check that we do not allow an empty SectionHeaderTable tag and suggest to use an explicit syntax instead.
-# RUN: not yaml2obj %s --docnum=5 -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-VALUE
+## Check that we allow using an empty SectionHeaderTable definition.
+## It can be used to emit the default section header table at an arbitrary position.
 
-# NO-VALUE: SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the section header table
+# RUN: yaml2obj %s --docnum=5 -o %t5.novalues
+# RUN: llvm-readelf --sections %t5.novalues | \
+# RUN:   FileCheck %s --check-prefix=NO-VALUES
+
+## Check we placed the section header table before the .foo section.
+
+# NO-VALUES: There are 4 section headers, starting at offset 0x40:
+# NO-VALUES: [Nr] Name Type     Address          Off    Size
+# NO-VALUES: [ 1] .foo PROGBITS 0000000000000000 000140 000000
 
 --- !ELF
 FileHeader:
@@ -162,9 +170,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
+  - Type: SectionHeaderTable
   - Name: .foo
     Type: SHT_PROGBITS
-  - Type: SectionHeaderTable
 
 ## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
 ## fields even when we do not produce section headers.
