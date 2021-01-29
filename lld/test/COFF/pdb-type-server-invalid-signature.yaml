@@ -20,10 +20,10 @@
 # Test an invalid path reference to a PDB type server; as a fallback LLD should try to load the PDB in the same path as the OBJ
 # RUN: yaml2obj %S/Inputs/pdb-type-server-invalid-path.yaml -o %t3.obj
 # RUN: cp %S/Inputs/pdb-diff-cl.pdb %T
-# RUN: lld-link %t3.obj -out:%t3.exe -debug -pdb:%t3.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=INVALID-PATH -allow-empty
+# RUN: lld-link %t3.obj -out:%t3.exe -debug -pdb:%t3.pdb -nodefaultlib -entry:main 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=INVALID-PATH -allow-empty
 
 # INVALID-PATH-NOT: warning: Cannot use debug info for '{{.*}}3.obj' [LNK4099]
-# INVALID-PATH-NOT: failed to load reference 'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb': {{[Nn]}}o such file or directory
+# INVALID-PATH-NOT: failed to load reference 'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb': [[MSG]]
 
 --- !COFF
 header:
