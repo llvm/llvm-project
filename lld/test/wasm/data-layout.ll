@@ -52,13 +52,15 @@
 ; CHECK-NEXT:       - SectionOffset:   7
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
-; CHECK-NEXT:           Opcode:          I32_CONST
+; CHK32-NEXT:           Opcode:          I32_CONST
+; CHK64-NEXT:           Opcode:          I64_CONST
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         68656C6C6F0A00
 ; CHECK-NEXT:       - SectionOffset:   20
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
-; CHECK-NEXT:           Opcode:          I32_CONST
+; CHK32-NEXT:           Opcode:          I32_CONST
+; CHK64-NEXT:           Opcode:          I64_CONST
 ; CHECK-NEXT:           Value:           1040
 
 
