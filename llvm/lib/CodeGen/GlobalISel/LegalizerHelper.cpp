@@ -5479,31 +5479,27 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   auto NotSignBitMask = MIRBuilder.buildConstant(
     Src0Ty, APInt::getLowBitsSet(Src0Size, Src0Size - 1));
 
-  auto And0 = MIRBuilder.buildAnd(Src0Ty, Src0, NotSignBitMask);
-  MachineInstr *Or;
-
+  Register And0 = MIRBuilder.buildAnd(Src0Ty, Src0, NotSignBitMask).getReg(0);
+  Register And1;
   if (Src0Ty == Src1Ty) {
-    auto And1 = MIRBuilder.buildAnd(Src1Ty, Src1, SignBitMask);
-    Or = MIRBuilder.buildOr(Dst, And0, And1);
+    And1 = MIRBuilder.buildAnd(Src1Ty, Src1, SignBitMask).getReg(0);
   } else if (Src0Size > Src1Size) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0Ty, Src0Size - Src1Size);
     auto Zext = MIRBuilder.buildZExt(Src0Ty, Src1);
     auto Shift = MIRBuilder.buildShl(Src0Ty, Zext, ShiftAmt);
-    auto And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask);
-    Or = MIRBuilder.buildOr(Dst, And0, And1);
+    And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask).getReg(0);
   } else {
     auto ShiftAmt = MIRBuilder.buildConstant(Src1Ty, Src1Size - Src0Size);
     auto Shift = MIRBuilder.buildLShr(Src1Ty, Src1, ShiftAmt);
     auto Trunc = MIRBuilder.buildTrunc(Src0Ty, Shift);
-    auto And1 = MIRBuilder.buildAnd(Src0Ty, Trunc, SignBitMask);
-    Or = MIRBuilder.buildOr(Dst, And0, And1);
+    And1 = MIRBuilder.buildAnd(Src0Ty, Trunc, SignBitMask).getReg(0);
   }
 
   // Be careful about setting nsz/nnan/ninf on every instruction, since the
   // constants are a nan and -0.0, but the final result should preserve
   // everything.
-  if (unsigned Flags = MI.getFlags())
-    Or->setFlags(Flags);
+  unsigned Flags = MI.getFlags();
+  MIRBuilder.buildOr(Dst, And0, And1, Flags);
 
   MI.eraseFromParent();
   return Legalized;
