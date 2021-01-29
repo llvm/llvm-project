@@ -815,16 +815,14 @@ define <4 x double> @uitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ; AVX1-64-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-64-NEXT:    vpsrlq $32, %xmm2, %xmm2
-; AVX1-64-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-64-NEXT:    vextractps $3, %xmm2, %eax
 ; AVX1-64-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-64-NEXT:    vmovq %xmm2, %rax
+; AVX1-64-NEXT:    vextractps $1, %xmm2, %eax
 ; AVX1-64-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
 ; AVX1-64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-64-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-64-NEXT:    vpextrd $3, %xmm0, %eax
 ; AVX1-64-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-64-NEXT:    vmovq %xmm0, %rax
+; AVX1-64-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-64-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm0
 ; AVX1-64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; AVX1-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
@@ -834,19 +832,17 @@ define <4 x double> @uitofp_v4i64_v4f64(<4 x i64> %x) #0 {
 ;
 ; AVX2-64-LABEL: uitofp_v4i64_v4f64:
 ; AVX2-64:       # %bb.0:
-; AVX2-64-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-64-NEXT:    vpsrlq $32, %xmm1, %xmm1
-; AVX2-64-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX2-64-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-64-NEXT:    vextractps $3, %xmm1, %eax
 ; AVX2-64-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
-; AVX2-64-NEXT:    vmovq %xmm1, %rax
+; AVX2-64-NEXT:    vextractps $1, %xmm1, %eax
 ; AVX2-64-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm1
 ; AVX2-64-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX2-64-NEXT:    vpsrlq $32, %xmm0, %xmm2
-; AVX2-64-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX2-64-NEXT:    vextractps $3, %xmm0, %eax
+; AVX2-64-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm2
+; AVX2-64-NEXT:    vextractps $1, %xmm0, %eax
 ; AVX2-64-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm3
-; AVX2-64-NEXT:    vmovq %xmm2, %rax
-; AVX2-64-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
-; AVX2-64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX2-64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX2-64-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX2-64-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [4.294967296E+9,4.294967296E+9,4.294967296E+9,4.294967296E+9]
 ; AVX2-64-NEXT:    vmulpd %ymm2, %ymm1, %ymm1

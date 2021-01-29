@@ -184,6 +184,7 @@ if (libcxx_enable_filesystem) {
     "filesystem/directory_iterator.cpp",
     "filesystem/filesystem_common.h",
     "filesystem/operations.cpp",
+    "filesystem/posix_compat.h",
   ]
   if (libcxx_use_compiler_rt) {
     cxx_sources += [ "filesystem/int128_builtins.cpp" ]

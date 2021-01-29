@@ -95,13 +95,12 @@ static void addAllGlobalValueUsers(ClusterMapType &GVtoClusterMap,
 // globalized.
 // Try to balance pack those partitions into N files since this roughly equals
 // thread balancing for the backend codegen step.
-static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
+static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
                            unsigned N) {
   // At this point module should have the proper mix of globals and locals.
   // As we attempt to partition this module, we must not change any
   // locals to globals.
-  LLVM_DEBUG(dbgs() << "Partition module with (" << M->size()
-                    << ")functions\n");
+  LLVM_DEBUG(dbgs() << "Partition module with (" << M.size() << ")functions\n");
   ClusterMapType GVtoClusterMap;
   ComdatMembersType ComdatMembers;
 
@@ -144,9 +143,9 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
       addAllGlobalValueUsers(GVtoClusterMap, &GV, &GV);
   };
 
-  llvm::for_each(M->functions(), recordGVSet);
-  llvm::for_each(M->globals(), recordGVSet);
-  llvm::for_each(M->aliases(), recordGVSet);
+  llvm::for_each(M.functions(), recordGVSet);
+  llvm::for_each(M.globals(), recordGVSet);
+  llvm::for_each(M.aliases(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -247,31 +246,32 @@ static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
 }
 
 void llvm::SplitModule(
-    std::unique_ptr<Module> M, unsigned N,
+    Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
     bool PreserveLocals) {
   if (!PreserveLocals) {
-    for (Function &F : *M)
+    for (Function &F : M)
       externalize(&F);
-    for (GlobalVariable &GV : M->globals())
+    for (GlobalVariable &GV : M.globals())
       externalize(&GV);
-    for (GlobalAlias &GA : M->aliases())
+    for (GlobalAlias &GA : M.aliases())
       externalize(&GA);
-    for (GlobalIFunc &GIF : M->ifuncs())
+    for (GlobalIFunc &GIF : M.ifuncs())
       externalize(&GIF);
   }
 
   // This performs splitting without a need for externalization, which might not
   // always be possible.
   ClusterIDMapType ClusterIDMap;
-  findPartitions(M.get(), ClusterIDMap, N);
+  findPartitions(M, ClusterIDMap, N);
 
   // FIXME: We should be able to reuse M as the last partition instead of
-  // cloning it.
+  // cloning it. Note that the callers at the moment expect the module to
+  // be preserved, so will need some adjustments as well.
   for (unsigned I = 0; I < N; ++I) {
     ValueToValueMapTy VMap;
     std::unique_ptr<Module> MPart(
-        CloneModule(*M, VMap, [&](const GlobalValue *GV) {
+        CloneModule(M, VMap, [&](const GlobalValue *GV) {
           if (ClusterIDMap.count(GV))
             return (ClusterIDMap[GV] == I);
           else
