@@ -661,8 +661,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpacesInContainerLiterals);
     IO.mapOptional("SpacesInCStyleCastParentheses",
                    Style.SpacesInCStyleCastParentheses);
-    IO.mapOptional("SpacesInLineCommentPrefix",
-                   Style.SpacesInLineCommentPrefix);
     IO.mapOptional("SpacesInParentheses", Style.SpacesInParentheses);
     IO.mapOptional("SpacesInSquareBrackets", Style.SpacesInSquareBrackets);
     IO.mapOptional("SpaceBeforeSquareBrackets",
@@ -709,20 +707,6 @@ template <> struct MappingTraits<FormatStyle::RawStringFormat> {
     IO.mapOptional("EnclosingFunctions", Format.EnclosingFunctions);
     IO.mapOptional("CanonicalDelimiter", Format.CanonicalDelimiter);
     IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
-  }
-};
-
-template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
-  static void mapping(IO &IO, FormatStyle::SpacesInLineComment &Space) {
-    // Transform the maximum to signed, to parse "-1" correctly
-    int signedMaximum = static_cast<int>(Space.Maximum);
-    IO.mapOptional("Minimum", Space.Minimum);
-    IO.mapOptional("Maximum", signedMaximum);
-    Space.Maximum = static_cast<unsigned>(signedMaximum);
-
-    if (Space.Maximum != -1u) {
-      Space.Minimum = std::min(Space.Minimum, Space.Maximum);
-    }
   }
 };
 
@@ -1002,7 +986,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceInEmptyParentheses = false;
   LLVMStyle.SpacesInContainerLiterals = true;
   LLVMStyle.SpacesInCStyleCastParentheses = false;
-  LLVMStyle.SpacesInLineCommentPrefix = {/*Minimum=*/1, /*Maximum=*/-1u};
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
