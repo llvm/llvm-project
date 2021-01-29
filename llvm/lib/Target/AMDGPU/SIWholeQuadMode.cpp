@@ -840,9 +840,26 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
         First = FirstWQM;
       }
 
+      // Whether we need to save SCC depends on start and end states
+      bool SaveSCC = false;
+      switch (State) {
+      case StateExact:
+      case StateWWM:
+        // Exact/WWM -> WWM: save SCC
+        // Exact/WWM -> WQM: save SCC if WQM mask is generated from exec
+        // Exact/WWM -> Exact: no save
+        SaveSCC = (Needs & StateWWM) || ((Needs & StateWQM) && WQMFromExec);
+        break;
+      case StateWQM:
+        // WQM -> Exact/WMM: save SCC
+        SaveSCC = !(Needs & StateWQM);
+        break;
+      default:
+        llvm_unreachable("Unknown state");
+        break;
+      }
       MachineBasicBlock::iterator Before =
-          prepareInsertion(MBB, First, II, Needs == StateWQM,
-                           Needs == StateExact || WQMFromExec);
+          prepareInsertion(MBB, First, II, Needs == StateWQM, SaveSCC);
 
       if (State == StateWWM) {
         assert(SavedNonWWMReg);
