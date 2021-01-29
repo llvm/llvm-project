@@ -277,8 +277,8 @@ template <> struct OptionEnumMapping<concurrency::MtUnsafeCheck::FunctionSet> {
 namespace concurrency {
 
 static ast_matchers::internal::Matcher<clang::NamedDecl>
-hasAnyMtUnsafeNames(MtUnsafeCheck::FunctionSet libc) {
-  switch (libc) {
+hasAnyMtUnsafeNames(MtUnsafeCheck::FunctionSet Libc) {
+  switch (Libc) {
   case MtUnsafeCheck::FunctionSet::Posix:
     return hasAnyName(PosixFunctions);
   case MtUnsafeCheck::FunctionSet::Glibc:

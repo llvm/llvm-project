@@ -490,6 +490,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     break;
   }
 
+  Options.BinutilsVersion =
+      llvm::TargetMachine::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
   Options.CompressDebugSections = CodeGenOpts.getCompressDebugSections();

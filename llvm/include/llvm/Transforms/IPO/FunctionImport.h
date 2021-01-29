@@ -214,8 +214,10 @@ std::error_code EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
-/// Resolve prevailing symbol linkages in \p TheModule based on the information
-/// recorded in the summaries during global summary-based analysis.
+/// Resolve prevailing symbol linkages and constrain visibility (1. CanAutoHide,
+/// 2. consider visibility from other definitions for ELF) in \p TheModule based
+/// on the information recorded in the summaries during global summary-based
+/// analysis.
 void thinLTOResolvePrevailingInModule(Module &TheModule,
                                       const GVSummaryMapTy &DefinedGlobals);
 

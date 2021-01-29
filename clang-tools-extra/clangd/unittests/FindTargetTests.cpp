@@ -230,6 +230,24 @@ TEST_F(TargetDeclTest, UsingDecl) {
                {"void waldo()"});
 }
 
+TEST_F(TargetDeclTest, BaseSpecifier) {
+  Code = R"cpp(
+    struct X {};
+    struct Y : [[private]] X {};
+  )cpp";
+  EXPECT_DECLS("CXXBaseSpecifier", "struct X");
+  Code = R"cpp(
+    struct X {};
+    struct Y : [[private X]] {};
+  )cpp";
+  EXPECT_DECLS("CXXBaseSpecifier", "struct X");
+  Code = R"cpp(
+    struct X {};
+    struct Y : private [[X]] {};
+  )cpp";
+  EXPECT_DECLS("RecordTypeLoc", "struct X");
+}
+
 TEST_F(TargetDeclTest, ConstructorInitList) {
   Code = R"cpp(
     struct X {

@@ -19,7 +19,7 @@ namespace tidy {
 namespace bugprone {
 
 void TerminatingContinueCheck::registerMatchers(MatchFinder *Finder) {
-  const auto doWithFalse =
+  const auto DoWithFalse =
       doStmt(hasCondition(ignoringImpCasts(
                  anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                        cxxNullPtrLiteralExpr(), gnuNullExpr()))),
@@ -29,7 +29,7 @@ void TerminatingContinueCheck::registerMatchers(MatchFinder *Finder) {
       continueStmt(hasAncestor(stmt(anyOf(forStmt(), whileStmt(),
                                           cxxForRangeStmt(), doStmt()))
                                    .bind("closestLoop")),
-                   hasAncestor(doWithFalse))
+                   hasAncestor(DoWithFalse))
           .bind("continue"),
       this);
 }

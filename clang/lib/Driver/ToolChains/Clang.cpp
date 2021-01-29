@@ -4840,6 +4840,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     IsIntegratedAssemblerDefault))
     CmdArgs.push_back("-fno-verbose-asm");
 
+  // Parse 'none' or '$major.$minor'. Disallow -fbinutils-version=0 because we
+  // use that to indicate the MC default in the backend.
+  if (Arg *A = Args.getLastArg(options::OPT_fbinutils_version_EQ)) {
+    StringRef V = A->getValue();
+    unsigned Num;
+    if (V == "none")
+      A->render(Args, CmdArgs);
+    else if (!V.consumeInteger(10, Num) && Num > 0 &&
+             (V.empty() || (V.consume_front(".") &&
+                            !V.consumeInteger(10, Num) && V.empty())))
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << A->getValue() << A->getOption().getName();
+  }
+
   if (!TC.useIntegratedAs())
     CmdArgs.push_back("-no-integrated-as");
 
@@ -5514,6 +5530,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);
+
+  for (const auto &Filename :
+       Args.getAllArgValues(options::OPT_fprofile_list_EQ)) {
+    if (D.getVFS().exists(Filename))
+      CmdArgs.push_back(Args.MakeArgString("-fprofile-list=" + Filename));
+    else
+      D.Diag(clang::diag::err_drv_no_such_file) << Filename;
+  }
 
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ)) {
     StringRef S0 = A->getValue(), S = S0;

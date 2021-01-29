@@ -17,9 +17,13 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "aarch64-prelegalizer-combiner"
@@ -51,6 +55,56 @@ static void applyFConstantToConstant(MachineInstr &MI) {
   const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
   MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
   MI.eraseFromParent();
+}
+
+/// Try to match a G_ICMP of a G_TRUNC with zero, in which the truncated bits
+/// are sign bits. In this case, we can transform the G_ICMP to directly compare
+/// the wide value with a zero.
+static bool matchICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    GISelKnownBits *KB, Register &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP && KB);
+
+  auto Pred = (CmpInst::Predicate)MI.getOperand(1).getPredicate();
+  if (!ICmpInst::isEquality(Pred))
+    return false;
+
+  Register LHS = MI.getOperand(2).getReg();
+  LLT LHSTy = MRI.getType(LHS);
+  if (!LHSTy.isScalar())
+    return false;
+
+  Register RHS = MI.getOperand(3).getReg();
+  Register WideReg;
+
+  if (!mi_match(LHS, MRI, m_GTrunc(m_Reg(WideReg))) ||
+      !mi_match(RHS, MRI, m_SpecificICst(0)))
+    return false;
+
+  LLT WideTy = MRI.getType(WideReg);
+  if (KB->computeNumSignBits(WideReg) <=
+      WideTy.getSizeInBits() - LHSTy.getSizeInBits())
+    return false;
+
+  MatchInfo = WideReg;
+  return true;
+}
+
+static bool applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &Builder,
+                                    GISelChangeObserver &Observer,
+                                    Register &WideReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+
+  LLT WideTy = MRI.getType(WideReg);
+  // We're going to directly use the wide register as the LHS, and then use an
+  // equivalent size zero for RHS.
+  Builder.setInstrAndDebugLoc(MI);
+  auto WideZero = Builder.buildConstant(WideTy, 0);
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(WideReg);
+  MI.getOperand(3).setReg(WideZero.getReg(0));
+  Observer.changedInstr(MI);
+  return true;
 }
 
 class AArch64PreLegalizerCombinerHelperState {
@@ -151,6 +205,8 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
   }
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -163,7 +219,13 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
     return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
+  auto &TPC = getAnalysis<TargetPassConfig>();
+
+  // Enable CSE.
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
@@ -172,8 +234,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
                                          F.hasMinSize(), KB, MDT);
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+  Combiner C(PCInfo, &TPC);
+  return C.combineMachineInstrs(MF, CSEInfo);
 }
 
 char AArch64PreLegalizerCombiner::ID = 0;
@@ -182,6 +244,7 @@ INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,
                     false)

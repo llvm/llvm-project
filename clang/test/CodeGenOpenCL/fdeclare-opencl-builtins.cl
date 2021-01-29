@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header %s | FileCheck %s
 
 // Test that Attr.Const from OpenCLBuiltins.td is lowered to a readnone attribute.
 // CHECK-LABEL: @test_const_attr

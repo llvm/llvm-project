@@ -61,8 +61,8 @@ define void @t2() nounwind ssp {
 
 ; ARM-ELF: movw [[REG1:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG1]], :upper16:temp
-; ARM-ELF:      add [[REG1]], r1, #4
-; ARM-ELF-NEXT: add r1, r1, #16
+; ARM-ELF:      add r0, [[REG1]], #4
+; ARM-ELF-NEXT: add r1, [[REG1]], #16
 
 ; ARM: movw r2, #17
 ; ARM: bl {{_?}}memcpy
@@ -106,7 +106,7 @@ define void @t3() nounwind ssp {
 
 ; ARM-ELF: movw [[REG0:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG0]], :upper16:temp
-; ARM-ELF:      add [[REG0]], r1, #4
+; ARM-ELF:      add r0, [[REG0]], #4
 ; ARM-ELF-NEXT: add r1, r1, #16
 
 ; ARM: movw r2, #10

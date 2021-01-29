@@ -8604,16 +8604,20 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // If it is a splat of a double, check if we can shrink it to a 32 bit
   // non-denormal float which when converted back to double gives us the same
-  // double. This is to exploit the XXSPLTIDP instruction.+  // If we lose precision, we use XXSPLTI32DX.
+  // double. This is to exploit the XXSPLTIDP instruction.
+  // If we lose precision, we use XXSPLTI32DX.
   if (BVNIsConstantSplat && (SplatBitSize == 64) &&
       Subtarget.hasPrefixInstrs()) {
-    if (convertToNonDenormSingle(APSplatBits) &&
-        (Op->getValueType(0) == MVT::v2f64)) {
+    // Check the type first to short-circuit so we don't modify APSplatBits if
+    // this block isn't executed.
+    if ((Op->getValueType(0) == MVT::v2f64) &&
+        convertToNonDenormSingle(APSplatBits)) {
       SDValue SplatNode = DAG.getNode(
           PPCISD::XXSPLTI_SP_TO_DP, dl, MVT::v2f64,
           DAG.getTargetConstant(APSplatBits.getZExtValue(), dl, MVT::i32));
       return DAG.getBitcast(Op.getValueType(), SplatNode);
-    } else { // We may lose precision, so we have to use XXSPLTI32DX.
+    } else {
+      // We may lose precision, so we have to use XXSPLTI32DX.
 
       uint32_t Hi =
           (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);

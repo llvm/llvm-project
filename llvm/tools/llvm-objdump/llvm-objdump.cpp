@@ -30,7 +30,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Demangle/Demangle.h"
@@ -50,6 +49,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/FaultMapParser.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
@@ -1479,8 +1479,7 @@ getRelocsMap(object::ObjectFile const &Obj) {
     if (Relocated == Obj.section_end() || !checkSectionFilter(*Relocated).Keep)
       continue;
     std::vector<RelocationRef> &V = Ret[*Relocated];
-    for (const RelocationRef &R : Sec.relocations())
-      V.push_back(R);
+    append_range(V, Sec.relocations());
     // Sort relocations by address.
     llvm::stable_sort(V, isRelocAddressLess);
   }

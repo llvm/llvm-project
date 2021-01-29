@@ -119,8 +119,13 @@ int main(int argc, const char **argv) {
   const char *Overview = "\nThis tool collects the USR name and location "
                          "of external definitions in the source files "
                          "(excluding headers).\n";
-  CommonOptionsParser OptionsParser(argc, argv, ClangExtDefMapGenCategory,
-                                    cl::ZeroOrMore, Overview);
+  auto ExpectedParser = CommonOptionsParser::create(
+      argc, argv, ClangExtDefMapGenCategory, cl::ZeroOrMore, Overview);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &OptionsParser = ExpectedParser.get();
 
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());

@@ -1368,6 +1368,7 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_noreturn: B.addAttribute(Attribute::NoReturn); break;
     case lltok::kw_nosync: B.addAttribute(Attribute::NoSync); break;
     case lltok::kw_nocf_check: B.addAttribute(Attribute::NoCfCheck); break;
+    case lltok::kw_noprofile: B.addAttribute(Attribute::NoProfile); break;
     case lltok::kw_norecurse: B.addAttribute(Attribute::NoRecurse); break;
     case lltok::kw_nounwind: B.addAttribute(Attribute::NoUnwind); break;
     case lltok::kw_null_pointer_is_valid:
@@ -1778,6 +1779,7 @@ bool LLParser::parseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_noinline:
     case lltok::kw_nonlazybind:
     case lltok::kw_nomerge:
+    case lltok::kw_noprofile:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
     case lltok::kw_nocf_check:
@@ -1886,6 +1888,7 @@ bool LLParser::parseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_noinline:
     case lltok::kw_nonlazybind:
     case lltok::kw_nomerge:
+    case lltok::kw_noprofile:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
     case lltok::kw_nocf_check:
@@ -8514,7 +8517,8 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
-      /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
+      GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
+      /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   unsigned InstCount;
   std::vector<FunctionSummary::EdgeTy> Calls;
@@ -8590,7 +8594,8 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
 
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
-      /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
+      GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
+      /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false,
                                         /* WriteOnly */ false,
@@ -8648,7 +8653,8 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   StringRef ModulePath;
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
-      /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
+      GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
+      /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
   if (parseToken(lltok::colon, "expected ':' here") ||
       parseToken(lltok::lparen, "expected '(' here") ||
@@ -9336,8 +9342,9 @@ bool LLParser::parseVFuncId(FunctionSummary::VFuncId &VFuncId,
 
 /// GVFlags
 ///   ::= 'flags' ':' '(' 'linkage' ':' OptionalLinkageAux ','
-///         'notEligibleToImport' ':' Flag ',' 'live' ':' Flag ','
-///         'dsoLocal' ':' Flag ',' 'canAutoHide' ':' Flag ')'
+///         'visibility' ':' Flag 'notEligibleToImport' ':' Flag ','
+///         'live' ':' Flag ',' 'dsoLocal' ':' Flag ','
+///         'canAutoHide' ':' Flag ',' ')'
 bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
   assert(Lex.getKind() == lltok::kw_flags);
   Lex.Lex();
@@ -9357,6 +9364,13 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
       GVFlags.Linkage = parseOptionalLinkageAux(Lex.getKind(), HasLinkage);
       assert(HasLinkage && "Linkage not optional in summary entry");
       Lex.Lex();
+      break;
+    case lltok::kw_visibility:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'"))
+        return true;
+      parseOptionalVisibility(Flag);
+      GVFlags.Visibility = Flag;
       break;
     case lltok::kw_notEligibleToImport:
       Lex.Lex();

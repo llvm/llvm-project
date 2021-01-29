@@ -32,18 +32,18 @@ define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_load_ushort v1, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen offset:2
+; GFX9-NEXT:    buffer_load_ushort v2, v0, s[0:3], 0 offen offset:2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FLASTSCR-LABEL: private_load_2xi16_align2:
 ; GFX9-FLASTSCR:       ; %bb.0:
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v1, v0, off
-; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v0, v0, off offset:2
+; GFX9-FLASTSCR-NEXT:    scratch_load_ushort v2, v0, off offset:2
 ; GFX9-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
 ; GFX9-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
   %p.0 = load i16, i16 addrspace(5)* %p, align 2

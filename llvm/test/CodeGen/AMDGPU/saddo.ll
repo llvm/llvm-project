@@ -58,19 +58,19 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX9-LABEL: saddo_i64_zext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    s_add_u32 s2, s6, s0
+; GFX9-NEXT:    s_add_u32 s0, s6, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s7
-; GFX9-NEXT:    s_addc_u32 s3, s7, s1
-; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[0:1], 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    s_xor_b64 s[0:1], s[8:9], vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX9-NEXT:    s_addc_u32 s1, s7, s3
+; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[2:3], 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    s_xor_b64 s[2:3], s[8:9], vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
@@ -132,14 +132,14 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-LABEL: s_saddo_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    s_add_i32 s1, s0, s1
-; GFX9-NEXT:    v_add_i32 v1, s0, v1 clamp
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s3
+; GFX9-NEXT:    s_add_i32 s0, s2, s3
+; GFX9-NEXT:    v_add_i32 v1, s2, v1 clamp
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, s0, v1
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dword v0, v2, s[4:5]
 ; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]

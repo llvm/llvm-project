@@ -164,7 +164,7 @@ CSProfileGenerator::getFunctionProfileForContext(StringRef ContextStr) {
   if (Ret.second) {
     SampleContext FContext(Ret.first->first(), RawContext);
     FunctionSamples &FProfile = Ret.first->second;
-    FProfile.setName(FContext.getName());
+    FProfile.setName(FContext.getNameWithoutContext());
     FProfile.setContext(FContext);
   }
   return Ret.first->second;

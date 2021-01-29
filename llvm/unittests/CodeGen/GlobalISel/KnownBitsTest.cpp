@@ -701,6 +701,78 @@ TEST_F(AArch64GISelMITest, TestKnownBitsExt) {
   EXPECT_EQ((uint64_t)0xfffffffe, Res.Zero.getZExtValue());
 }
 
+TEST_F(AArch64GISelMITest, TestKnownBitsSextInReg) {
+  StringRef MIRString = R"(
+   ; 000...0001
+   %one:_(s32) = G_CONSTANT i32 1
+
+   ; 000...0010
+   %two:_(s32) = G_CONSTANT i32 2
+
+   ; 000...1010
+   %ten:_(s32) = G_CONSTANT i32 10
+
+   ; ???...????
+   %w0:_(s32) = COPY $w0
+
+   ; ???...?1?
+   %or:_(s32) = G_OR %w0, %two
+
+   ; All bits are known.
+   %inreg1:_(s32) = G_SEXT_INREG %one, 1
+   %copy_inreg1:_(s32) = COPY %inreg1
+
+   ; All bits unknown
+   %inreg2:_(s32) = G_SEXT_INREG %or, 1
+   %copy_inreg2:_(s32) = COPY %inreg2
+
+   ; Extending from the only (known) set bit
+   ; 111...11?
+   %inreg3:_(s32) = G_SEXT_INREG %or, 2
+   %copy_inreg3:_(s32) = COPY %inreg3
+
+   ; Extending from a known set bit, overwriting all of the high set bits.
+   ; 111...1110
+   %inreg4:_(s32) = G_SEXT_INREG %ten, 2
+   %copy_inreg4:_(s32) = COPY %inreg4
+
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  GISelKnownBits Info(*MF);
+  KnownBits Res;
+  auto GetKB = [&](unsigned Idx) {
+    Register CopyReg = Copies[Idx];
+    auto *Copy = MRI->getVRegDef(CopyReg);
+    return Info.getKnownBits(Copy->getOperand(1).getReg());
+  };
+
+  // Every bit is known to be a 1.
+  Res = GetKB(Copies.size() - 4);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_TRUE(Res.isAllOnes());
+
+  // All bits are unknown
+  Res = GetKB(Copies.size() - 3);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_TRUE(Res.isUnknown());
+
+  // Extending from the only known set bit
+  // 111...11?
+  Res = GetKB(Copies.size() - 2);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0xFFFFFFFEu, Res.One.getZExtValue());
+  EXPECT_EQ(0u, Res.Zero.getZExtValue());
+
+  // Extending from a known set bit, overwriting all of the high set bits.
+  // 111...1110
+  Res = GetKB(Copies.size() - 1);
+  EXPECT_EQ(32u, Res.getBitWidth());
+  EXPECT_EQ(0xFFFFFFFEu, Res.One.getZExtValue());
+  EXPECT_EQ(1u, Res.Zero.getZExtValue());
+}
+
 TEST_F(AArch64GISelMITest, TestKnownBitsMergeValues) {
   StringRef MIRString = R"(
    %val0:_(s16) = G_CONSTANT i16 35224
@@ -840,4 +912,68 @@ TEST_F(AArch64GISelMITest, TestInvalidQueries) {
 
   EXPECT_TRUE(BiggerSizeRes.One.isNullValue());
   EXPECT_TRUE(BiggerSizeRes.Zero.isNullValue());
+}
+
+TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
+  StringRef MIRString = R"(
+   %copy:_(s64) = COPY $x0
+
+   %assert8:_(s64) = G_ASSERT_ZEXT %copy, 8
+   %copy_assert8:_(s64) = COPY %assert8
+
+   %assert1:_(s64) = G_ASSERT_ZEXT %copy, 1
+   %copy_assert1:_(s64) = COPY %assert1
+
+   %assert63:_(s64) = G_ASSERT_ZEXT %copy, 63
+   %copy_assert63:_(s64) = COPY %assert63
+
+   %assert3:_(s64) = G_ASSERT_ZEXT %copy, 3
+   %copy_assert3:_(s64) = COPY %assert3
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyAssert8 = Copies[Copies.size() - 4];
+  Register CopyAssert1 = Copies[Copies.size() - 3];
+  Register CopyAssert63 = Copies[Copies.size() - 2];
+  Register CopyAssert3 = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  MachineInstr *Copy;
+  Register SrcReg;
+  KnownBits Res;
+
+  // Assert zero-extension from an 8-bit value.
+  Copy = MRI->getVRegDef(CopyAssert8);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFF00u, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 1-bit value.
+  Copy = MRI->getVRegDef(CopyAssert1);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFFFE, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 63-bit value.
+  Copy = MRI->getVRegDef(CopyAssert63);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0x8000000000000000u, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 3-bit value.
+  Copy = MRI->getVRegDef(CopyAssert3);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
 }

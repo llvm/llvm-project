@@ -10,14 +10,13 @@
 #define LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include <cstdint>
-#include <map>
-#include <vector>
 
 namespace llvm {
 

@@ -455,6 +455,7 @@ static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
   // See if we must truncate the function pointer.
   // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
   // as 64-bit for uniformity with other pointer types.
+  // See also: WebAssemblyFastISel::selectCall
   if (IsIndirect && MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()) {
     Register Reg32 =
         MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);

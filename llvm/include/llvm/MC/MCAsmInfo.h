@@ -406,6 +406,12 @@ protected:
 
   //===--- Integrated Assembler Information ----------------------------===//
 
+  // Generated object files can use all ELF features supported by GNU ld of
+  // this binutils version and later. INT_MAX means all features can be used,
+  // regardless of GNU ld support. The default value is referenced by
+  // clang/Driver/Options.td.
+  std::pair<int, int> BinutilsVersion = {2, 26};
+
   /// Should we use the integrated assembler?
   /// The integrated assembler should be enabled by default (by the
   /// constructors) when failing to parse a valid piece of assembly (inline
@@ -673,8 +679,16 @@ public:
     return InitialFrameState;
   }
 
+  void setBinutilsVersion(std::pair<int, int> Value) {
+    BinutilsVersion = Value;
+  }
+
   /// Return true if assembly (inline or otherwise) should be parsed.
   bool useIntegratedAssembler() const { return UseIntegratedAssembler; }
+
+  bool binutilsIsAtLeast(int Major, int Minor) const {
+    return BinutilsVersion >= std::make_pair(Major, Minor);
+  }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
   virtual void setUseIntegratedAssembler(bool Value) {

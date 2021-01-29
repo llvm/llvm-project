@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-tile-and-pad-pattern -canonicalize
-//| FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns=test-tile-and-pad-pattern -canonicalize | FileCheck %s
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
@@ -19,9 +18,12 @@ func @matmul_tensors(
 //  CHECK-NOT:       linalg.matmul {{.*}} tensor<?x?xf32>
 
 // Padding injects static information.
-//      CHECK:       %[[pA:.*]] = linalg.simple_pad %[[sTA]] pad %{{.*}} : tensor<?x?xf32> to tensor<2x4xf32> pad f32
-//      CHECK:       %[[pB:.*]] = linalg.simple_pad %[[sTB]] pad %{{.*}} : tensor<?x?xf32> to tensor<4x3xf32> pad f32
-//      CHECK:       %[[pC:.*]] = linalg.simple_pad %[[sTC]] pad %{{.*}} : tensor<?x?xf32> to tensor<2x3xf32> pad f32
+//      CHECK:       %[[pA:.*]] = linalg.pad_tensor %[[sTA]] low[%c0, %c0] high[%{{.*}}, %{{.*}}]
+//      CHECK:         : tensor<?x?xf32> to tensor<2x4xf32>
+//      CHECK:       %[[pB:.*]] = linalg.pad_tensor %[[sTB]] low[%c0, %c0] high[%{{.*}}, %{{.*}}]
+//      CHECK:         : tensor<?x?xf32> to tensor<4x3xf32>
+//      CHECK:       %[[pC:.*]] = linalg.pad_tensor %[[sTC]] low[%c0, %c0] high[%{{.*}}, %{{.*}}]
+//      CHECK:         : tensor<?x?xf32> to tensor<2x3xf32>
 //      CHECK:       %[[pD:.*]] = linalg.matmul ins(%[[pA]], %[[pB]] : tensor<2x4xf32>, tensor<4x3xf32>)
 // CHECK-SAME:                                  outs(%[[pC]] : tensor<2x3xf32>)  -> tensor<2x3xf32>
 //      CHECK:       %[[sTD:.*]] = subtensor %[[pD]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : tensor<2x3xf32> to tensor<?x?xf32>

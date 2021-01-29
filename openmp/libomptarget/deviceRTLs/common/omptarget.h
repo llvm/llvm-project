@@ -336,6 +336,10 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 // inlined implementation
 ////////////////////////////////////////////////////////////////////////////////
 
+INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __builtin_ffs(x); }
+
+INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
+
 #include "common/omptargeti.h"
 
 #endif

@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test checks auto-vectorization with FP induction variable.
-; The FP operation is not "fast" and requires "fast-math" function attribute.
+; FMF is required on the IR instructions.
 
 ;void fp_iv_loop1(float * __restrict__ A, int N) {
 ;  float x = 1.0;
@@ -149,7 +149,7 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[FOR_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], float* [[ARRAYIDX]], align 4
-; AUTO_VEC-NEXT:    [[CONV1]] = fadd float [[X_06]], 5.000000e-01
+; AUTO_VEC-NEXT:    [[CONV1]] = fadd fast float [[X_06]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AUTO_VEC-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[ZEXT]]
 ; AUTO_VEC-NEXT:    br i1 [[TMP45]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP4:!llvm.loop !.*]]
@@ -168,7 +168,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %x.06 = phi float [ %conv1, %for.body ], [ 1.000000e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
   store float %x.06, float* %arrayidx, align 4
-  %conv1 = fadd float %x.06, 5.000000e-01
+  %conv1 = fadd fast float %x.06, 5.000000e-01
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %N
@@ -181,7 +181,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-; The same as the previous, FP operation is not fast, different function attribute
+; The same as the previous, but FP operation has no FMF.
 ; Vectorization should be rejected.
 ;void fp_iv_loop2(float * __restrict__ A, int N) {
 ;  float x = 1.0;
@@ -191,7 +191,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ;  }
 ;}
 
-define void @fp_iv_loop2(float* noalias nocapture %A, i32 %N) #1 {
+define void @fp_iv_loop2(float* noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-LABEL: @fp_iv_loop2(
 ; AUTO_VEC-NEXT:  entry:
 ; AUTO_VEC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -538,6 +538,3 @@ for.end:
   %t1 = phi double [ %j, %for.body ]
   ret double %t1
 }
-
-attributes #0 = { "no-nans-fp-math"="true" }
-attributes #1 = { "no-nans-fp-math"="false" }

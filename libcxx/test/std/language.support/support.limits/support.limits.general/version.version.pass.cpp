@@ -67,6 +67,7 @@
     __cpp_lib_execution                            201603L [C++17]
                                                    201902L [C++20]
     __cpp_lib_filesystem                           201703L [C++17]
+    __cpp_lib_format                               201907L [C++20]
     __cpp_lib_gcd_lcm                              201606L [C++17]
     __cpp_lib_generic_associative_lookup           201304L [C++14]
     __cpp_lib_generic_unordered_lookup             201811L [C++20]
@@ -351,6 +352,10 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_format
+#   error "__cpp_lib_format should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -882,6 +887,10 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_format
+#   error "__cpp_lib_format should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -1539,6 +1548,10 @@
 # endif
 # if __cpp_lib_filesystem != 201703L
 #   error "__cpp_lib_filesystem should have the value 201703L in c++17"
+# endif
+
+# ifdef __cpp_lib_format
+#   error "__cpp_lib_format should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
@@ -2580,6 +2593,19 @@
 # endif
 # if __cpp_lib_filesystem != 201703L
 #   error "__cpp_lib_filesystem should have the value 201703L in c++20"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++20"
+#   endif
+#   if __cpp_lib_format != 201907L
+#     error "__cpp_lib_format should have the value 201907L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
@@ -3786,6 +3812,19 @@
 # endif
 # if __cpp_lib_filesystem != 201703L
 #   error "__cpp_lib_filesystem should have the value 201703L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++2b"
+#   endif
+#   if __cpp_lib_format != 201907L
+#     error "__cpp_lib_format should have the value 201907L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_gcd_lcm

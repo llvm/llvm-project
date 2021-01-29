@@ -157,7 +157,7 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
   EXPECT_TRUE(!outputDiagBuffer.empty());
   EXPECT_TRUE(
       llvm::StringRef(outputDiagBuffer.data())
-          .startswith(
+          .contains(
               ":1:14: error: IF statement is not allowed in IF statement\n"));
 }
 } // namespace

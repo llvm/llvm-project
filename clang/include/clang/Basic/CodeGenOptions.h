@@ -128,6 +128,12 @@ public:
   // "none":        Disable sections/labels for basic blocks.
   std::string BBSections;
 
+  // If set, override the default value of MCAsmInfo::BinutilsVersion. If
+  // DisableIntegratedAS is specified, the assembly output will consider GNU as
+  // support. "none" means that all ELF features can be used, regardless of
+  // binutils support.
+  std::string BinutilsVersion;
+
   enum class FramePointerKind {
     None,        // Omit all frame pointers.
     NonLeaf,     // Keep non-leaf frame pointers.

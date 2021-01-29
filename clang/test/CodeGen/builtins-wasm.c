@@ -976,6 +976,18 @@ u64x2 widen_high_u_i32x4_i64x2(u32x4 x) {
   // WEBASSEMBLY: ret
 }
 
+i32x4 widen_s_i8x16_i32x4(i8x16 x) {
+  return __builtin_wasm_widen_s_i8x16_i32x4(x, 3);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.signed(<16 x i8> %x, i32 3)
+  // WEBASSEMBLY: ret
+}
+
+u32x4 widen_u_i8x16_i32x4(u8x16 x) {
+  return __builtin_wasm_widen_u_i8x16_i32x4(x, 3);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.unsigned(<16 x i8> %x, i32 3)
+  // WEBASSEMBLY: ret
+}
+
 f64x2 convert_low_s_i32x4_f64x2(i32x4 x) {
   return __builtin_wasm_convert_low_s_i32x4_f64x2(x);
   // WEBASSEMBLY: call <2 x double> @llvm.wasm.convert.low.signed(<4 x i32> %x)

@@ -256,7 +256,7 @@ void UseAfterMoveFinder::getDeclRefs(
     if (!S)
       continue;
 
-    auto addDeclRefs = [this, Block,
+    auto AddDeclRefs = [this, Block,
                         DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
@@ -275,9 +275,9 @@ void UseAfterMoveFinder::getDeclRefs(
                                       unless(inDecltypeOrTemplateArg()))
                               .bind("declref");
 
-    addDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
+    AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
-    addDeclRefs(match(findAll(cxxOperatorCallExpr(
+    AddDeclRefs(match(findAll(cxxOperatorCallExpr(
                                   hasAnyOverloadedOperatorName("*", "->", "[]"),
                                   hasArgument(0, DeclRefMatcher))
                                   .bind("operator")),
@@ -448,9 +448,9 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Arg->getDecl()->getDeclContext()->isFunctionOrMethod())
     return;
 
-  UseAfterMoveFinder finder(Result.Context);
+  UseAfterMoveFinder Finder(Result.Context);
   UseAfterMove Use;
-  if (finder.find(FunctionBody, MovingCall, Arg->getDecl(), &Use))
+  if (Finder.find(FunctionBody, MovingCall, Arg->getDecl(), &Use))
     emitDiagnostic(MovingCall, Arg, Use, this, Result.Context);
 }
 

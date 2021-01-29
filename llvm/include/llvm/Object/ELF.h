@@ -217,6 +217,8 @@ public:
   Expected<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section,
                                              Elf_Shdr_Range Sections) const;
 
+  Expected<uint64_t> getDynSymtabSize() const;
+
   StringRef getRelocationTypeName(uint32_t Type) const;
   void getRelocationTypeName(uint32_t Type,
                              SmallVectorImpl<char> &Result) const;
@@ -649,6 +651,99 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
     return createError("section header string table index " + Twine(Index) +
                        " does not exist");
   return getStringTable(Sections[Index], WarnHandler);
+}
+
+/// This function finds the number of dynamic symbols using a GNU hash table.
+///
+/// @param Table The GNU hash table for .dynsym.
+template <class ELFT>
+static Expected<uint64_t>
+getDynSymtabSizeFromGnuHash(const typename ELFT::GnuHash &Table,
+                            const void *BufEnd) {
+  using Elf_Word = typename ELFT::Word;
+  if (Table.nbuckets == 0)
+    return Table.symndx + 1;
+  uint64_t LastSymIdx = 0;
+  // Find the index of the first symbol in the last chain.
+  for (Elf_Word Val : Table.buckets())
+    LastSymIdx = std::max(LastSymIdx, (uint64_t)Val);
+  const Elf_Word *It =
+      reinterpret_cast<const Elf_Word *>(Table.values(LastSymIdx).end());
+  // Locate the end of the chain to find the last symbol index.
+  while (It < BufEnd && (*It & 1) == 0) {
+    ++LastSymIdx;
+    ++It;
+  }
+  if (It >= BufEnd) {
+    return createStringError(
+        object_error::parse_failed,
+        "no terminator found for GNU hash section before buffer end");
+  }
+  return LastSymIdx + 1;
+}
+
+/// This function determines the number of dynamic symbols. It reads section
+/// headers first. If section headers are not available, the number of
+/// symbols will be inferred by parsing dynamic hash tables.
+template <class ELFT>
+Expected<uint64_t> ELFFile<ELFT>::getDynSymtabSize() const {
+  // Read .dynsym section header first if available.
+  Expected<Elf_Shdr_Range> SectionsOrError = sections();
+  if (!SectionsOrError)
+    return SectionsOrError.takeError();
+  for (const Elf_Shdr &Sec : *SectionsOrError) {
+    if (Sec.sh_type == ELF::SHT_DYNSYM) {
+      if (Sec.sh_size % Sec.sh_entsize != 0) {
+        return createStringError(object_error::parse_failed,
+                                 "SHT_DYNSYM section has sh_size (" +
+                                     Twine(Sec.sh_size) + ") % sh_entsize (" +
+                                     Twine(Sec.sh_entsize) + ") that is not 0");
+      }
+      return Sec.sh_size / Sec.sh_entsize;
+    }
+  }
+
+  if (!SectionsOrError->empty()) {
+    // Section headers are available but .dynsym header is not found.
+    // Return 0 as .dynsym does not exist.
+    return 0;
+  }
+
+  // Section headers do not exist. Falling back to infer
+  // upper bound of .dynsym from .gnu.hash and .hash.
+  Expected<Elf_Dyn_Range> DynTable = dynamicEntries();
+  if (!DynTable)
+    return DynTable.takeError();
+  llvm::Optional<uint64_t> ElfHash;
+  llvm::Optional<uint64_t> ElfGnuHash;
+  for (const Elf_Dyn &Entry : *DynTable) {
+    switch (Entry.d_tag) {
+    case ELF::DT_HASH:
+      ElfHash = Entry.d_un.d_ptr;
+      break;
+    case ELF::DT_GNU_HASH:
+      ElfGnuHash = Entry.d_un.d_ptr;
+      break;
+    }
+  }
+  if (ElfGnuHash) {
+    Expected<const uint8_t *> TablePtr = toMappedAddr(*ElfGnuHash);
+    if (!TablePtr)
+      return TablePtr.takeError();
+    const Elf_GnuHash *Table =
+        reinterpret_cast<const Elf_GnuHash *>(TablePtr.get());
+    return getDynSymtabSizeFromGnuHash<ELFT>(*Table, this->Buf.bytes_end());
+  }
+
+  // Search SYSV hash table to try to find the upper bound of dynsym.
+  if (ElfHash) {
+    Expected<const uint8_t *> TablePtr = toMappedAddr(*ElfHash);
+    if (!TablePtr)
+      return TablePtr.takeError();
+    const Elf_Hash *Table = reinterpret_cast<const Elf_Hash *>(TablePtr.get());
+    return Table->nchain;
+  }
+  return 0;
 }
 
 template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}

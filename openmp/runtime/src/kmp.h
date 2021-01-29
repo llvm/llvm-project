@@ -595,6 +595,32 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #include <pthread.h>
 #endif
 
+enum kmp_hw_t : int {
+  KMP_HW_UNKNOWN = -1,
+  KMP_HW_MACHINE = 0,
+  KMP_HW_SOCKET,
+  KMP_HW_PROC_GROUP,
+  KMP_HW_NUMA,
+  KMP_HW_DIE,
+  KMP_HW_L3,
+  KMP_HW_TILE,
+  KMP_HW_MODULE,
+  KMP_HW_L2,
+  KMP_HW_L1,
+  KMP_HW_CORE,
+  KMP_HW_THREAD,
+  KMP_HW_LAST
+};
+
+#define KMP_ASSERT_VALID_HW_TYPE(type)                                         \
+  KMP_DEBUG_ASSERT(type >= (kmp_hw_t)0 && type < KMP_HW_LAST)
+
+#define KMP_FOREACH_HW_TYPE(type)                                              \
+  for (kmp_hw_t type = (kmp_hw_t)0; type < KMP_HW_LAST;                        \
+       type = (kmp_hw_t)((int)type + 1))
+
+const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural = false);
+
 /* Only Linux* OS and Windows* OS support thread affinity. */
 #if KMP_AFFINITY_SUPPORTED
 
@@ -763,6 +789,7 @@ enum affinity_gran {
   affinity_gran_thread,
   affinity_gran_core,
   affinity_gran_tile,
+  affinity_gran_die,
   affinity_gran_numa,
   affinity_gran_package,
   affinity_gran_node,
@@ -779,6 +806,7 @@ enum affinity_top_method {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   affinity_top_method_apicid,
   affinity_top_method_x2apicid,
+  affinity_top_method_x2apicid_1f,
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
   affinity_top_method_cpuinfo, // KMP_CPUINFO_FILE is usable on Windows* OS, too
 #if KMP_GROUP_AFFINITY
@@ -863,6 +891,7 @@ typedef struct kmp_hws_item {
 } kmp_hws_item_t;
 
 extern kmp_hws_item_t __kmp_hws_socket;
+extern kmp_hws_item_t __kmp_hws_die;
 extern kmp_hws_item_t __kmp_hws_node;
 extern kmp_hws_item_t __kmp_hws_tile;
 extern kmp_hws_item_t __kmp_hws_core;

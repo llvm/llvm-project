@@ -228,8 +228,8 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX9-PAL-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-PAL-NEXT:    s_mov_b32 s4, s0
 ; GFX9-PAL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    v_mov_b32_e32 v0, 15
+; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s4, s3
@@ -825,8 +825,8 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX9-PAL-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-PAL-NEXT:    s_mov_b32 s4, s0
 ; GFX9-PAL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_mov_b32 vcc_hi, 0
+; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s4, s3
@@ -1456,8 +1456,8 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX9-PAL-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-PAL-NEXT:    s_mov_b32 s4, s0
 ; GFX9-PAL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_mov_b32 vcc_hi, 0
+; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s4, s3
@@ -2013,8 +2013,8 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ; GFX9-PAL-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-PAL-NEXT:    s_mov_b32 s4, s0
 ; GFX9-PAL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    v_mov_b32_e32 v1, 4
+; GFX9-PAL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-PAL-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s4, s3

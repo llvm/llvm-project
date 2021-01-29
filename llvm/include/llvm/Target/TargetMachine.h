@@ -376,6 +376,8 @@ public:
   /// The integer bit size to use for SjLj based exception handling.
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
+
+  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 };
 
 /// This class describes a target machine that is implemented with the LLVM

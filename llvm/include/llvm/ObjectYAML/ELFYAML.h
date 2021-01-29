@@ -296,12 +296,14 @@ struct SectionHeaderTable : Chunk {
   Optional<bool> NoHeaders;
 
   size_t getNumHeaders(size_t SectionsNum) const {
-    if (IsImplicit)
+    if (IsImplicit || isDefault())
       return SectionsNum;
     if (NoHeaders)
       return (*NoHeaders) ? 0 : SectionsNum;
     return (Sections ? Sections->size() : 0) + /*Null section*/ 1;
   }
+
+  bool isDefault() const { return !Sections && !Excluded && !NoHeaders; }
 
   static constexpr StringRef TypeStr = "SectionHeaderTable";
 };

@@ -777,8 +777,9 @@ namespace llvm {
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definitions to linkage unit visibility in
 /// Module IR (for regular or hybrid LTO).
-void updateVCallVisibilityInModule(Module &M,
-                                   bool WholeProgramVisibilityEnabledInLTO) {
+void updateVCallVisibilityInModule(
+    Module &M, bool WholeProgramVisibilityEnabledInLTO,
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
   for (GlobalVariable &GV : M.globals())
@@ -786,22 +787,29 @@ void updateVCallVisibilityInModule(Module &M,
     // the vtable definitions. We won't have an existing vcall_visibility
     // metadata on vtable definitions with public visibility.
     if (GV.hasMetadata(LLVMContext::MD_type) &&
-        GV.getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
+        GV.getVCallVisibility() == GlobalObject::VCallVisibilityPublic &&
+        // Don't upgrade the visibility for symbols exported to the dynamic
+        // linker, as we have no information on their eventual use.
+        !DynamicExportSymbols.count(GV.getGUID()))
       GV.setVCallVisibilityMetadata(GlobalObject::VCallVisibilityLinkageUnit);
 }
 
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definition summaries to linkage unit
 /// visibility in Module summary index (for ThinLTO).
-void updateVCallVisibilityInIndex(ModuleSummaryIndex &Index,
-                                  bool WholeProgramVisibilityEnabledInLTO) {
+void updateVCallVisibilityInIndex(
+    ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
   for (auto &P : Index) {
     for (auto &S : P.second.SummaryList) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar || GVar->vTableFuncs().empty() ||
-          GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
+          GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic ||
+          // Don't upgrade the visibility for symbols exported to the dynamic
+          // linker, as we have no information on their eventual use.
+          DynamicExportSymbols.count(P.first))
         continue;
       GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
     }

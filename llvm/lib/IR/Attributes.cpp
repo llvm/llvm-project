@@ -403,6 +403,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "nocf_check";
   if (hasAttribute(Attribute::NoRecurse))
     return "norecurse";
+  if (hasAttribute(Attribute::NoProfile))
+    return "noprofile";
   if (hasAttribute(Attribute::NoUnwind))
     return "nounwind";
   if (hasAttribute(Attribute::OptForFuzzing))

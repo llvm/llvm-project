@@ -37,10 +37,6 @@
 using namespace clang;
 using namespace tidy;
 
-#ifdef LLVM_CLANG_AST_ATTR_H
-//#error
-#endif
-
 namespace {
 class ClangTidyDiagnosticRenderer : public DiagnosticRenderer {
 public:
