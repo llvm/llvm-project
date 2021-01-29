@@ -1142,13 +1142,16 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     }
   }
 
-  if ((Symflags & object::SymbolRef::SF_Weak) && !isa<MachOObjectFile>(Obj)) {
-    char Ret = isObject(Obj, I) ? 'v' : 'w';
-    return (!(Symflags & object::SymbolRef::SF_Undefined)) ? toupper(Ret) : Ret;
+  if (Symflags & object::SymbolRef::SF_Undefined) {
+    if (isa<MachOObjectFile>(Obj) || !(Symflags & object::SymbolRef::SF_Weak))
+      return 'U';
+    return isObject(Obj, I) ? 'v' : 'w';
   }
-
-  if (Symflags & object::SymbolRef::SF_Undefined)
-    return 'U';
+  if (ELFObjectFileBase *ELF = dyn_cast<ELFObjectFileBase>(&Obj))
+    if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
+      return 'i';
+  if (!isa<MachOObjectFile>(Obj) && (Symflags & object::SymbolRef::SF_Weak))
+    return isObject(Obj, I) ? 'V' : 'W';
 
   if (Symflags & object::SymbolRef::SF_Common)
     return 'C';
@@ -1169,8 +1172,6 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
   else if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
     Ret = getSymbolNMTypeChar(*Tapi, I);
   else if (ELFObjectFileBase *ELF = dyn_cast<ELFObjectFileBase>(&Obj)) {
-    if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
-      return 'i';
     Ret = getSymbolNMTypeChar(*ELF, I);
     if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
       return Ret;

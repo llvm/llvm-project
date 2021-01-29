@@ -57,6 +57,25 @@ func @pad_asymmetrical(%arg0: tensor<2x3xf32>, %ub0: index, %ub1: index,
 
 // -----
 
+func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
+                         %pad_value: f32) -> tensor<2x3xf32> {
+  %0 = linalg.pad_tensor %arg0 low[0, 0] high[%ub0, %ub1] {
+    ^bb0(%arg1: index, %arg2: index):
+      linalg.yield %pad_value : f32
+    } : tensor<?x?xf32> to tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+// CHECK-LABEL: func @pad_to_static_size
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB0:[a-zA-Z0-9_]*]]
+//  CHECK-SAME: %[[UB1:[a-zA-Z0-9_]*]]
+//       CHECK:   linalg.pad_tensor %[[ARG0]]
+//  CHECK-SAME:     low[0, 0]
+//  CHECK-SAME:     high[%[[UB0]], %[[UB1]]]
+//       CHECK:    : tensor<?x?xf32> to tensor<2x3xf32>
+
+// -----
+
 func @range(%arg0: index, %arg1: index, %arg2: index) {
   %0 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
   return

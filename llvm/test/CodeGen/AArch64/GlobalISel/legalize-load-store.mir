@@ -302,3 +302,96 @@ body:             |
     G_STORE %1(<8 x s8>), %0(p0) :: (store 8)
     RET_ReallyLR
 ...
+---
+name:            store_32xs8
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_32xs8
+    ; CHECK: liveins: $x0
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<16 x s8>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[BUILD_VECTOR1]](<16 x s8>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %val:_(<32 x s8>) = G_IMPLICIT_DEF
+    %ptr:_(p0) = COPY $x0
+    G_STORE %val(<32 x s8>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            store_16xs16
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_16xs16
+    ; CHECK: liveins: $x0
+    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<8 x s16>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[BUILD_VECTOR1]](<8 x s16>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %val:_(<16 x s16>) = G_IMPLICIT_DEF
+    %ptr:_(p0) = COPY $x0
+    G_STORE %val(<16 x s16>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            store_8xs32
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_8xs32
+    ; CHECK: liveins: $x0
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<4 x s32>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[BUILD_VECTOR1]](<4 x s32>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %val:_(<8 x s32>) = G_IMPLICIT_DEF
+    %ptr:_(p0) = COPY $x0
+    G_STORE %val(<8 x s32>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            store_4xs64
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_4xs64
+    ; CHECK: liveins: $x0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[DEF]](<2 x s64>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[DEF]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %val:_(<4 x s64>) = G_IMPLICIT_DEF
+    %ptr:_(p0) = COPY $x0
+    G_STORE %val(<4 x s64>), %ptr(p0) :: (store 32)
+    RET_ReallyLR

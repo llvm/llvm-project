@@ -62,7 +62,7 @@ public:
     Dict.handle("CompileFlags", [&](Node &N) { parse(F.CompileFlags, N); });
     Dict.handle("Index", [&](Node &N) { parse(F.Index, N); });
     Dict.handle("Style", [&](Node &N) { parse(F.Style, N); });
-    Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
+    Dict.handle("Diagnostics", [&](Node &N) { parse(F.Diagnostics, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -110,7 +110,17 @@ private:
     Dict.parse(N);
   }
 
-  void parse(Fragment::ClangTidyBlock &F, Node &N) {
+  void parse(Fragment::DiagnosticsBlock &F, Node &N) {
+    DictParser Dict("Diagnostics", this);
+    Dict.handle("Suppress", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.Suppress = std::move(*Values);
+    });
+    Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::DiagnosticsBlock::ClangTidyBlock &F, Node &N) {
     DictParser Dict("ClangTidy", this);
     Dict.handle("Add", [&](Node &N) {
       if (auto Values = scalarValues(N))

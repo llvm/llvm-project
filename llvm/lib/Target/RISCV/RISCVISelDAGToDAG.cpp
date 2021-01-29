@@ -17,6 +17,7 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -225,7 +226,7 @@ void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo,
 void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node) {
   SDLoc DL(Node);
   unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
-  unsigned NF = Node->getNumValues() - 2; // Do not count Chain and Glue.
+  unsigned NF = Node->getNumValues() - 2; // Do not count VL and Chain.
   EVT VT = Node->getValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
   MVT XLenVT = Subtarget->getXLenVT();
@@ -241,21 +242,24 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node) {
       static_cast<unsigned>(RISCVVLMUL::LMUL_1));
   SDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other,
                                         MVT::Glue, Operands);
+  SDNode *ReadVL = CurDAG->getMachineNode(RISCV::PseudoReadVL, DL, XLenVT,
+                                          /*Glue*/ SDValue(Load, 2));
+
   SDValue SuperReg = SDValue(Load, 0);
   for (unsigned I = 0; I < NF; ++I)
     ReplaceUses(SDValue(Node, I),
                 CurDAG->getTargetExtractSubreg(getSubregIndexByEVT(VT, I), DL,
                                                VT, SuperReg));
 
-  ReplaceUses(SDValue(Node, NF), SDValue(Load, 1));     // Chain.
-  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 2)); // Glue.
+  ReplaceUses(SDValue(Node, NF), SDValue(ReadVL, 0));   // VL
+  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 1)); // Chain
   CurDAG->RemoveDeadNode(Node);
 }
 
 void RISCVDAGToDAGISel::selectVLSEGFFMask(SDNode *Node) {
   SDLoc DL(Node);
   unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
-  unsigned NF = Node->getNumValues() - 2; // Do not count Chain and Glue.
+  unsigned NF = Node->getNumValues() - 2; // Do not count VL and Chain.
   EVT VT = Node->getValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
   MVT XLenVT = Subtarget->getXLenVT();
@@ -275,14 +279,17 @@ void RISCVDAGToDAGISel::selectVLSEGFFMask(SDNode *Node) {
       static_cast<unsigned>(RISCVVLMUL::LMUL_1));
   SDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other,
                                         MVT::Glue, Operands);
+  SDNode *ReadVL = CurDAG->getMachineNode(RISCV::PseudoReadVL, DL, XLenVT,
+                                          /*Glue*/ SDValue(Load, 2));
+
   SDValue SuperReg = SDValue(Load, 0);
   for (unsigned I = 0; I < NF; ++I)
     ReplaceUses(SDValue(Node, I),
                 CurDAG->getTargetExtractSubreg(getSubregIndexByEVT(VT, I), DL,
                                                VT, SuperReg));
 
-  ReplaceUses(SDValue(Node, NF), SDValue(Load, 1));     // Chain.
-  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 2)); // Glue.
+  ReplaceUses(SDValue(Node, NF), SDValue(ReadVL, 0));   // VL
+  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 1)); // Chain
   CurDAG->RemoveDeadNode(Node);
 }
 
@@ -680,6 +687,26 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       selectVLXSEGMask(Node, IntNo);
       return;
     }
+    case Intrinsic::riscv_vlseg8ff:
+    case Intrinsic::riscv_vlseg7ff:
+    case Intrinsic::riscv_vlseg6ff:
+    case Intrinsic::riscv_vlseg5ff:
+    case Intrinsic::riscv_vlseg4ff:
+    case Intrinsic::riscv_vlseg3ff:
+    case Intrinsic::riscv_vlseg2ff: {
+      selectVLSEGFF(Node);
+      return;
+    }
+    case Intrinsic::riscv_vlseg8ff_mask:
+    case Intrinsic::riscv_vlseg7ff_mask:
+    case Intrinsic::riscv_vlseg6ff_mask:
+    case Intrinsic::riscv_vlseg5ff_mask:
+    case Intrinsic::riscv_vlseg4ff_mask:
+    case Intrinsic::riscv_vlseg3ff_mask:
+    case Intrinsic::riscv_vlseg2ff_mask: {
+      selectVLSEGFFMask(Node);
+      return;
+    }
     }
     break;
   }
@@ -763,14 +790,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case RISCVISD::VLSEGFF: {
-    selectVLSEGFF(Node);
-    return;
-  }
-  case RISCVISD::VLSEGFF_MASK: {
-    selectVLSEGFFMask(Node);
-    return;
-  }
   }
 
   // Select the default instruction.
@@ -801,6 +820,21 @@ bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
     return true;
   }
   return false;
+}
+
+// Helper to detect unneeded and instructions on shift amounts. Called
+// from PatFrags in tablegen.
+bool RISCVDAGToDAGISel::isUnneededShiftMask(SDNode *N, unsigned Width) const {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
+  assert(Width >= 5 && N->getValueSizeInBits(0) >= (1ULL << Width) &&
+         "Unexpected width");
+  const APInt &Val = N->getConstantOperandAPInt(1);
+
+  if (Val.countTrailingOnes() >= Width)
+    return true;
+
+  APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+  return Mask.countTrailingOnes() >= Width;
 }
 
 // Match (srl (and val, mask), imm) where the result would be a

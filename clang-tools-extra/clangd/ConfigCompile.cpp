@@ -189,7 +189,6 @@ struct FragmentCompiler {
     compile(std::move(F.CompileFlags));
     compile(std::move(F.Index));
     compile(std::move(F.Diagnostics));
-    compile(std::move(F.ClangTidy));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -379,6 +378,8 @@ struct FragmentCompiler {
         for (llvm::StringRef N : Normalized)
           C.Diagnostics.Suppress.insert(N);
       });
+
+    compile(std::move(F.ClangTidy));
   }
 
   void compile(Fragment::StyleBlock &&F) {
@@ -422,7 +423,7 @@ struct FragmentCompiler {
     CurSpec += Str;
   }
 
-  void compile(Fragment::ClangTidyBlock &&F) {
+  void compile(Fragment::DiagnosticsBlock::ClangTidyBlock &&F) {
     std::string Checks;
     for (auto &CheckGlob : F.Add)
       appendTidyCheckSpec(Checks, CheckGlob, true);
@@ -433,8 +434,9 @@ struct FragmentCompiler {
     if (!Checks.empty())
       Out.Apply.push_back(
           [Checks = std::move(Checks)](const Params &, Config &C) {
-            C.ClangTidy.Checks.append(
-                Checks, C.ClangTidy.Checks.empty() ? /*skip comma*/ 1 : 0,
+            C.Diagnostics.ClangTidy.Checks.append(
+                Checks,
+                C.Diagnostics.ClangTidy.Checks.empty() ? /*skip comma*/ 1 : 0,
                 std::string::npos);
           });
     if (!F.CheckOptions.empty()) {
@@ -445,8 +447,8 @@ struct FragmentCompiler {
       Out.Apply.push_back(
           [CheckOptions = std::move(CheckOptions)](const Params &, Config &C) {
             for (auto &StringPair : CheckOptions)
-              C.ClangTidy.CheckOptions.insert_or_assign(StringPair.first,
-                                                        StringPair.second);
+              C.Diagnostics.ClangTidy.CheckOptions.insert_or_assign(
+                  StringPair.first, StringPair.second);
           });
     }
   }

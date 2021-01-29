@@ -99,6 +99,7 @@ set(files
   fenv.h
   filesystem
   float.h
+  format
   forward_list
   fstream
   functional

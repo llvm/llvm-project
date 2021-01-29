@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
+#include "target_interface.h"
 #include "target_impl.h"
 
 // Partially derived fom hcc_detail/device_functions.h

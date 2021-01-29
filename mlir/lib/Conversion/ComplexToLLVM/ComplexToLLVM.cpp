@@ -286,12 +286,13 @@ void ConvertComplexToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect using the converter defined above.
   OwningRewritePatternList patterns;
   LLVMTypeConverter converter(&getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns);
   populateComplexToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-  if (failed(applyFullConversion(module, target, std::move(patterns))))
+  target.addLegalOp<ModuleOp, FuncOp>();
+  target.addLegalOp<LLVM::DialectCastOp>();
+  target.addIllegalDialect<complex::ComplexDialect>();
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

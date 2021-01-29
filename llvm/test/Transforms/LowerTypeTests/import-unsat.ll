@@ -5,6 +5,7 @@
 ; SUMMARY:      GlobalValueMap:
 ; SUMMARY-NEXT:   42:
 ; SUMMARY-NEXT:    - Linkage:             0
+; SUMMARY-NEXT:      Visibility:          0
 ; SUMMARY-NEXT:      NotEligibleToImport: false
 ; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      Local:               false

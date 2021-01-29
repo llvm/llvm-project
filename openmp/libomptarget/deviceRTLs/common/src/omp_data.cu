@@ -37,7 +37,12 @@ omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
     omptarget_nvptx_device_State[MAX_SM];
 
 #else
-
+#if 0
+// OpenMP will try to call its ctor if we don't add the attribute explicitly
+[[clang::loader_uninitialized]] DEVICE
+    omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
+        omptarget_nvptx_device_State[MAX_SM];
+#endif
 __attribute__((used))
 EXTERN uint64_t const constexpr omptarget_nvptx_device_State_size =
     sizeof(omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext,
@@ -57,7 +62,8 @@ DEVICE uint32_t SHARED(usedMemIdx);
 DEVICE uint32_t SHARED(usedSlotIdx);
 
 #ifdef _OPENMP
-DEVICE [[clang::loader_uninitialized]] uint8_t
+// SHARED doesn't work with array so we add the attribute explicitly.
+[[clang::loader_uninitialized]] DEVICE uint8_t
     parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
 #pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
 #else

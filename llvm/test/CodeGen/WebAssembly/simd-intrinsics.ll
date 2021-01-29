@@ -586,6 +586,27 @@ define <4 x i32> @trunc_sat_zero_unsigned_v4i32(<2 x double> %a) {
   ret <4 x i32> %v
 }
 
+
+; CHECK-LABEL: widen_signed_v4i32:
+; SIMD128-NEXT: .functype widen_signed_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_i8x16_s $push[[R:[0-9]+]]=, $0, 1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.signed(<16 x i8>, i32 immarg)
+define <4 x i32> @widen_signed_v4i32(<16 x i8> %x) {
+  %v = call <4 x i32> @llvm.wasm.widen.signed(<16 x i8> %x, i32 1)
+  ret <4 x i32> %v
+}
+
+; CHECK-LABEL: widen_unsigned_v4i32:
+; SIMD128-NEXT: .functype widen_unsigned_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_i8x16_u $push[[R:[0-9]+]]=, $0, 1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.unsigned(<16 x i8>, i32 immarg)
+define <4 x i32> @widen_unsigned_v4i32(<16 x i8> %x) {
+  %v = call <4 x i32> @llvm.wasm.widen.unsigned(<16 x i8> %x, i32 1)
+  ret <4 x i32> %v
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================

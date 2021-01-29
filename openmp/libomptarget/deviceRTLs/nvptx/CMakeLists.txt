@@ -10,6 +10,15 @@
 #
 ##===----------------------------------------------------------------------===##
 
+# By default we will not build NVPTX deviceRTL on a non-CUDA
+set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
+  "Whether build NVPTX deviceRTL on non-CUDA system.")
+
+if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
+  libomptarget_say("Not building NVPTX deviceRTL by default on non-CUDA system.")
+  return()
+endif()
+
 # Check if we can create an LLVM bitcode implementation of the runtime library
 # that could be inlined in the user application. For that we need to find
 # a Clang compiler capable of compiling our CUDA files to LLVM bitcode and
@@ -117,14 +126,14 @@ set(cuda_src_files
 )
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -S -x c++
-              -target nvptx64
-              -Xclang -emit-llvm-bc
-              -Xclang -aux-triple -Xclang ${aux_triple}
-              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
-              -D__CUDACC__
-              -I${devicertl_base_directory}
-              -I${devicertl_nvptx_directory}/src)
+set(bc_flags -S -x c++ -O1 -std=c++14
+             -target nvptx64
+             -Xclang -emit-llvm-bc
+             -Xclang -aux-triple -Xclang ${aux_triple}
+             -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
+             -D__CUDACC__
+             -I${devicertl_base_directory}
+             -I${devicertl_nvptx_directory}/src)
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})
   list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=-1)

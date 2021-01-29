@@ -155,16 +155,16 @@ def print_discovered(tests, show_suites, show_tests):
 
 
 def determine_order(tests, order):
-    assert order in ['default', 'random', 'failing-first']
-    if order == 'default':
+    from lit.cl_arguments import TestOrder
+    if order == TestOrder.EARLY_TESTS_THEN_BY_NAME:
         tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
-    elif order == 'random':
-        import random
-        random.shuffle(tests)
-    else:
+    elif order == TestOrder.FAILING_FIRST:
         def by_mtime(test):
             return os.path.getmtime(test.getFilePath())
         tests.sort(key=by_mtime, reverse=True)
+    elif order == TestOrder.RANDOM:
+        import random
+        random.shuffle(tests)
 
 
 def touch_file(test):
@@ -203,7 +203,7 @@ def run_tests(tests, lit_config, opts, discovered_tests):
 
     def progress_callback(test):
         display.update(test)
-        if opts.order == 'failing-first':
+        if opts.order == lit.cl_arguments.TestOrder.FAILING_FIRST:
             touch_file(test)
 
     run = lit.run.Run(tests, lit_config, workers, progress_callback,

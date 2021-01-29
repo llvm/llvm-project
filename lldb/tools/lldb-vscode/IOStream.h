@@ -9,7 +9,9 @@
 #ifndef LLDB_TOOLS_LLDB_VSCODE_IOSTREAM_H
 #define LLDB_TOOLS_LLDB_VSCODE_IOSTREAM_H
 
-#if defined(_WIN32)
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+
+#if !LLVM_ON_UNIX
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
 // We also need to #undef GetObject (which is defined to GetObjectW) because

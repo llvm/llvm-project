@@ -40,6 +40,18 @@ constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
 
+GlobalValue::VisibilityTypes ValueInfo::getELFVisibility() const {
+  bool HasProtected = false;
+  for (const auto &S : make_pointee_range(getSummaryList())) {
+    if (S.getVisibility() == GlobalValue::HiddenVisibility)
+      return GlobalValue::HiddenVisibility;
+    if (S.getVisibility() == GlobalValue::ProtectedVisibility)
+      HasProtected = true;
+  }
+  return HasProtected ? GlobalValue::ProtectedVisibility
+                      : GlobalValue::DefaultVisibility;
+}
+
 bool ValueInfo::isDSOLocal() const {
   // Need to check all summaries are local in case of hash collisions.
   return getSummaryList().size() &&
@@ -564,6 +576,8 @@ void ModuleSummaryIndex::exportToDot(
         if (Flags.Live && hasConstantFlag(SummaryIt.second))
           A.addComment("constant");
       }
+      if (Flags.Visibility)
+        A.addComment("visibility");
       if (Flags.DSOLocal)
         A.addComment("dsoLocal");
       if (Flags.CanAutoHide)

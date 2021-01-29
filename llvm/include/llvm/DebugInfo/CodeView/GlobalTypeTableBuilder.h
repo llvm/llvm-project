@@ -21,7 +21,6 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace llvm {
 namespace codeview {

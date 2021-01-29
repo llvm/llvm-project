@@ -1,18 +1,22 @@
 ; Test for CSSPGO's SampleContextTracker to make sure context profile tree is promoted and merged properly
 ; based on inline decision, so post inline counts are accurate.
 
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/profile-context-tracker.prof -o %t
+
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
 ; Testwe we inlined the following in top-down order and entry counts accurate reflects post-inline base profile
 ;   main:3 @ _Z5funcAi
 ;   main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
 ;   _Z5funcBi:1 @ _Z8funcLeafi
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-sample-accurate -S | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -profile-sample-accurate -S | FileCheck %s --check-prefix=INLINE-ALL
 
 ; Testwe we inlined the following in top-down order and entry counts accurate reflects post-inline base profile
 ;   main:3 @ _Z5funcAi
 ;   _Z5funcAi:1 @ _Z8funcLeafi
 ;   _Z5funcBi:1 @ _Z8funcLeafi
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-sample-accurate -S | FileCheck %s --check-prefix=INLINE-HOT
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -profile-sample-accurate -S | FileCheck %s --check-prefix=INLINE-HOT
 
 
 @factor = dso_local global i32 3, align 4, !dbg !0

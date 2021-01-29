@@ -27,4 +27,5 @@ add_executable(openmp-offloading-server
 target_link_libraries(openmp-offloading-server
         grpc++
         protobuf
+        ${OPENMP_PTHREAD_LIB}
         "-ldl" "-lomp" "-fopenmp" "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports" ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES})

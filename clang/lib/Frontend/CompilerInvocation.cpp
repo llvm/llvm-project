@@ -400,6 +400,23 @@ static T extractMaskValue(T KeyPath) {
             MERGER(KEYPATH, static_cast<decltype(KEYPATH)>(*MaybeValue));      \
   }
 
+// Capture the extracted value as a lambda argument to avoid potential issues
+// with lifetime extension of the reference.
+#define GENERATE_OPTION_WITH_MARSHALLING(                                      \
+    ARGS, STRING_ALLOCATOR, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH,       \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR,      \
+    TABLE_INDEX)                                                               \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    [&](const auto &Extracted) {                                               \
+      if (ALWAYS_EMIT ||                                                       \
+          (Extracted !=                                                        \
+           static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
+                                                          : (DEFAULT_VALUE)))) \
+        DENORMALIZER(ARGS, SPELLING, STRING_ALLOCATOR, Option::KIND##Class,    \
+                     TABLE_INDEX, Extracted);                                  \
+    }(EXTRACTOR(KEYPATH));                                                     \
+  }
+
 static const StringRef GetInputKindName(InputKind IK);
 
 static void FixupInvocation(CompilerInvocation &Invocation,
@@ -476,6 +493,12 @@ static void FixupInvocation(CompilerInvocation &Invocation,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
   }
+
+  // Report if OpenMP host file does not exist.
+  if (!LangOpts.OMPHostIRFile.empty() &&
+      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+    Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
+        << LangOpts.OMPHostIRFile;
 
   if (!CodeGenOpts.ProfileRemappingFile.empty() && CodeGenOpts.LegacyPassManager)
     Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -1821,8 +1844,40 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
+static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
+                                     SmallVectorImpl<const char *> &Args,
+                                     CompilerInvocation::StringAllocator SA) {
+  const HeaderSearchOptions *HeaderSearchOpts = &Opts;
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
+}
+
 static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags,
                                   const std::string &WorkingDir) {
+  HeaderSearchOptions *HeaderSearchOpts = &Opts;
+  bool Success = true;
+
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
+
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
 
@@ -2377,13 +2432,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   bool IsSimdSpecified =
       Args.hasFlag(options::OPT_fopenmp_simd, options::OPT_fno_openmp_simd,
                    /*Default=*/false);
-  Opts.OpenMPSimd = !Opts.OpenMP && IsSimdSpecified;
-  Opts.OpenMPUseTLS =
-      Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
-  Opts.OpenMPIsDevice =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
-  Opts.OpenMPIRBuilder =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
 
@@ -2455,15 +2503,6 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
@@ -2779,7 +2818,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                                       LangOpts.IsHeaderFile);
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   if (DashX.getFormat() == InputKind::Precompiled ||
       DashX.getLanguage() == Language::LLVM_IR) {
@@ -2972,23 +3011,6 @@ std::string CompilerInvocation::getModuleHash() const {
 
 void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
-  // Capture the extracted value as a lambda argument to avoid potential issues
-  // with lifetime extension of the reference.
-#define GENERATE_OPTION_WITH_MARSHALLING(                                      \
-    ARGS, STRING_ALLOCATOR, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH,       \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR,      \
-    TABLE_INDEX)                                                               \
-  if ((FLAGS)&options::CC1Option) {                                            \
-    [&](const auto &Extracted) {                                               \
-      if (ALWAYS_EMIT ||                                                       \
-          (Extracted !=                                                        \
-           static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
-                                                          : (DEFAULT_VALUE)))) \
-        DENORMALIZER(ARGS, SPELLING, STRING_ALLOCATOR, Option::KIND##Class,    \
-                     TABLE_INDEX, Extracted);                                  \
-    }(EXTRACTOR(KEYPATH));                                                     \
-  }
-
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
@@ -3009,8 +3031,8 @@ void CompilerInvocation::generateCC1CommandLine(
 #undef LANG_OPTION_WITH_MARSHALLING
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
-#undef GENERATE_OPTION_WITH_MARSHALLING
 
+  GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA);
 }
 

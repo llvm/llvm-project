@@ -970,7 +970,11 @@ static LogicalResult verify(PadTensorOp op) {
   auto expectedType = PadTensorOp::inferResultType(
       sourceType, extractFromI64ArrayAttr(op.static_low()),
       extractFromI64ArrayAttr(op.static_high()));
-  if (resultType != expectedType) {
+  for (int i = 0, e = sourceType.getRank(); i < e; ++i) {
+    if (resultType.getDimSize(i) == expectedType.getDimSize(i))
+      continue;
+    if (expectedType.isDynamicDim(i))
+      continue;
     return op.emitError("specified type ")
            << resultType << " does not match the inferred type "
            << expectedType;
@@ -1077,6 +1081,24 @@ static void print(OpAsmPrinter &p, PadTensorOp op) {
   p << " : " << op.source().getType() << " to " << op.getType();
 }
 
+/// Helper function to dispatch an OpFoldResult into either the `dynamicVec` if
+/// it is a Value or into `staticVec` if it is an IntegerAttr.
+/// In the case of a Value, a copy of the `sentinel` value is also pushed to
+/// `staticVec`. This is useful to extract mixed static and dynamic entries that
+/// come from an AttrSizedOperandSegments trait.
+static void dispatchIndexOpFoldResult(OpFoldResult ofr,
+                                      SmallVectorImpl<Value> &dynamicVec,
+                                      SmallVectorImpl<int64_t> &staticVec,
+                                      int64_t sentinel) {
+  if (auto v = ofr.dyn_cast<Value>()) {
+    dynamicVec.push_back(v);
+    staticVec.push_back(sentinel);
+    return;
+  }
+  APInt apInt = ofr.dyn_cast<Attribute>().cast<IntegerAttr>().getValue();
+  staticVec.push_back(apInt.getSExtValue());
+}
+
 void PadTensorOp::build(OpBuilder &b, OperationState &result, Value source,
                         ArrayRef<int64_t> staticLow,
                         ArrayRef<int64_t> staticHigh, ValueRange low,
@@ -1095,6 +1117,60 @@ void PadTensorOp::build(OpBuilder &b, OperationState &result, Value source,
   unsigned rank = sourceType.getRank();
   SmallVector<int64_t, 4> staticVector(ShapedType::kDynamicSize, rank);
   build(b, result, source, staticVector, staticVector, low, high, attrs);
+}
+
+void PadTensorOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                        Value source, ArrayRef<OpFoldResult> low,
+                        ArrayRef<OpFoldResult> high,
+                        ArrayRef<NamedAttribute> attrs) {
+  assert(resultType.isa<RankedTensorType>());
+  auto sourceType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceType.getRank();
+  SmallVector<Value, 4> dynamicLow, dynamicHigh;
+  SmallVector<int64_t, 4> staticLow, staticHigh;
+  for (unsigned i = 0; i < rank; ++i) {
+    // staticLow and staticHigh have full information of the padding config.
+    // This will grow staticLow and staticHigh with 1 value. If the config is
+    // dynamic (ie not a constant), dynamicLow and dynamicHigh will grow with 1
+    // value as well.
+    dispatchIndexOpFoldResult(low[i], dynamicLow, staticLow,
+                              ShapedType::kDynamicSize);
+    dispatchIndexOpFoldResult(high[i], dynamicHigh, staticHigh,
+                              ShapedType::kDynamicSize);
+  }
+  if (!resultType) {
+    resultType =
+        PadTensorOp::inferResultType(sourceType, staticLow, staticHigh);
+  }
+  build(b, result, resultType, source, dynamicLow, dynamicHigh,
+        b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh));
+}
+
+PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
+                                         Location loc, OpBuilder &builder) {
+  SmallVector<OpFoldResult, 4> low, high;
+  auto rankedTensorType = type.cast<RankedTensorType>();
+  assert(rankedTensorType.hasStaticShape());
+  int rank = rankedTensorType.getRank();
+  for (int i = 0; i < rank; ++i) {
+    auto dimOp = builder.createOrFold<DimOp>(loc, source, i);
+    auto resultDimSize = builder.createOrFold<ConstantIndexOp>(
+        loc, rankedTensorType.getDimSize(i));
+    auto highValue = builder.createOrFold<SubIOp>(loc, resultDimSize, dimOp);
+    high.push_back(highValue);
+    low.push_back(builder.createOrFold<ConstantIndexOp>(loc, 0));
+  }
+  auto padTensorOp =
+      builder.create<linalg::PadTensorOp>(loc, type, source, low, high);
+  SmallVector<Type, 4> blockArgTypes;
+  blockArgTypes.assign(rank, builder.getIndexType());
+  auto &region = padTensorOp.region();
+  // `builder.createBlock` changes the insertion point within the block. Create
+  // a guard to reset the insertion point of the builder after it is destroyed.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(&region, region.end(), blockArgTypes);
+  builder.create<linalg::YieldOp>(loc, pad);
+  return padTensorOp;
 }
 
 //===----------------------------------------------------------------------===//

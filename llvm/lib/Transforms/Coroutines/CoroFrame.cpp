@@ -2158,7 +2158,7 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgDeclareInst *DDI, bool LoadFromFramePtr) {
+    DbgDeclareInst *DDI) {
   Function *F = DDI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
@@ -2168,10 +2168,20 @@ void coro::salvageDebugInfo(
   DIExpression *Expr = DDI->getExpression();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
+  bool OutermostLoad = true;
   Value *Storage = DDI->getAddress();
   while (Storage) {
     if (auto *LdInst = dyn_cast<LoadInst>(Storage)) {
       Storage = LdInst->getOperand(0);
+      // FIXME: This is a heuristic that works around the fact that
+      // LLVM IR debug intrinsics cannot yet distinguish between
+      // memory and value locations: Because a dbg.declare(alloca) is
+      // implicitly a memory location no DW_OP_deref operation for the
+      // last direct load from an alloca is necessary.  This condition
+      // effectively drops the *last* DW_OP_deref in the expression.
+      if (!OutermostLoad)
+        Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+      OutermostLoad = false;
     } else if (auto *StInst = dyn_cast<StoreInst>(Storage)) {
       Storage = StInst->getOperand(0);
     } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
@@ -2195,11 +2205,16 @@ void coro::salvageDebugInfo(
       Builder.CreateStore(Storage, Cached);
     }
     Storage = Cached;
+    // FIXME: LLVM lacks nuanced semantics to differentiate between
+    // memory and direct locations at the IR level. The backend will
+    // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
+    // location. Thus, if there are deref and offset operations in the
+    // expression, we need to add a DW_OP_deref at the *start* of the
+    // expression to first load the contents of the alloca before
+    // adjusting it with the expression.
+    if (Expr && Expr->isComplex())
+      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
   }
-  // The FramePtr object adds one extra layer of indirection that
-  // needs to be unwrapped.
-  if (LoadFromFramePtr)
-    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
   auto &VMContext = DDI->getFunction()->getContext();
   DDI->setOperand(
       0, MetadataAsValue::get(VMContext, ValueAsMetadata::get(Storage)));
