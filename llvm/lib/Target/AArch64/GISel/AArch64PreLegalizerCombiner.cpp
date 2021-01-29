@@ -17,9 +17,13 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "aarch64-prelegalizer-combiner"
@@ -51,6 +55,56 @@ static void applyFConstantToConstant(MachineInstr &MI) {
   const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
   MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
   MI.eraseFromParent();
+}
+
+/// Try to match a G_ICMP of a G_TRUNC with zero, in which the truncated bits
+/// are sign bits. In this case, we can transform the G_ICMP to directly compare
+/// the wide value with a zero.
+static bool matchICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    GISelKnownBits *KB, Register &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP && KB);
+
+  auto Pred = (CmpInst::Predicate)MI.getOperand(1).getPredicate();
+  if (!ICmpInst::isEquality(Pred))
+    return false;
+
+  Register LHS = MI.getOperand(2).getReg();
+  LLT LHSTy = MRI.getType(LHS);
+  if (!LHSTy.isScalar())
+    return false;
+
+  Register RHS = MI.getOperand(3).getReg();
+  Register WideReg;
+
+  if (!mi_match(LHS, MRI, m_GTrunc(m_Reg(WideReg))) ||
+      !mi_match(RHS, MRI, m_SpecificICst(0)))
+    return false;
+
+  LLT WideTy = MRI.getType(WideReg);
+  if (KB->computeNumSignBits(WideReg) <=
+      WideTy.getSizeInBits() - LHSTy.getSizeInBits())
+    return false;
+
+  MatchInfo = WideReg;
+  return true;
+}
+
+static bool applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &Builder,
+                                    GISelChangeObserver &Observer,
+                                    Register &WideReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+
+  LLT WideTy = MRI.getType(WideReg);
+  // We're going to directly use the wide register as the LHS, and then use an
+  // equivalent size zero for RHS.
+  Builder.setInstrAndDebugLoc(MI);
+  auto WideZero = Builder.buildConstant(WideTy, 0);
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(WideReg);
+  MI.getOperand(3).setReg(WideZero.getReg(0));
+  Observer.changedInstr(MI);
+  return true;
 }
 
 class AArch64PreLegalizerCombinerHelperState {
