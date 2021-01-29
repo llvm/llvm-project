@@ -64,24 +64,27 @@ mlir::Value Fortran::lower::FirOpBuilder::createIntegerConstant(
 
 mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
     mlir::Location loc, mlir::Type fltTy, llvm::APFloat::integerPart val) {
-  if (fltTy.isa<mlir::FloatType>()) {
-    if (fltTy.isF16())
-      return createRealConstant(loc, fltTy,
-                                llvm::APFloat(llvm::APFloat::IEEEhalf(), val));
-    if (fltTy.isBF16())
-      return createRealConstant(loc, fltTy,
-                                llvm::APFloat(llvm::APFloat::BFloat(), val));
-    if (fltTy.isF32())
-      return createRealConstant(
-          loc, fltTy, llvm::APFloat(llvm::APFloat::IEEEsingle(), val));
-    if (fltTy.isF64())
-      return createRealConstant(
-          loc, fltTy, llvm::APFloat(llvm::APFloat::IEEEdouble(), val));
-    llvm::report_fatal_error("unhandled MLIR float type");
-  }
-  auto ty = fltTy.cast<fir::RealType>();
-  return createRealConstant(
-      loc, ty, llvm::APFloat(kindMap.getFloatSemantics(ty.getFKind()), val));
+  auto apf = [&]() -> llvm::APFloat {
+    if (auto ty = fltTy.dyn_cast<fir::RealType>()) {
+      fltTy = Fortran::lower::convertReal(ty.getContext(), ty.getFKind());
+      return llvm::APFloat(kindMap.getFloatSemantics(ty.getFKind()), val);
+    } else {
+      if (fltTy.isF16())
+        return llvm::APFloat(llvm::APFloat::IEEEhalf(), val);
+      if (fltTy.isBF16())
+        return llvm::APFloat(llvm::APFloat::BFloat(), val);
+      if (fltTy.isF32())
+        return llvm::APFloat(llvm::APFloat::IEEEsingle(), val);
+      if (fltTy.isF64())
+        return llvm::APFloat(llvm::APFloat::IEEEdouble(), val);
+      if (fltTy.isF80())
+        return llvm::APFloat(llvm::APFloat::x87DoubleExtended(), val);
+      if (fltTy.isF128())
+        return llvm::APFloat(llvm::APFloat::IEEEquad(), val);
+      llvm_unreachable("unhandled MLIR floating-point type");
+    }
+  };
+  return createRealConstant(loc, fltTy, apf());
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
@@ -90,10 +93,7 @@ mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
     auto attr = getFloatAttr(fltTy, value);
     return create<mlir::ConstantOp>(loc, fltTy, attr);
   }
-  // MLIR standard dialect doesn't support floating point larger than double.
-  auto ty = fltTy.cast<fir::RealType>();
-  auto attr = fir::RealAttr::get(context, {ty.getFKind(), value});
-  return create<fir::ConstfOp>(loc, ty, attr);
+  llvm_unreachable("should use builtin floating-point type");
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
@@ -292,7 +292,7 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
                                         const fir::ExtendedValue &exv) {
   auto itemAddr = fir::getBase(exv);
   if (itemAddr.getType().isa<fir::BoxType>())
-     return itemAddr;
+    return itemAddr;
   auto elementType = fir::dyn_cast_ptrEleTy(itemAddr.getType());
   if (!elementType)
     mlir::emitError(loc, "internal: expected a memory reference type ")
