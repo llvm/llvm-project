@@ -43,12 +43,12 @@ def get_triple():
 
     # Get the SDK from the os and env.
     sdk = lldbutil.get_xcode_sdk(os, env)
-    if not sdk:
+    if sdk is None:
         return None, None, None, None
 
     # Get the version from the SDK.
     version = lldbutil.get_xcode_sdk_version(sdk)
-    if not version:
+    if version is None:
         return None, None, None, None
 
     return vendor, os, version, env
@@ -86,7 +86,7 @@ class BuilderDarwin(Builder):
         """Returns the ARCH_CFLAGS for the make system."""
         # Get the triple components.
         vendor, os, version, env = get_triple()
-        if not vendor or not os or not version or not env:
+        if vendor is None or os is None or version is None or env is None:
             return ""
 
         # Construct the triple from its components.
