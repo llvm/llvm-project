@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InefficientVectorOperationCheck.h"
+#include "../utils/DeclRefExprUtils.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "../utils/DeclRefExprUtils.h"
-#include "../utils/OptionsUtils.h"
 
 using namespace clang::ast_matchers;
 

@@ -21,11 +21,11 @@ namespace bugprone {
 
 namespace {
 AST_MATCHER(FloatingLiteral, floatHalf) {
-  const auto &literal = Node.getValue();
+  const auto &Literal = Node.getValue();
   if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle())
-    return literal.convertToFloat() == 0.5f;
+    return Literal.convertToFloat() == 0.5f;
   if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble())
-    return literal.convertToDouble() == 0.5;
+    return Literal.convertToDouble() == 0.5;
   return false;
 }
 } // namespace

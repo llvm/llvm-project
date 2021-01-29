@@ -47,7 +47,7 @@ void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
 }
 
 // Re-lex the tokens to get precise location of last 'const'
-static llvm::Optional<Token> ConstTok(CharSourceRange Range,
+static llvm::Optional<Token> constTok(CharSourceRange Range,
                                       const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
   std::pair<FileID, unsigned> LocInfo =
@@ -86,9 +86,9 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
                    "declaration; const-qualification of parameters only has an "
                    "effect in function definitions");
   if (Param->getName().empty()) {
-    for (unsigned int i = 0; i < Func->getNumParams(); ++i) {
-      if (Param == Func->getParamDecl(i)) {
-        Diag << (i + 1);
+    for (unsigned int I = 0; I < Func->getNumParams(); ++I) {
+      if (Param == Func->getParamDecl(I)) {
+        Diag << (I + 1);
         break;
       }
     }
@@ -109,7 +109,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
   if (!FileRange.isValid())
     return;
 
-  auto Tok = ConstTok(FileRange, Result);
+  auto Tok = constTok(FileRange, Result);
   if (!Tok)
     return;
   Diag << FixItHint::CreateRemoval(

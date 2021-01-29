@@ -280,7 +280,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     IdentifierInfo *II = PVD->getIdentifier();
     if (!II)
       continue;
-    if (auto Template = Callee->getTemplateInstantiationPattern()) {
+    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern()) {
       // Don't warn on arguments for parameters instantiated from template
       // parameter packs. If we find more arguments than the template
       // definition has, it also means that they correspond to a parameter

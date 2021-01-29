@@ -140,17 +140,17 @@ struct IntializerInsertion {
     assert(!Initializers.empty() && "No initializers to insert");
     std::string Code;
     llvm::raw_string_ostream Stream(Code);
-    std::string joined =
+    std::string Joined =
         llvm::join(Initializers.begin(), Initializers.end(), "(), ");
     switch (Placement) {
     case InitializerPlacement::New:
-      Stream << " : " << joined << "()";
+      Stream << " : " << Joined << "()";
       break;
     case InitializerPlacement::Before:
-      Stream << " " << joined << "(),";
+      Stream << " " << Joined << "(),";
       break;
     case InitializerPlacement::After:
-      Stream << ", " << joined << "()";
+      Stream << ", " << Joined << "()";
       break;
     }
     return Stream.str();
