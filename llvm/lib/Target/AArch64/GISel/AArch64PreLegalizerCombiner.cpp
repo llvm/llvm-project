@@ -205,6 +205,8 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
   }
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -217,7 +219,13 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
     return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
+  auto &TPC = getAnalysis<TargetPassConfig>();
+
+  // Enable CSE.
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
@@ -226,8 +234,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
                                          F.hasMinSize(), KB, MDT);
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+  Combiner C(PCInfo, &TPC);
+  return C.combineMachineInstrs(MF, CSEInfo);
 }
 
 char AArch64PreLegalizerCombiner::ID = 0;
@@ -236,6 +244,7 @@ INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,
                     false)
