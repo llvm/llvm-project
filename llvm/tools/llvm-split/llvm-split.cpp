@@ -52,25 +52,28 @@ int main(int argc, char **argv) {
   }
 
   unsigned I = 0;
-  SplitModule(std::move(M), NumOutputs, [&](std::unique_ptr<Module> MPart) {
-    std::error_code EC;
-    std::unique_ptr<ToolOutputFile> Out(
-        new ToolOutputFile(OutputFilename + utostr(I++), EC, sys::fs::OF_None));
-    if (EC) {
-      errs() << EC.message() << '\n';
-      exit(1);
-    }
+  SplitModule(
+      *M, NumOutputs,
+      [&](std::unique_ptr<Module> MPart) {
+        std::error_code EC;
+        std::unique_ptr<ToolOutputFile> Out(new ToolOutputFile(
+            OutputFilename + utostr(I++), EC, sys::fs::OF_None));
+        if (EC) {
+          errs() << EC.message() << '\n';
+          exit(1);
+        }
 
-    if (verifyModule(*MPart, &errs())) {
-      errs() << "Broken module!\n";
-      exit(1);
-    }
+        if (verifyModule(*MPart, &errs())) {
+          errs() << "Broken module!\n";
+          exit(1);
+        }
 
-    WriteBitcodeToFile(*MPart, Out->os());
+        WriteBitcodeToFile(*MPart, Out->os());
 
-    // Declare success.
-    Out->keep();
-  }, PreserveLocals);
+        // Declare success.
+        Out->keep();
+      },
+      PreserveLocals);
 
   return 0;
 }
