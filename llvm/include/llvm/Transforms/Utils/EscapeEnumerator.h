@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class DomTreeUpdater;
+
 /// EscapeEnumerator - This is a little algorithm to find all escape points
 /// from a function so that "finally"-style code can be inserted. In addition
 /// to finding the existing return and unwind instructions, it also (if
@@ -33,12 +35,14 @@ class EscapeEnumerator {
   bool Done;
   bool HandleExceptions;
 
+  DomTreeUpdater *DTU;
+
 public:
   EscapeEnumerator(Function &F, const char *N = "cleanup",
-                   bool HandleExceptions = true)
+                   bool HandleExceptions = true, DomTreeUpdater *DTU = nullptr)
       : F(F), CleanupBBName(N), StateBB(F.begin()), StateE(F.end()),
         Builder(F.getContext()), Done(false),
-        HandleExceptions(HandleExceptions) {}
+        HandleExceptions(HandleExceptions), DTU(DTU) {}
 
   IRBuilder<> *Next();
 };
