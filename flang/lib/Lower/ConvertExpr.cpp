@@ -1900,9 +1900,11 @@ public:
           auto [iterSpace, insPt] = genIterSpace();
           auto exv = f(iterSpace);
           auto innerArg = iterSpace.innerArgument();
+          // Convert to array elemental type is needed for logical.
+          auto eleTy = innerArg.getType().cast<fir::SequenceType>().getEleTy();
+          auto element = builder.createConvert(loc, eleTy, fir::getBase(exv));
           auto upd = builder.create<fir::ArrayUpdateOp>(
-              loc, innerArg.getType(), innerArg, fir::getBase(exv),
-              iterSpace.iterVec());
+              loc, innerArg.getType(), innerArg, element, iterSpace.iterVec());
           builder.create<fir::ResultOp>(loc, upd.getResult());
           builder.restoreInsertionPoint(insPt);
           return fir::substBase(exv, iterSpace.outerResult());
