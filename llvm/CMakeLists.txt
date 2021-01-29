@@ -697,7 +697,7 @@ set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
 
 include(HandleLLVMOptions)
 
-find_package(Python3 3.6 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 ######
 
