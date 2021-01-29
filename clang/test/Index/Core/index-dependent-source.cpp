@@ -224,3 +224,10 @@ struct UsingE : public UsingD<T>, public UsingD<U> {
 // CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingD | c:@ST>1#T@UsingD | <no-cgname> | Ref,RelCont | rel: 1
   using UsingD<U>::foo;
 };
+
+template <typename T> void foo();
+// CHECK: [[@LINE-1]]:28 | function/C | foo | c:@FT@>1#Tfoo#v# | <no-cgname> | Decl | rel: 0
+template <typename T> void bar() {
+  foo<T>();
+// CHECK: [[@LINE-1]]:3 | function/C | foo | c:@FT@>1#Tfoo#v# | <no-cgname> | Ref,Call,RelCall,RelCont | rel: 1
+}
