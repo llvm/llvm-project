@@ -4684,6 +4684,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << RawTriple.str();
     if (A->getOption().getID() == options::OPT_mabi_EQ_vec_default)
       D.Diag(diag::err_aix_default_altivec_abi);
+    if (A->getOption().getID() == options::OPT_mabi_EQ_vec_extabi)
+      CmdArgs.push_back("-mabi=vec-extabi");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
