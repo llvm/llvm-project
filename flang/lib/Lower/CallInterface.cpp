@@ -413,12 +413,24 @@ private:
     const auto *typeAndShape = result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
     auto dynamicType = typeAndShape->type();
-    // Character result allocated by caller and passed has hidden arguments
+    // Character result allocated by caller and passed as hidden arguments
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
       handleImplicitCharacterResult(dynamicType);
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Derived) {
+      // Derived result need to be allocated by the caller and passed as hidden
+      // arguments. Derived type in implicit interface cannot have length
+      // parameters.
+      setPassedResult(PassEntityBy::BaseAddress,
+                      getResultEntity(interface.side().getCallDescription()));
+      auto derivedRefTy =
+          fir::ReferenceType::get(translateDynamicType(dynamicType));
+      auto resultPosition = FirPlaceHolder::resultEntityPosition;
+      addFirInput(derivedRefTy, resultPosition, Property::BaseAddress);
+      addFirOutput(derivedRefTy, resultPosition, Property::BaseAddress);
     } else {
-      // All result other than characters are simply returned by value in
-      // implicit interfaces
+      // All result other than characters/derived are simply returned by value
+      // in implicit interfaces
       auto mlirType =
           getConverter().genType(dynamicType.category(), dynamicType.kind());
       addFirOutput(mlirType, FirPlaceHolder::resultEntityPosition,
