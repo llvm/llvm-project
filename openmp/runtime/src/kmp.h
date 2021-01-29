@@ -3004,6 +3004,7 @@ extern enum sched_type __kmp_static; /* default static scheduling method */
 extern enum sched_type __kmp_guided; /* default guided scheduling method */
 extern enum sched_type __kmp_auto; /* default auto scheduling method */
 extern int __kmp_chunk; /* default runtime chunk size */
+extern int __kmp_force_monotonic; /* whether monotonic scheduling forced */
 
 extern size_t __kmp_stksize; /* stack size per thread         */
 #if KMP_USE_MONITOR
