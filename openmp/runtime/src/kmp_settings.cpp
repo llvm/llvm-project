@@ -3355,7 +3355,8 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
         ntraits++;
     }
   }
-  omp_alloctrait_t traits[ntraits];
+  omp_alloctrait_t *traits =
+      (omp_alloctrait_t *)KMP_ALLOCA(ntraits * sizeof(omp_alloctrait_t));
 
 // Helper macros
 #define IS_POWER_OF_TWO(n) (((n) & ((n)-1)) == 0)
