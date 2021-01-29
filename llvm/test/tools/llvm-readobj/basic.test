@@ -20,6 +20,22 @@ RUN: llvm-ar rc %t.a %t.empty
 RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 NO-OUTPUT-NOT: {{.}}
 
+## Test we report a meaningful warning for bitcode files.
+## Check we try to continue dumping other files.
+
+## Note: 'echo -e -n "\x42\x43\xc0\xde" > %t.bc.1' simply doesn't work properly on windows.
+## It has an issue with writing of the 2 last bytes and emits different data instead.
+## echo.exe from GnuWin32 works properly though, but using of python is a more stable way.
+RUN: %python -c "import os; open(r'%t.bc.1', 'wb').write(b'\x42\x43\xC0\xDE')"
+RUN: %python -c "import os; open(r'%t.bc.2', 'wb').write(b'\xDE\xC0\x17\x0B')"
+RUN: llvm-readelf %t.bc.1 %t.bc.2 2>&1 | \
+RUN:   FileCheck --check-prefix=BITCODE -DFILE1=%t.bc.1 -DFILE2=%t.bc.2 %s
+RUN: llvm-readobj %t.bc.1 %t.bc.2 2>&1 | \
+RUN:   FileCheck --check-prefix=BITCODE -DFILE1=%t.bc.1 -DFILE2=%t.bc.2 %s
+
+# BITCODE: warning: '[[FILE1]]': bitcode files are not supported{{$}}
+# BITCODE: warning: '[[FILE2]]': bitcode files are not supported{{$}}
+
 # Test case where switch it not recognised.
 RUN: not llvm-readobj --unknown-switch 2>&1 | FileCheck --check-prefix=UNKNOWN %s
 UNKNOWN: Unknown command line argument '--unknown-switch'
