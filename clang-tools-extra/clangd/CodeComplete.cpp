@@ -1726,7 +1726,7 @@ private:
       }
       if (Candidate.IdentifierResult) {
         Quality.References = Candidate.IdentifierResult->References;
-        Relevance.ScopeKind = SymbolScope::FileScope;
+        Relevance.Scope = SymbolRelevanceSignals::FileScope;
         Origin |= SymbolOrigin::Identifier;
       }
     }

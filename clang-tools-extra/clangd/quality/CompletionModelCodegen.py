@@ -245,7 +245,7 @@ def gen_cpp_code(forest_json, features_json, filename, cpp_class):
 
 %s
 
-#define BIT(X) (1u << unsigned(X))
+#define BIT(X) (1 << X)
 
 %s
 
