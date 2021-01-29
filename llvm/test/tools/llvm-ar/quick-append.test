@@ -58,9 +58,9 @@
 
 ## Member does not exist:
 # RUN: not llvm-ar qc %t/missing.a %t/missing.txt 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
+# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt -DMSG=%errc_ENOENT
 
-# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
+# MISSING-FILE: error: [[FILE]]: [[MSG]]
 
 ## Create and append members to a thin archive:
 # RUN: llvm-ar qcT %t/thin-multiple.a %t/1.o

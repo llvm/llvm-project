@@ -1,8 +1,8 @@
 RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
 RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
 RUN: dsymutil -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-ARCHIVE
-RUN: dsymutil -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
-RUN: not dsymutil -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck %s --check-prefix=NO-EXECUTABLE
+RUN: dsymutil -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NOT-FOUND
+RUN: not dsymutil -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO-EXECUTABLE
 
 
 Check that We can parse the debug map of the basic executable.
@@ -72,9 +72,9 @@ Check that we warn about missing object files (this presumes that the files aren
 present in the machine's /Inputs/ folder, which should be a pretty safe bet).
 
 warning: (x86_64) /Inputs/basic1.macho.x86_64.o unable to open object file:
-NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic1.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
-NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic2.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
-NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic3.macho.x86_64.o unable to open object file: {{[Nn]o}} such file
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic1.macho.x86_64.o unable to open object file: [[MSG]]
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic2.macho.x86_64.o unable to open object file: [[MSG]]
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic3.macho.x86_64.o unable to open object file: [[MSG]]
 NOT-FOUND: ---
 NOT-FOUND-NEXT: triple: 'x86_64-apple-darwin'
 NOT-FOUND-NEXT: binary-path:{{.*}}/Inputs/basic.macho.x86_64
@@ -82,5 +82,5 @@ NOT-FOUND-NEXT: ...
 
 Check that we correctly error out on invalid executable.
 
-NO-EXECUTABLE: cannot parse{{.*}}/inexistant': {{[Nn]o}} such file
+NO-EXECUTABLE: cannot parse{{.*}}/inexistant': [[MSG]]
 NO-EXECUTABLE-NOT: ---
