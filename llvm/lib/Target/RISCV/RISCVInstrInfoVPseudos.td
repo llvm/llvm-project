@@ -1214,74 +1214,89 @@ class VPseudoISegStoreMask<VReg ValClass, VReg IdxClass, bits<11> EEW, bits<3> L
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-multiclass VPseudoUSLoad {
-  foreach lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar vreg = lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # LInfo : VPseudoUSLoadNoMask<vreg>;
-      def "_V_" # LInfo # "_MASK" : VPseudoUSLoadMask<vreg>;
+multiclass VPseudoUSLoad<bit isFF> {
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar vreg = lmul.vrclass;
+      defvar FFStr = !if(isFF, "FF", "");
+      let VLMul = lmul.value in {
+        def "E" # eew # FFStr # "_V_" # LInfo : VPseudoUSLoadNoMask<vreg>;
+        def "E" # eew # FFStr # "_V_" # LInfo # "_MASK" : VPseudoUSLoadMask<vreg>;
+      }
     }
   }
 }
 
 multiclass VPseudoSLoad {
-  foreach lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar vreg = lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # LInfo : VPseudoSLoadNoMask<vreg>;
-      def "_V_" # LInfo # "_MASK" : VPseudoSLoadMask<vreg>;
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar vreg = lmul.vrclass;
+      let VLMul = lmul.value in {
+        def "E" # eew # "_V_" # LInfo : VPseudoSLoadNoMask<vreg>;
+        def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSLoadMask<vreg>;
+      }
     }
   }
 }
 
 multiclass VPseudoILoad {
-  foreach lmul = MxList.m in
-  foreach idx_lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar Vreg = lmul.vrclass;
-    defvar IdxLInfo = idx_lmul.MX;
-    defvar IdxVreg = idx_lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # IdxLInfo # "_" # LInfo : VPseudoILoadNoMask<Vreg, IdxVreg>;
-      def "_V_" # IdxLInfo # "_" # LInfo # "_MASK" : VPseudoILoadMask<Vreg, IdxVreg>;
+  foreach eew = EEWList in {
+    foreach lmul = MxList.m in
+    foreach idx_lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar Vreg = lmul.vrclass;
+      defvar IdxLInfo = idx_lmul.MX;
+      defvar IdxVreg = idx_lmul.vrclass;
+      let VLMul = lmul.value in {
+        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo : VPseudoILoadNoMask<Vreg, IdxVreg>;
+        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" : VPseudoILoadMask<Vreg, IdxVreg>;
+      }
     }
   }
 }
 
 multiclass VPseudoUSStore {
-  foreach lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar vreg = lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # LInfo : VPseudoUSStoreNoMask<vreg>;
-      def "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg>;
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar vreg = lmul.vrclass;
+      let VLMul = lmul.value in {
+        def "E" # eew # "_V_" # LInfo : VPseudoUSStoreNoMask<vreg>;
+        def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg>;
+      }
     }
   }
 }
 
 multiclass VPseudoSStore {
-  foreach lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar vreg = lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # LInfo : VPseudoSStoreNoMask<vreg>;
-      def "_V_" # LInfo # "_MASK" : VPseudoSStoreMask<vreg>;
+  foreach eew = EEWList in {
+    foreach lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar vreg = lmul.vrclass;
+      let VLMul = lmul.value in {
+        def "E" # eew # "_V_" # LInfo : VPseudoSStoreNoMask<vreg>;
+        def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSStoreMask<vreg>;
+      }
     }
   }
 }
 
 multiclass VPseudoIStore {
-  foreach lmul = MxList.m in
-  foreach idx_lmul = MxList.m in {
-    defvar LInfo = lmul.MX;
-    defvar Vreg = lmul.vrclass;
-    defvar IdxLInfo = idx_lmul.MX;
-    defvar IdxVreg = idx_lmul.vrclass;
-    let VLMul = lmul.value in {
-      def "_V_" # IdxLInfo # "_" # LInfo : VPseudoIStoreNoMask<Vreg, IdxVreg>;
-      def "_V_" # IdxLInfo # "_" # LInfo # "_MASK" : VPseudoIStoreMask<Vreg, IdxVreg>;
+  foreach eew = EEWList in {
+    foreach lmul = MxList.m in
+    foreach idx_lmul = MxSet<eew>.m in {
+      defvar LInfo = lmul.MX;
+      defvar Vreg = lmul.vrclass;
+      defvar IdxLInfo = idx_lmul.MX;
+      defvar IdxVreg = idx_lmul.vrclass;
+      let VLMul = lmul.value in {
+        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
+          VPseudoIStoreNoMask<Vreg, IdxVreg>;
+        def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
+          VPseudoIStoreMask<Vreg, IdxVreg>;
+      }
     }
   }
 }
@@ -3133,32 +3148,26 @@ def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>
 //===----------------------------------------------------------------------===//
 
 // Pseudos Unit-Stride Loads and Stores
-foreach eew = EEWList in {
-  defm PseudoVLE # eew : VPseudoUSLoad;
-  defm PseudoVSE # eew : VPseudoUSStore;
-}
+defm PseudoVL : VPseudoUSLoad</*isFF=*/false>;
+defm PseudoVS : VPseudoUSStore;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions
 //===----------------------------------------------------------------------===//
 
 // Vector Strided Loads and Stores
-foreach eew = EEWList in {
-  defm PseudoVLSE # eew : VPseudoSLoad;
-  defm PseudoVSSE # eew : VPseudoSStore;
-}
+defm PseudoVLS : VPseudoSLoad;
+defm PseudoVSS : VPseudoSStore;
 
 //===----------------------------------------------------------------------===//
 // 7.6 Vector Indexed Instructions
 //===----------------------------------------------------------------------===//
 
 // Vector Indexed Loads and Stores
-foreach eew = EEWList in {
-  defm PseudoVLUXEI # eew : VPseudoILoad;
-  defm PseudoVLOXEI # eew : VPseudoILoad;
-  defm PseudoVSOXEI # eew : VPseudoIStore;
-  defm PseudoVSUXEI # eew : VPseudoIStore;
-}
+defm PseudoVLUX : VPseudoILoad;
+defm PseudoVLOX : VPseudoILoad;
+defm PseudoVSOX : VPseudoIStore;
+defm PseudoVSUX : VPseudoIStore;
 
 //===----------------------------------------------------------------------===//
 // 7.7. Unit-stride Fault-Only-First Loads
@@ -3166,14 +3175,12 @@ foreach eew = EEWList in {
 
 // vleff may update VL register
 let hasSideEffects = 1, Defs = [VL] in
-foreach eew = EEWList in {
-  defm PseudoVLE # eew # FF : VPseudoUSLoad;
-}
+defm PseudoVL : VPseudoUSLoad</*isFF=*/true>;
 
 //===----------------------------------------------------------------------===//
 // 7.8. Vector Load/Store Segment Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVLSEG : VPseudoUSSegLoad</*fault-only-first*/false>;
+defm PseudoVLSEG : VPseudoUSSegLoad</*isFF=*/false>;
 defm PseudoVLSSEG : VPseudoSSegLoad;
 defm PseudoVLOXSEG : VPseudoISegLoad;
 defm PseudoVLUXSEG : VPseudoISegLoad;
@@ -3184,7 +3191,7 @@ defm PseudoVSUXSEG : VPseudoISegStore;
 
 // vlseg<nf>e<eew>ff.v may update VL register
 let hasSideEffects = 1, Defs = [VL] in
-defm PseudoVLSEG : VPseudoUSSegLoad</*fault-only-first*/true>;
+defm PseudoVLSEG : VPseudoUSSegLoad</*isFF=*/true>;
 
 //===----------------------------------------------------------------------===//
 // 8. Vector AMO Operations
