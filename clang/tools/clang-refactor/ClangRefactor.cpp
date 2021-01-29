@@ -612,9 +612,14 @@ int main(int argc, const char **argv) {
 
   ClangRefactorTool RefactorTool;
 
-  CommonOptionsParser Options(
+  auto ExpectedParser = CommonOptionsParser::create(
       argc, argv, cl::GeneralCategory, cl::ZeroOrMore,
       "Clang-based refactoring tool for C, C++ and Objective-C");
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &Options = ExpectedParser.get();
 
   if (auto Err = RefactorTool.Init()) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
