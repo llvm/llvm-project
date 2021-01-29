@@ -57,7 +57,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(CheckAtomic)
 
   if(LLVM_INCLUDE_TESTS)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 3.6 REQUIRED COMPONENTS Interpreter)
 
     # Check prebuilt llvm/utils.
     if(EXISTS ${LLVM_TOOLS_BINARY_DIR}/FileCheck${CMAKE_EXECUTABLE_SUFFIX}
