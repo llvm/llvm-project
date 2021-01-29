@@ -150,7 +150,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   if (HasV) {
-    Builder.defineMacro("__riscv_v", "1000000");
+    Builder.defineMacro("__riscv_v", "10000");
     Builder.defineMacro("__riscv_vector");
   }
 
@@ -191,10 +191,10 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_zfh", "1000");
 
   if (HasZvamo)
-    Builder.defineMacro("__riscv_zvamo", "1000000");
+    Builder.defineMacro("__riscv_zvamo", "10000");
 
   if (HasZvlsseg)
-    Builder.defineMacro("__riscv_zvlsseg", "1000000");
+    Builder.defineMacro("__riscv_zvlsseg", "10000");
 }
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
