@@ -3335,43 +3335,6 @@ the configuration (without a prefix: ``Auto``).
      var arr = [ 1, 2, 3 ];         vs.     var arr = [1, 2, 3];
      f({a : 1, b : 2, c : 3});              f({a: 1, b: 2, c: 3});
 
-**SpacesInLineCommentPrefix** (``SpacesInLineComment``)
-  How many spaces are allowed at the start of a line comment. To disable the
-  maximum set it to ``-1``, apart from that the maximum takes precedence
-  over the minimum.
-  Minimum = 1 Maximum = -1
-  // One space is forced
-
-  //  but more spaces are possible
-
-  Minimum = 0
-  Maximum = 0
-  //Forces to start every comment directly after the slashes
-
-  Note that in line comment sections the relative indent of the subsequent
-  lines is kept, that means the following:
-
-  .. code-block:: c++
-
-  before:                                   after:
-  Minimum: 1
-  //if (b) {                                // if (b) {
-  //  return true;                          //   return true;
-  //}                                       // }
-
-  Maximum: 0
-  /// List:                                 ///List:
-  ///  - Foo                                /// - Foo
-  ///    - Bar                              ///   - Bar
-
-  Nested configuration flags:
-
-
-  * ``unsigned Minimum`` The minimum number of spaces at the start of the comment.
-
-  * ``unsigned Maximum`` The maximum number of spaces at the start of the comment.
-
-
 **SpacesInParentheses** (``bool``)
   If ``true``, spaces will be inserted after ``(`` and before ``)``.
 

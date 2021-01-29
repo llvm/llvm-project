@@ -465,23 +465,15 @@ private:
   // then the original prefix is "// ".
   SmallVector<StringRef, 16> OriginalPrefix;
 
-  /// Prefix[i] + SpacesToAdd[i] contains the intended leading "//" with
-  /// trailing spaces to account for the indentation of content within the
-  /// comment at line i after formatting. It can be different than the original
-  /// prefix.
-  /// When the original line starts like this:
-  /// //content
-  /// Then the OriginalPrefix[i] is "//", but the Prefix[i] is "// " in the LLVM
-  /// style.
-  /// When the line starts like:
-  /// // content
-  /// And we want to remove the spaces the OriginalPrefix[i] is "// " and
-  /// Prefix[i] is "//".
-  SmallVector<std::string, 16> Prefix;
+  // Prefix[i] contains the intended leading "//" with trailing spaces to
+  // account for the indentation of content within the comment at line i after
+  // formatting. It can be different than the original prefix when the original
+  // line starts like this:
+  // //content
+  // Then the original prefix is "//", but the prefix is "// ".
+  SmallVector<StringRef, 16> Prefix;
 
-  /// How many spaces are added or removed from the OriginalPrefix to form
-  /// Prefix.
-  SmallVector<int, 16> PrefixSpaceChange;
+  SmallVector<unsigned, 16> OriginalContentColumn;
 
   /// The token to which the last line of this breakable token belongs
   /// to; nullptr if that token is the initial token.
