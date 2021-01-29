@@ -1507,8 +1507,9 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildOr(const DstOp &Dst, const SrcOp &Src0,
-                              const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1});
+                              const SrcOp &Src1,
+                              Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_XOR \p Op0, \p Op1
