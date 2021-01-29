@@ -643,9 +643,10 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     break;
   case kmp_sch_static_chunked:
   case kmp_sch_dynamic_chunked:
-    if (pr->u.p.parm1 <= 0) {
+    if (pr->u.p.parm1 <= 0)
       pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
-    }
+    else if (pr->u.p.parm1 > tc)
+      pr->u.p.parm1 = tc;
     KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d "
                    "kmp_sch_static_chunked/kmp_sch_dynamic_chunked cases\n",
                    gtid));
