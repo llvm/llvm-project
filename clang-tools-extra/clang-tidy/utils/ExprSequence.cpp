@@ -61,7 +61,7 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
 
   return false;
 }
-}
+} // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)

@@ -223,14 +223,14 @@ class FunctionASTVisitor final
   std::stack<OBO, SmallVector<OBO, 4>> BinaryOperatorsStack;
 
 public:
-  bool TraverseStmtWithIncreasedNestingLevel(Stmt *Node) {
+  bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
-  bool TraverseDeclWithIncreasedNestingLevel(Decl *Node) {
+  bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
@@ -272,15 +272,15 @@ public:
       if (!TraverseStmt(Node->getCond()))
         return false;
     } else {
-      if (!TraverseStmtWithIncreasedNestingLevel(Node->getInit()))
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getInit()))
         return false;
 
-      if (!TraverseStmtWithIncreasedNestingLevel(Node->getCond()))
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getCond()))
         return false;
     }
 
     // "Then" always increases nesting level.
-    if (!TraverseStmtWithIncreasedNestingLevel(Node->getThen()))
+    if (!traverseStmtWithIncreasedNestingLevel(Node->getThen()))
       return false;
 
     if (!Node->getElse())
@@ -305,7 +305,7 @@ public:
     }
 
     // "Else" always increases nesting level.
-    return TraverseStmtWithIncreasedNestingLevel(Node->getElse());
+    return traverseStmtWithIncreasedNestingLevel(Node->getElse());
   }
 
 // The currently-being-processed stack entry, which is always the top.
@@ -447,7 +447,7 @@ public:
     if (!(Reasons & CognitiveComplexity::Criteria::IncrementNesting))
       return Base::TraverseStmt(Node);
 
-    return TraverseStmtWithIncreasedNestingLevel(Node);
+    return traverseStmtWithIncreasedNestingLevel(Node);
   }
 
   // The parameter MainAnalyzedFunction is needed to differentiate between the
@@ -481,7 +481,7 @@ public:
     CC.account(Node->getBeginLoc(), CurrentNestingLevel,
                CognitiveComplexity::Criteria::IncrementNesting);
 
-    return TraverseDeclWithIncreasedNestingLevel(Node);
+    return traverseDeclWithIncreasedNestingLevel(Node);
   }
 
   CognitiveComplexity CC;

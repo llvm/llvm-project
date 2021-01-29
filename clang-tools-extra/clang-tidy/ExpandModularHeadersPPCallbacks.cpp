@@ -125,7 +125,7 @@ void ExpandModularHeadersPPCallbacks::handleModuleFile(
         Recorder->addNecessaryFile(IF.getFile());
       });
   // Recursively handle all transitively imported modules.
-  for (auto Import : MF->Imports)
+  for (auto *Import : MF->Imports)
     handleModuleFile(Import);
 }
 
