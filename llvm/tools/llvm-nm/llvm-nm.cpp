@@ -1147,7 +1147,7 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
       return 'U';
     return isObject(Obj, I) ? 'v' : 'w';
   }
-  if (ELFObjectFileBase *ELF = dyn_cast<ELFObjectFileBase>(&Obj))
+  if (isa<ELFObjectFileBase>(&Obj))
     if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
       return 'i';
   if (!isa<MachOObjectFile>(Obj) && (Symflags & object::SymbolRef::SF_Weak))
