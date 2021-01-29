@@ -2682,8 +2682,8 @@ DWARF address space identifiers are used by:
   ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_implicit_aspace_pointer``,
   and ``DW_OP_xderef*``.
 
-* The CFI instructions: ``DW_CFA_def_aspace_cfa`` and
-  ``DW_CFA_def_aspace_cfa_sf``.
+* The CFI instructions: ``DW_CFA_LLVM_def_aspace_cfa`` and
+  ``DW_CFA_LLVM_def_aspace_cfa_sf``.
 
 .. note::
 
@@ -3768,9 +3768,9 @@ CFA Definition Instructions
     *The action is the same as* ``DW_CFA_def_cfa``\ *, except that the second
     operand is signed and factored.*
 
-3.  ``DW_CFA_def_aspace_cfa`` *New*
+3.  ``DW_CFA_LLVM_def_aspace_cfa`` *New*
 
-    The ``DW_CFA_def_aspace_cfa`` instruction takes three unsigned LEB128
+    The ``DW_CFA_LLVM_def_aspace_cfa`` instruction takes three unsigned LEB128
     operands representing a register number R, a (non-factored) byte
     displacement B, and a target architecture specific address space identifier
     AS. The required action is to define the current CFA rule to be the result
@@ -3780,7 +3780,7 @@ CFA Definition Instructions
     If AS is not one of the values defined by the target architecture specific
     ``DW_ASPACE_*`` values then the DWARF expression is ill-formed.
 
-4.  ``DW_CFA_def_aspace_cfa_sf`` *New*
+4.  ``DW_CFA_LLVM_def_aspace_cfa_sf`` *New*
 
     The ``DW_CFA_def_cfa_sf`` instruction takes three operands: an unsigned
     LEB128 value representing a register number R, a signed LEB128 factored byte
@@ -4195,13 +4195,13 @@ instructions.
 .. table:: Call frame instruction encodings
    :name: amdgpu-dwarf-call-frame-instruction-encodings-table
 
-   ======================== ====== ====== ================ ================ ================
-   Instruction              High 2 Low 6  Operand 1        Operand 2        Operand 3
-                            Bits   Bits
-   ======================== ====== ====== ================ ================ ================
-   DW_CFA_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
-   DW_CFA_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
-   ======================== ====== ====== ================ ================ ================
+   ============================= ====== ====== ================ ================ =====================
+   Instruction                   High 2 Low 6  Operand 1        Operand 2        Operand 3
+                                 Bits   Bits
+   ============================= ====== ====== ================ ================ =====================
+   DW_CFA_LLVM_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
+   DW_CFA_LLVM_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
+   ============================= ====== ====== ================ ================ =====================
 
 Attributes by Tag Value (Informative)
 -------------------------------------

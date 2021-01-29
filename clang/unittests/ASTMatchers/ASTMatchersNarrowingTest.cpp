@@ -863,6 +863,47 @@ void opFree()
                      mapAnyOf(unaryOperator, cxxOperatorCallExpr)
                          .with(hasAnyOperatorName("+", "!"),
                                forFunction(functionDecl(hasName("opFree")))))));
+
+  Code = R"cpp(
+struct ConstructorTakesInt
+{
+  ConstructorTakesInt(int i) {}
+};
+
+void callTakesInt(int i)
+{
+
+}
+
+void doCall()
+{
+  callTakesInt(42);
+}
+
+void doConstruct()
+{
+  ConstructorTakesInt cti(42);
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     invocation(forFunction(functionDecl(hasName("doCall"))),
+                                hasArgument(0, integerLiteral(equals(42))),
+                                hasAnyArgument(integerLiteral(equals(42))),
+                                forEachArgumentWithParam(
+                                    integerLiteral(equals(42)),
+                                    parmVarDecl(hasName("i")))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          invocation(forFunction(functionDecl(hasName("doConstruct"))),
+                     hasArgument(0, integerLiteral(equals(42))),
+                     hasAnyArgument(integerLiteral(equals(42))),
+                     forEachArgumentWithParam(integerLiteral(equals(42)),
+                                              parmVarDecl(hasName("i")))))));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFrom) {

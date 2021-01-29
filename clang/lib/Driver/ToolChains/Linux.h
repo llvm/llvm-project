@@ -42,6 +42,8 @@ public:
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
+  bool
+  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault() const override;
   bool isNoExecStackDefault() const override;
   bool IsMathErrnoDefault() const override;

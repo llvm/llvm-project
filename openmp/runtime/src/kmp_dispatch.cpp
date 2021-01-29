@@ -80,7 +80,7 @@ static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
   if (loc->get_openmp_version() < 50)
     monotonicity = SCHEDULE_MONOTONIC;
 
-  if (use_hier)
+  if (use_hier || __kmp_force_monotonic)
     monotonicity = SCHEDULE_MONOTONIC;
   else if (SCHEDULE_HAS_NONMONOTONIC(schedule))
     monotonicity = SCHEDULE_NONMONOTONIC;

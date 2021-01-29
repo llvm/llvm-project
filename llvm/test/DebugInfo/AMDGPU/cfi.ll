@@ -18,6 +18,8 @@
 ; CHECK-NEXT:   DW_CFA_nop:
 ; CHECK-NEXT:   DW_CFA_nop:
 ; CHECK-EMPTY:
+; CHECK-NEXT: CFA=unspecified
+; CHECK-EMPTY:
 ; CHECK-NEXT: 00000020 {{[0-9]+}} 00000000 FDE cie=00000000 pc=00000000...{{[0-9]+}}
 ; CHECK: .eh_frame contents:
 

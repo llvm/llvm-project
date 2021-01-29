@@ -13,8 +13,8 @@
 # RUN: not llvm-objcopy --redefine-syms %t.rename.txt %t /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-SYM-NAME
 # MISSING-SYM-NAME: error: {{.*}}.rename.txt:2: missing new symbol name
 
-# RUN: not llvm-objcopy --redefine-syms %t.rename-none.txt %t /dev/null 2>&1 | FileCheck %s --check-prefix=NO-FILE
-# NO-FILE: error: '{{.*}}.rename-none.txt': {{[Nn]}}o such file or directory
+# RUN: not llvm-objcopy --redefine-syms %t.rename-none.txt %t /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO-FILE
+# NO-FILE: error: '{{.*}}.rename-none.txt': [[MSG]]
 
 !ELF
 FileHeader:

@@ -89,6 +89,17 @@ public:
     return Result.first->second;
   }
 
+  uint64_t getAnonymousStructIdForDebugInfo(const NamedDecl *D) {
+    llvm::DenseMap<const NamedDecl *, uint64_t>::iterator Result =
+        AnonStructIds.find(D);
+    // The decl should already be inserted, but return 0 in case it is not.
+    if (Result == AnonStructIds.end())
+      return 0;
+    return Result->second;
+  }
+
+  virtual std::string getLambdaString(const CXXRecordDecl *Lambda) = 0;
+
   /// @name Mangler Entry Points
   /// @{
 

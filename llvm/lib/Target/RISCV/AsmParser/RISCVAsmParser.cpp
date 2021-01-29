@@ -2126,7 +2126,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
       if (getFeatureBits(RISCV::FeatureStdExtB))
         formalArchStr = (Twine(formalArchStr) + "_b0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtV))
-        formalArchStr = (Twine(formalArchStr) + "_v1p0").str();
+        formalArchStr = (Twine(formalArchStr) + "_v0p10").str();
       if (getFeatureBits(RISCV::FeatureExtZfh))
         formalArchStr = (Twine(formalArchStr) + "_zfh0p1").str();
       if (getFeatureBits(RISCV::FeatureExtZba))
@@ -2152,9 +2152,9 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
       if (getFeatureBits(RISCV::FeatureExtZbt))
         formalArchStr = (Twine(formalArchStr) + "_zbt0p93").str();
       if (getFeatureBits(RISCV::FeatureExtZvamo))
-        formalArchStr = (Twine(formalArchStr) + "_zvamo1p0").str();
+        formalArchStr = (Twine(formalArchStr) + "_zvamo0p10").str();
       if (getFeatureBits(RISCV::FeatureStdExtZvlsseg))
-        formalArchStr = (Twine(formalArchStr) + "_zvlsseg1p0").str();
+        formalArchStr = (Twine(formalArchStr) + "_zvlsseg0p10").str();
 
       getTargetStreamer().emitTextAttribute(Tag, formalArchStr);
     }

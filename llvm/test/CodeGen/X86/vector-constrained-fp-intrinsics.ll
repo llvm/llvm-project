@@ -7556,16 +7556,14 @@ define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    vextractps $3, %xmm2, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-NEXT:    vmovq %xmm2, %rax
+; AVX1-NEXT:    vextractps $1, %xmm2, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm0
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0

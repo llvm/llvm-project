@@ -63,7 +63,7 @@ isExperimentalExtension(StringRef Ext) {
       Ext == "zbr" || Ext == "zbs" || Ext == "zbt" || Ext == "zbproposedc")
     return RISCVExtensionVersion{"0", "93"};
   if (Ext == "v" || Ext == "zvamo" || Ext == "zvlsseg")
-    return RISCVExtensionVersion{"1", "0"};
+    return RISCVExtensionVersion{"0", "10"};
   if (Ext == "zfh")
     return RISCVExtensionVersion{"0", "1"};
   return None;

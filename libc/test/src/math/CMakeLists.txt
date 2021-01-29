@@ -3,7 +3,7 @@ add_libc_testsuite(libc_math_unittests)
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR" # No optional arguments
+    "NEED_MPFR" # Optional arguments
     "" # Single value arguments
     "" # Multi-value arguments
     ${ARGN}

@@ -1,4 +1,4 @@
-RUN: env RC_DEBUG_OPTIONS=1 dsymutil -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck %s
+RUN: env RC_DEBUG_OPTIONS=1 dsymutil -f %p/../Inputs/basic.macho.x86_64 -o - | llvm-dwarfdump -v - | FileCheck -DMSG=%errc_ENOENT %s
 
 CHECK: .debug_info contents:
 CHECK:  Compile Unit:
@@ -8,7 +8,7 @@ CHECK:    DW_AT_name {{.*}}"/Inputs/basic1.macho.x86_64.o"
 CHECK:    DW_TAG_constant [2]
 CHECK:      DW_AT_name {{.*}}"dsymutil_warning"
 CHECK:      DW_AT_artificial [DW_FORM_flag]	(0x01)
-CHECK:      DW_AT_const_value {{.*}}"unable to open object file: {{[Nn]}}o such file or directory"
+CHECK:      DW_AT_const_value {{.*}}"unable to open object file: [[MSG]]"
 CHECK:    NULL
 CHECK:  Compile Unit:
 CHECK:  DW_TAG_compile_unit [1] *
@@ -17,7 +17,7 @@ CHECK:    DW_AT_name {{.*}}"/Inputs/basic2.macho.x86_64.o"
 CHECK:    DW_TAG_constant [2]
 CHECK:      DW_AT_name {{.*}}"dsymutil_warning"
 CHECK:      DW_AT_artificial [DW_FORM_flag]	(0x01)
-CHECK:      DW_AT_const_value {{.*}}"unable to open object file: {{[Nn]}}o such file or directory"
+CHECK:      DW_AT_const_value {{.*}}"unable to open object file: [[MSG]]"
 CHECK:    NULL
 CHECK:  Compile Unit:
 CHECK:  DW_TAG_compile_unit [1] *
@@ -26,5 +26,5 @@ CHECK:    DW_AT_name {{.*}}"/Inputs/basic3.macho.x86_64.o"
 CHECK:    DW_TAG_constant [2]
 CHECK:      DW_AT_name {{.*}}"dsymutil_warning"
 CHECK:      DW_AT_artificial [DW_FORM_flag]	(0x01)
-CHECK:      DW_AT_const_value {{.*}}"unable to open object file: {{[Nn]}}o such file or directory"
+CHECK:      DW_AT_const_value {{.*}}"unable to open object file: [[MSG]]"
 CHECK:    NULL

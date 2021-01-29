@@ -1101,9 +1101,9 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   }
 
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
-    if (Error Err = backend(
-            Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-            std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
+    if (Error Err =
+            backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
+                    *RegularLTO.CombinedModule, ThinLTO.CombinedIndex))
       return Err;
   }
 

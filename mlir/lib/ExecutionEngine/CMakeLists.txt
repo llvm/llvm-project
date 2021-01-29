@@ -80,14 +80,6 @@ add_mlir_library(mlir_c_runner_utils
   EXCLUDE_FROM_LIBMLIR
   )
 set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 11)
-
-add_mlir_library(mlir_c_runner_utils_static
-  CRunnerUtils.cpp
-  SparseUtils.cpp
-
-  EXCLUDE_FROM_LIBMLIR
-  )
-set_property(TARGET mlir_c_runner_utils_static PROPERTY CXX_STANDARD 11)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
 add_mlir_library(mlir_runner_utils
@@ -95,9 +87,6 @@ add_mlir_library(mlir_runner_utils
   RunnerUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
-  mlir_c_runner_utils_static
 )
 target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
 
@@ -108,7 +97,6 @@ add_mlir_library(mlir_async_runtime
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  mlir_c_runner_utils_static
   ${LLVM_PTHREAD_LIB}
 )
 set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)

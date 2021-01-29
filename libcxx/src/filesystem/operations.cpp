@@ -17,6 +17,8 @@
 
 #include "filesystem_common.h"
 
+#include "posix_compat.h"
+
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
 # define NOMINMAX
@@ -40,7 +42,7 @@
 # define _LIBCPP_FILESYSTEM_USE_FSTREAM
 #endif
 
-#if !defined(CLOCK_REALTIME)
+#if !defined(CLOCK_REALTIME) && !defined(_LIBCPP_WIN32API)
 # include <sys/time.h> // for gettimeofday and timeval
 #endif
 
@@ -403,7 +405,7 @@ struct FileDescriptor {
   static FileDescriptor create(const path* p, error_code& ec, Args... args) {
     ec.clear();
     int fd;
-    if ((fd = ::open(p->c_str(), args...)) == -1) {
+    if ((fd = detail::open(p->c_str(), args...)) == -1) {
       ec = capture_errno();
       return FileDescriptor{p};
     }
@@ -429,7 +431,7 @@ struct FileDescriptor {
 
   void close() noexcept {
     if (fd != -1)
-      ::close(fd);
+      detail::close(fd);
     fd = -1;
   }
 
@@ -495,7 +497,7 @@ file_status create_file_status(error_code& m_ec, path const& p,
 
 file_status posix_stat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
-  if (::stat(p.c_str(), &path_stat) == -1)
+  if (detail::stat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
@@ -507,7 +509,7 @@ file_status posix_stat(path const& p, error_code* ec) {
 
 file_status posix_lstat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
-  if (::lstat(p.c_str(), &path_stat) == -1)
+  if (detail::lstat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
@@ -519,7 +521,7 @@ file_status posix_lstat(path const& p, error_code* ec) {
 
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/ftruncate.html
 bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
-  if (::ftruncate(fd.fd, to_size) == -1) {
+  if (detail::ftruncate(fd.fd, to_size) == -1) {
     ec = capture_errno();
     return true;
   }
@@ -545,7 +547,7 @@ file_status FileDescriptor::refresh_status(error_code& ec) {
   m_status = file_status{};
   m_stat = {};
   error_code m_ec;
-  if (::fstat(fd, &m_stat) == -1)
+  if (detail::fstat(fd, &m_stat) == -1)
     m_ec = capture_errno();
   m_status = create_file_status(m_ec, name, m_stat, &ec);
   return m_status;
@@ -565,7 +567,14 @@ const bool _FilesystemClock::is_steady;
 
 _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   typedef chrono::duration<rep> __secs;
-#if defined(CLOCK_REALTIME)
+#if defined(_LIBCPP_WIN32API)
+  typedef chrono::duration<rep, nano> __nsecs;
+  FILETIME time;
+  GetSystemTimeAsFileTime(&time);
+  TimeSpec tp = detail::filetime_to_timespec(time);
+  return time_point(__secs(tp.tv_sec) +
+                    chrono::duration_cast<duration>(__nsecs(tp.tv_nsec)));
+#elif defined(CLOCK_REALTIME)
   typedef chrono::duration<rep, nano> __nsecs;
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
@@ -819,8 +828,8 @@ bool __copy_file(const path& from, const path& to, copy_options options,
   ErrorHandler<bool> err("copy_file", ec, &to, &from);
 
   error_code m_ec;
-  FileDescriptor from_fd =
-      FileDescriptor::create_with_status(&from, m_ec, O_RDONLY | O_NONBLOCK);
+  FileDescriptor from_fd = FileDescriptor::create_with_status(
+      &from, m_ec, O_RDONLY | O_NONBLOCK | O_BINARY);
   if (m_ec)
     return err.report(m_ec);
 
@@ -872,7 +881,7 @@ bool __copy_file(const path& from, const path& to, copy_options options,
 
   // Don't truncate right away. We may not be opening the file we originally
   // looked at; we'll check this later.
-  int to_open_flags = O_WRONLY;
+  int to_open_flags = O_WRONLY | O_BINARY;
   if (!to_exists)
     to_open_flags |= O_CREAT;
   FileDescriptor to_fd = FileDescriptor::create_with_status(
@@ -908,10 +917,13 @@ void __copy_symlink(const path& existing_symlink, const path& new_symlink,
   if (ec && *ec) {
     return;
   }
-  // NOTE: proposal says you should detect if you should call
-  // create_symlink or create_directory_symlink. I don't think this
-  // is needed with POSIX
-  __create_symlink(real_path, new_symlink, ec);
+#if defined(_LIBCPP_WIN32API)
+  error_code local_ec;
+  if (is_directory(real_path, local_ec))
+    __create_directory_symlink(real_path, new_symlink, ec);
+  else
+#endif
+    __create_symlink(real_path, new_symlink, ec);
 }
 
 bool __create_directories(const path& p, error_code* ec) {
@@ -944,7 +956,7 @@ bool __create_directories(const path& p, error_code* ec) {
 bool __create_directory(const path& p, error_code* ec) {
   ErrorHandler<bool> err("create_directory", ec, &p);
 
-  if (::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
+  if (detail::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
 
   if (errno == EEXIST) {
@@ -972,7 +984,7 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
     return err.report(errc::not_a_directory,
                       "the specified attribute path is invalid");
 
-  if (::mkdir(p.c_str(), attr_stat.st_mode) == 0)
+  if (detail::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
 
   if (errno == EEXIST) {
@@ -991,19 +1003,19 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 void __create_directory_symlink(path const& from, path const& to,
                                 error_code* ec) {
   ErrorHandler<void> err("create_directory_symlink", ec, &from, &to);
-  if (::symlink(from.c_str(), to.c_str()) != 0)
+  if (detail::symlink_dir(from.c_str(), to.c_str()) == -1)
     return err.report(capture_errno());
 }
 
 void __create_hard_link(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("create_hard_link", ec, &from, &to);
-  if (::link(from.c_str(), to.c_str()) == -1)
+  if (detail::link(from.c_str(), to.c_str()) == -1)
     return err.report(capture_errno());
 }
 
 void __create_symlink(path const& from, path const& to, error_code* ec) {
   ErrorHandler<void> err("create_symlink", ec, &from, &to);
-  if (::symlink(from.c_str(), to.c_str()) == -1)
+  if (detail::symlink_file(from.c_str(), to.c_str()) == -1)
     return err.report(capture_errno());
 }
 
@@ -1023,7 +1035,7 @@ path __current_path(error_code* ec) {
 
 void __current_path(const path& p, error_code* ec) {
   ErrorHandler<void> err("current_path", ec, &p);
-  if (::chdir(p.c_str()) == -1)
+  if (detail::chdir(p.c_str()) == -1)
     err.report(capture_errno());
 }
 
@@ -1119,6 +1131,17 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
   using detail::fs_time;
   ErrorHandler<void> err("last_write_time", ec, &p);
 
+#if defined(_LIBCPP_WIN32API)
+  TimeSpec ts;
+  if (!fs_time::convert_to_timespec(ts, new_time))
+    return err.report(errc::value_too_large);
+  detail::WinHandle h(p.c_str(), FILE_WRITE_ATTRIBUTES, 0);
+  if (!h)
+    return err.report(detail::make_windows_error(GetLastError()));
+  FILETIME last_write = timespec_to_filetime(ts);
+  if (!SetFileTime(h, nullptr, nullptr, &last_write))
+    return err.report(detail::make_windows_error(GetLastError()));
+#else
   error_code m_ec;
   array<TimeSpec, 2> tbuf;
 #if !defined(_LIBCPP_USE_UTIMENSAT)
@@ -1140,6 +1163,7 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
   detail::set_file_times(p, tbuf, m_ec);
   if (m_ec)
     return err.report(m_ec);
+#endif
 }
 
 void __permissions(const path& p, perms prms, perm_options opts,
@@ -1197,7 +1221,7 @@ path __read_symlink(const path& p, error_code* ec) {
   auto buff = std::unique_ptr<char[], NullDeleter>(stack_buff);
 #else
   StatT sb;
-  if (::lstat(p.c_str(), &sb) == -1) {
+  if (detail::lstat(p.c_str(), &sb) == -1) {
     return err.report(capture_errno());
   }
   const size_t size = sb.st_size + 1;
@@ -1215,7 +1239,7 @@ path __read_symlink(const path& p, error_code* ec) {
 
 bool __remove(const path& p, error_code* ec) {
   ErrorHandler<bool> err("remove", ec, &p);
-  if (::remove(p.c_str()) == -1) {
+  if (detail::remove(p.c_str()) == -1) {
     if (errno != ENOENT)
       err.report(capture_errno());
     return false;
@@ -1264,13 +1288,13 @@ uintmax_t __remove_all(const path& p, error_code* ec) {
 
 void __rename(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("rename", ec, &from, &to);
-  if (::rename(from.c_str(), to.c_str()) == -1)
+  if (detail::rename(from.c_str(), to.c_str()) == -1)
     err.report(capture_errno());
 }
 
 void __resize_file(const path& p, uintmax_t size, error_code* ec) {
   ErrorHandler<void> err("resize_file", ec, &p);
-  if (::truncate(p.c_str(), static_cast< ::off_t>(size)) == -1)
+  if (detail::truncate(p.c_str(), static_cast< ::off_t>(size)) == -1)
     return err.report(capture_errno());
 }
 

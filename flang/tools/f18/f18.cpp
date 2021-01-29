@@ -518,6 +518,9 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-fimplicit-none-type-never") {
       options.features.Enable(
           Fortran::common::LanguageFeature::ImplicitNoneTypeNever);
+    } else if (arg == "-falternative-parameter-statement") {
+      options.features.Enable(
+          Fortran::common::LanguageFeature::OldStyleParameter, true);
     } else if (arg == "-fdebug-dump-provenance") {
       driver.dumpProvenance = true;
       options.needProvenanceRangeToCharBlockMappings = true;

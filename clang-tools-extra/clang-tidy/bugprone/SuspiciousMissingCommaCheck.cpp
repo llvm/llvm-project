@@ -108,8 +108,8 @@ void SuspiciousMissingCommaCheck::check(
 
   // Count the number of occurrence of concatenated string literal.
   unsigned int Count = 0;
-  for (unsigned int i = 0; i < Size; ++i) {
-    const Expr *Child = InitializerList->getInit(i)->IgnoreImpCasts();
+  for (unsigned int I = 0; I < Size; ++I) {
+    const Expr *Child = InitializerList->getInit(I)->IgnoreImpCasts();
     if (const auto *Literal = dyn_cast<StringLiteral>(Child)) {
       if (Literal->getNumConcatenated() > 1)
         ++Count;
