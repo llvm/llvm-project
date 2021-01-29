@@ -57,5 +57,5 @@ THINEXTRACT: extracting from a thin archive is not supported
 RUN: llvm-ar p %p/Inputs/thin.a evenlen | FileCheck %s --check-prefix=EVENLEN
 EVENLEN: evenlen
 
-RUN: not llvm-ar p %p/Inputs/thin-path.a t/test2.o 2>&1 | FileCheck %s --check-prefix=MISSING
-MISSING: error: {{N|n}}o such file or directory
+RUN: not llvm-ar p %p/Inputs/thin-path.a t/test2.o 2>&1 | FileCheck %s --DMSG=%errc_ENOENT --check-prefix=MISSING
+MISSING: error: [[MSG]]

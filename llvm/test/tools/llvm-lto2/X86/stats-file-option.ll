@@ -21,5 +21,5 @@ define void @patatino() {
 
 ; Try to save statistics to an invalid file.
 ; RUN: not llvm-lto2 run %t1.bc -o %t.o -r %t1.bc,patatino,px \
-; RUN:     -stats-file=%t2/foo.stats 2>&1 | FileCheck --check-prefix=ERROR %s
-; ERROR: LTO::run failed: {{[Nn]}}o such file or directory
+; RUN:     -stats-file=%t2/foo.stats 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s
+; ERROR: LTO::run failed: [[MSG]]
