@@ -143,6 +143,10 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
   }];
   let verifier = [{ return ::verify(*this); }];
 
+  let assemblyFormat = [{
+    `(` operands `)` attr-dict `:` type(operands)
+  }];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }

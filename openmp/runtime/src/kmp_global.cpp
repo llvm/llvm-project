@@ -284,6 +284,7 @@ int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
 
 kmp_hws_item_t __kmp_hws_socket = {0, 0};
+kmp_hws_item_t __kmp_hws_die = {0, 0};
 kmp_hws_item_t __kmp_hws_node = {0, 0};
 kmp_hws_item_t __kmp_hws_tile = {0, 0};
 kmp_hws_item_t __kmp_hws_core = {0, 0};

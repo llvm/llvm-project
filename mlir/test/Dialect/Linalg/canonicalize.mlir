@@ -668,3 +668,19 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
 // CHECK-LABEL: func @keep_not_noop
 //       CHECK:   %[[RESULT:.+]]:2 = linalg.generic
 //       CHECK:   return %[[RESULT]]#0, %[[RESULT]]#1
+
+// -----
+
+func @fold_init_tensor_with_subtensor
+  (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
+{
+  %0 = linalg.init_tensor[%arg0, 10, 40] : tensor<?x10x40xf32>
+  %1 = subtensor %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
+    : tensor<?x10x40xf32> to tensor<5x?x20xf32>
+  return %1 : tensor<5x?x20xf32>
+}
+//      CHECK: func @fold_init_tensor_with_subtensor
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//      CHECK:   %[[T0:.+]] = linalg.init_tensor [5, %[[ARG1]], 20]
+//      CHECK:   return %[[T0]]

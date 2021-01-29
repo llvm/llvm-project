@@ -7,8 +7,7 @@
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
-; RUN:   %t2.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   %t2.o -o %t3 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Hybrid WPD
@@ -18,8 +17,7 @@
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
-; RUN:   %t.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   %t.o -o %t3 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
@@ -28,8 +26,7 @@
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
-; RUN:   %t4.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN:   %t4.o -o %t3 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
@@ -43,7 +40,7 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t2.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
+; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Hybrid WPD
@@ -51,7 +48,7 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
+; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Regular LTO WPD
@@ -59,7 +56,7 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t4.o -o %t3 \
-; RUN: 	 --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
+; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -74,6 +71,8 @@ target triple = "x86_64-grtev4-linux-gnu"
 @_ZTV1C = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2, !vcall_visibility !5
 @_ZTV1D = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3, !vcall_visibility !5
 
+; Prevent the vtables from being dead code eliminated.
+@llvm.used = appending global [3 x i8*] [ i8* bitcast ( { [4 x i8*] }* @_ZTV1B to i8*), i8* bitcast ( { [4 x i8*] }* @_ZTV1C to i8*), i8* bitcast ( { [3 x i8*] }* @_ZTV1D to i8*)]
 
 ; CHECK-IR-LABEL: define dso_local i32 @_start
 define i32 @_start(%struct.A* %obj, %struct.D* %obj2, i32 %a) {

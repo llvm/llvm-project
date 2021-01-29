@@ -103,7 +103,7 @@
 "`P0466 <https://wg21.link/P0466>`__","LWG","Layout-compatibility and Pointer-interconvertibility Traits","Cologne","",""
 "`P0553 <https://wg21.link/P0553>`__","LWG","Bit operations","Cologne","|Complete|","9.0"
 "`P0631 <https://wg21.link/P0631>`__","LWG","Math Constants","Cologne","|Complete|","11.0"
-"`P0645 <https://wg21.link/P0645>`__","LWG","Text Formatting","Cologne","",""
+"`P0645 <https://wg21.link/P0645>`__","LWG","Text Formatting","Cologne","|In Progress|",""
 "`P0660 <https://wg21.link/P0660>`__","LWG","Stop Token and Joining Thread, Rev 10","Cologne","",""
 "`P0784 <https://wg21.link/P0784>`__","CWG","More constexpr containers","Cologne","|Complete|","12.0"
 "`P0980 <https://wg21.link/P0980>`__","LWG","Making std::string constexpr","Cologne","",""

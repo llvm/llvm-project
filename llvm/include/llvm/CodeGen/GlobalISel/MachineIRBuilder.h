@@ -810,6 +810,12 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildCopy(const DstOp &Res, const SrcOp &Op);
 
+  /// Build and insert \p Res = G_ASSERT_ZEXT Op, Size
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAssertZExt(const DstOp &Res, const SrcOp &Op,
+                                      unsigned Size);
+
   /// Build and insert `Res = G_LOAD Addr, MMO`.
   ///
   /// Loads the value stored at \p Addr. Puts the result in \p Res.

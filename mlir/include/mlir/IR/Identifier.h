@@ -11,10 +11,12 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
+class Dialect;
 class MLIRContext;
 
 /// This class represents a uniqued string owned by an MLIRContext.  Strings
@@ -22,10 +24,17 @@ class MLIRContext;
 /// zero length.
 ///
 /// This is a POD type with pointer size, so it should be passed around by
-/// value.  The underlying data is owned by MLIRContext and is thus immortal for
+/// value. The underlying data is owned by MLIRContext and is thus immortal for
 /// almost all clients.
+///
+/// An Identifier may be prefixed with a dialect namespace followed by a single
+/// dot `.`. This is particularly useful when used as a key in a NamedAttribute
+/// to differentiate a dependent attribute (specific to an operation) from a
+/// generic attribute defined by the dialect (in general applicable to multiple
+/// operations).
 class Identifier {
-  using EntryType = llvm::StringMapEntry<llvm::NoneType>;
+  using EntryType =
+      llvm::StringMapEntry<PointerUnion<Dialect *, MLIRContext *>>;
 
 public:
   /// Return an identifier for the specified string.
@@ -50,6 +59,15 @@ public:
 
   /// Return the number of bytes in this string.
   unsigned size() const { return entry->getKeyLength(); }
+
+  /// Return the dialect loaded in the context for this identifier or nullptr if
+  /// this identifier isn't prefixed with a loaded dialect. For example the
+  /// `llvm.fastmathflags` identifier would return the LLVM dialect here,
+  /// assuming it is loaded in the context.
+  Dialect *getDialect();
+
+  /// Return the current MLIRContext associated with this identifier.
+  MLIRContext *getContext();
 
   const char *begin() const { return data(); }
   const char *end() const { return entry->getKeyData() + size(); }

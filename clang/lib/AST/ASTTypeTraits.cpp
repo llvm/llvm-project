@@ -193,5 +193,7 @@ SourceRange DynTypedNode::getSourceRange() const {
     return TAL->getSourceRange();
   if (const auto *C = get<OMPClause>())
     return SourceRange(C->getBeginLoc(), C->getEndLoc());
+  if (const auto *CBS = get<CXXBaseSpecifier>())
+    return CBS->getSourceRange();
   return SourceRange();
 }

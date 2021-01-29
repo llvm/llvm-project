@@ -151,7 +151,7 @@ namespace llvm {
   struct CodeGenRegister {
     Record *TheDef;
     unsigned EnumValue;
-    unsigned CostPerUse;
+    std::vector<int64_t> CostPerUse;
     bool CoveredBySubRegs;
     bool HasDisjunctSubRegs;
     bool Artificial;

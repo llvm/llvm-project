@@ -393,12 +393,11 @@ static bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
         "(^[Mm]ain([_A-Z]|$))|([a-z0-9_]Main([_A-Z]|$))|(_main(_|$))");
     assert(Matcher.isValid() && "Invalid Matcher for main like functions.");
     return Matcher.match(FDecl->getName());
-  } else {
-    static llvm::Regex Matcher("(^((W[Mm])|(wm))ain([_A-Z]|$))|([a-z0-9_]W[Mm]"
-                               "ain([_A-Z]|$))|(_wmain(_|$))");
-    assert(Matcher.isValid() && "Invalid Matcher for wmain like functions.");
-    return Matcher.match(FDecl->getName());
   }
+  static llvm::Regex Matcher("(^((W[Mm])|(wm))ain([_A-Z]|$))|([a-z0-9_]W[Mm]"
+                             "ain([_A-Z]|$))|(_wmain(_|$))");
+  assert(Matcher.isValid() && "Invalid Matcher for wmain like functions.");
+  return Matcher.match(FDecl->getName());
 }
 
 static std::string

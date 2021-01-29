@@ -115,16 +115,12 @@ body:             |
     ; CHECK: [[FPTRUNC2:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY2]](<2 x s64>)
     ; CHECK: [[FPTRUNC3:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY3]](<2 x s64>)
     ; CHECK: [[COPY5:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: G_STORE [[FPTRUNC]](<2 x s32>), [[COPY5]](p0) :: (store 8, align 32)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x s32>), [[FPTRUNC1]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC2]](<2 x s32>), [[FPTRUNC3]](<2 x s32>)
+    ; CHECK: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY5]](p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C]](s64)
-    ; CHECK: G_STORE [[FPTRUNC1]](<2 x s32>), [[PTR_ADD]](p0) :: (store 8 + 8)
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C1]](s64)
-    ; CHECK: G_STORE [[FPTRUNC2]](<2 x s32>), [[PTR_ADD1]](p0) :: (store 8 + 16, align 16)
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C2]](s64)
-    ; CHECK: G_STORE [[FPTRUNC3]](<2 x s32>), [[PTR_ADD2]](p0) :: (store 8 + 24)
+    ; CHECK: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store 16 + 16)
     ; CHECK: RET_ReallyLR
     %2:_(<2 x s64>) = COPY $q0
     %3:_(<2 x s64>) = COPY $q1

@@ -1024,6 +1024,12 @@ TEST(RenameTest, Renameable) {
         }
       )cpp",
        "new name is the same", !HeaderFile, nullptr, "SameName"},
+      {R"cpp(// Ensure it doesn't associate base specifier with base name.
+        struct A {};
+        struct B : priv^ate A {};
+      )cpp",
+       "Cannot rename symbol: there is no symbol at the given location", false,
+       nullptr},
   };
 
   for (const auto& Case : Cases) {

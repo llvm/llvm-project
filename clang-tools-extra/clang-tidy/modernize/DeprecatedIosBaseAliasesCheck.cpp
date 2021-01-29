@@ -59,7 +59,7 @@ void DeprecatedIosBaseAliasesCheck::check(
   SourceLocation EndLoc = IoStateLoc.getLocWithOffset(TypeName.size() - 1);
 
   if (Replacement) {
-    auto FixName = *Replacement;
+    const char *FixName = *Replacement;
     auto Builder = diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
                                     "'std::ios_base::%1' instead")
                    << TypeName << FixName;

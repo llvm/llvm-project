@@ -113,6 +113,12 @@ kernel void basic_image_readonly(read_only image2d_t image_read_only_image2d) {
 
   resf = read_imagef(image_read_only_image2d, i2);
   res = read_imageh(image_read_only_image2d, i2);
+#if __OPENCL_C_VERSION__ < CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-3{{no matching function for call to 'read_imagef'}}
+  // expected-note@-4 + {{candidate function not viable}}
+  // expected-error@-4{{no matching function for call to 'read_imageh'}}
+  // expected-note@-5 + {{candidate function not viable}}
+#endif
   res = read_imageh(image_read_only_image2d, sampler, i2);
 
   int imgWidth = get_image_width(image_read_only_image2d);

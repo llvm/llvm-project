@@ -222,3 +222,31 @@ func @mlir_dialect_cast_unranked_rank(%0: memref<*xf32>) {
   // expected-error@+1 {{expected second element of a memref descriptor to be an !llvm.ptr<i8>}}
   llvm.mlir.cast %0 : memref<*xf32> to !llvm.struct<(i64, f32)>
 }
+
+// -----
+
+func @mlir_dialect_cast_complex_non_struct(%0: complex<f32>) {
+  // expected-error@+1 {{expected 'complex' to map to two-element struct with identical element types}}
+  llvm.mlir.cast %0 : complex<f32> to f32
+}
+
+// -----
+
+func @mlir_dialect_cast_complex_bad_size(%0: complex<f32>) {
+  // expected-error@+1 {{expected 'complex' to map to two-element struct with identical element types}}
+  llvm.mlir.cast %0 : complex<f32> to !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+func @mlir_dialect_cast_complex_mismatching_type_struct(%0: complex<f32>) {
+  // expected-error@+1 {{expected 'complex' to map to two-element struct with identical element types}}
+  llvm.mlir.cast %0 : complex<f32> to !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+func @mlir_dialect_cast_complex_mismatching_element(%0: complex<f32>) {
+  // expected-error@+1 {{expected 'complex' to map to two-element struct with identical element types}}
+  llvm.mlir.cast %0 : complex<f32> to !llvm.struct<(f64, f64)>
+}

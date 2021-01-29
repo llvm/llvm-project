@@ -160,7 +160,13 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
-  CommonOptionsParser OptionsParser(argc, argv, ClangCheckCategory);
+  auto ExpectedParser =
+      CommonOptionsParser::create(argc, argv, ClangCheckCategory);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
 

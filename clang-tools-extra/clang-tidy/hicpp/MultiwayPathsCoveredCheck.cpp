@@ -83,10 +83,9 @@ static std::size_t getNumberOfPossibleValues(QualType T,
   // and would not return 2 as result.
   if (T->isBooleanType())
     return 2;
-  else if (T->isIntegralType(Context))
+  if (T->isIntegralType(Context))
     return twoPow(Context.getTypeSize(T));
-  else
-    return 1;
+  return 1;
 }
 
 void MultiwayPathsCoveredCheck::check(const MatchFinder::MatchResult &Result) {

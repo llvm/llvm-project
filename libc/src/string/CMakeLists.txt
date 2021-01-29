@@ -73,7 +73,6 @@ add_entrypoint_object(
   HDRS
     memmove.h
   DEPENDS
-    libc.include.unistd
     libc.src.stdlib.abs_utils
     libc.src.string.memcpy
 )

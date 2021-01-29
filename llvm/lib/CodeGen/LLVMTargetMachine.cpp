@@ -61,6 +61,9 @@ void LLVMTargetMachine::initAsmInfo() {
          "Make sure you include the correct TargetSelect.h"
          "and that InitializeAllTargetMCs() is being invoked!");
 
+  if (Options.BinutilsVersion.first > 0)
+    TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);
+
   if (Options.DisableIntegratedAS)
     TmpAsmInfo->setUseIntegratedAssembler(false);
 

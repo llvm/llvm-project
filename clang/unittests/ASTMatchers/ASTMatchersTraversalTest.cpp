@@ -474,6 +474,42 @@ TEST(Matcher, CapturesThis) {
   EXPECT_TRUE(notMatches("void f() { int z = 3; [&z](){}; }", HasCaptureThis));
 }
 
+TEST(Matcher, MatchesMethodsOnLambda) {
+  StringRef Code = R"cpp(
+struct A {
+  ~A() {}
+};
+void foo()
+{
+  A a;
+  auto l = [a] { };
+  auto lCopy = l;
+  auto lPtrDecay = +[] { };
+  (void)lPtrDecay;
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code, cxxConstructorDecl(
+                hasBody(compoundStmt()),
+                hasAncestor(lambdaExpr(hasAncestor(varDecl(hasName("l"))))),
+                isCopyConstructor())));
+  EXPECT_TRUE(matches(
+      Code, cxxConstructorDecl(
+                hasBody(compoundStmt()),
+                hasAncestor(lambdaExpr(hasAncestor(varDecl(hasName("l"))))),
+                isMoveConstructor())));
+  EXPECT_TRUE(matches(
+      Code, cxxDestructorDecl(
+                hasBody(compoundStmt()),
+                hasAncestor(lambdaExpr(hasAncestor(varDecl(hasName("l"))))))));
+  EXPECT_TRUE(matches(
+      Code, cxxConversionDecl(hasBody(compoundStmt(has(returnStmt(
+                                  hasReturnValue(implicitCastExpr()))))),
+                              hasAncestor(lambdaExpr(hasAncestor(
+                                  varDecl(hasName("lPtrDecay"))))))));
+}
+
 TEST(Matcher, isClassMessage) {
   EXPECT_TRUE(matchesObjC(
       "@interface NSString +(NSString *) stringWithFormat; @end "
@@ -3851,6 +3887,78 @@ void binop()
                             hasRHS(declRefExpr(to(varDecl(hasName("F2"))))))),
         true, {"-std=c++20"}));
   }
+}
+
+TEST(IgnoringImpCasts, PathologicalLambda) {
+
+  // Test that deeply nested lambdas are not a performance penalty
+  StringRef Code = R"cpp(
+void f() {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+  [] {
+    int i = 42;
+    (void)i;
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+  }();
+}
+  )cpp";
+
+  EXPECT_TRUE(matches(Code, integerLiteral(equals(42))));
+  EXPECT_TRUE(matches(Code, functionDecl(hasDescendant(integerLiteral(equals(42))))));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {

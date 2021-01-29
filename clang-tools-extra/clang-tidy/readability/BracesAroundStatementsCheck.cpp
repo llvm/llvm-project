@@ -139,18 +139,19 @@ void BracesAroundStatementsCheck::check(
   const ASTContext *Context = Result.Context;
 
   // Get location of closing parenthesis or 'do' to insert opening brace.
-  if (auto S = Result.Nodes.getNodeAs<ForStmt>("for")) {
+  if (const auto *S = Result.Nodes.getNodeAs<ForStmt>("for")) {
     checkStmt(Result, S->getBody(), S->getRParenLoc());
-  } else if (auto S = Result.Nodes.getNodeAs<CXXForRangeStmt>("for-range")) {
+  } else if (const auto *S =
+                 Result.Nodes.getNodeAs<CXXForRangeStmt>("for-range")) {
     checkStmt(Result, S->getBody(), S->getRParenLoc());
-  } else if (auto S = Result.Nodes.getNodeAs<DoStmt>("do")) {
+  } else if (const auto *S = Result.Nodes.getNodeAs<DoStmt>("do")) {
     checkStmt(Result, S->getBody(), S->getDoLoc(), S->getWhileLoc());
-  } else if (auto S = Result.Nodes.getNodeAs<WhileStmt>("while")) {
+  } else if (const auto *S = Result.Nodes.getNodeAs<WhileStmt>("while")) {
     SourceLocation StartLoc = findRParenLoc(S, SM, Context);
     if (StartLoc.isInvalid())
       return;
     checkStmt(Result, S->getBody(), StartLoc);
-  } else if (auto S = Result.Nodes.getNodeAs<IfStmt>("if")) {
+  } else if (const auto *S = Result.Nodes.getNodeAs<IfStmt>("if")) {
     SourceLocation StartLoc = findRParenLoc(S, SM, Context);
     if (StartLoc.isInvalid())
       return;

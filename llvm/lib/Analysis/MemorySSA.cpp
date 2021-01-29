@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -2197,17 +2198,13 @@ void MemoryDef::print(raw_ostream &OS) const {
 }
 
 void MemoryPhi::print(raw_ostream &OS) const {
-  bool First = true;
+  ListSeparator LS(",");
   OS << getID() << " = MemoryPhi(";
   for (const auto &Op : operands()) {
     BasicBlock *BB = getIncomingBlock(Op);
     MemoryAccess *MA = cast<MemoryAccess>(Op);
-    if (!First)
-      OS << ',';
-    else
-      First = false;
 
-    OS << '{';
+    OS << LS << '{';
     if (BB->hasName())
       OS << BB->getName();
     else

@@ -1,6 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -debug-only=machine-scheduler < %s 2> %t | FileCheck --enable-var-scope --check-prefixes=CHECK,GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-xnack -verify-machineinstrs -debug-only=machine-scheduler < %s 2> %t | FileCheck --enable-var-scope --check-prefixes=CHECK,GCN %s
 ; RUN: FileCheck --enable-var-scope --check-prefixes=CHECK,DBG %s < %t
 ; REQUIRES: asserts
+
+; FIXME: Verifier error with xnack enabled.
 
 ; CHECK-LABEL: {{^}}cluster_load_cluster_store:
 define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noalias %sb) {

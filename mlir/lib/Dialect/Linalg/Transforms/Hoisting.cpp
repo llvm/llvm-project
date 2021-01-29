@@ -385,7 +385,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::SimplePadOp simplePadOp, int nLevels,
     return domInfo.dominates(outermostEnclosingForOp, op);
   });
 
-  #if 0
+#if 0
 
   // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
   // Bail on any op with side effects that is not a LoopLikeInterface.
@@ -398,7 +398,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::SimplePadOp simplePadOp, int nLevels,
       }))
     return failure();
 
-  #else
+#else
 
   // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
   if (llvm::any_of(backwardSlice, [](Operation *op) {
@@ -407,7 +407,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::SimplePadOp simplePadOp, int nLevels,
       }))
     return failure();
 
-  #endif
+#endif
 
   // Filter out the loops whose induction variable is not used to compute the
   // padded result. As a first approximation, just look for IVs that have no use

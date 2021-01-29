@@ -39,7 +39,7 @@ AST_MATCHER(FunctionDecl, isVectorFunction) {
 
 } // namespace
 
-static StringRef TrySuggestPPC(StringRef Name) {
+static StringRef trySuggestPpc(StringRef Name) {
   if (!Name.consume_front("vec_"))
     return {};
 
@@ -54,7 +54,7 @@ static StringRef TrySuggestPPC(StringRef Name) {
       .Default({});
 }
 
-static StringRef TrySuggestX86(StringRef Name) {
+static StringRef trySuggestX86(StringRef Name) {
   if (!(Name.consume_front("_mm_") || Name.consume_front("_mm256_") ||
         Name.consume_front("_mm512_")))
     return {};
@@ -120,11 +120,11 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    New = TrySuggestPPC(Old);
+    New = trySuggestPpc(Old);
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    New = TrySuggestX86(Old);
+    New = trySuggestX86(Old);
     break;
   }
 

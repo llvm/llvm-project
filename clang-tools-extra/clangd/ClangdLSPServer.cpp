@@ -510,6 +510,11 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         "semanticTokens request, choosing the latter (no notifications).");
     Opts.TheiaSemanticHighlighting = false;
   }
+  if (Opts.TheiaSemanticHighlighting) {
+    log("Using legacy semanticHighlights notification, which will be removed "
+        "in clangd 13. Clients should use the standard semanticTokens "
+        "request instead.");
+  }
 
   if (Params.rootUri && *Params.rootUri)
     Opts.WorkspaceRoot = std::string(Params.rootUri->file());

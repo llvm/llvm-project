@@ -72,6 +72,7 @@ private:
 protected:
   // Basic subtarget description.
   Triple TargetTriple;
+  AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen;
   InstrItineraryData InstrItins;
   int LDSBankCount;
@@ -88,8 +89,12 @@ protected:
   bool UnalignedScratchAccess;
   bool UnalignedAccessMode;
   bool HasApertureRegs;
+  bool SupportsXNACK;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for XNACK.
   bool EnableXNACK;
-  bool DoesNotSupportXNACK;
+
   bool EnableCuMode;
   bool TrapHandler;
 
@@ -145,8 +150,12 @@ protected:
   bool HasAtomicFaddRtnInsts;
   bool HasAtomicFaddNoRtnInsts;
   bool HasAtomicPkFaddNoRtnInsts;
+  bool SupportsSRAMECC;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for SRAMECC.
   bool EnableSRAMECC;
-  bool DoesNotSupportSRAMECC;
+
   bool HasNoSdstCMPX;
   bool HasVscnt;
   bool HasGetWaveIdInst;
@@ -504,7 +513,7 @@ public:
   }
 
   bool isXNACKEnabled() const {
-    return EnableXNACK;
+    return TargetID.isXnackOnOrAny();
   }
 
   bool isCuModeEnabled() const {
@@ -567,7 +576,7 @@ public:
   }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !isSRAMECCEnabled();
+    return hasD16LoadStore() && !TargetID.isSramEccOnOrAny();
   }
 
   bool hasD16Images() const {
@@ -681,10 +690,6 @@ public:
 
   bool hasAtomicPkFaddNoRtnInsts() const {
     return HasAtomicPkFaddNoRtnInsts;
-  }
-
-  bool isSRAMECCEnabled() const {
-    return EnableSRAMECC;
   }
 
   bool hasNoSdstCMPX() const {

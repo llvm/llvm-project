@@ -33,9 +33,6 @@ def riscv_vleff_mask : SDNode<"RISCVISD::VLEFF_MASK",
                                                    SDTCisVT<4, XLenVT>]>,
                               [SDNPHasChain, SDNPOutGlue, SDNPMayLoad,
                                SDNPSideEffect]>;
-def riscv_read_vl : SDNode<"RISCVISD::READ_VL",
-                           SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>,
-                           [SDNPInGlue]>;
 
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
@@ -3115,8 +3112,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
     Uses = [VL] in
-def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins),
-                          [(set GPR:$rd, (riscv_read_vl))]>;
+def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>;
 
 //===----------------------------------------------------------------------===//
 // 6. Configuration-Setting Instructions

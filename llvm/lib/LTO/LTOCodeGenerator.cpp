@@ -553,7 +553,10 @@ bool LTOCodeGenerator::optimize() {
   // via the internal option. Must be done before WPD invoked via the optimizer
   // pipeline run below.
   updateVCallVisibilityInModule(*MergedModule,
-                                /* WholeProgramVisibilityEnabledInLTO */ false);
+                                /* WholeProgramVisibilityEnabledInLTO */ false,
+                                // FIXME: This needs linker information via a
+                                // TBD new interface.
+                                /* DynamicExportSymbols */ {});
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.

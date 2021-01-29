@@ -14,7 +14,7 @@
 #include "VSCode.h"
 #include "llvm/Support/FormatVariadic.h"
 
-#if defined(_WIN32)
+#if !LLVM_ON_UNIX
 #define NOMINMAX
 #include <fcntl.h>
 #include <io.h>
@@ -41,7 +41,7 @@ VSCode::VSCode()
       stop_at_entry(false), is_attach(false),
       reverse_request_seq(0), waiting_for_run_in_terminal(false) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
-#if defined(_WIN32)
+#if !LLVM_ON_UNIX
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
   // while the value is just 10 on Darwin/Linux. Setting the file mode to binary
   // fixes this.
