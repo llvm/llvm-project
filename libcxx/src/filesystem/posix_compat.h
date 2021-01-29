@@ -94,6 +94,23 @@ TimeSpec filetime_to_timespec(LARGE_INTEGER li) {
   return ret;
 }
 
+TimeSpec filetime_to_timespec(FILETIME ft) {
+  LARGE_INTEGER li;
+  li.LowPart = ft.dwLowDateTime;
+  li.HighPart = ft.dwHighDateTime;
+  return filetime_to_timespec(li);
+}
+
+FILETIME timespec_to_filetime(TimeSpec ts) {
+  LARGE_INTEGER li;
+  li.QuadPart =
+      ts.tv_nsec / 100 + (ts.tv_sec + FILE_TIME_OFFSET_SECS) * 10000000;
+  FILETIME ft;
+  ft.dwLowDateTime = li.LowPart;
+  ft.dwHighDateTime = li.HighPart;
+  return ft;
+}
+
 int set_errno(int e = GetLastError()) {
   errno = static_cast<int>(__win_err_to_errc(e));
   return -1;
