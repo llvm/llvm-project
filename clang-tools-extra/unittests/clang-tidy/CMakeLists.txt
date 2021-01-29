@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
-  TestingSupport
   )
 
 get_filename_component(CLANG_LINT_SOURCE_DIR
@@ -46,4 +45,5 @@ target_link_libraries(ClangTidyTests
   clangTidyObjCModule
   clangTidyReadabilityModule
   clangTidyUtils
+  LLVMTestingSupport
   )
