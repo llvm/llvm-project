@@ -66,14 +66,49 @@ using namespace llvm::opt;
 static bool getSystemRegistryString(const char *keyPath, const char *valueName,
                                     std::string &value, std::string *phValue);
 
+static std::string getHighestNumericTupleInDirectory(StringRef Directory) {
+  std::string Highest;
+  llvm::VersionTuple HighestTuple;
+
+  std::error_code EC;
+  for (llvm::sys::fs::directory_iterator DirIt(Directory, EC), DirEnd;
+       !EC && DirIt != DirEnd; DirIt.increment(EC)) {
+    if (!llvm::sys::fs::is_directory(DirIt->path()))
+      continue;
+    StringRef CandidateName = llvm::sys::path::filename(DirIt->path());
+    llvm::VersionTuple Tuple;
+    if (Tuple.tryParse(CandidateName)) // tryParse() returns true on error.
+      continue;
+    if (Tuple > HighestTuple) {
+      HighestTuple = Tuple;
+      Highest = CandidateName.str();
+    }
+  }
+
+  return Highest;
+}
+
 // Check command line arguments to try and find a toolchain.
 static bool
 findVCToolChainViaCommandLine(const ArgList &Args, std::string &Path,
                               MSVCToolChain::ToolsetLayout &VSLayout) {
   // Don't validate the input; trust the value supplied by the user.
   // The primary motivation is to prevent unnecessary file and registry access.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_vctoolsdir)) {
-    Path = A->getValue();
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_vctoolsdir,
+                               options::OPT__SLASH_winsysroot)) {
+    if (A->getOption().getID() == options::OPT__SLASH_winsysroot) {
+      llvm::SmallString<128> ToolsPath(A->getValue());
+      llvm::sys::path::append(ToolsPath, "VC", "Tools", "MSVC");
+      std::string VCToolsVersion;
+      if (Arg *A = Args.getLastArg(options::OPT__SLASH_vctoolsversion))
+        VCToolsVersion = A->getValue();
+      else
+        VCToolsVersion = getHighestNumericTupleInDirectory(ToolsPath);
+      llvm::sys::path::append(ToolsPath, VCToolsVersion);
+      Path = std::string(ToolsPath.str());
+    } else {
+      Path = A->getValue();
+    }
     VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
     return true;
   }
@@ -345,7 +380,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // they're doing. If the user passes /vctoolsdir or /winsdkdir, trust that
   // over env vars.
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_vctoolsdir)) {
+      Args.getLastArg(options::OPT__SLASH_vctoolsdir,
+                      options::OPT__SLASH_winsysroot)) {
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-libpath:") +
         TC.getSubDirectoryPath(
@@ -356,7 +392,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                "atlmfc")));
   }
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_winsdkdir)) {
+      Args.getLastArg(options::OPT__SLASH_winsdkdir,
+                      options::OPT__SLASH_winsysroot)) {
     if (TC.useUniversalCRT()) {
       std::string UniversalCRTLibPath;
       if (TC.getUniversalCRTLibraryPath(Args, UniversalCRTLibPath))
@@ -1069,42 +1106,38 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
 // So we compare entry names lexicographically to find the greatest one.
 static bool getWindows10SDKVersionFromPath(const std::string &SDKPath,
                                            std::string &SDKVersion) {
-  SDKVersion.clear();
-
-  std::error_code EC;
   llvm::SmallString<128> IncludePath(SDKPath);
   llvm::sys::path::append(IncludePath, "Include");
-  for (llvm::sys::fs::directory_iterator DirIt(IncludePath, EC), DirEnd;
-       DirIt != DirEnd && !EC; DirIt.increment(EC)) {
-    if (!llvm::sys::fs::is_directory(DirIt->path()))
-      continue;
-    StringRef CandidateName = llvm::sys::path::filename(DirIt->path());
-    // If WDK is installed, there could be subfolders like "wdf" in the
-    // "Include" directory.
-    // Allow only directories which names start with "10.".
-    if (!CandidateName.startswith("10."))
-      continue;
-    if (CandidateName > SDKVersion)
-      SDKVersion = std::string(CandidateName);
-  }
-
+  SDKVersion = getHighestNumericTupleInDirectory(IncludePath);
   return !SDKVersion.empty();
 }
 
 static bool getWindowsSDKDirViaCommandLine(const ArgList &Args,
                                            std::string &Path, int &Major,
                                            std::string &Version) {
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_winsdkdir)) {
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_winsdkdir,
+                               options::OPT__SLASH_winsysroot)) {
     // Don't validate the input; trust the value supplied by the user.
     // The motivation is to prevent unnecessary file and registry access.
-    Path = A->getValue();
-    if (Arg *A = Args.getLastArg(options::OPT__SLASH_winsdkversion)) {
-      StringRef WinSdkVersion = A->getValue();
-      Version = WinSdkVersion.str();
-      if (WinSdkVersion.consumeInteger(10, Major))
-        return false;
-      if (!(WinSdkVersion.empty() || WinSdkVersion.startswith(".")))
-        return false;
+    llvm::VersionTuple SDKVersion;
+    if (Arg *A = Args.getLastArg(options::OPT__SLASH_winsdkversion))
+      SDKVersion.tryParse(A->getValue());
+
+    if (A->getOption().getID() == options::OPT__SLASH_winsysroot) {
+      llvm::SmallString<128> SDKPath(A->getValue());
+      llvm::sys::path::append(SDKPath, "Windows Kits");
+      if (!SDKVersion.empty())
+        llvm::sys::path::append(SDKPath, Twine(SDKVersion.getMajor()));
+      else
+        llvm::sys::path::append(SDKPath, getHighestNumericTupleInDirectory(SDKPath));
+      Path = std::string(SDKPath.str());
+    } else {
+      Path = A->getValue();
+    }
+
+    if (!SDKVersion.empty()) {
+      Major = SDKVersion.getMajor();
+      Version = SDKVersion.getAsString();
     } else if (getWindows10SDKVersionFromPath(Path, Version)) {
       Major = 10;
     }
@@ -1326,7 +1359,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   // Honor %INCLUDE%. It should know essential search paths with vcvarsall.bat.
   // Skip if the user expressly set a vctoolsdir
-  if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir)) {
+  if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
+                             options::OPT__SLASH_winsysroot)) {
     if (llvm::Optional<std::string> cl_include_dir =
             llvm::sys::Process::GetEnv("INCLUDE")) {
       SmallVector<StringRef, 8> Dirs;
