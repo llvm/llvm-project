@@ -133,6 +133,15 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
+      // Eliminate hints.
+      if (isPreISelGenericOptimizationHint(MI.getOpcode())) {
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(1).getReg();
+        MI.eraseFromParent();
+        MRI.replaceRegWith(DstReg, SrcReg);
+        continue;
+      }
+
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.
