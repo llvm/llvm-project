@@ -228,34 +228,6 @@ public:
     return true;
   }
 
-  StringRef getLambdaString(const CXXRecordDecl *Lambda) override {
-    assert(Lambda->isLambda() && "RD must be a lambda!");
-    llvm::SmallString<10> Name("<lambda_");
-
-    Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
-    unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
-    unsigned LambdaId;
-    const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
-    const FunctionDecl *Func =
-        Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
-
-    if (Func) {
-      unsigned DefaultArgNo =
-          Func->getNumParams() - Parm->getFunctionScopeIndex();
-      Name += llvm::utostr(DefaultArgNo);
-      Name += "_";
-    }
-
-    if (LambdaManglingNumber)
-      LambdaId = LambdaManglingNumber;
-    else
-      LambdaId = getLambdaIdForDebugInfo(Lambda);
-
-    Name += llvm::utostr(LambdaId);
-    Name += ">";
-    return StringRef(Name);
-  }
-
   unsigned getLambdaId(const CXXRecordDecl *RD) {
     assert(RD->isLambda() && "RD must be a lambda!");
     assert(!RD->isExternallyVisible() && "RD must not be visible!");
@@ -264,19 +236,6 @@ public:
     std::pair<llvm::DenseMap<const CXXRecordDecl *, unsigned>::iterator, bool>
         Result = LambdaIds.insert(std::make_pair(RD, LambdaIds.size()));
     return Result.first->second;
-  }
-
-  unsigned getLambdaIdForDebugInfo(const CXXRecordDecl *RD) {
-    assert(RD->isLambda() && "RD must be a lambda!");
-    assert(!RD->isExternallyVisible() && "RD must not be visible!");
-    assert(RD->getLambdaManglingNumber() == 0 &&
-           "RD must not have a mangling number!");
-    llvm::DenseMap<const CXXRecordDecl *, unsigned>::iterator Result =
-        LambdaIds.find(RD);
-    // The lambda should exist, but return 0 in case it doesn't.
-    if (Result == LambdaIds.end())
-      return 0;
-    return Result->second;
   }
 
   /// Return a character sequence that is (somewhat) unique to the TU suitable

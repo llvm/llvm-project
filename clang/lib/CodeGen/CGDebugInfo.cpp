@@ -317,9 +317,8 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
   if (const IdentifierInfo *II = RD->getIdentifier())
     return II->getName();
 
-  // The CodeView printer in LLVM wants to see the names of unnamed types
-  // because they need to have a unique identifier.
-  // These names are used to reconstruct the fully qualified type names.
+  // The CodeView printer in LLVM wants to see the names of unnamed types: it is
+  // used to reconstruct the fully qualified type names.
   if (CGM.getCodeGenOpts().EmitCodeView) {
     if (const TypedefNameDecl *D = RD->getTypedefNameForAnonDecl()) {
       assert(RD->getDeclContext() == D->getDeclContext() &&
@@ -342,14 +341,6 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
         // Anonymous types without a name for linkage purposes have their
         // associate typedef mangled in if they have one.
         Name = TND->getName();
-
-      // Give lambdas a display name based on their name mangling.
-      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-        if (CXXRD->isLambda()) {
-          StringRef LambdaName =
-              CGM.getCXXABI().getMangleContext().getLambdaString(CXXRD);
-          return internString(LambdaName);
-        }
 
       if (!Name.empty()) {
         SmallString<256> UnnamedType("<unnamed-type-");
