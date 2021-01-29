@@ -273,4 +273,6 @@ constexpr bool same_prefix(char const *lhs, char const *rhs, int const len) {
       return;                                                                  \
   } while (0)
 
+#define WITH_SIGNAL(X) X
+
 #endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
