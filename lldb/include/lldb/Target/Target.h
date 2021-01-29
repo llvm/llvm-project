@@ -1147,6 +1147,9 @@ public:
   GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
                             bool create_on_demand = true);
 
+  /// Return whether this is the Swift REPL.
+  bool IsSwiftREPL();
+
 private:
   void DisplayFallbackSwiftContextErrors(
       SwiftASTContextForExpressions *swift_ast_ctx);

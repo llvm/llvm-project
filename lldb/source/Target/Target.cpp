@@ -2611,6 +2611,12 @@ void Target::DisplayFallbackSwiftContextErrors(
       swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
   errs->Flush();
 }
+
+bool Target::IsSwiftREPL() {
+  return m_debugger.REPLIsActive() &&
+         GetProcessLaunchInfo().GetArg0().endswith("repl_swift");
+}
+
 #endif // LLDB_ENABLE_SWIFT
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
