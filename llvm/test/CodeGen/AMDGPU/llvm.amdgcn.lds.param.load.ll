@@ -23,10 +23,10 @@ main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %arg)
   ; Ensure memory clustering is occuring for lds_param_load
   %p5 = fadd float %p0, 1.0
-  %p1 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %arg)
-  %p2 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 2, i32 %arg)
-  %p3 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 3, i32 %arg)
-  %p4 = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %arg)
+  %p1 = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %arg)
+  %p2 = call float @llvm.amdgcn.lds.param.load(i32 2, i32 0, i32 %arg)
+  %p3 = call float @llvm.amdgcn.lds.param.load(i32 3, i32 0, i32 %arg)
+  %p4 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %arg)
   call void @llvm.amdgcn.raw.buffer.store.f32(float %p5, <4 x i32> %buf, i32 4, i32 0, i32 0)
   call void @llvm.amdgcn.raw.buffer.store.f32(float %p1, <4 x i32> %buf, i32 4, i32 1, i32 0)
   call void @llvm.amdgcn.raw.buffer.store.f32(float %p2, <4 x i32> %buf, i32 4, i32 2, i32 0)

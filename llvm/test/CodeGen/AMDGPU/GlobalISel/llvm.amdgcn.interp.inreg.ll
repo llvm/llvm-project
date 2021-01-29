@@ -23,8 +23,8 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    exp mrt0 v3, v2, v0, v1 done
 ; GCN-NEXT:    s_endpgm
 main_body:
-  %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %m0)
-  %p1 = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %m0)
+  %p0 = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %m0)
+  %p1 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %m0)
   %p0_0 = call float @llvm.amdgcn.interp.inreg.p10(float %p0, float %i, float %p0)
   %p1_0 = call float @llvm.amdgcn.interp.inreg.p2(float %p0, float %j, float %p0_0)
   %p0_1 = call float @llvm.amdgcn.interp.inreg.p10(float %p1, float %i, float %p1)
