@@ -190,7 +190,6 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Float to int
 ; CHECK-NEXT:       Lower constant intrinsics
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Canonicalize natural loops
 ; CHECK-NEXT:       LCSSA Verifier
