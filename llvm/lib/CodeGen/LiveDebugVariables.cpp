@@ -145,6 +145,14 @@ using LocMap = IntervalMap<SlotIndex, DbgVariableValue, 4>;
 /// Non-spilled locations are not added to the map.
 using SpillOffsetMap = DenseMap<unsigned, unsigned>;
 
+/// Cache to save the location where it can be used as the starting
+/// position as input for calling MachineBasicBlock::SkipPHIsLabelsAndDebug.
+/// This is to prevent MachineBasicBlock::SkipPHIsLabelsAndDebug from
+/// repeatedly searching the same set of PHIs/Labels/Debug instructions
+/// if it is called many times for the same block.
+using BlockSkipInstsMap =
+    DenseMap<MachineBasicBlock *, MachineBasicBlock::iterator>;
+
 namespace {
 
 class LDVImpl;
@@ -181,7 +189,8 @@ class UserValue {
                         SlotIndex StopIdx, DbgVariableValue DbgValue,
                         bool Spilled, unsigned SpillOffset, LiveIntervals &LIS,
                         const TargetInstrInfo &TII,
-                        const TargetRegisterInfo &TRI);
+                        const TargetRegisterInfo &TRI,
+                        BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Replace OldLocNo ranges with NewRegs ranges where NewRegs
   /// is live. Returns true if any changes were made.
@@ -348,7 +357,8 @@ public:
   void emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
                        const TargetInstrInfo &TII,
                        const TargetRegisterInfo &TRI,
-                       const SpillOffsetMap &SpillOffsets);
+                       const SpillOffsetMap &SpillOffsets,
+                       BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserValue.
   DebugLoc getDebugLoc() { return dl;}
@@ -365,7 +375,8 @@ class UserLabel {
 
   /// Insert a DBG_LABEL into MBB at Idx.
   void insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
-                        LiveIntervals &LIS, const TargetInstrInfo &TII);
+                        LiveIntervals &LIS, const TargetInstrInfo &TII,
+                        BlockSkipInstsMap &BBSkipInstsMap);
 
 public:
   /// Create a new UserLabel.
@@ -379,7 +390,8 @@ public:
   }
 
   /// Recreate DBG_LABEL instruction from data structures.
-  void emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII);
+  void emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
+                      BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserLabel.
   DebugLoc getDebugLoc() { return dl; }
@@ -1282,8 +1294,8 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
 
 /// Find an iterator for inserting a DBG_VALUE instruction.
 static MachineBasicBlock::iterator
-findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
-                   LiveIntervals &LIS) {
+findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
+                   BlockSkipInstsMap &BBSkipInstsMap) {
   SlotIndex Start = LIS.getMBBStartIdx(MBB);
   Idx = Idx.getBaseIndex();
 
@@ -1292,7 +1304,29 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
   while (!(MI = LIS.getInstructionFromIndex(Idx))) {
     // We've reached the beginning of MBB.
     if (Idx == Start) {
-      MachineBasicBlock::iterator I = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
+      // Retrieve the last PHI/Label/Debug location found when calling
+      // SkipPHIsLabelsAndDebug last time. Start searching from there.
+      //
+      // Note the iterator kept in BBSkipInstsMap is one step back based
+      // on the iterator returned by SkipPHIsLabelsAndDebug last time.
+      // One exception is when SkipPHIsLabelsAndDebug returns MBB->begin(),
+      // BBSkipInstsMap won't save it. This is to consider the case that
+      // new instructions may be inserted at the beginning of MBB after
+      // last call of SkipPHIsLabelsAndDebug. If we save MBB->begin() in
+      // BBSkipInstsMap, after new non-phi/non-label/non-debug instructions
+      // are inserted at the beginning of the MBB, the iterator in
+      // BBSkipInstsMap won't point to the beginning of the MBB anymore.
+      // Therefore The next search in SkipPHIsLabelsAndDebug will skip those
+      // newly added instructions and that is unwanted.
+      MachineBasicBlock::iterator BeginIt;
+      auto MapIt = BBSkipInstsMap.find(MBB);
+      if (MapIt == BBSkipInstsMap.end())
+        BeginIt = MBB->begin();
+      else
+        BeginIt = std::next(MapIt->second);
+      auto I = MBB->SkipPHIsLabelsAndDebug(BeginIt);
+      if (I != BeginIt)
+        BBSkipInstsMap[MBB] = std::prev(I);
       return I;
     }
     Idx = Idx.getPrevIndex();
@@ -1332,11 +1366,13 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
                                  SlotIndex StopIdx, DbgVariableValue DbgValue,
                                  bool Spilled, unsigned SpillOffset,
                                  LiveIntervals &LIS, const TargetInstrInfo &TII,
-                                 const TargetRegisterInfo &TRI) {
+                                 const TargetRegisterInfo &TRI,
+                                 BlockSkipInstsMap &BBSkipInstsMap) {
   SlotIndex MBBEndIdx = LIS.getMBBEndIdx(&*MBB);
   // Only search within the current MBB.
   StopIdx = (MBBEndIdx < StopIdx) ? MBBEndIdx : StopIdx;
-  MachineBasicBlock::iterator I = findInsertLocation(MBB, StartIdx, LIS);
+  MachineBasicBlock::iterator I =
+      findInsertLocation(MBB, StartIdx, LIS, BBSkipInstsMap);
   // Undef values don't exist in locations so create new "noreg" register MOs
   // for them. See getLocationNo().
   MachineOperand MO =
@@ -1382,9 +1418,10 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
 }
 
 void UserLabel::insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
-                                 LiveIntervals &LIS,
-                                 const TargetInstrInfo &TII) {
-  MachineBasicBlock::iterator I = findInsertLocation(MBB, Idx, LIS);
+                                 LiveIntervals &LIS, const TargetInstrInfo &TII,
+                                 BlockSkipInstsMap &BBSkipInstsMap) {
+  MachineBasicBlock::iterator I =
+      findInsertLocation(MBB, Idx, LIS, BBSkipInstsMap);
   ++NumInsertedDebugLabels;
   BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_LABEL))
       .addMetadata(Label);
@@ -1393,7 +1430,8 @@ void UserLabel::insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
 void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
                                 const TargetInstrInfo &TII,
                                 const TargetRegisterInfo &TRI,
-                                const SpillOffsetMap &SpillOffsets) {
+                                const SpillOffsetMap &SpillOffsets,
+                                BlockSkipInstsMap &BBSkipInstsMap) {
   MachineFunction::iterator MFEnd = VRM->getMachineFunction().end();
 
   for (LocMap::const_iterator I = locInts.begin(); I.valid();) {
@@ -1418,7 +1456,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
 
     LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
     insertDebugValue(&*MBB, Start, Stop, DbgValue, Spilled, SpillOffset, LIS,
-                     TII, TRI);
+                     TII, TRI, BBSkipInstsMap);
     // This interval may span multiple basic blocks.
     // Insert a DBG_VALUE into each one.
     while (Stop > MBBEnd) {
@@ -1429,7 +1467,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
       MBBEnd = LIS.getMBBEndIdx(&*MBB);
       LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
       insertDebugValue(&*MBB, Start, Stop, DbgValue, Spilled, SpillOffset, LIS,
-                       TII, TRI);
+                       TII, TRI, BBSkipInstsMap);
     }
     LLVM_DEBUG(dbgs() << '\n');
     if (MBB == MFEnd)
@@ -1439,12 +1477,13 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
   }
 }
 
-void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII) {
+void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
+                               BlockSkipInstsMap &BBSkipInstsMap) {
   LLVM_DEBUG(dbgs() << "\t" << loc);
   MachineFunction::iterator MBB = LIS.getMBBFromIndex(loc)->getIterator();
 
   LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB));
-  insertDebugLabel(&*MBB, loc, LIS, TII);
+  insertDebugLabel(&*MBB, loc, LIS, TII, BBSkipInstsMap);
 
   LLVM_DEBUG(dbgs() << '\n');
 }
@@ -1453,17 +1492,20 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
+
+  BlockSkipInstsMap BBSkipInstsMap;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   SpillOffsetMap SpillOffsets;
   for (auto &userValue : userValues) {
     LLVM_DEBUG(userValue->print(dbgs(), TRI));
     userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
-    userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets);
+    userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets,
+                               BBSkipInstsMap);
   }
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG LABELS **********\n");
   for (auto &userLabel : userLabels) {
     LLVM_DEBUG(userLabel->print(dbgs(), TRI));
-    userLabel->emitDebugLabel(*LIS, *TII);
+    userLabel->emitDebugLabel(*LIS, *TII, BBSkipInstsMap);
   }
 
   LLVM_DEBUG(dbgs() << "********** EMITTING INSTR REFERENCES **********\n");
@@ -1475,7 +1517,8 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   for (auto &P : StashedInstrReferences) {
     const SlotIndex &Idx = P.first;
     auto *MBB = Slots->getMBBFromIndex(Idx);
-    MachineBasicBlock::iterator insertPos = findInsertLocation(MBB, Idx, *LIS);
+    MachineBasicBlock::iterator insertPos =
+        findInsertLocation(MBB, Idx, *LIS, BBSkipInstsMap);
     for (auto &Stashed : P.second) {
       auto MIB = BuildMI(*MF, std::get<4>(Stashed), RefII);
       MIB.addImm(std::get<0>(Stashed));
@@ -1488,6 +1531,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   }
 
   EmitDone = true;
+  BBSkipInstsMap.clear();
 }
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
