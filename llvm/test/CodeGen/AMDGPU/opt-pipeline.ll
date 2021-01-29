@@ -208,7 +208,6 @@
 ; GCN-O1-NEXT:       Dominator Tree Construction
 ; GCN-O1-NEXT:       Float to int
 ; GCN-O1-NEXT:       Lower constant intrinsics
-; GCN-O1-NEXT:       Dominator Tree Construction
 ; GCN-O1-NEXT:       Natural Loop Information
 ; GCN-O1-NEXT:       Canonicalize natural loops
 ; GCN-O1-NEXT:       LCSSA Verifier
@@ -560,7 +559,6 @@
 ; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       Float to int
 ; GCN-O2-NEXT:       Lower constant intrinsics
-; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       Natural Loop Information
 ; GCN-O2-NEXT:       Canonicalize natural loops
 ; GCN-O2-NEXT:       LCSSA Verifier
@@ -924,7 +922,6 @@
 ; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       Float to int
 ; GCN-O3-NEXT:       Lower constant intrinsics
-; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       Natural Loop Information
 ; GCN-O3-NEXT:       Canonicalize natural loops
 ; GCN-O3-NEXT:       LCSSA Verifier
