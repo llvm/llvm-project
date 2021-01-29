@@ -28,11 +28,11 @@ unsigned i;
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
 unsigned test1() {
-  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0), align 8
-  // FUNC: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0), align 8
-  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0), align 8
-  // SECTION-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0), align 8
-  // EXCLUDE-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0), align 8
+  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
+  // FUNC: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
+  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
+  // SECTION-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
+  // EXCLUDE-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test1, i64 0, i64 0)
   return i + 1;
 }
 
@@ -47,10 +47,10 @@ unsigned test1() {
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
 unsigned test2() {
-  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0), align 8
-  // FUNC-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0), align 8
-  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0), align 8
-  // SECTION: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0), align 8
-  // EXCLUDE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0), align 8
+  // CHECK: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
+  // FUNC-NOT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
+  // FILE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
+  // SECTION: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
+  // EXCLUDE: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test2, i64 0, i64 0)
   return i - 1;
 }
