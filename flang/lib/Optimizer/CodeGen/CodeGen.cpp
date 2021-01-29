@@ -683,19 +683,6 @@ struct ConstcOpConversion : public FIROpConversion<fir::ConstcOp> {
   }
 };
 
-struct ConstfOpConversion : public FIROpConversion<fir::ConstfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::ConstfOp conf, OperandTy,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto ty = convertType(conf.getType());
-    auto val = conf.constantAttr();
-    rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(conf, ty, val);
-    return success();
-  }
-};
-
 static mlir::Type getComplexEleTy(mlir::Type complex) {
   if (auto cc = complex.dyn_cast<mlir::ComplexType>())
     return cc.getElementType();
@@ -2607,13 +2594,13 @@ struct FIRToLLVMLoweringPass
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
         CallOpConversion, CmpcOpConversion, CmpfOpConversion,
-        ConstcOpConversion, ConstfOpConversion, ConvertOpConversion,
-        CoordinateOpConversion, DispatchOpConversion, DispatchTableOpConversion,
-        DivcOpConversion, DivfOpConversion, DTEntryOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        FieldIndexOpConversion, FirEndOpConversion, ExtractValueOpConversion,
-        FreeMemOpConversion, GenTypeDescOpConversion, GlobalLenOpConversion,
-        GlobalOpConversion, HasValueOpConversion, InsertOnRangeOpConversion,
+        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
+        DispatchOpConversion, DispatchTableOpConversion, DivcOpConversion,
+        DivfOpConversion, DTEntryOpConversion, EmboxOpConversion,
+        EmboxCharOpConversion, EmboxProcOpConversion, FieldIndexOpConversion,
+        FirEndOpConversion, ExtractValueOpConversion, FreeMemOpConversion,
+        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        HasValueOpConversion, InsertOnRangeOpConversion,
         InsertValueOpConversion, LenParamIndexOpConversion, LoadOpConversion,
         ModfOpConversion, MulcOpConversion, MulfOpConversion, NegcOpConversion,
         NegfOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
