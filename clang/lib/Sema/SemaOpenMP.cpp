@@ -1898,11 +1898,11 @@ enum class FunctionEmissionStatus {
 } // anonymous namespace
 
 Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
-                                                         unsigned DiagID) {
+                                                         unsigned DiagID,
+                                                         FunctionDecl *FD) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
 
-  FunctionDecl *FD = getCurFunctionDecl();
   SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
   if (FD) {
     FunctionEmissionStatus FES = getEmissionStatus(FD);
@@ -1925,14 +1925,15 @@ Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
     }
   }
 
-  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return SemaDiagnosticBuilder(Kind, Loc, DiagID, FD, *this);
 }
 
 Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
-                                                       unsigned DiagID) {
+                                                       unsigned DiagID,
+                                                       FunctionDecl *FD) {
   assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
          "Expected OpenMP host compilation.");
-  FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
+  FunctionEmissionStatus FES = getEmissionStatus(FD);
   SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
   switch (FES) {
   case FunctionEmissionStatus::Emitted:
@@ -1948,7 +1949,7 @@ Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
     break;
   }
 
-  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return SemaDiagnosticBuilder(Kind, Loc, DiagID, FD, *this);
 }
 
 static OpenMPDefaultmapClauseKind

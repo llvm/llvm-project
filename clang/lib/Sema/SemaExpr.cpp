@@ -373,7 +373,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   }
 
   if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)) {
-    if (const auto *VD = dyn_cast<ValueDecl>(D))
+    if (auto *VD = dyn_cast<ValueDecl>(D))
       checkDeviceDecl(VD, Loc);
 
     if (!Context.getTargetInfo().isTLSSupported())
