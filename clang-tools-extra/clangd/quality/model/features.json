@@ -78,7 +78,7 @@
     {
         "name": "Scope",
         "kind": "ENUM",
-        "type": "clang::clangd::SymbolRelevanceSignals::AccessibleScope",
-        "header": "Quality.h"
+        "type": "clang::clangd::SymbolScope",
+        "header": "AST.h"
     }
 ]

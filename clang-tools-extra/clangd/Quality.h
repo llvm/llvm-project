@@ -108,17 +108,11 @@ struct SymbolRelevanceSignals {
 
   // Scope proximity is only considered (both index and sema) when this is set.
   ScopeDistance *ScopeProximityMatch = nullptr;
-  llvm::Optional<llvm::StringRef> SymbolScope;
+  llvm::Optional<llvm::StringRef> Scope;
   // A symbol from sema should be accessible from the current scope.
   bool SemaSaysInScope = false;
 
-  // An approximate measure of where we expect the symbol to be used.
-  enum AccessibleScope {
-    FunctionScope,
-    ClassScope,
-    FileScope,
-    GlobalScope,
-  } Scope = GlobalScope;
+  SymbolScope ScopeKind = SymbolScope::GlobalScope;
 
   enum QueryType {
     CodeComplete,
