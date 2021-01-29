@@ -162,6 +162,15 @@ std::string getQualification(ASTContext &Context,
 /// the cached value is incorrect. (clang catches this with an assertion).
 bool hasUnstableLinkage(const Decl *D);
 
+/// An approximate measure of where we expect a symbol to be used.
+enum class SymbolScope {
+  FunctionScope,
+  ClassScope,
+  FileScope,
+  GlobalScope,
+};
+SymbolScope symbolScope(const NamedDecl &D);
+
 } // namespace clangd
 } // namespace clang
 
