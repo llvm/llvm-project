@@ -262,12 +262,37 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
+static SymbolRelevanceSignals::AccessibleScope
+computeScope(const NamedDecl *D) {
+  // Injected "Foo" within the class "Foo" has file scope, not class scope.
+  const DeclContext *DC = D->getDeclContext();
+  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+    if (R->isInjectedClassName())
+      DC = DC->getParent();
+  // Class constructor should have the same scope as the class.
+  if (isa<CXXConstructorDecl>(D))
+    DC = DC->getParent();
+  bool InClass = false;
+  for (; !DC->isFileContext(); DC = DC->getParent()) {
+    if (DC->isFunctionOrMethod())
+      return SymbolRelevanceSignals::FunctionScope;
+    InClass = InClass || DC->isRecord();
+  }
+  if (InClass)
+    return SymbolRelevanceSignals::ClassScope;
+  // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
+  // Avoid caching linkage if it may change after enclosing code completion.
+  if (hasUnstableLinkage(D) || D->getLinkageInternal() < ExternalLinkage)
+    return SymbolRelevanceSignals::FileScope;
+  return SymbolRelevanceSignals::GlobalScope;
+}
+
 void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
   SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
-  Scope = IndexResult.Scope;
+  SymbolScope = IndexResult.Scope;
   IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
   if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
-    ScopeKind = SymbolScope::FileScope;
+    Scope = AccessibleScope::FileScope;
   }
   if (MainFileSignals) {
     MainFileRefs =
@@ -325,7 +350,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   computeASTSignals(SemaCCResult);
   // Declarations are scoped, others (like macros) are assumed global.
   if (SemaCCResult.Declaration)
-    ScopeKind = std::min(ScopeKind, symbolScope(*SemaCCResult.Declaration));
+    Scope = std::min(Scope, computeScope(SemaCCResult.Declaration));
 
   NeedsFixIts = !SemaCCResult.FixIts.empty();
 }
@@ -368,7 +393,7 @@ SymbolRelevanceSignals::calculateDerivedSignals() const {
   if (ScopeProximityMatch) {
     // For global symbol, the distance is 0.
     Derived.ScopeProximityDistance =
-        Scope ? ScopeProximityMatch->distance(*Scope) : 0;
+        SymbolScope ? ScopeProximityMatch->distance(*SymbolScope) : 0;
   }
   return Derived;
 }
@@ -404,26 +429,26 @@ float SymbolRelevanceSignals::evaluateHeuristics() const {
   if (Query == CodeComplete) {
     // The narrower the scope where a symbol is visible, the more likely it is
     // to be relevant when it is available.
-    switch (ScopeKind) {
-      case SymbolScope::GlobalScope:
+    switch (Scope) {
+    case GlobalScope:
       break;
-      case SymbolScope::FileScope:
+    case FileScope:
       Score *= 1.5f;
       break;
-      case SymbolScope::ClassScope:
+    case ClassScope:
       Score *= 2;
       break;
-      case SymbolScope::FunctionScope:
+    case FunctionScope:
       Score *= 4;
       break;
     }
   } else {
     // For non-completion queries, the wider the scope where a symbol is
     // visible, the more likely it is to be relevant.
-    switch (ScopeKind) {
-      case SymbolScope::GlobalScope:
+    switch (Scope) {
+    case GlobalScope:
       break;
-      case SymbolScope::FileScope:
+    case FileScope:
       Score *= 0.5f;
       break;
     default:
@@ -482,11 +507,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   OS << llvm::formatv("\tInBaseClass: {0}\n", S.InBaseClass);
   OS << llvm::formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
   OS << llvm::formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
-  OS << llvm::formatv("\tScope: {0}\n", static_cast<int>(S.ScopeKind));
+  OS << llvm::formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
 
   OS << llvm::formatv("\tSymbol URI: {0}\n", S.SymbolURI);
   OS << llvm::formatv("\tSymbol scope: {0}\n",
-                      S.Scope ? *S.Scope : "<None>");
+                      S.SymbolScope ? *S.SymbolScope : "<None>");
 
   SymbolRelevanceSignals::DerivedSignals Derived = S.calculateDerivedSignals();
   if (S.FileProximityMatch) {
@@ -543,7 +568,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   E.setSemaFileProximityScore(Relevance.SemaFileProximityScore);
   E.setSymbolScopeDistanceCost(Derived.ScopeProximityDistance);
   E.setSemaSaysInScope(Relevance.SemaSaysInScope);
-  E.setScope(static_cast<uint32_t>(Relevance.ScopeKind));
+  E.setScope(Relevance.Scope);
   E.setContextKind(Relevance.Context);
   E.setIsInstanceMember(Relevance.IsInstanceMember);
   E.setHadContextType(Relevance.HadContextType);

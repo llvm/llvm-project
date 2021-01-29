@@ -122,7 +122,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
                                        /*Accessible=*/false));
   EXPECT_EQ(Relevance.NameMatch, SymbolRelevanceSignals().NameMatch);
   EXPECT_TRUE(Relevance.Forbidden);
-  EXPECT_EQ(Relevance.ScopeKind, SymbolScope::GlobalScope);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
@@ -160,17 +160,17 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "X"), 42));
-  EXPECT_EQ(Relevance.ScopeKind, SymbolScope::FileScope);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "y"), 42));
-  EXPECT_EQ(Relevance.ScopeKind, SymbolScope::ClassScope);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::ClassScope);
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "z"), 42));
-  EXPECT_EQ(Relevance.ScopeKind, SymbolScope::FunctionScope);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FunctionScope);
   // The injected class name is treated as the outer class name.
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "S::S"), 42));
-  EXPECT_EQ(Relevance.ScopeKind, SymbolScope::GlobalScope);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
 
   Relevance = {};
   EXPECT_FALSE(Relevance.InBaseClass);
@@ -188,7 +188,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
     Matched = true;
     Relevance = {};
     Relevance.merge(S);
-    EXPECT_EQ(Relevance.ScopeKind, SymbolScope::FileScope);
+    EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
   });
   EXPECT_TRUE(Matched);
 }
@@ -263,7 +263,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
 
   SymbolRelevanceSignals WithIndexScopeProximity;
   WithIndexScopeProximity.ScopeProximityMatch = &ScopeProximity;
-  WithIndexScopeProximity.Scope = "x::";
+  WithIndexScopeProximity.SymbolScope = "x::";
   EXPECT_GT(WithSemaScopeProximity.evaluateHeuristics(),
             Default.evaluateHeuristics());
 
@@ -282,7 +282,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_GT(IndexDistant.evaluateHeuristics(), Default.evaluateHeuristics());
 
   SymbolRelevanceSignals Scoped;
-  Scoped.ScopeKind = SymbolScope::FileScope;
+  Scoped.Scope = SymbolRelevanceSignals::FileScope;
   EXPECT_LT(Scoped.evaluateHeuristics(), Default.evaluateHeuristics());
   Scoped.Query = SymbolRelevanceSignals::CodeComplete;
   EXPECT_GT(Scoped.evaluateHeuristics(), Default.evaluateHeuristics());
@@ -317,26 +317,26 @@ TEST(QualityTests, ScopeProximity) {
   ScopeDistance ScopeProximity({"x::y::z::", "x::", "llvm::", ""});
   Relevance.ScopeProximityMatch = &ScopeProximity;
 
-  Relevance.Scope = "other::";
+  Relevance.SymbolScope = "other::";
   float NotMatched = Relevance.evaluateHeuristics();
 
-  Relevance.Scope = "";
+  Relevance.SymbolScope = "";
   float Global = Relevance.evaluateHeuristics();
   EXPECT_GT(Global, NotMatched);
 
-  Relevance.Scope = "llvm::";
+  Relevance.SymbolScope = "llvm::";
   float NonParent = Relevance.evaluateHeuristics();
   EXPECT_GT(NonParent, Global);
 
-  Relevance.Scope = "x::";
+  Relevance.SymbolScope = "x::";
   float GrandParent = Relevance.evaluateHeuristics();
   EXPECT_GT(GrandParent, Global);
 
-  Relevance.Scope = "x::y::";
+  Relevance.SymbolScope = "x::y::";
   float Parent = Relevance.evaluateHeuristics();
   EXPECT_GT(Parent, GrandParent);
 
-  Relevance.Scope = "x::y::z::";
+  Relevance.SymbolScope = "x::y::z::";
   float Enclosing = Relevance.evaluateHeuristics();
   EXPECT_GT(Enclosing, Parent);
 }
@@ -375,8 +375,8 @@ TEST(QualityTests, NoBoostForClassConstructor) {
   SymbolRelevanceSignals Ctor;
   Ctor.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
 
-  EXPECT_EQ(Cls.ScopeKind, SymbolScope::GlobalScope);
-  EXPECT_EQ(Ctor.ScopeKind, SymbolScope::GlobalScope);
+  EXPECT_EQ(Cls.Scope, SymbolRelevanceSignals::GlobalScope);
+  EXPECT_EQ(Ctor.Scope, SymbolRelevanceSignals::GlobalScope);
 }
 
 TEST(QualityTests, IsInstanceMember) {

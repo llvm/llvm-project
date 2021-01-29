@@ -478,29 +478,5 @@ bool hasUnstableLinkage(const Decl *D) {
   return VD && !VD->getType().isNull() && VD->getType()->isUndeducedType();
 }
 
-SymbolScope symbolScope(const NamedDecl &D) {
-  // Injected "Foo" within the class "Foo" has file scope, not class scope.
-  const DeclContext *DC = D.getDeclContext();
-  if (auto *R = dyn_cast<RecordDecl>(&D))
-    if (R->isInjectedClassName())
-      DC = DC->getParent();
-  // Class constructor should have the same scope as the class.
-  if (isa<CXXConstructorDecl>(D))
-    DC = DC->getParent();
-  bool InClass = false;
-  for (; !DC->isFileContext(); DC = DC->getParent()) {
-    if (DC->isFunctionOrMethod())
-      return SymbolScope::FunctionScope;
-    InClass = InClass || DC->isRecord();
-  }
-  if (InClass)
-    return SymbolScope::ClassScope;
-  // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
-  // Avoid caching linkage if it may change after enclosing code completion.
-  if (hasUnstableLinkage(&D) || D.getLinkageInternal() < ExternalLinkage)
-    return SymbolScope::FileScope;
-  return SymbolScope::GlobalScope;
-}
-
 } // namespace clangd
 } // namespace clang
