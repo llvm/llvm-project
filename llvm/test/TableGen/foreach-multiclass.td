@@ -57,6 +57,9 @@
 // CHECK:     def F2_2_1
 // CHECK-NOT: def F2_2_2
 
+// CHECK: def G0
+// CHECK: def H0_G0_0
+
 multiclass A<int x> {
   foreach i = [0, 1] in {
     def NAME#i {
@@ -116,3 +119,20 @@ multiclass F<list<int> lst> {
 defm F0 : F<[]>;
 defm F1 : F<[0]>;
 defm F2 : F<[0, 1, 2]>;
+
+// If multiclass argument comes from loop variable,
+// and field of argument is placed at foreach statement,
+// the record field must be resolved correctly.
+class G {
+  list<int> val = [0];
+}
+
+multiclass H<G g> {
+  foreach n = g.val in
+    def _#g#_#n;
+}
+
+def G0 : G;
+
+foreach g = [G0] in
+  defm H0 : H<g>;
