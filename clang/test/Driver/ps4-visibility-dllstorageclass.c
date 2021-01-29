@@ -1,7 +1,7 @@
 // Check behaviour of -fvisibility-from-dllstorageclass options for PS4
 
 // RUN: %clang -### -target x86_64-scei-ps4 %s -Werror -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefixes=DEFAULTS,DEFAULTS1 \
+// RUN:   FileCheck %s --check-prefix=DEFAULTS \
 // RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
 // RUN:     --implicit-check-not=-fvisibility-dllexport \
 // RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
@@ -13,7 +13,7 @@
 // RUN:     -fvisibility-from-dllstorageclass \
 // RUN:     -Werror \
 // RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefixes=DEFAULTS,DEFAULTS2 \
+// RUN:   FileCheck %s --check-prefix=DEFAULTS \
 // RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
 // RUN:     --implicit-check-not=-fvisibility-dllexport \
 // RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
