@@ -137,6 +137,16 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       if (isPreISelGenericOptimizationHint(MI.getOpcode())) {
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(1).getReg();
+
+        // At this point, the destination register class of the hint may have
+        // been decided.
+        //
+        // Propagate that through to the source register.
+        const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
+        if (DstRC)
+          MRI.setRegClass(SrcReg, DstRC);
+        assert(canReplaceReg(DstReg, SrcReg, MRI) &&
+               "Must be able to replace dst with src!");
         MI.eraseFromParent();
         MRI.replaceRegWith(DstReg, SrcReg);
         continue;
