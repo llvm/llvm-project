@@ -117,7 +117,8 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
   if (AssertMacroName.empty())
     return;
 
-  diag(Loc, "found %0() with side effect") << AssertMacroName;
+  diag(Loc, "side effect in %0() condition discarded in release builds")
+      << AssertMacroName;
 }
 
 } // namespace bugprone
