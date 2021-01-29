@@ -3524,8 +3524,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 
     Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
 
-    if (resolve(MC->Entries, Substs, CurMultiClass == nullptr, &NewEntries,
-                &SubClassLoc))
+    if (resolve(MC->Entries, Substs, !CurMultiClass && Loops.empty(),
+                &NewEntries, &SubClassLoc))
       return true;
 
     if (!consume(tgtok::comma))
