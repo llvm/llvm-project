@@ -422,6 +422,7 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
     return Operand * CodeAlignmentFactor;
   }
   }
+  llvm_unreachable("invalid operand type");
 }
 
 llvm::Expected<int64_t>
@@ -474,6 +475,7 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
     return Operand * DataAlignmentFactor;
   }
   }
+  llvm_unreachable("invalid operand type");
 }
 
 Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
