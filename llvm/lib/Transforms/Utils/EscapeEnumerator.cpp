@@ -90,7 +90,7 @@ IRBuilder<> *EscapeEnumerator::Next() {
   SmallVector<Value *, 16> Args;
   for (unsigned I = Calls.size(); I != 0;) {
     CallInst *CI = cast<CallInst>(Calls[--I]);
-    changeToInvokeAndSplitBasicBlock(CI, CleanupBB);
+    changeToInvokeAndSplitBasicBlock(CI, CleanupBB, DTU);
   }
 
   Builder.SetInsertPoint(RI);
