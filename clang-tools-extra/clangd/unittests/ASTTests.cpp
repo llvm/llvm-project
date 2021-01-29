@@ -10,6 +10,7 @@
 
 #include "Annotations.h"
 #include "ParsedAST.h"
+#include "SourceCode.h"
 #include "TestTU.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -351,6 +352,76 @@ TEST(ClangdAST, PrintType) {
     }
   }
 }
+
+TEST(ASTTest, SymbolScope) {
+  const struct {
+    const char*Code;
+    SymbolScope Expected;
+  } Cases[] = {
+      {
+          "int ^x;",
+          SymbolScope::GlobalScope,
+      },
+      {
+          "static int ^x;",
+          SymbolScope::FileScope,
+      },
+      {
+          "namespace foo { int ^x; }",
+          SymbolScope::GlobalScope,
+      },
+      {
+          "namespace { int ^x; }",
+          SymbolScope::FileScope,
+      },
+      {
+          "class X{ void ^Y(); };",
+          SymbolScope::ClassScope,
+      },
+      {
+          "class X{ ^X(); };",
+          SymbolScope::GlobalScope,
+      },
+      {
+          "class X{ ^~X(); };",
+          SymbolScope::ClassScope,
+      },
+      {
+          "void x() { int ^y; }",
+          SymbolScope::FunctionScope,
+      },
+      {
+          "void x(int ^y) {}",
+          SymbolScope::FunctionScope,
+      },
+      {
+          "void x() { class ^Y{}; }",
+          SymbolScope::FunctionScope,
+      },
+      {
+          "void x() { class Y{ ^Y(); }; }",
+          SymbolScope::FunctionScope,
+      },
+      {
+          "void x() {auto y = [^z(0)]{};}",
+          SymbolScope::FunctionScope,
+      },
+  };
+
+  for (const auto& Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations Test(Case.Code);
+    auto AST = TestTU::withCode(Test.code()).build();
+
+    SourceLocation Loc = cantFail(
+        sourceLocationInMainFile(AST.getSourceManager(), Test.point()));
+    const NamedDecl &D = findDecl(
+        AST, [&](const NamedDecl &D) { return D.getLocation() == Loc; });
+
+    EXPECT_EQ(symbolScope(D), Case.Expected);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
