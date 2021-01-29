@@ -406,6 +406,10 @@ class RAGreedy : public MachineFunctionPass,
   /// Set of broken hints that may be reconciled later because of eviction.
   SmallSetVector<LiveInterval *, 8> SetOfBrokenHints;
 
+  /// The register cost values. This list will be recreated for each Machine
+  /// Function
+  ArrayRef<uint8_t> RegCosts;
+
 public:
   RAGreedy();
 
@@ -482,9 +486,9 @@ private:
   Register tryAssign(LiveInterval&, AllocationOrder&,
                      SmallVectorImpl<Register>&,
                      const SmallVirtRegSet&);
-  unsigned tryEvict(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<Register>&, unsigned,
-                    const SmallVirtRegSet&);
+  unsigned tryEvict(LiveInterval &, AllocationOrder &,
+                    SmallVectorImpl<Register> &, uint8_t,
+                    const SmallVirtRegSet &);
   MCRegister tryRegionSplit(LiveInterval &, AllocationOrder &,
                             SmallVectorImpl<Register> &);
   /// Calculate cost of region splitting.
@@ -501,7 +505,7 @@ private:
   /// time.
   MCRegister tryAssignCSRFirstTime(LiveInterval &VirtReg,
                                    AllocationOrder &Order, MCRegister PhysReg,
-                                   unsigned &CostPerUseLimit,
+                                   uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
   void initializeCSRCost();
   unsigned tryBlockSplit(LiveInterval&, AllocationOrder&,
@@ -797,7 +801,7 @@ Register RAGreedy::tryAssign(LiveInterval &VirtReg,
     }
 
   // Try to evict interference from a cheaper alternative.
-  unsigned Cost = TRI->getCostPerUse(PhysReg);
+  uint8_t Cost = RegCosts[PhysReg];
 
   // Most registers have 0 additional cost.
   if (!Cost)
@@ -1109,10 +1113,9 @@ bool RAGreedy::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
 /// @param  VirtReg Currently unassigned virtual register.
 /// @param  Order   Physregs to try.
 /// @return         Physreg to assign VirtReg, or 0.
-unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
-                            AllocationOrder &Order,
+unsigned RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
                             SmallVectorImpl<Register> &NewVRegs,
-                            unsigned CostPerUseLimit,
+                            uint8_t CostPerUseLimit,
                             const SmallVirtRegSet &FixedRegisters) {
   NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
                      TimePassesIsEnabled);
@@ -1125,13 +1128,13 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
 
   // When we are just looking for a reduced cost per use, don't break any
   // hints, and only evict smaller spill weights.
-  if (CostPerUseLimit < ~0u) {
+  if (CostPerUseLimit < uint8_t(~0u)) {
     BestCost.BrokenHints = 0;
     BestCost.MaxWeight = VirtReg.weight();
 
     // Check of any registers in RC are below CostPerUseLimit.
     const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
-    unsigned MinCost = RegClassInfo.getMinCost(RC);
+    uint8_t MinCost = RegClassInfo.getMinCost(RC);
     if (MinCost >= CostPerUseLimit) {
       LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << " minimum cost = "
                         << MinCost << ", no cheaper registers to be found.\n");
@@ -1140,7 +1143,7 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
 
     // It is normal for register classes to have a long tail of registers with
     // the same cost. We don't need to look at them if they're too expensive.
-    if (TRI->getCostPerUse(Order.getOrder().back()) >= CostPerUseLimit) {
+    if (RegCosts[Order.getOrder().back()] >= CostPerUseLimit) {
       OrderLimit = RegClassInfo.getLastCostChange(RC);
       LLVM_DEBUG(dbgs() << "Only trying the first " << OrderLimit
                         << " regs.\n");
@@ -1151,7 +1154,7 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (TRI->getCostPerUse(PhysReg) >= CostPerUseLimit)
+    if (RegCosts[PhysReg] >= CostPerUseLimit)
       continue;
     // The first use of a callee-saved register in a function has cost 1.
     // Don't start using a CSR when the CostPerUseLimit is low.
@@ -2793,7 +2796,7 @@ MCRegister RAGreedy::selectOrSplit(LiveInterval &VirtReg,
 /// to use the CSR; otherwise return 0.
 MCRegister
 RAGreedy::tryAssignCSRFirstTime(LiveInterval &VirtReg, AllocationOrder &Order,
-                                MCRegister PhysReg, unsigned &CostPerUseLimit,
+                                MCRegister PhysReg, uint8_t &CostPerUseLimit,
                                 SmallVectorImpl<Register> &NewVRegs) {
   if (getStage(VirtReg) == RS_Spill && VirtReg.isSpillable()) {
     // We choose spill over using the CSR for the first time if the spill cost
@@ -3024,7 +3027,7 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
                                        SmallVectorImpl<Register> &NewVRegs,
                                        SmallVirtRegSet &FixedRegisters,
                                        unsigned Depth) {
-  unsigned CostPerUseLimit = ~0u;
+  uint8_t CostPerUseLimit = uint8_t(~0u);
   // First try assigning a free register.
   auto Order =
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
@@ -3240,6 +3243,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   initializeCSRCost();
+
+  RegCosts = TRI->getRegisterCosts(*MF);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
 

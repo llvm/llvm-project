@@ -66,6 +66,9 @@ class RegisterClassInfo {
 
   std::unique_ptr<unsigned[]> PSetLimits;
 
+  // The register cost values.
+  ArrayRef<uint8_t> RegCosts;
+
   // Compute all information about RC.
   void compute(const TargetRegisterClass *RC) const;
 
@@ -117,16 +120,14 @@ public:
   }
 
   /// Get the minimum register cost in RC's allocation order.
-  /// This is the smallest value returned by TRI->getCostPerUse(Reg) for all
+  /// This is the smallest value in RegCosts[Reg] for all
   /// the registers in getOrder(RC).
-  unsigned getMinCost(const TargetRegisterClass *RC) {
-    return get(RC).MinCost;
-  }
+  uint8_t getMinCost(const TargetRegisterClass *RC) { return get(RC).MinCost; }
 
   /// Get the position of the last cost change in getOrder(RC).
   ///
   /// All registers in getOrder(RC).slice(getLastCostChange(RC)) will have the
-  /// same cost according to TRI->getCostPerUse().
+  /// same cost according to RegCosts[Reg].
   unsigned getLastCostChange(const TargetRegisterClass *RC) {
     return get(RC).LastCostChange;
   }
