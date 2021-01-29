@@ -42,8 +42,8 @@ bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
 Error backend(const Config &C, AddStreamFn AddStream,
-              unsigned ParallelCodeGenParallelismLevel,
-              std::unique_ptr<Module> M, ModuleSummaryIndex &CombinedIndex);
+              unsigned ParallelCodeGenParallelismLevel, Module &M,
+              ModuleSummaryIndex &CombinedIndex);
 
 /// Runs a ThinLTO backend.
 Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,

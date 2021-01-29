@@ -248,6 +248,11 @@ struct ExtractElementFromTensorFromElements
     APInt index;
     if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
       return failure();
+    // Prevent out of bounds accesses. This can happen in invalid code that will
+    // never execute.
+    if (tensorFromElements->getNumOperands() <= index.getZExtValue() ||
+        index.getSExtValue() < 0)
+      return failure();
     rewriter.replaceOp(extract,
                        tensorFromElements.getOperand(index.getZExtValue()));
     return success();

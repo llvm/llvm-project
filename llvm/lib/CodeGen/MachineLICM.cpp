@@ -964,11 +964,11 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
     return false;
   }
 
-  // If it is load then check if it is guaranteed to execute by making sure that
-  // it dominates all exiting blocks. If it doesn't, then there is a path out of
-  // the loop which does not execute this load, so we can't hoist it. Loads
-  // from constant memory are not safe to speculate all the time, for example
-  // indexed load from a jump table.
+  // If it is a load then check if it is guaranteed to execute by making sure
+  // that it dominates all exiting blocks. If it doesn't, then there is a path
+  // out of the loop which does not execute this load, so we can't hoist it.
+  // Loads from constant memory are safe to speculate, for example indexed load
+  // from a jump table.
   // Stores and side effects are already checked by isSafeToMove.
   if (I.mayLoad() && !mayLoadFromGOTOrConstantPool(I) &&
       !IsGuaranteedToExecute(I.getParent())) {

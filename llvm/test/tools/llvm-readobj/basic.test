@@ -1,8 +1,8 @@
 ## Test case where input file does not exit.
-RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj %s
-RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf %s
+RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj -DMSG=%errc_ENOENT %s
+RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf -DMSG=%errc_ENOENT %s
 
-ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{[Nn]}}o such file or directory
+ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': [[MSG]]
 
 # Test case with no input file.
 RUN: not llvm-readobj 2>&1 | FileCheck %s --check-prefix=NO-FILE
