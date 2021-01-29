@@ -72,7 +72,8 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       CheckFunctionCalls(Options.get("CheckFunctionCalls", false)),
-      RawAssertList(Options.get("AssertMacros", "assert")) {
+      RawAssertList(Options.get("AssertMacros",
+                                "assert,NSAssert,NSCAssert")) {
   StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
 }
 
