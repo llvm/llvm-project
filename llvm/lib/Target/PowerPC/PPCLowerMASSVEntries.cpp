@@ -167,9 +167,7 @@ bool PPCLowerMASSVEntries::runOnModule(Module &M) {
     // Call to lowerMASSVCall() invalidates the iterator over users upon
     // replacing the users. Precomputing the current list of users allows us to
     // replace all the call sites.
-    SmallVector<User *, 4> MASSVUsers;
-    for (auto *User: Func.users())
-      MASSVUsers.push_back(User);
+    SmallVector<User *, 4> MASSVUsers(Func.users());
     
     for (auto *User : MASSVUsers) {
       auto *CI = dyn_cast<CallInst>(User);

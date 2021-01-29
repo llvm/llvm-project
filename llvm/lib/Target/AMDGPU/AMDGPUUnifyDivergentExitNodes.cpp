@@ -110,11 +110,8 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
 /// XXX - Is there a more efficient way to find this?
 static bool isUniformlyReached(const LegacyDivergenceAnalysis &DA,
                                BasicBlock &BB) {
-  SmallVector<BasicBlock *, 8> Stack;
+  SmallVector<BasicBlock *, 8> Stack(predecessors(&BB));
   SmallPtrSet<BasicBlock *, 8> Visited;
-
-  for (BasicBlock *Pred : predecessors(&BB))
-    Stack.push_back(Pred);
 
   while (!Stack.empty()) {
     BasicBlock *Top = Stack.pop_back_val();
