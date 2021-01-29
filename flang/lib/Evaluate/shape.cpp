@@ -810,4 +810,5 @@ bool IncrementSubscripts(
   }
   return false;
 }
+
 } // namespace Fortran::evaluate
