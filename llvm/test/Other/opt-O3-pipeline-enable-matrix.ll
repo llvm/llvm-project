@@ -209,7 +209,6 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Float to int
 ; CHECK-NEXT:       Lower constant intrinsics
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
