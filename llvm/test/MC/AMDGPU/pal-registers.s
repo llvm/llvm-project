@@ -13,6 +13,7 @@ amdpal.pipelines:
       - 0x123456789abcdef0
       - 0xfedcba9876543210
     .registers:
+      0x2c06: 0
       0x2c07: 0
       0x2c0a: 0
       0x2c0b: 0
@@ -48,6 +49,11 @@ amdpal.pipelines:
       0x2c29: 0
       0x2c2a: 0
       0x2c2b: 0
+      0x2c32: 0
+      0x2c33: 0
+      0x2c34: 0
+      0x2c35: 0
+      0x2c45: 0
       0x2c46: 0
       0x2c4a: 0
       0x2c4b: 0
@@ -83,8 +89,14 @@ amdpal.pipelines:
       0x2c69: 0
       0x2c6a: 0
       0x2c6b: 0
+      0x2c72: 0
+      0x2c73: 0
+      0x2c74: 0
+      0x2c75: 0
+      0x2c80: 0
       0x2c81: 0
       0x2c87: 0
+      0x2c88: 0
       0x2c8a: 0
       0x2c8b: 0
       0x2c8c: 0
@@ -119,6 +131,10 @@ amdpal.pipelines:
       0x2ca9: 0
       0x2caa: 0
       0x2cab: 0
+      0x2cb2: 0
+      0x2cb3: 0
+      0x2cb4: 0
+      0x2cb5: 0
       0x2cc7: 0
       0x2cca: 0
       0x2ccb: 0
@@ -154,6 +170,7 @@ amdpal.pipelines:
       0x2ce9: 0
       0x2cea: 0
       0x2ceb: 0
+      0x2d00: 0
       0x2d07: 0
       0x2d0a: 0
       0x2d0b: 0
@@ -189,6 +206,10 @@ amdpal.pipelines:
       0x2d29: 0
       0x2d2a: 0
       0x2d2b: 0
+      0x2d32: 0
+      0x2d33: 0
+      0x2d34: 0
+      0x2d35: 0
       0x2d47: 0
       0x2d4a: 0
       0x2d4b: 0
@@ -215,6 +236,12 @@ amdpal.pipelines:
       0x2e12: 0
       0x2e13: 0
       0x2e18: 0
+      0x2e24: 0
+      0x2e25: 0
+      0x2e26: 0
+      0x2e27: 0
+      0x2e28: 0
+      0x2e2a: 0
       0x2e40: 0
       0x2e41: 0
       0x2e42: 0
@@ -271,13 +298,16 @@ amdpal.pipelines:
       0xa1b6: 0
       0xa1b8: 0
       0xa1ba: 0
+      0xa1c2: 0
       0xa1c3: 0
       0xa1c4: 0
       0xa1c5: 0
+      0xa1ff: 0
       0xa203: 0
       0xa204: 0
       0xa206: 0
       0xa207: 0
+      0xa210: 0
       0xa286: 0
       0xa287: 0
       0xa290: 0
@@ -299,6 +329,7 @@ amdpal.pipelines:
       0xa2bd: 0
       0xa2c1: 0
       0xa2ce: 0
+      0xa2d3: 0
       0xa2d5: 0
       0xa2d6: 0
       0xa2d7: 0
@@ -314,9 +345,13 @@ amdpal.pipelines:
       0xa310: 0
       0xa313: 0
       0xa316: 0
+      0xc258: 0
+      0xc25f: 0
+      0xc262: 0
 ...
 	.end_amdgpu_pal_metadata
 
+// CHECK: 0x2c06 (SPI_SHADER_PGM_CHKSUM_PS)
 // CHECK: 0x2c07 (SPI_SHADER_PGM_RSRC3_PS)
 // CHECK: 0x2c0a (SPI_SHADER_PGM_RSRC1_PS)
 // CHECK: 0x2c0b (SPI_SHADER_PGM_RSRC2_PS)
@@ -352,6 +387,11 @@ amdpal.pipelines:
 // CHECK: 0x2c29 (SPI_SHADER_USER_DATA_PS_29)
 // CHECK: 0x2c2a (SPI_SHADER_USER_DATA_PS_30)
 // CHECK: 0x2c2b (SPI_SHADER_USER_DATA_PS_31)
+// CHECK: 0x2c32 (SPI_SHADER_USER_ACCUM_PS_0)
+// CHECK: 0x2c33 (SPI_SHADER_USER_ACCUM_PS_1)
+// CHECK: 0x2c34 (SPI_SHADER_USER_ACCUM_PS_2)
+// CHECK: 0x2c35 (SPI_SHADER_USER_ACCUM_PS_3)
+// CHECK: 0x2c45 (SPI_SHADER_PGM_CHKSUM_VS)
 // CHECK: 0x2c46 (SPI_SHADER_PGM_RSRC3_VS)
 // CHECK: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS)
 // CHECK: 0x2c4b (SPI_SHADER_PGM_RSRC2_VS)
@@ -387,8 +427,14 @@ amdpal.pipelines:
 // CHECK: 0x2c69 (SPI_SHADER_USER_DATA_VS_29)
 // CHECK: 0x2c6a (SPI_SHADER_USER_DATA_VS_30)
 // CHECK: 0x2c6b (SPI_SHADER_USER_DATA_VS_31)
+// CHECK: 0x2c72 (SPI_SHADER_USER_ACCUM_VS_0)
+// CHECK: 0x2c73 (SPI_SHADER_USER_ACCUM_VS_1)
+// CHECK: 0x2c74 (SPI_SHADER_USER_ACCUM_VS_2)
+// CHECK: 0x2c75 (SPI_SHADER_USER_ACCUM_VS_3)
+// CHECK: 0x2c80 (SPI_SHADER_PGM_CHKSUM_GS)
 // CHECK: 0x2c81 (SPI_SHADER_PGM_RSRC4_GS)
 // CHECK: 0x2c87 (SPI_SHADER_PGM_RSRC3_GS)
+// CHECK: 0x2c88 (SPI_SHADER_PGM_LO_GS)
 // CHECK: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS)
 // CHECK: 0x2c8b (SPI_SHADER_PGM_RSRC2_GS)
 // CHECK: 0x2c8c (SPI_SHADER_USER_DATA_GS_0)
@@ -423,6 +469,10 @@ amdpal.pipelines:
 // CHECK: 0x2ca9 (SPI_SHADER_USER_DATA_GS_29)
 // CHECK: 0x2caa (SPI_SHADER_USER_DATA_GS_30)
 // CHECK: 0x2cab (SPI_SHADER_USER_DATA_GS_31)
+// CHECK: 0x2cb2 (SPI_SHADER_USER_ACCUM_ESGS_0)
+// CHECK: 0x2cb3 (SPI_SHADER_USER_ACCUM_ESGS_1)
+// CHECK: 0x2cb4 (SPI_SHADER_USER_ACCUM_ESGS_2)
+// CHECK: 0x2cb5 (SPI_SHADER_USER_ACCUM_ESGS_3)
 // CHECK: 0x2cc7 (SPI_SHADER_PGM_RSRC3_ES)
 // CHECK: 0x2cca (SPI_SHADER_PGM_RSRC1_ES)
 // CHECK: 0x2ccb (SPI_SHADER_PGM_RSRC2_ES)
@@ -458,6 +508,7 @@ amdpal.pipelines:
 // CHECK: 0x2ce9 (SPI_SHADER_USER_DATA_ES_29)
 // CHECK: 0x2cea (SPI_SHADER_USER_DATA_ES_30)
 // CHECK: 0x2ceb (SPI_SHADER_USER_DATA_ES_31)
+// CHECK: 0x2d00 (SPI_SHADER_PGM_CHKSUM_HS)
 // CHECK: 0x2d07 (SPI_SHADER_PGM_RSRC3_HS)
 // CHECK: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS)
 // CHECK: 0x2d0b (SPI_SHADER_PGM_RSRC2_HS)
@@ -493,6 +544,10 @@ amdpal.pipelines:
 // CHECK: 0x2d29 (SPI_SHADER_USER_DATA_HS_29)
 // CHECK: 0x2d2a (SPI_SHADER_USER_DATA_HS_30)
 // CHECK: 0x2d2b (SPI_SHADER_USER_DATA_HS_31)
+// CHECK: 0x2d32 (SPI_SHADER_USER_ACCUM_LSHS_0)
+// CHECK: 0x2d33 (SPI_SHADER_USER_ACCUM_LSHS_1)
+// CHECK: 0x2d34 (SPI_SHADER_USER_ACCUM_LSHS_2)
+// CHECK: 0x2d35 (SPI_SHADER_USER_ACCUM_LSHS_3)
 // CHECK: 0x2d47 (SPI_SHADER_PGM_RSRC3_LS)
 // CHECK: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS)
 // CHECK: 0x2d4b (SPI_SHADER_PGM_RSRC2_LS)
@@ -519,6 +574,12 @@ amdpal.pipelines:
 // CHECK: 0x2e12 (COMPUTE_PGM_RSRC1)
 // CHECK: 0x2e13 (COMPUTE_PGM_RSRC2)
 // CHECK: 0x2e18 (COMPUTE_TMPRING_SIZE)
+// CHECK: 0x2e24 (COMPUTE_USER_ACCUM_0)
+// CHECK: 0x2e25 (COMPUTE_USER_ACCUM_1)
+// CHECK: 0x2e26 (COMPUTE_USER_ACCUM_2)
+// CHECK: 0x2e27 (COMPUTE_USER_ACCUM_3)
+// CHECK: 0x2e28 (COMPUTE_PGM_RSRC3)
+// CHECK: 0x2e2a (COMPUTE_SHADER_CHKSUM)
 // CHECK: 0x2e40 (COMPUTE_USER_DATA_0)
 // CHECK: 0x2e41 (COMPUTE_USER_DATA_1)
 // CHECK: 0x2e42 (COMPUTE_USER_DATA_2)
@@ -575,13 +636,16 @@ amdpal.pipelines:
 // CHECK: 0xa1b6 (SPI_PS_IN_CONTROL)
 // CHECK: 0xa1b8 (SPI_BARYC_CNTL)
 // CHECK: 0xa1ba (SPI_TMPRING_SIZE)
+// CHECK: 0xa1c2 (SPI_SHADER_IDX_FORMAT)
 // CHECK: 0xa1c3 (SPI_SHADER_POS_FORMAT)
 // CHECK: 0xa1c4 (SPI_SHADER_Z_FORMAT)
 // CHECK: 0xa1c5 (SPI_SHADER_COL_FORMAT)
+// CHECK: 0xa1ff (GE_MAX_OUTPUT_PER_SUBGROUP)
 // CHECK: 0xa203 (DB_SHADER_CONTROL)
 // CHECK: 0xa204 (PA_CL_CLIP_CNTL)
 // CHECK: 0xa206 (PA_CL_VTE_CNTL)
 // CHECK: 0xa207 (PA_CL_VS_OUT_CNTL)
+// CHECK: 0xa210 (PA_STEREO_CNTL)
 // CHECK: 0xa286 (VGT_HOS_MAX_TESS_LEVEL)
 // CHECK: 0xa287 (VGT_HOS_MIN_TESS_LEVEL)
 // CHECK: 0xa290 (VGT_GS_MODE)
@@ -603,6 +667,7 @@ amdpal.pipelines:
 // CHECK: 0xa2bd (VGT_STRMOUT_VTX_STRIDE_2)
 // CHECK: 0xa2c1 (VGT_STRMOUT_VTX_STRIDE_3)
 // CHECK: 0xa2ce (VGT_GS_MAX_VERT_OUT)
+// CHECK: 0xa2d3 (GE_NGG_SUBGRP_CNTL)
 // CHECK: 0xa2d5 (VGT_SHADER_STAGES_EN)
 // CHECK: 0xa2d6 (VGT_LS_HS_CONFIG)
 // CHECK: 0xa2d7 (VGT_GS_VERT_ITEMSIZE)
@@ -618,3 +683,6 @@ amdpal.pipelines:
 // CHECK: 0xa310 (PA_SC_SHADER_CONTROL)
 // CHECK: 0xa313 (PA_SC_CONSERVATIVE_RASTERIZATION_CNTL)
 // CHECK: 0xa316 (VGT_VERTEX_REUSE_BLOCK_CNTL)
+// CHECK: 0xc258 (IA_MULTI_VGT_PARAM_PIPED)
+// CHECK: 0xc25f (GE_STEREO_CNTL)
+// CHECK: 0xc262 (GE_USER_VGPR_EN)
