@@ -138,7 +138,7 @@ struct PseudoProbe {
   // Get the inlined context by traversing current inline tree backwards,
   // each tree node has its InlineSite which is taken as the context.
   // \p ContextStack is populated in root to leaf order
-  void getInlineContext(SmallVector<std::string, 16> &ContextStack,
+  void getInlineContext(SmallVectorImpl<std::string> &ContextStack,
                         const GUIDProbeFunctionMap &GUID2FuncMAP,
                         bool ShowName) const;
   // Helper function to get the string from context stack
@@ -214,7 +214,7 @@ public:
   //  IncludeLeaf = false, Output: [main:1, foo:2]
   void
   getInlineContextForProbe(const PseudoProbe *Probe,
-                           SmallVector<std::string, 16> &InlineContextStack,
+                           SmallVectorImpl<std::string> &InlineContextStack,
                            bool IncludeLeaf) const;
 
   const AddressProbesMap &getAddress2ProbesMap() const {
