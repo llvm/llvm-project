@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple x86_64-windows-msvc -gcodeview
-// RUN: -debug-info-kind=line-tables-only -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-windows-msvc -gcodeview \
+// RUN:   -debug-info-kind=line-tables-only -emit-llvm -o - | FileCheck %s
 // Checks that clang with "-gline-tables-only" with CodeView emits some debug
 // info for variables and types when they appear in function scopes.
 
