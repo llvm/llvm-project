@@ -913,3 +913,67 @@ TEST_F(AArch64GISelMITest, TestInvalidQueries) {
   EXPECT_TRUE(BiggerSizeRes.One.isNullValue());
   EXPECT_TRUE(BiggerSizeRes.Zero.isNullValue());
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
+  StringRef MIRString = R"(
+   %copy:_(s64) = COPY $x0
+
+   %assert8:_(s64) = G_ASSERT_ZEXT %copy, 8
+   %copy_assert8:_(s64) = COPY %assert8
+
+   %assert1:_(s64) = G_ASSERT_ZEXT %copy, 1
+   %copy_assert1:_(s64) = COPY %assert1
+
+   %assert63:_(s64) = G_ASSERT_ZEXT %copy, 63
+   %copy_assert63:_(s64) = COPY %assert63
+
+   %assert3:_(s64) = G_ASSERT_ZEXT %copy, 3
+   %copy_assert3:_(s64) = COPY %assert3
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyAssert8 = Copies[Copies.size() - 4];
+  Register CopyAssert1 = Copies[Copies.size() - 3];
+  Register CopyAssert63 = Copies[Copies.size() - 2];
+  Register CopyAssert3 = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  MachineInstr *Copy;
+  Register SrcReg;
+  KnownBits Res;
+
+  // Assert zero-extension from an 8-bit value.
+  Copy = MRI->getVRegDef(CopyAssert8);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFF00u, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 1-bit value.
+  Copy = MRI->getVRegDef(CopyAssert1);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFFFE, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 63-bit value.
+  Copy = MRI->getVRegDef(CopyAssert63);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0x8000000000000000u, Res.Zero.getZExtValue());
+
+  // Assert zero-extension from a 3-bit value.
+  Copy = MRI->getVRegDef(CopyAssert3);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(0u, Res.One.getZExtValue());
+  EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
+}
