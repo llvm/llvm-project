@@ -1815,9 +1815,13 @@ struct CoordinateOpConversion
 
   int64_t getIntValue(mlir::Value val) const {
     if (val)
-      if (auto defop = val.getDefiningOp())
+      if (auto defop = val.getDefiningOp()) {
         if (auto constOp = dyn_cast<mlir::ConstantIntOp>(defop))
           return constOp.getValue();
+        else if (auto llConstOp = dyn_cast<mlir::LLVM::ConstantOp>(defop))
+          if (auto attr = llConstOp.value().dyn_cast<mlir::IntegerAttr>())
+            return attr.getValue().getSExtValue();
+      }
     llvm_unreachable("must be a constant");
   }
 };
@@ -1831,14 +1835,30 @@ struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FieldIndexOp field, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    // call the compiler generated function to determine the byte offset of
-    // the field at runtime
-    auto symAttr =
-        mlir::SymbolRefAttr::get(field.getContext(), methodName(field));
-    SmallVector<mlir::NamedAttribute, 1> attrs{
-        rewriter.getNamedAttr("callee", symAttr)};
-    auto ty = lowerTy().offsetType();
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(field, ty, operands, attrs);
+
+    auto recordType = field.on_type().cast<fir::RecordType>();
+    if (!fir::LLVMTypeConverter::dynamicallySized(recordType)) {
+      // Derived type has compile-time constant layout.
+      // Returns index of the component type in the parent type (to be used in
+      // GEP).
+      auto index = recordType.getFieldIndex(field.field_id());
+      rewriter.replaceOp(field, mlir::ValueRange{genConstantOffset(
+                                    field.getLoc(), rewriter, index)});
+    } else {
+      // call the compiler generated function to determine the byte offset of
+      // the field at runtime
+      // FIXME: If/when derived type layout not known at compile time, need to
+      // call runtime. Field -> offset in parent type in bytes. This currently
+      // breaks the coordinate_of lowering that expects constant integers to
+      // generate GEPs.
+      auto symAttr =
+          mlir::SymbolRefAttr::get(field.getContext(), methodName(field));
+      SmallVector<mlir::NamedAttribute, 1> attrs{
+          rewriter.getNamedAttr("callee", symAttr)};
+      auto ty = lowerTy().offsetType();
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(field, ty, operands,
+                                                      attrs);
+    }
     return success();
   }
 
