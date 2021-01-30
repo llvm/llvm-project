@@ -4924,7 +4924,7 @@ static bool isIndirectCall(const SDValue &Callee, SelectionDAG &DAG,
   if (isPatchPoint)
     return false;
 
-  if (isFunctionGlobalAddress(Callee) || dyn_cast<ExternalSymbolSDNode>(Callee))
+  if (isFunctionGlobalAddress(Callee) || isa<ExternalSymbolSDNode>(Callee))
     return false;
 
   // Darwin, and 32-bit ELF can use a BLA. The descriptor based ABIs can not
