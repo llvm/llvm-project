@@ -1084,7 +1084,8 @@ constexpr auto cosubscript{scalarIntExpr};
 // R924 image-selector ->
 //        lbracket cosubscript-list [, image-selector-spec-list] rbracket
 TYPE_CONTEXT_PARSER("image selector"_en_US,
-    construct<ImageSelector>("[" >> nonemptyList(cosubscript / !"="_tok),
+    construct<ImageSelector>(
+        "[" >> nonemptyList(cosubscript / lookAhead(space / ",]"_ch)),
         defaulted("," >> nonemptyList(Parser<ImageSelectorSpec>{})) / "]"))
 
 // R926 image-selector-spec ->
