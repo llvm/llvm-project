@@ -334,7 +334,7 @@ inline static bool isMImmVal(uint64_t Val) {
     return true;
   }
   // (m)1 patterns
-  return (Val & (1UL << 63)) && isShiftedMask_64(Val);
+  return (Val & (UINT64_C(1) << 63)) && isShiftedMask_64(Val);
 }
 
 inline static bool isMImm32Val(uint32_t Val) {
@@ -347,14 +347,14 @@ inline static bool isMImm32Val(uint32_t Val) {
     return true;
   }
   // (m)1 patterns
-  return (Val & (1 << 31)) && isShiftedMask_32(Val);
+  return (Val & (UINT32_C(1) << 31)) && isShiftedMask_32(Val);
 }
 
 /// val2MImm - Convert an integer immediate value to target MImm immediate.
 inline static uint64_t val2MImm(uint64_t Val) {
   if (Val == 0)
     return 0; // (0)1
-  if (Val & (1UL << 63))
+  if (Val & (UINT64_C(1) << 63))
     return countLeadingOnes(Val);       // (m)1
   return countLeadingZeros(Val) | 0x40; // (m)0
 }
@@ -364,8 +364,8 @@ inline static uint64_t mimm2Val(uint64_t Val) {
   if (Val == 0)
     return 0; // (0)1
   if ((Val & 0x40) == 0)
-    return (uint64_t)((1L << 63) >> (Val & 0x3f)); // (m)1
-  return ((uint64_t)(-1L) >> (Val & 0x3f));        // (m)0
+    return (uint64_t)((INT64_C(1) << 63) >> (Val & 0x3f)); // (m)1
+  return ((uint64_t)INT64_C(-1) >> (Val & 0x3f));          // (m)0
 }
 
 inline unsigned M0(unsigned Val) { return Val + 64; }
