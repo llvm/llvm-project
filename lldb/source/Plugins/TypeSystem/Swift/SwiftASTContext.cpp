@@ -4795,6 +4795,12 @@ CompilerType SwiftASTContext::GetErrorType() {
   return {};
 }
 
+CompilerType SwiftASTContext::GetObjCObjectType() {
+  // FIXME: ClangImporter::Implementation stores this type, but it's not
+  // exposed.
+  return GetCompilerType(ConstString("$sSo8NSObjectCD"));
+}
+
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
   SwiftASTContext *swift_ast = GetASTMap().Lookup(ast);
   return swift_ast;
