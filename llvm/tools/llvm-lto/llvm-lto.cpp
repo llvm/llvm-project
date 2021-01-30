@@ -222,6 +222,11 @@ static cl::opt<bool> PrintMachOCPUOnly(
     "print-macho-cpu-only", cl::init(false),
     cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"));
 
+static cl::opt<bool>
+    UseNewPM("use-new-pm",
+             cl::desc("Run LTO passes using the new pass manager"),
+             cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
+
 namespace {
 
 struct ModuleInfo {
@@ -1013,6 +1018,8 @@ int main(int argc, char **argv) {
 
   CodeGen.setOptLevel(OptLevel - '0');
   CodeGen.setAttrs(codegen::getMAttrs());
+
+  CodeGen.setUseNewPM(UseNewPM);
 
   if (auto FT = codegen::getExplicitFileType())
     CodeGen.setFileType(FT.getValue());
