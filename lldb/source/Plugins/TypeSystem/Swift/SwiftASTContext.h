@@ -356,6 +356,7 @@ public:
   CreateTupleType(const std::vector<TupleElement> &elements) override;
 
   CompilerType GetErrorType() override;
+  CompilerType GetObjCObjectType() override;
 
   bool HasErrors();
 
