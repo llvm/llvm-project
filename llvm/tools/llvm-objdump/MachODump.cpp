@@ -8007,12 +8007,23 @@ static void printCompressedSecondLevelUnwindPage(
   (void)Kind;
   assert(Kind == 3 && "kind for a compressed 2nd level index should be 3");
 
+  uint32_t NumCommonEncodings = CommonEncodings.size();
   uint16_t EntriesStart = readNext<uint16_t>(PageData, Pos);
   uint16_t NumEntries = readNext<uint16_t>(PageData, Pos);
 
-  uint16_t EncodingsStart = readNext<uint16_t>(PageData, Pos);
-  readNext<uint16_t>(PageData, Pos);
-  StringRef PageEncodings = PageData.substr(EncodingsStart, StringRef::npos);
+  uint16_t PageEncodingsStart = readNext<uint16_t>(PageData, Pos);
+  uint16_t NumPageEncodings = readNext<uint16_t>(PageData, Pos);
+  SmallVector<uint32_t, 64> PageEncodings;
+  if (NumPageEncodings) {
+    outs() << "      Page encodings: (count = " << NumPageEncodings << ")\n";
+    Pos = PageEncodingsStart;
+    for (unsigned i = 0; i < NumPageEncodings; ++i) {
+      uint32_t Encoding = readNext<uint32_t>(PageData, Pos);
+      PageEncodings.push_back(Encoding);
+      outs() << "        encoding[" << (i + NumCommonEncodings)
+             << "]: " << format("0x%08" PRIx32, Encoding) << '\n';
+    }
+  }
 
   Pos = EntriesStart;
   for (unsigned i = 0; i < NumEntries; ++i) {
@@ -8021,12 +8032,10 @@ static void printCompressedSecondLevelUnwindPage(
     uint32_t EncodingIdx = Entry >> 24;
 
     uint32_t Encoding;
-    if (EncodingIdx < CommonEncodings.size())
+    if (EncodingIdx < NumCommonEncodings)
       Encoding = CommonEncodings[EncodingIdx];
     else
-      Encoding = read<uint32_t>(PageEncodings,
-                                sizeof(uint32_t) *
-                                    (EncodingIdx - CommonEncodings.size()));
+      Encoding = PageEncodings[EncodingIdx - NumCommonEncodings];
 
     outs() << "      [" << i << "]: "
            << "function offset=" << format("0x%08" PRIx32, FunctionOffset)
