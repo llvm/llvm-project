@@ -126,7 +126,8 @@ class ThreadRegistry {
   void SetThreadNameByUserId(uptr user_id, const char *name);
   void DetachThread(u32 tid, void *arg);
   void JoinThread(u32 tid, void *arg);
-  void FinishThread(u32 tid);
+  // Finishes thread and returns previous status.
+  ThreadStatus FinishThread(u32 tid);
   void StartThread(u32 tid, tid_t os_id, ThreadType thread_type, void *arg);
   void SetThreadUserId(u32 tid, uptr user_id);
 

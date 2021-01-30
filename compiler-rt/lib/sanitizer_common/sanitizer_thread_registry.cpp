@@ -278,7 +278,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
 // really started.  We just did CreateThread for a prospective new
 // thread before trying to create it, and then failed to actually
 // create it, and so never called StartThread.
-void ThreadRegistry::FinishThread(u32 tid) {
+ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
   BlockingMutexLock l(&mtx_);
   CHECK_GT(alive_threads_, 0);
   alive_threads_--;
@@ -286,6 +286,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   bool dead = tctx->detached;
+  ThreadStatus prev_status = tctx->status;
   if (tctx->status == ThreadStatusRunning) {
     CHECK_GT(running_threads_, 0);
     running_threads_--;
@@ -300,6 +301,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
     QuarantinePush(tctx);
   }
   tctx->SetDestroyed();
+  return prev_status;
 }
 
 void ThreadRegistry::StartThread(u32 tid, tid_t os_id, ThreadType thread_type,
