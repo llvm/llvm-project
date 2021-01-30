@@ -4282,8 +4282,8 @@ static void collectModes(std::set<unsigned> &Modes, const TreePatternNode *N) {
 void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
   std::map<unsigned,std::vector<Predicate>> ModeChecks;
-  std::vector<PatternToMatch> Copy = PatternsToMatch;
-  PatternsToMatch.clear();
+  std::vector<PatternToMatch> Copy;
+  PatternsToMatch.swap(Copy);
 
   auto AppendPattern = [this, &ModeChecks](PatternToMatch &P, unsigned Mode) {
     TreePatternNodePtr NewSrc = P.SrcPattern->clone();
@@ -4295,8 +4295,9 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     std::vector<Predicate> Preds = P.Predicates;
     const std::vector<Predicate> &MC = ModeChecks[Mode];
     llvm::append_range(Preds, MC);
-    PatternsToMatch.emplace_back(P.getSrcRecord(), Preds, std::move(NewSrc),
-                                 std::move(NewDst), P.getDstRegs(),
+    PatternsToMatch.emplace_back(P.getSrcRecord(), std::move(Preds),
+                                 std::move(NewSrc), std::move(NewDst),
+                                 P.getDstRegs(),
                                  P.getAddedComplexity(), Record::getNewUID(),
                                  Mode);
   };
