@@ -333,7 +333,7 @@ void CodeExtractorAnalysisCache::findSideEffectInfoForBlock(BasicBlock &BB) {
         MemAddr = LI->getPointerOperand();
       }
       // Global variable can not be aliased with locals.
-      if (dyn_cast<Constant>(MemAddr))
+      if (isa<Constant>(MemAddr))
         break;
       Value *Base = MemAddr->stripInBoundsConstantOffsets();
       if (!isa<AllocaInst>(Base)) {
