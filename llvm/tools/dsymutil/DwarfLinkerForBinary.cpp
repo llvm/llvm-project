@@ -613,8 +613,7 @@ bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugSections(
 
 bool DwarfLinkerForBinary::AddressManager::hasValidDebugAddrRelocationAt(
     uint64_t Offset) {
-  auto It = std::lower_bound(ValidDebugAddrRelocs.begin(),
-                             ValidDebugAddrRelocs.end(), Offset);
+  auto It = lower_bound(ValidDebugAddrRelocs, Offset);
   return It != ValidDebugAddrRelocs.end();
 }
 
@@ -769,8 +768,7 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
 
 llvm::Expected<uint64_t>
 DwarfLinkerForBinary::AddressManager::relocateIndexedAddr(uint64_t Offset) {
-  auto It = std::lower_bound(ValidDebugAddrRelocs.begin(),
-                             ValidDebugAddrRelocs.end(), Offset);
+  auto It = lower_bound(ValidDebugAddrRelocs, Offset);
   if (It == ValidDebugAddrRelocs.end())
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
