@@ -46,6 +46,16 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
     }
     return failure();
   }
+
+  LogicalResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto tupleType = type.dyn_cast<TupleType>()) {
+      if (tupleType.size() > 16) {
+        os << "tuple";
+        return success();
+      }
+    }
+    return failure();
+  }
 };
 } // end anonymous namespace.
 
