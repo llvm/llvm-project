@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This file contains the required infrastructure to support code generation
-/// for the standard 'V' (Vector) extension, version 0.9.  This version is still
+/// for the standard 'V' (Vector) extension, version 0.10.  This version is still
 /// experimental as the 'V' extension hasn't been ratified yet.
 ///
 /// This file is included from RISCVInstrInfoV.td
