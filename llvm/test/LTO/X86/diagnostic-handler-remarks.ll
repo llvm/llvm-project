@@ -1,35 +1,41 @@
 ; RUN: llvm-as < %s >%t.bc
 ; PR21108: Diagnostic handlers get pass remarks, even if they're not enabled.
 
+; FIXME: Update checks for new pass manager.
+
 ; Confirm that there are -pass-remarks.
-; RUN: llvm-lto -pass-remarks=inline \
+; RUN: llvm-lto -use-new-pm=false \
+; RUN:          -pass-remarks=inline \
 ; RUN:          -exported-symbol _func2 -pass-remarks-analysis=loop-vectorize \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=REMARKS
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
-; RUN: llvm-lto -pass-remarks=inline -use-diagnostic-handler \
+; RUN: llvm-lto -use-new-pm=false \
+; RUN:          -pass-remarks=inline -use-diagnostic-handler \
 ; RUN:          -exported-symbol _func2 -pass-remarks-analysis=loop-vectorize \
-; RUN:         -exported-symbol _main -o %t.o %t.bc 2>&1 | \
+; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=REMARKS_DH
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
 ; Confirm that -pass-remarks are not printed by default.
-; RUN: llvm-lto \
+; RUN: llvm-lto -use-new-pm=false \
 ; RUN:         -exported-symbol _func2 \
 ; RUN:         -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
-; RUN: llvm-lto -use-diagnostic-handler \
-; RUN:         -exported-symbol _func2 \
-; RUN:         -exported-symbol _main -o %t.o %t.bc 2>&1 | \
+; RUN: llvm-lto -use-new-pm=false \
+; RUN:          -use-diagnostic-handler \
+; RUN:          -exported-symbol _func2 \
+; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
 ; Optimization records are collected regardless of the diagnostic handler
 ; RUN: rm -f %t.yaml
-; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
+; RUN: llvm-lto -use-new-pm=false \
+; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -exported-symbol _func2 \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty
