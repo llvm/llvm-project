@@ -98,10 +98,9 @@ void X86PreTileConfig::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static Register buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
-                              const TargetInstrInfo *TII,
-                              MachineRegisterInfo *MRI,
-                              const X86Subtarget *ST) {
+static void buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
+                          const TargetInstrInfo *TII, MachineRegisterInfo *MRI,
+                          const X86Subtarget *ST) {
   auto *MBB = MI->getParent();
 
   // FIXME: AMX should assume AVX512 enabled.
@@ -117,12 +116,8 @@ static Register buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
   }
 
   // build psuedo ldtilecfg
-  Register VReg = MRI->createVirtualRegister(&X86::TILECFGRegClass);
-
-  addFrameReference(
-      BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::PLDTILECFG), VReg), FrameIdx);
-
-  return VReg;
+  addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::LDTILECFG)),
+                    FrameIdx);
 }
 
 static ShapeT getShape(const MachineInstr &MI, MachineRegisterInfo *MRI) {
@@ -219,25 +214,97 @@ MachineInstr *X86PreTileConfig::getTileConfigPoint() {
   return &*MII;
 }
 
-static void addTileCFGUse(MachineFunction &MF, Register CFG) {
-  for (MachineBasicBlock &MBB : MF) {
+static bool isAMXInstruction(MachineBasicBlock::iterator MII) {
+  switch (MII->getOpcode()) {
+  default:
+    return false;
+  case X86::PTILELOADDV:
+  case X86::PTILESTOREDV:
+  case X86::PTDPBSSDV:
+  case X86::PTILEZEROV:
+    return true;
+  }
+}
 
-    // Traverse the basic block.
-    for (MachineInstr &MI : MBB) {
-      unsigned Opcode = MI.getOpcode();
-      switch (Opcode) {
-      default:
-        break;
-      case X86::PTILELOADDV:
-      case X86::PTILESTOREDV:
-      case X86::PTDPBSSDV:
-      case X86::PTILEZEROV:
-        unsigned NumOperands = MI.getNumOperands();
-        MI.RemoveOperand(NumOperands - 1);
-        MI.addOperand(MF, MachineOperand::CreateReg(CFG, false));
-        break;
+struct BBInfo {
+  bool HasAMX = false;
+  bool HasCallBeforeAMX = false;
+  bool HasAMXBeforeCallInSuccs = false;
+  MachineInstr *LastCall = nullptr;
+
+  BBInfo() = default;
+  BBInfo(SmallSet<MachineInstr *, 8> &CfgNeedInsert, MachineBasicBlock *MBB,
+         MachineInstr *MI = nullptr) {
+    MachineBasicBlock::iterator MII = MI ? MI->getIterator() : MBB->begin();
+    for (auto E = MBB->end(); MII != E; ++MII) {
+      if (isAMXInstruction(MII)) {
+        HasAMX = true;
+        if (LastCall)
+          CfgNeedInsert.insert(LastCall);
+      } else if (MII->isCall()) {
+        LastCall = &*MII;
+        if (!HasAMX)
+          HasCallBeforeAMX = true;
       }
     }
+  }
+};
+
+static void reloadTileConfig(MachineInstr *MI, int FI,
+                             const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  SmallSet<MachineInstr *, 8> CfgNeedInsert;
+  SmallVector<MachineBasicBlock *, 8> WorkList;
+  DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
+
+  MachineBasicBlock *MBB = MI->getParent();
+  BBVisitedInfo[MBB] = BBInfo(CfgNeedInsert, MBB, MI);
+
+  WorkList.push_back(MBB);
+  while (!WorkList.empty()) {
+    MBB = WorkList.pop_back_val();
+    for (auto I = MBB->succ_begin(), E = MBB->succ_end(); I != E; ++I) {
+      if (!BBVisitedInfo.count(*I)) {
+        BBVisitedInfo[*I] = BBInfo(CfgNeedInsert, *I);
+        WorkList.push_back(*I);
+      }
+    }
+  }
+
+  WorkList.clear();
+  for (auto I : BBVisitedInfo) {
+    WorkList.push_back(I.first);
+    while (!WorkList.empty()) {
+      MBB = WorkList.pop_back_val();
+      if (BBVisitedInfo[MBB].HasCallBeforeAMX ||
+          (!BBVisitedInfo[MBB].HasAMX &&
+           !BBVisitedInfo[MBB].HasAMXBeforeCallInSuccs))
+        continue;
+      for (auto I = MBB->pred_begin(), E = MBB->pred_end(); I != E; ++I) {
+        if (!BBVisitedInfo.count(*I) ||
+            BBVisitedInfo[*I].HasAMXBeforeCallInSuccs)
+          continue;
+        if (BBVisitedInfo[*I].LastCall)
+          CfgNeedInsert.insert(BBVisitedInfo[*I].LastCall);
+        BBVisitedInfo[*I].HasAMXBeforeCallInSuccs = true;
+        WorkList.push_back(*I);
+      }
+    }
+  }
+
+  for (auto *I : CfgNeedInsert) {
+    BitVector UsableRegs(TRI->getNumRegs());
+    const TargetRegisterClass *RC = TRI->getRegClass(X86::TILERegClassID);
+    for (unsigned J = 0; J < RC->getNumRegs(); J++)
+      UsableRegs.set(X86::TMM0 + J);
+    for (MachineOperand &CallMO : I->operands()) {
+      if (CallMO.isRegMask())
+        UsableRegs.clearBitsInMask(CallMO.getRegMask());
+    }
+    if (!UsableRegs.none())
+      addFrameReference(BuildMI(*I->getParent(), ++I->getIterator(), DebugLoc(),
+                                TII->get(X86::LDTILECFG)),
+                        FI);
   }
 }
 
@@ -255,8 +322,8 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &mf) {
   unsigned Size = ST->getTileConfigSize();
   Align Alignment = ST->getTileConfigAlignment();
   int SS = mf.getFrameInfo().CreateStackObject(Size, Alignment, false);
-  Register CFG = buildConfigMI(MI, SS, TII, MRI, ST);
-  addTileCFGUse(mf, CFG);
+  buildConfigMI(MI, SS, TII, MRI, ST);
+  reloadTileConfig(MI, SS, TII, TRI);
   return true;
 }
 

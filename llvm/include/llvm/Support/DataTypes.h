@@ -13,4 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_SUPPORT_DATATYPES_H
+#define LLVM_SUPPORT_DATATYPES_H
+
 #include "llvm-c/DataTypes.h"
+
+#endif // LLVM_SUPPORT_DATATYPES_H

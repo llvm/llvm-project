@@ -575,42 +575,6 @@ exit:
   ret i32 10
 }
 
-; Check that MemorySSA updating can deal with a clobbering access of a
-; duplicated load being a MemoryPHI outside the loop.
-define void @partial_unswitch_memssa_update(i32* noalias %ptr, i1 %c) {
-; CHECK-LABEL: @partial_unswitch_memssa_update(
-; CHECK-LABEL: loop.ph:
-; CHECK-NEXT:    [[LV:%[a-z0-9]+]] = load i32, i32* %ptr, align 4
-; CHECK-NEXT:    [[C:%[a-z0-9]+]] = icmp eq i32 [[LV]], 0
-; CHECK-NEXT:    br i1 [[C]]
-entry:
-  br i1 %c, label %loop.ph, label %outside.clobber
-
-outside.clobber:
-  call void @clobber()
-  br label %loop.ph
-
-loop.ph:
-  br label %loop.header
-
-loop.header:
-  %lv = load i32, i32* %ptr, align 4
-  %hc = icmp eq i32 %lv, 0
-  br i1 %hc, label %if, label %then
-
-if:
-  br label %loop.latch
-
-then:
-  br label %loop.latch
-
-loop.latch:
-  br i1 true, label %loop.header, label %exit
-
-exit:
-  ret void
-}
-
 ; Make sure the duplicated instructions are moved to a preheader that always
 ; executes when the loop body also executes. Do not check the unswitched code,
 ; because it is already checked in the @partial_unswitch_true_successor test

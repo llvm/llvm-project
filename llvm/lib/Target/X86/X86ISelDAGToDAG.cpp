@@ -4607,7 +4607,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Index = Node->getOperand(5);
       SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
       SDValue Segment = CurDAG->getRegister(0, MVT::i16);
-      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
       SDValue Chain = Node->getOperand(0);
       MachineSDNode *CNode;
       SDValue Ops[] = {Node->getOperand(2),
@@ -4617,7 +4616,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                        Index,
                        Disp,
                        Segment,
-                       CFG,
                        Chain};
       CNode = CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
       ReplaceNode(Node, CNode);
@@ -4628,14 +4626,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         break;
       SDValue Chain = Node->getOperand(0);
       unsigned Opc = X86::PTDPBSSDV;
-      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
       SDValue Ops[] = {Node->getOperand(2),
                        Node->getOperand(3),
                        Node->getOperand(4),
                        Node->getOperand(5),
                        Node->getOperand(6),
                        Node->getOperand(7),
-                       CFG,
                        Chain};
       MachineSDNode *CNode =
           CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
@@ -4647,8 +4643,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         break;
       unsigned Opc = X86::PTILEZEROV;
       SDValue Chain = Node->getOperand(0);
-      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
-      SDValue Ops[] = {Node->getOperand(2), Node->getOperand(3), CFG, Chain};
+      SDValue Ops[] = {Node->getOperand(2), Node->getOperand(3), Chain};
       MachineSDNode *CNode =
           CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
       ReplaceNode(Node, CNode);
@@ -4719,7 +4714,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Index = Node->getOperand(5);
       SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
       SDValue Segment = CurDAG->getRegister(0, MVT::i16);
-      SDValue CFG = CurDAG->getRegister(0, MVT::Untyped);
       SDValue Chain = Node->getOperand(0);
       MachineSDNode *CNode;
       SDValue Ops[] = {Node->getOperand(2),
@@ -4730,7 +4724,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                        Disp,
                        Segment,
                        Node->getOperand(6),
-                       CFG,
                        Chain};
       CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
       ReplaceNode(Node, CNode);

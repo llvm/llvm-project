@@ -585,7 +585,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
           for (User *U : AI->users()) {
             if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
               if (Value *Arg = SI->getValueOperand()) {
-                if (dyn_cast<Argument>(Arg)) {
+                if (isa<Argument>(Arg)) {
                   LLVM_DEBUG(dbgs() << "  Include: ");
                   LLVM_DEBUG(AI->print(dbgs()));
                   LLVM_DEBUG(dbgs() << "\n");

@@ -191,7 +191,7 @@ static bool sinkInstruction(
   for (auto &U : I.uses()) {
     Instruction *UI = cast<Instruction>(U.getUser());
     // We cannot sink I to PHI-uses.
-    if (dyn_cast<PHINode>(UI))
+    if (isa<PHINode>(UI))
       return false;
     // We cannot sink I if it has uses outside of the loop.
     if (!L.contains(LI.getLoopFor(UI->getParent())))

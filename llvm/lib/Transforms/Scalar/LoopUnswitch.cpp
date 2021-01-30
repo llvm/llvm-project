@@ -1114,12 +1114,16 @@ void LoopUnswitch::emitPreheaderBranchOnCondition(
 
         Loop *L = LI->getLoopFor(I->getParent());
         auto *DefiningAccess = MemA->getDefiningAccess();
-        // If the defining access is a MemoryPhi in the header, get the incoming
-        // value for the pre-header as defining access.
-        if (DefiningAccess->getBlock() == I->getParent()) {
+        // Get the first defining access before the loop.
+        while (L->contains(DefiningAccess->getBlock())) {
+          // If the defining access is a MemoryPhi, get the incoming
+          // value for the pre-header as defining access.
           if (auto *MemPhi = dyn_cast<MemoryPhi>(DefiningAccess)) {
             DefiningAccess =
                 MemPhi->getIncomingValueForBlock(L->getLoopPreheader());
+          } else {
+            DefiningAccess =
+                cast<MemoryDef>(DefiningAccess)->getDefiningAccess();
           }
         }
         MSSAU->createMemoryAccessInBB(New, DefiningAccess, New->getParent(),
