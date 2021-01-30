@@ -330,6 +330,22 @@ template <typename A> const Symbol *UnwrapWholeSymbolDataRef(const A &x) {
   return nullptr;
 }
 
+// If an expression is a whole symbol or a whole component desginator,
+// extract and return that symbol, else null.
+template <typename A>
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
+  if (auto dataRef{ExtractDataRef(x)}) {
+    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
+      return &p->get();
+    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
+      if (c->base().Rank() == 0) {
+        return &c->GetLastSymbol();
+      }
+    }
+  }
+  return nullptr;
+}
+
 // GetFirstSymbol(A%B%C[I]%D) -> A
 template <typename A> const Symbol *GetFirstSymbol(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
