@@ -521,7 +521,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
 
   SDValue Cmp;
 
-  if (LHS.getSimpleValueType() == MVT::i16 && dyn_cast<ConstantSDNode>(RHS)) {
+  if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
     // Generate a CPI/CPC pair if RHS is a 16-bit constant.
     SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
                                 DAG.getIntPtrConstant(0, DL));

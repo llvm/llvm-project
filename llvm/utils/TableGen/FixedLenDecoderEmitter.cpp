@@ -1250,7 +1250,7 @@ bool FilterChooser::doesOpcodeNeedPredicate(unsigned Opc) const {
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    if (dyn_cast<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
+    if (isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       return true;
   }
   return false;

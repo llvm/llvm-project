@@ -42,7 +42,7 @@ public:
   void visitMemIntrinsic(MemIntrinsic &MI) {
     Value *Length = MI.getLength();
     // Not instrument constant length calls.
-    if (dyn_cast<ConstantInt>(Length))
+    if (isa<ConstantInt>(Length))
       return;
 
     Instruction *InsertPt = &MI;
@@ -60,7 +60,7 @@ public:
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp)) {
       Value *Length = CI.getArgOperand(2);
       // Not instrument constant length calls.
-      if (dyn_cast<ConstantInt>(Length))
+      if (isa<ConstantInt>(Length))
         return;
       Instruction *InsertPt = &CI;
       Instruction *AnnotatedInst = &CI;
