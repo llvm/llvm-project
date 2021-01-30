@@ -1758,7 +1758,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
 bool RedirectingFileSystem::shouldFallBackToExternalFS(
     std::error_code EC) const {
   return shouldUseExternalFS() && EC == llvm::errc::no_such_file_or_directory;
-};
+}
 
 std::error_code
 RedirectingFileSystem::makeCanonical(SmallVectorImpl<char> &Path) const {
