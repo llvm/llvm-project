@@ -745,14 +745,11 @@ int main(int argc, char **argv) {
   }
 
   FileCheckRequest Req;
-  for (StringRef Prefix : CheckPrefixes)
-    Req.CheckPrefixes.push_back(Prefix);
+  append_range(Req.CheckPrefixes, CheckPrefixes);
 
-  for (StringRef Prefix : CommentPrefixes)
-    Req.CommentPrefixes.push_back(Prefix);
+  append_range(Req.CommentPrefixes, CommentPrefixes);
 
-  for (StringRef CheckNot : ImplicitCheckNot)
-    Req.ImplicitCheckNot.push_back(CheckNot);
+  append_range(Req.ImplicitCheckNot, ImplicitCheckNot);
 
   bool GlobalDefineError = false;
   for (StringRef G : GlobalDefines) {
