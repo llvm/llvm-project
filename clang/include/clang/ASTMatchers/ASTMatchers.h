@@ -344,7 +344,7 @@ extern const internal::VariadicAllOfMatcher<Decl> decl;
 ///   int number = 42;
 ///   auto [foo, bar] = std::make_pair{42, 42};
 /// \endcode
-extern const internal::VariadicAllOfMatcher<DecompositionDecl>
+extern const internal::VariadicDynCastAllOfMatcher<Decl, DecompositionDecl>
     decompositionDecl;
 
 /// Matches a declaration of a linkage specification.
