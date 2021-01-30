@@ -439,7 +439,7 @@ private:
     // - or use evaluate/type.h
     if (auto r{t.dyn_cast<fir::RealType>()})
       return r.getFKind() * 4;
-    if (auto cplx{t.dyn_cast<fir::CplxType>()})
+    if (auto cplx{t.dyn_cast<fir::ComplexType>()})
       return cplx.getFKind() * 4;
     llvm_unreachable("not a floating-point type");
   }
@@ -459,8 +459,8 @@ private:
                  ? Conversion::Narrow
                  : Conversion::Extend;
     }
-    if (auto fromCplxTy{from.dyn_cast<fir::CplxType>()}) {
-      if (auto toCplxTy{to.dyn_cast<fir::CplxType>()}) {
+    if (auto fromCplxTy{from.dyn_cast<fir::ComplexType>()}) {
+      if (auto toCplxTy{to.dyn_cast<fir::ComplexType>()}) {
         return getFloatingPointWidth(fromCplxTy) >
                        getFloatingPointWidth(toCplxTy)
                    ? Conversion::Narrow

@@ -16,7 +16,7 @@
 mlir::Type
 Fortran::lower::ComplexExprHelper::getComplexPartType(mlir::Type complexType) {
   return Fortran::lower::convertReal(
-      builder.getContext(), complexType.cast<fir::CplxType>().getFKind());
+      builder.getContext(), complexType.cast<fir::ComplexType>().getFKind());
 }
 
 mlir::Type
@@ -27,7 +27,7 @@ Fortran::lower::ComplexExprHelper::getComplexPartType(mlir::Value cplx) {
 mlir::Value Fortran::lower::ComplexExprHelper::createComplex(fir::KindTy kind,
                                                              mlir::Value real,
                                                              mlir::Value imag) {
-  auto complexTy = fir::CplxType::get(builder.getContext(), kind);
+  auto complexTy = fir::ComplexType::get(builder.getContext(), kind);
   mlir::Value und = builder.create<fir::UndefOp>(loc, complexTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
 }

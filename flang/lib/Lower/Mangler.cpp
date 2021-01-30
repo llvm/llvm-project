@@ -134,7 +134,7 @@ static std::string typeToString(mlir::Type t) {
   if (auto i{t.dyn_cast<mlir::IntegerType>()}) {
     return "i" + std::to_string(i.getWidth());
   }
-  if (auto cplx{t.dyn_cast<fir::CplxType>()}) {
+  if (auto cplx{t.dyn_cast<fir::ComplexType>()}) {
     return "z" + std::to_string(cplx.getFKind());
   }
   if (auto real{t.dyn_cast<fir::RealType>()}) {
