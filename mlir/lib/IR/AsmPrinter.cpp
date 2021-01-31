@@ -731,7 +731,7 @@ void AliasState::printAliases(raw_ostream &os, NewLineCounter &newLine,
   }
   for (const auto &it : llvm::make_filter_range(typeToAlias, filterFn)) {
     it.second.print(os << '!');
-    os << " = " << it.first << newLine;
+    os << " = type " << it.first << newLine;
   }
 }
 
