@@ -14,6 +14,7 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include <type_traits>
 
@@ -257,8 +258,13 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
 }
 
 // LEN()
-static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &sym) {
-  if (auto dyType{DynamicType::From(sym)}) {
+static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
+      return chExpr->LEN();
+    }
+  } else if (auto dyType{DynamicType::From(ultimate)}) {
     if (const semantics::ParamValue * len{dyType->charLength()}) {
       if (len->isExplicit()) {
         if (auto intExpr{len->GetExplicit()}) {
@@ -267,8 +273,10 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &sym) {
           }
         }
       }
-      return Expr<SubscriptInteger>{
-          DescriptorInquiry{NamedEntity{sym}, DescriptorInquiry::Field::Len}};
+      if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
+        return Expr<SubscriptInteger>{DescriptorInquiry{
+            NamedEntity{ultimate}, DescriptorInquiry::Field::Len}};
+      }
     }
   }
   return std::nullopt;
