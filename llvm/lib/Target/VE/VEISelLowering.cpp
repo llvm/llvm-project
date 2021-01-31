@@ -2743,6 +2743,7 @@ SDValue VETargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   // Special treatment for packed V64 types.
   assert(VT == MVT::v512i32 || VT == MVT::v512f32);
+  (void)VT;
   // Example of codes:
   //   %packed_v = extractelt %vr, %idx / 2
   //   %v = %packed_v >> (%idx % 2 * 32)
@@ -2787,6 +2788,7 @@ SDValue VETargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   // Special treatment for packed V64 types.
   assert(VT == MVT::v512i32 || VT == MVT::v512f32);
+  (void)VT;
   // The v512i32 and v512f32 starts from upper bits (0..31).  This "upper
   // bits" required `val << 32` from C implementation's point of view.
   //
