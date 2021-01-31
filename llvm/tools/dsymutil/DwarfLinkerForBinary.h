@@ -82,18 +82,33 @@ private:
     std::vector<ValidReloc> ValidDebugAddrRelocs;
     /// }
 
-    /// Index into ValidRelocs of the next relocation to consider. As we walk
-    /// the DIEs in acsending file offset and as ValidRelocs is sorted by file
-    /// offset, keeping this index up to date is all we have to do to have a
-    /// cheap lookup during the root DIE selection and during DIE cloning.
-    unsigned NextValidReloc = 0;
-
     RangesTy AddressRanges;
+
+    StringRef SrcFileName;
+
+    /// Returns list of valid relocations from \p Relocs,
+    /// between \p StartOffset and \p NextOffset.
+    ///
+    /// \returns true if any relocation is found.
+    std::vector<ValidReloc>
+    getRelocations(const std::vector<ValidReloc> &Relocs, uint64_t StartPos,
+                   uint64_t EndPos);
+
+    /// Resolve specified relocation \p Reloc.
+    ///
+    /// \returns resolved value.
+    uint64_t relocate(const ValidReloc &Reloc) const;
+
+    /// Fill \p Info with address information for the specified \p Reloc.
+    void fillDieInfo(const ValidReloc &Reloc, CompileUnit::DIEInfo &Info);
+
+    /// Print contents of debug map entry for the specified \p Reloc.
+    void printReloc(const ValidReloc &Reloc);
 
   public:
     AddressManager(DwarfLinkerForBinary &Linker, const object::ObjectFile &Obj,
                    const DebugMapObject &DMO)
-        : Linker(Linker) {
+        : Linker(Linker), SrcFileName(DMO.getObjectFilename()) {
       findValidRelocsInDebugSections(Obj, DMO);
 
       // Iterate over the debug map entries and put all the ones that are
@@ -125,9 +140,7 @@ private:
 
     virtual bool areRelocationsResolved() const override { return true; }
 
-    bool hasValidRelocs(bool ResetRelocsPtr = true) override {
-      if (ResetRelocsPtr)
-        NextValidReloc = 0;
+    bool hasValidRelocs() override {
       return !ValidDebugInfoRelocs.empty() || !ValidDebugAddrRelocs.empty();
     }
 
@@ -149,18 +162,13 @@ private:
                               std::vector<ValidReloc> &ValidRelocs);
     /// @}
 
-    /// Checks that there is a relocation in the debug_addr section  against a
+    /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
     ///
-    /// This function must be called with offsets in strictly ascending order
-    /// because it never looks back at relocations it already 'went past'.
     /// \returns true and sets Info.InDebugMap if it is the case.
-    bool hasValidDebugInfoRelocationAt(uint64_t StartOffset, uint64_t EndOffset,
-                                       CompileUnit::DIEInfo &Info);
-
-    /// Checks that there is a relocation in the debug_addr section against a
-    /// debug map entry at the given offset.
-    bool hasValidDebugAddrRelocationAt(uint64_t Offset);
+    bool hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
+                              uint64_t StartOffset, uint64_t EndOffset,
+                              CompileUnit::DIEInfo &Info);
 
     bool hasLiveMemoryLocation(const DWARFDie &DIE,
                                CompileUnit::DIEInfo &Info) override;
@@ -170,7 +178,8 @@ private:
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
 
-    llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t Offset) override;
+    llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
+                                                 uint64_t EndOffset) override;
 
     RangesTy &getValidAddressRanges() override { return AddressRanges; }
 
@@ -178,7 +187,6 @@ private:
       AddressRanges.clear();
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
-      NextValidReloc = 0;
     }
   };
 

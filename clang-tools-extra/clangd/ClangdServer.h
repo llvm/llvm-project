@@ -34,7 +34,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
-#include <future>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -194,13 +193,8 @@ public:
   void removeDocument(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
-  /// Request is processed asynchronously.
   ///
-  /// This method should only be called for currently tracked files. However, it
-  /// is safe to call removeDocument for \p File after this method returns, even
-  /// while returned future is not yet ready.
-  /// A version of `codeComplete` that runs \p Callback on the processing thread
-  /// when codeComplete results become available.
+  /// This method should only be called for currently tracked files.
   void codeComplete(PathRef File, Position Pos,
                     const clangd::CodeCompleteOptions &Opts,
                     Callback<CodeCompleteResult> CB);
