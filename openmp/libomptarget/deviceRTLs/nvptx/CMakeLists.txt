@@ -10,12 +10,12 @@
 #
 ##===----------------------------------------------------------------------===##
 
-# By default we will not build NVPTX deviceRTL on a non-CUDA
+# By default we will not build NVPTX deviceRTL on a CUDA free system
 set(LIBOMPTARGET_BUILD_NVPTX_BCLIB FALSE CACHE BOOL
-  "Whether build NVPTX deviceRTL on non-CUDA system.")
+  "Whether build NVPTX deviceRTL on CUDA free system.")
 
 if (NOT (LIBOMPTARGET_DEP_CUDA_FOUND OR LIBOMPTARGET_BUILD_NVPTX_BCLIB))
-  libomptarget_say("Not building NVPTX deviceRTL by default on non-CUDA system.")
+  libomptarget_say("Not building NVPTX deviceRTL by default on CUDA free system.")
   return()
 endif()
 
@@ -73,16 +73,22 @@ set(devicertl_common_directory
 set(devicertl_nvptx_directory
   ${devicertl_base_directory}/nvptx)
 
-if (DEFINED LIBOMPTARGET_DEP_CUDA_ARCH)
-  set(default_capabilities ${LIBOMPTARGET_DEP_CUDA_ARCH})
-else()
-  set(default_capabilities 35 37 50 52 53 60 61 62 70 72 75 80)
-endif()
+set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80)
 
-set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${default_capabilities} CACHE STRING
+set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
   "List of CUDA Compute Capabilities to be used to compile the NVPTX device RTL.")
+string(TOLOWER ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES} LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES)
 
-set(nvptx_sm_list ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES})
+if (LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "all")
+  set(nvptx_sm_list ${all_capabilities})
+elseif(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "auto")
+  if (NOT LIBOMPTARGET_DEP_CUDA_FOUND)
+    libomptarget_error_say("[NVPTX] Cannot auto detect compute capability as CUDA not found.")
+  endif()
+  set(nvptx_sm_list ${LIBOMPTARGET_DEP_CUDA_ARCH})
+else()
+  string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
+endif()
 
 # If user set LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES to empty, we disable the
 # build.
@@ -93,8 +99,8 @@ endif()
 
 # Check all SM values
 foreach(sm ${nvptx_sm_list})
-  if (NOT ${sm} IN_LIST default_capabilities)
-    message(FATAL_ERROR "LIBOMPTARGET-NVPTX: compute capability ${sm} is not supported. Supported values: ${default_capabilities}")
+  if (NOT ${sm} IN_LIST all_capabilities)
+    libomptarget_warning_say("[NVPTX] Compute capability ${sm} is not supported. Make sure clang can work with it.")
   endif()
 endforeach()
 
