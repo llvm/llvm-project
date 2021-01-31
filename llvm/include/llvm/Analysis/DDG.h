@@ -275,7 +275,7 @@ public:
   virtual ~DependenceGraphInfo() {}
 
   /// Return the label that is used to name this graph.
-  const StringRef getName() const { return Name; }
+  StringRef getName() const { return Name; }
 
   /// Return the root node of the graph.
   NodeType &getRoot() const {

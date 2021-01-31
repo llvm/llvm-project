@@ -412,9 +412,9 @@ public:
   InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
-  const ArrayRef<WriteState> getDefs() const { return Defs; }
+  ArrayRef<WriteState> getDefs() const { return Defs; }
   SmallVectorImpl<ReadState> &getUses() { return Uses; }
-  const ArrayRef<ReadState> getUses() const { return Uses; }
+  ArrayRef<ReadState> getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
 
   unsigned getLatency() const { return Desc.MaxLatency; }

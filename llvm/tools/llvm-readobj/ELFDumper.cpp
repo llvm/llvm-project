@@ -5141,8 +5141,7 @@ static const NoteType CoreNoteTypes[] = {
 };
 
 template <class ELFT>
-const StringRef getNoteTypeName(const typename ELFT::Note &Note,
-                                unsigned ELFType) {
+StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
   uint32_t Type = Note.getType();
   auto FindNote = [&](ArrayRef<NoteType> V) -> StringRef {
     for (const NoteType &N : V)

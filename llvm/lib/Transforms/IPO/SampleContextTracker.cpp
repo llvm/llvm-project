@@ -113,7 +113,7 @@ std::map<uint32_t, ContextTrieNode> &ContextTrieNode::getAllChildContext() {
   return AllChildContext;
 }
 
-const StringRef ContextTrieNode::getFuncName() const { return FuncName; }
+StringRef ContextTrieNode::getFuncName() const { return FuncName; }
 
 FunctionSamples *ContextTrieNode::getFunctionSamples() const {
   return FuncSamples;
