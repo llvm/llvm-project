@@ -53,7 +53,7 @@ public:
                                       bool DeleteNode = true);
   void removeChildContext(const LineLocation &CallSite, StringRef CalleeName);
   std::map<uint32_t, ContextTrieNode> &getAllChildContext();
-  const StringRef getFuncName() const;
+  StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
   LineLocation getCallSiteLoc() const;

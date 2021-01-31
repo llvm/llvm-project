@@ -318,7 +318,7 @@ public:
 
   element_iterator element_begin() const { return ContainedTys; }
   element_iterator element_end() const { return &ContainedTys[NumContainedTys];}
-  ArrayRef<Type *> const elements() const {
+  ArrayRef<Type *> elements() const {
     return makeArrayRef(element_begin(), element_end());
   }
 

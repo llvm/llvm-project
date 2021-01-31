@@ -160,10 +160,8 @@ public:
   void cleanUpManifests(std::vector<std::string> &Duplicates);
   void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
-  const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
-  const ArrayRef<std::vector<UTF16>> getStringTable() const {
-    return StringTable;
-  }
+  ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
+  ArrayRef<std::vector<UTF16>> getStringTable() const { return StringTable; }
 
   class TreeNode {
   public:
