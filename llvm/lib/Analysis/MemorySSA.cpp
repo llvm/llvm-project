@@ -281,7 +281,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     // clobbers where they don't really exist at all. Please see D43269 for
     // context.
     switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_end:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
@@ -357,22 +356,6 @@ struct UpwardsMemoryQuery {
 };
 
 } // end anonymous namespace
-
-static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
-                           BatchAAResults &AA) {
-  Instruction *Inst = MD->getMemoryInst();
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_end: {
-      MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(1));
-      return AA.alias(ArgLoc, Loc) == MustAlias;
-    }
-    default:
-      return false;
-    }
-  }
-  return false;
-}
 
 template <typename AliasAnalysisType>
 static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
@@ -1465,15 +1448,6 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       }
 
       MemoryDef *MD = cast<MemoryDef>(VersionStack[UpperBound]);
-      // If the lifetime of the pointer ends at this instruction, it's live on
-      // entry.
-      if (!UseMLOC.IsCall && lifetimeEndsAt(MD, UseMLOC.getLoc(), *AA)) {
-        // Reset UpperBound to liveOnEntryDef's place in the stack
-        UpperBound = 0;
-        FoundClobberResult = true;
-        LocInfo.AR = MustAlias;
-        break;
-      }
       ClobberAlias CA = instructionClobbersQuery(MD, MU, UseMLOC, *AA);
       if (CA.IsClobber) {
         FoundClobberResult = true;
