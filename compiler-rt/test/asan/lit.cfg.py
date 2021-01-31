@@ -210,7 +210,7 @@ if not config.arm_thumb:
 
 # Turn on leak detection on 64-bit Linux.
 leak_detection_android = config.android and 'android-thread-properties-api' in config.available_features and (config.target_arch in ['x86_64', 'i386', 'i686', 'aarch64'])
-leak_detection_linux = (config.host_os == 'Linux') and (not config.android) and (config.target_arch in ['x86_64', 'i386'])
+leak_detection_linux = (config.host_os == 'Linux') and (not config.android) and (config.target_arch in ['x86_64', 'i386', 'riscv64'])
 leak_detection_mac = (config.host_os == 'Darwin') and (config.target_arch == 'x86_64')
 leak_detection_netbsd = (config.host_os == 'NetBSD') and (config.target_arch in ['x86_64', 'i386'])
 if leak_detection_android or leak_detection_linux or leak_detection_mac or leak_detection_netbsd:
