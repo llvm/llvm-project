@@ -124,31 +124,15 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
       TheLinker(new Linker(*MergedModule)) {
   Context.setDiscardValueNames(LTODiscardValueNames);
   Context.enableDebugTypeODRUniquing();
+
+  Config.CodeModel = None;
+  Config.StatsFile = LTOStatsFile;
+  Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
+    PM.add(createObjCARCContractPass());
+  };
 }
 
 LTOCodeGenerator::~LTOCodeGenerator() {}
-
-lto::Config LTOCodeGenerator::toConfig() const {
-  lto::Config Conf;
-  Conf.CGFileType = FileType;
-  Conf.CPU = MCpu;
-  Conf.MAttrs = MAttrs;
-  Conf.RelocModel = RelocModel;
-  Conf.Options = Options;
-  Conf.CodeModel = None;
-  Conf.StatsFile = LTOStatsFile;
-  Conf.OptLevel = OptLevel;
-  Conf.Freestanding = Freestanding;
-  Conf.PTO.LoopVectorization = OptLevel > 1;
-  Conf.PTO.SLPVectorization = OptLevel > 1;
-  Conf.DisableVerify = DisableVerify;
-  Conf.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
-    PM.add(createObjCARCContractPass());
-  };
-  Conf.UseNewPM = UseNewPM;
-
-  return Conf;
-}
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
   const std::vector<StringRef> &undefs = Mod->getAsmUndefinedRefs();
@@ -184,7 +168,7 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
 }
 
 void LTOCodeGenerator::setTargetOptions(const TargetOptions &Options) {
-  this->Options = Options;
+  Config.Options = Options;
 }
 
 void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
@@ -201,19 +185,21 @@ void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
 }
 
 void LTOCodeGenerator::setOptLevel(unsigned Level) {
-  OptLevel = Level;
-  switch (OptLevel) {
+  Config.OptLevel = Level;
+  Config.PTO.LoopVectorization = Config.OptLevel > 1;
+  Config.PTO.SLPVectorization = Config.OptLevel > 1;
+  switch (Config.OptLevel) {
   case 0:
-    CGOptLevel = CodeGenOpt::None;
+    Config.CGOptLevel = CodeGenOpt::None;
     return;
   case 1:
-    CGOptLevel = CodeGenOpt::Less;
+    Config.CGOptLevel = CodeGenOpt::Less;
     return;
   case 2:
-    CGOptLevel = CodeGenOpt::Default;
+    Config.CGOptLevel = CodeGenOpt::Default;
     return;
   case 3:
-    CGOptLevel = CodeGenOpt::Aggressive;
+    Config.CGOptLevel = CodeGenOpt::Aggressive;
     return;
   }
   llvm_unreachable("Unknown optimization level!");
@@ -261,7 +247,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
 
   auto AddStream =
       [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
-    StringRef Extension(FileType == CGFT_AssemblyFile ? "s" : "o");
+    StringRef Extension(Config.CGFileType == CGFT_AssemblyFile ? "s" : "o");
 
     int FD;
     std::error_code EC =
@@ -348,20 +334,20 @@ bool LTOCodeGenerator::determineTarget() {
 
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
-  SubtargetFeatures Features(join(MAttrs, ""));
+  SubtargetFeatures Features(join(Config.MAttrs, ""));
   Features.getDefaultSubtargetFeatures(Triple);
   FeatureStr = Features.getString();
   // Set a default CPU for Darwin triples.
-  if (MCpu.empty() && Triple.isOSDarwin()) {
+  if (Config.CPU.empty() && Triple.isOSDarwin()) {
     if (Triple.getArch() == llvm::Triple::x86_64)
-      MCpu = "core2";
+      Config.CPU = "core2";
     else if (Triple.getArch() == llvm::Triple::x86)
-      MCpu = "yonah";
+      Config.CPU = "yonah";
     else if (Triple.isArm64e())
-      MCpu = "apple-a12";
+      Config.CPU = "apple-a12";
     else if (Triple.getArch() == llvm::Triple::aarch64 ||
              Triple.getArch() == llvm::Triple::aarch64_32)
-      MCpu = "cyclone";
+      Config.CPU = "cyclone";
   }
 
   TargetMach = createTargetMachine();
@@ -373,7 +359,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      TripleStr, MCpu, FeatureStr, Options, RelocModel, None, CGOptLevel));
+      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
+      None, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make
@@ -558,11 +545,10 @@ bool LTOCodeGenerator::optimize() {
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());
 
-  lto::Config Conf = toConfig();
 
   ModuleSummaryIndex CombinedIndex(false);
   TargetMach = createTargetMachine();
-  if (!opt(Conf, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
+  if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
            /*CmdArgs*/ std::vector<uint8_t>())) {
     emitError("LTO middle-end optimizations failed");
@@ -585,11 +571,10 @@ bool LTOCodeGenerator::compileOptimized(lto::AddStreamFn AddStream,
   // for splitting
   restoreLinkageForExternals();
 
-  lto::Config Conf = toConfig();
   ModuleSummaryIndex CombinedIndex(false);
 
-  Error Err =
-      backend(Conf, AddStream, ParallelismLevel, *MergedModule, CombinedIndex);
+  Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
+                      CombinedIndex);
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
 
