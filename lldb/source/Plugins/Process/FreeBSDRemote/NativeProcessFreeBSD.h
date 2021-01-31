@@ -84,6 +84,10 @@ public:
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
+protected:
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
+
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
