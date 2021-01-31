@@ -296,27 +296,31 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
   CHECK(dimension >= 0);
   const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    if (IsImpliedShape(symbol)) {
-      Shape shape{GetShape(symbol).value()};
-      return std::move(shape.at(dimension));
-    }
-    int j{0};
-    for (const auto &shapeSpec : details->shape()) {
-      if (j++ == dimension) {
-        if (shapeSpec.ubound().isExplicit()) {
-          if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
-            if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
-              return common::Clone(ubound.value()) -
-                  common::Clone(lbound.value()) + ExtentExpr{1};
-            } else {
-              return ubound.value();
+    if (IsImpliedShape(symbol) && details->init()) {
+      if (auto shape{GetShape(symbol)}) {
+        if (dimension < static_cast<int>(shape->size())) {
+          return std::move(shape->at(dimension));
+        }
+      }
+    } else {
+      int j{0};
+      for (const auto &shapeSpec : details->shape()) {
+        if (j++ == dimension) {
+          if (shapeSpec.ubound().isExplicit()) {
+            if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
+              if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
+                return common::Clone(ubound.value()) -
+                    common::Clone(lbound.value()) + ExtentExpr{1};
+              } else {
+                return ubound.value();
+              }
             }
+          } else if (details->IsAssumedSize() && j == symbol.Rank()) {
+            return std::nullopt;
+          } else if (semantics::IsDescriptor(symbol)) {
+            return ExtentExpr{DescriptorInquiry{NamedEntity{base},
+                DescriptorInquiry::Field::Extent, dimension}};
           }
-        } else if (details->IsAssumedSize() && j == symbol.Rank()) {
-          return std::nullopt;
-        } else if (semantics::IsDescriptor(symbol)) {
-          return ExtentExpr{DescriptorInquiry{
-              NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
         }
       }
     }
@@ -449,7 +453,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
   return std::visit(
       common::visitors{
           [&](const semantics::ObjectEntityDetails &object) {
-            if (IsImpliedShape(symbol)) {
+            if (IsImpliedShape(symbol) && object.init()) {
               return (*this)(object.init());
             } else {
               int n{object.shape().Rank()};
