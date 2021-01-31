@@ -1067,6 +1067,52 @@ TEST(RenameTest, Renameable) {
   }
 }
 
+MATCHER_P(newText, T, "") { return arg.newText == T; }
+
+TEST(RenameTest, IndexMergeMainFile) {
+  Annotations Code("int ^x();");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.Filename = "main.cc";
+  auto AST = TU.build();
+
+  auto Main = testPath("main.cc");
+
+  auto Rename = [&](const SymbolIndex *Idx) {
+    auto GetDirtyBuffer = [&](PathRef Path) -> llvm::Optional<std::string> {
+      return Code.code().str(); // Every file has the same content.
+    };
+    RenameOptions Opts;
+    Opts.AllowCrossFile = true;
+    RenameInputs Inputs{Code.point(), "xPrime", AST,           Main,
+                        Idx,          Opts,     GetDirtyBuffer};
+    auto Results = rename(Inputs);
+    EXPECT_TRUE(bool(Results)) << llvm::toString(Results.takeError());
+    return std::move(*Results);
+  };
+
+  // We do not expect to see duplicated edits from AST vs index.
+  auto Results = Rename(TU.index().get());
+  EXPECT_THAT(Results.GlobalChanges.keys(), ElementsAre(Main));
+  EXPECT_THAT(Results.GlobalChanges[Main].asTextEdits(),
+              ElementsAre(newText("xPrime")));
+
+  // Sanity check: we do expect to see index results!
+  TU.Filename = "other.cc";
+  Results = Rename(TU.index().get());
+  EXPECT_THAT(Results.GlobalChanges.keys(),
+              UnorderedElementsAre(Main, testPath("other.cc")));
+
+#if defined(_WIN32) || defined(__APPLE__)
+  // On case-insensitive systems, no duplicates if AST vs index case differs.
+  // https://github.com/clangd/clangd/issues/665
+  TU.Filename = "MAIN.CC";
+  Results = Rename(TU.index().get());
+  EXPECT_THAT(Results.GlobalChanges.keys(), ElementsAre(Main));
+  EXPECT_THAT(Results.GlobalChanges[Main].asTextEdits(),
+              ElementsAre(newText("xPrime")));
+#endif
+}
+
 TEST(RenameTest, MainFileReferencesOnly) {
   // filter out references not from main file.
   llvm::StringRef Test =

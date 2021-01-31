@@ -22,6 +22,12 @@ using Path = std::string;
 /// signatures.
 using PathRef = llvm::StringRef;
 
+// For platforms where paths are case-insensitive (but case-preserving),
+// we need to do case-insensitive comparisons and use lowercase keys.
+// FIXME: Make Path a real class with desired semantics instead.
+std::string maybeCaseFoldPath(PathRef Path);
+bool pathEqual(PathRef, PathRef);
+
 } // namespace clangd
 } // namespace clang
 
