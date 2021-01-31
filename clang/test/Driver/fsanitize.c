@@ -434,6 +434,12 @@
 // RUN: %clang -target powerpc-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC
 // CHECK-SANL-PPC: unsupported option '-fsanitize=leak' for target 'powerpc-unknown-linux'
 
+// RUN: %clang -target riscv64-linux-gnu -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-RISCV64
+// CHECK-SANL-RISCV64: "-fsanitize=leak"
+
+// RUN: %clang -target riscv64-linux-gnu -fsanitize=address,leak -fno-sanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANL-NO-SANA-RISCV64
+// CHECK-SANA-SANL-NO-SANA-RISCV64: "-fsanitize=leak"
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN
 // CHECK-MSAN: "-fno-assume-sane-operator-new"
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN
