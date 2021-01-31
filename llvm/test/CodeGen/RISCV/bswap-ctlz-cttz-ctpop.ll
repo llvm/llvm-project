@@ -17,23 +17,22 @@ declare i32 @llvm.ctpop.i32(i32)
 define i16 @test_bswap_i16(i16 %a) nounwind {
 ; RV32I-LABEL: test_bswap_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 8
-; RV32I-NEXT:    lui a2, 4080
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a1, a1, -256
+; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    srli a1, a1, 8
+; RV32I-NEXT:    slli a0, a0, 8
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_bswap_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 40
-; RV64I-NEXT:    addi a2, zero, 255
-; RV64I-NEXT:    slli a2, a2, 48
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -256
+; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    srli a1, a1, 8
+; RV64I-NEXT:    slli a0, a0, 8
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
   %tmp = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %tmp
@@ -58,21 +57,18 @@ define i32 @test_bswap_i32(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: test_bswap_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    addi a2, zero, 255
-; RV64I-NEXT:    slli a3, a2, 32
-; RV64I-NEXT:    and a1, a1, a3
-; RV64I-NEXT:    slli a3, a0, 24
-; RV64I-NEXT:    slli a4, a2, 40
-; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    or a1, a3, a1
-; RV64I-NEXT:    slli a3, a0, 40
-; RV64I-NEXT:    slli a2, a2, 48
-; RV64I-NEXT:    and a2, a3, a2
-; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srliw a2, a0, 24
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    lui a3, 4080
+; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
   %tmp = call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %tmp
