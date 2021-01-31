@@ -2312,9 +2312,7 @@ static void noteOverloads(Sema &S, const UnresolvedSetImpl &Overloads,
   int SuppressedOverloads = 0;
   for (UnresolvedSetImpl::iterator It = Overloads.begin(),
        DeclsEnd = Overloads.end(); It != DeclsEnd; ++It) {
-    // FIXME: Magic number for max shown overloads stolen from
-    // OverloadCandidateSet::NoteCandidates.
-    if (ShownOverloads >= 4 && S.Diags.getShowOverloads() == Ovl_Best) {
+    if (ShownOverloads >= S.Diags.getNumOverloadCandidatesToShow()) {
       ++SuppressedOverloads;
       continue;
     }
@@ -2329,6 +2327,8 @@ static void noteOverloads(Sema &S, const UnresolvedSetImpl &Overloads,
     S.Diag(Fn->getLocation(), diag::note_possible_target_of_call);
     ++ShownOverloads;
   }
+
+  S.Diags.overloadCandidatesShown(ShownOverloads);
 
   if (SuppressedOverloads)
     S.Diag(FinalNoteLoc, diag::note_ovl_too_many_candidates)
