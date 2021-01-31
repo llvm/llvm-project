@@ -64,7 +64,7 @@ TEST(CommandMangler, Sysroot) {
 
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(printArgv(Cmd),
+  EXPECT_THAT(llvm::join(Cmd, " "),
               HasSubstr("-isysroot " + testPath("fake/sysroot")));
 }
 
