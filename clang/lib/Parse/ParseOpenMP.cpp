@@ -21,6 +21,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
@@ -1463,7 +1464,29 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
   // TODO: Keep some source location in the TI to provide better diagnostics.
   // TODO: Perform some kind of equivalence check on the condition and score
   //       expressions.
-  for (const OMPTraitSet &ParentSet : ParentTI->Sets) {
+  auto StripImplementation = [](const OMPTraitSet &TSet) -> OMPTraitSet {
+    if (TSet.Kind != llvm::omp::TraitSet::implementation)
+      return TSet;
+    OMPTraitSet Set = TSet;
+    for (OMPTraitSelector &Selector : Set.Selectors) {
+      if (Selector.Kind != llvm::omp::TraitSelector::implementation_extension)
+        continue;
+      // Do not propagate match extensions to nested contexts.
+      llvm::erase_if(Selector.Properties, [](const OMPTraitProperty &Property) {
+        return (
+            Property.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_any ||
+            Property.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_all ||
+            Property.Kind ==
+                llvm::omp::TraitProperty::implementation_extension_match_none);
+      });
+      return Set;
+    }
+    return Set;
+  };
+  for (const OMPTraitSet &PSet : ParentTI->Sets) {
+    const OMPTraitSet ParentSet = StripImplementation(PSet);
     bool MergedSet = false;
     for (OMPTraitSet &Set : TI.Sets) {
       if (Set.Kind != ParentSet.Kind)

@@ -168,8 +168,13 @@ static int isVariantApplicableInContextHelper(
     // For kind "any" a single match is enough but we ignore non-matched
     // properties.
     if (MK == MK_ANY) {
-      if (WasFound)
+      if (WasFound) {
+        LLVM_DEBUG(
+            dbgs() << "[" << DEBUG_TYPE << "] Property "
+                   << getOpenMPContextTraitPropertyName(Property, "")
+                   << " was in the OpenMP context and match kind is any.\n";);
         return true;
+      }
       return None;
     }
 
