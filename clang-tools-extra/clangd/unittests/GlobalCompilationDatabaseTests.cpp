@@ -348,7 +348,7 @@ MATCHER_P(hasArg, Flag, "") {
     return false;
   }
   if (!llvm::is_contained(arg->CommandLine, Flag)) {
-    *result_listener << "flags are " << printArgv(arg->CommandLine);
+    *result_listener << "flags are " << llvm::join(arg->CommandLine, " ");
     return false;
   }
   return true;
@@ -457,7 +457,8 @@ MATCHER_P2(hasFlag, Flag, Path, "") {
     return false;
   }
   if (!llvm::is_contained(Cmds.front().CommandLine, Flag)) {
-    *result_listener << "flags are: " << printArgv(Cmds.front().CommandLine);
+    *result_listener << "flags are: "
+                     << llvm::join(Cmds.front().CommandLine, " ");
     return false;
   }
   return true;
