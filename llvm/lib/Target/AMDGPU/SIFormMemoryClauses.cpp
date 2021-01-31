@@ -62,7 +62,8 @@ private:
   template <typename Callable>
   void forAllLanes(Register Reg, LaneBitmask LaneMask, Callable Func) const;
 
-  bool canBundle(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
+  bool canBundle(const MachineInstr &MI, const RegUse &Defs,
+                 const RegUse &Uses) const;
   bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
   void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
@@ -203,8 +204,8 @@ void SIFormMemoryClauses::forAllLanes(Register Reg, LaneBitmask LaneMask,
 
 // Returns false if there is a use of a def already in the map.
 // In this case we must break the clause.
-bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
-                                    RegUse &Defs, RegUse &Uses) const {
+bool SIFormMemoryClauses::canBundle(const MachineInstr &MI, const RegUse &Defs,
+                                    const RegUse &Uses) const {
   // Check interference with defs.
   for (const MachineOperand &MO : MI.operands()) {
     // TODO: Prologue/Epilogue Insertion pass does not process bundled
@@ -221,7 +222,7 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
     if (MO.isTied())
       return false;
 
-    RegUse &Map = MO.isDef() ? Uses : Defs;
+    const RegUse &Map = MO.isDef() ? Uses : Defs;
     auto Conflict = Map.find(Reg);
     if (Conflict == Map.end())
       continue;
