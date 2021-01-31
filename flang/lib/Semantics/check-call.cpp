@@ -272,6 +272,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           : nullptr};
   int actualRank{evaluate::GetRank(actualType.shape())};
   bool actualIsPointer{evaluate::IsObjectPointer(actual, context)};
+  bool dummyIsAssumedRank{dummy.type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedRank)};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
@@ -295,7 +297,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (!IsArrayElement(actual) &&
         !(actualType.type().category() == TypeCategory::Character &&
             actualType.type().kind() == 1) &&
-        !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize)) {
+        !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
+        !dummyIsAssumedRank) {
       messages.Say(
           "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
           dummyName);
@@ -355,8 +358,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   bool actualIsContiguous{IsSimplyContiguous(actual, context)};
-  bool dummyIsAssumedRank{dummy.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedRank)};
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
   if ((actualIsAsynchronous || actualIsVolatile) &&
