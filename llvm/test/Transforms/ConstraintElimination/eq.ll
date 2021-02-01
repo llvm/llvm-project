@@ -9,15 +9,15 @@ define i1 @test_eq_1(i8 %a, i8 %b) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[A]], [[B]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[T_3]]
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp eq i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[T_4]]
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i8 [[B]], [[A]]
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[F_1]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], false
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i8 [[B]], [[A]]
-; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[F_2]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[B]], 99
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_6]]
@@ -95,13 +95,13 @@ define i1 @test_eq_2(i8 %a, i8 %b) {
 ; CHECK:       then.then:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[A]], 100
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[B]], 100
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], true
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[A]], 100
-; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], [[F_1]]
+; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], false
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[B]], 100
 ; CHECK-NEXT:    [[XOR_3:%.*]] = xor i1 [[XOR_2]], false
 ; CHECK-NEXT:    [[F_3_1:%.*]] = icmp ugt i8 [[A]], 99
-; CHECK-NEXT:    [[XOR_4:%.*]] = xor i1 [[XOR_3]], [[F_3_1]]
+; CHECK-NEXT:    [[XOR_4:%.*]] = xor i1 [[XOR_3]], false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A]], 99
 ; CHECK-NEXT:    [[XOR_5:%.*]] = xor i1 [[XOR_4]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[A]], 98
@@ -110,17 +110,17 @@ define i1 @test_eq_2(i8 %a, i8 %b) {
 ; CHECK:       then.else:
 ; CHECK-NEXT:    [[F_4:%.*]] = icmp ult i8 [[A]], 100
 ; CHECK-NEXT:    [[F_5:%.*]] = icmp ult i8 [[B]], 100
-; CHECK-NEXT:    [[XOR_7:%.*]] = xor i1 [[F_4]], false
+; CHECK-NEXT:    [[XOR_7:%.*]] = xor i1 false, false
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp uge i8 [[A]], 100
-; CHECK-NEXT:    [[XOR_8:%.*]] = xor i1 [[XOR_7]], [[T_3]]
+; CHECK-NEXT:    [[XOR_8:%.*]] = xor i1 [[XOR_7]], true
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp uge i8 [[B]], 100
 ; CHECK-NEXT:    [[XOR_9:%.*]] = xor i1 [[XOR_8]], true
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ugt i8 [[A]], 99
-; CHECK-NEXT:    [[XOR_10:%.*]] = xor i1 [[XOR_9]], [[T_5]]
+; CHECK-NEXT:    [[XOR_10:%.*]] = xor i1 [[XOR_9]], true
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[A]], 99
-; CHECK-NEXT:    [[XOR_11:%.*]] = xor i1 [[XOR_10]], [[C_3]]
+; CHECK-NEXT:    [[XOR_11:%.*]] = xor i1 [[XOR_10]], false
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i8 [[A]], 98
-; CHECK-NEXT:    [[XOR_12:%.*]] = xor i1 [[XOR_11]], [[C_4]]
+; CHECK-NEXT:    [[XOR_12:%.*]] = xor i1 [[XOR_11]], true
 ; CHECK-NEXT:    ret i1 [[XOR_12]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i8 [[A]], 100
@@ -298,13 +298,13 @@ define i1 @test_eq_ult_and(i8 %a, i8 %b) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[A]], 100
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[B]], 100
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], true
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[A]], 100
-; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], [[F_1]]
+; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], false
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[B]], 100
 ; CHECK-NEXT:    [[XOR_3:%.*]] = xor i1 [[XOR_2]], false
 ; CHECK-NEXT:    [[F_3_1:%.*]] = icmp ugt i8 [[A]], 99
-; CHECK-NEXT:    [[XOR_4:%.*]] = xor i1 [[XOR_3]], [[F_3_1]]
+; CHECK-NEXT:    [[XOR_4:%.*]] = xor i1 [[XOR_3]], false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A]], 99
 ; CHECK-NEXT:    [[XOR_5:%.*]] = xor i1 [[XOR_4]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[A]], 98
