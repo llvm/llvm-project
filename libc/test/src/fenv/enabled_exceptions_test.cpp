@@ -51,6 +51,6 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
           // exception.
           __llvm_libc::feraiseexcept(e);
         },
-        SIGFPE);
+        WITH_SIGNAL(SIGFPE));
   }
 }

@@ -32,5 +32,5 @@ TEST(LlvmLibcSigdelset, UnblockOne) {
   EXPECT_THAT(__llvm_libc::sigfillset(&set), Succeeds());
   EXPECT_THAT(__llvm_libc::sigdelset(&set, SIGUSR1), Succeeds());
   EXPECT_THAT(__llvm_libc::sigprocmask(SIG_SETMASK, &set, nullptr), Succeeds());
-  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, SIGUSR1);
+  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, WITH_SIGNAL(SIGUSR1));
 }
