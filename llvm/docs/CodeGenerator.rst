@@ -2102,6 +2102,10 @@ WebAssembly constraints:
 * The caller and callee's return types must match. The caller cannot
   be void unless the callee is, too.
 
+AArch64 constraints:
+
+* No variable argument lists are used.
+
 Example:
 
 Call as ``llc -tailcallopt test.ll``.
