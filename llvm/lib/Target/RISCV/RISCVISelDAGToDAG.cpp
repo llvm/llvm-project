@@ -553,10 +553,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::SRL: {
     // Optimize (srl (and X, 0xffff), C) -> (srli (slli X, 16), 16 + C).
-    // Taking into account that the 0xffff may have had lower bits removed by
-    // SimplifyDemandedBits.
-    // This avoids materializing the 0xffff immediate. This pattern occurs when
-    // type legalizing i16 right shifts.
+    // Taking into account that the 0xffff may have had lower bits unset by
+    // SimplifyDemandedBits. This avoids materializing the 0xffff immediate.
+    // This pattern occurs when type legalizing i16 right shifts.
     // FIXME: This could be extended to other AND masks.
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (N1C) {
