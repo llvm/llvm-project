@@ -94,7 +94,7 @@ EXTERN void __tgt_register_requires(int64_t flags) {
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *desc) {
   TIMESCOPE();
-  std::call_once(PM->RTLs.initFlag, &RTLsTy::LoadRTLs, PM->RTLs);
+  std::call_once(PM->RTLs.initFlag, &RTLsTy::LoadRTLs, &PM->RTLs);
   for (auto &RTL : PM->RTLs.AllRTLs) {
     if (RTL.register_lib) {
       if ((*RTL.register_lib)(desc) != OFFLOAD_SUCCESS) {
