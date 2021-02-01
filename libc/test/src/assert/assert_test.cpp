@@ -21,7 +21,7 @@ TEST(LlvmLibcAssert, Enabled) {
         close(2);
         assert(0);
       },
-      -1);
+      WITH_SIGNAL(-1));
 }
 
 #define NDEBUG
