@@ -6,6 +6,8 @@ declare i8 @llvm.umax.i8(i8, i8)
 declare i8 @llvm.smin.i8(i8, i8)
 declare i8 @llvm.smax.i8(i8, i8)
 declare <3 x i8> @llvm.umin.v3i8(<3 x i8>, <3 x i8>)
+declare <3 x i8> @llvm.umax.v3i8(<3 x i8>, <3 x i8>)
+declare <3 x i8> @llvm.smin.v3i8(<3 x i8>, <3 x i8>)
 declare void @use(i8)
 
 define i8 @umin_known_bits(i8 %x, i8 %y) {
@@ -206,5 +208,156 @@ define i8 @umin_zext_uses(i5 %x, i5 %y) {
   %zy = zext i5 %y to i8
   call void @use(i8 %zy)
   %m = call i8 @llvm.umin.i8(i8 %zx, i8 %zy)
+  ret i8 %m
+}
+
+define i8 @smax_sext_constant(i5 %x) {
+; CHECK-LABEL: @smax_sext_constant(
+; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.smax.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define i8 @smax_sext_constant_big(i5 %x) {
+; CHECK-LABEL: @smax_sext_constant_big(
+; CHECK-NEXT:    ret i8 16
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.smax.i8(i8 %e, i8 16)
+  ret i8 %m
+}
+
+define i8 @smax_zext_constant(i5 %x) {
+; CHECK-LABEL: @smax_zext_constant(
+; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = zext i5 %x to i8
+  %m = call i8 @llvm.smax.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define <3 x i8> @smin_sext_constant(<3 x i5> %x) {
+; CHECK-LABEL: @smin_sext_constant(
+; CHECK-NEXT:    [[E:%.*]] = sext <3 x i5> [[X:%.*]] to <3 x i8>
+; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[E]], <3 x i8> <i8 7, i8 15, i8 -16>)
+; CHECK-NEXT:    ret <3 x i8> [[M]]
+;
+  %e = sext <3 x i5> %x to <3 x i8>
+  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %e, <3 x i8> <i8 7, i8 15, i8 -16>)
+  ret <3 x i8> %m
+}
+
+define i8 @smin_zext_constant(i5 %x) {
+; CHECK-LABEL: @smin_zext_constant(
+; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = zext i5 %x to i8
+  %m = call i8 @llvm.smin.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define i8 @umax_sext_constant(i5 %x) {
+; CHECK-LABEL: @umax_sext_constant(
+; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.umax.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define i8 @umax_sext_constant_big(i5 %x) {
+; CHECK-LABEL: @umax_sext_constant_big(
+; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[E]], i8 126)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.umax.i8(i8 %e, i8 126)
+  ret i8 %m
+}
+
+define <3 x i8> @umax_zext_constant(<3 x i5> %x) {
+; CHECK-LABEL: @umax_zext_constant(
+; CHECK-NEXT:    [[E:%.*]] = zext <3 x i5> [[X:%.*]] to <3 x i8>
+; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[E]], <3 x i8> <i8 7, i8 15, i8 31>)
+; CHECK-NEXT:    ret <3 x i8> [[M]]
+;
+  %e = zext <3 x i5> %x to <3 x i8>
+  %m = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %e, <3 x i8> <i8 7, i8 15, i8 31>)
+  ret <3 x i8> %m
+}
+
+define i8 @umax_zext_constant_big(i5 %x) {
+; CHECK-LABEL: @umax_zext_constant_big(
+; CHECK-NEXT:    ret i8 126
+;
+  %e = zext i5 %x to i8
+  %m = call i8 @llvm.umax.i8(i8 %e, i8 126)
+  ret i8 %m
+}
+
+define i8 @umin_sext_constant(i5 %x) {
+; CHECK-LABEL: @umin_sext_constant(
+; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define i8 @umin_sext_constant_big(i5 %x) {
+; CHECK-LABEL: @umin_sext_constant_big(
+; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 126)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = sext i5 %x to i8
+  %m = call i8 @llvm.umin.i8(i8 %e, i8 126)
+  ret i8 %m
+}
+
+define i8 @umin_zext_constant(i5 %x) {
+; CHECK-LABEL: @umin_zext_constant(
+; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = zext i5 %x to i8
+  %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
+  ret i8 %m
+}
+
+define i8 @umin_zext_constant_big(i5 %x) {
+; CHECK-LABEL: @umin_zext_constant_big(
+; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    ret i8 [[E]]
+;
+  %e = zext i5 %x to i8
+  %m = call i8 @llvm.umin.i8(i8 %e, i8 126)
+  ret i8 %m
+}
+
+define i8 @umin_zext_constanti_uses(i5 %x) {
+; CHECK-LABEL: @umin_zext_constanti_uses(
+; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[E]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %e = zext i5 %x to i8
+  call void @use(i8 %e)
+  %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
   ret i8 %m
 }
