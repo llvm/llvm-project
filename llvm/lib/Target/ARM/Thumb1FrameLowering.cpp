@@ -1033,6 +1033,7 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       if (!MBB.succ_empty() ||
           MI->getOpcode() == ARM::TCRETURNdi ||
           MI->getOpcode() == ARM::TCRETURNri)
+        // FIXME: assert or something!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         // LR may only be popped into PC, as part of return sequence.
         // If this isn't the return sequence, we'll need emitPopSpecialFixUp
         // to restore LR the hard way.
