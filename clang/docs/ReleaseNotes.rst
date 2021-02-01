@@ -156,8 +156,8 @@ AST Matchers
 clang-format
 ------------
 
-- ...
-
+- Option ``SpacesInLineCommentPrefix`` has been added to control the
+  number of spaces in a line comments prefix.
 
 libclang
 --------
