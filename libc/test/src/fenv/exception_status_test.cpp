@@ -24,6 +24,10 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
+
+  constexpr int allExcepts =
+      FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
+
   for (int e : excepts) {
     int r = __llvm_libc::feraiseexcept(e);
     ASSERT_EQ(r, 0);
@@ -108,8 +112,8 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
     }
   }
 
-  int r = __llvm_libc::feraiseexcept(FE_ALL_EXCEPT);
+  int r = __llvm_libc::feraiseexcept(allExcepts);
   ASSERT_EQ(r, 0);
-  int s = __llvm_libc::fetestexcept(FE_ALL_EXCEPT);
-  ASSERT_EQ(s, FE_ALL_EXCEPT);
+  int s = __llvm_libc::fetestexcept(allExcepts);
+  ASSERT_EQ(s, allExcepts);
 }
