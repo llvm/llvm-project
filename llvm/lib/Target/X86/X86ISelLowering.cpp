@@ -40277,10 +40277,21 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 
   // We can only legally extract other elements from 128-bit vectors and in
   // certain circumstances, depending on SSE-level.
-  // TODO: Investigate using extract_subvector for larger vectors.
   // TODO: Investigate float/double extraction if it will be just stored.
   auto GetLegalExtract = [&Subtarget, &DAG, &dl](SDValue Vec, EVT VecVT,
                                                  unsigned Idx) {
+    EVT VecSVT = VecVT.getScalarType();
+    if ((VecVT.is256BitVector() || VecVT.is512BitVector()) &&
+        (VecSVT == MVT::i8 || VecSVT == MVT::i16 || VecSVT == MVT::i32 ||
+         VecSVT == MVT::i64)) {
+      unsigned EltSizeInBits = VecSVT.getSizeInBits();
+      unsigned NumEltsPerLane = 128 / EltSizeInBits;
+      unsigned LaneOffset = (Idx & ~(NumEltsPerLane - 1)) * EltSizeInBits;
+      unsigned LaneIdx = LaneOffset / Vec.getScalarValueSizeInBits();
+      VecVT = EVT::getVectorVT(*DAG.getContext(), VecSVT, NumEltsPerLane);
+      Vec = extract128BitVector(Vec, LaneIdx, DAG, dl);
+      Idx &= (NumEltsPerLane - 1);
+    }
     if ((VecVT == MVT::v4i32 || VecVT == MVT::v2i64) &&
         ((Idx == 0 && Subtarget.hasSSE2()) || Subtarget.hasSSE41())) {
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VecVT.getScalarType(),
