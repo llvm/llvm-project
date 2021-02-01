@@ -6,3 +6,5 @@
 void __attribute__((__swiftcall__)) f(void) {}
 // CHECK-LABEL: define dso_local swiftcc void @f()
 
+void __attribute__((__swiftasynccall__)) f_async(void) {}
+// CHECK-LABEL: define dso_local swifttailcc void @f_async()
