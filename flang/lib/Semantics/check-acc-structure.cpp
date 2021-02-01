@@ -344,6 +344,7 @@ CHECK_SIMPLE_CLAUSE(VectorLength, ACCC_vector_length)
 CHECK_SIMPLE_CLAUSE(Wait, ACCC_wait)
 CHECK_SIMPLE_CLAUSE(Worker, ACCC_worker)
 CHECK_SIMPLE_CLAUSE(Write, ACCC_write)
+CHECK_SIMPLE_CLAUSE(Unknown, ACCC_unknown)
 
 void AccStructureChecker::Enter(const parser::AccClause::Create &c) {
   CheckAllowed(llvm::acc::Clause::ACCC_create);
