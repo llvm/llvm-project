@@ -1,7 +1,6 @@
-;; Test that --export-dynamic prevents devirtualization.
-;; Note that --export-dynamic-symbol and --dynamic-list are tested similarly
-;; in the v1.16 directory, because those were not properly passed down to the
-;; plugin until then.
+;; Test that --export-dynamic-symbol and --dynamic-list prevents devirtualization.
+;; Note that --export-dynamic is tested in the parent directory, as it does not
+;; require a more recent version of gold.
 
 ;; First check that we get devirtualization without any export dynamic options.
 
@@ -37,7 +36,7 @@
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
 
-;; Check that all WPD fails with --export-dynamic.
+;; Check that WPD fails for target _ZN1D1mEi with --export-dynamic-symbol=_ZTV1D.
 
 ;; Index based WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
@@ -45,8 +44,8 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t2.o -o %t3 \
-; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Hybrid WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
@@ -54,8 +53,8 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t.o -o %t3 \
-; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
@@ -63,8 +62,42 @@
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t4.o -o %t3 \
-; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
-; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+; REMARK-AONLY-NOT: single-impl:
+; REMARK-AONLY: single-impl: devirtualized a call to _ZN1A1nEi
+; REMARK-AONLY-NOT: single-impl:
+
+;; Check that WPD fails for target _ZN1D1mEi with _ZTV1D in --dynamic-list.
+; RUN: echo "{ _ZTV1D; };" > %t.list
+
+;; Index based WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t2.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Hybrid WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Regular LTO WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t4.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
@@ -95,7 +128,7 @@ entry:
 
   ;; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
-  ; CHECK-NODEVIRT-IR: %call = tail call i32 %fptr1
+  ; CHECK-AONLY-IR: %call = tail call i32 @_ZN1A1nEi
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
 
   %3 = bitcast i8** %vtable to i32 (%struct.A*, i32)**
@@ -103,7 +136,7 @@ entry:
 
   ;; We still have to call it as virtual.
   ; CHECK-IR: %call3 = tail call i32 %fptr22
-  ; CHECK-NODEVIRT-IR: %call3 = tail call i32 %fptr22
+  ; CHECK-AONLY-IR: %call3 = tail call i32 %fptr22
   %call3 = tail call i32 %fptr22(%struct.A* nonnull %obj, i32 %call)
 
   %4 = bitcast %struct.D* %obj2 to i8***
@@ -117,7 +150,7 @@ entry:
 
   ;; Check that the call was devirtualized.
   ; CHECK-IR: %call4 = tail call i32 @_ZN1D1mEi
-  ; CHECK-NODEVIRT-IR: %call4 = tail call i32 %fptr33
+  ; CHECK-AONLY-IR: %call4 = tail call i32 %fptr33
   %call4 = tail call i32 %fptr33(%struct.D* nonnull %obj2, i32 %call3)
   ret i32 %call4
 }
