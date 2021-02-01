@@ -72,10 +72,8 @@ static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
-#ifndef NDEBUG
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-#endif
 
   // We need to save and restore the current FP/BP.
 
