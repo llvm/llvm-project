@@ -101,9 +101,18 @@ message("")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-if (ENABLE_ASAN)
+if (ADDRESS_SANITIZER)
   set(ASAN_LINKER_FLAGS "-fsanitize=address")
-  set(ASAN_COMPILER_FLAGS "-fno-omit-frame-pointer ${ASAN_LINKER_FLAGS}")
+  set(ASAN_COMPILER_FLAGS "-fno-omit-frame-pointer -fsanitize=address")
+
+  if (NOT CMAKE_COMPILER_IS_GNUCC)
+    if (COMGR_BUILD_SHARED_LIBS)
+      set(ASAN_LINKER_FLAGS "${ASAN_LINKER_FLAGS} -shared-libsan")
+    else()
+      set(ASAN_LINKER_FLAGS "${ASAN_LINKER_FLAGS} -static-libsan")
+    endif()
+  endif()
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ASAN_COMPILER_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_COMPILER_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
@@ -134,7 +143,7 @@ if (UNIX)
     # strict about undefined symbol references, as Clang won't include
     # libasan in the link, see
     # https://clang.llvm.org/docs/AddressSanitizer.html
-    if (NOT ENABLE_ASAN)
+    if (NOT ADDRESS_SANITIZER)
       list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
         -Wl,--no-undefined)
     endif()

@@ -74,7 +74,7 @@ The equivalent on Windows in `cmd.exe` using Visual Studio project files is:
 
 Optionally,
 [AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
-may be enabled during development via `-DENABLE_ASAN=On` during the Comgr
+may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 `cmake` step.
 
 Depending on the Code Object Manager
