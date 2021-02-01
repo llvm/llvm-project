@@ -721,6 +721,18 @@ declaratorDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('decompositionDecl0')"><a name="decompositionDecl0Anchor">decompositionDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decompositionDecl0"><pre>Matches decomposition-declarations.
+
+Examples matches the declaration node with foo and bar, but not
+number.
+(matcher = declStmt(has(decompositionDecl())))
+
+  int number = 42;
+  auto [foo, bar] = std::make_pair{42, 42};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('enumConstantDecl0')"><a name="enumConstantDecl0Anchor">enumConstantDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1EnumConstantDecl.html">EnumConstantDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="enumConstantDecl0"><pre>Matches enum constants.
 
@@ -1123,18 +1135,6 @@ Note: this does not match declarations of member variables, which are
 
 Example matches a
   int a;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('decompositionDecl0')"><a name="decompositionDecl0Anchor">decompositionDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="decompositionDecl0"><pre>Matches decomposition-declarations.
-
-Examples matches the declaration node with foo and bar, but not
-number.
-(matcher = declStmt(has(decompositionDecl())))
-
-  int number = 42;
-  auto [foo, bar] = std::make_pair{42, 42};
 </pre></td></tr>
 
 
@@ -5613,40 +5613,6 @@ matches each use of "!=" in:
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('invocation0')"><a name="invocation0Anchor">invocation</a></td><td>Matcher&lt;*&gt;...Matcher&lt;*&gt;</td></tr>
-<tr><td colspan="4" class="doc" id="invocation0"><pre>Matches function calls and constructor calls
-
-Because CallExpr and CXXConstructExpr do not share a common
-base class with API accessing arguments etc, AST Matchers for code
-which should match both are typically duplicated. This matcher
-removes the need for duplication.
-
-Given code
-struct ConstructorTakesInt
-{
-  ConstructorTakesInt(int i) {}
-};
-
-void callTakesInt(int i)
-{
-}
-
-void doCall()
-{
-  callTakesInt(42);
-}
-
-void doConstruct()
-{
-  ConstructorTakesInt cti(42);
-}
-
-The matcher
-invocation(hasArgument(0, integerLiteral(equals(42))))
-matches the expression in both doCall and doConstruct
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('eachOf0')"><a name="eachOf0Anchor">eachOf</a></td><td>Matcher&lt;*&gt;, ..., Matcher&lt;*&gt;</td></tr>
 <tr><td colspan="4" class="doc" id="eachOf0"><pre>Matches if any of the given matchers matches.
 
@@ -5787,6 +5753,40 @@ void f() { for (;;) { int x = 42; if (true) { int x = 43; } } }
 compoundStmt(hasParent(ifStmt())) matches "{ int x = 43; }".
 
 Usable as: Any Matcher
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('invocation0')"><a name="invocation0Anchor">invocation</a></td><td>Matcher&lt;*&gt;...Matcher&lt;*&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="invocation0"><pre>Matches function calls and constructor calls
+
+Because CallExpr and CXXConstructExpr do not share a common
+base class with API accessing arguments etc, AST Matchers for code
+which should match both are typically duplicated. This matcher
+removes the need for duplication.
+
+Given code
+struct ConstructorTakesInt
+{
+  ConstructorTakesInt(int i) {}
+};
+
+void callTakesInt(int i)
+{
+}
+
+void doCall()
+{
+  callTakesInt(42);
+}
+
+void doConstruct()
+{
+  ConstructorTakesInt cti(42);
+}
+
+The matcher
+invocation(hasArgument(0, integerLiteral(equals(42))))
+matches the expression in both doCall and doConstruct
 </pre></td></tr>
 
 
