@@ -15,6 +15,7 @@ static_library("support") {
     "Logger.cpp",
     "Markup.cpp",
     "MemoryTree.cpp",
+    "Path.cpp",
     "Shutdown.cpp",
     "Threading.cpp",
     "ThreadsafeFS.cpp",
