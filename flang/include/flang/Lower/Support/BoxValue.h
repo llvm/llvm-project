@@ -150,6 +150,10 @@ public:
     return {newBase, len, extents, lbounds};
   }
 
+  CharBoxValue cloneElement(mlir::Value newBase) const {
+     return {newBase, len};
+  }
+
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const CharArrayBoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
@@ -197,7 +201,12 @@ public:
     return {newBase, len, params, extents, lbounds};
   }
 
+  BoxValue cloneElement(mlir::Value newBase) const {
+     return {newBase, len, params, {}, {}};
+  }
+
   mlir::Value getLen() const { return len; }
+
   const llvm::SmallVectorImpl<mlir::Value> &getLenTypeParams() const {
     return params;
   }
@@ -206,8 +215,8 @@ public:
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
 protected:
-  mlir::Value len;
-  llvm::SmallVector<mlir::Value, 2> params;
+  mlir::Value len; // box is CHARACTER
+  llvm::SmallVector<mlir::Value, 2> params; // LENs, box is derived type
 };
 
 /// Used for triple notation (array slices)

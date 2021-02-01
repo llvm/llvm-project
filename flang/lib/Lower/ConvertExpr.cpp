@@ -1752,7 +1752,7 @@ public:
               iterSpace.iterVec());
           builder.create<fir::ResultOp>(loc, upd.getResult());
           builder.restoreInsertionPoint(insPt);
-          return iterSpace.outerResult();
+          return fir::substBase(exv, iterSpace.outerResult());
         },
         exp.u);
   }
@@ -2307,9 +2307,23 @@ public:
       return [=](IterSpace) -> ExtValue { return arrLd; };
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     return [=](IterSpace iters) -> ExtValue {
-      return builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd,
-                                               iters.iterVec());
+      return emboxElement(extMemref, builder.create<fir::ArrayFetchOp>(
+                                         loc, eleTy, arrLd, iters.iterVec()));
     };
+  }
+
+  static ExtValue emboxElement(const ExtValue &memref, mlir::Value arrFetch) {
+    return memref.match(
+        [&](const fir::CharBoxValue &cb) -> ExtValue {
+          return cb.clone(arrFetch);
+        },
+        [&](const fir::CharArrayBoxValue &bv) -> ExtValue {
+          return bv.cloneElement(arrFetch);
+        },
+        [&](const fir::BoxValue &bv) -> ExtValue {
+          return bv.cloneElement(arrFetch);
+        },
+        [&](const auto &) -> ExtValue { return arrFetch; });
   }
 
   /// Reduce the rank of a array to be boxed based on the slice's operands.
