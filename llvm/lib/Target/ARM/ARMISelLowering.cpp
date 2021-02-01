@@ -13596,6 +13596,25 @@ static SDValue PerformVMOVRRDCombine(SDNode *N,
     return Result;
   }
 
+  // VMOVRRD(extract(..(build_vector(a, b, c, d)))) -> a,b or c,d
+  if (InDouble.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isa<ConstantSDNode>(InDouble.getOperand(1))) {
+    SDValue BV = InDouble.getOperand(0);
+    // Look up through any nop bitcasts
+    while (BV.getOpcode() == ISD::BITCAST &&
+           (BV.getValueType() == MVT::v2f64 || BV.getValueType() == MVT::v2i64))
+      BV = BV.getOperand(0);
+    if (BV.getValueType() != MVT::v4i32 || BV.getOpcode() != ISD::BUILD_VECTOR)
+      return SDValue();
+    unsigned Offset = InDouble.getConstantOperandVal(1) == 1 ? 2 : 0;
+    if (Subtarget->isLittle())
+      return DCI.DAG.getMergeValues(
+          {BV.getOperand(Offset), BV.getOperand(Offset + 1)}, SDLoc(N));
+    else
+      return DCI.DAG.getMergeValues(
+          {BV.getOperand(Offset + 1), BV.getOperand(Offset)}, SDLoc(N));
+  }
+
   return SDValue();
 }
 
