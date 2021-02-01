@@ -883,7 +883,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5) {
 std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
   if (!ProfileIsProbeBased)
     return sampleprof_error::success;
-  for (unsigned I = 0; I < Profiles.size(); ++I) {
+  while (Data < End) {
     auto FName(readStringFromTable());
     if (std::error_code EC = FName.getError())
       return EC;
@@ -893,8 +893,13 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
       return EC;
 
     SampleContext FContext(*FName);
-    Profiles[FContext].setFunctionHash(*Checksum);
+    // No need to load metadata for profiles that are not loaded in the current
+    // module.
+    if (Profiles.count(FContext))
+      Profiles[FContext].setFunctionHash(*Checksum);
   }
+
+  assert(Data == End && "More data is read than expected");
   return sampleprof_error::success;
 }
 
