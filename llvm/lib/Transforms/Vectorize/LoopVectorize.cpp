@@ -5505,11 +5505,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return None;
   }
 
-  ElementCount MaxVF = computeFeasibleMaxVF(TC, UserVF);
-
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
-    return MaxVF;
+    return computeFeasibleMaxVF(TC, UserVF);
   case CM_ScalarEpilogueNotAllowedUsePredicate:
     LLVM_FALLTHROUGH;
   case CM_ScalarEpilogueNotNeededUsePredicate:
@@ -5547,7 +5545,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                            "scalar epilogue instead.\n");
       ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
-      return MaxVF;
+      return computeFeasibleMaxVF(TC, UserVF);
     }
     return None;
   }
@@ -5564,6 +5562,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
+  ElementCount MaxVF = computeFeasibleMaxVF(TC, UserVF);
   assert(!MaxVF.isScalable() &&
          "Scalable vectors do not yet support tail folding");
   assert((UserVF.isNonZero() || isPowerOf2_32(MaxVF.getFixedValue())) &&
