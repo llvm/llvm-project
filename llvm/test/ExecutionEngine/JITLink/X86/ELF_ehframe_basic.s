@@ -1,9 +1,13 @@
 # REQUIRES: asserts
-# UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t %s
 # RUN: llvm-jitlink -debug-only=jitlink -define-abs bar=0x01 \
-# RUN:     -define-abs _ZTIi=0x02 -noexec %t 2>&1 | FileCheck %s
+# RUN:     -define-abs _ZTIi=0x02 -define-abs __cxa_throw=0x03 \
+# RUN:     -define-abs __cxa_end_catch=0x04 \
+# RUN:     -define-abs __gxx_personality_v0=0x05 \
+# RUN      -define-abs __cxa_begin_catch=0x06 \
+# RUN:     -define-abs __cxa_allocate_exception=0x07 \
+# RUN:     -noexec %t 2>&1 | FileCheck %s
 #
 # FIXME: This test should run on windows. Investigate spurious
 # 'note: command had no output on stdout or stderr' errors, then re-enable.
