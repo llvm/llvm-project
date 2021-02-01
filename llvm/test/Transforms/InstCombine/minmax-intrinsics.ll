@@ -213,14 +213,16 @@ define i8 @umin_zext_uses(i5 %x, i5 %y) {
 
 define i8 @smax_sext_constant(i5 %x) {
 ; CHECK-LABEL: @smax_sext_constant(
-; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smax.i5(i5 [[X:%.*]], i5 7)
+; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = sext i5 %x to i8
   %m = call i8 @llvm.smax.i8(i8 %e, i8 7)
   ret i8 %m
 }
+
+; simplifies
 
 define i8 @smax_sext_constant_big(i5 %x) {
 ; CHECK-LABEL: @smax_sext_constant_big(
@@ -230,6 +232,8 @@ define i8 @smax_sext_constant_big(i5 %x) {
   %m = call i8 @llvm.smax.i8(i8 %e, i8 16)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @smax_zext_constant(i5 %x) {
 ; CHECK-LABEL: @smax_zext_constant(
@@ -244,14 +248,16 @@ define i8 @smax_zext_constant(i5 %x) {
 
 define <3 x i8> @smin_sext_constant(<3 x i5> %x) {
 ; CHECK-LABEL: @smin_sext_constant(
-; CHECK-NEXT:    [[E:%.*]] = sext <3 x i5> [[X:%.*]] to <3 x i8>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[E]], <3 x i8> <i8 7, i8 15, i8 -16>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.smin.v3i5(<3 x i5> [[X:%.*]], <3 x i5> <i5 7, i5 15, i5 -16>)
+; CHECK-NEXT:    [[M:%.*]] = sext <3 x i5> [[TMP1]] to <3 x i8>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %e = sext <3 x i5> %x to <3 x i8>
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %e, <3 x i8> <i8 7, i8 15, i8 -16>)
   ret <3 x i8> %m
 }
+
+; negative test
 
 define i8 @smin_zext_constant(i5 %x) {
 ; CHECK-LABEL: @smin_zext_constant(
@@ -266,14 +272,16 @@ define i8 @smin_zext_constant(i5 %x) {
 
 define i8 @umax_sext_constant(i5 %x) {
 ; CHECK-LABEL: @umax_sext_constant(
-; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umax.i5(i5 [[X:%.*]], i5 7)
+; CHECK-NEXT:    [[M:%.*]] = sext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = sext i5 %x to i8
   %m = call i8 @llvm.umax.i8(i8 %e, i8 7)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @umax_sext_constant_big(i5 %x) {
 ; CHECK-LABEL: @umax_sext_constant_big(
@@ -288,14 +296,16 @@ define i8 @umax_sext_constant_big(i5 %x) {
 
 define <3 x i8> @umax_zext_constant(<3 x i5> %x) {
 ; CHECK-LABEL: @umax_zext_constant(
-; CHECK-NEXT:    [[E:%.*]] = zext <3 x i5> [[X:%.*]] to <3 x i8>
-; CHECK-NEXT:    [[M:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[E]], <3 x i8> <i8 7, i8 15, i8 31>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[X:%.*]], <3 x i5> <i5 7, i5 15, i5 -1>)
+; CHECK-NEXT:    [[M:%.*]] = zext <3 x i5> [[TMP1]] to <3 x i8>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
   %e = zext <3 x i5> %x to <3 x i8>
   %m = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %e, <3 x i8> <i8 7, i8 15, i8 31>)
   ret <3 x i8> %m
 }
+
+; simplifies
 
 define i8 @umax_zext_constant_big(i5 %x) {
 ; CHECK-LABEL: @umax_zext_constant_big(
@@ -308,14 +318,16 @@ define i8 @umax_zext_constant_big(i5 %x) {
 
 define i8 @umin_sext_constant(i5 %x) {
 ; CHECK-LABEL: @umin_sext_constant(
-; CHECK-NEXT:    [[E:%.*]] = sext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 7)
+; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = sext i5 %x to i8
   %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @umin_sext_constant_big(i5 %x) {
 ; CHECK-LABEL: @umin_sext_constant_big(
@@ -330,14 +342,16 @@ define i8 @umin_sext_constant_big(i5 %x) {
 
 define i8 @umin_zext_constant(i5 %x) {
 ; CHECK-LABEL: @umin_zext_constant(
-; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 7)
+; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = zext i5 %x to i8
   %m = call i8 @llvm.umin.i8(i8 %e, i8 7)
   ret i8 %m
 }
+
+; simplifies
 
 define i8 @umin_zext_constant_big(i5 %x) {
 ; CHECK-LABEL: @umin_zext_constant_big(
@@ -348,6 +362,8 @@ define i8 @umin_zext_constant_big(i5 %x) {
   %m = call i8 @llvm.umin.i8(i8 %e, i8 126)
   ret i8 %m
 }
+
+; negative test
 
 define i8 @umin_zext_constanti_uses(i5 %x) {
 ; CHECK-LABEL: @umin_zext_constanti_uses(
