@@ -535,6 +535,11 @@ v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}                   ^
 
+image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK: error: failed parsing operand.
+// CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK-NEXT:{{^}}                                                  ^
+
 //==============================================================================
 // first register index should not exceed second index
 
