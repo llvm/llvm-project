@@ -56,8 +56,8 @@ class LibCxxAtomicTestCase(TestBase):
         self.assertEqual(i_atomic.GetNumChildren(), 1)
         i = i_atomic.GetChildAtIndex(0)
 
-        self.assertTrue(i.GetValueAsUnsigned(0) == 5, "i == 5")
-        self.assertTrue(s.GetNumChildren() == 2, "s has two children")
+        self.assertEqual(i.GetValueAsUnsigned(0), 5, "i == 5")
+        self.assertEqual(s.GetNumChildren(), 2, "s has two children")
         self.assertTrue(
             s.GetChildAtIndex(0).GetValueAsUnsigned(0) == 1,
             "s.x == 1")

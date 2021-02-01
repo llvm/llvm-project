@@ -98,8 +98,8 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         moduleId = self.vscode.get_active_modules()['a.out']['id']
         response = self.vscode.request_getCompileUnits(moduleId)
         self.assertTrue(response['body'])
-        self.assertTrue(len(response['body']['compileUnits']) == 1,
+        self.assertEqual(len(response['body']['compileUnits']), 1,
                         'Only one source file should exist')
-        self.assertTrue(response['body']['compileUnits'][0]['compileUnitPath'] == main_source_path,
+        self.assertEqual(response['body']['compileUnits'][0]['compileUnitPath'], main_source_path,
                         'Real path to main.cpp matches')
 
