@@ -74,8 +74,16 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     default:
       MIRBuilder.buildCopy(ValVReg, PhysReg);
       break;
+    case CCValAssign::LocInfo::ZExt: {
+      auto WideTy = LLT{VA.getLocVT()};
+      auto NarrowTy = MRI.getType(ValVReg);
+      MIRBuilder.buildTrunc(ValVReg,
+                            MIRBuilder.buildAssertZExt(
+                                WideTy, MIRBuilder.buildCopy(WideTy, PhysReg),
+                                NarrowTy.getSizeInBits()));
+      break;
+    }
     case CCValAssign::LocInfo::SExt:
-    case CCValAssign::LocInfo::ZExt:
     case CCValAssign::LocInfo::AExt: {
       auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
       MIRBuilder.buildTrunc(ValVReg, Copy);
