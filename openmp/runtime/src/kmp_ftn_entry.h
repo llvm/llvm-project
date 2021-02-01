@@ -1373,6 +1373,49 @@ void FTN_STDCALL FTN_FULFILL_EVENT(kmp_event_t *event) {
 #endif
 }
 
+// nteams-var per-device ICV
+void FTN_STDCALL FTN_SET_NUM_TEAMS(int KMP_DEREF num_teams) {
+#ifdef KMP_STUB
+// Nothing.
+#else
+  if (!__kmp_init_serial) {
+    __kmp_serial_initialize();
+  }
+  __kmp_set_num_teams(KMP_DEREF num_teams);
+#endif
+}
+int FTN_STDCALL FTN_GET_MAX_TEAMS(void) {
+#ifdef KMP_STUB
+  return 1;
+#else
+  if (!__kmp_init_serial) {
+    __kmp_serial_initialize();
+  }
+  return __kmp_get_max_teams();
+#endif
+}
+// teams-thread-limit-var per-device ICV
+void FTN_STDCALL FTN_SET_TEAMS_THREAD_LIMIT(int KMP_DEREF limit) {
+#ifdef KMP_STUB
+// Nothing.
+#else
+  if (!__kmp_init_serial) {
+    __kmp_serial_initialize();
+  }
+  __kmp_set_teams_thread_limit(KMP_DEREF limit);
+#endif
+}
+int FTN_STDCALL FTN_GET_TEAMS_THREAD_LIMIT(void) {
+#ifdef KMP_STUB
+  return 1;
+#else
+  if (!__kmp_init_serial) {
+    __kmp_serial_initialize();
+  }
+  return __kmp_get_teams_thread_limit();
+#endif
+}
+
 // display environment variables when requested
 void FTN_STDCALL FTN_DISPLAY_ENV(int verbose) {
 #ifndef KMP_STUB
