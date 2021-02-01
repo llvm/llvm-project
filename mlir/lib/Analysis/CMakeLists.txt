@@ -31,6 +31,7 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
+  MLIRLinalg
   MLIRSCF
   )
 
