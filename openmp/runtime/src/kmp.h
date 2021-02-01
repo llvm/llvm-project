@@ -3153,6 +3153,8 @@ extern const char *__kmp_speculative_statsfile;
 extern int __kmp_display_env; /* TRUE or FALSE */
 extern int __kmp_display_env_verbose; /* TRUE if OMP_DISPLAY_ENV=VERBOSE */
 extern int __kmp_omp_cancellation; /* TRUE or FALSE */
+extern int __kmp_nteams;
+extern int __kmp_teams_thread_limit;
 
 /* ------------------------------------------------------------------------- */
 
@@ -3847,6 +3849,10 @@ KMP_EXPORT void __kmpc_task_reduction_modifier_fini(ident_t *loc, int gtid,
 KMP_EXPORT kmp_int32 __kmpc_omp_reg_task_with_affinity(
     ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 naffins,
     kmp_task_affinity_info_t *affin_list);
+KMP_EXPORT void __kmp_set_num_teams(int num_teams);
+KMP_EXPORT int __kmp_get_max_teams(void);
+KMP_EXPORT void __kmp_set_teams_thread_limit(int limit);
+KMP_EXPORT int __kmp_get_teams_thread_limit(void);
 
 /* Lock interface routines (fast versions with gtid passed in) */
 KMP_EXPORT void __kmpc_init_lock(ident_t *loc, kmp_int32 gtid,
