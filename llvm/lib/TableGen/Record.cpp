@@ -502,6 +502,28 @@ IntInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   return BitsInit::get(NewBits);
 }
 
+AnonymousNameInit *AnonymousNameInit::get(unsigned V) {
+  return new (Allocator) AnonymousNameInit(V);
+}
+
+StringInit *AnonymousNameInit::getNameInit() const {
+  return StringInit::get(getAsString());
+}
+
+std::string AnonymousNameInit::getAsString() const {
+  return "anonymous_" + utostr(Value);
+}
+
+Init *AnonymousNameInit::resolveReferences(Resolver &R) const {
+  auto *Old = const_cast<Init *>(static_cast<const Init *>(this));
+  auto *New = R.resolve(Old);
+  New = New ? New : Old;
+  if (R.isFinal())
+    if (auto *Anonymous = dyn_cast<AnonymousNameInit>(New))
+      return Anonymous->getNameInit();
+  return New;
+}
+
 StringInit *StringInit::get(StringRef V, StringFormat Fmt) {
   static StringMap<StringInit*, BumpPtrAllocator &> StringPool(Allocator);
   static StringMap<StringInit*, BumpPtrAllocator &> CodePool(Allocator);
@@ -701,7 +723,9 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
 
         // Self-references are allowed, but their resolution is delayed until
         // the final resolve to ensure that we get the correct type for them.
-        if (Name == CurRec->getNameInit()) {
+        auto *Anonymous = dyn_cast<AnonymousNameInit>(CurRec->getNameInit());
+        if (Name == CurRec->getNameInit() ||
+            (Anonymous && Name == Anonymous->getNameInit())) {
           if (!IsFinal)
             break;
           D = CurRec;
@@ -2304,6 +2328,12 @@ void Record::getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const {
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
+  Init *OldName = getNameInit();
+  Init *NewName = Name->resolveReferences(R);
+  if (NewName != OldName) {
+    // Re-register with RecordKeeper.
+    setName(NewName);
+  }
   for (RecordVal &Value : Values) {
     if (SkipVal == &Value) // Skip resolve the same field as the given one
       continue;
@@ -2324,16 +2354,11 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
       }
     }
   }
-  Init *OldName = getNameInit();
-  Init *NewName = Name->resolveReferences(R);
-  if (NewName != OldName) {
-    // Re-register with RecordKeeper.
-    setName(NewName);
-  }
 }
 
-void Record::resolveReferences() {
+void Record::resolveReferences(Init *NewName) {
   RecordResolver R(*this);
+  R.setName(NewName);
   R.setFinal(true);
   resolveReferences(R);
 }
@@ -2588,7 +2613,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
 /// GetNewAnonymousName - Generate a unique anonymous name that can be used as
 /// an identifier.
 Init *RecordKeeper::getNewAnonymousName() {
-  return StringInit::get("anonymous_" + utostr(AnonCounter++));
+  return AnonymousNameInit::get(AnonCounter++);
 }
 
 // These functions implement the phase timing facility. Starting a timer
@@ -2702,6 +2727,10 @@ Init *RecordResolver::resolve(Init *VarName) {
       Val = Val->resolveReferences(*this);
       Stack.pop_back();
     }
+  } else if (Name && VarName == getCurrentRecord()->getNameInit()) {
+    Stack.push_back(VarName);
+    Val = Name->resolveReferences(*this);
+    Stack.pop_back();
   }
 
   Cache[VarName] = Val;
