@@ -96,7 +96,7 @@ mailing list</a> to notify other members of the community.</p>
          We should model (potentially some of) such evaluations,
          and the same applies for destructors called from
          <code>operator delete[]</code>.
-         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/master/clang/test/Analysis/handle_constructors_with_new_array.cpp">handle_constructors_with_new_array.cpp</a>.
+         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/main/clang/test/Analysis/handle_constructors_with_new_array.cpp">handle_constructors_with_new_array.cpp</a>.
       </p>
       <p>
       Constructing an array requires invoking multiple (potentially unknown)
@@ -135,7 +135,7 @@ mailing list</a> to notify other members of the community.</p>
     <li>Handle constructors for default arguments
       <p>Default arguments in C++ are recomputed at every call,
          and are therefore local, and not static, variables.
-         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/master/clang/test/Analysis/handle_constructors_for_default_arguments.cpp">handle_constructors_for_default_arguments.cpp</a>.
+         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/main/clang/test/Analysis/handle_constructors_for_default_arguments.cpp">handle_constructors_for_default_arguments.cpp</a>.
       </p>
       <p>
       Default arguments are annoying because the initializer expression is
