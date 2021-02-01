@@ -231,7 +231,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 } // namespace
 
 static bool doesCalleeRestoreStack(CallingConv::ID CallConv, bool TailCallOpt) {
-  return CallConv == CallingConv::Fast && TailCallOpt;
+  return (CallConv == CallingConv::Fast && TailCallOpt) ||
+         CallConv == CallingConv::Tail || CallConv == CallingConv::SwiftTail;
 }
 
 void AArch64CallLowering::splitToValueTypes(
@@ -524,8 +525,9 @@ bool AArch64CallLowering::lowerFormalArguments(
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
+static bool canGuaranteeTCO(CallingConv::ID CC, bool GuaranteeTailCalls) {
+  return (CC == CallingConv::Fast && GuaranteeTailCalls) ||
+         CC == CallingConv::Tail || CC == CallingConv::SwiftTail;
 }
 
 /// Return true if we might ever do TCO for calls with this calling convention.
@@ -534,9 +536,12 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::PreserveMost:
   case CallingConv::Swift:
+  case CallingConv::SwiftTail:
+  case CallingConv::Tail:
+  case CallingConv::Fast:
     return true;
   default:
-    return canGuaranteeTCO(CC);
+    return false;
   }
 }
 
@@ -760,8 +765,8 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   }
 
   // If we have -tailcallopt, then we're done.
-  if (MF.getTarget().Options.GuaranteedTailCallOpt)
-    return canGuaranteeTCO(CalleeCC) && CalleeCC == CallerF.getCallingConv();
+  if (canGuaranteeTCO(CalleeCC, MF.getTarget().Options.GuaranteedTailCallOpt))
+    return CalleeCC == CallerF.getCallingConv();
 
   // We don't have -tailcallopt, so we're allowed to change the ABI (sibcall).
   // Try to find cases where we can do that.
@@ -814,7 +819,9 @@ bool AArch64CallLowering::lowerTailCall(
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
   // True when we're tail calling, but without -tailcallopt.
-  bool IsSibCall = !MF.getTarget().Options.GuaranteedTailCallOpt;
+  bool IsSibCall = !MF.getTarget().Options.GuaranteedTailCallOpt &&
+                   Info.CallConv != CallingConv::Tail &&
+                   Info.CallConv != CallingConv::SwiftTail;
 
   // TODO: Right now, regbankselect doesn't know how to handle the rtcGPR64
   // register class. Until we can do that, we should fall back here.

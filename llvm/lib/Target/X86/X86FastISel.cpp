@@ -1284,7 +1284,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   // the sret argument into %rax/%eax (depending on ABI) for the return.
   // We saved the argument into a virtual register in the entry block,
   // so now we copy the value out and into %rax/%eax.
-  if (F.hasStructRetAttr() && CC != CallingConv::Swift) {
+  if (F.hasStructRetAttr() && CC != CallingConv::Swift &&
+      CC != CallingConv::SwiftTail) {
     Register Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
@@ -3232,6 +3233,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   case CallingConv::Tail:
   case CallingConv::WebKit_JS:
   case CallingConv::Swift:
+  case CallingConv::SwiftTail:
   case CallingConv::X86_FastCall:
   case CallingConv::X86_StdCall:
   case CallingConv::X86_ThisCall:
