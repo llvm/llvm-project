@@ -41,25 +41,30 @@ declare i32 @h2(i32, i32, i32, i32, i32)
 define hidden i32 @f2(i32, i32, i32, i32, i32) {
 ; CHECK-LABEL: f2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    ldr r7, [sp, #24]
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    cbz r0, .LBB2_2
 ; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:    str r7, [sp, #24]
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    mov r2, r5
 ; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    ldr r4, [sp, #12]
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    ldr r4, [sp, #16]
 ; CHECK-NEXT:    mov lr, r4
-; CHECK-NEXT:    pop {r4, r5, r6}
+; CHECK-NEXT:    pop {r4, r5, r6, r7}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    b h2
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    mvns r0, r0
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
   %6 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
   %7 = icmp eq i32 %6, 0
   br i1 %7, label %10, label %8
