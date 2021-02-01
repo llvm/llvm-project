@@ -357,10 +357,14 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[1])
     return nullptr;
 
+  // TODO: Support folding with more than 2 input shapes
+  if (operands.size() > 2 && !operands[2].isa<StringAttr>())
+    return nullptr;
+
   auto rhsShape = llvm::to_vector<6>(
       operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
   if (rhsShape.empty())
-    return lhs();
+    return shapes()[0];
 
   if (!operands[0])
     return nullptr;
@@ -368,7 +372,7 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   auto lhsShape = llvm::to_vector<6>(
       operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
   if (lhsShape.empty())
-    return rhs();
+    return shapes()[1];
 
   SmallVector<int64_t, 6> resultShape;
   // If the shapes are not compatible, we can't fold it.

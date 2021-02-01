@@ -305,86 +305,6 @@ func @broadcast(%a : tensor<?xindex>, %b : !shape.shape) -> !shape.shape {
 
 // -----
 
-// CHECK-LABEL:   func @broadcast_unknown_extents(
-// CHECK-SAME:                                    %[[LHS:.*]]: tensor<?xindex>,
-// CHECK-SAME:                                    %[[RHS:.*]]: tensor<?xindex>) {
-func @broadcast_unknown_extents(%a : tensor<?xindex>, %b : tensor<?xindex>) {
-  // CHECK:           %[[C0:.*]] = constant 0 : index
-  // CHECK:           %[[C1:.*]] = constant 1 : index
-  // CHECK:           %[[LHS_RANK:.*]] = dim %[[LHS]], %[[C0]] : tensor<?xindex>
-  // CHECK:           %[[RHS_RANK:.*]] = dim %[[RHS]], %[[C0]] : tensor<?xindex>
-  // CHECK:           %[[LHS_RANK_ULE:.*]] = cmpi ule, %[[LHS_RANK]], %[[RHS_RANK]] : index
-  // CHECK:           %[[LESSER_RANK:.*]] = select %[[LHS_RANK_ULE]], %[[LHS_RANK]], %[[RHS_RANK]] : index
-  // CHECK:           %[[GREATER_RANK:.*]] = select %[[LHS_RANK_ULE]], %[[RHS_RANK]], %[[LHS_RANK]] : index
-  // CHECK:           %[[ERASED_LHS:.*]] = tensor.cast %[[LHS]] : tensor<?xindex> to tensor<?xindex>
-  // CHECK:           %[[ERASED_RHS:.*]] = tensor.cast %[[RHS]] : tensor<?xindex> to tensor<?xindex>
-  // CHECK:           %[[LESSER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_LHS]], %[[ERASED_RHS]] : tensor<?xindex>
-  // CHECK:           %[[GREATER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_RHS]], %[[ERASED_LHS]] : tensor<?xindex>
-  // CHECK:           %[[RANK_DIFF:.*]] = subi %[[GREATER_RANK]], %[[LESSER_RANK]] : index
-  // CHECK:           %[[RESULT:.*]] = tensor.generate %[[GREATER_RANK]] {
-  // CHECK:           ^bb0(%[[OUTPUT_DIMENSION:.*]]: index):
-  // CHECK:             %[[IS_UNCHALLENGED_DIMENSION:.*]] = cmpi ult, %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
-  // CHECK:             %[[GREATER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[GREATER_RANK_OPERAND]][%[[OUTPUT_DIMENSION]]] : tensor<?xindex>
-  // CHECK:             %[[OUTPUT_EXTENT:.*]] = scf.if %[[IS_UNCHALLENGED_DIMENSION]] -> (index) {
-  // CHECK:               scf.yield %[[GREATER_RANK_OPERAND_EXTENT]] : index
-  // CHECK:             } else {
-  // CHECK:               %[[LESSER_RANK_OPERAND_DIMENSION:.*]] = subi %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
-  // CHECK:               %[[LESSER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[LESSER_RANK_OPERAND]][%[[LESSER_RANK_OPERAND_DIMENSION]]] : tensor<?xindex>
-  // CHECK:               %[[GREATER_RANK_OPERAND_EXTENT_IS_ONE:.*]] = cmpi eq, %[[GREATER_RANK_OPERAND_EXTENT]], %[[C1]] : index
-  // CHECK:               %[[BROADCASTED_EXTENT:.*]] = select %[[GREATER_RANK_OPERAND_EXTENT_IS_ONE]], %[[LESSER_RANK_OPERAND_EXTENT]], %[[GREATER_RANK_OPERAND_EXTENT]] : index
-  // CHECK:               scf.yield %[[BROADCASTED_EXTENT]] : index
-  // CHECK:             }
-  // CHECK:             yield %[[OUTPUT_EXTENT:.*]] : index
-  // CHECK:           } : tensor<?xindex>
-  // CHECK:           return
-  // CHECK:         }
-  %0 = shape.broadcast %a, %b
-      : tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
-  return
-}
-
-// -----
-
-// CHECK-LABEL:   func @broadcast_known_different_extents(
-// CHECK-SAME:                                            %[[LHS:.*]]: tensor<2xindex>,
-// CHECK-SAME:                                            %[[RHS:.*]]: tensor<3xindex>) {
-func @broadcast_known_different_extents(%a : tensor<2xindex>, %b : tensor<3xindex>) {
-  // CHECK:           %[[C0:.*]] = constant 0 : index
-  // CHECK:           %[[C1:.*]] = constant 1 : index
-  // CHECK:           %[[LHS_RANK:.*]] = dim %[[LHS]], %[[C0]] : tensor<2xindex>
-  // CHECK:           %[[RHS_RANK:.*]] = dim %[[RHS]], %[[C0]] : tensor<3xindex>
-  // CHECK:           %[[LHS_RANK_ULE:.*]] = cmpi ule, %[[LHS_RANK]], %[[RHS_RANK]] : index
-  // CHECK:           %[[LESSER_RANK:.*]] = select %[[LHS_RANK_ULE]], %[[LHS_RANK]], %[[RHS_RANK]] : index
-  // CHECK:           %[[GREATER_RANK:.*]] = select %[[LHS_RANK_ULE]], %[[RHS_RANK]], %[[LHS_RANK]] : index
-  // CHECK:           %[[ERASED_LHS:.*]] = tensor.cast %[[LHS]] : tensor<2xindex> to tensor<?xindex>
-  // CHECK:           %[[ERASED_RHS:.*]] = tensor.cast %[[RHS]] : tensor<3xindex> to tensor<?xindex>
-  // CHECK:           %[[LESSER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_LHS]], %[[ERASED_RHS]] : tensor<?xindex>
-  // CHECK:           %[[GREATER_RANK_OPERAND:.*]] = select %[[LHS_RANK_ULE]], %[[ERASED_RHS]], %[[ERASED_LHS]] : tensor<?xindex>
-  // CHECK:           %[[RANK_DIFF:.*]] = subi %[[GREATER_RANK]], %[[LESSER_RANK]] : index
-  // CHECK:           %[[RESULT:.*]] = tensor.generate %[[GREATER_RANK]] {
-  // CHECK:           ^bb0(%[[OUTPUT_DIMENSION:.*]]: index):
-  // CHECK:             %[[IS_UNCHALLENGED_DIMENSION:.*]] = cmpi ult, %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
-  // CHECK:             %[[GREATER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[GREATER_RANK_OPERAND]][%[[OUTPUT_DIMENSION]]] : tensor<?xindex>
-  // CHECK:             %[[OUTPUT_EXTENT:.*]] = scf.if %[[IS_UNCHALLENGED_DIMENSION]] -> (index) {
-  // CHECK:               scf.yield %[[GREATER_RANK_OPERAND_EXTENT]] : index
-  // CHECK:             } else {
-  // CHECK:               %[[LESSER_RANK_OPERAND_DIMENSION:.*]] = subi %[[OUTPUT_DIMENSION]], %[[RANK_DIFF]] : index
-  // CHECK:               %[[LESSER_RANK_OPERAND_EXTENT:.*]] = tensor.extract %[[LESSER_RANK_OPERAND]][%[[LESSER_RANK_OPERAND_DIMENSION]]] : tensor<?xindex>
-  // CHECK:               %[[GREATER_RANK_OPERAND_EXTENT_IS_ONE:.*]] = cmpi eq, %[[GREATER_RANK_OPERAND_EXTENT]], %[[C1]] : index
-  // CHECK:               %[[BROADCASTED_EXTENT:.*]] = select %[[GREATER_RANK_OPERAND_EXTENT_IS_ONE]], %[[LESSER_RANK_OPERAND_EXTENT]], %[[GREATER_RANK_OPERAND_EXTENT]] : index
-  // CHECK:               scf.yield %[[BROADCASTED_EXTENT]] : index
-  // CHECK:             }
-  // CHECK:             yield %[[OUTPUT_EXTENT:.*]] : index
-  // CHECK:           } : tensor<?xindex>
-  // CHECK:           return
-  // CHECK:         }
-  %0 = shape.broadcast %a, %b
-      : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
-  return
-}
-
-// -----
-
 func @try_is_broadcastable(%a : tensor<3xindex>, %b : tensor<?xindex>) -> i1 {
   %0 = shape.is_broadcastable %a, %b : tensor<3xindex>, tensor<?xindex>
   return %0 : i1
@@ -459,3 +379,62 @@ func @broadcast(%a : tensor<?xindex>, %b : tensor<?xindex>) -> !shape.witness {
 // CHECK:           %[[RESULT:.*]] = shape.cstr_require %[[ALL_RESULT]], "required broadcastable shapes"
 // CHECK:           return %[[RESULT]] : !shape.witness
 // CHECK:         }
+
+// -----
+
+func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
+                                           %b : tensor<3xindex>,
+                                           %c : tensor<2xindex>) {
+// CHECK-LABEL:   func @broadcast_3_shapes_different_extents(
+// CHECK-SAME:          %[[ARG0:.*]]: tensor<2xindex>,
+// CHECK-SAME:          %[[ARG1:.*]]: tensor<3xindex>,
+// CHECK-SAME:          %[[ARG2:.*]]: tensor<2xindex>) {
+// CHECK:           %[[C0:.*]] = constant 0 : index
+// CHECK:           %[[RANK0:.*]] = dim %[[ARG0]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK1:.*]] = dim %[[ARG1]], %[[C0]] : tensor<3xindex>
+// CHECK:           %[[RANK2:.*]] = dim %[[ARG2]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[CMP0:.*]] = cmpi ugt, %[[RANK1]], %[[RANK0]] : index
+// CHECK:           %[[LARGER_DIM:.*]] = select %[[CMP0]], %[[RANK1]], %[[RANK0]] : index
+// CHECK:           %[[CMP1:.*]] = cmpi ugt, %[[RANK2]], %[[LARGER_DIM]] : index
+// CHECK:           %[[MAX_RANK:.*]] = select %[[CMP1]], %[[RANK2]], %[[LARGER_DIM]] : index
+// CHECK:           %[[DIM_DIFF0:.*]] = subi %[[MAX_RANK]], %[[RANK0]] : index
+// CHECK:           %[[DIM_DIFF1:.*]] = subi %[[MAX_RANK]], %[[RANK1]] : index
+// CHECK:           %[[DIM_DIFF2:.*]] = subi %[[MAX_RANK]], %[[RANK2]] : index
+// CHECK:           %[[RESULT:.*]] = tensor.generate %[[MAX_RANK]]  {
+// CHECK:           ^bb0(%[[IDX:.*]]: index):
+// CHECK:             %[[C1:.*]] = constant 1 : index
+// CHECK:             %[[OUTBOUNDS0:.*]] = cmpi ult, %[[IDX]], %[[DIM_DIFF0]] : index
+// CHECK:             %[[DIM0:.*]] = scf.if %[[OUTBOUNDS0]] -> (index) {
+// CHECK:               scf.yield %[[C1]] : index
+// CHECK:             } else {
+// CHECK:               %[[IDX0:.*]] = subi %[[IDX]], %[[DIM_DIFF0]] : index
+// CHECK:               %[[EXTRACTED_0:.*]] = tensor.extract %[[ARG0]]{{\[}}%[[IDX0]]] : tensor<2xindex>
+// CHECK:               %[[DIM0_IS_1:.*]] = cmpi eq, %[[EXTRACTED_0:.*]], %[[C1]] : index
+// CHECK:               %[[MAX_DIM0:.*]] = select %[[DIM0_IS_1]], %[[C1]], %[[EXTRACTED_0]] : index
+// CHECK:             }
+// CHECK:             %[[VAL_28:.*]] = cmpi ult, %[[IDX]], %[[DIM_DIFF1]] : index
+// CHECK:             %[[DIM1:.*]] = scf.if %[[VAL_28]] -> (index) {
+// CHECK:               scf.yield %[[DIM0]] : index
+// CHECK:             } else {
+// CHECK:               %[[IDX1:.*]] = subi %[[IDX]], %[[DIM_DIFF1]] : index
+// CHECK:               %[[EXTRACTED_1:.*]] = tensor.extract %[[ARG1]]{{\[}}%[[IDX1]]] : tensor<3xindex>
+// CHECK:               %[[DIM1_IS_1:.*]] = cmpi eq, %[[EXTRACTED_1:.*]], %[[C1]] : index
+// CHECK:               %[[MAX_DIM1:.*]] = select %[[DIM1_IS_1]], %[[DIM0]], %[[EXTRACTED_1]] : index
+// CHECK:             }
+// CHECK:             %[[VAL_36:.*]] = cmpi ult, %[[IDX]], %[[DIM_DIFF2]] : index
+// CHECK:             %[[DIM2:.*]] = scf.if %[[VAL_36]] -> (index) {
+// CHECK:               scf.yield %[[DIM1]] : index
+// CHECK:             } else {
+// CHECK:               %[[IDX2:.*]] = subi %[[IDX]], %[[DIM_DIFF2]] : index
+// CHECK:               %[[EXTRACTED_2:.*]] = tensor.extract %[[ARG2]]{{\[}}%[[IDX2]]] : tensor<2xindex>
+// CHECK:               %[[DIM2_IS_1:.*]] = cmpi eq, %[[EXTRACTED_2:.*]], %[[C1]] : index
+// CHECK:               %[[MAX_DIM2:.*]] = select %[[DIM2_IS_1]], %[[DIM1]], %[[EXTRACTED_2]] : index
+// CHECK:             }
+// CHECK:             tensor.yield %[[DIM2]] : index
+// CHECK:           } : tensor<?xindex>
+// CHECK:           return
+// CHECK:         }
+  %0 = shape.broadcast %a, %b, %c
+      : tensor<2xindex>, tensor<3xindex>, tensor<2xindex> -> tensor<?xindex>
+  return
+}
