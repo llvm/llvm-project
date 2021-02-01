@@ -27777,8 +27777,8 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
                                                ShiftAmt, DAG);
       SRL = DAG.getBitcast(VT, SRL);
       // Zero out the leftmost bits.
-      return DAG.getNode(ISD::AND, dl, VT, SRL,
-                         DAG.getConstant(uint8_t(-1U) >> ShiftAmt, dl, VT));
+      APInt Mask = APInt::getLowBitsSet(8, 8 - ShiftAmt);
+      return DAG.getNode(ISD::AND, dl, VT, SRL, DAG.getConstant(Mask, dl, VT));
     }
     if (Op.getOpcode() == ISD::SRA) {
       // ashr(R, Amt) === sub(xor(lshr(R, Amt), Mask), Mask)
