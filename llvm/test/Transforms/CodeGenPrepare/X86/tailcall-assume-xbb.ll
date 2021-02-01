@@ -13,6 +13,8 @@
 
 define i8* @foo(i64 %size, i64 %v1, i64 %v2) {
 entry:
+  %a = alloca i8
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a) nounwind
   %cmp1 = icmp ult i64 %size, 1025
   br i1 %cmp1, label %if.end, label %case1
 
@@ -40,9 +42,12 @@ exit1:
 
 exit2:
   %retval2 = phi i8* [ %ret1, %case1 ], [ %retval1, %exit1 ]
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %a) nounwind
   ret i8* %retval2
 }
 
 declare void @llvm.assume(i1)
 declare i8* @qux()
 declare i8* @bar()
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
