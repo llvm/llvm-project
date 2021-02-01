@@ -48,7 +48,15 @@ exit:
 define i32 @partial_unswitch_shortcut_mustprogress(i32* %ptr, i32 %N) mustprogress {
 ; CHECK-LABEL: @partial_unswitch_shortcut_mustprogress
 ; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]], label %[[CRIT_TO_EXIT:[a-z._]+]], label %[[CRIT_TO_HEADER:[a-z._]+]]
+;
+; CHECK:      [[CRIT_TO_HEADER]]:
 ; CHECK-NEXT:   br label %loop.header
+;
+; CHECK:      [[CRIT_TO_EXIT]]:
+; CHECK-NEXT:   br label %exit
 ;
 entry:
   br label %loop.header
@@ -86,7 +94,15 @@ exit:
 define i32 @partial_unswitch_shortcut_mustprogress_single_exit_on_path(i32* %ptr, i32 %N) mustprogress {
 ; CHECK-LABEL: @partial_unswitch_shortcut_mustprogress_single_exit_on_path
 ; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]], label %[[CRIT_TO_EXIT:.+]], label %[[CRIT_TO_HEADER:[a-z._]+]]
+;
+; CHECK:      [[CRIT_TO_HEADER]]:
 ; CHECK-NEXT:   br label %loop.header
+;
+; CHECK:      [[CRIT_TO_EXIT]]:
+; CHECK-NEXT:   br label %exit
 ;
 entry:
   br label %loop.header
@@ -208,7 +224,15 @@ exit:
 define i32 @partial_unswitch_shortcut_multiple_exiting_blocks(i32* %ptr, i32 %N, i1 %ec.1) mustprogress {
 ; CHECK-LABEL: @partial_unswitch_shortcut_multiple_exiting_blocks
 ; CHECK-LABEL: entry:
+; CHECK-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:   br i1 [[C]], label %[[CRIT_TO_EXIT:.+]], label %[[CRIT_TO_HEADER:[a-z._]+]]
+;
+; CHECK:      [[CRIT_TO_HEADER]]:
 ; CHECK-NEXT:   br label %loop.header
+;
+; CHECK:      [[CRIT_TO_EXIT]]:
+; CHECK-NEXT:   br label %exit
 ;
 entry:
   br label %loop.header
