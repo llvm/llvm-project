@@ -45,9 +45,9 @@ jobs:
         cmake_args: -G Ninja  -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
         build_target: ""
     - name: Build and test libclc
+      # spirv targets require llvm-spirv, so skip building them until we figure out
+      # how to install this tool.
       run: |
-        mkdir libclc-build
-        cd libclc-build
-        cmake -G Ninja ../libclc -DLLVM_CONFIG=../build/bin/llvm-config
-        ninja
-        ninja test
+        cmake -G Ninja -S libclc -B libclc-build -DLLVM_CONFIG=`pwd`/build/bin/llvm-config -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+        ninja -C libclc-build
+        ninja -C libclc-build test
