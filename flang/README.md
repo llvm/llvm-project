@@ -34,7 +34,7 @@ and
 also review [how flang uses modern C++ features](docs/C++17.md).
 
 If you are interested in writing new documentation, follow 
-[markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/master/llvm/docs/MarkdownQuickstartTemplate.md).
+[markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/main/llvm/docs/MarkdownQuickstartTemplate.md).
 
 ## Supported C++ compilers
 

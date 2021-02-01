@@ -99,10 +99,10 @@ implementation is located under ``lldb/packages/Python/lldbsuite``. We have
 several extensions and custom test primitives on top of what's offered by
 `unittest2 <https://docs.python.org/2/library/unittest.html>`_. Those can be
 found  in
-`lldbtest.py <https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
+`lldbtest.py <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
 
 Below is the directory layout of the `example API test
-<https://github.com/llvm/llvm-project/tree/master/lldb/test/API/sample_test>`_.
+<https://github.com/llvm/llvm-project/tree/main/lldb/test/API/sample_test>`_.
 The test directory will always contain a python file, starting with ``Test``.
 Most of the tests are structured as a binary being debugged, so there will be
 one or more source files and a ``Makefile``.
@@ -127,7 +127,7 @@ Our testing framework also has a bunch of utilities that abstract common
 operations, such as creating targets, setting breakpoints etc. When code is
 shared across tests, we extract it into a utility in ``lldbutil``. It's always
 worth taking a look at  `lldbutil
-<https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/lldbutil.py>`_
+<https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbutil.py>`_
 to see if there's a utility to simplify some of the testing boiler plate.
 Because we can't always audit every existing test, this is doubly true when
 looking at an existing test for inspiration.
@@ -168,7 +168,7 @@ Here's an example of a simple ``Makefile`` used by the example test.
   include Makefile.rules
 
 Finding the right variables to set can be tricky. You can always take a look at
-`Makefile.rules <https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/make/Makefile.rules>`_
+`Makefile.rules <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/make/Makefile.rules>`_
 but often it's easier to find an existing ``Makefile`` that does something
 similar to what you want to do.
 
