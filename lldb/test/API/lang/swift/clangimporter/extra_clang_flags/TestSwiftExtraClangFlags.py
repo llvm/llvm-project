@@ -59,3 +59,22 @@ class TestSwiftExtraClangFlags(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("frame var foo", "sanity check", substrs=['(Foo)'])
         self.expect("expr FromOverlay(i: 23)", substrs=['(FromOverlay)', '23'])
+
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(oslist=['windows'])
+    @swiftTest
+    def test_invalid_extra_clang_flags(self):
+        """
+        Test that LLDB ignores specific invalid arguments in
+        swift-extra-clang-flags.
+        """
+        self.build()
+        self.addTearDownHook(
+            lambda: self.runCmd("settings clear target.swift-extra-clang-flags"))
+
+        self.expect('settings set target.swift-extra-clang-flags -- -v')
+
+        lldbutil.run_to_source_breakpoint(self, "break here",
+                                          lldb.SBFileSpec('main.swift'))
+        self.expect("frame var foo", substrs=['(Foo)'])
