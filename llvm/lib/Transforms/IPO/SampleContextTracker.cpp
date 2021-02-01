@@ -308,8 +308,7 @@ void SampleContextTracker::promoteMergeContextSamplesTree(
     return;
 
   // Get the context that needs to be promoted
-  LineLocation CallSite(FunctionSamples::getOffset(DIL),
-                        DIL->getBaseDiscriminator());
+  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
   ContextTrieNode *NodeToPromo =
       CallerNode->getChildContext(CallSite, CalleeName);
   if (!NodeToPromo)
@@ -370,9 +369,7 @@ SampleContextTracker::getCalleeContextFor(const DILocation *DIL,
     return nullptr;
 
   return CallContext->getChildContext(
-      LineLocation(FunctionSamples::getOffset(DIL),
-                   DIL->getBaseDiscriminator()),
-      CalleeName);
+      FunctionSamples::getCallSiteIdentifier(DIL), CalleeName);
 }
 
 ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
@@ -386,8 +383,8 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
     if (Name.empty())
       Name = PrevDIL->getScope()->getSubprogram()->getName();
     S.push_back(
-        std::make_pair(LineLocation(FunctionSamples::getOffset(DIL),
-                                    DIL->getBaseDiscriminator()), Name));
+        std::make_pair(FunctionSamples::getCallSiteIdentifier(DIL),
+                       PrevDIL->getScope()->getSubprogram()->getLinkageName()));
     PrevDIL = DIL;
   }
 
