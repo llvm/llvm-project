@@ -123,8 +123,7 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
     auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions);
-    Branches.insert(Branches.end(), NestedExBranches.begin(),
-                    NestedExBranches.end());
+    append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
     auto ExBranches = ExpansionCoverage.getBranches();

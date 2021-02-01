@@ -459,6 +459,8 @@ bool ElementsAttr::isValidIndex(ArrayRef<uint64_t> index) const {
 
   // Verify that the rank of the indices matches the held type.
   auto rank = type.getRank();
+  if (rank == 0 && index.size() == 1 && index[0] == 0)
+    return true;
   if (rank != static_cast<int64_t>(index.size()))
     return false;
 

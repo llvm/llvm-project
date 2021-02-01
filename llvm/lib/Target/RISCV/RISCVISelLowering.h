@@ -53,6 +53,10 @@ enum NodeType : unsigned {
   // instructions.
   ROLW,
   RORW,
+  // RV64IB/RV32IB funnel shifts, with the semantics of the named RISC-V
+  // instructions, but the same operand order as fshl/fshr intrinsics.
+  FSR,
+  FSL,
   // RV64IB funnel shifts, with the semantics of the named RISC-V instructions,
   // but the same operand order as fshl/fshr intrinsics.
   FSRW,

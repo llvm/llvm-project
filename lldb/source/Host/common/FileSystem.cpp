@@ -487,7 +487,7 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
     return E.getError();
   }
 
-  auto *F = dyn_cast<vfs::RedirectingFileSystem::RedirectingFileEntry>(*E);
+  auto *F = dyn_cast<vfs::RedirectingFileSystem::FileEntry>(*E);
   if (!F)
     return make_error_code(llvm::errc::not_supported);
 

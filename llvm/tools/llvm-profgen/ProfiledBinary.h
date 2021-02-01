@@ -179,8 +179,8 @@ public:
   uint64_t offsetToVirtualAddr(uint64_t Offset) const {
     return Offset + BaseAddress;
   }
-  const StringRef getPath() const { return Path; }
-  const StringRef getName() const { return llvm::sys::path::filename(Path); }
+  StringRef getPath() const { return Path; }
+  StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
   uint64_t getPreferredBaseAddress() const { return PreferredBaseAddress; }

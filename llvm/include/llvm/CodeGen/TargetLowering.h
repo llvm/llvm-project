@@ -4396,6 +4396,12 @@ public:
   bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG,
                  bool IsNegative = false) const;
 
+  /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
+  /// scalar types. Returns SDValue() if expand fails.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
   /// \returns BUILD_VECTOR and TokenFactor nodes.

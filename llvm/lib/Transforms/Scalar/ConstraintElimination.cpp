@@ -352,6 +352,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
   }
 
+  assert(CS.size() == DFSInStack.size() &&
+         "updates to CS and DFSInStack are out of sync");
   return Changed;
 }
 

@@ -21,11 +21,11 @@ func @avx512_scalef(%a: vector<16xf32>, %b: vector<8xf64>, %i32: i32, %i16: i16,
 }
 
 func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
-  -> (i16, i16, i8, i8)
+  -> (vector<16xi1>, vector<16xi1>, vector<8xi1>, vector<8xi1>)
 {
   // CHECK: avx512.vp2intersect {{.*}} : vector<16xi32>
   %0, %1 = avx512.vp2intersect %a, %a : vector<16xi32>
   // CHECK: avx512.vp2intersect {{.*}} : vector<8xi64>
   %2, %3 = avx512.vp2intersect %b, %b : vector<8xi64>
-  return %0, %1, %2, %3 : i16, i16, i8, i8
+  return %0, %1, %2, %3 : vector<16xi1>, vector<16xi1>, vector<8xi1>, vector<8xi1>
 }

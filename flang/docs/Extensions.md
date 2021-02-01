@@ -52,7 +52,6 @@ accepted if enabled by command-line options.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Triplets allowed in array constructors
-* Old-style `PARAMETER pi=3.14` statement without parentheses
 * `%LOC`, `%VAL`, and `%REF`
 * Leading comma allowed before I/O item list
 * Empty parentheses allowed in `PROGRAM P()`
@@ -153,6 +152,8 @@ accepted if enabled by command-line options.
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Old-style `PARAMETER pi=3.14` statement without parentheses
+  [-falternative-parameter-statement]
 
 ### Extensions and legacy features deliberately not supported
 

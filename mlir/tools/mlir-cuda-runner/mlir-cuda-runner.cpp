@@ -83,10 +83,10 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
   RETURN_ON_CUDA_ERROR(
       cuLinkAddData(linkState, CUjitInputType::CU_JIT_INPUT_PTX,
                     const_cast<void *>(static_cast<const void *>(ptx.c_str())),
-                    ptx.length(), name.data(), /* kernel name */
-                    0,                         /* number of jit options */
-                    nullptr,                   /* jit options */
-                    nullptr                    /* jit option values */
+                    ptx.length(), name.str().data(), /* kernel name */
+                    0,                               /* number of jit options */
+                    nullptr,                         /* jit options */
+                    nullptr                          /* jit option values */
                     ),
       "cuLinkAddData");
 

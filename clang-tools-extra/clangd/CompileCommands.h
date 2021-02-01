@@ -96,6 +96,11 @@ private:
   std::deque<std::string> Storage; // Store strings not found in option table.
 };
 
+// Renders an argv list, with arguments separated by spaces.
+// Where needed, arguments are "quoted" and escaped.
+std::string printArgv(llvm::ArrayRef<llvm::StringRef> Args);
+std::string printArgv(llvm::ArrayRef<std::string> Args);
+
 } // namespace clangd
 } // namespace clang
 

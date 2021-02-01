@@ -689,6 +689,7 @@ def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 
 let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
   def int_flt_rounds    : DefaultAttrsIntrinsic<[llvm_i32_ty], []>;
+  def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 }
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//

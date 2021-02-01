@@ -253,9 +253,10 @@ bool PlatformFreeBSD::CanDebugProcess() {
     bool use_legacy_plugin;
 
     switch (host_triple.getArch()) {
+      case llvm::Triple::aarch64:
+      case llvm::Triple::arm:
       case llvm::Triple::x86:
       case llvm::Triple::x86_64:
-        // FreeBSDRemote plugin supports x86 only at the moment
         use_legacy_plugin = !!getenv("FREEBSD_LEGACY_PLUGIN");
         break;
       default:
