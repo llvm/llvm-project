@@ -58,7 +58,7 @@ static void HandleTargetOutcome(bool success, ident_t *loc = nullptr) {
   case tgt_mandatory:
     if (!success) {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
-        for (const auto &Device : PM->Devices)
+        for (auto &Device : PM->Devices)
           dumpTargetPointerMappings(loc, Device);
       else
         FAILURE_MESSAGE("Run with LIBOMPTARGET_DEBUG=%d to dump host-target "
@@ -76,7 +76,7 @@ static void HandleTargetOutcome(bool success, ident_t *loc = nullptr) {
           1, "failure of target construct while offloading is mandatory");
     } else {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
-        for (const auto &Device : PM->Devices)
+        for (auto &Device : PM->Devices)
           dumpTargetPointerMappings(loc, Device);
     }
     break;
