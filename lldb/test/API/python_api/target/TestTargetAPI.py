@@ -491,6 +491,7 @@ class TargetAPITestCase(TestBase):
 
 
     @add_test_categories(['pyapi'])
+    @skipIfWindows
     def test_is_loaded(self):
         """Exercise SBTarget.IsLoaded(SBModule&) API."""
         d = {'EXE': 'b.out'}
