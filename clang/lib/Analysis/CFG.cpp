@@ -4475,8 +4475,14 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
     // Add implicit scope and dtors for loop variable.
     addLocalScopeAndDtors(S->getLoopVarStmt());
 
+    // If body is not a compound statement create implicit scope
+    // and add destructors.
+    if (!isa<CompoundStmt>(S->getBody()))
+      addLocalScopeAndDtors(S->getBody());
+
     // Populate a new block to contain the loop body and loop variable.
     addStmt(S->getBody());
+
     if (badCFG)
       return nullptr;
     CFGBlock *LoopVarStmtBlock = addStmt(S->getLoopVarStmt());
