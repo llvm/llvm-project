@@ -209,6 +209,8 @@ const char *__kmp_speculative_statsfile = "-";
 int __kmp_display_env = FALSE;
 int __kmp_display_env_verbose = FALSE;
 int __kmp_omp_cancellation = FALSE;
+int __kmp_nteams = 0;
+int __kmp_teams_thread_limit = 0;
 
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
 int __kmp_user_level_mwait = FALSE;
