@@ -123,7 +123,7 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             member.IsValid(),
             'make sure we find a local variabble named "member"')
-        self.assertTrue(member.GetType().GetName() ==
+        self.assertEqual(member.GetType().GetName(),
                         'EnumTemplate<EnumType::Member>')
 
         expr_result = frame.EvaluateExpression("member.getMember()")
@@ -143,7 +143,7 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             subclass.IsValid(),
             'make sure we find a local variabble named "subclass"')
-        self.assertTrue(subclass.GetType().GetName() ==
+        self.assertEqual(subclass.GetType().GetName(),
                         'EnumTemplate<EnumType::Subclass>')
 
         expr_result = frame.EvaluateExpression("subclass.getMember()")

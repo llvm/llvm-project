@@ -49,7 +49,7 @@ class SymbolContextAPITestCase(TestBase):
         self.assertTrue(thread.IsValid(),
                         "There should be a thread stopped due to breakpoint")
         frame0 = thread.GetFrameAtIndex(0)
-        self.assertTrue(frame0.GetLineEntry().GetLine() == self.line)
+        self.assertEqual(frame0.GetLineEntry().GetLine(), self.line)
 
         # Now get the SBSymbolContext from this frame.  We want everything. :-)
         context = frame0.GetSymbolContext(lldb.eSymbolContextEverything)
@@ -81,7 +81,7 @@ class SymbolContextAPITestCase(TestBase):
                     "The line entry should have the correct filename",
                     exe=False,
                     substrs=['main.c'])
-        self.assertTrue(lineEntry.GetLine() == self.line,
+        self.assertEqual(lineEntry.GetLine(), self.line,
                         "The line entry's line number should match ")
 
         symbol = context.GetSymbol()
