@@ -33,7 +33,7 @@ FifoFile::~FifoFile() {
 #if LLVM_ON_UNIX
   unlink(m_path.c_str());
 #endif
-};
+}
 
 Expected<std::shared_ptr<FifoFile>> CreateFifoFile(StringRef path) {
 #if !LLVM_ON_UNIX
