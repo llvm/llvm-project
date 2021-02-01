@@ -230,26 +230,23 @@ entry:
 define hidden <8 x i16> @create_i16(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d, i16 zeroext %a2, i16 zeroext %b2, i16 zeroext %c2, i16 zeroext %d2) local_unnamed_addr #0 {
 ; CHECK-LABEL: create_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r5, r7, r9, lr}
-; CHECK-NEXT:    push.w {r5, r7, r9, lr}
-; CHECK-NEXT:    ldr.w r12, [sp, #24]
-; CHECK-NEXT:    mov.w r9, #0
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    ldr r5, [sp, #28]
-; CHECK-NEXT:    lsll r2, r9, #16
-; CHECK-NEXT:    lsll r12, r7, #16
-; CHECK-NEXT:    orr.w r5, r5, r12
-; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r5
-; CHECK-NEXT:    ldrd r2, r3, [sp, #16]
 ; CHECK-NEXT:    orr.w r0, r1, r0, lsl #16
-; CHECK-NEXT:    orr.w r0, r0, r9
-; CHECK-NEXT:    orr.w r2, r3, r2, lsl #16
-; CHECK-NEXT:    orrs r2, r7
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r2
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop.w {r5, r7, r9, pc}
+; CHECK-NEXT:    lsll r2, r7, #16
+; CHECK-NEXT:    ldr r4, [sp, #24]
+; CHECK-NEXT:    orr.w r1, r0, r7
+; CHECK-NEXT:    ldrd r0, r7, [sp, #16]
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    lsll r4, r5, #16
+; CHECK-NEXT:    orr.w r0, r7, r0, lsl #16
+; CHECK-NEXT:    orr.w r12, r0, r5
+; CHECK-NEXT:    orr.w r0, r2, r3
+; CHECK-NEXT:    ldr r2, [sp, #28]
+; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    orrs r2, r4
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %conv = zext i16 %a to i64
   %shl = shl nuw i64 %conv, 48
@@ -308,59 +305,58 @@ entry:
 define hidden <16 x i8> @create_i8(i8 zeroext %a1, i8 zeroext %b1, i8 zeroext %c1, i8 zeroext %d1, i8 zeroext %a2, i8 zeroext %b2, i8 zeroext %c2, i8 zeroext %d2, i8 zeroext %a3, i8 zeroext %b3, i8 zeroext %c3, i8 zeroext %d3, i8 zeroext %a4, i8 zeroext %b4, i8 zeroext %c4, i8 zeroext %d4) local_unnamed_addr #0 {
 ; CHECK-LABEL: create_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r11, lr}
-; CHECK-NEXT:    ldr r4, [sp, #68]
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    ldr r4, [sp, #40]
 ; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    ldr r6, [sp, #64]
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    lsll r4, r11, #16
-; CHECK-NEXT:    mov lr, r1
-; CHECK-NEXT:    lsll r6, r5, #24
-; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    orr.w r1, r6, r4
-; CHECK-NEXT:    ldr r4, [sp, #72]
-; CHECK-NEXT:    mov r12, r3
-; CHECK-NEXT:    ldr r3, [sp, #76]
-; CHECK-NEXT:    lsll r4, r7, #8
 ; CHECK-NEXT:    ldr r6, [sp, #36]
-; CHECK-NEXT:    orrs r1, r4
-; CHECK-NEXT:    ldr r4, [sp, #32]
-; CHECK-NEXT:    orr.w r8, r1, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    lsll r6, r3, #16
-; CHECK-NEXT:    lsll r4, r1, #24
-; CHECK-NEXT:    mov.w r9, #0
-; CHECK-NEXT:    orrs r4, r6
-; CHECK-NEXT:    ldr r6, [sp, #40]
-; CHECK-NEXT:    lsll r6, r9, #8
-; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    lsll r4, r11, #16
+; CHECK-NEXT:    mov r10, r1
+; CHECK-NEXT:    lsll r6, r7, #24
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    orr.w r1, r6, r4
 ; CHECK-NEXT:    ldr r6, [sp, #44]
-; CHECK-NEXT:    orrs r4, r6
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    ldr r4, [sp, #72]
+; CHECK-NEXT:    lsll r6, r3, #8
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    orrs r1, r6
 ; CHECK-NEXT:    ldr r6, [sp, #48]
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r8
-; CHECK-NEXT:    ldr r4, [sp, #52]
-; CHECK-NEXT:    lsls r4, r4, #16
-; CHECK-NEXT:    orr.w r4, r4, r6, lsl #22
-; CHECK-NEXT:    ldr r6, [sp, #56]
-; CHECK-NEXT:    orr.w r4, r4, r6, lsl #8
-; CHECK-NEXT:    ldr r6, [sp, #60]
-; CHECK-NEXT:    add r4, r6
-; CHECK-NEXT:    orrs r4, r5
-; CHECK-NEXT:    orr.w r4, r4, r11
-; CHECK-NEXT:    orrs r4, r7
-; CHECK-NEXT:    lsl.w r7, lr, #16
-; CHECK-NEXT:    orr.w r0, r7, r0, lsl #22
+; CHECK-NEXT:    lsll r4, r5, #16
+; CHECK-NEXT:    mov.w r9, #0
+; CHECK-NEXT:    orr.w r12, r1, r6
+; CHECK-NEXT:    ldr r6, [sp, #68]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    lsll r6, r1, #24
+; CHECK-NEXT:    orrs r6, r4
+; CHECK-NEXT:    ldr r4, [sp, #76]
+; CHECK-NEXT:    lsll r4, r9, #8
+; CHECK-NEXT:    orrs r6, r4
+; CHECK-NEXT:    ldr r4, [sp, #80]
+; CHECK-NEXT:    orr.w lr, r6, r4
+; CHECK-NEXT:    lsl.w r4, r10, #16
+; CHECK-NEXT:    orr.w r0, r4, r0, lsl #22
 ; CHECK-NEXT:    orr.w r0, r0, r2, lsl #8
-; CHECK-NEXT:    add r0, r12
+; CHECK-NEXT:    add r0, r8
+; CHECK-NEXT:    orrs r0, r7
+; CHECK-NEXT:    orr.w r0, r0, r11
+; CHECK-NEXT:    orr.w r2, r0, r3
+; CHECK-NEXT:    ldr r0, [sp, #56]
+; CHECK-NEXT:    ldr r3, [sp, #52]
+; CHECK-NEXT:    lsls r0, r0, #16
+; CHECK-NEXT:    orr.w r0, r0, r3, lsl #22
+; CHECK-NEXT:    ldr r3, [sp, #60]
+; CHECK-NEXT:    orr.w r0, r0, r3, lsl #8
+; CHECK-NEXT:    ldr r3, [sp, #64]
+; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    orrs r0, r3
-; CHECK-NEXT:    orr.w r0, r0, r9
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r4
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r11, pc}
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    orrs r0, r5
+; CHECK-NEXT:    mov r2, lr
+; CHECK-NEXT:    orr.w r3, r0, r9
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %conv = zext i8 %a1 to i64
   %shl = shl nuw nsw i64 %conv, 54

@@ -91,25 +91,21 @@ entry:
 }
 
 define <2 x i64> @vector_add_i64(<2 x i64> %lhs, <2 x i64> %rhs) {
-; CHECK-MVE-LABEL: vector_add_i64:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .save {r7, lr}
-; CHECK-MVE-NEXT:    push {r7, lr}
-; CHECK-MVE-NEXT:    add.w r12, sp, #8
-; CHECK-MVE-NEXT:    vldrw.u32 q0, [r12]
-; CHECK-MVE-NEXT:    vmov lr, s2
-; CHECK-MVE-NEXT:    vmov r12, s3
-; CHECK-MVE-NEXT:    adds.w r2, r2, lr
-; CHECK-MVE-NEXT:    adc.w r12, r12, r3
-; CHECK-MVE-NEXT:    vmov r3, s0
-; CHECK-MVE-NEXT:    adds r0, r0, r3
-; CHECK-MVE-NEXT:    vmov q1[2], q1[0], r0, r2
-; CHECK-MVE-NEXT:    vmov r0, s1
-; CHECK-MVE-NEXT:    adcs r0, r1
-; CHECK-MVE-NEXT:    vmov q1[3], q1[1], r0, r12
-; CHECK-MVE-NEXT:    vmov r0, r1, d2
-; CHECK-MVE-NEXT:    vmov r2, r3, d3
-; CHECK-MVE-NEXT:    pop {r7, pc}
+; CHECK-LE-LABEL: vector_add_i64:
+; CHECK-LE:       @ %bb.0: @ %entry
+; CHECK-LE-NEXT:    .save {r7, lr}
+; CHECK-LE-NEXT:    push {r7, lr}
+; CHECK-LE-NEXT:    add.w r12, sp, #8
+; CHECK-LE-NEXT:    vldrw.u32 q0, [r12]
+; CHECK-LE-NEXT:    vmov lr, s0
+; CHECK-LE-NEXT:    vmov r12, s1
+; CHECK-LE-NEXT:    adds.w r0, r0, lr
+; CHECK-LE-NEXT:    vmov lr, s2
+; CHECK-LE-NEXT:    adc.w r1, r1, r12
+; CHECK-LE-NEXT:    vmov r12, s3
+; CHECK-LE-NEXT:    adds.w r2, r2, lr
+; CHECK-LE-NEXT:    adc.w r3, r3, r12
+; CHECK-LE-NEXT:    pop {r7, pc}
 ;
 ; CHECK-BE-LABEL: vector_add_i64:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -117,40 +113,15 @@ define <2 x i64> @vector_add_i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; CHECK-BE-NEXT:    push {r7, lr}
 ; CHECK-BE-NEXT:    add.w r12, sp, #8
 ; CHECK-BE-NEXT:    vldrw.u32 q0, [r12]
+; CHECK-BE-NEXT:    vmov lr, s1
+; CHECK-BE-NEXT:    vmov r12, s0
+; CHECK-BE-NEXT:    adds.w r1, r1, lr
 ; CHECK-BE-NEXT:    vmov lr, s3
+; CHECK-BE-NEXT:    adc.w r0, r0, r12
 ; CHECK-BE-NEXT:    vmov r12, s2
-; CHECK-BE-NEXT:    adds.w lr, lr, r3
-; CHECK-BE-NEXT:    vmov r3, s0
-; CHECK-BE-NEXT:    adc.w r12, r12, r2
-; CHECK-BE-NEXT:    vmov r2, s1
-; CHECK-BE-NEXT:    adds r1, r1, r2
-; CHECK-BE-NEXT:    adcs r0, r3
-; CHECK-BE-NEXT:    vmov q0[2], q0[0], r0, r12
-; CHECK-BE-NEXT:    vmov q0[3], q0[1], r1, lr
-; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vmov r1, r0, d2
-; CHECK-BE-NEXT:    vmov r3, r2, d3
+; CHECK-BE-NEXT:    adds.w r3, r3, lr
+; CHECK-BE-NEXT:    adc.w r2, r2, r12
 ; CHECK-BE-NEXT:    pop {r7, pc}
-;
-; CHECK-FP-LABEL: vector_add_i64:
-; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    .save {r7, lr}
-; CHECK-FP-NEXT:    push {r7, lr}
-; CHECK-FP-NEXT:    add.w r12, sp, #8
-; CHECK-FP-NEXT:    vldrw.u32 q0, [r12]
-; CHECK-FP-NEXT:    vmov lr, s2
-; CHECK-FP-NEXT:    vmov r12, s3
-; CHECK-FP-NEXT:    adds.w lr, lr, r2
-; CHECK-FP-NEXT:    vmov r2, s0
-; CHECK-FP-NEXT:    adc.w r12, r12, r3
-; CHECK-FP-NEXT:    vmov r3, s1
-; CHECK-FP-NEXT:    adds r0, r0, r2
-; CHECK-FP-NEXT:    adcs r1, r3
-; CHECK-FP-NEXT:    vmov q0[2], q0[0], r0, lr
-; CHECK-FP-NEXT:    vmov q0[3], q0[1], r1, r12
-; CHECK-FP-NEXT:    vmov r0, r1, d0
-; CHECK-FP-NEXT:    vmov r2, r3, d1
-; CHECK-FP-NEXT:    pop {r7, pc}
 entry:
   %sum = add <2 x i64> %lhs, %rhs
   ret <2 x i64> %sum
