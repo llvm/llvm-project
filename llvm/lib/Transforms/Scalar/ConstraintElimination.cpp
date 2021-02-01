@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
@@ -336,6 +337,22 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     }
 
+    // Set up a function to restore the predicate at the end of the scope if it
+    // has been negated. Negate the predicate in-place, if required.
+    auto *CI = dyn_cast<CmpInst>(CB.Condition);
+    auto PredicateRestorer = make_scope_exit([CI, &CB]() {
+      if (CB.Not && CI)
+        CI->setPredicate(CI->getInversePredicate());
+    });
+    if (CB.Not) {
+      if (CI) {
+        CI->setPredicate(CI->getInversePredicate());
+      } else {
+        LLVM_DEBUG(dbgs() << "Can only negate compares so far.\n");
+        continue;
+      }
+    }
+
     // Otherwise, add the condition to the system and stack, if we can transform
     // it into a constraint.
     auto R = getConstraint(CB.Condition, Value2Index, true);
@@ -343,8 +360,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
 
     LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
-    if (CB.Not)
-      R = ConstraintSystem::negate(R);
 
     // If R has been added to the system, queue it for removal once it goes
     // out-of-scope.
