@@ -335,7 +335,7 @@ static void AddPredecessorToBlock(BasicBlock *Succ, BasicBlock *NewPred,
 /// which is assumed to be safe to speculate. TCC_Free means cheap,
 /// TCC_Basic means less cheap, and TCC_Expensive means prohibitively
 /// expensive.
-static unsigned ComputeSpeculationCost(const User *I,
+static unsigned computeSpeculationCost(const User *I,
                                        const TargetTransformInfo &TTI) {
   assert(isSafeToSpeculativelyExecute(I) &&
          "Instruction is not safe to speculatively execute!");
@@ -359,7 +359,7 @@ static unsigned ComputeSpeculationCost(const User *I,
 /// After this function returns, CostRemaining is decreased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// CostRemaining, false is returned and CostRemaining is undefined.
-static bool DominatesMergePoint(Value *V, BasicBlock *BB,
+static bool dominatesMergePoint(Value *V, BasicBlock *BB,
                                 SmallPtrSetImpl<Instruction *> &AggressiveInsts,
                                 int &BudgetRemaining,
                                 const TargetTransformInfo &TTI,
@@ -404,7 +404,7 @@ static bool DominatesMergePoint(Value *V, BasicBlock *BB,
   if (!isSafeToSpeculativelyExecute(I))
     return false;
 
-  BudgetRemaining -= ComputeSpeculationCost(I, TTI);
+  BudgetRemaining -= computeSpeculationCost(I, TTI);
 
   // Allow exactly one instruction to be speculated regardless of its cost
   // (as long as it is safe to do so).
@@ -419,7 +419,7 @@ static bool DominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, we can only really hoist these out if their operands do
   // not take us over the cost threshold.
   for (User::op_iterator i = I->op_begin(), e = I->op_end(); i != e; ++i)
-    if (!DominatesMergePoint(*i, BB, AggressiveInsts, BudgetRemaining, TTI,
+    if (!dominatesMergePoint(*i, BB, AggressiveInsts, BudgetRemaining, TTI,
                              Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
@@ -2148,8 +2148,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if ((ThenCE && !isSafeToSpeculativelyExecute(ThenCE)) ||
         (OrigCE && !isSafeToSpeculativelyExecute(OrigCE)))
       return false;
-    unsigned OrigCost = OrigCE ? ComputeSpeculationCost(OrigCE, TTI) : 0;
-    unsigned ThenCost = ThenCE ? ComputeSpeculationCost(ThenCE, TTI) : 0;
+    unsigned OrigCost = OrigCE ? computeSpeculationCost(OrigCE, TTI) : 0;
+    unsigned ThenCost = ThenCE ? computeSpeculationCost(ThenCE, TTI) : 0;
     unsigned MaxCost =
         2 * PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
     if (OrigCost + ThenCost > MaxCost)
@@ -2267,7 +2267,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
                                   I, BB, ThenBB, EndBB))))
       return false;
     if (!SpeculatedStoreValue &&
-        ComputeSpeculationCost(I, TTI) >
+        computeSpeculationCost(I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
@@ -2573,9 +2573,9 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       continue;
     }
 
-    if (!DominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
+    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
                              BudgetRemaining, TTI) ||
-        !DominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
+        !dominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
                              BudgetRemaining, TTI))
       return Changed;
   }
