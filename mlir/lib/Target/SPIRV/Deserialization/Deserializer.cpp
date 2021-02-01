@@ -713,8 +713,6 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processCooperativeMatrixType(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
-  case spirv::Opcode::OpTypeImage:
-    return processImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
     return processRuntimeArrayType(operands);
   case spirv::Opcode::OpTypeStruct:
@@ -1003,54 +1001,6 @@ spirv::Deserializer::processTypeForwardPointer(ArrayRef<uint32_t> operands) {
   // TODO: Use the 2nd operand (Storage Class) to validate the OpTypePointer
   // instruction that defines the actual type.
 
-  return success();
-}
-
-LogicalResult
-spirv::Deserializer::processImageType(ArrayRef<uint32_t> operands) {
-  // TODO: Add support for Access Qualifier.
-  if (operands.size() != 8)
-    return emitError(
-        unknownLoc,
-        "OpTypeImage with non-eight operands are not supported yet");
-
-  Type elementTy = getType(operands[1]);
-  if (!elementTy)
-    return emitError(unknownLoc, "OpTypeImage references undefined <id>: ")
-           << operands[1];
-
-  auto dim = spirv::symbolizeDim(operands[2]);
-  if (!dim)
-    return emitError(unknownLoc, "unknown Dim for OpTypeImage: ")
-           << operands[2];
-
-  auto depthInfo = spirv::symbolizeImageDepthInfo(operands[3]);
-  if (!depthInfo)
-    return emitError(unknownLoc, "unknown Depth for OpTypeImage: ")
-           << operands[3];
-
-  auto arrayedInfo = spirv::symbolizeImageArrayedInfo(operands[4]);
-  if (!arrayedInfo)
-    return emitError(unknownLoc, "unknown Arrayed for OpTypeImage: ")
-           << operands[4];
-
-  auto samplingInfo = spirv::symbolizeImageSamplingInfo(operands[5]);
-  if (!samplingInfo)
-    return emitError(unknownLoc, "unknown MS for OpTypeImage: ") << operands[5];
-
-  auto samplerUseInfo = spirv::symbolizeImageSamplerUseInfo(operands[6]);
-  if (!samplerUseInfo)
-    return emitError(unknownLoc, "unknown Sampled for OpTypeImage: ")
-           << operands[6];
-
-  auto format = spirv::symbolizeImageFormat(operands[7]);
-  if (!format)
-    return emitError(unknownLoc, "unknown Format for OpTypeImage: ")
-           << operands[7];
-
-  typeMap[operands[0]] = spirv::ImageType::get(
-      elementTy, dim.getValue(), depthInfo.getValue(), arrayedInfo.getValue(),
-      samplingInfo.getValue(), samplerUseInfo.getValue(), format.getValue());
   return success();
 }
 
