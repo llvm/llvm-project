@@ -572,8 +572,8 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTileAndPadPattern)
     return applyTileAndPadPattern(getFunction());
   if (testHoistPadding2Levels) {
-    getFunction().walk([](linalg::PadTensorOp padTensorOp) {
-      linalg::hoistPaddingOnTensors(padTensorOp, 2);
+    getFunction().walk([](linalg::SimplePadOp simplePadOp) {
+      linalg::hoistPaddingOnTensors(simplePadOp, 2);
     });
   }
 }
