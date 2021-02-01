@@ -3207,7 +3207,6 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
   const CallInst *CI = dyn_cast_or_null<CallInst>(CLI.CB);
-  const Function *CalledFn = CI ? CI->getCalledFunction() : nullptr;
 
   // Call / invoke instructions with NoCfCheck attribute require special
   // handling.
@@ -3216,8 +3215,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     return false;
 
   // Functions with no_caller_saved_registers that need special handling.
-  if ((CI && CI->hasFnAttr("no_caller_saved_registers")) ||
-      (CalledFn && CalledFn->hasFnAttribute("no_caller_saved_registers")))
+  if ((CI && CI->hasFnAttr("no_caller_saved_registers")))
     return false;
 
   // Functions using thunks for indirect calls need to use SDISel.
