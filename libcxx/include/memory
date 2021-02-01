@@ -2647,7 +2647,7 @@ private:
             _Alloc *__alloc = reinterpret_cast<_Alloc*>(__first);
             return __alloc;
         }
-        _Tp* __get_elem() _NOEXCEPT {
+        _LIBCPP_NO_CFI _Tp* __get_elem() _NOEXCEPT {
             _CompressedPair *__as_pair = reinterpret_cast<_CompressedPair*>(__blob_);
             typename _CompressedPair::_Base2* __second = _CompressedPair::__get_second_base(__as_pair);
             _Tp *__elem = reinterpret_cast<_Tp*>(__second);
