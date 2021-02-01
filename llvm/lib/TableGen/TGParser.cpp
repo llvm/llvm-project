@@ -439,6 +439,7 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
 
 /// Resolve the record fully and add it to the record keeper.
 bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
+  Init *NewName = nullptr;
   if (Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
     if (!Rec->isAnonymous()) {
       PrintError(Rec->getLoc(),
@@ -446,10 +447,10 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
       PrintNote(Prev->getLoc(), "location of previous definition");
       return true;
     }
-    Rec->setName(Records.getNewAnonymousName());
+    NewName = Records.getNewAnonymousName();
   }
 
-  Rec->resolveReferences();
+  Rec->resolveReferences(NewName);
   checkConcrete(*Rec);
 
   CheckRecordAsserts(*Rec);
