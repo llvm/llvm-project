@@ -6228,6 +6228,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), SatW));
     return;
   }
+  case Intrinsic::set_rounding:
+    Res = DAG.getNode(ISD::SET_ROUNDING, sdl, MVT::Other,
+                      {getRoot(), getValue(I.getArgOperand(0))});
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(0));
+    return;
   case Intrinsic::pcmarker: {
     SDValue Tmp = getValue(I.getArgOperand(0));
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));
