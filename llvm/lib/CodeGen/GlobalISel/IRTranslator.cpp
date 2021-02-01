@@ -840,9 +840,8 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     // For conditional branch lowering, we might try to do something silly like
     // emit an G_ICMP to compare an existing G_ICMP i1 result with true. If so,
     // just re-use the existing condition vreg.
-    if (CI && CI->getZExtValue() == 1 &&
-        MRI->getType(CondLHS).getSizeInBits() == 1 &&
-        CB.PredInfo.Pred == CmpInst::ICMP_EQ) {
+    if (MRI->getType(CondLHS).getSizeInBits() == 1 && CI &&
+        CI->getZExtValue() == 1 && CB.PredInfo.Pred == CmpInst::ICMP_EQ) {
       Cond = CondLHS;
     } else {
       Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
