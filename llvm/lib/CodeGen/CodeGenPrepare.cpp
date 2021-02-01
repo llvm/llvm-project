@@ -2242,21 +2242,25 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB, bool &ModifiedDT
   if (PN && PN->getParent() != BB)
     return false;
 
-  // Make sure there are no instructions between the PHI and return, or that the
-  // return is the first instruction in the block.
-  if (PN) {
-    BasicBlock::iterator BI = BB->begin();
-    // Skip over debug and the bitcast.
-    do {
-      ++BI;
-    } while (isa<DbgInfoIntrinsic>(BI) || &*BI == BCI || &*BI == EVI ||
-             isa<PseudoProbeInst>(BI));
-    if (&*BI != RetI)
-      return false;
-  } else {
-    if (BB->getFirstNonPHIOrDbg(true) != RetI)
-      return false;
-  }
+  auto isLifetimeEndOrBitCastFor = [](const Instruction *Inst) {
+    const BitCastInst *BC = dyn_cast<BitCastInst>(Inst);
+    if (BC && BC->hasOneUse())
+      Inst = BC->user_back();
+
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
+      return II->getIntrinsicID() == Intrinsic::lifetime_end;
+    return false;
+  };
+
+  // Make sure there are no instructions between the first instruction
+  // and return.
+  const Instruction *BI = BB->getFirstNonPHI();
+  // Skip over debug and the bitcast.
+  while (isa<DbgInfoIntrinsic>(BI) || BI == BCI || BI == EVI ||
+         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI))
+    BI = BI->getNextNode();
+  if (BI != RetI)
+    return false;
 
   /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
   /// call.
