@@ -8,6 +8,12 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
 # RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+vle1.v v8, (a0)
+# CHECK-INST: vle1.v v8, (a0)
+# CHECK-ENCODING: [0x07,0x04,0xb5,0x00]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 07 04 b5 00 <unknown>
+
 vle8.v v8, (a0), v0.t
 # CHECK-INST: vle8.v v8, (a0), v0.t
 # CHECK-ENCODING: [0x07,0x04,0x05,0x00]
@@ -55,54 +61,6 @@ vle64.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x74,0x05,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 05 02 <unknown>
-
-vle128.v v8, (a0), v0.t
-# CHECK-INST: vle128.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x04,0x05,0x10]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 05 10 <unknown>
-
-vle128.v v8, (a0)
-# CHECK-INST: vle128.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x05,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 05 12 <unknown>
-
-vle256.v v8, (a0), v0.t
-# CHECK-INST: vle256.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x54,0x05,0x10]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 05 10 <unknown>
-
-vle256.v v8, (a0)
-# CHECK-INST: vle256.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x05,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 05 12 <unknown>
-
-vle512.v v8, (a0), v0.t
-# CHECK-INST: vle512.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x64,0x05,0x10]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 05 10 <unknown>
-
-vle512.v v8, (a0)
-# CHECK-INST: vle512.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x05,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 05 12 <unknown>
-
-vle1024.v v8, (a0), v0.t
-# CHECK-INST: vle1024.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x74,0x05,0x10]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 05 10 <unknown>
-
-vle1024.v v8, (a0)
-# CHECK-INST: vle1024.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x05,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 05 12 <unknown>
 
 vle8ff.v v8, (a0), v0.t
 # CHECK-INST: vle8ff.v v8, (a0), v0.t
@@ -152,54 +110,6 @@ vle64ff.v v8, (a0)
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 05 03 <unknown>
 
-vle128ff.v v8, (a0), v0.t
-# CHECK-INST: vle128ff.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x04,0x05,0x11]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 05 11 <unknown>
-
-vle128ff.v v8, (a0)
-# CHECK-INST: vle128ff.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x05,0x13]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 05 13 <unknown>
-
-vle256ff.v v8, (a0), v0.t
-# CHECK-INST: vle256ff.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x54,0x05,0x11]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 05 11 <unknown>
-
-vle256ff.v v8, (a0)
-# CHECK-INST: vle256ff.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x05,0x13]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 05 13 <unknown>
-
-vle512ff.v v8, (a0), v0.t
-# CHECK-INST: vle512ff.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x64,0x05,0x11]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 05 11 <unknown>
-
-vle512ff.v v8, (a0)
-# CHECK-INST: vle512ff.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x05,0x13]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 05 13 <unknown>
-
-vle1024ff.v v8, (a0), v0.t
-# CHECK-INST: vle1024ff.v v8, (a0), v0.t
-# CHECK-ENCODING: [0x07,0x74,0x05,0x11]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 05 11 <unknown>
-
-vle1024ff.v v8, (a0)
-# CHECK-INST: vle1024ff.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x05,0x13]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 05 13 <unknown>
-
 vlse8.v v8, (a0), a1, v0.t
 # CHECK-INST: vlse8.v v8, (a0), a1, v0.t
 # CHECK-ENCODING: [0x07,0x04,0xb5,0x08]
@@ -247,54 +157,6 @@ vlse64.v v8, (a0), a1
 # CHECK-ENCODING: [0x07,0x74,0xb5,0x0a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 b5 0a <unknown>
-
-vlse128.v v8, (a0), a1, v0.t
-# CHECK-INST: vlse128.v v8, (a0), a1, v0.t
-# CHECK-ENCODING: [0x07,0x04,0xb5,0x18]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 b5 18 <unknown>
-
-vlse128.v v8, (a0), a1
-# CHECK-INST: vlse128.v v8, (a0), a1
-# CHECK-ENCODING: [0x07,0x04,0xb5,0x1a]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 b5 1a <unknown>
-
-vlse256.v v8, (a0), a1, v0.t
-# CHECK-INST: vlse256.v v8, (a0), a1, v0.t
-# CHECK-ENCODING: [0x07,0x54,0xb5,0x18]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 b5 18 <unknown>
-
-vlse256.v v8, (a0), a1
-# CHECK-INST: vlse256.v v8, (a0), a1
-# CHECK-ENCODING: [0x07,0x54,0xb5,0x1a]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 b5 1a <unknown>
-
-vlse512.v v8, (a0), a1, v0.t
-# CHECK-INST: vlse512.v v8, (a0), a1, v0.t
-# CHECK-ENCODING: [0x07,0x64,0xb5,0x18]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 b5 18 <unknown>
-
-vlse512.v v8, (a0), a1
-# CHECK-INST: vlse512.v v8, (a0), a1
-# CHECK-ENCODING: [0x07,0x64,0xb5,0x1a]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 b5 1a <unknown>
-
-vlse1024.v v8, (a0), a1, v0.t
-# CHECK-INST: vlse1024.v v8, (a0), a1, v0.t
-# CHECK-ENCODING: [0x07,0x74,0xb5,0x18]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 b5 18 <unknown>
-
-vlse1024.v v8, (a0), a1
-# CHECK-INST: vlse1024.v v8, (a0), a1
-# CHECK-ENCODING: [0x07,0x74,0xb5,0x1a]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 b5 1a <unknown>
 
 vluxei8.v v8, (a0), v4, v0.t
 # CHECK-INST: vluxei8.v v8, (a0), v4, v0.t
@@ -416,30 +278,6 @@ vl1re64.v v8, (a0)
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 85 22 <unknown>
 
-vl1re128.v v8, (a0)
-# CHECK-INST: vl1re128.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x85,0x32]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 85 32 <unknown>
-
-vl1re256.v v8, (a0)
-# CHECK-INST: vl1re256.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x85,0x32]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 85 32 <unknown>
-
-vl1re512.v v8, (a0)
-# CHECK-INST: vl1re512.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x85,0x32]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 85 32 <unknown>
-
-vl1re1024.v v8, (a0)
-# CHECK-INST: vl1re1024.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x85,0x32]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 85 32 <unknown>
-
 vl2re8.v v8, (a0)
 # CHECK-INST: vl2re8.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x04,0x85,0x42]
@@ -463,30 +301,6 @@ vl2re64.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x74,0x85,0x42]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 85 42 <unknown>
-
-vl2re128.v v8, (a0)
-# CHECK-INST: vl2re128.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x85,0x52]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 85 52 <unknown>
-
-vl2re256.v v8, (a0)
-# CHECK-INST: vl2re256.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x85,0x52]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 85 52 <unknown>
-
-vl2re512.v v8, (a0)
-# CHECK-INST: vl2re512.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x85,0x52]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 85 52 <unknown>
-
-vl2re1024.v v8, (a0)
-# CHECK-INST: vl2re1024.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x85,0x52]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 85 52 <unknown>
 
 vl4re8.v v8, (a0)
 # CHECK-INST: vl4re8.v v8, (a0)
@@ -512,30 +326,6 @@ vl4re64.v v8, (a0)
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 85 82 <unknown>
 
-vl4re128.v v8, (a0)
-# CHECK-INST: vl4re128.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x85,0x92]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 85 92 <unknown>
-
-vl4re256.v v8, (a0)
-# CHECK-INST: vl4re256.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x85,0x92]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 85 92 <unknown>
-
-vl4re512.v v8, (a0)
-# CHECK-INST: vl4re512.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x85,0x92]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 85 92 <unknown>
-
-vl4re1024.v v8, (a0)
-# CHECK-INST: vl4re1024.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x85,0x92]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 85 92 <unknown>
-
 vl8re8.v v8, (a0)
 # CHECK-INST: vl8re8.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x04,0x85,0x02]
@@ -559,27 +349,3 @@ vl8re64.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x74,0x85,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 07 74 85 02 <unknown>
-
-vl8re128.v v8, (a0)
-# CHECK-INST: vl8re128.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x04,0x85,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 04 85 12 <unknown>
-
-vl8re256.v v8, (a0)
-# CHECK-INST: vl8re256.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x54,0x85,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 54 85 12 <unknown>
-
-vl8re512.v v8, (a0)
-# CHECK-INST: vl8re512.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x64,0x85,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 64 85 12 <unknown>
-
-vl8re1024.v v8, (a0)
-# CHECK-INST: vl8re1024.v v8, (a0)
-# CHECK-ENCODING: [0x07,0x74,0x85,0x12]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 07 74 85 12 <unknown>
