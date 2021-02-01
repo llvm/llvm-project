@@ -1111,9 +1111,9 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   3: auto &&__range1 = nums;
 // CHECK-NEXT:   4: __range1
 // CHECK-NEXT:   5: [B4.4] (ImplicitCastExpr, ArrayToPointerDecay, int *)
-// CHECK-NEXT:   6: 4L
+// CHECK-NEXT:   6: 4{{L*}}
 // CHECK-NEXT:   7: [B4.5] + [B4.6]
-// CHECK-NEXT:   8: auto __end1 = __range1 + 4L;
+// CHECK-NEXT:   8: auto __end1 = __range1 + 4{{L*}};
 // CHECK-NEXT:   9: __range1
 // CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, ArrayToPointerDecay, int *)
 // CHECK-NEXT:  11: auto __begin1 = __range1;
