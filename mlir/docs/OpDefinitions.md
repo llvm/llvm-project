@@ -1796,9 +1796,9 @@ requirements that were desirable:
 [TableGen]: https://llvm.org/docs/TableGen/index.html
 [TableGenProgRef]: https://llvm.org/docs/TableGen/ProgRef.html
 [TableGenBackend]: https://llvm.org/docs/TableGen/BackEnds.html#introduction
-[OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td
-[OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
-[EnumsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/EnumsGen.cpp
+[OpBase]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/OpBase.td
+[OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
+[EnumsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/EnumsGen.cpp
 [StringAttr]: LangRef.md#string-attribute
 [IntegerAttr]: LangRef.md#integer-attribute
-[AttrClasses]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/Attributes.h
+[AttrClasses]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/Attributes.h
