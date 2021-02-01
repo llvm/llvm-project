@@ -50,11 +50,14 @@ void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
 
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
-    StringRef Value = A->getValue();
-    if (Value.startswith("-mcpu="))
-      CPU = Value.substr(6);
-    if (Value.startswith("-march="))
-      Arch = Value.substr(7);
+    // Use getValues because -Wa can have multiple arguments
+    // e.g. -Wa,-mcpu=foo,-mcpu=bar
+    for (StringRef Value : A->getValues()) {
+      if (Value.startswith("-mcpu="))
+        CPU = Value.substr(6);
+      if (Value.startswith("-march="))
+        Arch = Value.substr(7);
+    }
   }
 }
 
@@ -290,8 +293,8 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
   arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
   arm::ReadTPMode ThreadPointer = arm::getReadTPMode(D, Args);
-  const Arg *WaCPU = nullptr, *WaFPU = nullptr;
-  const Arg *WaHDiv = nullptr, *WaArch = nullptr;
+  llvm::Optional<std::pair<const Arg *, StringRef>> WaCPU, WaFPU, WaHDiv,
+      WaArch;
 
   // This vector will accumulate features from the architecture
   // extension suffixes on -mcpu and -march (e.g. the 'bar' in
@@ -325,15 +328,18 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     // to the assembler correctly.
     for (const Arg *A :
          Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
-      StringRef Value = A->getValue();
-      if (Value.startswith("-mfpu=")) {
-        WaFPU = A;
-      } else if (Value.startswith("-mcpu=")) {
-        WaCPU = A;
-      } else if (Value.startswith("-mhwdiv=")) {
-        WaHDiv = A;
-      } else if (Value.startswith("-march=")) {
-        WaArch = A;
+      // We use getValues here because you can have many options per -Wa
+      // We will keep the last one we find for each of these
+      for (StringRef Value : A->getValues()) {
+        if (Value.startswith("-mfpu=")) {
+          WaFPU = std::make_pair(A, Value.substr(6));
+        } else if (Value.startswith("-mcpu=")) {
+          WaCPU = std::make_pair(A, Value.substr(6));
+        } else if (Value.startswith("-mhwdiv=")) {
+          WaHDiv = std::make_pair(A, Value.substr(8));
+        } else if (Value.startswith("-march=")) {
+          WaArch = std::make_pair(A, Value.substr(7));
+        }
       }
     }
   }
@@ -353,8 +359,8 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (CPUArg)
       D.Diag(clang::diag::warn_drv_unused_argument)
           << CPUArg->getAsString(Args);
-    CPUName = StringRef(WaCPU->getValue()).substr(6);
-    CPUArg = WaCPU;
+    CPUName = WaCPU->second;
+    CPUArg = WaCPU->first;
   } else if (CPUArg)
     CPUName = CPUArg->getValue();
 
@@ -363,11 +369,12 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (ArchArg)
       D.Diag(clang::diag::warn_drv_unused_argument)
           << ArchArg->getAsString(Args);
-    ArchName = StringRef(WaArch->getValue()).substr(7);
-    checkARMArchName(D, WaArch, Args, ArchName, CPUName, ExtensionFeatures,
-                     Triple, ArchArgFPUID);
-    // FIXME: Set Arch.
-    D.Diag(clang::diag::warn_drv_unused_argument) << WaArch->getAsString(Args);
+    ArchName = WaArch->second;
+    // This will set any features after the base architecture.
+    checkARMArchName(D, WaArch->first, Args, ArchName, CPUName,
+                     ExtensionFeatures, Triple, ArchArgFPUID);
+    // The base architecture was handled in ToolChain::ComputeLLVMTriple because
+    // triple is read only by this point.
   } else if (ArchArg) {
     ArchName = ArchArg->getValue();
     checkARMArchName(D, ArchArg, Args, ArchName, CPUName, ExtensionFeatures,
@@ -399,8 +406,7 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (FPUArg)
       D.Diag(clang::diag::warn_drv_unused_argument)
           << FPUArg->getAsString(Args);
-    (void)getARMFPUFeatures(D, WaFPU, Args, StringRef(WaFPU->getValue()).substr(6),
-                            Features);
+    (void)getARMFPUFeatures(D, WaFPU->first, Args, WaFPU->second, Features);
   } else if (FPUArg) {
     FPUID = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
   } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
@@ -423,8 +429,7 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (HDivArg)
       D.Diag(clang::diag::warn_drv_unused_argument)
           << HDivArg->getAsString(Args);
-    getARMHWDivFeatures(D, WaHDiv, Args,
-                        StringRef(WaHDiv->getValue()).substr(8), Features);
+    getARMHWDivFeatures(D, WaHDiv->first, Args, WaHDiv->second, Features);
   } else if (HDivArg)
     getARMHWDivFeatures(D, HDivArg, Args, HDivArg->getValue(), Features);
 
