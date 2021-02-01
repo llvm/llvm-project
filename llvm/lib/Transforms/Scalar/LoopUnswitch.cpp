@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -809,12 +810,12 @@ static Optional<IVConditionInfo> hasPartialIVCondition(Loop *L, MemorySSA &MSSA,
           if (L->contains(Succ))
             continue;
 
-          Info.PathIsNoop &= empty(Succ->phis()) &&
+          Info.PathIsNoop &= llvm::empty(Succ->phis()) &&
                              (!Info.ExitForPath || Info.ExitForPath == Succ);
           if (!Info.PathIsNoop)
             break;
-          assert(!Info.ExitForPath || Info.ExitForPath == Succ &&
-                                          "cannot have multiple exit blocks");
+          assert((!Info.ExitForPath || Info.ExitForPath == Succ) &&
+                 "cannot have multiple exit blocks");
           Info.ExitForPath = Succ;
         }
       }
