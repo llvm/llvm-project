@@ -104,11 +104,12 @@ public:
   lookup(const LookupRequest &Req,
          llvm::function_ref<void(const Symbol &)> Callback) const = 0;
 
-  /// Finds all occurrences (e.g. references, declarations, definitions) of a
-  /// symbol and applies \p Callback on each result.
+  /// Finds all occurrences (e.g. references, declarations, definitions) of
+  /// symbols and applies \p Callback on each result.
   ///
   /// Results should be returned in arbitrary order.
   /// The returned result must be deep-copied if it's used outside Callback.
+  /// FIXME: there's no indication which result references which symbol.
   ///
   /// Returns true if there will be more results (limited by Req.Limit);
   virtual bool refs(const RefsRequest &Req,

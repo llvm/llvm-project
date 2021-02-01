@@ -1871,7 +1871,7 @@ TEST(FindReferences, IncludeOverrides) {
         };
         class Derived : public Base {
         public:
-          void $decl[[func]]() override; // FIXME: ref, not decl
+          void [[func]]() override;
         };
         void test(Derived* D) {
           D->[[func]]();
