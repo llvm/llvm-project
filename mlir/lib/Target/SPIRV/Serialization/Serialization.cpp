@@ -1192,22 +1192,6 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
-  if (auto imageType = type.dyn_cast<spirv::ImageType>()) {
-    typeEnum = spirv::Opcode::OpTypeImage;
-    uint32_t sampledTypeID = 0;
-    if (failed(processType(loc, imageType.getElementType(), sampledTypeID)))
-      return failure();
-
-    operands.push_back(sampledTypeID);
-    operands.push_back(static_cast<uint32_t>(imageType.getDim()));
-    operands.push_back(static_cast<uint32_t>(imageType.getDepthInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getArrayedInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getSamplingInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getSamplerUseInfo()));
-    operands.push_back(static_cast<uint32_t>(imageType.getImageFormat()));
-    return success();
-  }
-
   if (auto arrayType = type.dyn_cast<spirv::ArrayType>()) {
     typeEnum = spirv::Opcode::OpTypeArray;
     uint32_t elementTypeID = 0;
