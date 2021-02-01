@@ -1219,10 +1219,17 @@ bool fromJSON(const llvm::json::Value &Params,
          O.map("direction", R.direction);
 }
 
+bool fromJSON(const llvm::json::Value &Params, ReferenceContext &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("includeDeclaration", R.includeDeclaration);
+}
+
 bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R,
               llvm::json::Path P) {
   TextDocumentPositionParams &Base = R;
-  return fromJSON(Params, Base, P);
+  llvm::json::ObjectMapper O(Params, P);
+  return fromJSON(Params, Base, P) && O && O.mapOptional("context", R.context);
 }
 
 llvm::json::Value toJSON(SymbolTag Tag) {
