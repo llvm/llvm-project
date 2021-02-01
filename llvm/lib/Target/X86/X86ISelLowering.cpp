@@ -3910,9 +3910,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CallConv == CallingConv::Tail;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   const auto *CI = dyn_cast_or_null<CallInst>(CLI.CB);
-  const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
-  bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
-                 (Fn && Fn->hasFnAttribute("no_caller_saved_registers"));
+  bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers"));
   const auto *II = dyn_cast_or_null<InvokeInst>(CLI.CB);
   bool HasNoCfCheck =
       (CI && CI->doesNoCfCheck()) || (II && II->doesNoCfCheck());
