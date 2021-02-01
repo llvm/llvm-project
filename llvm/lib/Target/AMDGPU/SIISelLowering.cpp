@@ -11487,8 +11487,9 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   // Allocate a VGPR for future SGPR Spill if
   // "amdgpu-reserve-vgpr-for-sgpr-spill" option is used
   // FIXME: We won't need this hack if we split SGPR allocation from VGPR
-  if (VGPRReserveforSGPRSpill && !Info->VGPRReservedForSGPRSpill &&
-      !Info->isEntryFunction() && MF.getFrameInfo().hasStackObjects())
+  if (VGPRReserveforSGPRSpill && TRI->spillSGPRToVGPR() &&
+      !Info->VGPRReservedForSGPRSpill && !Info->isEntryFunction() &&
+      MF.getFrameInfo().hasStackObjects())
     Info->reserveVGPRforSGPRSpills(MF);
 }
 
