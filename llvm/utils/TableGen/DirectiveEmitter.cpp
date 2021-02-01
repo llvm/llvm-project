@@ -633,6 +633,20 @@ void GenerateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   }
 }
 
+// Generate check in the Enter functions for clauses classes.
+void GenerateFlangClauseCheckPrototypes(const DirectiveLanguage &DirLang,
+                                        raw_ostream &OS) {
+
+  IfDefScope Scope("GEN_FLANG_CLAUSE_CHECK_ENTER", OS);
+
+  OS << "\n";
+  for (const auto &C : DirLang.getClauses()) {
+    Clause Clause{C};
+    OS << "void Enter(const parser::" << DirLang.getFlangClauseBaseClass()
+       << "::" << Clause.getFormattedParserClassName() << " &);\n";
+  }
+}
+
 // Generate the implementation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
@@ -649,6 +663,8 @@ void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
   GenerateFlangClauseDump(DirLang, OS);
 
   GenerateFlangClauseUnparse(DirLang, OS);
+
+  GenerateFlangClauseCheckPrototypes(DirLang, OS);
 }
 
 void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
