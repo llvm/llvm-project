@@ -795,6 +795,8 @@ function. The operand fields are:
   * ``swiftcc`` : code 16
   * ``cxx_fast_tlscc``: code 17
   * ``tailcc`` : code 18
+  * ``cfguard_checkcc`` : code 19
+  * ``swifttailcc`` : code 20
   * ``x86_stdcallcc``: code 64
   * ``x86_fastcallcc``: code 65
   * ``arm_apcscc``: code 66

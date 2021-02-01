@@ -462,6 +462,7 @@ def RetCC_X86_64 : CallingConv<[
 
   // Handle Swift calls.
   CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
+  CCIfCC<"CallingConv::SwiftTail", CCDelegateTo<RetCC_X86_64_Swift>>,
 
   // Handle explicit CC selection
   CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
@@ -520,8 +521,10 @@ def CC_X86_64_C : CallingConv<[
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[R14]>>>,
 
-  // For Swift Calling Convention, pass sret in %rax.
+  // For Swift Calling Conventions, pass sret in %rax.
   CCIfCC<"CallingConv::Swift",
+    CCIfSRet<CCIfType<[i64], CCAssignToReg<[RAX]>>>>,
+  CCIfCC<"CallingConv::SwiftTail",
     CCIfSRet<CCIfType<[i64], CCAssignToReg<[RAX]>>>>,
 
   // Pointers are always passed in full 64-bit registers.
