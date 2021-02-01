@@ -27,8 +27,7 @@ func @matmul_tensors(
   //      CHECK:   %[[A:.*]] = scf.for
   //  CHECK-NOT:     scf.for
   //      CHECK:     subtensor %{{.*}} [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-  //      CHECK:     linalg.pad_tensor %{{.*}}
-  //      CHECK:       : tensor<?x?xf32> to tensor<2x4xf32>
+  //      CHECK:     linalg.simple_pad %{{.*}} : tensor<?x?xf32> to tensor<2x4xf32> pad f32
   //      CHECK:     subtensor_insert %{{.*}} into %{{.*}}[%{{.*}}, 0, 0]
   // CHECK-SAME:       [1, 2, 4] [1, 1, 1] : tensor<2x4xf32> into tensor<?x2x4xf32>
   // 2-D loop
@@ -37,8 +36,7 @@ func @matmul_tensors(
   //      CHECK:     scf.for
   //  CHECK-NOT:       scf.for
   //      CHECK:       subtensor %{{.*}} [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-  //      CHECK:       linalg.pad_tensor %{{.*}}
-  //      CHECK:         : tensor<?x?xf32> to tensor<4x3xf32>
+  //      CHECK:       linalg.simple_pad %{{.*}} : tensor<?x?xf32> to tensor<4x3xf32> pad f32
   //      CHECK:       subtensor_insert %{{.*}} into %{{.*}}[%{{.*}}, %{{.*}}, 0, 0]
   // CHECK-SAME:         [1, 1, 4, 3] [1, 1, 1, 1] : tensor<4x3xf32> into tensor<?x?x4x3xf32>
   // 2-D loop
@@ -49,8 +47,8 @@ func @matmul_tensors(
   // CHECK-SAME:         tensor<?x2x4xf32> to tensor<2x4xf32>
   //      CHECK:       %[[stB:.*]] = subtensor %[[B]][%[[K]], %[[J]], 0, 0] [1, 1, 4, 3] [1, 1, 1, 1] :
   // CHECK-SAME:         tensor<?x?x4x3xf32> to tensor<4x3xf32>
-  //      CHECK:       %[[stC:.*]] = linalg.pad_tensor %{{.*}}
-  //      CHECK:         : tensor<?x?xf32> to tensor<2x3xf32>
+  //      CHECK:       %[[stC:.*]] = linalg.simple_pad %{{.*}} pad %{{.*}} :
+  // CHECK-SAME:         tensor<?x?xf32> to tensor<2x3xf32> pad f32
   //      CHECK:       linalg.matmul ins(%[[stA]], %[[stB]] : tensor<2x4xf32>, tensor<4x3xf32>)
   // CHECK-SAME:         outs(%[[stC]] : tensor<2x3xf32>) -> tensor<2x3xf32>
   %3 = scf.for %arg3 = %c0 to %0 step %c2 iter_args(%arg4 = %arg2) -> (tensor<?x?xf32>) {
@@ -71,28 +69,13 @@ func @matmul_tensors(
         %18 = dim %arg8, %c1 : tensor<?x?xf32>
         %19 = affine.min #map4(%18, %arg5)
         %20 = subtensor %arg8[%arg3, %arg5] [%17, %19] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-        %21 = subi %c2, %7 : index
-        %22 = subi %c4, %9 : index
-        %23 = linalg.pad_tensor %10 low[%c0, %c0] high[%21, %22] {
-        ^bb0(%arg9: index, %arg10: index):  // no predecessors
-          linalg.yield %cst : f32
-        } : tensor<?x?xf32> to tensor<2x4xf32>
-        %24 = subi %c4, %12 : index
-        %25 = subi %c3, %14 : index
-        %26 = linalg.pad_tensor %15 low[%c0, %c0] high[%24, %25] {
-        ^bb0(%arg9: index, %arg10: index):  // no predecessors
-          linalg.yield %cst : f32
-        } : tensor<?x?xf32> to tensor<4x3xf32>
-        %27 = subi %c2, %17 : index
-        %28 = subi %c3, %19 : index
-        %29 = linalg.pad_tensor %20 low[%c0, %c0] high[%27, %28] {
-        ^bb0(%arg9: index, %arg10: index):  // no predecessors
-          linalg.yield %cst : f32
-        } : tensor<?x?xf32> to tensor<2x3xf32>
-        %30 = linalg.matmul ins(%23, %26 : tensor<2x4xf32>, tensor<4x3xf32>) outs(%29 : tensor<2x3xf32>) -> tensor<2x3xf32>
-        %31 = subtensor %30[0, 0] [%7, %14] [1, 1] : tensor<2x3xf32> to tensor<?x?xf32>
-        %32 = subtensor_insert %31 into %arg8[%arg3, %arg5] [%17, %19] [%c1, %c1] : tensor<?x?xf32> into tensor<?x?xf32>
-        scf.yield %32 : tensor<?x?xf32>
+        %21 = linalg.simple_pad %10 pad %cst : tensor<?x?xf32> to tensor<2x4xf32> pad f32
+        %22 = linalg.simple_pad %15 pad %cst : tensor<?x?xf32> to tensor<4x3xf32> pad f32
+        %23 = linalg.simple_pad %20 pad %cst : tensor<?x?xf32> to tensor<2x3xf32> pad f32
+        %24 = linalg.matmul ins(%21, %22 : tensor<2x4xf32>, tensor<4x3xf32>) outs(%23 : tensor<2x3xf32>) -> tensor<2x3xf32>
+        %25 = subtensor %24[0, 0] [%7, %14] [1, 1] : tensor<2x3xf32> to tensor<?x?xf32>
+        %26 = subtensor_insert %25 into %arg8[%arg3, %arg5] [%17, %19] [%c1, %c1] : tensor<?x?xf32> into tensor<?x?xf32>
+        scf.yield %26 : tensor<?x?xf32>
       }
       scf.yield %5 : tensor<?x?xf32>
     }
