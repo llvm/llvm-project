@@ -509,7 +509,7 @@ static void cloneLoopBlocks(
     SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
     ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
-    LoopInfo *LI) {
+    LoopInfo *LI, ArrayRef<MDNode *> LoopLocalNoAliasDeclScopes) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *PreHeader = L->getLoopPreheader();
@@ -543,6 +543,15 @@ static void cloneLoopBlocks(
         DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
       }
     }
+  }
+
+  {
+    // Identify what other metadata depends on the cloned version. After
+    // cloning, replace the metadata with the corrected version for both
+    // memory instructions and noalias intrinsics.
+    std::string Ext = (Twine("Peel") + Twine(IterNumber)).str();
+    cloneAndAdaptNoAliasScopes(LoopLocalNoAliasDeclScopes, NewBlocks,
+                               Header->getContext(), Ext);
   }
 
   // Recursively create the new Loop objects for nested loops, if any,
@@ -769,13 +778,19 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   uint64_t ExitWeight = 0, FallThroughWeight = 0;
   initBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
 
+  // Identify what noalias metadata is inside the loop: if it is inside the
+  // loop, the associated metadata must be cloned for each iteration.
+  SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
+  identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
+
   // For each peeled-off iteration, make a copy of the loop.
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     ValueToValueMapTy VMap;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, DT, LI);
+                    LoopBlocks, VMap, LVMap, DT, LI,
+                    LoopLocalNoAliasDeclScopes);
 
     // Remap to use values from the current iteration instead of the
     // previous one.
