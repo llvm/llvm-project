@@ -185,13 +185,20 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
   // We can't insert directly before a phi node or an eh pad. Insert before
   // the terminator of the incoming or dominating block.
   assert(Entry != Inst->getParent() && "PHI or landing pad in entry block!");
-  if (Idx != ~0U && isa<PHINode>(Inst))
-    return cast<PHINode>(Inst)->getIncomingBlock(Idx)->getTerminator();
+  BasicBlock *InsertionBlock = nullptr;
+  if (Idx != ~0U && isa<PHINode>(Inst)) {
+    InsertionBlock = cast<PHINode>(Inst)->getIncomingBlock(Idx);
+    if (!InsertionBlock->isEHPad()) {
+      return InsertionBlock->getTerminator();
+    }
+  } else {
+    InsertionBlock = Inst->getParent();
+  }
 
   // This must be an EH pad. Iterate over immediate dominators until we find a
   // non-EH pad. We need to skip over catchswitch blocks, which are both EH pads
   // and terminators.
-  auto IDom = DT->getNode(Inst->getParent())->getIDom();
+  auto *IDom = DT->getNode(InsertionBlock)->getIDom();
   while (IDom->getBlock()->isEHPad()) {
     assert(Entry != IDom->getBlock() && "eh pad in entry block");
     IDom = IDom->getIDom();
