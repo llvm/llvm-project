@@ -167,3 +167,7 @@
 // CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870910]
 // CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x02,0x00,0x00,0xe0]
           vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870910]
+
+// CHECK: vextractps ecx, xmm2, 1
+// CHECK: encoding: [0xc4,0xe3,0x79,0x17,0xd1,0x01]
+          vextractps ecx, xmm2, 1
