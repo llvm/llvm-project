@@ -21,6 +21,8 @@ def riscv_rolw : SDNode<"RISCVISD::ROLW", SDTIntShiftOp>;
 def riscv_rorw : SDNode<"RISCVISD::RORW", SDTIntShiftOp>;
 def riscv_fslw : SDNode<"RISCVISD::FSLW", SDTIntShiftDOp>;
 def riscv_fsrw : SDNode<"RISCVISD::FSRW", SDTIntShiftDOp>;
+def riscv_fsl  : SDNode<"RISCVISD::FSL",  SDTIntShiftDOp>;
+def riscv_fsr  : SDNode<"RISCVISD::FSR",  SDTIntShiftDOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -776,31 +778,17 @@ def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
 // instruction use different orders. fshl will return its first operand for
 // shift of zero, fshr will return its second operand. fsl and fsr both return
 // $rs1 so the patterns need to have different operand orders.
-//
-// fshl and fshr only read the lower log2(xlen) bits of the shift amount, but
-// fsl/fsr instructions read log2(xlen)+1 bits. DAG combine may have removed
-// an AND mask on the shift amount that we need to add back to avoid a one in
-// the extra bit.
-// FIXME: If we can prove that the extra bit in the shift amount is zero, we
-// don't need this mask.
-let Predicates = [HasStdExtZbt, IsRV32] in {
-def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
-          (FSR GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
-}
-let Predicates = [HasStdExtZbt, IsRV64] in {
-def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
-          (FSR GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
-}
 let Predicates = [HasStdExtZbt] in {
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
+          (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, GPR:$rs2),
+          (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+
+def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
 // We can use FSRI for fshl by immediate if we subtract the immediate from
 // XLen and swap the operands.
-def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
