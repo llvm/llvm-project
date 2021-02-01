@@ -489,7 +489,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
     // dialect may be loaded after identifier prefixed with this dialect name
     // were already created.
     for (auto &identifierEntry : impl.identifiers)
-      if (identifierEntry.first().startswith(dialectNamespace))
+      if (!identifierEntry.second &&
+          identifierEntry.first().startswith(dialectNamespace))
         identifierEntry.second = dialect.get();
 
     return dialect.get();
@@ -718,15 +719,22 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
   assert(str.find('\0') == StringRef::npos &&
          "Cannot create an identifier with a nul character");
 
-  PointerUnion<Dialect *, MLIRContext *> dialectOrContext = context;
-  auto dialectNamePair = str.split('.');
-  if (!dialectNamePair.first.empty())
-    if (Dialect *dialect = context->getLoadedDialect(dialectNamePair.first))
-      dialectOrContext = dialect;
+  auto getDialectOrContext = [&]() {
+    PointerUnion<Dialect *, MLIRContext *> dialectOrContext = context;
+    auto dialectNamePair = str.split('.');
+    if (!dialectNamePair.first.empty())
+      if (Dialect *dialect = context->getLoadedDialect(dialectNamePair.first))
+        dialectOrContext = dialect;
+    return dialectOrContext;
+  };
 
   auto &impl = context->getImpl();
-  if (!context->isMultithreadingEnabled())
-    return Identifier(&*impl.identifiers.insert({str, dialectOrContext}).first);
+  if (!context->isMultithreadingEnabled()) {
+    auto insertedIt = impl.identifiers.insert({str, nullptr});
+    if (insertedIt.second)
+      insertedIt.first->second = getDialectOrContext();
+    return Identifier(&*insertedIt.first);
+  }
 
   // Check for an existing instance in the local cache.
   auto *&localEntry = (*impl.localIdentifierCache)[str];
@@ -745,7 +753,7 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
-  auto it = impl.identifiers.insert({str, dialectOrContext}).first;
+  auto it = impl.identifiers.insert({str, getDialectOrContext()}).first;
   localEntry = &*it;
   return Identifier(localEntry);
 }
