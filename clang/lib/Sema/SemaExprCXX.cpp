@@ -1176,15 +1176,11 @@ QualType Sema::getCurrentThisType() {
   }
 
   if (ThisTy.isNull() && isLambdaCallOperator(CurContext) &&
-      inTemplateInstantiation()) {
-
-    assert(isa<CXXRecordDecl>(DC) &&
-           "Trying to get 'this' type from static method?");
+      inTemplateInstantiation() && isa<CXXRecordDecl>(DC)) {
 
     // This is a lambda call operator that is being instantiated as a default
     // initializer. DC must point to the enclosing class type, so we can recover
     // the 'this' type from it.
-
     QualType ClassTy = Context.getTypeDeclType(cast<CXXRecordDecl>(DC));
     // There are no cv-qualifiers for 'this' within default initializers,
     // per [expr.prim.general]p4.
