@@ -1007,7 +1007,7 @@ IEEEFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
    on to the full-precision result of the multiplication.  Returns the
    lost fraction.  */
 lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
-                                            const IEEEFloat &addend) {
+                                            IEEEFloat addend) {
   unsigned int omsb;        // One, not zero, based MSB.
   unsigned int partsCount, newPartsCount, precision;
   integerPart *lhsSignificand;
