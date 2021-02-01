@@ -489,3 +489,27 @@ class TargetAPITestCase(TestBase):
         target3 = self.dbg.CreateTargetWithFileAndTargetTriple(exe, target.GetTriple())
         self.assertTrue(target3.IsValid())
 
+
+    @add_test_categories(['pyapi'])
+    def test_is_loaded(self):
+        """Exercise SBTarget.IsLoaded(SBModule&) API."""
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target('b.out')
+
+        self.assertFalse(target.IsLoaded(lldb.SBModule()))
+
+        num_modules = target.GetNumModules()
+        for i in range(num_modules):
+            module = target.GetModuleAtIndex(i)
+            self.assertFalse(target.IsLoaded(module), "Target that isn't "
+                             "running shouldn't have any module loaded.")
+
+        process = target.LaunchSimple(None, None,
+                                      self.get_process_working_directory())
+
+        for i in range(num_modules):
+            module = target.GetModuleAtIndex(i)
+            self.assertTrue(target.IsLoaded(module), "Running the target should "
+                            "have loaded its modules.")
