@@ -12,9 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include "AMDGPU.h"
 =======
 #include "AMDGPULegalizerInfo.h"
+=======
+>>>>>>> Added and used new target pseudo for v_cvt_pk_i16_i32, changes due to code review.
 #include "AMDGPUTargetMachine.h"
 >>>>>>> Move Combiner to PreLegalize step
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
@@ -69,8 +72,6 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
   const LLT DstType = MRI.getType(MI.getOperand(0).getReg());
   if (DstType != LLT::scalar(16))
     return false;
-
-  LLVM_DEBUG(dbgs() << "Matching Clamp i64 to i16\n");
 
   Register Base;
 
@@ -128,38 +129,33 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
   MRI.setRegClass(Hi32, &AMDGPU::VGPR_32RegClass);
   MRI.setRegClass(Lo32, &AMDGPU::VGPR_32RegClass);
 
-  constexpr unsigned int CvtOpcode = AMDGPU::V_CVT_PK_I16_I32_e64;
-  assert(MI.getOpcode() != CvtOpcode);
+  assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
 
-  const auto REG_CLASS = &AMDGPU::VGPR_32RegClass;
+  Register CvtDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  const LLT V2S16 = LLT::vector(2, 16);
+  MRI.setType(CvtDst, V2S16);
 
-  Register CvtDst = MRI.createVirtualRegister(REG_CLASS);
-  MRI.setType(CvtDst, S32);
-
-  auto CvtPk = B.buildInstr(CvtOpcode);
-  CvtPk.addDef(CvtDst);
-  CvtPk.addReg(Hi32);
-  CvtPk.addReg(Lo32);
-  CvtPk.setMIFlags(MI.getFlags());
+  B.buildInstr(AMDGPU::G_AMDGPU_CVT_PK_I16_I32,
+    {CvtDst},
+    {Hi32, Lo32},
+    MI.getFlags());
 
   auto MinBoundary = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto MaxBoundary = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
 
   auto MinBoundaryDst = B.buildConstant(S32, MinBoundary);
-  MRI.setRegClass(MinBoundaryDst.getReg(0), REG_CLASS);
+  MRI.setRegClass(MinBoundaryDst.getReg(0), &AMDGPU::VGPR_32RegClass);
 
   auto MaxBoundaryDst = B.buildConstant(S32, MaxBoundary);
-  MRI.setRegClass(MaxBoundaryDst.getReg(0), REG_CLASS);
+  MRI.setRegClass(MaxBoundaryDst.getReg(0), &AMDGPU::VGPR_32RegClass);
 
-  Register MedDst = MRI.createVirtualRegister(REG_CLASS);
+  Register MedDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   MRI.setType(MedDst, S32);
 
-  auto Med = B.buildInstr(AMDGPU::V_MED3_I32);
-  Med.addDef(MedDst);
-  Med.addReg(MinBoundaryDst.getReg(0));
-  Med.addReg(CvtDst);
-  Med.addReg(MaxBoundaryDst.getReg(0));
-  Med.setMIFlags(MI.getFlags());
+  B.buildInstr(AMDGPU::V_MED3_I32,
+    {MedDst},
+    {MinBoundaryDst.getReg(0), CvtDst, MaxBoundaryDst.getReg(0)},
+    MI.getFlags());
   
   Register TruncDst = MRI.createGenericVirtualRegister(LLT::scalar(16));
   B.buildTrunc(TruncDst, MedDst);
@@ -197,10 +193,9 @@ public:
   AMDGPUGenPreLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
   AMDGPUPreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                  const AMDGPULegalizerInfo *LI,
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
+                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
     if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
@@ -282,16 +277,12 @@ bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
-      
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const AMDGPULegalizerInfo *LI =
-      static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AMDGPUPreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                        F.hasMinSize(), LI, KB, MDT);
+                                        F.hasMinSize(), KB, MDT);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
 }
