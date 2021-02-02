@@ -35,12 +35,28 @@ Breaking changes
 COFF Improvements
 -----------------
 
-* ...
+* Error out clearly if creating a DLL with too many exported symbols.
+  (`D86701 <https://reviews.llvm.org/D86701>`_)
 
 MinGW Improvements
 ------------------
 
-* ...
+* Enabled dynamicbase by default. (`D86654 <https://reviews.llvm.org/D86654>`_)
+
+* Tolerate mismatches between COMDAT section sizes with different amount of
+  padding (produced by binutils) by inspecting the aux section definition.
+  (`D86659 <https://reviews.llvm.org/D86659>`_)
+
+* Support setting the subsystem version via the subsystem argument.
+  (`D88804 <https://reviews.llvm.org/D88804>`_)
+
+* Implemented the GNU -wrap option.
+  (`D89004 <https://reviews.llvm.org/D89004>`_,
+  `D91689 <https://reviews.llvm.org/D91689>`_)
+
+* Handle the ``--demangle`` and ``--no-demangle`` options.
+  (`D93950 <https://reviews.llvm.org/D93950>`_)
+
 
 MachO Improvements
 ------------------

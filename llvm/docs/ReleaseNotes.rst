@@ -92,6 +92,25 @@ Changes to TableGen
   uses the "`...`" range punctuation (e.g., ``{0...9}``). The hyphen syntax
   is deprecated.
 
+Changes to the AArch64 Backend
+--------------------------
+
+During this release ...
+
+* Lots of improvements to generation of Windows unwind data; the unwind
+  data is optimized and written in packed form where possible, reducing
+  the size of unwind data (pdata and xdata sections) by around 60%
+  compared with LLVM 11. The generation of prologs/epilogs is tweaked
+  when targeting Windows, to increase the chances of being able to use
+  the packed unwind info format.
+
+* Support for creating Windows unwind data using ``.seh_*`` assembler
+  directives.
+
+* Produce proper assembly output for the Windows target, including
+  ``:lo12:`` relocation specifiers, to allow the assembly output
+  to actually be assembled.
+
 Changes to the ARM Backend
 --------------------------
 

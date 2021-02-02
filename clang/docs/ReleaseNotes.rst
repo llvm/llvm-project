@@ -150,6 +150,9 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- Implicitly add ``.exe`` suffix for MinGW targets, even when cross compiling.
+  (This matches a change from GCC 8.)
+
 C Language Changes in Clang
 ---------------------------
 
