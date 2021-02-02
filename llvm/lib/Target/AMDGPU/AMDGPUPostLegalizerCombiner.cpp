@@ -371,7 +371,7 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 AMDGPUPostLegalizerCombiner::AMDGPUPostLegalizerCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+  : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeAMDGPUPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }
 
