@@ -1,3 +1,41 @@
+add_subdirectory(generic)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_MACHINE})
+  add_subdirectory(${LIBC_TARGET_MACHINE})
+endif()
+
+function(add_math_entrypoint_object name)
+  # We prefer machine specific implementation if available. Hence we check
+  # that first and retrun early if we are able to add an alias target for the
+  # machine specific implementation.
+  get_fq_target_name("${LIBC_TARGET_MACHINE}.${name}" fq_machine_specific_target_name)
+  if(TARGET ${fq_machine_specific_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_MACHINE}.${name}
+    )
+    return()
+  endif()
+
+  get_fq_target_name("generic.${name}" fq_generic_target_name)
+  if(TARGET ${fq_generic_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .generic.${name}
+    )
+    return()
+  endif()
+
+  message(FATAL_ERROR "No machine specific or generic implementation found for ${name}.")
+endfunction()
+
+add_math_entrypoint_object(ceil)
+add_math_entrypoint_object(ceilf)
+add_math_entrypoint_object(ceill)
+
 add_object_library(
   math_utils
   SRCS
@@ -122,42 +160,6 @@ add_entrypoint_object(
     truncl.cpp
   HDRS
     truncl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  ceil
-  SRCS
-    ceil.cpp
-  HDRS
-    ceil.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  ceilf
-  SRCS
-    ceilf.cpp
-  HDRS
-    ceilf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  ceill
-  SRCS
-    ceill.cpp
-  HDRS
-    ceill.h
   DEPENDS
     libc.utils.FPUtil.fputil
   COMPILE_OPTIONS
