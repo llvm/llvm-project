@@ -55,7 +55,7 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_sext(<2 x i32> %x) {
 ; CHECK-LABEL: add_v2i32_v2i64_sext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.32 q1[0], r0
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    asrs r1, r0, #31
 ; CHECK-NEXT:    vmov.32 q1[1], r1
@@ -889,7 +889,7 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_acc_sext(<2 x i32> %x, i64 %a) {
 ; CHECK-LABEL: add_v2i32_v2i64_acc_sext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov.32 q1[0], r2
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    asrs r2, r2, #31
 ; CHECK-NEXT:    vmov.32 q1[1], r2
