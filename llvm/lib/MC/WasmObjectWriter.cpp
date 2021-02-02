@@ -488,10 +488,14 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
-    if (SecA.getKind().isText())
-      SectionSymbol = SectionFunctions.find(&SecA)->second;
-    else
+    if (SecA.getKind().isText()) {
+      auto SecSymIt = SectionFunctions.find(&SecA);
+      if (SecSymIt == SectionFunctions.end())
+        report_fatal_error("section doesn\'t have defining symbol");
+      SectionSymbol = SecSymIt->second;
+    } else {
       SectionSymbol = SecA.getBeginSymbol();
+    }
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
@@ -1458,8 +1462,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         continue;
 
       const auto &WS = static_cast<const MCSymbolWasm &>(S);
-      LLVM_DEBUG(
-          dbgs() << "MCSymbol: " << toString(WS.getType()) << " '" << S << "'"
+      LLVM_DEBUG(dbgs()
+                 << "MCSymbol: "
+                 << toString(WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA))
+                 << " '" << S << "'"
                  << " isDefined=" << S.isDefined() << " isExternal="
                  << S.isExternal() << " isTemporary=" << S.isTemporary()
                  << " isWeak=" << WS.isWeak() << " isHidden=" << WS.isHidden()
@@ -1699,7 +1705,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();
-    Info.Kind = WS.getType();
+    Info.Kind = WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA);
     Info.Flags = Flags;
     if (!WS.isData()) {
       assert(WasmIndices.count(&WS) > 0);
