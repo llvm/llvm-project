@@ -35,6 +35,10 @@ void dfsan_add_label(dfsan_label label, void *addr, uptr size);
 void dfsan_set_label(dfsan_label label, void *addr, uptr size);
 dfsan_label dfsan_read_label(const void *addr, uptr size);
 dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
+// Zero out [offset, offset+size) from __dfsan_arg_tls.
+void dfsan_clear_arg_tls(uptr offset, uptr size);
+// Zero out the TLS storage.
+void dfsan_clear_thread_local_state();
 }  // extern "C"
 
 template <typename T>
