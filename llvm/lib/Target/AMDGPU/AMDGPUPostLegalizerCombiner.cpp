@@ -197,11 +197,11 @@ void AMDGPUPostLegalizerCombinerHelper::applyUCharToFloat(MachineInstr &MI) {
     SrcReg = B.buildAnyExtOrTrunc(S32, SrcReg).getReg(0);
 
   if (Ty == S32) {
-    B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg}, {SrcReg},
-                 MI.getFlags());
+    B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg},
+                   {SrcReg}, MI.getFlags());
   } else {
-    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32}, {SrcReg},
-                             MI.getFlags());
+    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32},
+                             {SrcReg}, MI.getFlags());
     B.buildFPTrunc(DstReg, Cvt0, MI.getFlags());
   }
 
@@ -253,7 +253,6 @@ void AMDGPUPostLegalizerCombinerHelper::applyCvtF32UByteN(
   B.buildInstr(NewOpc, {MI.getOperand(0)}, {CvtSrc}, MI.getFlags());
   MI.eraseFromParent();
 }
-
 
 class AMDGPUPostLegalizerCombinerHelperState {
 protected:
