@@ -11,22 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
-=======
-#include "AMDGPULegalizerInfo.h"
-#include "AMDGPUTargetMachine.h"
->>>>>>> clang-format
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-=======
-#include "AMDGPUTargetMachine.h"
-#include "AMDGPULegalizerInfo.h"
-
-
->>>>>>> Updating formatting changes.
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -34,15 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-<<<<<<< HEAD
 #include "llvm/Target/TargetMachine.h"
-=======
-#include "llvm/Support/Debug.h"
-<<<<<<< HEAD
->>>>>>> clang-format
-=======
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
->>>>>>> Updating formatting changes.
 
 #define DEBUG_TYPE "amdgpu-postlegalizer-combiner"
 
