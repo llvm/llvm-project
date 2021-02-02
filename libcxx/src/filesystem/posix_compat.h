@@ -311,6 +311,7 @@ int statvfs(const wchar_t *p, StatVFS *buf) {
   return 0;
 }
 
+wchar_t *getcwd(wchar_t *buff, size_t size) { return _wgetcwd(buff, size); }
 #else
 int symlink_file(const char *oldname, const char *newname) {
   return ::symlink(oldname, newname);
@@ -322,6 +323,7 @@ using ::chdir;
 using ::close;
 using ::fstat;
 using ::ftruncate;
+using ::getcwd;
 using ::link;
 using ::lstat;
 using ::mkdir;
