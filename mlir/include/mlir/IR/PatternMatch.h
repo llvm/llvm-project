@@ -480,9 +480,10 @@ public:
   /// Replaces the result op with a new op that is created without verification.
   /// The result values of the two ops must be the same types.
   template <typename OpTy, typename... Args>
-  void replaceOpWithNewOp(Operation *op, Args &&... args) {
+  OpTy replaceOpWithNewOp(Operation *op, Args &&... args) {
     auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
     replaceOpWithResultsOfAnotherOp(op, newOp.getOperation());
+    return newOp;
   }
 
   /// This method erases an operation that is known to have no uses.
