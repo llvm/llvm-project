@@ -110,9 +110,9 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-LABEL: func_local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    s_add_u32 s4, s32, 0x7ffc0
 ; MUBUF-NEXT:    s_mov_b32 s5, s33
-; MUBUF-NEXT:    s_and_b32 s33, s4, 0xfff80000
+; MUBUF-NEXT:    s_add_u32 s33, s32, 0x7ffc0
+; MUBUF-NEXT:    s_and_b32 s33, s33, 0xfff80000
 ; MUBUF-NEXT:    v_lshrrev_b32_e64 v3, 6, s33
 ; MUBUF-NEXT:    v_add_u32_e32 v3, 0x1000, v3
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0
@@ -152,9 +152,9 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; FLATSCR-LABEL: func_local_stack_offset_uses_sp:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    s_add_u32 s0, s32, 0x1fff
 ; FLATSCR-NEXT:    s_mov_b32 s2, s33
-; FLATSCR-NEXT:    s_and_b32 s33, s0, 0xffffe000
+; FLATSCR-NEXT:    s_add_u32 s33, s32, 0x1fff
+; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    s_add_u32 s32, s32, 0x6000

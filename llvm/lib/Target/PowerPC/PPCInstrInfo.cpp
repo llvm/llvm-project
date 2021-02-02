@@ -1096,6 +1096,8 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
     break;
   case PPC::LI:
   case PPC::LI8:
+  case PPC::PLI:
+  case PPC::PLI8:
   case PPC::LIS:
   case PPC::LIS8:
   case PPC::ADDIStocHA:

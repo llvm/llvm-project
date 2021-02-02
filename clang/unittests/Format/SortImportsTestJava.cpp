@@ -32,7 +32,7 @@ public:
   SortImportsTestJava() {
     FmtStyle = getGoogleStyle(FormatStyle::LK_Java);
     FmtStyle.JavaImportGroups = {"com.test", "org", "com"};
-    FmtStyle.SortIncludes = true;
+    FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
   }
 };
 

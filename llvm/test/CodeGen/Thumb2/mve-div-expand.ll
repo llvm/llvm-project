@@ -806,38 +806,26 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @fdiv_f16(<8 x half> %in1, <8 x half> %in2) {
 ; CHECK-LABEL: fdiv_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdiv.f16 s8, s0, s4
-; CHECK-NEXT:    vmovx.f16 s10, s0
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vdiv.f16 s8, s10, s8
-; CHECK-NEXT:    vdiv.f16 s12, s1, s5
-; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov.16 q2[0], r0
-; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s10, s0
+; CHECK-NEXT:    vdiv.f16 s12, s10, s8
+; CHECK-NEXT:    vdiv.f16 s8, s0, s4
+; CHECK-NEXT:    vins.f16 s8, s12
 ; CHECK-NEXT:    vmovx.f16 s12, s5
 ; CHECK-NEXT:    vmovx.f16 s14, s1
-; CHECK-NEXT:    vmov.16 q2[1], r1
+; CHECK-NEXT:    vdiv.f16 s9, s1, s5
 ; CHECK-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-NEXT:    vmov.16 q2[2], r0
-; CHECK-NEXT:    vmov r0, s12
-; CHECK-NEXT:    vdiv.f16 s12, s2, s6
-; CHECK-NEXT:    vmov.16 q2[3], r0
-; CHECK-NEXT:    vmov r0, s12
-; CHECK-NEXT:    vmovx.f16 s12, s6
 ; CHECK-NEXT:    vmovx.f16 s14, s2
+; CHECK-NEXT:    vins.f16 s9, s12
+; CHECK-NEXT:    vmovx.f16 s12, s6
 ; CHECK-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-NEXT:    vmov.16 q2[4], r0
-; CHECK-NEXT:    vmov r0, s12
-; CHECK-NEXT:    vdiv.f16 s12, s3, s7
-; CHECK-NEXT:    vmovx.f16 s4, s7
-; CHECK-NEXT:    vmovx.f16 s0, s3
-; CHECK-NEXT:    vmov.16 q2[5], r0
-; CHECK-NEXT:    vmov r0, s12
-; CHECK-NEXT:    vdiv.f16 s0, s0, s4
-; CHECK-NEXT:    vmov.16 q2[6], r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.16 q2[7], r0
+; CHECK-NEXT:    vdiv.f16 s10, s2, s6
+; CHECK-NEXT:    vins.f16 s10, s12
+; CHECK-NEXT:    vmovx.f16 s12, s7
+; CHECK-NEXT:    vmovx.f16 s14, s3
+; CHECK-NEXT:    vdiv.f16 s11, s3, s7
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vins.f16 s11, s12
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:

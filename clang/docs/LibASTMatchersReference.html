@@ -591,6 +591,15 @@ accessSpecDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('bindingDecl0')"><a name="bindingDecl0Anchor">bindingDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BindingDecl.html">BindingDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="bindingDecl0"><pre>Matches binding declarations
+Example matches foo and bar
+(matcher = bindingDecl()
+
+  auto [foo, bar] = std::make_pair{42, 42};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('blockDecl0')"><a name="blockDecl0Anchor">blockDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="blockDecl0"><pre>Matches block declarations.
 
@@ -6011,6 +6020,24 @@ Example matches b (matcher = binaryOperator(hasRHS()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BindingDecl.html">BindingDecl</a>&gt;</td><td class="name" onclick="toggle('forDecomposition0')"><a name="forDecomposition0Anchor">forDecomposition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forDecomposition0"><pre>Matches the DecompositionDecl the binding belongs to.
+
+For example, in:
+void foo()
+{
+    int arr[3];
+    auto &amp;[f, s, t] = arr;
+
+    f = 42;
+}
+The matcher:
+  bindingDecl(hasName("f"),
+                forDecomposition(decompositionDecl())
+matches 'f' in 'auto &amp;[f, s, t]'.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter2')"><a name="hasAnyParameter2Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyParameter2"><pre>Matches any parameter of a function or an ObjC method declaration or a
 block.
@@ -7087,6 +7114,40 @@ decltypeType(hasUnderlyingType(isInteger()))
   matches the type of "a"
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyBinding0')"><a name="hasAnyBinding0Anchor">hasAnyBinding</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BindingDecl.html">BindingDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyBinding0"><pre>Matches any binding of a DecompositionDecl.
+
+For example, in:
+void foo()
+{
+    int arr[3];
+    auto &amp;[f, s, t] = arr;
+
+    f = 42;
+}
+The matcher:
+  decompositionDecl(hasAnyBinding(bindingDecl(hasName("f").bind("fBinding"))))
+matches the decomposition decl with 'f' bound to "fBinding".
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBinding0')"><a name="hasBinding0Anchor">hasBinding</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BindingDecl.html">BindingDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasBinding0"><pre>Matches the Nth binding of a DecompositionDecl.
+
+For example, in:
+void foo()
+{
+    int arr[3];
+    auto &amp;[f, s, t] = arr;
+
+    f = 42;
+}
+The matcher:
+  decompositionDecl(hasBinding(0, bindingDecl(hasName("f").bind("fBinding"))))
+matches the decomposition decl with 'f' bound to "fBinding".
 </pre></td></tr>
 
 

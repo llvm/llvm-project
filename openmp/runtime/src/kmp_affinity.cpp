@@ -109,8 +109,8 @@ static int __kmp_affinity_remove_radix_one_levels(AddrUnsPair *addrP, int nTh,
     }
     bool radix1 = true;
     bool all_same = true;
-    int id1 = addrP[0].first.labels[top_index1];
-    int id2 = addrP[0].first.labels[top_index2];
+    unsigned id1 = addrP[0].first.labels[top_index1];
+    unsigned id2 = addrP[0].first.labels[top_index2];
     int pref1 = preference[type1];
     int pref2 = preference[type2];
     for (int hwidx = 1; hwidx < nTh; ++hwidx) {
