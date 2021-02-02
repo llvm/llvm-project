@@ -309,8 +309,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
           // TODO: This is a hack to work-around the fact that FMF may not be
           //       assigned/propagated correctly. If that problem is fixed or we
           //       standardize on fmin/fmax via intrinsics, this can be removed.
-          assert(isa<FCmpInst>(Sel->getCondition()) && "Expected fcmp min/max");
-          CurFMF |= cast<FCmpInst>(Sel->getCondition())->getFastMathFlags();
+          if (auto *FCmp = dyn_cast<FCmpInst>(Sel->getCondition()))
+            CurFMF |= FCmp->getFastMathFlags();
         }
         FMF &= CurFMF;
       }
