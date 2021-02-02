@@ -233,8 +233,8 @@ func @remove_zero_iteration_loop_vals(%arg0: index) {
   return
 }
 
-// CHECK-LABEL: @replace_single_iteration_loop
-func @replace_single_iteration_loop() {
+// CHECK-LABEL: @replace_single_iteration_loop_1
+func @replace_single_iteration_loop_1() {
   // CHECK: %[[LB:.*]] = constant 42
   %c42 = constant 42 : index
   %c43 = constant 43 : index
@@ -251,6 +251,26 @@ func @replace_single_iteration_loop() {
   "test.consume"(%0) : (i32) -> ()
   return
 }
+
+// CHECK-LABEL: @replace_single_iteration_loop_2
+func @replace_single_iteration_loop_2() {
+  // CHECK: %[[LB:.*]] = constant 5
+	%c5 = constant 5 : index
+	%c6 = constant 6 : index
+	%c11 = constant 11 : index
+  // CHECK: %[[INIT:.*]] = "test.init"
+  %init = "test.init"() : () -> i32
+  // CHECK-NOT: scf.for
+  // CHECK: %[[VAL:.*]] = "test.op"(%[[LB]], %[[INIT]])
+  %0 = scf.for %i = %c5 to %c11 step %c6 iter_args(%arg = %init) -> (i32) {
+    %1 = "test.op"(%i, %arg) : (index, i32) -> i32
+    scf.yield %1 : i32
+  }
+  // CHECK: "test.consume"(%[[VAL]])
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
 
 // CHECK-LABEL: @replace_single_iteration_loop_non_unit_step
 func @replace_single_iteration_loop_non_unit_step() {
