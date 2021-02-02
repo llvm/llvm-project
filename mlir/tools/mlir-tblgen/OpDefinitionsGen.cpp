@@ -898,8 +898,9 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
 
     if (operand.isOptional()) {
       m = opClass.addMethodAndPrune("::mlir::Value", operand.name);
-      m->body() << "  auto operands = getODSOperands(" << i << ");\n"
-                << "  return operands.empty() ? Value() : *operands.begin();";
+      m->body()
+          << "  auto operands = getODSOperands(" << i << ");\n"
+          << "  return operands.empty() ? ::mlir::Value() : *operands.begin();";
     } else if (operand.isVariadic()) {
       m = opClass.addMethodAndPrune(rangeType, operand.name);
       m->body() << "  return getODSOperands(" << i << ");";
