@@ -921,14 +921,20 @@ void ScopedAliasMetadataDeepCloner::remap(ValueToValueMapTy &VMap) {
     if (!I)
       continue;
 
+    // Only update scopes when we find them in the map. If they are not, it is
+    // because we already handled that instruction before. This is faster than
+    // tracking which instructions we already updated.
     if (MDNode *M = I->getMetadata(LLVMContext::MD_alias_scope))
-      I->setMetadata(LLVMContext::MD_alias_scope, MDMap[M]);
+      if (MDNode *MNew = MDMap.lookup(M))
+        I->setMetadata(LLVMContext::MD_alias_scope, MNew);
 
     if (MDNode *M = I->getMetadata(LLVMContext::MD_noalias))
-      I->setMetadata(LLVMContext::MD_noalias, MDMap[M]);
+      if (MDNode *MNew = MDMap.lookup(M))
+        I->setMetadata(LLVMContext::MD_noalias, MNew);
 
     if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I))
-      Decl->setScopeList(MDMap[Decl->getScopeList()]);
+      if (MDNode *MNew = MDMap.lookup(Decl->getScopeList()))
+        Decl->setScopeList(MNew);
   }
 }
 
