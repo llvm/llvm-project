@@ -78,7 +78,7 @@ static cl::opt<bool> AllowEmptyInput(
              "checks that some error message does not occur, for example."));
 
 static cl::opt<bool> AllowUnusedPrefixes(
-    "allow-unused-prefixes", cl::init(true),
+    "allow-unused-prefixes", cl::init(true), cl::ZeroOrMore,
     cl::desc("Allow prefixes to be specified but not appear in the test."));
 
 static cl::opt<bool> MatchFullLines(
