@@ -468,6 +468,14 @@ m_GInsertVecElt(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
                          TargetOpcode::G_INSERT_VECTOR_ELT>(Src0, Src1, Src2);
 }
 
+template <typename Src0Ty, typename Src1Ty, typename Src2Ty>
+inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
+                       TargetOpcode::G_SELECT>
+m_GISelect(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
+  return TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
+                         TargetOpcode::G_SELECT>(Src0, Src1, Src2);
+}
+
 /// Matches a register negated by a G_SUB.
 /// G_SUB 0, %negated_reg
 template <typename SrcTy>
@@ -482,6 +490,50 @@ template <typename SrcTy>
 inline BinaryOp_match<SrcTy, SpecificConstantMatch, TargetOpcode::G_XOR, true>
 m_Not(const SrcTy &&Src) {
   return m_GXor(Src, m_AllOnesInt());
+}
+
+// class that allows to match one of the following patterns:
+//    select (pred, x, value1) -> cmp slt -> select (pred, origin, value2) ->
+//    cmp sgt OR select (pred, x, value1) -> cmp sgt -> select (pred, origin,
+//    value2) -> cmp slt
+// also binds the boundary values and the origin.
+template <typename Boundary1,
+          typename Boundary2, typename Origin>
+struct MaxMin_match_helper {
+  Boundary1 B1;
+  Boundary2 B2;
+  Origin O;
+
+  MaxMin_match_helper(const Boundary1 &FirstBoundary,
+                      const Boundary2 &SecondBoundary, const Origin &Or)
+      : B1(FirstBoundary), B2(SecondBoundary), O(Or) {}
+
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    CmpInst::Predicate Predicate1;
+    Register Base;
+
+    if (mi_match(Op, MRI,
+                 m_GISelect(m_GICmp(m_Pred(Predicate1), m_Reg(), m_Reg()),
+                            m_Reg(Base), B1))) {
+      CmpInst::Predicate Predicate2;
+
+      if (mi_match(Base, MRI, m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), O, B2))) {
+        if ((Predicate1 == CmpInst::ICMP_SLT && Predicate2 == CmpInst::ICMP_SGT) ||
+            (Predicate1 == CmpInst::ICMP_SGT && Predicate2 == CmpInst::ICMP_SLT)) {
+            return true;
+        }
+      }
+    }
+
+    return false;
+  }
+};
+
+template <typename Boundary1, typename Boundary2, typename Origin>
+inline MaxMin_match_helper<Boundary1, Boundary2, Origin>
+m_MaxMin(const Boundary1 &B1, const Boundary2 &B2, const Origin &O) {
+  return MaxMin_match_helper<Boundary1, Boundary2, Origin>(B1, B2, O);
 }
 
 } // namespace GMIPatternMatch
