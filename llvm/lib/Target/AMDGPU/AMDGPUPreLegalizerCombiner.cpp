@@ -124,47 +124,29 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
   B.setInstrAndDebugLoc(MI);
 
   auto Unmerge = B.buildUnmerge(S32, Src);
-  Register Hi32 = Unmerge.getReg(0);
-  Register Lo32 = Unmerge.getReg(1);
-  MRI.setRegClass(Hi32, &AMDGPU::VGPR_32RegClass);
-  MRI.setRegClass(Lo32, &AMDGPU::VGPR_32RegClass);
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
 
-  Register CvtDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   const LLT V2S16 = LLT::vector(2, 16);
-  MRI.setType(CvtDst, V2S16);
-
-  B.buildInstr(AMDGPU::G_AMDGPU_CVT_PK_I16_I32,
-    {CvtDst},
-    {Hi32, Lo32},
+  auto CvtPk = B.buildInstr(AMDGPU::G_AMDGPU_CVT_PK_I16_I32,
+    {V2S16},
+    {Unmerge.getReg(0), Unmerge.getReg(1)},
     MI.getFlags());
 
   auto MinBoundary = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto MaxBoundary = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
-
   auto MinBoundaryDst = B.buildConstant(S32, MinBoundary);
-  MRI.setRegClass(MinBoundaryDst.getReg(0), &AMDGPU::VGPR_32RegClass);
-
   auto MaxBoundaryDst = B.buildConstant(S32, MaxBoundary);
-  MRI.setRegClass(MaxBoundaryDst.getReg(0), &AMDGPU::VGPR_32RegClass);
 
-  Register MedDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setType(MedDst, S32);
+  auto Bitcast = B.buildBitcast({S32}, CvtPk);
 
-  Register CvtDst32 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  MRI.setType(CvtDst32, S32);
-
-  B.buildBitcast(CvtDst32, CvtDst);
-
-  B.buildInstr(AMDGPU::G_AMDGPU_MED3_S32,
-    {MedDst},
-    {MinBoundaryDst.getReg(0), CvtDst32, MaxBoundaryDst.getReg(0)},
+  auto Med3 = B.buildInstr(AMDGPU::G_AMDGPU_MED3_S32,
+    {S32},
+    {MinBoundaryDst.getReg(0), Bitcast.getReg(0), MaxBoundaryDst.getReg(0)},
     MI.getFlags());
   
-  Register TruncDst = MRI.createGenericVirtualRegister(LLT::scalar(16));
-  B.buildTrunc(TruncDst, MedDst);
-  B.buildCopy(MI.getOperand(0).getReg(), TruncDst);
+  auto Trunc = B.buildTrunc(LLT::scalar(16), Med3);
+  B.buildCopy(MI.getOperand(0).getReg(), Trunc);
 
   MI.eraseFromParent();
 }
