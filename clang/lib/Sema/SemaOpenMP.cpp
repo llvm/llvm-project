@@ -1884,8 +1884,7 @@ void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
 static bool isOpenMPDeviceDelayedContext(Sema &S) {
   assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
-  return !S.isInOpenMPTargetExecutionDirective() &&
-         !S.isInOpenMPDeclareTargetContext();
+  return !S.isInOpenMPTargetExecutionDirective();
 }
 
 namespace {
@@ -1911,6 +1910,13 @@ Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
       Kind = SemaDiagnosticBuilder::K_Immediate;
       break;
     case FunctionEmissionStatus::Unknown:
+      // TODO: We should always delay diagnostics here in case a target
+      //       region is in a function we do not emit. However, as the
+      //       current diagnostics are associated with the function containing
+      //       the target region and we do not emit that one, we would miss out
+      //       on diagnostics for the target region itself. We need to anchor
+      //       the diagnostics with the new generated function *or* ensure we
+      //       emit diagnostics associated with the surrounding function.
       Kind = isOpenMPDeviceDelayedContext(*this)
                  ? SemaDiagnosticBuilder::K_Deferred
                  : SemaDiagnosticBuilder::K_Immediate;
