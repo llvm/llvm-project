@@ -11,21 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #include "AMDGPU.h"
-<<<<<<< HEAD
-=======
-#include "AMDGPULegalizerInfo.h"
-=======
->>>>>>> Added and used new target pseudo for v_cvt_pk_i16_i32, changes due to code review.
-#include "AMDGPUTargetMachine.h"
->>>>>>> Move Combiner to PreLegalize step
-=======
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
->>>>>>> Added missing includes.
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
