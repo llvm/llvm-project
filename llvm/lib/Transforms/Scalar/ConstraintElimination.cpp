@@ -216,6 +216,7 @@ struct StackEntry {
 };
 } // namespace
 
+#ifndef NDEBUG
 static void dumpWithNames(ConstraintTy &C,
                           DenseMap<Value *, unsigned> &Value2Index) {
   SmallVector<std::string> Names(Value2Index.size(), "");
@@ -226,6 +227,7 @@ static void dumpWithNames(ConstraintTy &C,
   CS.addVariableRowFill(C.Coefficients);
   CS.dump(Names);
 }
+#endif
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
