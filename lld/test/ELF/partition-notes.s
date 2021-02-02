@@ -9,8 +9,8 @@
 // RUN: llvm-objcopy --extract-main-partition %t %t0
 // RUN: llvm-objcopy --extract-partition=part1 %t %t1
 
-// RUN: llvm-readobj --all %t0 | FileCheck --check-prefixes=CHECK,PART0 %s
-// RUN: llvm-readobj --all %t1 | FileCheck --check-prefixes=CHECK,PART1 %s
+// RUN: llvm-readobj --all %t0 | FileCheck %s
+// RUN: llvm-readobj --all %t1 | FileCheck %s
 
 // CHECK:        Type: PT_NOTE
 // CHECK-NEXT:   Offset: 0x{{0*}}[[NOTE_OFFSET:[^ ]*]]
