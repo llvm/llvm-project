@@ -275,6 +275,29 @@ updateValueInfoForIndirectCalls(const ModuleSummaryIndex &Index, ValueInfo VI) {
   return Index.getValueInfo(GUID);
 }
 
+static bool shouldImportGlobal(const ValueInfo &VI,
+                               const GVSummaryMapTy &DefinedGVSummaries) {
+  const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
+  if (GVS == DefinedGVSummaries.end())
+    return true;
+  // We should not skip import if the module contains a definition with
+  // interposable linkage type. This is required for correctness in
+  // the situation with two following conditions:
+  // * the def with interposable linkage is non-prevailing,
+  // * there is a prevailing def available for import and marked read-only.
+  // In this case, the non-prevailing def will be converted to a declaration,
+  // while the prevailing one becomes internal, thus no definitions will be
+  // available for linking. In order to prevent undefined symbol link error,
+  // the prevailing definition must be imported.
+  // FIXME: Consider adding a check that the suitable prevailing definition
+  // exists and marked read-only.
+  if (VI.getSummaryList().size() > 1 &&
+      GlobalValue::isInterposableLinkage(GVS->second->linkage()))
+    return true;
+
+  return false;
+}
+
 static void computeImportForReferencedGlobals(
     const GlobalValueSummary &Summary, const ModuleSummaryIndex &Index,
     const GVSummaryMapTy &DefinedGVSummaries,
@@ -282,7 +305,7 @@ static void computeImportForReferencedGlobals(
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists) {
   for (auto &VI : Summary.refs()) {
-    if (DefinedGVSummaries.count(VI.getGUID())) {
+    if (!shouldImportGlobal(VI, DefinedGVSummaries)) {
       LLVM_DEBUG(
           dbgs() << "Ref ignored! Target already in destination module.\n");
       continue;
@@ -378,6 +401,9 @@ static void computeImportForFunction(
       continue;
 
     if (DefinedGVSummaries.count(VI.getGUID())) {
+      // FIXME: Consider not skipping import if the module contains
+      // a non-prevailing def with interposable linkage. The prevailing copy
+      // can safely be imported (see shouldImportGlobal()).
       LLVM_DEBUG(dbgs() << "ignored! Target already in destination module.\n");
       continue;
     }
