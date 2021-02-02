@@ -61,25 +61,20 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
     ClampI64ToI16MatchInfo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Invalid instruction!");
 
-  // we want to check if a 64-bit number gets clamped to 16-bit boundaries (or
-  // below).
+  // Try to find a pattern where an i64 value should get clamped to short.
   const LLT SrcType = MRI.getType(MI.getOperand(1).getReg());
-
   if (SrcType != LLT::scalar(64))
     return false;
 
   const LLT DstType = MRI.getType(MI.getOperand(0).getReg());
-
   if (DstType != LLT::scalar(16))
     return false;
-
-  MachineIRBuilder B(MI);
 
   LLVM_DEBUG(dbgs() << "Matching Clamp i64 to i16\n");
 
   Register Base;
 
-  // match max / min pattern
+  // Try to match a combination of min / max MIR opcodes.
   if (mi_match(MI.getOperand(1).getReg(), MRI, m_GSMin(m_Reg(Base), m_ICst(MatchInfo.Cmp1)))) {
     if (!mi_match(Base, MRI, m_GSMax(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2)))) {
       return false;
@@ -96,14 +91,14 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
   const auto Cmp2 = MatchInfo.Cmp2;
   const auto Diff = std::abs(Cmp2 - Cmp1);
 
-  // we don't need to clamp here.
+  // If the difference between both comparison values is 0 or 1, there is no need to clamp.
   if (Diff == 0 || Diff == 1)
     return false;
 
   const int64_t Min = std::numeric_limits<int16_t>::min();
   const int64_t Max = std::numeric_limits<int16_t>::max();
 
-  // are we really trying to clamp against the relevant boundaries?
+  // Check if the comparison values are between SHORT_MIN and SHORT_MAX.
   return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
           (Cmp1 >= Cmp2 && Cmp1 <= Max && Cmp2 >= Min));
 }
@@ -115,21 +110,20 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
 // This can be efficiently written as following:
 // v_cvt_pk_i16_i32 v0, v0, v1
 // v_med3_i32 v0, Clamp_Min, v0, Clamp_Max
-
 void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
     MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) {
-  LLVM_DEBUG(dbgs() << "Combining MI\n");
-
-  MachineIRBuilder B(MI);
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
   Register Src = MatchInfo.Origin;
   assert(MRI.getType(Src) == LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
+  B.setMBB(*MI.getParent());
+  B.setInstrAndDebugLoc(MI);
+
   auto Unmerge = B.buildUnmerge(S32, Src);
-  Register Hi32 = Unmerge->getOperand(0).getReg();
-  Register Lo32 = Unmerge->getOperand(1).getReg();
+  Register Hi32 = Unmerge.getReg(0);
+  Register Lo32 = Unmerge.getReg(1);
   MRI.setRegClass(Hi32, &AMDGPU::VGPR_32RegClass);
   MRI.setRegClass(Lo32, &AMDGPU::VGPR_32RegClass);
 
@@ -147,25 +141,23 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
   CvtPk.addReg(Lo32);
   CvtPk.setMIFlags(MI.getFlags());
 
-  auto min = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
-  auto max = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
+  auto MinBoundary = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
+  auto MaxBoundary = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
 
-  Register MinBoundaryDst = MRI.createVirtualRegister(REG_CLASS);
-  MRI.setType(MinBoundaryDst, S32);
-  B.buildConstant(MinBoundaryDst, min);
+  auto MinBoundaryDst = B.buildConstant(S32, MinBoundary);
+  MRI.setRegClass(MinBoundaryDst.getReg(0), REG_CLASS);
 
-  Register MaxBoundaryDst = MRI.createVirtualRegister(REG_CLASS);
-  MRI.setType(MaxBoundaryDst, S32);
-  B.buildConstant(MaxBoundaryDst, max);
+  auto MaxBoundaryDst = B.buildConstant(S32, MaxBoundary);
+  MRI.setRegClass(MaxBoundaryDst.getReg(0), REG_CLASS);
 
   Register MedDst = MRI.createVirtualRegister(REG_CLASS);
   MRI.setType(MedDst, S32);
 
   auto Med = B.buildInstr(AMDGPU::V_MED3_I32);
   Med.addDef(MedDst);
-  Med.addReg(MinBoundaryDst);
+  Med.addReg(MinBoundaryDst.getReg(0));
   Med.addReg(CvtDst);
-  Med.addReg(MaxBoundaryDst);
+  Med.addReg(MaxBoundaryDst.getReg(0));
   Med.setMIFlags(MI.getFlags());
   
   Register TruncDst = MRI.createGenericVirtualRegister(LLT::scalar(16));
