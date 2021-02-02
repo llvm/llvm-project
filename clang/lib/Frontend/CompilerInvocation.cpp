@@ -1666,9 +1666,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
     Opts.DiagnosticSerializationFile = A->getValue();
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
-  if (Args.getLastArgValue(OPT_fdiagnostics_format) == "msvc-fallback")
-    Opts.CLFallbackMode = true;
-
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");

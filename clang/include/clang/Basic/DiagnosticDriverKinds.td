@@ -210,9 +210,6 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
   "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
   InGroup<ClangClPch>;
 
-def err_drv_dllexport_inlines_and_fallback : Error<
-  "option '/Zc:dllexportInlines-' is ABI-changing and not compatible with '/fallback'">;
-
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<"invalid value '%1' in '%0','%2'">;
@@ -391,9 +388,6 @@ def err_drv_modules_validate_once_requires_timestamp : Error<
 def err_test_module_file_extension_format : Error<
   "-ftest-module-file-extension argument '%0' is not of the required form "
   "'blockname:major:minor:hashed:user info'">;
-
-def warn_drv_invoking_fallback : Warning<"falling back to %0">,
-  InGroup<Fallback>;
 
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
