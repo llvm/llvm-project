@@ -144,6 +144,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(binaryConditionalOperator);
   REGISTER_MATCHER(binaryOperator);
   REGISTER_MATCHER(binaryOperation);
+  REGISTER_MATCHER(bindingDecl);
   REGISTER_MATCHER(blockDecl);
   REGISTER_MATCHER(blockExpr);
   REGISTER_MATCHER(blockPointerType);
@@ -226,6 +227,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
   REGISTER_MATCHER(floatLiteral);
+  REGISTER_MATCHER(forDecomposition);
   REGISTER_MATCHER(forEach);
   REGISTER_MATCHER(forEachArgumentWithParam);
   REGISTER_MATCHER(forEachArgumentWithParamType);
@@ -248,6 +250,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAncestor);
   REGISTER_MATCHER(hasAnyArgument);
   REGISTER_MATCHER(hasAnyBase);
+  REGISTER_MATCHER(hasAnyBinding);
   REGISTER_MATCHER(hasAnyClause);
   REGISTER_MATCHER(hasAnyConstructorInitializer);
   REGISTER_MATCHER(hasAnyDeclaration);
@@ -266,6 +269,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAttr);
   REGISTER_MATCHER(hasAutomaticStorageDuration);
   REGISTER_MATCHER(hasBase);
+  REGISTER_MATCHER(hasBinding);
   REGISTER_MATCHER(hasBitWidth);
   REGISTER_MATCHER(hasBody);
   REGISTER_MATCHER(hasCanonicalType);
