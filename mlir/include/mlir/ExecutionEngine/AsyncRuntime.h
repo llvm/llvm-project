@@ -16,21 +16,10 @@
 
 #include <stdint.h>
 
-#ifdef _WIN32
-#ifndef MLIR_ASYNCRUNTIME_EXPORT
 #ifdef mlir_async_runtime_EXPORTS
 // We are building this library
-#define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllexport)
 #define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
-#else
-// We are using this library
-#define MLIR_ASYNCRUNTIME_EXPORT __declspec(dllimport)
 #endif // mlir_async_runtime_EXPORTS
-#endif // MLIR_ASYNCRUNTIME_EXPORT
-#else
-#define MLIR_ASYNCRUNTIME_EXPORT
-#define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
-#endif // _WIN32
 
 namespace mlir {
 namespace runtime {
@@ -62,78 +51,67 @@ using CoroResume = void (*)(void *); // coroutine resume function
 using RefCountedObjPtr = void *;
 
 // Adds references to reference counted runtime object.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-    mlirAsyncRuntimeAddRef(RefCountedObjPtr, int32_t);
+extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr, int32_t);
 
 // Drops references from reference counted runtime object.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-    mlirAsyncRuntimeDropRef(RefCountedObjPtr, int32_t);
+extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr, int32_t);
 
 // Create a new `async.token` in not-ready state.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncToken *mlirAsyncRuntimeCreateToken();
+extern "C" AsyncToken *mlirAsyncRuntimeCreateToken();
 
 // Create a new `async.value` in not-ready state. Size parameter specifies the
 // number of bytes that will be allocated for the async value storage. Storage
 // is owned by the `async.value` and deallocated when the async value is
 // destructed (reference count drops to zero).
-extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncValue *
-    mlirAsyncRuntimeCreateValue(int32_t);
+extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t);
 
 // Create a new `async.group` in empty state.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT AsyncGroup *mlirAsyncRuntimeCreateGroup();
+extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup();
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT int64_t
-mlirAsyncRuntimeAddTokenToGroup(AsyncToken *, AsyncGroup *);
+extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *, AsyncGroup *);
 
 // Switches `async.token` to ready state and runs all awaiters.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeEmplaceToken(AsyncToken *);
+extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *);
 
 // Switches `async.value` to ready state and runs all awaiters.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeEmplaceValue(AsyncValue *);
+extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *);
 
 // Blocks the caller thread until the token becomes ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitToken(AsyncToken *);
+extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *);
 
 // Blocks the caller thread until the value becomes ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitValue(AsyncValue *);
+extern "C" void mlirAsyncRuntimeAwaitValue(AsyncValue *);
 
 // Blocks the caller thread until the elements in the group become ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *);
+extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *);
 
 // Returns a pointer to the storage owned by the async value.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT ValueStorage
-mlirAsyncRuntimeGetValueStorage(AsyncValue *);
+extern "C" ValueStorage mlirAsyncRuntimeGetValueStorage(AsyncValue *);
 
 // Executes the task (coro handle + resume function) in one of the threads
 // managed by the runtime.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void mlirAsyncRuntimeExecute(CoroHandle,
-                                                                 CoroResume);
+extern "C" void mlirAsyncRuntimeExecute(CoroHandle, CoroResume);
 
 // Executes the task (coro handle + resume function) in one of the threads
 // managed by the runtime after the token becomes ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *, CoroHandle, CoroResume);
+extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *, CoroHandle,
+                                                     CoroResume);
 
 // Executes the task (coro handle + resume function) in one of the threads
 // managed by the runtime after the value becomes ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
-mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *, CoroHandle, CoroResume);
+extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *, CoroHandle,
+                                                     CoroResume);
 
 // Executes the task (coro handle + resume function) in one of the threads
 // managed by the runtime after the all members of the group become ready.
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void
+extern "C" void
 mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
 
 //===----------------------------------------------------------------------===//
 // Small async runtime support library for testing.
 //===----------------------------------------------------------------------===//
 
-extern "C" MLIR_ASYNCRUNTIME_EXPORT void mlirAsyncRuntimePrintCurrentThreadId();
+extern "C" void mlirAsyncRuntimePrintCurrentThreadId();
 
 } // namespace runtime
 } // namespace mlir

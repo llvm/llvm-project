@@ -182,8 +182,6 @@ struct AsyncGroup : public RefCounted {
   std::vector<std::function<void()>> awaiters;
 };
 
-} // namespace runtime
-} // namespace mlir
 
 // Adds references to reference counted runtime object.
 extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
@@ -369,8 +367,11 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 //===----------------------------------------------------------------------===//
 
 // Export symbols for the MLIR runner integration. All other symbols are hidden.
-#ifndef _WIN32
+#ifdef _WIN32
+#define API __declspec(dllexport)
+#else
 #define API __attribute__((visibility("default")))
+#endif
 
 extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
@@ -416,6 +417,7 @@ extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
 
 extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
 
-#endif // _WIN32
+} // namespace runtime
+} // namespace mlir
 
 #endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
