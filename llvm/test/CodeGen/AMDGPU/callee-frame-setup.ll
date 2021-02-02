@@ -597,6 +597,41 @@ define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
   ret void
 }
 
+; When flat-scratch is enabled, we save the FP to s0. At the same time,
+; the exec register is saved to s0 when saving CSR in the function prolog.
+; Make sure that the FP save happens after restoring exec from the same
+; register.
+; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_reg:
+; GCN-NOT: v_writelane_b32 v40, s33
+; FLATSCR: s_or_saveexec_b64 s[0:1], -1
+; FLATSCR: s_mov_b64 exec, s[0:1]
+; FLATSCR: s_mov_b32 s0, s33
+; FLATSCR: s_mov_b32 s33, s32
+; FLATSCR: s_mov_b32 s33, s0
+; FLATSCR: s_or_saveexec_b64 s[0:1], -1
+; GCN-NOT: v_readlane_b32 s33, v40
+; GCN:     s_setpc_b64
+define void @callee_need_to_spill_fp_to_reg() #1 {
+  call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
+    "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
+    ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
+    ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
+    ,~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
+    ,~{s50},~{s51},~{s52},~{s53},~{s54},~{s55},~{s56},~{s57},~{s58},~{s59}
+    ,~{s60},~{s61},~{s62},~{s63},~{s64},~{s65},~{s66},~{s67},~{s68},~{s69}
+    ,~{s70},~{s71},~{s72},~{s73},~{s74},~{s75},~{s76},~{s77},~{s78},~{s79}
+    ,~{s80},~{s81},~{s82},~{s83},~{s84},~{s85},~{s86},~{s87},~{s88},~{s89}
+    ,~{s90},~{s91},~{s92},~{s93},~{s94},~{s95},~{s96},~{s97},~{s98},~{s99}
+    ,~{s100},~{s101},~{s102},~{s39},~{vcc}"()
+
+  call void asm sideeffect "; clobber all VGPRs except CSR v40",
+    "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
+    ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
+    ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"()
+  ret void
+}
+
 ; If the size of the offset exceeds the MUBUF offset field we need another
 ; scratch VGPR to hold the offset.
 ; GCN-LABEL: {{^}}spill_fp_to_memory_scratch_reg_needed_mubuf_offset
