@@ -139,8 +139,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
 
-  auto ADec = decompose(Op0);
-  auto BDec = decompose(Op1);
+  auto ADec = decompose(Op0->stripPointerCasts());
+  auto BDec = decompose(Op1->stripPointerCasts());
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};

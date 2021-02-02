@@ -2,6 +2,7 @@
 ; RUN: opt -constraint-elimination -S %s | FileCheck %s
 
 define i1 @bitcast_and_cmp(i32* readonly %src, i32* readnone %min, i32* readnone %max) {
+;
 ; CHECK-LABEL: @bitcast_and_cmp(
 ; CHECK-NEXT:  check.0.min:
 ; CHECK-NEXT:    [[SRC_C:%.*]] = bitcast i32* [[SRC:%.*]] to i8*
@@ -18,19 +19,19 @@ define i1 @bitcast_and_cmp(i32* readonly %src, i32* readnone %min, i32* readnone
 ; CHECK:       checks:
 ; CHECK-NEXT:    [[C_3_MIN:%.*]] = icmp ult i32* [[GEP_3]], [[MIN]]
 ; CHECK-NEXT:    [[C_3_MAX:%.*]] = icmp ult i32* [[GEP_3]], [[MAX]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_3_MIN]], [[C_3_MAX]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, [[C_3_MAX]]
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 1
 ; CHECK-NEXT:    [[C_1_MIN:%.*]] = icmp ult i32* [[GEP_1]], [[MIN]]
 ; CHECK-NEXT:    [[C_1_MAX:%.*]] = icmp ult i32* [[GEP_1]], [[MAX]]
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_1_MIN]], [[C_1_MAX]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
 ; CHECK-NEXT:    [[C_2_MIN:%.*]] = icmp ult i32* [[GEP_2]], [[MIN]]
 ; CHECK-NEXT:    [[C_2_MAX:%.*]] = icmp ult i32* [[GEP_2]], [[MAX]]
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[C_2_MIN]], [[C_2_MAX]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 4
-; CHECK-NEXT:    [[C_4_MIN:%.*]] = icmp ult i32* [[GEP_2]], [[MIN]]
-; CHECK-NEXT:    [[C_4_MAX:%.*]] = icmp ult i32* [[GEP_2]], [[MAX]]
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[C_4_MIN]], [[C_4_MAX]]
+; CHECK-NEXT:    [[C_4_MIN:%.*]] = icmp ult i32* [[GEP_4]], [[MIN]]
+; CHECK-NEXT:    [[C_4_MAX:%.*]] = icmp ult i32* [[GEP_4]], [[MAX]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 false, [[C_4_MAX]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_1]], [[RES_2]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[RES_3]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[RES_4]]
@@ -68,8 +69,8 @@ checks:
   %res.3 = xor i1 %c.2.min, %c.2.max
 
   %gep.4 = getelementptr inbounds i32, i32* %src, i64 4
-  %c.4.min = icmp ult i32* %gep.2, %min
-  %c.4.max = icmp ult i32* %gep.2, %max
+  %c.4.min = icmp ult i32* %gep.4, %min
+  %c.4.max = icmp ult i32* %gep.4, %max
   %res.4 = xor i1 %c.4.min, %c.4.max
 
   %res.5 = xor i1 %res.1, %res.2
