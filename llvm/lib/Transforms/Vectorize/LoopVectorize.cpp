@@ -6792,6 +6792,11 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                                    ElementCount VF) {
+  // TODO: Once we have support for interleaving with scalable vectors
+  // we can calculate the cost properly here.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
   Type *ValTy = getMemInstValueType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -6800,7 +6805,6 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   assert(Group && "Fail to get an interleaved access group.");
 
   unsigned InterleaveFactor = Group->getFactor();
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
 
   // Holds the indices of existing members in an interleaved load group.
@@ -7064,7 +7068,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       }
 
       // Choose between Interleaving, Gather/Scatter or Scalarization.
-      InstructionCost InterleaveCost = std::numeric_limits<int>::max();
+      InstructionCost InterleaveCost = InstructionCost::getInvalid();
       unsigned NumAccesses = 1;
       if (isAccessInterleaved(&I)) {
         auto Group = getInterleavedAccessGroup(&I);
@@ -7082,10 +7086,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       InstructionCost GatherScatterCost =
           isLegalGatherOrScatter(&I)
               ? getGatherScatterCost(&I, VF) * NumAccesses
-              : std::numeric_limits<int>::max();
+              : InstructionCost::getInvalid();
 
       InstructionCost ScalarizationCost =
-          getMemInstScalarizationCost(&I, VF) * NumAccesses;
+          !VF.isScalable() ? getMemInstScalarizationCost(&I, VF) * NumAccesses
+                           : InstructionCost::getInvalid();
 
       // Choose better solution for the current VF,
       // write down this decision and use it during vectorization.
@@ -7099,6 +7104,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         Decision = CM_GatherScatter;
         Cost = GatherScatterCost;
       } else {
+        assert(!VF.isScalable() &&
+               "We cannot yet scalarise for scalable vectors");
         Decision = CM_Scalarize;
         Cost = ScalarizationCost;
       }
@@ -7448,8 +7455,12 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       }
     }
 
-    assert(!VF.isScalable() && "VF is assumed to be non scalable");
-    unsigned N = isScalarAfterVectorization(I, VF) ? VF.getKnownMinValue() : 1;
+    unsigned N;
+    if (isScalarAfterVectorization(I, VF)) {
+      assert(!VF.isScalable() && "VF is assumed to be non scalable");
+      N = VF.getKnownMinValue();
+    } else
+      N = 1;
     return N *
            TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
