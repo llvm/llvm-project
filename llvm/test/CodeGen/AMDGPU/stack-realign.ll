@@ -124,9 +124,9 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
 }
 
 ; GCN-LABEL: {{^}}default_realign_align128:
-; GCN: s_add_u32 [[TMP:s[0-9]+]], s32, 0x1fc0
-; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_and_b32 s33, [[TMP]], 0xffffe000
+; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_add_u32 s33, s32, 0x1fc0
+; GCN-NEXT: s_and_b32 s33, s33, 0xffffe000
 ; GCN-NEXT: s_add_u32 s32, s32, 0x4000
 ; GCN-NOT: s33
 ; GCN: buffer_store_dword v0, off, s[0:3], s33{{$}}
@@ -193,11 +193,11 @@ define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5
 ; The BP value will get saved/restored in an SGPR at the prolgoue/epilogue.
 
 ; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
-; GCN: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_add_u32 s33, s32, 0xffc0
+; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
 ; GCN-NEXT: s_mov_b32 s34, s32
-; GCN-NEXT: s_add_u32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
-; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
+; GCN-NEXT: s_and_b32 s33, s33, 0xffff0000
 ; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NEXT: v_lshrrev_b32_e64 [[VGPR_REG:v[0-9]+]], 6, s34
 ; GCN: s_add_u32 s32, s32, 0x30000

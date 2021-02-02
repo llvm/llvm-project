@@ -335,12 +335,12 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 
 ; GCN-LABEL: {{^}}realign_stack_no_fp_elim:
 ; GCN: s_waitcnt
-; MUBUF-NEXT:   s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x7ffc0
-; FLATSCR-NEXT: s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x1fff
 ; MUBUF-NEXT:   s_mov_b32 [[FP_COPY:s4]], s33
 ; FLATSCR-NEXT: s_mov_b32 [[FP_COPY:s0]], s33
-; MUBUF-NEXT:   s_and_b32 s33, [[SCRATCH]], 0xfff80000
-; FLATSCR-NEXT: s_and_b32 s33, [[SCRATCH]], 0xffffe000
+; MUBUF-NEXT:   s_add_u32 s33, s32, 0x7ffc0
+; FLATSCR-NEXT: s_add_u32 s33, s32, 0x1fff
+; MUBUF-NEXT:   s_and_b32 s33, s33, 0xfff80000
+; FLATSCR-NEXT: s_and_b32 s33, s33, 0xffffe000
 ; MUBUF-NEXT:   s_add_u32 s32, s32, 0x100000
 ; FLATSCR-NEXT: s_add_u32 s32, s32, 0x4000
 ; GCN-NEXT:     v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
