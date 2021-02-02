@@ -11,8 +11,8 @@ declare void @use8(i8)
 ; Most basic positive test
 define i8 @t0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[NOT_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = xor i8 [[NOT_X_NOT]], -1
 ; CHECK-NEXT:    ret i8 [[ASHR]]
 ;
   %not_x = xor i8 %x, -1
@@ -22,8 +22,8 @@ define i8 @t0(i8 %x, i8 %y) {
 ; 'exact'-ness isn't preserved!
 define i8 @t1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i8 [[NOT_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = xor i8 [[NOT_X_NOT]], -1
 ; CHECK-NEXT:    ret i8 [[ASHR]]
 ;
   %not_x = xor i8 %x, -1
@@ -33,8 +33,8 @@ define i8 @t1(i8 %x, i8 %y) {
 ; Basic vector test
 define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[NOT_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i8> [[ASHR]]
 ;
   %not_x = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -44,8 +44,8 @@ define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; Note that we must sanitize undef elts of -1 constant to -1 or 0.
 define <2 x i8> @t3_vec_undef(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t3_vec_undef(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[NOT_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_X_NOT:%.*]] = ashr <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = xor <2 x i8> [[NOT_X_NOT]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i8> [[ASHR]]
 ;
   %not_x = xor <2 x i8> %x, <i8 -1, i8 undef>

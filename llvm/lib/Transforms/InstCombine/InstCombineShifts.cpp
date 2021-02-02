@@ -1320,5 +1320,14 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
   if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))
     return BinaryOperator::CreateLShr(Op0, Op1);
 
+  // ashr (xor %x, -1), %y  -->  xor (ashr %x, %y), -1
+  Value *X;
+  if (match(Op0, m_OneUse(m_Not(m_Value(X))))) {
+    // Note that we must drop 'exact'-ness of the shift!
+    // Note that we can't keep undef's in -1 vector constant!
+    auto *NewAShr = Builder.CreateAShr(X, Op1, Op0->getName() + ".not");
+    return BinaryOperator::CreateNot(NewAShr);
+  }
+
   return nullptr;
 }
