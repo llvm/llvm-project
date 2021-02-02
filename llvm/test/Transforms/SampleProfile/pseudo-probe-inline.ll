@@ -89,7 +89,7 @@ if.end:
 ;YAML-NEXT:    - String:          '(cost='
 ;YAML-NEXT:    - Cost:            '15'
 ;YAML-NEXT:    - String:          ', threshold='
-;YAML-NEXT:    - Threshold:       '2147483647'
+;YAML-NEXT:    - Threshold:       '225'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:    - String:          ' at callsite '
 ;YAML-NEXT:    - String:          foo

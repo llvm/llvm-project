@@ -522,14 +522,14 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
                                             Value *Mask, Value *PassThru,
                                             const Twine &Name) {
-  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
+  auto *PtrsTy = cast<VectorType>(Ptrs->getType());
   auto *PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  unsigned NumElts = PtrsTy->getNumElements();
-  auto *DataTy = FixedVectorType::get(PtrTy->getElementType(), NumElts);
+  ElementCount NumElts = PtrsTy->getElementCount();
+  auto *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
 
   if (!Mask)
     Mask = Constant::getAllOnesValue(
-        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
+        VectorType::get(Type::getInt1Ty(Context), NumElts));
 
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
@@ -552,20 +552,20 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
                                              Align Alignment, Value *Mask) {
-  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
-  auto *DataTy = cast<FixedVectorType>(Data->getType());
-  unsigned NumElts = PtrsTy->getNumElements();
+  auto *PtrsTy = cast<VectorType>(Ptrs->getType());
+  auto *DataTy = cast<VectorType>(Data->getType());
+  ElementCount NumElts = PtrsTy->getElementCount();
 
 #ifndef NDEBUG
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  assert(NumElts == DataTy->getNumElements() &&
+  assert(NumElts == DataTy->getElementCount() &&
          PtrTy->getElementType() == DataTy->getElementType() &&
          "Incompatible pointer and data types");
 #endif
 
   if (!Mask)
     Mask = Constant::getAllOnesValue(
-        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
+        VectorType::get(Type::getInt1Ty(Context), NumElts));
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
