@@ -4335,11 +4335,19 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                   RegsToPass[i].second.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
-  // If HasNCSR is asserted (attribute NoCallerSavedRegisters exists) then we
-  // set X86_INTR calling convention because it has the same CSR mask
-  // (same preserved registers).
-  const uint32_t *Mask = RegInfo->getCallPreservedMask(
-      MF, HasNCSR ? (CallingConv::ID)CallingConv::X86_INTR : CallConv);
+  const uint32_t *Mask = [&]() {
+    auto AdaptedCC = CallConv;
+    // If HasNCSR is asserted (attribute NoCallerSavedRegisters exists),
+    // use X86_INTR calling convention because it has the same CSR mask
+    // (same preserved registers).
+    if (HasNCSR)
+      AdaptedCC = (CallingConv::ID)CallingConv::X86_INTR;
+    // If NoCalleeSavedRegisters is requested, than use GHC since it happens
+    // to use the CSR_NoRegs_RegMask.
+    if (CB && CB->hasFnAttr("no_callee_saved_registers"))
+      AdaptedCC = (CallingConv::ID)CallingConv::GHC;
+    return RegInfo->getCallPreservedMask(MF, AdaptedCC);
+  }();
   assert(Mask && "Missing call preserved mask for calling convention");
 
   // If this is an invoke in a 32-bit function using a funclet-based
