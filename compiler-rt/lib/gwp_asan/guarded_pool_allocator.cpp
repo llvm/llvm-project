@@ -103,9 +103,15 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
     installAtFork();
 }
 
-void GuardedPoolAllocator::disable() { PoolMutex.lock(); }
+void GuardedPoolAllocator::disable() {
+  PoolMutex.lock();
+  BacktraceMutex.lock();
+}
 
-void GuardedPoolAllocator::enable() { PoolMutex.unlock(); }
+void GuardedPoolAllocator::enable() {
+  PoolMutex.unlock();
+  BacktraceMutex.unlock();
+}
 
 void GuardedPoolAllocator::iterate(void *Base, size_t Size, iterate_callback Cb,
                                    void *Arg) {
@@ -232,7 +238,10 @@ void *GuardedPoolAllocator::allocate(size_t Size, size_t Alignment) {
       roundUpTo(Size, PageSize));
 
   Meta->RecordAllocation(UserPtr, Size);
-  Meta->AllocationTrace.RecordBacktrace(Backtrace);
+  {
+    ScopedLock UL(BacktraceMutex);
+    Meta->AllocationTrace.RecordBacktrace(Backtrace);
+  }
 
   return reinterpret_cast<void *>(UserPtr);
 }
@@ -281,6 +290,7 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
     // otherwise non-reentrant unwinders may deadlock.
     if (!getThreadLocals()->RecursiveGuard) {
       ScopedRecursiveGuard SRG;
+      ScopedLock UL(BacktraceMutex);
       Meta->DeallocationTrace.RecordBacktrace(Backtrace);
     }
   }

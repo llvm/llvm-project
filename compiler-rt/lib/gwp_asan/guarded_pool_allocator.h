@@ -196,6 +196,10 @@ private:
 
   // A mutex to protect the guarded slot and metadata pool for this class.
   Mutex PoolMutex;
+  // Some unwinders can grab the libdl lock. In order to provide atfork
+  // protection, we need to ensure that we allow an unwinding thread to release
+  // the libdl lock before forking.
+  Mutex BacktraceMutex;
   // Record the number allocations that we've sampled. We store this amount so
   // that we don't randomly choose to recycle a slot that previously had an
   // allocation before all the slots have been utilised.
