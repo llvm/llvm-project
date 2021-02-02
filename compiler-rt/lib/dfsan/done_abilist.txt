@@ -253,6 +253,7 @@ fun:sched_getaffinity=custom
 fun:select=custom
 fun:sigemptyset=custom
 fun:sigaction=custom
+fun:signal=custom
 fun:gettimeofday=custom
 
 # sprintf-like
