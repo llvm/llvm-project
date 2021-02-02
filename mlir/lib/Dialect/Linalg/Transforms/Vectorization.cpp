@@ -442,6 +442,7 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
     LLVM_DEBUG(dbgs() << dbgPref
                       << "Rewrite linalg op as vector.transfer_read + " << *op);
     auto status = vectorizeAsLinalgGeneric(builder, linalgOp);
+    (void)status;
     assert(succeeded(status) &&
            "Unexpected vectorization failed despite preconditions");
     return;
@@ -473,6 +474,7 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
   };
   auto status =
       vectorizeAsLinalgGeneric(builder, linalgOp, {vectorizeContraction});
+  (void)status;
   assert(succeeded(status) &&
          "Unexpected vectorization failed despite preconditions");
 }
