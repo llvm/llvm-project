@@ -45,6 +45,11 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
 
   let results = (outs AnyTensor:$result);
 
+  let assemblyFormat = [{
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
+    `:` type($result)
+  }];
+
   let verifier = [{ return ::verify(*this); }];
 
   let extraClassDeclaration = [{
@@ -118,7 +123,7 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
 }
 
 def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
-    [AttrSizedOperandSegments, SingleBlockImplicitTerminator<"YieldOp">]> {
+    [AttrSizedOperandSegments]> {
   let summary = "tensor pad operation";
   let description = [{
     `linalg.pad_tensor` is an operation that pads the `source` tensor
@@ -181,9 +186,15 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     I64ArrayAttr:$static_low,
     I64ArrayAttr:$static_high);
 
-  let regions = (region AnyRegion:$region);
+  let regions = (region SizedRegion<1>:$region);
 
   let results = (outs AnyTensor:$result);
+
+  let assemblyFormat = [{
+    $source `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
+    `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
+    $region attr-dict `:` type($source) `to` type($result)
+  }];
 
   let extraClassDeclaration = [{
     static StringRef getStaticLowAttrName() {
