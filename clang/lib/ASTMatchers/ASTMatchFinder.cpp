@@ -1216,6 +1216,8 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
       ScopedChildren = true;
     if (FD->isTemplateInstantiation())
       ScopedTraversal = true;
+  } else if (isa<BindingDecl>(DeclNode)) {
+    ScopedChildren = true;
   }
 
   ASTNodeNotSpelledInSourceScope RAII1(this, ScopedTraversal);
