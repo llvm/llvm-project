@@ -249,6 +249,7 @@ body:             |
   ; CHECK:   renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (load 4 from %ir.arrayidx7.us)
   ; CHECK:   $r3 = tMOVr $r5, 14 /* CC::al */, $noreg, debug-location !32
   ; CHECK:   $r0 = tMOVr $r8, 14 /* CC::al */, $noreg, debug-location !32
+  ; CHECK:   dead $lr = tMOVr $r10, 14 /* CC::al */, $noreg, debug-location !32
   ; CHECK:   $lr = t2DLS renamable $r10, debug-location !42
   ; CHECK: bb.3.for.body3.us:
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)

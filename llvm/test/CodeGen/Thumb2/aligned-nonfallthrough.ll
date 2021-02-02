@@ -7,7 +7,6 @@ define i32 @loop(i32* nocapture readonly %x) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #500
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_1: @ %for.body

@@ -26,7 +26,6 @@ define void @arm_min_q31(i32* nocapture readonly %pSrc, i32 %blockSize, i32* noc
 ; CHECK-NEXT:    subs r7, #4
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
 ; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    movs r7, #4
 ; CHECK-NEXT:  .LBB0_5: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
