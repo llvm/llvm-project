@@ -140,12 +140,12 @@ class StaticVariableTestCase(TestBase):
             name = val.GetName()
             self.assertTrue(name in ['g_points', 'A::g_points'])
             if name == 'g_points':
-                self.assertTrue(
-                    val.GetValueType() == lldb.eValueTypeVariableStatic)
+                self.assertEqual(
+                    val.GetValueType(), lldb.eValueTypeVariableStatic)
                 self.assertEqual(val.GetNumChildren(), 2)
             elif name == 'A::g_points':
-                self.assertTrue(
-                    val.GetValueType() == lldb.eValueTypeVariableGlobal)
+                self.assertEqual(
+                    val.GetValueType(), lldb.eValueTypeVariableGlobal)
                 self.assertEqual(val.GetNumChildren(), 2)
                 child1 = val.GetChildAtIndex(1)
                 self.DebugSBValue(child1)

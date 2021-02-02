@@ -215,7 +215,7 @@ class BreakpointNames(TestBase):
         # Now find it in the dummy target, and make sure these settings took:
         bp_name = lldb.SBBreakpointName(dummy_target, self.bp_name_string)
         # Make sure the name is right:
-        self.assertTrue (bp_name.GetName() == self.bp_name_string, "Wrong bp_name: %s"%(bp_name.GetName()))
+        self.assertEqual(bp_name.GetName(), self.bp_name_string, "Wrong bp_name: %s"%(bp_name.GetName()))
         bp_name.SetOneShot(self.is_one_shot)
         bp_name.SetIgnoreCount(self.ignore_count)
         bp_name.SetCondition(self.condition)

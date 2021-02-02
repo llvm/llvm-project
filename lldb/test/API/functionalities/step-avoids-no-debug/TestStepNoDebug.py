@@ -78,8 +78,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
             "Could not find source pattern " +
             pattern)
         cur_line = self.thread.frames[0].GetLineEntry().GetLine()
-        self.assertTrue(
-            cur_line == target_line,
+        self.assertEqual(
+            cur_line, target_line,
             "Stepped to line %d instead of expected %d with pattern '%s'." %
             (cur_line,
              target_line,

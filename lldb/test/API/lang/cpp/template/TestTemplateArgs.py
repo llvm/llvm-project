@@ -38,8 +38,8 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -61,8 +61,8 @@ class TemplateArgsTestCase(TestBase):
             expr_result.IsValid(),
             'got a valid expression result from expression "testpos.getArg()"')
         self.assertEquals(expr_result.GetValue(), "1", "testpos.getArg() == 1")
-        self.assertTrue(
-            expr_result.GetType().GetName() == "int",
+        self.assertEqual(
+            expr_result.GetType().GetName(), "int",
             'expr_result.GetType().GetName() == "int"')
 
         testneg = frame.FindVariable('testneg')
@@ -75,11 +75,11 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             expr_result.IsValid(),
             'got a valid expression result from expression "testneg.getArg()"')
-        self.assertTrue(
-            expr_result.GetValue() == "-1",
+        self.assertEqual(
+            expr_result.GetValue(), "-1",
             "testneg.getArg() == -1")
-        self.assertTrue(
-            expr_result.GetType().GetName() == "int",
+        self.assertEqual(
+            expr_result.GetType().GetName(), "int",
             'expr_result.GetType().GetName() == "int"')
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
@@ -130,11 +130,11 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             expr_result.IsValid(),
             'got a valid expression result from expression "member.getMember()"')
-        self.assertTrue(
-            expr_result.GetValue() == "123",
+        self.assertEqual(
+            expr_result.GetValue(), "123",
             "member.getMember() == 123")
-        self.assertTrue(
-            expr_result.GetType().GetName() == "int",
+        self.assertEqual(
+            expr_result.GetType().GetName(), "int",
             'expr_result.GetType().GetName() == "int"')
 
         # Make sure "subclass" can be displayed and also used in an expression
@@ -150,9 +150,9 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             expr_result.IsValid(),
             'got a valid expression result from expression "subclass.getMember()"')
-        self.assertTrue(
-            expr_result.GetValue() == "246",
+        self.assertEqual(
+            expr_result.GetValue(), "246",
             "subclass.getMember() == 246")
-        self.assertTrue(
-            expr_result.GetType().GetName() == "int",
+        self.assertEqual(
+            expr_result.GetType().GetName(), "int",
             'expr_result.GetType().GetName() == "int"')

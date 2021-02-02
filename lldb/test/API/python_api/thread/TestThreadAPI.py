@@ -99,8 +99,7 @@ class ThreadAPITestCase(TestBase):
 
         proc_of_thread = thread.GetProcess()
         self.trace("proc_of_thread:", proc_of_thread)
-        self.assertTrue(proc_of_thread.GetProcessID()
-                        == process.GetProcessID())
+        self.assertEqual(proc_of_thread.GetProcessID(), process.GetProcessID())
 
     def get_stop_description(self):
         """Test Python SBThread.GetStopDescription() API."""
@@ -180,8 +179,8 @@ class ThreadAPITestCase(TestBase):
 
         thread.StepOut()
         self.runCmd("thread backtrace")
-        self.assertTrue(
-            thread.GetFrameAtIndex(0).GetLineEntry().GetLine() == self.step_out_of_malloc,
+        self.assertEqual(
+            thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), self.step_out_of_malloc,
             "step out of malloc into function b is successful")
 
     def step_over_3_times(self, exe_name):
