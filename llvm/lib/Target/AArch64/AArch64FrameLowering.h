@@ -124,16 +124,6 @@ public:
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
 private:
-  /// Returns true if a homogeneous prolog or epilog code can be emitted
-  /// for the size optimization. If so, HOM_Prolog/HOM_Epilog pseudo
-  /// instructions are emitted in place. When Exit block is given, this check is
-  /// for epilog.
-  bool homogeneousPrologEpilog(MachineFunction &MF,
-                               MachineBasicBlock *Exit = nullptr) const;
-
-  /// Returns true if CSRs should be paired.
-  bool producePairRegisters(MachineFunction &MF) const;
-
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       uint64_t StackBumpBytes) const;
 
