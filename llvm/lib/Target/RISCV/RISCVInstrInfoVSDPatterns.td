@@ -45,8 +45,8 @@ class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
 
-multiclass VPatUSLoadStoreSDNode<LLVMType type,
-                                 LLVMType mask_type,
+multiclass VPatUSLoadStoreSDNode<ValueType type,
+                                 ValueType mask_type,
                                  int sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
