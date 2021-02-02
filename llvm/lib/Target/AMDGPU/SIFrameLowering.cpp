@@ -1022,19 +1022,14 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       LiveRegs.addLiveIns(MBB);
     }
 
-    Register ScratchSPReg = findScratchNonCalleeSaveRegister(
-        MRI, LiveRegs, AMDGPU::SReg_32_XM0RegClass);
-    assert(ScratchSPReg && ScratchSPReg != FuncInfo->SGPRForFPSaveRestoreCopy &&
-           ScratchSPReg != FuncInfo->SGPRForBPSaveRestoreCopy);
-
-    // s_add_u32 tmp_reg, s32, NumBytes
-    // s_and_b32 s32, tmp_reg, 0b111...0000
-    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_U32), ScratchSPReg)
+    // s_add_u32 s33, s32, NumBytes
+    // s_and_b32 s33, s33, 0b111...0000
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_U32), FramePtrReg)
         .addReg(StackPtrReg)
         .addImm((Alignment - 1) * getScratchScaleFactor(ST))
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
-        .addReg(ScratchSPReg, RegState::Kill)
+        .addReg(FramePtrReg, RegState::Kill)
         .addImm(-Alignment * getScratchScaleFactor(ST))
         .setMIFlag(MachineInstr::FrameSetup);
     FuncInfo->setIsStackRealigned(true);
