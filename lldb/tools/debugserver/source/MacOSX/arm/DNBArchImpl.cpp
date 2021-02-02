@@ -647,8 +647,8 @@ bool DNBArchMachARM::NotifyException(MachException::Data &exc) {
                                         "watchpoint %d was hit on address "
                                         "0x%llx",
                        hw_index, (uint64_t)addr);
-      const int num_watchpoints = NumSupportedHardwareWatchpoints();
-      for (int i = 0; i < num_watchpoints; i++) {
+      const uint32_t num_watchpoints = NumSupportedHardwareWatchpoints();
+      for (uint32_t i = 0; i < num_watchpoints; i++) {
         if (LoHi[i] != 0 && LoHi[i] == hw_index && LoHi[i] != i &&
             GetWatchpointAddressByIndex(i) != INVALID_NUB_ADDRESS) {
           addr = GetWatchpointAddressByIndex(i);
