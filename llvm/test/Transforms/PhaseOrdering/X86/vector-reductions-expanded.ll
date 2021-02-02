@@ -327,8 +327,8 @@ for.end:
   ret float %r.0
 }
 
-define float @fmin_v4i32(float* %p) #0 {
-; CHECK-LABEL: @fmin_v4i32(
+define float @fmin_v4f32(float* %p) #0 {
+; CHECK-LABEL: @fmin_v4f32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, [[TBAA7]]
@@ -381,8 +381,70 @@ for.end:
   ret float %r.0
 }
 
+define available_externally float @max(float %a, float %b) {
+entry:
+  %a.addr = alloca float, align 4
+  %b.addr = alloca float, align 4
+  store float %a, float* %a.addr, align 4
+  store float %b, float* %b.addr, align 4
+  %0 = load float, float* %a.addr, align 4
+  %1 = load float, float* %b.addr, align 4
+  %cmp = fcmp nnan ninf nsz ogt float %0, %1
+  br i1 %cmp, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  %2 = load float, float* %a.addr, align 4
+  br label %cond.end
+
+cond.false:                                       ; preds = %entry
+  %3 = load float, float* %b.addr, align 4
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.false, %cond.true
+  %cond = phi nnan ninf nsz float [ %2, %cond.true ], [ %3, %cond.false ]
+  ret float %cond
+}
+
+; PR23116
+
+define float @findMax(<8 x float>* byval(<8 x float>) align 16 %0) {
+; CHECK-LABEL: @findMax(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load <8 x float>, <8 x float>* [[TMP0:%.*]], align 16, [[TBAA0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[V]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+entry:
+  %v.addr = alloca <8 x float>, align 32
+  %v = load <8 x float>, <8 x float>* %0, align 16, !tbaa !3
+  store <8 x float> %v, <8 x float>* %v.addr, align 32, !tbaa !3
+  %1 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext = extractelement <8 x float> %1, i32 0
+  %2 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext1 = extractelement <8 x float> %2, i32 1
+  %call = call nnan ninf nsz float @max(float %vecext, float %vecext1)
+  %3 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext2 = extractelement <8 x float> %3, i32 2
+  %call3 = call nnan ninf nsz float @max(float %call, float %vecext2)
+  %4 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext4 = extractelement <8 x float> %4, i32 3
+  %call5 = call nnan ninf nsz float @max(float %call3, float %vecext4)
+  %5 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext6 = extractelement <8 x float> %5, i32 4
+  %call7 = call nnan ninf nsz float @max(float %call5, float %vecext6)
+  %6 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext8 = extractelement <8 x float> %6, i32 5
+  %call9 = call nnan ninf nsz float @max(float %call7, float %vecext8)
+  %7 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext10 = extractelement <8 x float> %7, i32 6
+  %call11 = call nnan ninf nsz float @max(float %call9, float %vecext10)
+  %8 = load <8 x float>, <8 x float>* %v.addr, align 32, !tbaa !3
+  %vecext12 = extractelement <8 x float> %8, i32 7
+  %call13 = call nnan ninf nsz float @max(float %call11, float %vecext12)
+  ret float %call13
+}
+
 attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+avx,+cx16,+cx8,+fxsr,+mmx,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "unsafe-fp-math"="true" "use-soft-float"="false" }
-;attributes #1 = { argmemonly nounwind willreturn }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}
