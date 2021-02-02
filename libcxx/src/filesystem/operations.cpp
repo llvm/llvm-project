@@ -636,20 +636,20 @@ path __canonical(path const& orig_p, error_code* ec) {
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
   path p = __do_absolute(orig_p, &cwd, ec);
-#if defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112
-  std::unique_ptr<char, decltype(&::free)>
-    hold(::realpath(p.c_str(), nullptr), &::free);
+#if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
+  std::unique_ptr<path::value_type, decltype(&::free)>
+    hold(detail::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
     return err.report(capture_errno());
   return {hold.get()};
 #else
   #if defined(__MVS__) && !defined(PATH_MAX)
-    char buff[ _XOPEN_PATH_MAX + 1 ];
+    path::value_type buff[ _XOPEN_PATH_MAX + 1 ];
   #else
-    char buff[PATH_MAX + 1];
+    path::value_type buff[PATH_MAX + 1];
   #endif
-  char* ret;
-  if ((ret = ::realpath(p.c_str(), buff)) == nullptr)
+  path::value_type* ret;
+  if ((ret = detail::realpath(p.c_str(), buff)) == nullptr)
     return err.report(capture_errno());
   return {ret};
 #endif
