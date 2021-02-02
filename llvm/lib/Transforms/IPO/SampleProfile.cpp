@@ -1113,7 +1113,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     }
   } else {
     LLVM_DEBUG(dbgs() << "\nFailed to promote indirect call to "
-                      << CalleeFunctionName << " because " << Reason << "\n");
+                      << Candidate.CalleeSamples->getFuncName() << " because "
+                      << Reason << "\n");
   }
   return false;
 }
