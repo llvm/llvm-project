@@ -491,11 +491,6 @@ m_Not(const SrcTy &&Src) {
   return m_GXor(Src, m_AllOnesInt());
 }
 
-// class that allows to match one of the following patterns:
-//    select (pred, x, value1) -> cmp slt -> select (pred, origin, value2) ->
-//    cmp sgt OR select (pred, x, value1) -> cmp sgt -> select (pred, origin,
-//    value2) -> cmp slt
-// also binds the boundary values and the origin.
 template <typename Boundary1, typename Boundary2, typename Origin>
 struct MaxMin_match_helper {
   Boundary1 B1;

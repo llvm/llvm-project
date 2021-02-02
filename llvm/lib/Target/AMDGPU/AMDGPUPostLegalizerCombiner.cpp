@@ -273,6 +273,9 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
     ClampI64ToI16MatchInfo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Invalid instruction!");
   const LLT SrcType = MRI.getType(MI.getOperand(1).getReg());
+
+  // we want to check if a 64-bit number gets clamped to 16-bit boundaries (or
+  // below).
   if (SrcType != LLT::scalar(64))
     return false;
 
@@ -283,13 +286,11 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
   if (mi_match(MI.getOperand(1).getReg(), MRI,
                m_MaxMin(m_ICst(MatchInfo.Cmp1), m_ICst(MatchInfo.Cmp2),
                         m_Reg(MatchInfo.Origin)))) {
-    const auto Cmp1 = static_cast<int64_t>(MatchInfo.Cmp1);
-    const auto Cmp2 = static_cast<int64_t>(MatchInfo.Cmp2);
+    const auto Cmp1 = MatchInfo.Cmp1;
+    const auto Cmp2 = MatchInfo.Cmp2;
 
-    const int64_t Min =
-        static_cast<int64_t>(std::numeric_limits<int16_t>::min());
-    const int64_t Max =
-        static_cast<int64_t>(std::numeric_limits<int16_t>::max());
+    const int64_t Min = std::numeric_limits<int16_t>::min();
+    const int64_t Max = std::numeric_limits<int16_t>::max();
 
     // are we really trying to clamp against short boundaries?
     return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
@@ -299,6 +300,15 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
   return false;
 }
 
+/**
+ * We want to find a combination of instructions that
+ * gets generated when an i64 gets clamped to i16.
+ * The corresponding pattern is:
+ * G_SELECT MIN/MAX, G_ICMP, G_SELECT MIN/MAX, G_ICMP, G_TRUNC.
+ * This can be efficiently written as following:
+ * v_cvt_pk_i16_i32 v0, v0, v1
+ * v_med3_i32 v0, Clamp_Min, v0, Clamp_Max
+ */
 void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
     MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) {
   LLVM_DEBUG(dbgs() << "Combining MI");
@@ -319,8 +329,7 @@ void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
   constexpr unsigned int CvtOpcode = AMDGPU::V_CVT_PK_I16_I32_e64;
   assert(MI.getOpcode() != CvtOpcode);
 
-  Register CvtDst = MRI.createGenericVirtualRegister(S32);
-  MRI.setRegClass(CvtDst, &AMDGPU::VGPR_32RegClass);
+  Register CvtDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
   auto CvtPk = B.buildInstr(CvtOpcode);
   CvtPk.addDef(CvtDst);
@@ -331,16 +340,13 @@ void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
   auto min = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto max = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
 
-  Register MinBoundaryDst = MRI.createGenericVirtualRegister(S32);
-  MRI.setRegClass(MinBoundaryDst, &AMDGPU::VGPR_32RegClass);
+  Register MinBoundaryDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   B.buildConstant(MinBoundaryDst, min);
 
-  Register MaxBoundaryDst = MRI.createGenericVirtualRegister(S32);
-  MRI.setRegClass(MaxBoundaryDst, &AMDGPU::VGPR_32RegClass);
+  Register MaxBoundaryDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   B.buildConstant(MaxBoundaryDst, max);
 
-  Register MedDst = MRI.createGenericVirtualRegister(S32);
-  MRI.setRegClass(MedDst, &AMDGPU::VGPR_32RegClass);
+  Register MedDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
   auto Med = B.buildInstr(AMDGPU::V_MED3_I32);
   Med.addDef(MedDst);
