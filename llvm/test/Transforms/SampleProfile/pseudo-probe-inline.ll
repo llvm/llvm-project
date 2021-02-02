@@ -12,18 +12,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local i32 @foo(i32 %x) #0 !dbg !12 {
 entry:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID1:]], i64 1, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID1:]], i64 1, i32 0, i64 -1)
   %add = add nsw i32 %x, 100000, !dbg !19
 ;; Check zen is fully inlined so there's no call to zen anymore.
 ;; Check code from the inlining of zen is properly annotated here.
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1)
 ; CHECK: br i1 %cmp.i, label %while.cond.i, label %while.cond2.i, !dbg ![[#]], !prof ![[PD1:[0-9]+]]
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 2, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 2, i32 0, i64 -1)
 ; CHECK: br i1 %cmp1.i, label %while.body.i, label %zen.exit, !dbg ![[#]], !prof ![[PD2:[0-9]+]]
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 3, i32 0)
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 4, i32 0)
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 5, i32 0)
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 6, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 3, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 4, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 5, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 6, i32 0, i64 -1)
 ; CHECK-NOT: call i32 @zen
   %call = call i32 @zen(i32 %add), !dbg !20
   ret i32 %call, !dbg !21
@@ -32,36 +32,36 @@ entry:
 ; CHECK: define dso_local i32 @zen
 define dso_local i32 @zen(i32 %x) #0 !dbg !22 {
 entry:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 1, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 1, i32 0, i64 -1)
   %cmp = icmp sgt i32 %x, 0, !dbg !26
   br i1 %cmp, label %while.cond, label %while.cond2, !dbg !28
 
 while.cond:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 2, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 2, i32 0, i64 -1)
   %x.addr.0 = phi i32 [ %x, %entry ], [ %sub, %while.body ]
   %cmp1 = icmp sgt i32 %x.addr.0, 0, !dbg !29
   br i1 %cmp1, label %while.body, label %if.end, !dbg !31
 
 while.body:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 3, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 3, i32 0, i64 -1)
   %0 = load volatile i32, i32* @factor, align 4, !dbg !32
   %sub = sub nsw i32 %x.addr.0, %0, !dbg !39
   br label %while.cond, !dbg !31
 
 while.cond2:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 4, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 4, i32 0, i64 -1)
   %x.addr.1 = phi i32 [ %x, %entry ], [ %add, %while.body4 ]
   %cmp3 = icmp slt i32 %x.addr.1, 0, !dbg !42
   br i1 %cmp3, label %while.body4, label %if.end, !dbg !44
 
 while.body4:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 5, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 5, i32 0, i64 -1)
   %1 = load volatile i32, i32* @factor, align 4, !dbg !45
   %add = add nsw i32 %x.addr.1, %1, !dbg !48
   br label %while.cond2, !dbg !44
 
 if.end:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 6, i32 0)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 6, i32 0, i64 -1)
   %x.addr.2 = phi i32 [ %x.addr.0, %while.cond ], [ %x.addr.1, %while.cond2 ]
   ret i32 %x.addr.2, !dbg !51
 }
@@ -109,6 +109,10 @@ if.end:
 ;YAML-NEXT:    - NumSamples:      '23'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '1'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '23'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:  ...
 ;YAML:  --- !Analysis
@@ -121,6 +125,10 @@ if.end:
 ;YAML-NEXT:    - NumSamples:      '23'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '1'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '23'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:  ...
 ;YAML:  --- !Analysis
@@ -133,6 +141,10 @@ if.end:
 ;YAML-NEXT:    - NumSamples:      '382920'
 ;YAML-NEXT:    - String:          ' samples from profile (ProbeId='
 ;YAML-NEXT:    - ProbeId:         '2'
+;YAML-NEXT:    - String:          ', Factor='
+;YAML-NEXT:    - Factor:          '1.000000e+00'
+;YAML-NEXT:    - String:          ', OriginalSamples='
+;YAML-NEXT:    - OriginalSamples: '382920'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:  ...
 

@@ -108,6 +108,8 @@ STATISTIC(NumCSNotInlined,
 STATISTIC(NumMismatchedProfile,
           "Number of functions with CFG mismatched profile");
 STATISTIC(NumMatchedProfile, "Number of functions with CFG matched profile");
+STATISTIC(NumDuplicatedInlinesite,
+          "Number of inlined callsites with a partial distribution factor");
 
 STATISTIC(NumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
@@ -358,7 +360,14 @@ private:
 struct InlineCandidate {
   CallBase *CallInstr;
   const FunctionSamples *CalleeSamples;
+  // Prorated callsite count, which will be used to guide inlining. For example,
+  // if a callsite is duplicated in LTO prelink, then in LTO postlink the two
+  // copies will get their own distribution factors and their prorated counts
+  // will be used to decide if they should be inlined independently.
   uint64_t CallsiteCount;
+  // Call site distribution factor to prorate the profile samples for a
+  // duplicated callsite. Default value is 1.0.
+  float CallsiteDistribution;
 };
 
 // Inline candidate comparer using call site weight
@@ -418,8 +427,8 @@ protected:
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   // Attempt to promote indirect call and also inline the promoted call
   bool tryPromoteAndInlineCandidate(
-      Function &F, InlineCandidate &Candidate, uint64_t &Sum,
-      DenseSet<Instruction *> &PromotedInsns,
+      Function &F, InlineCandidate &Candidate, uint64_t SumOrigin,
+      uint64_t &Sum, DenseSet<Instruction *> &PromotedInsns,
       SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
@@ -886,7 +895,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
 
   const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
   if (R) {
-    uint64_t Samples = R.get();
+    uint64_t Samples = R.get() * Probe->Factor;
     bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
     if (FirstMark) {
       ORE->emit([&]() {
@@ -894,13 +903,17 @@ ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
         Remark << "Applied " << ore::NV("NumSamples", Samples);
         Remark << " samples from profile (ProbeId=";
         Remark << ore::NV("ProbeId", Probe->Id);
+        Remark << ", Factor=";
+        Remark << ore::NV("Factor", Probe->Factor);
+        Remark << ", OriginalSamples=";
+        Remark << ore::NV("OriginalSamples", R.get());
         Remark << ")";
         return Remark;
       });
     }
-
     LLVM_DEBUG(dbgs() << "    " << Probe->Id << ":" << Inst
-                      << " - weight: " << R.get() << ")\n");
+                      << " - weight: " << R.get() << " - factor: "
+                      << format("%0.2f", Probe->Factor) << ")\n");
     return Samples;
   }
   return R;
@@ -1085,7 +1098,7 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// \param InlinedCallSite  Output vector for new call sites exposed after
 /// inlining.
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
-    Function &F, InlineCandidate &Candidate, uint64_t &Sum,
+    Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     DenseSet<Instruction *> &PromotedInsns,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
   const char *Reason = "Callee function not available";
@@ -1106,10 +1119,28 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
                                   Candidate.CallsiteCount, Sum, false, ORE);
     if (DI) {
       Sum -= Candidate.CallsiteCount;
+      // Prorate the indirect callsite distribution.
+      // Do not update the promoted direct callsite distribution at this
+      // point since the original distribution combined with the callee
+      // profile will be used to prorate callsites from the callee if
+      // inlined. Once not inlined, the direct callsite distribution should
+      // be prorated so that the it will reflect the real callsite counts.
+      setProbeDistributionFactor(*Candidate.CallInstr,
+                                 Candidate.CallsiteDistribution * Sum /
+                                     SumOrigin);
       PromotedInsns.insert(Candidate.CallInstr);
       Candidate.CallInstr = DI;
-      if (isa<CallInst>(DI) || isa<InvokeInst>(DI))
-        return tryInlineCandidate(Candidate, InlinedCallSite);
+      if (isa<CallInst>(DI) || isa<InvokeInst>(DI)) {
+        bool Inlined = tryInlineCandidate(Candidate, InlinedCallSite);
+        if (!Inlined) {
+          // Prorate the direct callsite distribution so that it reflects real
+          // callsite counts.
+          setProbeDistributionFactor(*DI, Candidate.CallsiteDistribution *
+                                              Candidate.CallsiteCount /
+                                              SumOrigin);
+        }
+        return Inlined;
+      }
     }
   } else {
     LLVM_DEBUG(dbgs() << "\nFailed to promote indirect call to "
@@ -1216,11 +1247,11 @@ bool SampleProfileLoader::inlineHotFunctions(
     }
     for (CallBase *I : CIS) {
       Function *CalledFunction = I->getCalledFunction();
-      InlineCandidate Candidate = {I,
-                                   LocalNotInlinedCallSites.count(I)
-                                       ? LocalNotInlinedCallSites[I]
-                                       : nullptr,
-                                   0 /* dummy count */};
+      InlineCandidate Candidate = {
+          I,
+          LocalNotInlinedCallSites.count(I) ? LocalNotInlinedCallSites[I]
+                                            : nullptr,
+          0 /* dummy count */, 1.0 /* dummy distribution factor */};
       // Do not inline recursive calls.
       if (CalledFunction == &F)
         continue;
@@ -1229,6 +1260,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           continue;
         uint64_t Sum;
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
+          uint64_t SumOrigin = Sum;
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
             FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
                                      PSI->getOrCompHotCountThreshold());
@@ -1237,8 +1269,9 @@ bool SampleProfileLoader::inlineHotFunctions(
           if (!callsiteIsHot(FS, PSI))
             continue;
 
-          Candidate = {I, FS, FS->getEntrySamples()};
-          if (tryPromoteAndInlineCandidate(F, Candidate, Sum, PromotedInsns)) {
+          Candidate = {I, FS, FS->getEntrySamples(), 1.0};
+          if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
+                                           PromotedInsns)) {
             LocalNotInlinedCallSites.erase(I);
             LocalChanged = true;
           }
@@ -1343,6 +1376,23 @@ bool SampleProfileLoader::tryInlineCandidate(
     if (ProfileIsCS)
       ContextTracker->markContextSamplesInlined(Candidate.CalleeSamples);
     ++NumCSInlined;
+
+    // Prorate inlined probes for a duplicated inlining callsite which probably
+    // has a distribution less than 100%. Samples for an inlinee should be
+    // distributed among the copies of the original callsite based on each
+    // callsite's distribution factor for counts accuracy. Note that an inlined
+    // probe may come with its own distribution factor if it has been duplicated
+    // in the inlinee body. The two factor are multiplied to reflect the
+    // aggregation of duplication.
+    if (Candidate.CallsiteDistribution < 1) {
+      for (auto &I : IFI.InlinedCallSites) {
+        if (Optional<PseudoProbe> Probe = extractProbe(*I))
+          setProbeDistributionFactor(*I, Probe->Factor *
+                                             Candidate.CallsiteDistribution);
+      }
+      NumDuplicatedInlinesite++;
+    }
+
     return true;
   }
   return false;
@@ -1360,14 +1410,19 @@ bool SampleProfileLoader::getInlineCandidate(InlineCandidate *NewCandidate,
   if (!CalleeSamples)
     return false;
 
+  float Factor = 1.0;
+  if (Optional<PseudoProbe> Probe = extractProbe(*CB))
+    Factor = Probe->Factor;
+
   uint64_t CallsiteCount = 0;
   ErrorOr<uint64_t> Weight = getBlockWeight(CB->getParent());
   if (Weight)
     CallsiteCount = Weight.get();
   if (CalleeSamples)
-    CallsiteCount = std::max(CallsiteCount, CalleeSamples->getEntrySamples());
+    CallsiteCount = std::max(
+        CallsiteCount, uint64_t(CalleeSamples->getEntrySamples() * Factor));
 
-  *NewCandidate = {CB, CalleeSamples, CallsiteCount};
+  *NewCandidate = {CB, CalleeSamples, CallsiteCount, Factor};
   return true;
 }
 
@@ -1479,6 +1534,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       uint64_t Sum;
       auto CalleeSamples = findIndirectCallFunctionSamples(*I, Sum);
       uint64_t SumOrigin = Sum;
+      Sum *= Candidate.CallsiteDistribution;
       for (const auto *FS : CalleeSamples) {
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
@@ -1486,7 +1542,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
                                    PSI->getOrCompHotCountThreshold());
           continue;
         }
-        uint64_t EntryCountDistributed = FS->getEntrySamples();
+        uint64_t EntryCountDistributed =
+            FS->getEntrySamples() * Candidate.CallsiteDistribution;
         // In addition to regular inline cost check, we also need to make sure
         // ICP isn't introducing excessive speculative checks even if individual
         // target looks beneficial to promote and inline. That means we should
@@ -1505,9 +1562,10 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         SmallVector<CallBase *, 8> InlinedCallSites;
         // Attach function profile for promoted indirect callee, and update
         // call site count for the promoted inline candidate too.
-        Candidate = {I, FS, EntryCountDistributed};
-        if (tryPromoteAndInlineCandidate(F, Candidate, Sum, PromotedInsns,
-                                         &InlinedCallSites)) {
+        Candidate = {I, FS, EntryCountDistributed,
+                     Candidate.CallsiteDistribution};
+        if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
+                                         PromotedInsns, &InlinedCallSites)) {
           for (auto *CB : InlinedCallSites) {
             if (getInlineCandidate(&NewCandidate, CB))
               CQueue.emplace(NewCandidate);
@@ -1965,6 +2023,14 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           auto T = FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
+          // Prorate the callsite counts to reflect what is already done to the
+          // callsite, such as ICP or calliste cloning.
+          if (FunctionSamples::ProfileIsProbeBased) {
+            if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+              if (Probe->Factor < 1)
+                T = SampleRecord::adjustCallTargets(T.get(), Probe->Factor);
+            }
+          }
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
               GetSortedValueDataFromCallTargets(T.get());
           uint64_t Sum;
