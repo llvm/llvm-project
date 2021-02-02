@@ -469,11 +469,10 @@ m_GInsertVecElt(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
 }
 
 template <typename Src0Ty, typename Src1Ty, typename Src2Ty>
-inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
-                       TargetOpcode::G_SELECT>
+inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty, TargetOpcode::G_SELECT>
 m_GISelect(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
-  return TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
-                         TargetOpcode::G_SELECT>(Src0, Src1, Src2);
+  return TernaryOp_match<Src0Ty, Src1Ty, Src2Ty, TargetOpcode::G_SELECT>(
+      Src0, Src1, Src2);
 }
 
 /// Matches a register negated by a G_SUB.
@@ -497,8 +496,7 @@ m_Not(const SrcTy &&Src) {
 //    cmp sgt OR select (pred, x, value1) -> cmp sgt -> select (pred, origin,
 //    value2) -> cmp slt
 // also binds the boundary values and the origin.
-template <typename Boundary1,
-          typename Boundary2, typename Origin>
+template <typename Boundary1, typename Boundary2, typename Origin>
 struct MaxMin_match_helper {
   Boundary1 B1;
   Boundary2 B2;
@@ -518,10 +516,14 @@ struct MaxMin_match_helper {
                             m_Reg(Base), B1))) {
       CmpInst::Predicate Predicate2;
 
-      if (mi_match(Base, MRI, m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), O, B2))) {
-        if ((Predicate1 == CmpInst::ICMP_SLT && Predicate2 == CmpInst::ICMP_SGT) ||
-            (Predicate1 == CmpInst::ICMP_SGT && Predicate2 == CmpInst::ICMP_SLT)) {
-            return true;
+      if (mi_match(Base, MRI,
+                   m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), O,
+                              B2))) {
+        if ((Predicate1 == CmpInst::ICMP_SLT &&
+             Predicate2 == CmpInst::ICMP_SGT) ||
+            (Predicate1 == CmpInst::ICMP_SGT &&
+             Predicate2 == CmpInst::ICMP_SLT)) {
+          return true;
         }
       }
     }
@@ -536,7 +538,7 @@ m_MaxMin(const Boundary1 &B1, const Boundary2 &B2, const Origin &O) {
   return MaxMin_match_helper<Boundary1, Boundary2, Origin>(B1, B2, O);
 }
 
-} // namespace GMIPatternMatch
+} // namespace MIPatternMatch
 } // namespace llvm
 
 #endif
