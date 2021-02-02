@@ -970,23 +970,20 @@ define arm_aapcs_vfpcc i64 @add_v2i64_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov r3, s5
 ; CHECK-NEXT:    vmov r4, s7
-; CHECK-NEXT:    umull r12, r3, r1, r0
-; CHECK-NEXT:    mla r1, r1, r2, r3
+; CHECK-NEXT:    umull r12, r2, r1, r0
+; CHECK-NEXT:    mla r1, r1, r3, r2
 ; CHECK-NEXT:    vmov r2, s1
-; CHECK-NEXT:    vmov r3, s2
-; CHECK-NEXT:    vmov.32 q2[0], r12
+; CHECK-NEXT:    mla lr, r2, r0, r1
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    umull r3, r1, r2, r0
+; CHECK-NEXT:    mla r1, r2, r4, r1
+; CHECK-NEXT:    vmov r2, s3
 ; CHECK-NEXT:    mla r1, r2, r0, r1
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    vmov.32 q2[1], r1
-; CHECK-NEXT:    vmov r12, s8
-; CHECK-NEXT:    umull lr, r0, r3, r2
-; CHECK-NEXT:    mla r0, r3, r4, r0
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    mla r2, r3, r2, r0
-; CHECK-NEXT:    adds.w r0, r12, lr
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    adds.w r0, r12, r3
+; CHECK-NEXT:    adc.w r1, r1, lr
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %m = mul <2 x i64> %x, %y
@@ -1843,23 +1840,20 @@ define arm_aapcs_vfpcc i64 @add_v2i64_v2i64_acc(<2 x i64> %x, <2 x i64> %y, i64 
 ; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    vmov r4, s5
 ; CHECK-NEXT:    vmov r6, s7
-; CHECK-NEXT:    umull r12, lr, r3, r2
-; CHECK-NEXT:    mla r3, r3, r4, lr
+; CHECK-NEXT:    umull lr, r12, r3, r2
+; CHECK-NEXT:    mla r3, r3, r4, r12
 ; CHECK-NEXT:    vmov r4, s1
-; CHECK-NEXT:    vmov.32 q2[0], r12
-; CHECK-NEXT:    mla r2, r4, r2, r3
-; CHECK-NEXT:    vmov r4, s6
-; CHECK-NEXT:    vmov r3, s2
-; CHECK-NEXT:    vmov.32 q2[1], r2
-; CHECK-NEXT:    vmov r12, s8
-; CHECK-NEXT:    umull lr, r5, r3, r4
-; CHECK-NEXT:    mla r3, r3, r6, r5
+; CHECK-NEXT:    mla r12, r4, r2, r3
+; CHECK-NEXT:    vmov r3, s6
+; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    umull r2, r5, r4, r3
+; CHECK-NEXT:    mla r4, r4, r6, r5
 ; CHECK-NEXT:    vmov r5, s3
-; CHECK-NEXT:    adds.w r6, r12, lr
-; CHECK-NEXT:    mla r3, r5, r4, r3
-; CHECK-NEXT:    adcs r2, r3
-; CHECK-NEXT:    adds r0, r0, r6
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    adds.w r2, r2, lr
+; CHECK-NEXT:    mla r3, r5, r3, r4
+; CHECK-NEXT:    adc.w r3, r3, r12
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %m = mul <2 x i64> %x, %y

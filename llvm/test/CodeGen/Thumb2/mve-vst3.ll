@@ -18,7 +18,6 @@ define void @vst3_v2i32(<2 x i32> *%src, <6 x i32> *%dst) {
 ; CHECK-NEXT:    vmov.f32 s8, s7
 ; CHECK-NEXT:    vmov.f32 s10, s1
 ; CHECK-NEXT:    vmov r2, s8
-; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vmov.f64 d4, d2
 ; CHECK-NEXT:    vmov.f32 s9, s6
 ; CHECK-NEXT:    vmov.f32 s10, s0
