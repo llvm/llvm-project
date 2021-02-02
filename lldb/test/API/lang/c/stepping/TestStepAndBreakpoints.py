@@ -166,14 +166,14 @@ class TestCStepping(TestBase):
 
         process.Continue()
 
-        self.assertTrue(thread.GetFrameAtIndex(0).GetFunctionName() == "a")
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "a")
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # And one more time should get us back to main:
         process.Continue()
 
-        self.assertTrue(thread.GetFrameAtIndex(0).GetFunctionName() == "main")
-        self.assertTrue(thread.GetStopReason() == lldb.eStopReasonPlanComplete)
+        self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "main")
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Now make sure we can call a function, break in the called function,
         # then have "continue" get us back out again:
@@ -238,18 +238,18 @@ class TestCStepping(TestBase):
 
         threads = lldbutil.continue_to_breakpoint(
             process, break_before_complex_1)
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         break_before_complex_1.SetEnabled(False)
 
         thread.StepInto("b")
-        self.assertTrue(thread.GetFrameAtIndex(0).GetFunctionName() == "b")
+        self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "b")
 
         # Now continue out and stop at the next call to complex.  This time
         # step all the way into complex:
         threads = lldbutil.continue_to_breakpoint(
             process, break_before_complex_2)
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         break_before_complex_2.SetEnabled(False)
 
@@ -261,7 +261,7 @@ class TestCStepping(TestBase):
         # enable breakpoints in a and c and then step targeting b:
         threads = lldbutil.continue_to_breakpoint(
             process, break_before_complex_3)
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         break_before_complex_3.SetEnabled(False)
 
@@ -272,7 +272,7 @@ class TestCStepping(TestBase):
         threads = lldbutil.get_stopped_threads(
             process, lldb.eStopReasonBreakpoint)
 
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         stop_break_id = thread.GetStopReasonDataAtIndex(0)
         self.assertTrue(stop_break_id == break_at_start_of_a.GetID()
@@ -282,15 +282,15 @@ class TestCStepping(TestBase):
         break_at_start_of_c.SetEnabled(False)
 
         process.Continue()
-        self.assertTrue(thread.GetFrameAtIndex(0).GetFunctionName() == "b")
+        self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "b")
 
         # Now continue out and stop at the next call to complex.  This time
         # enable breakpoints in a and c and then step targeting b:
         threads = lldbutil.continue_to_breakpoint(
             process, break_before_complex_4)
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         break_before_complex_4.SetEnabled(False)
 
         thread.StepInto("NoSuchFunction")
-        self.assertTrue(thread.GetFrameAtIndex(0).GetFunctionName() == "main")
+        self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "main")

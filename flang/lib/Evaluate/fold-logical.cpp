@@ -108,6 +108,18 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "__builtin_ieee_support_datatype" ||
+      name == "__builtin_ieee_support_denormal" ||
+      name == "__builtin_ieee_support_divide" ||
+      name == "__builtin_ieee_support_divide" ||
+      name == "__builtin_ieee_support_inf" ||
+      name == "__builtin_ieee_support_io" ||
+      name == "__builtin_ieee_support_nan" ||
+      name == "__builtin_ieee_support_sqrt" ||
+      name == "__builtin_ieee_support_standard" ||
+      name == "__builtin_ieee_support_subnormal" ||
+      name == "__builtin_ieee_support_underflow_control") {
+    return Expr<T>{true};
   }
   // TODO: btest, cshift, dot_product, eoshift, is_iostat_end,
   // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,

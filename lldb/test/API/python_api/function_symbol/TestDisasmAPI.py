@@ -53,7 +53,7 @@ class DisasmAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -61,7 +61,7 @@ class DisasmAPITestCase(TestBase):
             "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertTrue(lineEntry.GetLine() == self.line1)
+        self.assertEqual(lineEntry.GetLine(), self.line1)
 
         address1 = lineEntry.GetStartAddress()
         self.trace("address1:", address1)
@@ -76,7 +76,7 @@ class DisasmAPITestCase(TestBase):
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -84,7 +84,7 @@ class DisasmAPITestCase(TestBase):
             "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertTrue(lineEntry.GetLine() == self.line2)
+        self.assertEqual(lineEntry.GetLine(), self.line2)
 
         # Verify that the symbol and the function has the same address range
         # per function 'a'.

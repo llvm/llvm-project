@@ -228,13 +228,13 @@ static constexpr const char *kResume = "__resume";
 /// intrinsics. We need this function to be able to pass it to the async
 /// runtime execute API.
 static void addResumeFunction(ModuleOp module) {
+  if (module.lookupSymbol(kResume))
+    return;
+
   MLIRContext *ctx = module.getContext();
 
   OpBuilder moduleBuilder(module.getBody()->getTerminator());
   Location loc = module.getLoc();
-
-  if (module.lookupSymbol(kResume))
-    return;
 
   auto voidTy = LLVM::LLVMVoidType::get(ctx);
   auto i8Ptr = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
@@ -637,6 +637,7 @@ public:
     Value handle = RuntimeAwaitAndResumeOpAdaptor(operands).handle();
 
     // A pointer to coroutine resume intrinsic wrapper.
+    addResumeFunction(op->getParentOfType<ModuleOp>());
     auto resumeFnTy = AsyncAPI::resumeFunctionType(op->getContext());
     auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
         op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
@@ -663,6 +664,7 @@ public:
   matchAndRewrite(RuntimeResumeOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     // A pointer to coroutine resume intrinsic wrapper.
+    addResumeFunction(op->getParentOfType<ModuleOp>());
     auto resumeFnTy = AsyncAPI::resumeFunctionType(op->getContext());
     auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
         op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
@@ -862,8 +864,9 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   ModuleOp module = getOperation();
   MLIRContext *ctx = module->getContext();
 
-  // Add declarations for all functions required by the coroutines lowering.
-  addResumeFunction(module);
+  // Add declarations for most functions required by the coroutines lowering.
+  // We delay adding the resume function until it's needed because it currently
+  // fails to compile unless '-O0' is specified.
   addAsyncRuntimeApiDeclarations(module);
   addCRuntimeDeclarations(module);
 

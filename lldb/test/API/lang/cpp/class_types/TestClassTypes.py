@@ -111,7 +111,7 @@ class ClassTypesTestCase(TestBase):
         # startstr = "main.cpp:93")
 
         # We should be stopped on the breakpoint with a hit count of 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1, BREAKPOINT_HIT_ONCE)
+        self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
         process.Continue()
 
