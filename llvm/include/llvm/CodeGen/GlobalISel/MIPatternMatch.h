@@ -503,7 +503,6 @@ m_Not(const SrcTy &&Src) {
   return m_GXor(Src, m_AllOnesInt());
 }
 
-
 } // namespace MIPatternMatch
 } // namespace llvm
 

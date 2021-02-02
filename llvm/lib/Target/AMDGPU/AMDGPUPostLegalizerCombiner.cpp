@@ -351,7 +351,6 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
 private:
   bool IsOptNone;
 };
