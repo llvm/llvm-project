@@ -665,9 +665,9 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 #map1 = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
 #map2 = affine_map<()[s0] -> (s0 + 3)>
 
-func @fill_and_conv(%arg0: memref<1x4x5x1xf32>, %arg1: memref<2x3x1x1xf32>, %arg2: memref<1x4x5x1xf32>) {
+func @fill_and_conv(%arg0: memref<?x?x?x?xf32>, %arg1: memref<2x3x1x1xf32>, %arg2: memref<?x?x?x?xf32>) {
   %cst = constant 0.000000e+00 : f32
-  linalg.fill(%arg2, %cst) : memref<1x4x5x1xf32>, f32
+  linalg.fill(%arg2, %cst) : memref<?x?x?x?xf32>, f32
 
   %c4 = constant 4 : index
   %c1 = constant 1 : index
@@ -676,13 +676,13 @@ func @fill_and_conv(%arg0: memref<1x4x5x1xf32>, %arg1: memref<2x3x1x1xf32>, %arg
   %c3 = constant 3 : index
   %4 = dim %arg1, %c0 : memref<2x3x1x1xf32>
   %5 = dim %arg1, %c1 : memref<2x3x1x1xf32>
-  %6 = dim %arg0, %c0 : memref<1x4x5x1xf32>
-  %7 = dim %arg0, %c1 : memref<1x4x5x1xf32>
-  %8 = dim %arg0, %c3 : memref<1x4x5x1xf32>
-  %9 = dim %arg2, %c0 : memref<1x4x5x1xf32>
-  %10 = dim %arg2, %c1 : memref<1x4x5x1xf32>
-  %11 = dim %arg2, %c2 : memref<1x4x5x1xf32>
-  %12 = dim %arg2, %c3 : memref<1x4x5x1xf32>
+  %6 = dim %arg0, %c0 : memref<?x?x?x?xf32>
+  %7 = dim %arg0, %c1 : memref<?x?x?x?xf32>
+  %8 = dim %arg0, %c3 : memref<?x?x?x?xf32>
+  %9 = dim %arg2, %c0 : memref<?x?x?x?xf32>
+  %10 = dim %arg2, %c1 : memref<?x?x?x?xf32>
+  %11 = dim %arg2, %c2 : memref<?x?x?x?xf32>
+  %12 = dim %arg2, %c3 : memref<?x?x?x?xf32>
   %13 = linalg.range %c0 : %6 : %c2 : !linalg.range
   %14 = linalg.range %c0 : %10 : %c3 : !linalg.range
   scf.for %arg3 = %c0 to %6 step %c2 {
@@ -690,14 +690,14 @@ func @fill_and_conv(%arg0: memref<1x4x5x1xf32>, %arg1: memref<2x3x1x1xf32>, %arg
       %15 = affine.min #map0(%c2, %c1, %arg3)
       %16 = affine.apply #map2()[%7]
       %17 = affine.min #map0(%16, %c4, %arg4)
-      %18 = dim %arg0, %c2 : memref<1x4x5x1xf32>
-      %19 = dim %arg0, %c3 : memref<1x4x5x1xf32>
-      %20 = subview %arg0[%arg3, %arg4, %c0, %c0] [%15, %17, %18, %19] [%c1, %c1, %c1, %c1] : memref<1x4x5x1xf32> to memref<?x?x?x?xf32, #map1>
+      %18 = dim %arg0, %c2 : memref<?x?x?x?xf32>
+      %19 = dim %arg0, %c3 : memref<?x?x?x?xf32>
+      %20 = subview %arg0[%arg3, %arg4, %c0, %c0] [%15, %17, %18, %19] [%c1, %c1, %c1, %c1] : memref<?x?x?x?xf32> to memref<?x?x?x?xf32, #map1>
       %21 = affine.min #map0(%c2, %c1, %arg3)
       %22 = affine.min #map0(%c3, %c4, %arg4)
-      %23 = dim %arg2, %c2 : memref<1x4x5x1xf32>
-      %24 = dim %arg2, %c3 : memref<1x4x5x1xf32>
-      %25 = subview %arg2[%arg3, %arg4, %c0, %c0] [%21, %22, %23, %24] [%c1, %c1, %c1, %c1] : memref<1x4x5x1xf32> to memref<?x?x?x?xf32, #map1>
+      %23 = dim %arg2, %c2 : memref<?x?x?x?xf32>
+      %24 = dim %arg2, %c3 : memref<?x?x?x?xf32>
+      %25 = subview %arg2[%arg3, %arg4, %c0, %c0] [%21, %22, %23, %24] [%c1, %c1, %c1, %c1] : memref<?x?x?x?xf32> to memref<?x?x?x?xf32, #map1>
       linalg.conv(%arg1, %20, %25) {dilations = [1, 1], strides = [1, 1]} : memref<2x3x1x1xf32>, memref<?x?x?x?xf32, #map1>, memref<?x?x?x?xf32, #map1>
     }
   }
