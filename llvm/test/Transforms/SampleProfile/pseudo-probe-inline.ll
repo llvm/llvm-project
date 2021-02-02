@@ -1,8 +1,8 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
 
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-inline.prof -o %t2
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%t2 -S -pass-remarks=sample-profile -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML < %t2.opt.yaml
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
