@@ -19,9 +19,11 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
+
 #define DEBUG_TYPE "flang-affine-demotion"
 
 using namespace fir;
