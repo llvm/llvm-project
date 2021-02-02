@@ -283,9 +283,21 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
 
   LLVM_DEBUG(dbgs() << "Matching Clamp i64 to i16");
 
-  if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_MaxMin(m_ICst(MatchInfo.Cmp1), m_ICst(MatchInfo.Cmp2),
-                        m_Reg(MatchInfo.Origin)))) {
+  CmpInst::Predicate Predicate1;
+  Register Base;
+
+  if (!mi_match(MI.getOperand(1).getReg(), MRI, m_GISelect(m_GICmp(m_Pred(Predicate1), m_Reg(), m_Reg()), m_Reg(Base), m_ICst(MatchInfo.Cmp1))))
+    return false;
+
+  CmpInst::Predicate Predicate2;
+
+  if (!mi_match(Base, MRI, m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), m_Reg(MatchInfo.AssignValue), m_ICst(MatchInfo.Cmp2))))
+    return false;
+    
+  if ((Predicate1 == CmpInst::ICMP_SLT &&
+      Predicate2 == CmpInst::ICMP_SGT) ||
+      (Predicate1 == CmpInst::ICMP_SGT &&
+      Predicate2 == CmpInst::ICMP_SLT)) {
     const auto Cmp1 = MatchInfo.Cmp1;
     const auto Cmp2 = MatchInfo.Cmp2;
     const auto Diff = std::abs(Cmp2 - Cmp1);
@@ -298,7 +310,7 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
     const int64_t Min = std::numeric_limits<int16_t>::min();
     const int64_t Max = std::numeric_limits<int16_t>::max();
 
-    // are we really trying to clamp against short boundaries?
+    // are we really trying to clamp against the relevant boundaries?
     return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
             (Cmp1 >= Cmp2 && Cmp1 <= Max && Cmp2 >= Min));
   }
