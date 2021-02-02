@@ -2328,6 +2328,36 @@ struct UnreachableOpConversion : public FIROpConversion<fir::UnreachableOp> {
   }
 };
 
+// Check if an argument is present.
+struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsPresentOp isPresent, OperandTy operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto idxTy = lowerTy().indexType();
+    auto c0 = genConstantIndex(isPresent.getLoc(), idxTy, rewriter, 0);
+    auto addr = rewriter.create<mlir::LLVM::PtrToIntOp>(isPresent.getLoc(),
+                                                        idxTy, operands[0]);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        isPresent, mlir::LLVM::ICmpPredicate::ne, addr, c0);
+    return success();
+  }
+};
+
+// Create value signaling an absent optional argument in a call.
+struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::AbsentOp absent, OperandTy,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto ty = convertType(absent.getType());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+    return success();
+  }
+};
+
 //
 // Primitive operations on Real (floating-point) types
 //
@@ -2591,27 +2621,28 @@ struct FIRToLLVMLoweringPass
     auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern;
     pattern.insert<
-        AddcOpConversion, AddfOpConversion, AddrOfOpConversion,
-        AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
-        BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
-        BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-        BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
-        CallOpConversion, CmpcOpConversion, CmpfOpConversion,
-        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DispatchOpConversion, DispatchTableOpConversion, DivcOpConversion,
-        DivfOpConversion, DTEntryOpConversion, EmboxOpConversion,
-        EmboxCharOpConversion, EmboxProcOpConversion, FieldIndexOpConversion,
-        FirEndOpConversion, ExtractValueOpConversion, FreeMemOpConversion,
-        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-        ModfOpConversion, MulcOpConversion, MulfOpConversion, NegcOpConversion,
-        NegfOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-        SubfOpConversion, UnboxCharOpConversion, UnboxOpConversion,
-        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-        XArrayCoorOpConversion, XEmboxOpConversion>(context, typeConverter);
+        AbsentOpConversion, AddcOpConversion, AddfOpConversion,
+        AddrOfOpConversion, AllocaOpConversion, AllocMemOpConversion,
+        BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
+        BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
+        BoxIsPtrOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
+        BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
+        CmpfOpConversion, ConstcOpConversion, ConvertOpConversion,
+        CoordinateOpConversion, DispatchOpConversion, DispatchTableOpConversion,
+        DivcOpConversion, DivfOpConversion, DTEntryOpConversion,
+        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+        FieldIndexOpConversion, FirEndOpConversion, ExtractValueOpConversion,
+        IsPresentOpConversion, FreeMemOpConversion, GenTypeDescOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        LenParamIndexOpConversion, LoadOpConversion, ModfOpConversion,
+        MulcOpConversion, MulfOpConversion, NegcOpConversion, NegfOpConversion,
+        NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
+        SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, SubfOpConversion,
+        UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
+        XEmboxOpConversion>(context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
