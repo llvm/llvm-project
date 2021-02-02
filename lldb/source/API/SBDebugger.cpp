@@ -1284,7 +1284,8 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
       ConstString(debugger_instance_name)));
   Status error;
   if (debugger_sp) {
-    ExecutionContext exe_ctx(debugger_sp->GetSelectedExecutionContext());
+    ExecutionContext exe_ctx(
+        debugger_sp->GetCommandInterpreter().GetExecutionContext());
     error = debugger_sp->SetPropertyValue(&exe_ctx, eVarSetOperationAssign,
                                           var_name, value);
   } else {
@@ -1308,7 +1309,8 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
       ConstString(debugger_instance_name)));
   Status error;
   if (debugger_sp) {
-    ExecutionContext exe_ctx(debugger_sp->GetSelectedExecutionContext());
+    ExecutionContext exe_ctx(
+        debugger_sp->GetCommandInterpreter().GetExecutionContext());
     lldb::OptionValueSP value_sp(
         debugger_sp->GetPropertyValue(&exe_ctx, var_name, false, error));
     if (value_sp) {
