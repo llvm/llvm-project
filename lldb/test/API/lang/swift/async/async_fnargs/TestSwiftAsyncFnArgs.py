@@ -18,7 +18,7 @@ class TestSwiftAsyncFnArgs(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', src)
 
-        self.expect("frame var -d run-target -- msg", '"world"')
+        self.expect("frame var -d run-target -- msg", substrs=['"world"'])
 
         # Continue into the second coroutine funclet.
         bkpt2 = target.BreakpointCreateBySourceRegex("And also here", src, None)
@@ -27,4 +27,4 @@ class TestSwiftAsyncFnArgs(lldbtest.TestBase):
         self.assertEqual(
              len(lldbutil.get_threads_stopped_at_breakpoint(process, bkpt2)), 1)
 
-        self.expect("frame var -d run-target -- msg", '"world"')
+        self.expect("frame var -d run-target -- msg", substrs=['"world"'])
