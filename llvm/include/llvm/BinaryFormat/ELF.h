@@ -949,6 +949,9 @@ enum : unsigned {
   // Identifies a section containing compressed data.
   SHF_COMPRESSED = 0x800U,
 
+  // This section should not be garbage collected by the linker.
+  SHF_GNU_RETAIN = 0x200000,
+
   // This section is excluded from the final executable or shared library.
   SHF_EXCLUDE = 0x80000000U,
 
