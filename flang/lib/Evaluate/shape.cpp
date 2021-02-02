@@ -724,7 +724,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               auto sourceBytes{
                   sourceTypeAndShape->MeasureSizeInBytes(*context_)};
               auto moldElementBytes{
-                  moldTypeAndShape->type().MeasureSizeInBytes(*context_, true)};
+                  moldTypeAndShape->MeasureElementSizeInBytes(*context_, true)};
               if (sourceBytes && moldElementBytes) {
                 ExtentExpr extent{Fold(*context_,
                     (std::move(*sourceBytes) +

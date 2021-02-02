@@ -323,7 +323,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
             chars->type().GetAlignment(foldingContext)};
       }
     } else { // element size only
-      if (auto size{ToInt64(chars->type().MeasureSizeInBytes(
+      if (auto size{ToInt64(chars->MeasureElementSizeInBytes(
               foldingContext, true /*aligned*/))}) {
         return {static_cast<std::size_t>(*size),
             chars->type().GetAlignment(foldingContext)};
