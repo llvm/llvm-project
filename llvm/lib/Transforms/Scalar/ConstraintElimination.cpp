@@ -29,6 +29,8 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <string>
+
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -214,6 +216,17 @@ struct StackEntry {
 };
 } // namespace
 
+static void dumpWithNames(ConstraintTy &C,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+  for (auto &KV : Value2Index) {
+    Names[KV.second - 1] = std::string("%") + KV.first->getName().str();
+  }
+  ConstraintSystem CS;
+  CS.addVariableRowFill(C.Coefficients);
+  CS.dump(Names);
+}
+
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
@@ -380,7 +393,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     bool Added = false;
     for (auto &C : R) {
       auto Coeffs = C.Coefficients;
-
+      LLVM_DEBUG({
+        dbgs() << "  constraint: ";
+        dumpWithNames(C, Value2Index);
+      });
       Added |= CS.addVariableRowFill(Coeffs);
       // If R has been added to the system, queue it for removal once it goes
       // out-of-scope.
