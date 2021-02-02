@@ -701,7 +701,6 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB22_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
@@ -747,7 +746,6 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB23_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16

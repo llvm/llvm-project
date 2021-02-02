@@ -1300,7 +1300,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     return {};
   }
 
-  llvm::DenseSet<SymbolID> IDs, Overrides;
+  llvm::DenseSet<SymbolID> IDs;
 
   const auto *IdentifierAtCursor =
       syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
@@ -1339,25 +1339,19 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       if (auto ID = getSymbolID(D))
         Targets.insert(ID);
 
+    RelationsRequest OverriddenBy;
     if (Index) {
-      RelationsRequest FindOverrides;
-      FindOverrides.Predicate = RelationKind::OverriddenBy;
+      OverriddenBy.Predicate = RelationKind::OverriddenBy;
       for (const NamedDecl *ND : Decls) {
-        // Special case: virtual void meth^od() = 0 includes refs of overrides.
+        // Special case: Inlcude declaration of overridding methods.
         if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-          if (CMD->isPure())
+          if (CMD->isVirtual())
             if (IdentifierAtCursor && SM.getSpellingLoc(CMD->getLocation()) ==
                                           IdentifierAtCursor->location())
               if (auto ID = getSymbolID(CMD))
-                FindOverrides.Subjects.insert(ID);
+                OverriddenBy.Subjects.insert(ID);
         }
       }
-      if (!FindOverrides.Subjects.empty())
-        Index->relations(FindOverrides,
-                         [&](const SymbolID &Subject, const Symbol &Object) {
-                           Overrides.insert(Object.ID);
-                         });
-      Targets.insert(Overrides.begin(), Overrides.end());
     }
 
     // We traverse the AST to find references in the main file.
@@ -1376,17 +1370,37 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       ReferencesResult::Reference Result;
       Result.Loc.range = Ref.range(SM);
       Result.Loc.uri = URIMainFile;
-      // Overrides are always considered references, not defs/decls.
-      if (!Overrides.contains(Ref.Target)) {
-        if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Declaration))
-          Result.Attributes |= ReferencesResult::Declaration;
-        // clang-index doesn't report definitions as declarations, but they are.
-        if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Definition))
-          Result.Attributes |=
-              ReferencesResult::Definition | ReferencesResult::Declaration;
-      }
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Declaration))
+        Result.Attributes |= ReferencesResult::Declaration;
+      // clang-index doesn't report definitions as declarations, but they are.
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Definition))
+        Result.Attributes |=
+            ReferencesResult::Definition | ReferencesResult::Declaration;
       Results.References.push_back(std::move(Result));
     }
+    // Add decl/def of overridding methods.
+    if (Index && Results.References.size() <= Limit &&
+        !OverriddenBy.Subjects.empty())
+      Index->relations(
+          OverriddenBy, [&](const SymbolID &Subject, const Symbol &Object) {
+            if (auto LSPLoc =
+                    toLSPLocation(Object.CanonicalDeclaration, *MainFilePath)) {
+              ReferencesResult::Reference Result;
+              Result.Loc = std::move(*LSPLoc);
+              Result.Attributes =
+                  ReferencesResult::Declaration | ReferencesResult::Override;
+              Results.References.push_back(std::move(Result));
+            }
+            if (auto LSPLoc = toLSPLocation(Object.Definition, *MainFilePath)) {
+              ReferencesResult::Reference Result;
+              Result.Loc = std::move(*LSPLoc);
+              Result.Attributes = ReferencesResult::Declaration |
+                                  ReferencesResult::Definition |
+                                  ReferencesResult::Override;
+              Results.References.push_back(std::move(Result));
+            }
+          });
+
     if (Index && Results.References.size() <= Limit) {
       for (const Decl *D : Decls) {
         // Not all symbols can be referenced from outside (e.g.
@@ -1429,13 +1443,11 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     });
   };
   QueryIndex(std::move(IDs), /*AllowAttributes=*/true);
-  // FIXME: Currently we surface decls/defs/refs of derived methods.
-  // Maybe we'd prefer decls/defs of derived methods, and refs of base methods?
-  QueryIndex(std::move(Overrides), /*AllowAttributes=*/false);
   if (Results.References.size() > Limit) {
     Results.HasMore = true;
     Results.References.resize(Limit);
   }
+  // FIXME: Report refs of base methods.
   return Results;
 }
 
@@ -1507,6 +1519,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
     OS << " [decl]";
   if (R.Attributes & ReferencesResult::Definition)
     OS << " [def]";
+  if (R.Attributes & ReferencesResult::Override)
+    OS << " [override]";
   return OS;
 }
 

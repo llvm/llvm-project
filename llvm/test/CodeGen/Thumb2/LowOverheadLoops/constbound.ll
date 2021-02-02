@@ -10,7 +10,6 @@ define dso_local i32 @test_500_504(i32* nocapture readonly %x) {
 ; CHECK-NEXT:    adr r2, .LCPI0_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    mov.w r2, #500
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdup.32 q1, r2
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    movs r2, #0
