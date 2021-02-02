@@ -109,7 +109,8 @@ while.end:
 
 ; CHECK-LLC:      do_inc2:
 ; CHECK-LLC-NOT:    mov lr,
-; CHECK-LLC:        dls lr, {{.*}}
+; CHECK-LLC:        add.w lr,
+; CHECK-LLC-NOT:    dls lr,
 ; CHECK-LLC-NOT:    mov lr,
 ; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9._]+]]:
 ; CHECK-LLC:        le lr, [[LOOP_HEADER]]
@@ -162,7 +163,8 @@ while.end:
 
 ; CHECK-LLC:      do_dec2
 ; CHECK-LLC-NOT:    mov lr,
-; CHECK-LLC:        dls lr, {{.*}}
+; CHECK-LLC:        add.w lr,
+; CHECK-LLC-NOT:    dls lr,
 ; CHECK-LLC-NOT:    mov lr,
 ; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
 ; CHECK-LLC:        le lr, [[LOOP_HEADER]]
