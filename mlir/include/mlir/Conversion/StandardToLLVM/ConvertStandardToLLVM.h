@@ -656,9 +656,6 @@ public:
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
-    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
-                                  SourceOp>::value,
-                  "expected same operands and result type");
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), operands, *this->getTypeConverter(),
         rewriter);
