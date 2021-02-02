@@ -812,12 +812,34 @@ void test_sigemptyset() {
   ASSERT_READ_ZERO_LABEL(&set, sizeof(set));
 }
 
+static void SignalHandler(int signo) {}
+
+static void SignalAction(int signo, siginfo_t *si, void *uc) {}
+
 void test_sigaction() {
-  struct sigaction oldact;
-  dfsan_set_label(j_label, &oldact, 1);
-  int ret = sigaction(SIGUSR1, NULL, &oldact);
+  struct sigaction newact_with_sigaction = {};
+  newact_with_sigaction.sa_flags = SA_SIGINFO;
+  newact_with_sigaction.sa_sigaction = SignalAction;
+
+  // Set sigaction to be SignalAction, save the last one into origin_act
+  struct sigaction origin_act;
+  dfsan_set_label(j_label, &origin_act, 1);
+  int ret = sigaction(SIGUSR1, &newact_with_sigaction, &origin_act);
   assert(ret == 0);
-  ASSERT_READ_ZERO_LABEL(&oldact, sizeof(oldact));
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_ZERO_LABEL(&origin_act, sizeof(origin_act));
+
+  struct sigaction newact_with_sighandler = {};
+  newact_with_sighandler.sa_handler = SignalHandler;
+
+  // Set sigaction to be SignalHandler, check the last one is SignalAction
+  struct sigaction oldact;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_sigaction == SignalAction);
+
+  // Restore sigaction to the orginal setting, check the last one is SignalHandler
+  assert(0 == sigaction(SIGUSR1, &origin_act, &oldact));
+  assert(oldact.sa_handler == SignalHandler);
 }
 
 void test_sigaltstack() {
