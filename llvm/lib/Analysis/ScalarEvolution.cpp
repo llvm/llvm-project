@@ -6887,7 +6887,8 @@ ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
     // Attempt to factor more general cases. Returns the greatest power of
     // two divisor. If overflow happens, the trip count expression is still
     // divisible by the greatest power of 2 divisor returned.
-    return 1U << std::min((uint32_t)31, GetMinTrailingZeros(TCExpr));
+    return 1U << std::min((uint32_t)31,
+                          GetMinTrailingZeros(applyLoopGuards(TCExpr, L)));
 
   ConstantInt *Result = TC->getValue();
 
@@ -13259,6 +13260,27 @@ public:
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS, ValueToSCEVMapTy &RewriteMap) {
+    // If we have LHS == 0, check if LHS is computing a property of some unknown
+    // SCEV %v which we can rewrite %v to express explicitly.
+    const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS);
+    if (Predicate == CmpInst::ICMP_EQ && RHSC &&
+        RHSC->getValue()->isNullValue()) {
+      // If LHS is A % B, i.e. A % B == 0, rewrite A to (A /u B) * B to
+      // explicitly express that.
+      const SCEV *URemLHS = nullptr;
+      const SCEV *URemRHS = nullptr;
+      if (matchURem(LHS, URemLHS, URemRHS)) {
+        if (const SCEVUnknown *LHSUnknown = dyn_cast<SCEVUnknown>(URemLHS)) {
+          Value *V = LHSUnknown->getValue();
+          auto Multiple =
+              getMulExpr(getUDivExpr(URemLHS, URemRHS), URemRHS,
+                         (SCEV::NoWrapFlags)(SCEV::FlagNUW | SCEV::FlagNSW));
+          RewriteMap[V] = Multiple;
+          return;
+        }
+      }
+    }
+
     if (!isa<SCEVUnknown>(LHS)) {
       std::swap(LHS, RHS);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
