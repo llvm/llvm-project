@@ -1087,6 +1087,7 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
                     CompletedQueries.insert(Q);
                   Q->removeQueryDependence(DependantJD, DependantName);
                 }
+                DependantJD.MaterializingInfos.erase(DependantMII);
               }
             }
           }
@@ -1102,6 +1103,7 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
                 CompletedQueries.insert(Q);
               Q->removeQueryDependence(*this, Name);
             }
+            MaterializingInfos.erase(MII);
           }
         }
 
@@ -1373,6 +1375,11 @@ void JITDylib::dump(raw_ostream &OS) {
       OS << "      Unemitted Dependencies:\n";
       for (auto &KV2 : KV.second.UnemittedDependencies)
         OS << "        " << KV2.first->getName() << ": " << KV2.second << "\n";
+      assert((Symbols[KV.first].getState() != SymbolState::Ready ||
+              !KV.second.pendingQueries().empty() ||
+              !KV.second.Dependants.empty() ||
+              !KV.second.UnemittedDependencies.empty()) &&
+             "Stale materializing info entry");
     }
   });
 }
