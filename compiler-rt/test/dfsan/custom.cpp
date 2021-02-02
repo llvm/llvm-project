@@ -118,6 +118,17 @@ void test_memcpy() {
   ASSERT_LABEL(str2[3], i_label);
 }
 
+void test_memmove() {
+  char str[] = "str1xx";
+  dfsan_set_label(i_label, &str[3], 1);
+
+  ASSERT_ZERO_LABEL(memmove(str + 2, str, 4));
+  assert(0 == memcmp(str + 2, "str1", 4));
+  for (int i = 0; i <= 4; ++i)
+    ASSERT_ZERO_LABEL(str[i]);
+  ASSERT_LABEL(str[5], i_label);
+}
+
 void test_memset() {
   char buf[8];
   int j = 'a';
@@ -1299,6 +1310,7 @@ int main(void) {
   test_memchr();
   test_memcmp();
   test_memcpy();
+  test_memmove();
   test_memset();
   test_nanosleep();
   test_poll();
