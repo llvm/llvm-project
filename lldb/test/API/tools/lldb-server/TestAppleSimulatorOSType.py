@@ -1,5 +1,3 @@
-
-
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.test.decorators import *
@@ -7,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 import json
+import platform
 
 @skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
@@ -16,7 +15,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     # Number of stderr lines to read from the simctl output.
     READ_LINES = 10
 
-    def check_simulator_ostype(self, sdk, platform, arch='x86_64'):
+    def check_simulator_ostype(self, sdk, platform_name):
         cmd = ['xcrun', 'simctl', 'list', '-j', 'devices']
         self.trace(' '.join(cmd))
         sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
@@ -31,7 +30,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             else:
                 runtime = simulator
                 devices = sim_devices[simulator]
-            if not platform in runtime.lower():
+            if not platform_name in runtime.lower():
                 continue
             for device in devices:
                 if 'availability' in device and device['availability'] != '(available)':
@@ -47,10 +46,10 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Launch the process using simctl
         self.assertIsNotNone(deviceUDID)
-        exe_name = 'test_simulator_platform_{}'.format(platform)
+        exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
-                                'ARCH': arch })
+                                'ARCH': platform.machine() })
         exe_path = self.getBuildArtifact(exe_name)
         cmd = [
             'xcrun', 'simctl', 'spawn', '-s', deviceUDID, exe_path,
@@ -96,7 +95,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(process_info)
 
         # Check that ostype is correct
-        self.assertEquals(process_info['ostype'], platform + 'simulator')
+        self.assertEquals(process_info['ostype'], platform_name + 'simulator')
 
         # Now for dylibs
         dylib_info_raw = context.get("dylib_info_raw")
@@ -111,7 +110,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             break
 
         self.assertIsNotNone(image_info)
-        self.assertEquals(image['min_version_os_name'], platform + 'simulator')
+        self.assertEquals(image['min_version_os_name'], platform_name + 'simulator')
 
 
     @apple_simulator_test('iphone')
@@ -119,18 +118,18 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfRemote
     def test_simulator_ostype_ios(self):
         self.check_simulator_ostype(sdk='iphonesimulator',
-                                    platform='ios')
+                                    platform_name='ios')
 
     @apple_simulator_test('appletv')
     @debugserver_test
     @skipIfRemote
     def test_simulator_ostype_tvos(self):
         self.check_simulator_ostype(sdk='appletvsimulator',
-                                    platform='tvos')
+                                    platform_name='tvos')
 
     @apple_simulator_test('watch')
     @debugserver_test
     @skipIfRemote
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform='watchos', arch='i386')
+                                    platform_name='watchos')
