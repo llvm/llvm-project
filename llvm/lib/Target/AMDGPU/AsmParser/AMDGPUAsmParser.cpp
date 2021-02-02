@@ -1294,7 +1294,7 @@ public:
                               bool (*ConvertResult)(int64_t&) = nullptr);
 
   OperandMatchResultTy
-  parseNamedBit(const char *Name, OperandVector &Operands,
+  parseNamedBit(StringRef Name, OperandVector &Operands,
                 AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value,
@@ -1403,6 +1403,7 @@ private:
   bool isId(const AsmToken &Token, const StringRef Id) const;
   bool isToken(const AsmToken::TokenKind Kind) const;
   bool trySkipId(const StringRef Id);
+  bool trySkipId(const StringRef Pref, const StringRef Id);
   bool trySkipId(const StringRef Id, const AsmToken::TokenKind Kind);
   bool trySkipToken(const AsmToken::TokenKind Kind);
   bool skipToken(const AsmToken::TokenKind Kind, const StringRef ErrMsg);
@@ -5043,39 +5044,31 @@ AMDGPUAsmParser::parseOperandArrayWithPrefix(const char *Prefix,
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
+AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy) {
-  int64_t Bit = 0;
+  int64_t Bit;
   SMLoc S = getLoc();
 
-  // We are at the end of the statement, and this is a default argument, so
-  // use a default value.
-  if (!isToken(AsmToken::EndOfStatement)) {
-    switch(getTokenKind()) {
-      case AsmToken::Identifier: {
-        StringRef Tok = getTokenStr();
-        if (Tok == Name) {
-          if (Tok == "r128" && !hasMIMG_R128())
-            Error(S, "r128 modifier is not supported on this GPU");
-          if (Tok == "a16" && !isGFX9() && !hasGFX10A16())
-            Error(S, "a16 modifier is not supported on this GPU");
-          Bit = 1;
-          Parser.Lex();
-        } else if (Tok.startswith("no") && Tok.endswith(Name)) {
-          Bit = 0;
-          Parser.Lex();
-        } else {
-          return MatchOperand_NoMatch;
-        }
-        break;
-      }
-      default:
-        return MatchOperand_NoMatch;
-    }
+  if (trySkipId(Name)) {
+    Bit = 1;
+  } else if (trySkipId("no", Name)) {
+    Bit = 0;
+  } else {
+    return MatchOperand_NoMatch;
   }
 
-  if (!isGFX10Plus() && ImmTy == AMDGPUOperand::ImmTyDLC)
+  if (Name == "r128" && !hasMIMG_R128()) {
+    Error(S, "r128 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
+  }
+  if (Name == "a16" && !isGFX9() && !hasGFX10A16()) {
+    Error(S, "a16 modifier is not supported on this GPU");
+    return MatchOperand_ParseFail;
+  }
+  if (!isGFX10Plus() && ImmTy == AMDGPUOperand::ImmTyDLC) {
+    Error(S, "dlc modifier is not supported on this GPU");
+    return MatchOperand_ParseFail;
+  }
 
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
     ImmTy = AMDGPUOperand::ImmTyR128A16;
@@ -5929,6 +5922,18 @@ AMDGPUAsmParser::trySkipId(const StringRef Id) {
   if (isId(Id)) {
     lex();
     return true;
+  }
+  return false;
+}
+
+bool
+AMDGPUAsmParser::trySkipId(const StringRef Pref, const StringRef Id) {
+  if (isToken(AsmToken::Identifier)) {
+    StringRef Tok = getTokenStr();
+    if (Tok.startswith(Pref) && Tok.drop_front(Pref.size()) == Id) {
+      lex();
+      return true;
+    }
   }
   return false;
 }
