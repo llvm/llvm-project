@@ -487,7 +487,6 @@ define void @vabd_loop_s8(i8* nocapture readonly %x, i8* nocapture readonly %y, 
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.s32 q0, [r1, #12]
@@ -548,7 +547,6 @@ define void @vabd_loop_s16(i16* nocapture readonly %x, i16* nocapture readonly %
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #8]
@@ -604,7 +602,6 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    mov.w lr, #256
 ; CHECK-NEXT:    mov.w r12, #1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -700,7 +697,6 @@ define void @vabd_loop_u8(i8* nocapture readonly %x, i8* nocapture readonly %y, 
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u32 q0, [r1, #12]
@@ -761,7 +757,6 @@ define void @vabd_loop_u16(i16* nocapture readonly %x, i16* nocapture readonly %
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u32 q0, [r1, #8]
@@ -817,7 +812,6 @@ define void @vabd_loop_u32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    mov.w lr, #256
 ; CHECK-NEXT:    vmov.i64 q0, #0xffffffff
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:  .LBB11_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

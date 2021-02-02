@@ -21,7 +21,6 @@ define void @vldst4(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %n
 ; CHECK-NEXT:    sub.w r12, r3, #8
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #3
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q5, [r0, #32]
