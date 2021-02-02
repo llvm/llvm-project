@@ -53,6 +53,7 @@ class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
 def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ballot">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
 def FuncExtKhrLocalInt32BaseAtomics      : FunctionExtension<"cl_khr_local_int32_base_atomics">;
@@ -344,6 +345,7 @@ def TLAllInts       : TypeList<[Char, UChar, Short, UShort, Int, UInt, Long, ULo
 // GenType definitions for multiple base types (e.g. all floating point types,
 // or all integer types).
 // All types
+def AGenType1              : GenericType<"AGenType1", TLAll, Vec1>;
 def AGenTypeN              : GenericType<"AGenTypeN", TLAll, VecAndScalar>;
 def AGenTypeNNoScalar      : GenericType<"AGenTypeNNoScalar", TLAll, VecNoScalar>;
 // All integer
@@ -1485,6 +1487,44 @@ let Extension = FuncExtKhrSubgroups in {
     }
   }
 }
+
+// OpenCL Extension v3.0 s38 - Extended Subgroup Functions
+
+// Section 38.4.1 - cl_khr_subgroup_extended_types
+// TODO
+
+// Section 38.5.1 - cl_khr_subgroup_non_uniform_vote
+// TODO
+
+// Section 38.6.1 - cl_khr_subgroup_ballot
+let Extension = FuncExtKhrSubgroupBallot in {
+  def : Builtin<"sub_group_non_uniform_broadcast", [AGenTypeN, AGenTypeN, UInt]>;
+  def : Builtin<"sub_group_broadcast_first", [AGenType1, AGenType1]>;
+  def : Builtin<"sub_group_ballot", [VectorType<UInt, 4>, Int]>;
+  def : Builtin<"sub_group_inverse_ballot", [Int, VectorType<UInt, 4>], Attr.Const>;
+  def : Builtin<"sub_group_ballot_bit_extract", [Int, VectorType<UInt, 4>, UInt], Attr.Const>;
+  def : Builtin<"sub_group_ballot_bit_count", [UInt, VectorType<UInt, 4>], Attr.Const>;
+  def : Builtin<"sub_group_ballot_inclusive_scan", [UInt, VectorType<UInt, 4>]>;
+  def : Builtin<"sub_group_ballot_exclusive_scan", [UInt, VectorType<UInt, 4>]>;
+  def : Builtin<"sub_group_ballot_find_lsb", [UInt, VectorType<UInt, 4>]>;
+  def : Builtin<"sub_group_ballot_find_msb", [UInt, VectorType<UInt, 4>]>;
+
+  foreach op = ["eq", "ge", "gt", "le", "lt"] in {
+    def : Builtin<"get_sub_group_" # op # "_mask", [VectorType<UInt, 4>], Attr.Const>;
+  }
+}
+
+// Section 38.7.1 - cl_khr_subgroup_non_uniform_arithmetic
+// TODO
+
+// Section 38.8.1 - cl_khr_subgroup_shuffle
+// TODO
+
+// Section 38.9.1 - cl_khr_subgroup_shuffle_relative
+// TODO
+
+// Section 38.10.1 - cl_khr_subgroup_clustered_reduce
+// TODO
 
 //--------------------------------------------------------------------
 // Arm extensions.
