@@ -111,7 +111,6 @@ struct TestLinalgCodegenStrategy
           "\tlinalg.fill: anchor on linalg.fill\n"),
       llvm::cl::init("")};
 };
-} // end anonymous namespace
 
 template <>
 void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
@@ -171,6 +170,7 @@ void TestLinalgCodegenStrategy::runStrategy(
           VectorTransferToSCFOptions().setUnroll(unrollVectorTransfers));
   strategy.transform(getFunction());
 }
+} // end anonymous namespace
 
 /// Apply transformations specified as patterns.
 void TestLinalgCodegenStrategy::runOnFunction() {
