@@ -29,7 +29,7 @@ protected:
     size_t Slot = State.getNearestSlot(Addr);
 
     Metadata[Slot].Addr = Addr;
-    Metadata[Slot].RequestedSize = Size;
+    Metadata[Slot].Size = Size;
     Metadata[Slot].IsDeallocated = IsDeallocated;
     Metadata[Slot].AllocationTrace.ThreadID = 123;
     Metadata[Slot].DeallocationTrace.ThreadID = 321;
@@ -80,8 +80,7 @@ protected:
         __gwp_asan_get_metadata(&State, Metadata, ErrorPtr);
     EXPECT_NE(nullptr, Meta);
     EXPECT_EQ(Metadata[Index].Addr, __gwp_asan_get_allocation_address(Meta));
-    EXPECT_EQ(Metadata[Index].RequestedSize,
-              __gwp_asan_get_allocation_size(Meta));
+    EXPECT_EQ(Metadata[Index].Size, __gwp_asan_get_allocation_size(Meta));
     EXPECT_EQ(Metadata[Index].AllocationTrace.ThreadID,
               __gwp_asan_get_allocation_thread_id(Meta));
 

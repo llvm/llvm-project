@@ -39,37 +39,6 @@ TEST_F(CustomGuardedPoolAllocator, SizedAllocations) {
 TEST_F(DefaultGuardedPoolAllocator, TooLargeAllocation) {
   EXPECT_EQ(nullptr,
             GPA.allocate(GPA.getAllocatorState()->maximumAllocationSize() + 1));
-  EXPECT_EQ(nullptr, GPA.allocate(SIZE_MAX, 0));
-  EXPECT_EQ(nullptr, GPA.allocate(SIZE_MAX, 1));
-  EXPECT_EQ(nullptr, GPA.allocate(0, SIZE_MAX / 2));
-  EXPECT_EQ(nullptr, GPA.allocate(1, SIZE_MAX / 2));
-  EXPECT_EQ(nullptr, GPA.allocate(SIZE_MAX, SIZE_MAX / 2));
-}
-
-TEST_F(DefaultGuardedPoolAllocator, ZeroSizeAndAlignmentAllocations) {
-  void *P;
-  EXPECT_NE(nullptr, (P = GPA.allocate(0, 0)));
-  GPA.deallocate(P);
-  EXPECT_NE(nullptr, (P = GPA.allocate(1, 0)));
-  GPA.deallocate(P);
-  EXPECT_NE(nullptr, (P = GPA.allocate(0, 1)));
-  GPA.deallocate(P);
-}
-
-TEST_F(DefaultGuardedPoolAllocator, NonPowerOfTwoAlignment) {
-  EXPECT_EQ(nullptr, GPA.allocate(0, 3));
-  EXPECT_EQ(nullptr, GPA.allocate(1, 3));
-  EXPECT_EQ(nullptr, GPA.allocate(0, SIZE_MAX));
-  EXPECT_EQ(nullptr, GPA.allocate(1, SIZE_MAX));
-}
-
-// Added multi-page slots? You'll need to expand this test.
-TEST_F(DefaultGuardedPoolAllocator, TooBigForSinglePageSlots) {
-  EXPECT_EQ(nullptr, GPA.allocate(0x1001, 0));
-  EXPECT_EQ(nullptr, GPA.allocate(0x1001, 1));
-  EXPECT_EQ(nullptr, GPA.allocate(0x1001, 0x1000));
-  EXPECT_EQ(nullptr, GPA.allocate(1, 0x2000));
-  EXPECT_EQ(nullptr, GPA.allocate(0, 0x2000));
 }
 
 TEST_F(CustomGuardedPoolAllocator, AllocAllSlots) {

@@ -11,6 +11,7 @@ set(GWP_ASAN_SOURCES
   platform_specific/utilities_posix.cpp
   guarded_pool_allocator.cpp
   stack_trace_compressor.cpp
+  utilities.cpp
 )
 
 set(GWP_ASAN_HEADERS
