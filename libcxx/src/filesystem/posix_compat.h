@@ -277,6 +277,40 @@ template <class... Args> int open(const wchar_t *filename, Args... args) {
 }
 int close(int fd) { return _close(fd); }
 int chdir(const wchar_t *path) { return _wchdir(path); }
+
+struct StatVFS {
+  uint64_t f_frsize;
+  uint64_t f_blocks;
+  uint64_t f_bfree;
+  uint64_t f_bavail;
+};
+
+int statvfs(const wchar_t *p, StatVFS *buf) {
+  path dir = p;
+  while (true) {
+    error_code local_ec;
+    const file_status st = status(dir, local_ec);
+    if (!exists(st) || is_directory(st))
+      break;
+    path parent = dir.parent_path();
+    if (parent == dir) {
+      errno = ENOENT;
+      return -1;
+    }
+    dir = parent;
+  }
+  ULARGE_INTEGER free_bytes_available_to_caller, total_number_of_bytes,
+      total_number_of_free_bytes;
+  if (!GetDiskFreeSpaceExW(dir.c_str(), &free_bytes_available_to_caller,
+                           &total_number_of_bytes, &total_number_of_free_bytes))
+    return set_errno();
+  buf->f_frsize = 1;
+  buf->f_blocks = total_number_of_bytes.QuadPart;
+  buf->f_bfree = total_number_of_free_bytes.QuadPart;
+  buf->f_bavail = free_bytes_available_to_caller.QuadPart;
+  return 0;
+}
+
 #else
 int symlink_file(const char *oldname, const char *newname) {
   return ::symlink(oldname, newname);
@@ -295,9 +329,12 @@ using ::open;
 using ::remove;
 using ::rename;
 using ::stat;
+using ::statvfs;
 using ::truncate;
 
 #define O_BINARY 0
+
+using StatVFS = struct statvfs;
 
 #endif
 
