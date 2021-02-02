@@ -200,7 +200,6 @@ body:             |
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg, debug-location !28
   ; CHECK:   renamable $r3, dead $cpsr = tLSRri killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !28
   ; CHECK:   renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 18, 14 /* CC::al */, $noreg, $noreg, debug-location !28
-  ; CHECK:   $lr = t2DLS killed renamable $lr, debug-location !28
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3

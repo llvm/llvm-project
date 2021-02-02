@@ -147,7 +147,6 @@ body:             |
   ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
   ; CHECK:   renamable $q0 = MVE_VDUP32 killed renamable $r5, 0, $noreg, undef renamable $q0
   ; CHECK:   $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2.bb9:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3, $r12

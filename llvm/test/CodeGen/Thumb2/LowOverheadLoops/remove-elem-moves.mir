@@ -210,7 +210,6 @@ body:             |
   ; CHECK:   liveins: $lr, $r3, $r12
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.8.while.body:
   ; CHECK:   successors: %bb.8(0x7c000000), %bb.9(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1
