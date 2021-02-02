@@ -461,9 +461,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   std::map<std::string, std::vector<std::string>> CaseMap;
 
   // Construct all cases statement for each opcode
-  for (std::vector<Record*>::iterator IC = Insts.begin(), EC = Insts.end();
-        IC != EC; ++IC) {
-    Record *R = *IC;
+  for (Record *R : Insts) {
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo"))
       continue;

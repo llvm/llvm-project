@@ -4032,8 +4032,7 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 /// Verify instruction flags against pattern node properties.
 void CodeGenDAGPatterns::VerifyInstructionFlags() {
   unsigned Errors = 0;
-  for (ptm_iterator I = ptm_begin(), E = ptm_end(); I != E; ++I) {
-    const PatternToMatch &PTM = *I;
+  for (const PatternToMatch &PTM : ptms()) {
     SmallVector<Record*, 8> Instrs;
     getInstructionsInTree(PTM.getDstPattern(), Instrs);
     if (Instrs.empty())
