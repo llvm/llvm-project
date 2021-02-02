@@ -102,6 +102,8 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'T';
   if (Flags & ELF::SHF_LINK_ORDER)
     OS << 'o';
+  if (Flags & ELF::SHF_GNU_RETAIN)
+    OS << 'R';
 
   // If there are target-specific flags, print them.
   Triple::ArchType Arch = T.getArch();
