@@ -202,7 +202,7 @@ static mlir::FuncOp getOutputFunc(mlir::Location loc,
     return ty.getWidth() <= 32
                ? getIORuntimeFunc<mkIOKey(OutputReal32)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(OutputReal64)>(loc, builder);
-  if (auto ty = type.dyn_cast<fir::CplxType>())
+  if (auto ty = type.dyn_cast<fir::ComplexType>())
     return ty.getFKind() <= 4
                ? getIORuntimeFunc<mkIOKey(OutputComplex32)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(OutputComplex64)>(loc, builder);
@@ -274,7 +274,7 @@ static mlir::FuncOp getInputFunc(mlir::Location loc,
     return ty.getWidth() <= 32
                ? getIORuntimeFunc<mkIOKey(InputReal32)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(InputReal64)>(loc, builder);
-  if (auto ty = type.dyn_cast<fir::CplxType>())
+  if (auto ty = type.dyn_cast<fir::ComplexType>())
     return ty.getFKind() <= 4
                ? getIORuntimeFunc<mkIOKey(InputReal32)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(InputReal64)>(loc, builder);
@@ -314,7 +314,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     auto argType = inputFunc.getType().getInput(1);
     auto originalItemAddr = itemAddr;
     mlir::Type complexPartType;
-    if (itemType.isa<fir::CplxType>())
+    if (itemType.isa<fir::ComplexType>())
       complexPartType = builder.getRefType(
           Fortran::lower::ComplexExprHelper{builder, loc}.getComplexPartType(
               itemType));

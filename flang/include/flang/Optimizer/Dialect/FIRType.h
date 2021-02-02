@@ -39,7 +39,7 @@ struct BoxTypeStorage;
 struct BoxCharTypeStorage;
 struct BoxProcTypeStorage;
 struct CharacterTypeStorage;
-struct CplxTypeStorage;
+struct ComplexTypeStorage;
 struct DimsTypeStorage;
 struct FieldTypeStorage;
 struct HeapTypeStorage;
@@ -105,11 +105,11 @@ public:
 /// Model of a Fortran COMPLEX intrinsic type, including the KIND type
 /// parameter. COMPLEX is a floating point type with a real and imaginary
 /// member.
-class CplxType : public mlir::Type::TypeBase<CplxType, mlir::Type,
-                                             detail::CplxTypeStorage> {
+class ComplexType : public mlir::Type::TypeBase<fir::ComplexType, mlir::Type,
+                                                detail::ComplexTypeStorage> {
 public:
   using Base::Base;
-  static CplxType get(mlir::MLIRContext *ctxt, KindTy kind);
+  static fir::ComplexType get(mlir::MLIRContext *ctxt, KindTy kind);
 
   /// Get the corresponding fir.real<k> type.
   mlir::Type getElementType() const;
@@ -129,9 +129,8 @@ public:
 
 /// Model of a Fortran LOGICAL intrinsic type, including the KIND type
 /// parameter.
-class LogicalType
-    : public mlir::Type::TypeBase<LogicalType, mlir::Type,
-                                  detail::LogicalTypeStorage> {
+class LogicalType : public mlir::Type::TypeBase<LogicalType, mlir::Type,
+                                                detail::LogicalTypeStorage> {
 public:
   using Base::Base;
   static LogicalType get(mlir::MLIRContext *ctxt, KindTy kind);
@@ -394,7 +393,7 @@ inline bool isa_integer(mlir::Type t) {
 
 /// Is `t` a FIR or MLIR Complex type?
 inline bool isa_complex(mlir::Type t) {
-  return t.isa<fir::CplxType>() || t.isa<mlir::ComplexType>();
+  return t.isa<fir::ComplexType>() || t.isa<mlir::ComplexType>();
 }
 
 } // namespace fir
