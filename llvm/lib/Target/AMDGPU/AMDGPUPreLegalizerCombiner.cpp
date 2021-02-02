@@ -109,10 +109,10 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
 // v_med3_i32 v0, Clamp_Min, v0, Clamp_Max
 void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
     MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) {
-  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
   Register Src = MatchInfo.Origin;
-  assert(MRI.getType(Src) == LLT::scalar(64));
+  assert(MI.getParent()->getParent()->getRegInfo().getType(Src) ==
+         LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
   B.setMBB(*MI.getParent());
