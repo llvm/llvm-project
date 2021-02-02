@@ -72,6 +72,7 @@ int main(int argc, const char *argv[]) {
   }
 }
 
+// CHECK:         Counters:
 // CHECK-1-LABEL:   caller_with_value_site_never_called2:
 // CHECK-1-NEXT:    Hash: 0x0000000000000000
 // CHECK-1-NEXT:    Counters:
