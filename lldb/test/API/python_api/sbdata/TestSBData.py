@@ -30,16 +30,16 @@ class SBDataAPICase(TestBase):
         data = lldb.SBData()
         data.SetData(error, addr_data, lldb.eByteOrderBig, 4)
         addr = data.GetAddress(error, 0)
-        self.assertTrue(addr == 0x11223344);
+        self.assertEqual(addr, 0x11223344);
         data.SetData(error, addr_data, lldb.eByteOrderBig, 8)
         addr = data.GetAddress(error, 0)
-        self.assertTrue(addr == 0x1122334455667788);
+        self.assertEqual(addr, 0x1122334455667788);
         data.SetData(error, addr_data, lldb.eByteOrderLittle, 4)
         addr = data.GetAddress(error, 0)
-        self.assertTrue(addr == 0x44332211);
+        self.assertEqual(addr, 0x44332211);
         data.SetData(error, addr_data, lldb.eByteOrderLittle, 8)
         addr = data.GetAddress(error, 0)
-        self.assertTrue(addr == 0x8877665544332211);
+        self.assertEqual(addr, 0x8877665544332211);
 
     @add_test_categories(['pyapi'])
     @skipIfReproducer # SBData::SetData is not instrumented.
@@ -146,8 +146,8 @@ class SBDataAPICase(TestBase):
         self.assertTrue(new_foobar.IsValid())
         data = new_foobar.GetData()
 
-        self.assertTrue(data.uint32[0] == 8, 'then foo[1].a == 8')
-        self.assertTrue(data.uint32[1] == 7, 'then foo[1].b == 7')
+        self.assertEqual(data.uint32[0], 8, 'then foo[1].a == 8')
+        self.assertEqual(data.uint32[1], 7, 'then foo[1].b == 7')
         # exploiting that sizeof(uint32) == sizeof(float)
         self.assertTrue(fabs(data.float[2] - 3.14) < 1, 'foo[1].c == 3.14')
 
@@ -218,7 +218,7 @@ class SBDataAPICase(TestBase):
         new_object = barfoo.CreateValueFromData(
             "new_object", data, barfoo.GetType().GetBasicType(
                 lldb.eBasicTypeInt))
-        self.assertTrue(new_object.GetValue() == "1", 'new_object == 1')
+        self.assertEqual(new_object.GetValue(), "1", 'new_object == 1')
 
         if data.GetByteOrder() == lldb.eByteOrderBig:
             data.SetData(
@@ -262,12 +262,12 @@ class SBDataAPICase(TestBase):
         hello_str = "hello!"
         data2 = lldb.SBData.CreateDataFromCString(
             process.GetByteOrder(), process.GetAddressByteSize(), hello_str)
-        self.assertTrue(len(data2.uint8) == len(hello_str))
-        self.assertTrue(data2.uint8[0] == 104, 'h == 104')
-        self.assertTrue(data2.uint8[1] == 101, 'e == 101')
-        self.assertTrue(data2.uint8[2] == 108, 'l == 108')
+        self.assertEqual(len(data2.uint8), len(hello_str))
+        self.assertEqual(data2.uint8[0], 104, 'h == 104')
+        self.assertEqual(data2.uint8[1], 101, 'e == 101')
+        self.assertEqual(data2.uint8[2], 108, 'l == 108')
         self.assert_data(data2.GetUnsignedInt8, 3, 108)  # l
-        self.assertTrue(data2.uint8[4] == 111, 'o == 111')
+        self.assertEqual(data2.uint8[4], 111, 'o == 111')
         self.assert_data(data2.GetUnsignedInt8, 5, 33)  # !
 
         uint_lists = [[1, 2, 3, 4, 5], [int(i) for i in [1, 2, 3, 4, 5]]]
@@ -415,7 +415,7 @@ class SBDataAPICase(TestBase):
         data2 = lldb.SBData()
 
         data2.SetDataFromCString(hello_str)
-        self.assertTrue(len(data2.uint8) == len(hello_str))
+        self.assertEqual(len(data2.uint8), len(hello_str))
         self.assert_data(data2.GetUnsignedInt8, 0, 104)
         self.assert_data(data2.GetUnsignedInt8, 1, 101)
         self.assert_data(data2.GetUnsignedInt8, 2, 108)

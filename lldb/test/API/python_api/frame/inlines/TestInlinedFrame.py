@@ -47,7 +47,7 @@ class InlinedFrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil
@@ -70,7 +70,7 @@ class InlinedFrameAPITestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         if frame0.IsInlined():
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()
-            self.assertTrue(filename == self.source)
+            self.assertEqual(filename, self.source)
             self.expect(
                 stack_traces1, "First stop at %s:%d" %
                 (self.source, self.first_stop), exe=False, substrs=[
@@ -79,7 +79,7 @@ class InlinedFrameAPITestCase(TestBase):
 
             # Expect to break again for the second time.
             process.Continue()
-            self.assertTrue(process.GetState() == lldb.eStateStopped,
+            self.assertEqual(process.GetState(), lldb.eStateStopped,
                             PROCESS_STOPPED)
             stack_traces2 = lldbutil.print_stacktraces(
                 process, string_buffer=True)
