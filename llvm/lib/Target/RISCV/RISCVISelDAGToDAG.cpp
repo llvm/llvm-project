@@ -1011,6 +1011,23 @@ bool RISCVDAGToDAGISel::MatchSLLIUW(SDNode *N) const {
   return (VC1 >> VC2) == UINT64_C(0xFFFFFFFF);
 }
 
+// X0 has special meaning for vsetvl/vsetvli.
+//  rd | rs1 |   AVL value | Effect on vl
+//--------------------------------------------------------------
+// !X0 |  X0 |       VLMAX | Set vl to VLMAX
+//  X0 |  X0 | Value in vl | Keep current vl, just change vtype.
+bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
+  // If the VL value is a constant 0, manually select it to an ADDI with 0
+  // immediate to prevent the default selection path from matching it to X0.
+  auto *C = dyn_cast<ConstantSDNode>(N);
+  if (C && C->isNullValue())
+    VL = SDValue(selectImm(CurDAG, SDLoc(N), 0, Subtarget->getXLenVT()), 0);
+  else
+    VL = N;
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
   if (N.getOpcode() != ISD::SPLAT_VECTOR &&
       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64)
