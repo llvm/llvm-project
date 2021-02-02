@@ -290,11 +290,13 @@ static inline int setRound(int mode) {
     return 1; // To indicate failure
   }
 
-  uint16_t x87Value = bitValue << internal::X87RoundingControlBitPosition;
+  uint16_t x87Value = static_cast<uint16_t>(
+      bitValue << internal::X87RoundingControlBitPosition);
   uint16_t x87Control = internal::getX87ControlWord();
-  x87Control =
-      (x87Control & ~(0x3 << internal::X87RoundingControlBitPosition)) |
-      x87Value;
+  x87Control = static_cast<uint16_t>(
+      (x87Control &
+       ~(uint16_t(0x3) << internal::X87RoundingControlBitPosition)) |
+      x87Value);
   internal::writeX87ControlWord(x87Control);
 
   uint32_t mxcsrValue = bitValue << internal::MXCSRRoundingControlBitPosition;

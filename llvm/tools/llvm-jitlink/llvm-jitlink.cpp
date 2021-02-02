@@ -690,15 +690,35 @@ LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
                                        " is not a valid integer",
                                    inconvertibleErrorCode());
 
+  addrinfo *AI;
+  addrinfo Hints{};
+  Hints.ai_family = AF_INET;
+  Hints.ai_socktype = SOCK_STREAM;
+  Hints.ai_protocol = PF_INET;
+  Hints.ai_flags = AI_NUMERICSERV;
+  if (getaddrinfo(HostName.c_str(), PortStr.str().c_str(), &Hints, &AI) != 0)
+    return make_error<StringError>("Failed to resolve " + HostName + ":" +
+                                       Twine(Port),
+                                   inconvertibleErrorCode());
+
   int SockFD = socket(PF_INET, SOCK_STREAM, 0);
-  hostent *Server = gethostbyname(HostName.c_str());
   sockaddr_in ServAddr;
   memset(&ServAddr, 0, sizeof(ServAddr));
   ServAddr.sin_family = PF_INET;
-  memmove(&Server->h_addr, &ServAddr.sin_addr.s_addr, Server->h_length);
   ServAddr.sin_port = htons(Port);
-  if (connect(SockFD, reinterpret_cast<sockaddr *>(&ServAddr),
-              sizeof(ServAddr)) < 0)
+
+  // getaddrinfo returns a list of address structures.  Go through the list
+  // to find one we can connect to.
+  int ConnectRC = -1;
+  for (addrinfo *Server = AI; Server; Server = Server->ai_next) {
+    memmove(&Server->ai_addr, &ServAddr.sin_addr.s_addr, Server->ai_addrlen);
+    ConnectRC = connect(SockFD, reinterpret_cast<sockaddr *>(&ServAddr),
+                        sizeof(ServAddr));
+    if (ConnectRC == 0)
+      break;
+  }
+  freeaddrinfo(AI);
+  if (ConnectRC == -1)
     return make_error<StringError>("Failed to connect to " + HostName + ":" +
                                        Twine(Port),
                                    inconvertibleErrorCode());

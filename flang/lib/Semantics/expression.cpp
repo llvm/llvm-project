@@ -1847,11 +1847,12 @@ static bool CheckCompatibleArgument(bool isElemental,
   return std::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &x) {
-            characteristics::TypeAndShape dummyTypeAndShape{x.type};
-            if (!isElemental && actual.Rank() != dummyTypeAndShape.Rank()) {
+            if (!isElemental && actual.Rank() != x.type.Rank() &&
+                !x.type.attrs().test(
+                    characteristics::TypeAndShape::Attr::AssumedRank)) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
-              return dummyTypeAndShape.type().IsTkCompatibleWith(*actualType);
+              return x.type.type().IsTkCompatibleWith(*actualType);
             } else {
               return false;
             }

@@ -215,41 +215,6 @@ def no_order_data : Flag<["-"], "no_order_data">,
      HelpText<"Disable default reordering of global data accessed at launch time">,
      Flags<[HelpHidden]>,
      Group<grp_opts>;
-def platform_version : MultiArg<["-"], "platform_version", 3>,
-     MetaVarName<"<platform> <min_version> <sdk_version>">,
-     HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
-     Group<grp_opts>;
-def sdk_version : Separate<["-"], "sdk_version">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
-def macos_version_min : Separate<["-"], "macos_version_min">,
-     MetaVarName<"<version>">,
-     HelpText<"Oldest macOS version for which linked output is useable">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
-def macosx_version_min : Separate<["-"], "macosx_version_min">,
-     MetaVarName<"<version>">,
-     Alias<macos_version_min>,
-     HelpText<"Alias for -macos_version_min">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
-def ios_version_min : Separate<["-"], "ios_version_min">,
-     MetaVarName<"<version>">,
-     HelpText<"Oldest iOS version for which linked output is useable">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
-def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
-     MetaVarName<"<version>">,
-     HelpText<"Oldest iOS simulator version for which linked output is useable">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
-def iphoneos_version_min : Separate<["-"], "iphoneos_version_min">,
-     MetaVarName<"<version>">,
-     Alias<ios_version_min>,
-     HelpText<"Alias for -ios_version_min">,
-     Flags<[HelpHidden]>,
-     Group<grp_opts>;
 def image_base : Separate<["-"], "image_base">,
      MetaVarName<"<address>">,
      HelpText<"Preferred hex load address for a dylib or bundle.">,
@@ -281,6 +246,80 @@ def no_branch_islands : Flag<["-"], "no_branch_islands">,
      HelpText<"Disable infra for branches beyond the maximum branch distance.">,
      Flags<[HelpHidden]>,
      Group<grp_opts>;
+
+def grp_version : OptionGroup<"version">, HelpText<"VERSION CONTROL">;
+
+def platform_version : MultiArg<["-"], "platform_version", 3>,
+     MetaVarName<"<platform> <min_version> <sdk_version>">,
+     HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
+     Group<grp_version>;
+def sdk_version : Separate<["-"], "sdk_version">,
+     HelpText<"This option is undocumented in ld64">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def macos_version_min : Separate<["-"], "macos_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest macOS version for which linked output is usable">,
+     Group<grp_version>;
+def macosx_version_min : Separate<["-"], "macosx_version_min">,
+     MetaVarName<"<version>">,
+     Alias<macos_version_min>,
+     HelpText<"Alias for -macos_version_min">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def ios_version_min : Separate<["-"], "ios_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest iOS version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest iOS simulator version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def iphoneos_version_min : Separate<["-"], "iphoneos_version_min">,
+     MetaVarName<"<version>">,
+     Alias<ios_version_min>,
+     HelpText<"Alias for -ios_version_min">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def maccatalyst_version_min : Separate<["-"], "maccatalyst_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest MacCatalyst version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def iosmac_version_min : Separate<["-"], "iosmac_version_min">,
+     MetaVarName<"<version>">,
+     Alias<maccatalyst_version_min>,
+     HelpText<"Alias for -maccatalyst_version_min">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def uikitformac_version_min : Separate<["-"], "uikitformac_version_min">,
+     MetaVarName<"<version>">,
+     Alias<maccatalyst_version_min>,
+     HelpText<"Alias for -maccatalyst_version_min">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def tvos_version_min : Separate<["-"], "tvos_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest tvOS version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def watchos_version_min : Separate<["-"], "watchos_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest watchOS version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def bridgeos_version_min : Separate<["-"], "bridgeos_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest bridgeOS version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
+def driverkit_version_min : Separate<["-"], "driverkit_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest DriverKit version for which linked output is usable">,
+     Flags<[HelpHidden]>,
+     Group<grp_version>;
 
 def grp_dylib : OptionGroup<"dylib">, HelpText<"DYNAMIC LIBRARIES (DYLIB)">;
 
@@ -1214,20 +1253,6 @@ def no_kext_objects : Flag<["-"], "no_kext_objects">,
      Group<grp_undocumented>;
 def kexts_use_stubs : Flag<["-"], "kexts_use_stubs">,
      HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def maccatalyst_version_min : Flag<["-"], "maccatalyst_version_min">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def iosmac_version_min : Flag<["-"], "iosmac_version_min">,
-     Alias<maccatalyst_version_min>,
-     HelpText<"Alias for -maccatalyst_version_min">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def uikitformac_version_min : Flag<["-"], "uikitformac_version_min">,
-     Alias<maccatalyst_version_min>,
-     HelpText<"Alias for -maccatalyst_version_min">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def no_compact_unwind : Flag<["-"], "no_compact_unwind">,

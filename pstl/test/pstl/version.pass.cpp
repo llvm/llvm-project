@@ -8,8 +8,8 @@
 
 #include <pstl/internal/pstl_config.h>
 
-static_assert(_PSTL_VERSION == 12000);
-static_assert(_PSTL_VERSION_MAJOR == 12);
+static_assert(_PSTL_VERSION == 13000);
+static_assert(_PSTL_VERSION_MAJOR == 13);
 static_assert(_PSTL_VERSION_MINOR == 00);
 static_assert(_PSTL_VERSION_PATCH == 0);
 

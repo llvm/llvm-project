@@ -503,5 +503,32 @@ void ArgStripper::process(std::vector<std::string> &Args) const {
   Args.resize(Write);
 }
 
+
+std::string printArgv(llvm::ArrayRef<llvm::StringRef> Args) {
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
+  bool Sep = false;
+  for (llvm::StringRef Arg : Args) {
+    if (Sep)
+      OS << ' ';
+    Sep = true;
+    if (llvm::all_of(Arg, llvm::isPrint) &&
+        Arg.find_first_of(" \t\n\"\\") == llvm::StringRef::npos) {
+      OS << Arg;
+      continue;
+    }
+    OS << '"';
+    OS.write_escaped(Arg, /*UseHexEscapes=*/true);
+    OS << '"';
+  }
+  return std::move(OS.str());
+}
+
+std::string printArgv(llvm::ArrayRef<std::string> Args) {
+  std::vector<llvm::StringRef> Refs(Args.size());
+  llvm::copy(Args, Refs.begin());
+  return printArgv(Refs);
+}
+
 } // namespace clangd
 } // namespace clang

@@ -136,6 +136,8 @@ TEST_MACROS();
 #endif
 #include <float.h>
 TEST_MACROS();
+#include <format>
+TEST_MACROS();
 #include <forward_list>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION

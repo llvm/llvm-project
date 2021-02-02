@@ -17,7 +17,6 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "hip/hip_runtime.h"
 
@@ -28,7 +27,7 @@
     const char *name = hipGetErrorName(result);                                \
     if (!name)                                                                 \
       name = "<unknown>";                                                      \
-    llvm::errs() << "'" << #expr << "' failed with '" << name << "'\n";        \
+    fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
 
 // Static reference to HIP primary context for device ordinal 0.

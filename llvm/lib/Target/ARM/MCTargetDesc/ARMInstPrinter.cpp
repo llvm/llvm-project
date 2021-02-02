@@ -807,11 +807,11 @@ void ARMInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
   if (MI->getOpcode() != ARM::t2CLRM) {
-    assert(std::is_sorted(MI->begin() + OpNum, MI->end(),
-                          [&](const MCOperand &LHS, const MCOperand &RHS) {
-                            return MRI.getEncodingValue(LHS.getReg()) <
-                                   MRI.getEncodingValue(RHS.getReg());
-                          }));
+    assert(is_sorted(drop_begin(*MI, OpNum),
+                     [&](const MCOperand &LHS, const MCOperand &RHS) {
+                       return MRI.getEncodingValue(LHS.getReg()) <
+                              MRI.getEncodingValue(RHS.getReg());
+                     }));
   }
 
   O << "{";

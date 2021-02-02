@@ -14,6 +14,10 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
+#ifndef _WIN32
+#include <sys/time.h>
+#endif // _WIN32
+
 #include <cinttypes>
 #include <cstdio>
 
@@ -31,5 +35,24 @@ extern "C" void printOpen() { fputs("( ", stdout); }
 extern "C" void printClose() { fputs(" )", stdout); }
 extern "C" void printComma() { fputs(", ", stdout); }
 extern "C" void printNewline() { fputc('\n', stdout); }
+
+/// Prints GFLOPS rating.
+extern "C" void print_flops(double flops) {
+  fprintf(stderr, "%lf GFLOPS\n", flops / 1.0E9);
+}
+
+/// Returns the number of seconds since Epoch 1970-01-01 00:00:00 +0000 (UTC).
+extern "C" double rtclock() {
+#ifndef _WIN32
+  struct timeval tp;
+  int stat = gettimeofday(&tp, NULL);
+  if (stat != 0)
+    fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
+  return (tp.tv_sec + tp.tv_usec * 1.0e-6);
+#else
+  fprintf(stderr, "Timing utility not implemented on Windows\n");
+  return 0.0;
+#endif // _WIN32
+}
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

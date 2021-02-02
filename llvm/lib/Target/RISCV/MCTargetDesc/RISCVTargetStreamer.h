@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class formatted_raw_ostream;
+
 class RISCVTargetStreamer : public MCTargetStreamer {
 public:
   RISCVTargetStreamer(MCStreamer &S);

@@ -358,6 +358,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(injectedClassNameType);
   REGISTER_MATCHER(innerType);
   REGISTER_MATCHER(integerLiteral);
+  REGISTER_MATCHER(invocation);
   REGISTER_MATCHER(isAllowedToContainClauseKind);
   REGISTER_MATCHER(isAnonymous);
   REGISTER_MATCHER(isAnyCharacter);

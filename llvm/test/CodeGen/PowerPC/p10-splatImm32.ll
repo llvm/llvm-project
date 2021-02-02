@@ -100,3 +100,13 @@ define dso_local <8 x i16> @test_xxsplti32dx_9() {
 entry:
   ret <8 x i16> <i16 291, i16 undef, i16 undef, i16 364, i16 undef, i16 1, i16 173, i16 undef>
 }
+
+define dso_local <16 x i8> @constSplatBug() {
+; CHECK-LABEL: constSplatBug:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxlxor vs34, vs34, vs34
+; CHECK-NEXT:    xxsplti32dx vs34, 0, 1191182336
+; CHECK-NEXT:    blr
+entry:
+  ret <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 71, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 71>
+}

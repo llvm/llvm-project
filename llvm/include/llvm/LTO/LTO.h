@@ -43,7 +43,7 @@ class ToolOutputFile;
 /// This is done for correctness (if value exported, ensure we always
 /// emit a copy), and compile-time optimization (allow drop of duplicates).
 void thinLTOResolvePrevailingInIndex(
-    ModuleSummaryIndex &Index,
+    const lto::Config &C, ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
@@ -364,6 +364,10 @@ private:
     /// summary).
     bool VisibleOutsideSummary = false;
 
+    /// The symbol was exported dynamically, and therefore could be referenced
+    /// by a shared library not visible to the linker.
+    bool ExportDynamic = false;
+
     bool UnnamedAddr = true;
 
     /// True if module contains the prevailing definition.
@@ -434,6 +438,10 @@ private:
 
   // Use Optional to distinguish false from not yet initialized.
   Optional<bool> EnableSplitLTOUnit;
+
+  // Identify symbols exported dynamically, and that therefore could be
+  // referenced by a shared library not visible to the linker.
+  DenseSet<GlobalValue::GUID> DynamicExportSymbols;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for
@@ -441,7 +449,7 @@ private:
 struct SymbolResolution {
   SymbolResolution()
       : Prevailing(0), FinalDefinitionInLinkageUnit(0), VisibleToRegularObj(0),
-        LinkerRedefined(0) {}
+        ExportDynamic(0), LinkerRedefined(0) {}
 
   /// The linker has chosen this definition of the symbol.
   unsigned Prevailing : 1;
@@ -452,6 +460,10 @@ struct SymbolResolution {
 
   /// The definition of this symbol is visible outside of the LTO unit.
   unsigned VisibleToRegularObj : 1;
+
+  /// The symbol was exported dynamically, and therefore could be referenced
+  /// by a shared library not visible to the linker.
+  unsigned ExportDynamic : 1;
 
   /// Linker redefined version of the symbol which appeared in -wrap or -defsym
   /// linker option.

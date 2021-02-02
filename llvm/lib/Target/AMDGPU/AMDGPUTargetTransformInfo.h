@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class AMDGPUTargetMachine;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;

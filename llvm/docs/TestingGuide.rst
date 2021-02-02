@@ -537,6 +537,16 @@ RUN lines:
 
    Example: ``%:s: C\Desktop Files\foo_test.s.tmp``
 
+``%errc_<ERRCODE>``
+
+ Some error messages may be substituted to allow different spellings
+ based on the host platform.
+
+   The following error codes are currently supported: ENOENT, EISDIR.
+
+   Example: ``Linux %errc_ENOENT: No such file or directory``
+
+   Example: ``Windows %errc_ENOENT: no such file or directory``
 
 **LLVM-specific substitutions:**
 

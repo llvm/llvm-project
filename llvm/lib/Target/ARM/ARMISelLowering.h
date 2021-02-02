@@ -660,6 +660,7 @@ class VectorType;
     /// function checks the vector element type and the overall width of the
     /// vector.
     bool isLegalInterleavedAccessType(unsigned Factor, FixedVectorType *VecTy,
+                                      Align Alignment,
                                       const DataLayout &DL) const;
 
     bool alignLoopsWithOptSize() const override;

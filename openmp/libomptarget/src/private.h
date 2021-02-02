@@ -99,7 +99,7 @@ int __kmpc_get_target_offload(void) __attribute__((weak));
 ////////////////////////////////////////////////////////////////////////////////
 /// dump a table of all the host-target pointer pairs on failure
 static inline void dumpTargetPointerMappings(const ident_t *Loc,
-                                             const DeviceTy &Device) {
+                                             DeviceTy &Device) {
   if (Device.HostDataToTargetMap.empty())
     return;
 
@@ -109,15 +109,17 @@ static inline void dumpTargetPointerMappings(const ident_t *Loc,
        Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
   INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s\n", "Host Ptr",
        "Target Ptr", "Size (B)", "RefCount", "Declaration");
+  Device.DataMapMtx.lock();
   for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
     SourceInfo Info(HostTargetMap.HstPtrName);
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8lu %-8ld %s at %s:%d:%d\n",
+         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-8" PRId64 " %s at %s:%d:%d\n",
          DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
-         (long unsigned)(HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin),
+         HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
          HostTargetMap.getRefCount(), Info.getName(), Info.getFilename(),
          Info.getLine(), Info.getColumn());
   }
+  Device.DataMapMtx.unlock();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,7 +154,7 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     else
       type = "use_address";
 
-    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%ld] %s\n", type,
+    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", type,
          getNameFromMapping(varName).c_str(), ArgSizes[i], implicit);
   }
 }

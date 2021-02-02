@@ -14,7 +14,7 @@ using namespace tidy;
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
-static bool ConsumeNegativeIndicator(StringRef &GlobList) {
+static bool consumeNegativeIndicator(StringRef &GlobList) {
   GlobList = GlobList.trim(" \r\n");
   if (GlobList.startswith("-")) {
     GlobList = GlobList.substr(1);
@@ -25,7 +25,7 @@ static bool ConsumeNegativeIndicator(StringRef &GlobList) {
 
 // Converts first glob from the comma-separated list of globs to Regex and
 // removes it and the trailing comma from the GlobList.
-static llvm::Regex ConsumeGlob(StringRef &GlobList) {
+static llvm::Regex consumeGlob(StringRef &GlobList) {
   StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find(','));
   StringRef Glob = UntrimmedGlob.trim(' ');
   GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
@@ -46,8 +46,8 @@ GlobList::GlobList(StringRef Globs) {
   Items.reserve(Globs.count(',') + 1);
   do {
     GlobListItem Item;
-    Item.IsPositive = !ConsumeNegativeIndicator(Globs);
-    Item.Regex = ConsumeGlob(Globs);
+    Item.IsPositive = !consumeNegativeIndicator(Globs);
+    Item.Regex = consumeGlob(Globs);
     Items.push_back(std::move(Item));
   } while (!Globs.empty());
 }

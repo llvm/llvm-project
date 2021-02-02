@@ -62,7 +62,8 @@ private:
   template <typename Callable>
   void forAllLanes(Register Reg, LaneBitmask LaneMask, Callable Func) const;
 
-  bool canBundle(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
+  bool canBundle(const MachineInstr &MI, const RegUse &Defs,
+                 const RegUse &Uses) const;
   bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
   void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
@@ -106,7 +107,8 @@ static bool isSMEMClauseInst(const MachineInstr &MI) {
 // There no sense to create store clauses, they do not define anything,
 // thus there is nothing to set early-clobber.
 static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
-  if (MI.isDebugValue() || MI.isBundled())
+  assert(!MI.isDebugInstr() && "debug instructions should not reach here");
+  if (MI.isBundled())
     return false;
   if (!MI.mayLoad() || MI.mayStore())
     return false;
@@ -203,8 +205,8 @@ void SIFormMemoryClauses::forAllLanes(Register Reg, LaneBitmask LaneMask,
 
 // Returns false if there is a use of a def already in the map.
 // In this case we must break the clause.
-bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
-                                    RegUse &Defs, RegUse &Uses) const {
+bool SIFormMemoryClauses::canBundle(const MachineInstr &MI, const RegUse &Defs,
+                                    const RegUse &Uses) const {
   // Check interference with defs.
   for (const MachineOperand &MO : MI.operands()) {
     // TODO: Prologue/Epilogue Insertion pass does not process bundled
@@ -221,7 +223,7 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
     if (MO.isTied())
       return false;
 
-    RegUse &Map = MO.isDef() ? Uses : Defs;
+    const RegUse &Map = MO.isDef() ? Uses : Defs;
     auto Conflict = Map.find(Reg);
     if (Conflict == Map.end())
       continue;
@@ -321,12 +323,17 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
   unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
       MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
 
+  SmallVector<MachineInstr *> DbgInstrs;
+
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
       Next = std::next(I);
+
+      if (MI.isDebugInstr())
+        continue;
 
       bool IsVMEM = isVMEMClauseInst(MI);
 
@@ -349,6 +356,11 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       unsigned Length = 1;
       for ( ; Next != E && Length < FuncMaxClause; ++Next) {
+        // Debug instructions should not change the bundling. We need to move
+        // these after the bundle
+        if (Next->isDebugInstr())
+          continue;
+
         if (!isValidClauseInst(*Next, IsVMEM))
           break;
 
@@ -373,8 +385,17 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       // Restore the state after processing the bundle.
       RPT.reset(*B, &LiveRegsCopy);
+      DbgInstrs.clear();
 
-      for (auto BI = I; BI != Next; ++BI) {
+      auto BundleNext = I;
+      for (auto BI = I; BI != Next; BI = BundleNext) {
+        BundleNext = std::next(BI);
+
+        if (BI->isDebugValue()) {
+          DbgInstrs.push_back(BI->removeFromParent());
+          continue;
+        }
+
         BI->bundleWithPred();
         Ind->removeSingleMachineInstrFromMaps(*BI);
 
@@ -382,6 +403,10 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
           if (MO.readsReg())
             MO.setIsInternalRead(true);
       }
+
+      // Replace any debug instructions after the new bundle.
+      for (MachineInstr *DbgInst : DbgInstrs)
+        MBB.insert(Next, DbgInst);
 
       for (auto &&R : Defs) {
         forAllLanes(R.first, R.second.second, [&R, &B](unsigned SubReg) {

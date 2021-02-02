@@ -29,7 +29,7 @@ public:
   void printFlagDescriptions();
 
 private:
-  static const u32 MaxFlags = 16;
+  static const u32 MaxFlags = 20;
   struct Flag {
     const char *Name;
     const char *Desc;

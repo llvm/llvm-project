@@ -289,12 +289,6 @@ def ixlenimm_li : Operand<XLenVT> {
 // Standalone (codegen-only) immleaf patterns.
 def simm32     : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
 def simm32hi20 : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
-// A mask value that won't affect significant shift bits.
-def immbottomxlenset : ImmLeaf<XLenVT, [{
-  if (Subtarget->is64Bit())
-    return countTrailingOnes<uint64_t>(Imm) >= 6;
-  return countTrailingOnes<uint64_t>(Imm) >= 5;
-}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -901,14 +895,21 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // typically introduced when the legalizer promotes the shift amount and
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
+def shiftMaskXLen : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, Subtarget->is64Bit() ? 6 : 5);
+}]>;
+def shiftMask32 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, 5);
+}]>;
+
 class shiftop<SDPatternOperator operator>
     : PatFrags<(ops node:$val, node:$count),
                [(operator node:$val, node:$count),
-                (operator node:$val, (and node:$count, immbottomxlenset))]>;
+                (operator node:$val, (shiftMaskXLen node:$count))]>;
 class shiftopw<SDPatternOperator operator>
     : PatFrags<(ops node:$val, node:$count),
                [(operator node:$val, node:$count),
-                (operator node:$val, (and node:$count, (XLenVT 31)))]>;
+                (operator node:$val, (shiftMask32 node:$count))]>;
 
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;

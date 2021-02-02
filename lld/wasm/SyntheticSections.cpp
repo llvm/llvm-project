@@ -333,7 +333,7 @@ void GlobalSection::writeBody() {
     WasmGlobal global;
     // In the case of dynamic linking, internal GOT entries
     // need to be mutable since they get updated to the correct
-    // runtime value during `__wasm_apply_relocs`.
+    // runtime value during `__wasm_apply_global_relocs`.
     bool mutable_ = config->isPic & !sym->isStub;
     global.Type = {WASM_TYPE_I32, mutable_};
     global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;

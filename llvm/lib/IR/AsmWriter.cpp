@@ -3163,6 +3163,18 @@ static std::string getLinkageNameWithSpace(GlobalValue::LinkageTypes LT) {
   return getLinkageName(LT) + " ";
 }
 
+static const char *getVisibilityName(GlobalValue::VisibilityTypes Vis) {
+  switch (Vis) {
+  case GlobalValue::DefaultVisibility:
+    return "default";
+  case GlobalValue::HiddenVisibility:
+    return "hidden";
+  case GlobalValue::ProtectedVisibility:
+    return "protected";
+  }
+  llvm_unreachable("invalid visibility");
+}
+
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
 
@@ -3331,6 +3343,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << "(module: ^" << Machine.getModulePathSlot(Summary.modulePath())
       << ", flags: (";
   Out << "linkage: " << getLinkageName(LT);
+  Out << ", visibility: "
+      << getVisibilityName((GlobalValue::VisibilityTypes)GVFlags.Visibility);
   Out << ", notEligibleToImport: " << GVFlags.NotEligibleToImport;
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;

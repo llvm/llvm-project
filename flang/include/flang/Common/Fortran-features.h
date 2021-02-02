@@ -47,6 +47,7 @@ public:
     disable_.set(LanguageFeature::BackslashEscapes);
     disable_.set(LanguageFeature::LogicalAbbreviations);
     disable_.set(LanguageFeature::XOROperator);
+    disable_.set(LanguageFeature::OldStyleParameter);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }

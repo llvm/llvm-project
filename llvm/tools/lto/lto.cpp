@@ -564,8 +564,7 @@ void thinlto_debug_options(const char *const *options, int number) {
   // if options were requested, set them
   if (number && options) {
     std::vector<const char *> CodegenArgv(1, "libLTO");
-    for (auto Arg : ArrayRef<const char *>(options, number))
-      CodegenArgv.push_back(Arg);
+    append_range(CodegenArgv, ArrayRef<const char *>(options, number));
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
   }
 }

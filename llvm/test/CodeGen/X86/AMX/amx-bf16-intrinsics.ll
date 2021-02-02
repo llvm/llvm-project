@@ -5,6 +5,7 @@ define void @test_amx() {
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tdpbf16ps %tmm7, %tmm4, %tmm3
+; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    retq
   call void @llvm.x86.tdpbf16ps(i8 3, i8 4, i8 7)
   ret void

@@ -43,3 +43,35 @@ class DebuggerAPITestCase(TestBase):
         target = lldb.SBTarget()
         self.assertFalse(target.IsValid())
         self.dbg.DeleteTarget(target)
+
+    @add_test_categories(['pyapi'])
+    def test_debugger_internal_variables(self):
+        debugger_name = self.dbg.GetInstanceName()
+
+        # Set a variable and check it was written successfully.
+        error = lldb.SBDebugger.SetInternalVariable(
+            'target.prefer-dynamic-value', 'no-dynamic-values', debugger_name)
+        self.assertTrue(error.Success())
+        ret = lldb.SBDebugger.GetInternalVariableValue(
+            'target.prefer-dynamic-value', debugger_name)
+        self.assertEqual(ret.GetSize(), 1)
+        self.assertEqual(ret.GetStringAtIndex(0), 'no-dynamic-values')
+
+        # Set a variable with a different value.
+        error = lldb.SBDebugger.SetInternalVariable(
+            'target.prefer-dynamic-value', 'no-run-target', debugger_name)
+        self.assertTrue(error.Success())
+        ret = lldb.SBDebugger.GetInternalVariableValue(
+            'target.prefer-dynamic-value', debugger_name)
+        self.assertEqual(ret.GetSize(), 1)
+        self.assertEqual(ret.GetStringAtIndex(0), 'no-run-target')
+
+        # Try setting invalid value, check for error.
+        error = lldb.SBDebugger.SetInternalVariable(
+            'target.prefer-dynamic-value', 'dummy-value', debugger_name)
+        self.assertTrue(error.Fail())
+        # Check that the value didn't change.
+        ret = lldb.SBDebugger.GetInternalVariableValue(
+            'target.prefer-dynamic-value', debugger_name)
+        self.assertEqual(ret.GetSize(), 1)
+        self.assertEqual(ret.GetStringAtIndex(0), 'no-run-target')

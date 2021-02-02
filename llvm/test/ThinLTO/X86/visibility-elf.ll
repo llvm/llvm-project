@@ -22,7 +22,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK:      @var1 = external global i32, align 4
+; CHECK:      @var1 = external hidden global i32, align 4
 ; CHECK-NEXT: @var2 = available_externally hidden global i32 1, align 4
 
 @var1 = weak global i32 1, align 4
@@ -30,8 +30,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @ext(void ()*)
 
-; CHECK: declare i32 @hidden_def_weak_def()
-; CHECK: declare void @protected_def_weak_def()
+; CHECK: declare hidden i32 @hidden_def_weak_def()
+; CHECK: declare protected void @protected_def_weak_def()
 ; CHECK: declare hidden void @protected_def_weak_hidden_def()
 ;; Currently the visibility is not propagated onto an unimported function,
 ;; because we don't have summaries for declarations.
@@ -45,7 +45,7 @@ declare void @ext(void ()*)
 
 ; CHECK2: define hidden i32 @hidden_def_weak_def()
 ; CHECK2: define protected void @protected_def_weak_def()
-; CHECK2: define protected void @protected_def_weak_hidden_def()
+; CHECK2: define hidden void @protected_def_weak_hidden_def()
 ; CHECK2: define hidden void @hidden_def_ref()
 ; CHECK2: define hidden void @hidden_def_weak_ref()
 ; CHECK2: define protected void @protected_def_hidden_ref()

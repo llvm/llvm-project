@@ -1057,16 +1057,34 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const CompileUnit &Unit, AttributesInfo &Info) {
-  dwarf::Form Form = AttrSpec.Form;
-  uint64_t Addr = *Val.getAsAddress();
-
   if (LLVM_UNLIKELY(Linker.Options.Update)) {
     if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
       Info.HasLowPc = true;
     Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
-                 dwarf::Form(AttrSpec.Form), DIEInteger(Addr));
+                 dwarf::Form(AttrSpec.Form), DIEInteger(Val.getRawUValue()));
     return Unit.getOrigUnit().getAddressByteSize();
   }
+
+  dwarf::Form Form = AttrSpec.Form;
+  uint64_t Addr = 0;
+  if (Form == dwarf::DW_FORM_addrx) {
+    if (Optional<uint64_t> AddrOffsetSectionBase =
+            Unit.getOrigUnit().getAddrOffsetSectionBase()) {
+      uint64_t StartOffset = *AddrOffsetSectionBase + Val.getRawUValue();
+      uint64_t EndOffset =
+          StartOffset + Unit.getOrigUnit().getAddressByteSize();
+      if (llvm::Expected<uint64_t> RelocAddr =
+              ObjFile.Addresses->relocateIndexedAddr(StartOffset, EndOffset))
+        Addr = *RelocAddr;
+      else
+        Linker.reportWarning(toString(RelocAddr.takeError()), ObjFile);
+    } else
+      Linker.reportWarning("no base offset for address table", ObjFile);
+
+    // If this is an indexed address emit the debug_info address.
+    Form = dwarf::DW_FORM_addr;
+  } else
+    Addr = *Val.getAsAddress();
 
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (Die.getTag() == dwarf::DW_TAG_inlined_subroutine ||
@@ -1105,17 +1123,6 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     // Relocate the address of a branch instruction within a call site entry.
     if (Die.getTag() == dwarf::DW_TAG_call_site)
       Addr = (Info.OrigCallPc ? Info.OrigCallPc : Addr) + Info.PCOffset;
-  }
-
-  // If this is an indexed address emit the relocated address.
-  if (Form == dwarf::DW_FORM_addrx) {
-    if (llvm::Expected<uint64_t> RelocAddr =
-            ObjFile.Addresses->relocateIndexedAddr(Addr)) {
-      Addr = *RelocAddr;
-      Form = dwarf::DW_FORM_addr;
-    } else {
-      Linker.reportWarning(toString(RelocAddr.takeError()), ObjFile);
-    }
   }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),

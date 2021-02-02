@@ -39,17 +39,17 @@ name:            test_scalar_uaddo_32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_uaddo_32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDO1]](s1)
-    ; CHECK: $w0 = COPY [[UADDO]](s32)
-    ; CHECK: $w1 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s32), %3:_(s1) = G_UADDO %0, %1
-    %4:_(s32) = G_ANYEXT %3
-    $w0 = COPY %2(s32)
-    $w1 = COPY %4(s32)
+    ; CHECK: %lhs:_(s32) = COPY $w0
+    ; CHECK: %rhs:_(s32) = COPY $w1
+    ; CHECK: %add:_(s32), %carry_out:_(s1) = G_UADDO %lhs, %rhs
+    ; CHECK: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $w0 = COPY %add(s32)
+    ; CHECK: $w1 = COPY %carry_out_ext(s32)
+    %lhs:_(s32) = COPY $w0
+    %rhs:_(s32) = COPY $w1
+    %add:_(s32), %carry_out:_(s1) = G_UADDO %lhs, %rhs
+    %carry_out_ext:_(s32) = G_ANYEXT %carry_out
+    $w0 = COPY %add
+    $w1 = COPY %carry_out_ext
 
 ...

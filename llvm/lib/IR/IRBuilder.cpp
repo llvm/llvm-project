@@ -892,8 +892,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Optional<fp::ExceptionBehavior> Except) {
   llvm::SmallVector<Value *, 6> UseArgs;
 
-  for (auto *OneArg : Args)
-    UseArgs.push_back(OneArg);
+  append_range(UseArgs, Args);
   bool HasRoundingMD = false;
   switch (Callee->getIntrinsicID()) {
   default:

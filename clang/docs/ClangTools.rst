@@ -11,7 +11,7 @@ refactoring, etc.
 Only a couple of the most basic and fundamental tools are kept in the
 primary Clang tree. The rest of the tools are kept in a separate
 directory tree, `clang-tools-extra
-<https://github.com/llvm/llvm-project/tree/master/clang-tools-extra>`_.
+<https://github.com/llvm/llvm-project/tree/main/clang-tools-extra>`_.
 
 This document describes a high-level overview of the organization of
 Clang Tools within the project as well as giving an introduction to some

@@ -338,6 +338,9 @@
 ?vector_func@@YQXXZ
 ; CHECK: void __vectorcall vector_func(void)
 
+?swift_func@@YSXXZ
+; CHECK: void __attribute__((__swiftcall__)) swift_func(void)
+
 ??$fn_tmpl@$1?extern_c_func@@YAXXZ@@YAXXZ
 ; CHECK: void __cdecl fn_tmpl<&void __cdecl extern_c_func(void)>(void)
 

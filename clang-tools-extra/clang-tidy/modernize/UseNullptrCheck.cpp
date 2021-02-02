@@ -173,9 +173,9 @@ private:
 class CastSequenceVisitor : public RecursiveASTVisitor<CastSequenceVisitor> {
 public:
   CastSequenceVisitor(ASTContext &Context, ArrayRef<StringRef> NullMacros,
-                      ClangTidyCheck &check)
+                      ClangTidyCheck &Check)
       : SM(Context.getSourceManager()), Context(Context),
-        NullMacros(NullMacros), Check(check), FirstSubExpr(nullptr),
+        NullMacros(NullMacros), Check(Check), FirstSubExpr(nullptr),
         PruneSubtree(false) {}
 
   bool TraverseStmt(Stmt *S) {

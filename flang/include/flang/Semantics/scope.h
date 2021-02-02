@@ -194,6 +194,7 @@ public:
   DeclTypeSpec &MakeDerivedType(DeclTypeSpec::Category, DerivedTypeSpec &&);
   const DeclTypeSpec &MakeTypeStarType();
   const DeclTypeSpec &MakeClassStarType();
+  const DeclTypeSpec *GetType(const SomeExpr &);
 
   std::size_t size() const { return size_; }
   void set_size(std::size_t size) { size_ = size; }

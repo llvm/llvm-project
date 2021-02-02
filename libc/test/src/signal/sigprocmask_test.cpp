@@ -53,7 +53,7 @@ TEST_F(LlvmLibcSignalTest, BlockUnblock) {
   sigset_t sigset;
   EXPECT_EQ(__llvm_libc::sigemptyset(&sigset), 0);
   EXPECT_EQ(__llvm_libc::sigprocmask(SIG_SETMASK, &sigset, nullptr), 0);
-  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, SIGUSR1);
+  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, WITH_SIGNAL(SIGUSR1));
   EXPECT_EQ(__llvm_libc::sigaddset(&sigset, SIGUSR1), 0);
   EXPECT_EQ(__llvm_libc::sigprocmask(SIG_SETMASK, &sigset, nullptr), 0);
   EXPECT_EXITS([] { __llvm_libc::raise(SIGUSR1); }, 0);

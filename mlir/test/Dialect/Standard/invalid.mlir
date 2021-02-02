@@ -38,7 +38,7 @@ func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off 
 // -----
 
 func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected 1 offset values}}
+  // expected-error @+1 {{expected <= 1 offset values}}
   %out = memref_reinterpret_cast %in to
            offset: [0, 0], sizes: [10, 10], strides: [10, 1]
            : memref<?xf32> to memref<10x10xf32, offset: 0, strides: [10, 1]>

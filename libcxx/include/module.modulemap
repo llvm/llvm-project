@@ -292,6 +292,10 @@ module std [system] {
     header "filesystem"
     export *
   }
+  module format {
+    header "format"
+    export *
+  }
   module forward_list {
     header "forward_list"
     export initializer_list

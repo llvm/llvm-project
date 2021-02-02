@@ -1,0 +1,56 @@
+// -*- C++ -*-
+//===--------------------------- format -----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_FORMAT
+#define _LIBCPP_FORMAT
+
+/*
+
+namespace std {
+  // [format.error], class format_error
+  class format_error : public runtime_error {
+  public:
+    explicit format_error(const string& what_arg);
+    explicit format_error(const char* what_arg);
+  };
+}
+
+*/
+
+#include <__config>
+#include <stdexcept>
+#include <version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 17
+
+class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
+public:
+  _LIBCPP_INLINE_VISIBILITY explicit format_error(const string& __s)
+      : runtime_error(__s) {}
+  _LIBCPP_INLINE_VISIBILITY explicit format_error(const char* __s)
+      : runtime_error(__s) {}
+  virtual ~format_error() noexcept;
+};
+
+#endif //_LIBCPP_STD_VER > 17
+
+_LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_FORMAT

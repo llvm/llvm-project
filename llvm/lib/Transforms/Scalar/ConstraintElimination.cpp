@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
@@ -91,10 +92,19 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   return {{0, nullptr}, {1, V}};
 }
 
+struct ConstraintTy {
+  SmallVector<int64_t, 8> Coefficients;
+
+  ConstraintTy(SmallVector<int64_t, 8> Coefficients)
+      : Coefficients(Coefficients) {}
+
+  unsigned size() const { return Coefficients.size(); }
+};
+
 /// Turn a condition \p CmpI into a constraint vector, using indices from \p
 /// Value2Index. If \p ShouldAdd is true, new indices are added for values not
 /// yet in \p Value2Index.
-static SmallVector<int64_t, 8>
+static SmallVector<ConstraintTy, 4>
 getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
               DenseMap<Value *, unsigned> &Value2Index, bool ShouldAdd) {
   int64_t Offset1 = 0;
@@ -115,6 +125,13 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE)
     return getConstraint(CmpInst::getSwappedPredicate(Pred), Op1, Op0,
                          Value2Index, ShouldAdd);
+
+  if (Pred == CmpInst::ICMP_EQ) {
+    auto A = getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, ShouldAdd);
+    auto B = getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index, ShouldAdd);
+    append_range(A, B);
+    return A;
+  }
 
   // Only ULE and ULT predicates are supported at the moment.
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
@@ -155,10 +172,10 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     R[Value2Index[KV.second]] -= KV.first;
 
   R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
-  return R;
+  return {R};
 }
 
-static SmallVector<int64_t, 8>
+static SmallVector<ConstraintTy, 4>
 getConstraint(CmpInst *Cmp, DenseMap<Value *, unsigned> &Value2Index,
               bool ShouldAdd) {
   return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
@@ -300,9 +317,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         if (!Cmp)
           continue;
         auto R = getConstraint(Cmp, Value2Index, false);
-        if (R.empty() || R.size() == 1)
+        if (R.size() != 1 || R[0].size() == 1)
           continue;
-        if (CS.isConditionImplied(R)) {
+        if (CS.isConditionImplied(R[0].Coefficients)) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
 
@@ -317,7 +334,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           NumCondsRemoved++;
           Changed = true;
         }
-        if (CS.isConditionImplied(ConstraintSystem::negate(R))) {
+        if (CS.isConditionImplied(
+                ConstraintSystem::negate(R[0].Coefficients))) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
 
@@ -336,6 +354,22 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     }
 
+    // Set up a function to restore the predicate at the end of the scope if it
+    // has been negated. Negate the predicate in-place, if required.
+    auto *CI = dyn_cast<CmpInst>(CB.Condition);
+    auto PredicateRestorer = make_scope_exit([CI, &CB]() {
+      if (CB.Not && CI)
+        CI->setPredicate(CI->getInversePredicate());
+    });
+    if (CB.Not) {
+      if (CI) {
+        CI->setPredicate(CI->getInversePredicate());
+      } else {
+        LLVM_DEBUG(dbgs() << "Can only negate compares so far.\n");
+        continue;
+      }
+    }
+
     // Otherwise, add the condition to the system and stack, if we can transform
     // it into a constraint.
     auto R = getConstraint(CB.Condition, Value2Index, true);
@@ -343,15 +377,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
 
     LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
-    if (CB.Not)
-      R = ConstraintSystem::negate(R);
+    bool Added = false;
+    for (auto &C : R) {
+      auto Coeffs = C.Coefficients;
 
-    // If R has been added to the system, queue it for removal once it goes
-    // out-of-scope.
-    if (CS.addVariableRowFill(R))
-      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
+      Added |= CS.addVariableRowFill(Coeffs);
+      // If R has been added to the system, queue it for removal once it goes
+      // out-of-scope.
+      if (Added)
+        DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not);
+    }
   }
 
+  assert(CS.size() == DFSInStack.size() &&
+         "updates to CS and DFSInStack are out of sync");
   return Changed;
 }
 

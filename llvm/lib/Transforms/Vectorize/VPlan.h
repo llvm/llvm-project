@@ -1130,17 +1130,15 @@ public:
 class VPReductionRecipe : public VPRecipeBase, public VPUser, public VPValue {
   /// The recurrence decriptor for the reduction in question.
   RecurrenceDescriptor *RdxDesc;
-  /// Fast math flags to use for the resulting reduction operation.
-  bool NoNaN;
   /// Pointer to the TTI, needed to create the target reduction
   const TargetTransformInfo *TTI;
 
 public:
   VPReductionRecipe(RecurrenceDescriptor *R, Instruction *I, VPValue *ChainOp,
-                    VPValue *VecOp, VPValue *CondOp, bool NoNaN,
+                    VPValue *VecOp, VPValue *CondOp,
                     const TargetTransformInfo *TTI)
       : VPRecipeBase(VPRecipeBase::VPReductionSC), VPUser({ChainOp, VecOp}),
-        VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R), NoNaN(NoNaN),
+        VPValue(VPValue::VPVReductionSC, I, this), RdxDesc(R),
         TTI(TTI) {
     if (CondOp)
       addOperand(CondOp);

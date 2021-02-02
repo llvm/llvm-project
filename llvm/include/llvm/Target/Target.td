@@ -168,8 +168,15 @@ class Register<string n, list<string> altNames = []> {
   // minimize the number of instructions using a register with a CostPerUse.
   // This is used by the ARC target, by the ARM Thumb and x86-64 targets, where
   // some registers require larger instruction encodings, by the RISC-V target,
-  // where some registers preclude using some C instructions.
-  int CostPerUse = 0;
+  // where some registers preclude using some C instructions. By making it a
+  // list, targets can have multiple cost models associated with each register
+  // and can choose one specific cost model per Machine Function by overriding
+  // TargetRegisterInfo::getRegisterCostTableIndex. Every target register will
+  // finally have an equal number of cost values which is the max of costPerUse
+  // values specified. Any mismatch in the cost values for a register will be
+  // filled with zeros. Restricted the cost type to uint8_t in the
+  // generated table. It will considerably reduce the table size.
+  list<int> CostPerUse = [0];
 
   // CoveredBySubRegs - When this bit is set, the value of this register is
   // completely determined by the value of its sub-registers.  For example, the

@@ -7,15 +7,21 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+//
+// Use descriptive names for opaque pointers.
+//
+!Filename = type !llvm.ptr<i8>
+!Tensor   = type !llvm.ptr<i8>
+
 module {
   //
   // Example of using the sparse runtime support library to read a sparse tensor
   // in the FROSTT file format (http://frostt.io/tensors/file-formats.html).
   //
-  func private @openTensor(!llvm.ptr<i8>, memref<?xindex>) -> (!llvm.ptr<i8>)
-  func private @readTensorItem(!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>) -> ()
-  func private @closeTensor(!llvm.ptr<i8>) -> ()
-  func private @getTensorFilename(index) -> (!llvm.ptr<i8>)
+  func private @getTensorFilename(index) -> (!Filename)
+  func private @openTensor(!Filename, memref<?xindex>) -> (!Tensor)
+  func private @readTensorItem(!Tensor, memref<?xindex>, memref<?xf64>) -> ()
+  func private @closeTensor(!Tensor) -> ()
 
   func @entry() {
     %d0  = constant 0.0 : f64
@@ -35,7 +41,7 @@ module {
     //
     // Obtain the sparse tensor filename through this test helper.
     //
-    %fileName = call @getTensorFilename(%c0) : (index) -> (!llvm.ptr<i8>)
+    %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
 
     //
     // Read a sparse tensor. The call yields a pointer to an opaque
@@ -44,8 +50,7 @@ module {
     // provides the rank and the number of nonzero elements (nnz) through
     // a memref array.
     //
-    %tensor = call @openTensor(%fileName, %idata)
-      : (!llvm.ptr<i8>, memref<?xindex>) -> (!llvm.ptr<i8>)
+    %tensor = call @openTensor(%fileName, %idata) : (!Filename, memref<?xindex>) -> (!Tensor)
 
     //
     // Print some meta data.
@@ -65,8 +70,7 @@ module {
     // simply print the elements on the fly.
     //
     scf.for %k = %c0 to %nnz step %c1 {
-      call @readTensorItem(%tensor, %idata, %ddata)
-        : (!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>) -> ()
+      call @readTensorItem(%tensor, %idata, %ddata) : (!Tensor, memref<?xindex>, memref<?xf64>) -> ()
       //
       // Build index vector and print element (here, using the
       // knowledge that the read sparse tensor has rank 8).
@@ -88,7 +92,7 @@ module {
     // Since at this point we have processed the contents, make sure to
     // close the sparse tensor to release its memory resources.
     //
-    call @closeTensor(%tensor) : (!llvm.ptr<i8>) -> ()
+    call @closeTensor(%tensor) : (!Tensor) -> ()
 
     //
     // Verify that the results are as expected.

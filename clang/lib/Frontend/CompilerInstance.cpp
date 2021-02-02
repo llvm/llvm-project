@@ -85,7 +85,7 @@ void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
 }
 
 void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
-  OwnedVerboseOutputStream.release();
+  OwnedVerboseOutputStream.reset();
   VerboseOutputStream = &Value;
 }
 
@@ -646,31 +646,32 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 
 // Output Files
 
-void CompilerInstance::addOutputFile(OutputFile &&OutFile) {
-  OutputFiles.push_back(std::move(OutFile));
-}
-
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
   for (OutputFile &OF : OutputFiles) {
-    if (!OF.TempFilename.empty()) {
-      if (EraseFiles) {
+    if (EraseFiles) {
+      if (!OF.TempFilename.empty()) {
         llvm::sys::fs::remove(OF.TempFilename);
-      } else {
-        SmallString<128> NewOutFile(OF.Filename);
-
-        // If '-working-directory' was passed, the output filename should be
-        // relative to that.
-        FileMgr->FixupRelativePath(NewOutFile);
-        if (std::error_code ec =
-                llvm::sys::fs::rename(OF.TempFilename, NewOutFile)) {
-          getDiagnostics().Report(diag::err_unable_to_rename_temp)
-            << OF.TempFilename << OF.Filename << ec.message();
-
-          llvm::sys::fs::remove(OF.TempFilename);
-        }
+        continue;
       }
-    } else if (!OF.Filename.empty() && EraseFiles)
-      llvm::sys::fs::remove(OF.Filename);
+      if (!OF.Filename.empty())
+        llvm::sys::fs::remove(OF.Filename);
+      continue;
+    }
+
+    if (OF.TempFilename.empty())
+      continue;
+
+    // If '-working-directory' was passed, the output filename should be
+    // relative to that.
+    SmallString<128> NewOutFile(OF.Filename);
+    FileMgr->FixupRelativePath(NewOutFile);
+    std::error_code EC = llvm::sys::fs::rename(OF.TempFilename, NewOutFile);
+    if (!EC)
+      continue;
+    getDiagnostics().Report(diag::err_unable_to_rename_temp)
+        << OF.TempFilename << OF.Filename << EC.message();
+
+    llvm::sys::fs::remove(OF.TempFilename);
   }
   OutputFiles.clear();
   if (DeleteBuiltModules) {
@@ -678,15 +679,29 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
       llvm::sys::fs::remove(Module.second);
     BuiltModules.clear();
   }
-  NonSeekStream.reset();
 }
 
 std::unique_ptr<raw_pwrite_stream>
 CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
-                                          StringRef Extension) {
-  return createOutputFile(getFrontendOpts().OutputFile, Binary,
-                          /*RemoveFileOnSignal=*/true, InFile, Extension,
-                          getFrontendOpts().UseTemporary);
+                                          StringRef Extension,
+                                          bool RemoveFileOnSignal,
+                                          bool CreateMissingDirectories) {
+  StringRef OutputPath = getFrontendOpts().OutputFile;
+  Optional<SmallString<128>> PathStorage;
+  if (OutputPath.empty()) {
+    if (InFile == "-" || Extension.empty()) {
+      OutputPath = "-";
+    } else {
+      PathStorage.emplace(InFile);
+      llvm::sys::path::replace_extension(*PathStorage, Extension);
+      OutputPath = *PathStorage;
+    }
+  }
+
+  // Force a temporary file if RemoveFileOnSignal was disabled.
+  return createOutputFile(OutputPath, Binary, RemoveFileOnSignal,
+                          getFrontendOpts().UseTemporary || !RemoveFileOnSignal,
+                          CreateMissingDirectories);
 }
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
@@ -695,64 +710,40 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
 
 std::unique_ptr<raw_pwrite_stream>
 CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
-                                   bool RemoveFileOnSignal, StringRef InFile,
-                                   StringRef Extension, bool UseTemporary,
+                                   bool RemoveFileOnSignal, bool UseTemporary,
                                    bool CreateMissingDirectories) {
-  std::string OutputPathName, TempPathName;
-  std::error_code EC;
-  std::unique_ptr<raw_pwrite_stream> OS = createOutputFile(
-      OutputPath, EC, Binary, RemoveFileOnSignal, InFile, Extension,
-      UseTemporary, CreateMissingDirectories, &OutputPathName, &TempPathName);
-  if (!OS) {
-    getDiagnostics().Report(diag::err_fe_unable_to_open_output) << OutputPath
-                                                                << EC.message();
-    return nullptr;
-  }
-
-  // Add the output file -- but don't try to remove "-", since this means we are
-  // using stdin.
-  addOutputFile(
-      OutputFile((OutputPathName != "-") ? OutputPathName : "", TempPathName));
-
-  return OS;
+  Expected<std::unique_ptr<raw_pwrite_stream>> OS =
+      createOutputFileImpl(OutputPath, Binary, RemoveFileOnSignal, UseTemporary,
+                           CreateMissingDirectories);
+  if (OS)
+    return std::move(*OS);
+  getDiagnostics().Report(diag::err_fe_unable_to_open_output)
+      << OutputPath << errorToErrorCode(OS.takeError()).message();
+  return nullptr;
 }
 
-std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
-    StringRef OutputPath, std::error_code &Error, bool Binary,
-    bool RemoveFileOnSignal, StringRef InFile, StringRef Extension,
-    bool UseTemporary, bool CreateMissingDirectories,
-    std::string *ResultPathName, std::string *TempPathName) {
+Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
+CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
+                                       bool RemoveFileOnSignal,
+                                       bool UseTemporary,
+                                       bool CreateMissingDirectories) {
   assert((!CreateMissingDirectories || UseTemporary) &&
          "CreateMissingDirectories is only allowed when using temporary files");
 
-  std::string OutFile, TempFile;
-  if (!OutputPath.empty()) {
-    OutFile = std::string(OutputPath);
-  } else if (InFile == "-") {
-    OutFile = "-";
-  } else if (!Extension.empty()) {
-    SmallString<128> Path(InFile);
-    llvm::sys::path::replace_extension(Path, Extension);
-    OutFile = std::string(Path.str());
-  } else {
-    OutFile = "-";
-  }
-
   std::unique_ptr<llvm::raw_fd_ostream> OS;
-  std::string OSFile;
+  Optional<StringRef> OSFile;
 
   if (UseTemporary) {
-    if (OutFile == "-")
+    if (OutputPath == "-")
       UseTemporary = false;
     else {
       llvm::sys::fs::file_status Status;
       llvm::sys::fs::status(OutputPath, Status);
       if (llvm::sys::fs::exists(Status)) {
         // Fail early if we can't write to the final destination.
-        if (!llvm::sys::fs::can_write(OutputPath)) {
-          Error = make_error_code(llvm::errc::operation_not_permitted);
-          return nullptr;
-        }
+        if (!llvm::sys::fs::can_write(OutputPath))
+          return llvm::errorCodeToError(
+              make_error_code(llvm::errc::operation_not_permitted));
 
         // Don't use a temporary if the output is a special file. This handles
         // things like '-o /dev/null'
@@ -762,14 +753,15 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
     }
   }
 
+  std::string TempFile;
   if (UseTemporary) {
     // Create a temporary file.
     // Insert -%%%%%%%% before the extension (if any), and because some tools
     // (noticeable, clang's own GlobalModuleIndex.cpp) glob for build
     // artifacts, also append .tmp.
-    StringRef OutputExtension = llvm::sys::path::extension(OutFile);
+    StringRef OutputExtension = llvm::sys::path::extension(OutputPath);
     SmallString<128> TempPath =
-        StringRef(OutFile).drop_back(OutputExtension.size());
+        StringRef(OutputPath).drop_back(OutputExtension.size());
     TempPath += "-%%%%%%%%";
     TempPath += OutputExtension;
     TempPath += ".tmp";
@@ -796,30 +788,28 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
   }
 
   if (!OS) {
-    OSFile = OutFile;
+    OSFile = OutputPath;
+    std::error_code EC;
     OS.reset(new llvm::raw_fd_ostream(
-        OSFile, Error,
+        *OSFile, EC,
         (Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text)));
-    if (Error)
-      return nullptr;
+    if (EC)
+      return llvm::errorCodeToError(EC);
   }
 
   // Make sure the out stream file gets removed if we crash.
   if (RemoveFileOnSignal)
-    llvm::sys::RemoveFileOnSignal(OSFile);
+    llvm::sys::RemoveFileOnSignal(*OSFile);
 
-  if (ResultPathName)
-    *ResultPathName = OutFile;
-  if (TempPathName)
-    *TempPathName = TempFile;
+  // Add the output file -- but don't try to remove "-", since this means we are
+  // using stdin.
+  OutputFiles.emplace_back(((OutputPath != "-") ? OutputPath : "").str(),
+                           std::move(TempFile));
 
   if (!Binary || OS->supportsSeeking())
     return std::move(OS);
 
-  auto B = std::make_unique<llvm::buffer_ostream>(*OS);
-  assert(!NonSeekStream);
-  NonSeekStream = std::move(OS);
-  return std::move(B);
+  return std::make_unique<llvm::buffer_unique_ostream>(std::move(OS));
 }
 
 // Initialization Utilities

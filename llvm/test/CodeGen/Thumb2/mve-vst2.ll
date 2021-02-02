@@ -100,10 +100,18 @@ entry:
 define void @vst2_v4i32_align1(<4 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-LABEL: vst2_v4i32_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vst20.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov.f64 d4, d3
+; CHECK-NEXT:    vmov.f64 d6, d2
+; CHECK-NEXT:    vmov.f32 s9, s2
+; CHECK-NEXT:    vmov.f32 s13, s0
+; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vmov.f32 s14, s5
+; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s15, s1
+; CHECK-NEXT:    vstrb.8 q2, [r1, #16]
+; CHECK-NEXT:    vstrb.8 q3, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <4 x i32>, <4 x i32>* %src, i32 0
@@ -199,10 +207,42 @@ entry:
 define void @vst2_v8i16_align1(<8 x i16> *%src, <16 x i16> *%dst) {
 ; CHECK-LABEL: vst2_v8i16_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vst20.16 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.16 {q0, q1}, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
+; CHECK-NEXT:    vmov.u16 r2, q1[4]
+; CHECK-NEXT:    vmov.u16 r0, q2[4]
+; CHECK-NEXT:    vmov.16 q0[0], r2
+; CHECK-NEXT:    vmov.16 q0[1], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[5]
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[5]
+; CHECK-NEXT:    vmov.16 q0[3], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[6]
+; CHECK-NEXT:    vmov.16 q0[4], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[6]
+; CHECK-NEXT:    vmov.16 q0[5], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[7]
+; CHECK-NEXT:    vmov.16 q0[6], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[7]
+; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[0]
+; CHECK-NEXT:    vmov.16 q3[0], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[0]
+; CHECK-NEXT:    vmov.16 q3[1], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[1]
+; CHECK-NEXT:    vmov.16 q3[2], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[1]
+; CHECK-NEXT:    vmov.16 q3[3], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[2]
+; CHECK-NEXT:    vmov.16 q3[4], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[2]
+; CHECK-NEXT:    vmov.16 q3[5], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[3]
+; CHECK-NEXT:    vmov.16 q3[6], r0
+; CHECK-NEXT:    vmov.u16 r0, q2[3]
+; CHECK-NEXT:    vmov.16 q3[7], r0
+; CHECK-NEXT:    vstrb.8 q0, [r1, #16]
+; CHECK-NEXT:    vstrb.8 q3, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x i16>, <8 x i16>* %src, i32 0
@@ -453,10 +493,18 @@ entry:
 define void @vst2_v4f32_align1(<4 x float> *%src, <8 x float> *%dst) {
 ; CHECK-LABEL: vst2_v4f32_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vst20.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov.f64 d4, d3
+; CHECK-NEXT:    vmov.f64 d6, d2
+; CHECK-NEXT:    vmov.f32 s9, s2
+; CHECK-NEXT:    vmov.f32 s13, s0
+; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    vmov.f32 s14, s5
+; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s15, s1
+; CHECK-NEXT:    vstrb.8 q2, [r1, #16]
+; CHECK-NEXT:    vstrb.8 q3, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <4 x float>, <4 x float>* %src, i32 0
@@ -585,10 +633,50 @@ entry:
 define void @vst2_v8f16_align1(<8 x half> *%src, <16 x half> *%dst) {
 ; CHECK-LABEL: vst2_v8f16_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vst20.16 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.16 {q0, q1}, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov r2, s6
+; CHECK-NEXT:    vmovx.f16 s12, s6
+; CHECK-NEXT:    vmov.16 q2[0], r2
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.16 q2[1], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s12, s2
+; CHECK-NEXT:    vmov.16 q2[2], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s12, s7
+; CHECK-NEXT:    vmov.16 q2[3], r0
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov.16 q2[4], r0
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov.16 q2[5], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s12, s3
+; CHECK-NEXT:    vmov.16 q2[6], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s12, s4
+; CHECK-NEXT:    vmov.16 q2[7], r0
+; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vstrb.8 q2, [r1, #16]
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q2[0], r2
+; CHECK-NEXT:    vmovx.f16 s4, s5
+; CHECK-NEXT:    vmov.16 q2[1], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s12, s0
+; CHECK-NEXT:    vmov.16 q2[2], r0
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmovx.f16 s0, s1
+; CHECK-NEXT:    vmov.16 q2[3], r0
+; CHECK-NEXT:    vmov r0, s5
+; CHECK-NEXT:    vmov.16 q2[4], r0
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vmov.16 q2[5], r0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.16 q2[6], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q2[7], r0
+; CHECK-NEXT:    vstrb.8 q2, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x half>, <8 x half>* %src, i32 0

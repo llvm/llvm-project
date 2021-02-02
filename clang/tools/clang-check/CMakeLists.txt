@@ -18,4 +18,5 @@ clang_target_link_libraries(clang-check
   clangSerialization
   clangStaticAnalyzerFrontend
   clangTooling
+  clangToolingSyntax
   )

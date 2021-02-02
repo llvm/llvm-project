@@ -74,6 +74,39 @@ entry:
   ret float %conv
 }
 
+define <4 x half> @insert_v4f16(half %a) {
+; CHECKHARD-LABEL: insert_v4f16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    @ kill: def $s0 killed $s0 def $d0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: insert_v4f16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov.f16 s0, r0
+; CHECKSOFT-NEXT:    vmov r0, r1, d0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %res = insertelement <4 x half> undef, half %a, i32 0
+  ret <4 x half> %res
+}
+
+define <8 x half> @insert_v8f16(half %a) {
+; CHECKHARD-LABEL: insert_v8f16:
+; CHECKHARD:       @ %bb.0: @ %entry
+; CHECKHARD-NEXT:    @ kill: def $s0 killed $s0 def $q0
+; CHECKHARD-NEXT:    bx lr
+;
+; CHECKSOFT-LABEL: insert_v8f16:
+; CHECKSOFT:       @ %bb.0: @ %entry
+; CHECKSOFT-NEXT:    vmov.f16 s0, r0
+; CHECKSOFT-NEXT:    vmov r2, r3, d1
+; CHECKSOFT-NEXT:    vmov r0, r1, d0
+; CHECKSOFT-NEXT:    bx lr
+entry:
+  %res = insertelement <8 x half> undef, half %a, i32 0
+  ret <8 x half> %res
+}
+
 define <4 x half> @test_vset_lane_f16(<4 x half> %a, float %fb) nounwind {
 ; CHECKHARD-LABEL: test_vset_lane_f16:
 ; CHECKHARD:       @ %bb.0: @ %entry

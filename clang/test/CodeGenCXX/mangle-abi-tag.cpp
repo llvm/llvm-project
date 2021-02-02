@@ -225,7 +225,7 @@ namespace pr30440 {
 template<class F> void g(F);
 template<class ...A> auto h(A ...a)->decltype (g (0, g < a > (a) ...)) {
 }
-// CHECK-DAG: define {{.*}} @_ZN7pr304401hIJEEEDTcl1gLi0Espcl1gIL_ZZNS_1hEDpT_E1aEEfp_EEES2_(
+// CHECK-DAG: define {{.*}} @_ZN7pr304401hIJEEEDTcl1gLi0Espcl1gIXfp_EEfp_EEEDpT_(
 
 void pr30440_test () {
   h();

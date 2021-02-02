@@ -684,8 +684,7 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
   bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
 
   ParsedAttributesWithRange Attrs(AttrFactory);
-  MaybeParseGNUAttributes(Attrs);
-  MaybeParseCXX11Attributes(Attrs);
+  MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   // Maybe this is an alias-declaration.
   if (Tok.is(tok::equal)) {
@@ -1435,8 +1434,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   ParsedAttributesWithRange attrs(AttrFactory);
   // If attributes exist after tag, parse them.
-  MaybeParseGNUAttributes(attrs);
-  MaybeParseMicrosoftDeclSpecs(attrs);
+  MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
 
   // Parse inheritance specifiers.
   if (Tok.isOneOf(tok::kw___single_inheritance,
@@ -1444,10 +1442,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                   tok::kw___virtual_inheritance))
     ParseMicrosoftInheritanceClassAttributes(attrs);
 
-  // If C++0x attributes exist here, parse them.
-  // FIXME: Are we consistent with the ordering of parsing of different
-  // styles of attributes?
-  MaybeParseCXX11Attributes(attrs);
+  // Allow attributes to precede or succeed the inheritance specifiers.
+  MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
 
   // Source location used by FIXIT to insert misplaced
   // C++11 attributes

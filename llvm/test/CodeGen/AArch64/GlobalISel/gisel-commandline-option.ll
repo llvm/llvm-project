@@ -56,9 +56,9 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
+; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED:  RegBankSelect

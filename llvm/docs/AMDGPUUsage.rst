@@ -3592,7 +3592,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      aligned.
      351:272 20                                      Reserved, must be 0.
              bytes
-     383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-9
+     383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10
                                                        Compute Shader (CS)
@@ -3639,7 +3639,7 @@ The fields used by CP for code objects before V3 also match those specified in
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
      457:455 3 bits                                  Reserved, must be 0.
-     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-9
+     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10
                                                        - If 0 execute in
@@ -3905,7 +3905,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.WGP_MODE``.
-     30      1 bit    MEM_ORDERED                    GFX6-9
+     30      1 bit    MEM_ORDERED                    GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10
                                                        Controls the behavior of the
@@ -3928,7 +3928,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.MEM_ORDERED``.
-     31      1 bit    FWD_PROGRESS                   GFX6-9
+     31      1 bit    FWD_PROGRESS                   GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10
                                                        - If 0 execute SIMD wavefronts
@@ -4750,7 +4750,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX6-9
+                  Ordering     Sync Scope     Address    GFX6-GFX9
                                               Space
      ============ ============ ============== ========== ================================
      **Non-Atomic**
@@ -8079,41 +8079,41 @@ supports the ``s_trap`` instruction. For usage see:
   .. table:: AMDGPU Trap Handler for AMDHSA OS Code Object V4
      :name: amdgpu-trap-handler-for-amdhsa-os-v4-table
 
-     =================== =============== =============== ============== =======================================
-     Usage               Code Sequence   GFX6-8 Inputs   GFX9-10 Inputs Description
-     =================== =============== =============== ============== =======================================
-     reserved            ``s_trap 0x00``                                Reserved by hardware.
-     debugger breakpoint ``s_trap 0x01`` *none*          *none*         Reserved for debugger to use for
-                                                                        breakpoints. Causes wave to be halted
-                                                                        with the PC at the trap instruction.
-                                                                        The debugger is responsible to resume
-                                                                        the wave, including the instruction
-                                                                        that the breakpoint overwrote.
-     ``llvm.trap``       ``s_trap 0x02`` ``SGPR0-1``:    *none*         Causes wave to be halted with the PC at
-                                           ``queue_ptr``                the trap instruction. The associated
-                                                                        queue is signalled to put it into the
-                                                                        error state.  When the queue is put in
-                                                                        the error state, the waves executing
-                                                                        dispatches on the queue will be
-                                                                        terminated.
-     ``llvm.debugtrap``  ``s_trap 0x03`` *none*          *none*         - If debugger not enabled then behaves
-                                                                          as a no-operation. The trap handler
-                                                                          is entered and immediately returns to
-                                                                          continue execution of the wavefront.
-                                                                        - If the debugger is enabled, causes
-                                                                          the debug trap to be reported by the
-                                                                          debugger and the wavefront is put in
-                                                                          the halt state with the PC at the
-                                                                          instruction.  The debugger must
-                                                                          increment the PC and resume the wave.
-     reserved            ``s_trap 0x04``                                Reserved.
-     reserved            ``s_trap 0x05``                                Reserved.
-     reserved            ``s_trap 0x06``                                Reserved.
-     reserved            ``s_trap 0x07``                                Reserved.
-     reserved            ``s_trap 0x08``                                Reserved.
-     reserved            ``s_trap 0xfe``                                Reserved.
-     reserved            ``s_trap 0xff``                                Reserved.
-     =================== =============== =============== ============== =======================================
+     =================== =============== ================ ================= =======================================
+     Usage               Code Sequence   GFX6-GFX8 Inputs GFX9-GFX10 Inputs Description
+     =================== =============== ================ ================= =======================================
+     reserved            ``s_trap 0x00``                                    Reserved by hardware.
+     debugger breakpoint ``s_trap 0x01`` *none*           *none*            Reserved for debugger to use for
+                                                                            breakpoints. Causes wave to be halted
+                                                                            with the PC at the trap instruction.
+                                                                            The debugger is responsible to resume
+                                                                            the wave, including the instruction
+                                                                            that the breakpoint overwrote.
+     ``llvm.trap``       ``s_trap 0x02`` ``SGPR0-1``:     *none*            Causes wave to be halted with the PC at
+                                           ``queue_ptr``                    the trap instruction. The associated
+                                                                            queue is signalled to put it into the
+                                                                            error state.  When the queue is put in
+                                                                            the error state, the waves executing
+                                                                            dispatches on the queue will be
+                                                                            terminated.
+     ``llvm.debugtrap``  ``s_trap 0x03`` *none*           *none*            - If debugger not enabled then behaves
+                                                                              as a no-operation. The trap handler
+                                                                              is entered and immediately returns to
+                                                                              continue execution of the wavefront.
+                                                                            - If the debugger is enabled, causes
+                                                                              the debug trap to be reported by the
+                                                                              debugger and the wavefront is put in
+                                                                              the halt state with the PC at the
+                                                                              instruction.  The debugger must
+                                                                              increment the PC and resume the wave.
+     reserved            ``s_trap 0x04``                                    Reserved.
+     reserved            ``s_trap 0x05``                                    Reserved.
+     reserved            ``s_trap 0x06``                                    Reserved.
+     reserved            ``s_trap 0x07``                                    Reserved.
+     reserved            ``s_trap 0x08``                                    Reserved.
+     reserved            ``s_trap 0xfe``                                    Reserved.
+     reserved            ``s_trap 0xff``                                    Reserved.
+     =================== =============== ================ ================= =======================================
 
 .. _amdgpu-amdhsa-function-call-convention:
 
@@ -8179,7 +8179,7 @@ On entry to a function:
 
 2.  The FLAT_SCRATCH register pair is setup. See
     :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
-3.  GFX6-8: M0 register set to the size of LDS in bytes. See
+3.  GFX6-GFX8: M0 register set to the size of LDS in bytes. See
     :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
 4.  The EXEC register is set to the lanes active on entry to the function.
 5.  MODE register: *TBD*
@@ -8237,7 +8237,7 @@ On exit from a function:
 
     * FLAT_SCRATCH
     * EXEC
-    * GFX6-8: M0
+    * GFX6-GFX8: M0
     * All SGPR registers except the clobbered registers of SGPR4-31.
     * VGPR40-47
       VGPR56-63

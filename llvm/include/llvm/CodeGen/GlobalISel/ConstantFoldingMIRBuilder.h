@@ -9,6 +9,10 @@
 /// This file implements a version of MachineIRBuilder which does trivial
 /// constant folding.
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CODEGEN_GLOBALISEL_CONSTANTFOLDINGMIRBUILDER_H
+#define LLVM_CODEGEN_GLOBALISEL_CONSTANTFOLDINGMIRBUILDER_H
+
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 
@@ -70,3 +74,5 @@ public:
   }
 };
 } // namespace llvm
+
+#endif // LLVM_CODEGEN_GLOBALISEL_CONSTANTFOLDINGMIRBUILDER_H

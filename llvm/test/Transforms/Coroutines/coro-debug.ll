@@ -26,6 +26,9 @@ entry:
   ], !dbg !17
 
 sw.bb:                                            ; preds = %entry
+  %direct = load i32, i32* %x.addr, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata i32 %conv, metadata !26, metadata !13), !dbg !14
+  call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
   br label %sw.epilog, !dbg !18
@@ -126,19 +129,31 @@ attributes #7 = { noduplicate }
 !22 = !DILocation(line: 59, column: 7, scope: !6)
 !23 = !DILocation(line: 59, column: 5, scope: !6)
 !24 = !DILocation(line: 62, column: 3, scope: !6)
+; These variables were added manually.
+!25 = !DILocalVariable(name: "direct_mem", scope: !6, file: !7, line: 55, type: !11)
+!26 = !DILocalVariable(name: "direct_const", scope: !6, file: !7, line: 55, type: !11)
 
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
 ; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
+; CHECK: %[[DBG_PTR:.*]] = alloca %f.Frame*
+; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_COROHDL:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
+; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_X:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
+; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
+; CHECK: store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
+; CHECK-NOT: alloca %struct.test*
+; CHECK: call void @llvm.dbg.declare(metadata i32 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression())
 ; CHECK: call void @coro.devirt.trigger(i8* null)
-; CHECK: call void @llvm.dbg.declare(metadata i32* %x.addr.reload.addr, metadata ![[RESUME_VAR:[0-9]+]]
 ; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
 ; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
-; CHECK: ![[RESUME_VAR]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
+; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
+; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
+; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
+; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 
 ; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 

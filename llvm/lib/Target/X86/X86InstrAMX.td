@@ -48,23 +48,14 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                      VEX, T8XD;
 
     // Pseduo instruction for RA.
-    let hasSideEffects = 1, mayLoad = 1,
-        Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
-    def PLDTILECFG : PseudoI <(outs TILECFG:$cfg), (ins opaquemem:$src), []>;
-
-    let hasSideEffects = 1, mayStore = 1 in
-    def PSTTILECFG : PseudoI<(outs), (ins opaquemem:$dst, TILECFG:$cfg), []>;
-
     def PTILELOADDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
                                                       GR16:$src2,
-                                                      opaquemem:$src3,
-                                                      TILECFG:$cfg), []>;
+                                                      opaquemem:$src3), []>;
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
-                                            TILE:$src4, TILECFG:$cfg), []>;
+                                            TILE:$src4), []>;
     def PTILEZEROV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
-                                                     GR16:$src2,
-                                                     TILECFG:$cfg), []>;
+                                                     GR16:$src2), []>;
 
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
@@ -104,7 +95,7 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
     let Constraints = "$src4 = $dst" in
     def PTDPBSSDV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
                             GR16:$src2, GR16:$src3, TILE:$src4,
-                            TILE:$src5, TILE:$src6, TILECFG:$cfg), []>;
+                            TILE:$src5, TILE:$src6), []>;
 
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.

@@ -852,13 +852,13 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   DataExtractor::Cursor Cur(0);
   while (Cur && Cur.tell() < Content.size()) {
     uint64_t Address = Data.getAddress(Cur);
-    uint32_t NumBlocks = Data.getULEB128(Cur);
+    uint64_t NumBlocks = Data.getULEB128(Cur);
     std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
     // Read the specified number of BB entries, or until decoding fails.
-    for (uint32_t BlockID = 0; Cur && BlockID < NumBlocks; ++BlockID) {
-      uint32_t Offset = Data.getULEB128(Cur);
-      uint32_t Size = Data.getULEB128(Cur);
-      uint32_t Metadata = Data.getULEB128(Cur);
+    for (uint64_t BlockID = 0; Cur && BlockID < NumBlocks; ++BlockID) {
+      uint64_t Offset = Data.getULEB128(Cur);
+      uint64_t Size = Data.getULEB128(Cur);
+      uint64_t Metadata = Data.getULEB128(Cur);
       BBEntries.push_back({Offset, Size, Metadata});
     }
     Entries.push_back({Address, BBEntries});

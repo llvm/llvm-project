@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}const_load_no_shrink_dword_to_unaligned_byte:
+; GCN: s_load_dword s{{[0-9]+}}
 ; GCN: s_load_dword [[LD:s[0-9]+]],
 ; GCN: s_bfe_i32 s{{[0-9]+}}, [[LD]], 0x10013
 define amdgpu_kernel void @const_load_no_shrink_dword_to_unaligned_byte(i32 addrspace(1)* %out, i32 addrspace(4)* %in, i32 %x) {
@@ -14,6 +15,7 @@ define amdgpu_kernel void @const_load_no_shrink_dword_to_unaligned_byte(i32 addr
 }
 
 ; GCN-LABEL: const_load_no_shrink_dword_to_aligned_byte:
+; GCN: s_load_dword s{{[0-9]+}}
 ; GCN: s_load_dword [[LD:s[0-9]+]],
 ; GCN: s_bfe_i32 s{{[0-9]+}}, [[LD]], 0x10003
 define amdgpu_kernel void @const_load_no_shrink_dword_to_aligned_byte(i32 addrspace(1)* %out, i32 addrspace(4)* %in, i32 %x) {
@@ -27,6 +29,7 @@ define amdgpu_kernel void @const_load_no_shrink_dword_to_aligned_byte(i32 addrsp
 }
 
 ; GCN-LABEL: global_load_no_shrink_dword_to_unaligned_byte:
+; GCN: s_load_dword s{{[0-9]+}}
 ; GCN: s_load_dword [[LD:s[0-9]+]],
 ; GCN: s_bfe_i32 s{{[0-9]+}}, [[LD]], 0x10013
 define amdgpu_kernel void @global_load_no_shrink_dword_to_unaligned_byte(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in, i32 %x) {
@@ -40,6 +43,7 @@ define amdgpu_kernel void @global_load_no_shrink_dword_to_unaligned_byte(i32 add
 }
 
 ; GCN-LABEL: global_load_no_shrink_dword_to_aligned_byte:
+; GCN: s_load_dword s{{[0-9]+}}
 ; GCN: s_load_dword [[LD:s[0-9]+]],
 ; GCN: s_bfe_i32 s{{[0-9]+}}, [[LD]], 0x10003
 define amdgpu_kernel void @global_load_no_shrink_dword_to_aligned_byte(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %x) {

@@ -657,4 +657,5 @@ void ProcInterface::set_type(const DeclTypeSpec &type) {
   CHECK(!symbol_);
   type_ = &type;
 }
+
 } // namespace Fortran::semantics

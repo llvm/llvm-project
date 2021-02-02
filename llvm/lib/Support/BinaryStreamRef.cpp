@@ -62,7 +62,7 @@ public:
 private:
   MutableBinaryByteStream BBS;
 };
-}
+} // namespace
 
 BinaryStreamRef::BinaryStreamRef(BinaryStream &Stream)
     : BinaryStreamRefBase(Stream) {}

@@ -50,7 +50,7 @@ AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
 // A function that helps to tell whether a TargetDecl in a UsingDecl will be
 // checked. Only variable, function, function template, class template, class,
 // enum declaration and enum constant declaration are considered.
-static bool ShouldCheckDecl(const Decl *TargetDecl) {
+static bool shouldCheckDecl(const Decl *TargetDecl) {
   return isa<RecordDecl>(TargetDecl) || isa<ClassTemplateDecl>(TargetDecl) ||
          isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl) ||
          isa<FunctionTemplateDecl>(TargetDecl) || isa<EnumDecl>(TargetDecl) ||
@@ -105,7 +105,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     for (const auto *UsingShadow : Using->shadows()) {
       const auto *TargetDecl = UsingShadow->getTargetDecl()->getCanonicalDecl();
-      if (ShouldCheckDecl(TargetDecl))
+      if (shouldCheckDecl(TargetDecl))
         Context.UsingTargetDecls.insert(TargetDecl);
     }
     if (!Context.UsingTargetDecls.empty())

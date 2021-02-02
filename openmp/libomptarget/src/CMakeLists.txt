@@ -20,6 +20,8 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
 )
 
+set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
+
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # Build libomptarget library with libdl dependency. Add LLVMSupport

@@ -320,10 +320,11 @@ extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
                                                      CoroHandle handle,
                                                      CoroResume resume) {
   auto execute = [handle, resume]() { (*resume)(handle); };
+  std::unique_lock<std::mutex> lock(token->mu);
   if (token->ready) {
+    lock.unlock();
     execute();
   } else {
-    std::unique_lock<std::mutex> lock(token->mu);
     token->awaiters.push_back([execute]() { execute(); });
   }
 }
@@ -332,10 +333,11 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
                                                      CoroHandle handle,
                                                      CoroResume resume) {
   auto execute = [handle, resume]() { (*resume)(handle); };
+  std::unique_lock<std::mutex> lock(value->mu);
   if (value->ready) {
+    lock.unlock();
     execute();
   } else {
-    std::unique_lock<std::mutex> lock(value->mu);
     value->awaiters.push_back([execute]() { execute(); });
   }
 }
@@ -344,10 +346,11 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
                                                           CoroHandle handle,
                                                           CoroResume resume) {
   auto execute = [handle, resume]() { (*resume)(handle); };
+  std::unique_lock<std::mutex> lock(group->mu);
   if (group->pendingTokens == 0) {
+    lock.unlock();
     execute();
   } else {
-    std::unique_lock<std::mutex> lock(group->mu);
     group->awaiters.push_back([execute]() { execute(); });
   }
 }

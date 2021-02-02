@@ -1,14 +1,13 @@
-// RUN: mlir-opt %s -split-input-file -convert-complex-to-llvm | FileCheck %s
+// RUN: mlir-opt %s -convert-complex-to-llvm | FileCheck %s
 
-// CHECK-LABEL: llvm.func @complex_numbers()
-// CHECK-NEXT:    %[[REAL0:.*]] = llvm.mlir.constant(1.200000e+00 : f32) : f32
-// CHECK-NEXT:    %[[IMAG0:.*]] = llvm.mlir.constant(3.400000e+00 : f32) : f32
+// CHECK-LABEL: func @complex_numbers
+// CHECK-NEXT:    %[[REAL0:.*]] = constant 1.200000e+00 : f32
+// CHECK-NEXT:    %[[IMAG0:.*]] = constant 3.400000e+00 : f32
 // CHECK-NEXT:    %[[CPLX0:.*]] = llvm.mlir.undef : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[CPLX1:.*]] = llvm.insertvalue %[[REAL0]], %[[CPLX0]][0] : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG0]], %[[CPLX1]][1] : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[REAL1:.*]] = llvm.extractvalue %[[CPLX2:.*]][0] : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[IMAG1:.*]] = llvm.extractvalue %[[CPLX2:.*]][1] : !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    llvm.return
 func @complex_numbers() {
   %real0 = constant 1.2 : f32
   %imag0 = constant 3.4 : f32
@@ -18,9 +17,7 @@ func @complex_numbers() {
   return
 }
 
-// -----
-
-// CHECK-LABEL: llvm.func @complex_addition()
+// CHECK-LABEL: func @complex_addition
 // CHECK-DAG:     %[[A_REAL:.*]] = llvm.extractvalue %[[A:.*]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG:     %[[B_REAL:.*]] = llvm.extractvalue %[[B:.*]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG:     %[[A_IMAG:.*]] = llvm.extractvalue %[[A]][1] : !llvm.struct<(f64, f64)>
@@ -41,9 +38,7 @@ func @complex_addition() {
   return
 }
 
-// -----
-
-// CHECK-LABEL: llvm.func @complex_substraction()
+// CHECK-LABEL: func @complex_substraction
 // CHECK-DAG:     %[[A_REAL:.*]] = llvm.extractvalue %[[A:.*]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG:     %[[B_REAL:.*]] = llvm.extractvalue %[[B:.*]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG:     %[[A_IMAG:.*]] = llvm.extractvalue %[[A]][1] : !llvm.struct<(f64, f64)>
@@ -64,18 +59,19 @@ func @complex_substraction() {
   return
 }
 
-// -----
-
-// CHECK-LABEL: llvm.func @complex_div
-// CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]
+// CHECK-LABEL: func @complex_div
+// CHECK-SAME:    %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
 func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %div = complex.div %lhs, %rhs : complex<f32>
   return %div : complex<f32>
 }
-// CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[LHS]][0] : ![[C_TY]]
-// CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[LHS]][1] : ![[C_TY]]
-// CHECK: %[[RHS_RE:.*]] = llvm.extractvalue %[[RHS]][0] : ![[C_TY]]
-// CHECK: %[[RHS_IM:.*]] = llvm.extractvalue %[[RHS]][1] : ![[C_TY]]
+// CHECK: %[[CASTED_LHS:.*]] = llvm.mlir.cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[CASTED_RHS:.*]] = llvm.mlir.cast %[[RHS]] : complex<f32> to ![[C_TY]]
+
+// CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[CASTED_LHS]][0] : ![[C_TY]]
+// CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[CASTED_LHS]][1] : ![[C_TY]]
+// CHECK: %[[RHS_RE:.*]] = llvm.extractvalue %[[CASTED_RHS]][0] : ![[C_TY]]
+// CHECK: %[[RHS_IM:.*]] = llvm.extractvalue %[[CASTED_RHS]][1] : ![[C_TY]]
 
 // CHECK: %[[RESULT_0:.*]] = llvm.mlir.undef : ![[C_TY]]
 
@@ -95,20 +91,23 @@ func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_1:.*]] = llvm.insertvalue %[[REAL]], %[[RESULT_0]][0] : ![[C_TY]]
 // CHECK: %[[IMAG:.*]] = llvm.fdiv %[[IMAG_TMP_2]], %[[SQ_NORM]]  : f32
 // CHECK: %[[RESULT_2:.*]] = llvm.insertvalue %[[IMAG]], %[[RESULT_1]][1] : ![[C_TY]]
-// CHECK: llvm.return %[[RESULT_2]] : ![[C_TY]]
+//
+// CHECK: %[[CASTED_RESULT:.*]] = llvm.mlir.cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
+// CHECK: return %[[CASTED_RESULT]] : complex<f32>
 
-// -----
-
-// CHECK-LABEL: llvm.func @complex_mul
-// CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]
+// CHECK-LABEL: func @complex_mul
+// CHECK-SAME:    %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
 func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %mul = complex.mul %lhs, %rhs : complex<f32>
   return %mul : complex<f32>
 }
-// CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[LHS]][0] : ![[C_TY]]
-// CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[LHS]][1] : ![[C_TY]]
-// CHECK: %[[RHS_RE:.*]] = llvm.extractvalue %[[RHS]][0] : ![[C_TY]]
-// CHECK: %[[RHS_IM:.*]] = llvm.extractvalue %[[RHS]][1] : ![[C_TY]]
+// CHECK: %[[CASTED_LHS:.*]] = llvm.mlir.cast %[[LHS]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[CASTED_RHS:.*]] = llvm.mlir.cast %[[RHS]] : complex<f32> to ![[C_TY]]
+
+// CHECK: %[[LHS_RE:.*]] = llvm.extractvalue %[[CASTED_LHS]][0] : ![[C_TY]]
+// CHECK: %[[LHS_IM:.*]] = llvm.extractvalue %[[CASTED_LHS]][1] : ![[C_TY]]
+// CHECK: %[[RHS_RE:.*]] = llvm.extractvalue %[[CASTED_RHS]][0] : ![[C_TY]]
+// CHECK: %[[RHS_IM:.*]] = llvm.extractvalue %[[CASTED_RHS]][1] : ![[C_TY]]
 // CHECK: %[[RESULT_0:.*]] = llvm.mlir.undef : ![[C_TY]]
 
 // CHECK-DAG: %[[REAL_TMP_0:.*]] = llvm.fmul %[[RHS_RE]], %[[LHS_RE]]  : f32
@@ -121,21 +120,22 @@ func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK: %[[RESULT_1:.*]] = llvm.insertvalue %[[REAL]], %[[RESULT_0]][0]
 // CHECK: %[[RESULT_2:.*]] = llvm.insertvalue %[[IMAG]], %[[RESULT_1]][1]
-// CHECK: llvm.return %[[RESULT_2]] : ![[C_TY]]
 
-// -----
+// CHECK: %[[CASTED_RESULT:.*]] = llvm.mlir.cast %[[RESULT_2]] : ![[C_TY]] to complex<f32>
+// CHECK: return %[[CASTED_RESULT]] : complex<f32>
 
-// CHECK-LABEL: llvm.func @complex_abs
-// CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
+// CHECK-LABEL: func @complex_abs
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }
-// CHECK: %[[REAL:.*]] = llvm.extractvalue %[[ARG]][0] : ![[C_TY]]
-// CHECK: %[[IMAG:.*]] = llvm.extractvalue %[[ARG]][1] : ![[C_TY]]
+// CHECK: %[[CASTED_ARG:.*]] = llvm.mlir.cast %[[ARG]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK: %[[REAL:.*]] = llvm.extractvalue %[[CASTED_ARG]][0] : ![[C_TY]]
+// CHECK: %[[IMAG:.*]] = llvm.extractvalue %[[CASTED_ARG]][1] : ![[C_TY]]
 // CHECK-DAG: %[[REAL_SQ:.*]] = llvm.fmul %[[REAL]], %[[REAL]]  : f32
 // CHECK-DAG: %[[IMAG_SQ:.*]] = llvm.fmul %[[IMAG]], %[[IMAG]]  : f32
 // CHECK: %[[SQ_NORM:.*]] = llvm.fadd %[[REAL_SQ]], %[[IMAG_SQ]]  : f32
 // CHECK: %[[NORM:.*]] = "llvm.intr.sqrt"(%[[SQ_NORM]]) : (f32) -> f32
-// CHECK: llvm.return %[[NORM]] : f32
+// CHECK: return %[[NORM]] : f32
 

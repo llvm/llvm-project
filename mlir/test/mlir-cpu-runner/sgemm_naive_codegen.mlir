@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-linalg-to-loops -lower-affine -convert-scf-to-std -convert-std-to-llvm %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | FileCheck %s
+// RUN: mlir-opt -convert-linalg-to-loops -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 func @main() {
   %A = alloc() : memref<16x16xf32>
@@ -20,8 +20,8 @@ func @main() {
   %t_end = call @rtclock() : () -> f64
   %t = subf %t_end, %t_start : f64
 
-  %pC = memref_cast %C : memref<16x16xf32> to memref<*xf32>
-  call @print_memref_f32(%pC) : (memref<*xf32>) -> ()
+  %res = affine.load %C[0, 0]: memref<16x16xf32>
+  vector.print %res: f32
 
   %c0 = constant 0 : index
   %c1 = constant 1 : index
@@ -44,7 +44,7 @@ func @main() {
 
   return
 }
-// CHECK: 17,   17,   17,
+// CHECK: 17
 
 func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>) {
   %c0 = constant 0 : index
@@ -71,4 +71,3 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
 
 func private @print_flops(f64)
 func private @rtclock() -> f64
-func private @print_memref_f32(memref<*xf32>)

@@ -5,8 +5,8 @@
 # To check folding of an expression EXPR, the fortran program passed to this script
 # must contain the following:
 #   logical, parameter :: test_x = <compare EXPR to expected value>
-# This script will test that all parameter with a name starting with "test_" have
-# been folded to .true.
+# This script will test that all parameter with a name starting with "test_"
+# have been folded to .true.
 # For instance, acos folding can be tested with:
 #
 #   real(4), parameter :: res_acos = acos(0.5_4)

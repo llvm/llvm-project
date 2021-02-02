@@ -802,9 +802,9 @@ define i32 @PR46586(i8* %p, <4 x i32> %v) {
 ;
 ; SSE41-LABEL: PR46586:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    extractps $3, %xmm0, %ecx
-; SSE41-NEXT:    pextrd $3, %xmm1, %eax
+; SSE41-NEXT:    pextrb $3, %xmm1, %eax
 ; SSE41-NEXT:    xorl %edx, %edx
 ; SSE41-NEXT:    divl %ecx
 ; SSE41-NEXT:    movl %edx, %eax
@@ -812,9 +812,9 @@ define i32 @PR46586(i8* %p, <4 x i32> %v) {
 ;
 ; AVX-LABEL: PR46586:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vextractps $3, %xmm0, %ecx
-; AVX-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX-NEXT:    vpextrb $3, %xmm1, %eax
 ; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    divl %ecx
 ; AVX-NEXT:    movl %edx, %eax

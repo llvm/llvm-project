@@ -490,6 +490,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     break;
   }
 
+  Options.BinutilsVersion =
+      llvm::TargetMachine::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
   Options.CompressDebugSections = CodeGenOpts.getCompressDebugSections();
@@ -613,6 +615,9 @@ getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;
   Options.Atomic = CodeGenOpts.AtomicProfileUpdate;
+  std::pair<int, int> BinutilsVersion =
+      llvm::TargetMachine::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
+  Options.CounterLinkOrder = BinutilsVersion >= std::make_pair(2, 36);
   return Options;
 }
 

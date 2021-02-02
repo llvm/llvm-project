@@ -117,14 +117,14 @@ void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
-  const auto enumExpr = [](StringRef RefName, StringRef DeclName) {
+  const auto EnumExpr = [](StringRef RefName, StringRef DeclName) {
     return expr(ignoringImpCasts(expr().bind(RefName)),
                 ignoringImpCasts(hasType(enumDecl().bind(DeclName))));
   };
 
   Finder->addMatcher(
-      binaryOperator(hasOperatorName("|"), hasLHS(enumExpr("", "enumDecl")),
-                     hasRHS(expr(enumExpr("", "otherEnumDecl"),
+      binaryOperator(hasOperatorName("|"), hasLHS(EnumExpr("", "enumDecl")),
+                     hasRHS(expr(EnumExpr("", "otherEnumDecl"),
                                  ignoringImpCasts(hasType(enumDecl(
                                      unless(equalsBoundNode("enumDecl"))))))))
           .bind("diffEnumOp"),
@@ -132,8 +132,8 @@ void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("+", "|"),
-                     hasLHS(enumExpr("lhsExpr", "enumDecl")),
-                     hasRHS(expr(enumExpr("rhsExpr", ""),
+                     hasLHS(EnumExpr("lhsExpr", "enumDecl")),
+                     hasRHS(expr(EnumExpr("rhsExpr", ""),
                                  ignoringImpCasts(hasType(
                                      enumDecl(equalsBoundNode("enumDecl"))))))),
       this);
@@ -141,12 +141,12 @@ void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("+", "|"),
-          hasOperands(expr(hasType(isInteger()), unless(enumExpr("", ""))),
-                      enumExpr("enumExpr", "enumDecl"))),
+          hasOperands(expr(hasType(isInteger()), unless(EnumExpr("", ""))),
+                      EnumExpr("enumExpr", "enumDecl"))),
       this);
 
   Finder->addMatcher(binaryOperator(hasAnyOperatorName("|=", "+="),
-                                    hasRHS(enumExpr("enumExpr", "enumDecl"))),
+                                    hasRHS(EnumExpr("enumExpr", "enumDecl"))),
                      this);
 }
 

@@ -17,7 +17,7 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> vAArgExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> VAArgExpr;
 
 static constexpr StringRef AllowedVariadics[] = {
     // clang-format off
@@ -71,7 +71,7 @@ AST_MATCHER_P(AdjustedType, hasOriginalType,
 } // namespace
 
 void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(vAArgExpr().bind("va_use"), this);
+  Finder->addMatcher(VAArgExpr().bind("va_use"), this);
 
   Finder->addMatcher(
       callExpr(callee(functionDecl(isVariadic(),

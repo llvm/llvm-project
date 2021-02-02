@@ -6482,8 +6482,6 @@ def : Pat<(v4f32 (insertelt QPR:$src1, SPR:$src2, imm:$src3)),
 
 defm : InsertEltF16<f16, v4f16, v8f16>;
 
-//def : Pat<(v2i64 (insertelt QPR:$src1, DPR:$src2, imm:$src3)),
-//          (INSERT_SUBREG QPR:$src1, DPR:$src2, (DSubReg_f64_reg imm:$src3))>;
 def : Pat<(v2f64 (insertelt QPR:$src1, DPR:$src2, imm:$src3)),
           (INSERT_SUBREG QPR:$src1, DPR:$src2, (DSubReg_f64_reg imm:$src3))>;
 
@@ -6493,6 +6491,11 @@ def : Pat<(v2f64 (scalar_to_vector (f64 DPR:$src))),
           (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
 def : Pat<(v4f32 (scalar_to_vector SPR:$src)),
           (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), SPR:$src, ssub_0)>;
+
+def : Pat<(v4f16 (scalar_to_vector (f16 HPR:$src))),
+          (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$src, ssub_0)>;
+def : Pat<(v8f16 (scalar_to_vector (f16 HPR:$src))),
+          (INSERT_SUBREG (v8f16 (IMPLICIT_DEF)), HPR:$src, ssub_0)>;
 
 def : Pat<(v8i8 (scalar_to_vector GPR:$src)),
           (VSETLNi8  (v8i8  (IMPLICIT_DEF)), GPR:$src, (i32 0))>;

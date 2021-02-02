@@ -25,7 +25,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace dwarf;
@@ -41,6 +40,191 @@ static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
     }
   }
   OS << "reg" << RegNum;
+}
+
+UnwindLocation UnwindLocation::createUnspecified() { return {Unspecified}; }
+
+UnwindLocation UnwindLocation::createUndefined() { return {Undefined}; }
+
+UnwindLocation UnwindLocation::createSame() { return {Same}; }
+
+UnwindLocation UnwindLocation::createIsConstant(int32_t Value) {
+  return {Constant, InvalidRegisterNumber, Value, false};
+}
+
+UnwindLocation UnwindLocation::createIsCFAPlusOffset(int32_t Offset) {
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, false};
+}
+
+UnwindLocation UnwindLocation::createAtCFAPlusOffset(int32_t Offset) {
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, true};
+}
+
+UnwindLocation UnwindLocation::createIsRegisterPlusOffset(uint32_t RegNum,
+                                                          int32_t Offset) {
+  return {RegPlusOffset, RegNum, Offset, false};
+}
+UnwindLocation UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum,
+                                                          int32_t Offset) {
+  return {RegPlusOffset, RegNum, Offset, true};
+}
+
+UnwindLocation UnwindLocation::createIsDWARFExpression(DWARFExpression Expr) {
+  return {Expr, false};
+}
+
+UnwindLocation UnwindLocation::createAtDWARFExpression(DWARFExpression Expr) {
+  return {Expr, true};
+}
+
+void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                          bool IsEH) const {
+  if (Dereference)
+    OS << '[';
+  switch (Kind) {
+  case Unspecified:
+    OS << "unspecified";
+    break;
+  case Undefined:
+    OS << "undefined";
+    break;
+  case Same:
+    OS << "same";
+    break;
+  case CFAPlusOffset:
+    OS << "CFA";
+    if (Offset == 0)
+      break;
+    if (Offset > 0)
+      OS << "+";
+    OS << Offset;
+    break;
+  case RegPlusOffset:
+    printRegister(OS, MRI, IsEH, RegNum);
+    if (Offset == 0)
+      break;
+    if (Offset > 0)
+      OS << "+";
+    OS << Offset;
+    break;
+  case DWARFExpr:
+    Expr->print(OS, DIDumpOptions(), MRI, nullptr, IsEH);
+    break;
+  case Constant:
+    OS << Offset;
+    break;
+  }
+  if (Dereference)
+    OS << ']';
+}
+
+raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
+                                     const UnwindLocation &UL) {
+  UL.dump(OS, nullptr, false);
+  return OS;
+}
+
+bool UnwindLocation::operator==(const UnwindLocation &RHS) const {
+  if (Kind != RHS.Kind)
+    return false;
+  switch (Kind) {
+  case Unspecified:
+  case Undefined:
+  case Same:
+    return true;
+  case CFAPlusOffset:
+    return Offset == RHS.Offset && Dereference == RHS.Dereference;
+  case RegPlusOffset:
+    return RegNum == RHS.RegNum && Offset == RHS.Offset &&
+           Dereference == RHS.Dereference;
+  case DWARFExpr:
+    return *Expr == *RHS.Expr && Dereference == RHS.Dereference;
+  case Constant:
+    return Offset == RHS.Offset;
+  }
+  return false;
+}
+
+void RegisterLocations::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                             bool IsEH) const {
+  bool First = true;
+  for (const auto &RegLocPair : Locations) {
+    if (First)
+      First = false;
+    else
+      OS << ", ";
+    printRegister(OS, MRI, IsEH, RegLocPair.first);
+    OS << '=';
+    RegLocPair.second.dump(OS, MRI, IsEH);
+  }
+}
+
+raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
+                                     const RegisterLocations &RL) {
+  RL.dump(OS, nullptr, false);
+  return OS;
+}
+
+void UnwindRow::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+                     unsigned IndentLevel) const {
+  OS.indent(2 * IndentLevel);
+  if (hasAddress())
+    OS << format("0x%" PRIx64 ": ", *Address);
+  OS << "CFA=";
+  CFAValue.dump(OS, MRI, IsEH);
+  if (RegLocs.hasLocations()) {
+    OS << ": ";
+    RegLocs.dump(OS, MRI, IsEH);
+  }
+  OS << "\n";
+}
+
+raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindRow &Row) {
+  Row.dump(OS, nullptr, false, 0);
+  return OS;
+}
+
+void UnwindTable::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+                       unsigned IndentLevel) const {
+  for (const UnwindRow &Row : Rows)
+    Row.dump(OS, MRI, IsEH, IndentLevel);
+}
+
+raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
+  Rows.dump(OS, nullptr, false, 0);
+  return OS;
+}
+
+Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
+  UnwindTable UT;
+  UnwindRow Row;
+  Row.setAddress(Fde->getInitialLocation());
+  UT.EndAddress = Fde->getInitialLocation() + Fde->getAddressRange();
+
+  const CIE *Cie = Fde->getLinkedCIE();
+  if (Cie == nullptr)
+    return createStringError(errc::invalid_argument,
+                             "unable to get CIE for FDE at offset 0x%" PRIx64,
+                             Fde->getOffset());
+
+  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+    return std::move(CieError);
+  // We need to save the initial locations of registers from the CIE parsing
+  // in case we run into DW_CFA_restore or DW_CFA_restore_extended opcodes.
+  const RegisterLocations InitialLocs = Row.getRegisterLocations();
+  if (Error FdeError = UT.parseRows(Fde->cfis(), Row, &InitialLocs))
+    return std::move(FdeError);
+  UT.Rows.push_back(Row);
+  return UT;
+}
+
+Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
+  UnwindTable UT;
+  UnwindRow Row;
+  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+    return std::move(CieError);
+  UT.Rows.push_back(Row);
+  return UT;
 }
 
 // See DWARF standard v3, section 7.23
@@ -175,10 +359,386 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
   return C.takeError();
 }
 
-namespace {
+StringRef CFIProgram::callFrameString(unsigned Opcode) const {
+  return dwarf::CallFrameString(Opcode, Arch);
+}
 
+const char *CFIProgram::operandTypeString(CFIProgram::OperandType OT) {
+#define ENUM_TO_CSTR(e)                                                        \
+  case e:                                                                      \
+    return #e;
+  switch (OT) {
+    ENUM_TO_CSTR(OT_Unset);
+    ENUM_TO_CSTR(OT_None);
+    ENUM_TO_CSTR(OT_Address);
+    ENUM_TO_CSTR(OT_Offset);
+    ENUM_TO_CSTR(OT_FactoredCodeOffset);
+    ENUM_TO_CSTR(OT_SignedFactDataOffset);
+    ENUM_TO_CSTR(OT_UnsignedFactDataOffset);
+    ENUM_TO_CSTR(OT_Register);
+    ENUM_TO_CSTR(OT_Expression);
+  }
+  return "<unknown CFIProgram::OperandType>";
+}
 
-} // end anonymous namespace
+llvm::Expected<uint64_t>
+CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
+                                              uint32_t OperandIdx) const {
+  if (OperandIdx >= 2)
+    return createStringError(errc::invalid_argument,
+                             "operand index %" PRIu32 " is not valid",
+                             OperandIdx);
+  OperandType Type = CFIP.getOperandTypes()[Opcode][OperandIdx];
+  uint64_t Operand = Ops[OperandIdx];
+  switch (Type) {
+  case OT_Unset:
+  case OT_None:
+  case OT_Expression:
+    return createStringError(errc::invalid_argument,
+                             "op[%" PRIu32 "] has type %s which has no value",
+                             OperandIdx, CFIProgram::operandTypeString(Type));
+
+  case OT_Offset:
+  case OT_SignedFactDataOffset:
+  case OT_UnsignedFactDataOffset:
+    return createStringError(
+        errc::invalid_argument,
+        "op[%" PRIu32 "] has OperandType OT_Offset which produces a signed "
+        "result, call getOperandAsSigned instead",
+        OperandIdx);
+
+  case OT_Address:
+  case OT_Register:
+    return Operand;
+
+  case OT_FactoredCodeOffset: {
+    const uint64_t CodeAlignmentFactor = CFIP.codeAlign();
+    if (CodeAlignmentFactor == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "op[%" PRIu32 "] has type OT_FactoredCodeOffset but code alignment "
+          "is zero",
+          OperandIdx);
+    return Operand * CodeAlignmentFactor;
+  }
+  }
+  llvm_unreachable("invalid operand type");
+}
+
+llvm::Expected<int64_t>
+CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
+                                            uint32_t OperandIdx) const {
+  if (OperandIdx >= 2)
+    return createStringError(errc::invalid_argument,
+                             "operand index %" PRIu32 " is not valid",
+                             OperandIdx);
+  OperandType Type = CFIP.getOperandTypes()[Opcode][OperandIdx];
+  uint64_t Operand = Ops[OperandIdx];
+  switch (Type) {
+  case OT_Unset:
+  case OT_None:
+  case OT_Expression:
+    return createStringError(errc::invalid_argument,
+                             "op[%" PRIu32 "] has type %s which has no value",
+                             OperandIdx, CFIProgram::operandTypeString(Type));
+
+  case OT_Address:
+  case OT_Register:
+    return createStringError(
+        errc::invalid_argument,
+        "op[%" PRIu32 "] has OperandType %s which produces an unsigned result, "
+        "call getOperandAsUnsigned instead",
+        OperandIdx, CFIProgram::operandTypeString(Type));
+
+  case OT_Offset:
+    return (int64_t)Operand;
+
+  case OT_FactoredCodeOffset:
+  case OT_SignedFactDataOffset: {
+    const int64_t DataAlignmentFactor = CFIP.dataAlign();
+    if (DataAlignmentFactor == 0)
+      return createStringError(errc::invalid_argument,
+                               "op[%" PRIu32 "] has type %s but data "
+                               "alignment is zero",
+                               OperandIdx, CFIProgram::operandTypeString(Type));
+    return int64_t(Operand) * DataAlignmentFactor;
+  }
+
+  case OT_UnsignedFactDataOffset: {
+    const int64_t DataAlignmentFactor = CFIP.dataAlign();
+    if (DataAlignmentFactor == 0)
+      return createStringError(errc::invalid_argument,
+                               "op[%" PRIu32
+                               "] has type OT_UnsignedFactDataOffset but data "
+                               "alignment is zero",
+                               OperandIdx);
+    return Operand * DataAlignmentFactor;
+  }
+  }
+  llvm_unreachable("invalid operand type");
+}
+
+Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
+                             const RegisterLocations *InitialLocs) {
+  std::vector<RegisterLocations> RegisterStates;
+  for (const CFIProgram::Instruction &Inst : CFIP) {
+    switch (Inst.Opcode) {
+    case dwarf::DW_CFA_set_loc: {
+      // The DW_CFA_set_loc instruction takes a single operand that
+      // represents a target address. The required action is to create a new
+      // table row using the specified address as the location. All other
+      // values in the new row are initially identical to the current row.
+      // The new location value is always greater than the current one. If
+      // the segment_size field of this FDE's CIE is non- zero, the initial
+      // location is preceded by a segment selector of the given length
+      llvm::Expected<uint64_t> NewAddress = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!NewAddress)
+        return NewAddress.takeError();
+      if (*NewAddress <= Row.getAddress())
+        return createStringError(
+            errc::invalid_argument,
+            "%s with adrress 0x%" PRIx64 " which must be greater than the "
+            "current row address 0x%" PRIx64,
+            CFIP.callFrameString(Inst.Opcode).str().c_str(), *NewAddress,
+            Row.getAddress());
+      Rows.push_back(Row);
+      Row.setAddress(*NewAddress);
+      break;
+    }
+
+    case dwarf::DW_CFA_advance_loc:
+    case dwarf::DW_CFA_advance_loc1:
+    case dwarf::DW_CFA_advance_loc2:
+    case dwarf::DW_CFA_advance_loc4: {
+      // The DW_CFA_advance instruction takes a single operand that
+      // represents a constant delta. The required action is to create a new
+      // table row with a location value that is computed by taking the
+      // current entry’s location value and adding the value of delta *
+      // code_alignment_factor. All other values in the new row are initially
+      // identical to the current row.
+      Rows.push_back(Row);
+      llvm::Expected<uint64_t> Offset = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!Offset)
+        return Offset.takeError();
+      Row.slideAddress(*Offset);
+      break;
+    }
+
+    case dwarf::DW_CFA_restore:
+    case dwarf::DW_CFA_restore_extended: {
+      // The DW_CFA_restore instruction takes a single operand (encoded with
+      // the opcode) that represents a register number. The required action
+      // is to change the rule for the indicated register to the rule
+      // assigned it by the initial_instructions in the CIE.
+      if (InitialLocs == nullptr)
+        return createStringError(
+            errc::invalid_argument, "%s encountered while parsing a CIE",
+            CFIP.callFrameString(Inst.Opcode).str().c_str());
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      if (Optional<UnwindLocation> O =
+              InitialLocs->getRegisterLocation(*RegNum))
+        Row.getRegisterLocations().setRegisterLocation(*RegNum, *O);
+      else
+        Row.getRegisterLocations().removeRegisterLocation(*RegNum);
+      break;
+    }
+
+    case dwarf::DW_CFA_offset:
+    case dwarf::DW_CFA_offset_extended:
+    case dwarf::DW_CFA_offset_extended_sf: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 1);
+      if (!Offset)
+        return Offset.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createAtCFAPlusOffset(*Offset));
+      break;
+    }
+
+    case dwarf::DW_CFA_nop:
+      break;
+
+    case dwarf::DW_CFA_remember_state:
+      RegisterStates.push_back(Row.getRegisterLocations());
+      break;
+
+    case dwarf::DW_CFA_restore_state:
+      if (RegisterStates.empty())
+        return createStringError(errc::invalid_argument,
+                                 "DW_CFA_restore_state without a matching "
+                                 "previous DW_CFA_remember_state");
+      Row.getRegisterLocations() = RegisterStates.back();
+      RegisterStates.pop_back();
+      break;
+
+    case dwarf::DW_CFA_GNU_window_save:
+      switch (CFIP.triple()) {
+      case Triple::aarch64:
+      case Triple::aarch64_be:
+      case Triple::aarch64_32: {
+        // DW_CFA_GNU_window_save is used for different things on different
+        // architectures. For aarch64 it is known as
+        // DW_CFA_AARCH64_negate_ra_state. The action is to toggle the
+        // value of the return address state between 1 and 0. If there is
+        // no rule for the AARCH64_DWARF_PAUTH_RA_STATE register, then it
+        // should be initially set to 1.
+        constexpr uint32_t AArch64DWARFPAuthRaState = 34;
+        auto LRLoc = Row.getRegisterLocations().getRegisterLocation(
+            AArch64DWARFPAuthRaState);
+        if (LRLoc) {
+          if (LRLoc->getLocation() == UnwindLocation::Constant) {
+            // Toggle the constant value from 0 to 1 or 1 to 0.
+            LRLoc->setConstant(LRLoc->getConstant() ^ 1);
+          } else {
+            return createStringError(
+                errc::invalid_argument,
+                "%s encountered when existing rule for this register is not "
+                "a constant",
+                CFIP.callFrameString(Inst.Opcode).str().c_str());
+          }
+        } else {
+          Row.getRegisterLocations().setRegisterLocation(
+              AArch64DWARFPAuthRaState, UnwindLocation::createIsConstant(1));
+        }
+        break;
+      }
+
+      case Triple::sparc:
+      case Triple::sparcv9:
+      case Triple::sparcel:
+        for (uint32_t RegNum = 16; RegNum < 32; ++RegNum) {
+          Row.getRegisterLocations().setRegisterLocation(
+              RegNum, UnwindLocation::createAtCFAPlusOffset((RegNum - 16) * 8));
+        }
+        break;
+
+      default: {
+        return createStringError(
+            errc::not_supported,
+            "DW_CFA opcode %#x is not supported for architecture %s",
+            Inst.Opcode, Triple::getArchTypeName(CFIP.triple()).str().c_str());
+
+        break;
+      }
+      }
+      break;
+
+    case dwarf::DW_CFA_undefined: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createUndefined());
+      break;
+    }
+
+    case dwarf::DW_CFA_same_value: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createSame());
+      break;
+    }
+
+    case dwarf::DW_CFA_GNU_args_size:
+      break;
+
+    case dwarf::DW_CFA_register: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      llvm::Expected<uint64_t> NewRegNum = Inst.getOperandAsUnsigned(CFIP, 1);
+      if (!NewRegNum)
+        return NewRegNum.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createIsRegisterPlusOffset(*NewRegNum, 0));
+      break;
+    }
+
+    case dwarf::DW_CFA_val_offset:
+    case dwarf::DW_CFA_val_offset_sf: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 1);
+      if (!Offset)
+        return Offset.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createIsCFAPlusOffset(*Offset));
+      break;
+    }
+
+    case dwarf::DW_CFA_expression: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createAtDWARFExpression(*Inst.Expression));
+      break;
+    }
+
+    case dwarf::DW_CFA_val_expression: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      Row.getRegisterLocations().setRegisterLocation(
+          *RegNum, UnwindLocation::createIsDWARFExpression(*Inst.Expression));
+      break;
+    }
+
+    case dwarf::DW_CFA_def_cfa_register: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      if (Row.getCFAValue().getLocation() != UnwindLocation::RegPlusOffset)
+        Row.getCFAValue() =
+            UnwindLocation::createIsRegisterPlusOffset(*RegNum, 0);
+      else
+        Row.getCFAValue().setRegister(*RegNum);
+      break;
+    }
+
+    case dwarf::DW_CFA_def_cfa_offset:
+    case dwarf::DW_CFA_def_cfa_offset_sf: {
+      llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 0);
+      if (!Offset)
+        return Offset.takeError();
+      if (Row.getCFAValue().getLocation() != UnwindLocation::RegPlusOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "%s found when CFA rule was not RegPlusOffset",
+            CFIP.callFrameString(Inst.Opcode).str().c_str());
+      }
+      Row.getCFAValue().setOffset(*Offset);
+      break;
+    }
+
+    case dwarf::DW_CFA_def_cfa:
+    case dwarf::DW_CFA_def_cfa_sf: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 1);
+      if (!Offset)
+        return Offset.takeError();
+      Row.getCFAValue() =
+          UnwindLocation::createIsRegisterPlusOffset(*RegNum, *Offset);
+      break;
+    }
+
+    case dwarf::DW_CFA_def_cfa_expression:
+      Row.getCFAValue() =
+          UnwindLocation::createIsDWARFExpression(*Inst.Expression);
+      break;
+    }
+  }
+  return Error::success();
+}
 
 ArrayRef<CFIProgram::OperandType[2]> CFIProgram::getOperandTypes() {
   static OperandType OpTypes[DW_CFA_restore+1][2];
@@ -245,7 +805,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   switch (Type) {
   case OT_Unset: {
     OS << " Unsupported " << (OperandIdx ? "second" : "first") << " operand to";
-    auto OpcodeName = CallFrameString(Opcode, Arch);
+    auto OpcodeName = callFrameString(Opcode);
     if (!OpcodeName.empty())
       OS << " " << OpcodeName;
     else
@@ -298,10 +858,8 @@ void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                       unsigned IndentLevel) const {
   for (const auto &Instr : Instructions) {
     uint8_t Opcode = Instr.Opcode;
-    if (Opcode & DWARF_CFI_PRIMARY_OPCODE_MASK)
-      Opcode &= DWARF_CFI_PRIMARY_OPCODE_MASK;
     OS.indent(2 * IndentLevel);
-    OS << CallFrameString(Opcode, Arch) << ":";
+    OS << callFrameString(Opcode) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
       printOperand(OS, DumpOpts, MRI, IsEH, Instr, i, Instr.Ops[i]);
     OS << '\n';
@@ -355,6 +913,16 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
   OS << "\n";
   CFIs.dump(OS, DumpOpts, MRI, IsEH);
   OS << "\n";
+
+  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+    RowsOrErr->dump(OS, MRI, IsEH, 1);
+  else {
+    DumpOpts.RecoverableErrorHandler(joinErrors(
+        createStringError(errc::invalid_argument,
+                          "decoding the CIE opcodes into rows failed"),
+        RowsOrErr.takeError()));
+  }
+  OS << "\n";
 }
 
 void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
@@ -373,6 +941,16 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
   CFIs.dump(OS, DumpOpts, MRI, IsEH);
+  OS << "\n";
+
+  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+    RowsOrErr->dump(OS, MRI, IsEH, 1);
+  else {
+    DumpOpts.RecoverableErrorHandler(joinErrors(
+        createStringError(errc::invalid_argument,
+                          "decoding the FDE opcodes into rows failed"),
+        RowsOrErr.takeError()));
+  }
   OS << "\n";
 }
 

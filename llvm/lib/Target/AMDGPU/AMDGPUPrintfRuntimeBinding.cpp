@@ -356,8 +356,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       //
       ConstantPointerNull *zeroIntPtr =
           ConstantPointerNull::get(PointerType::get(Type::getInt8Ty(Ctx), 1));
-      ICmpInst *cmp =
-          dyn_cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
+      auto *cmp = cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
       if (!CI->use_empty()) {
         Value *result =
             Builder.CreateSExt(Builder.CreateNot(cmp), I32Ty, "printf_res");

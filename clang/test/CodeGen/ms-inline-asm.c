@@ -114,7 +114,7 @@ unsigned t10(void) {
 // CHECK: call i32 asm sideeffect inteldialect
 // CHECK-SAME: mov eax, $2
 // CHECK-SAME: mov $0, eax
-// CHECK-SAME: "=*m,={eax},*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}})
+// CHECK-SAME: "=*m,=&{eax},*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}})
 // CHECK: [[RET:%[a-zA-Z0-9]+]] = load i32, i32* [[J]], align 4
 // CHECK: ret i32 [[RET]]
 }
@@ -140,7 +140,7 @@ unsigned t12(void) {
 // CHECK-SAME: mov $0, eax
 // CHECK-SAME: mov eax, $4
 // CHECK-SAME: mov $1, eax
-// CHECK-SAME: "=*m,=*m,={eax},*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
+// CHECK-SAME: "=*m,=*m,=&{eax},*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}})
 }
 
 void t13() {

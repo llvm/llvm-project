@@ -21,6 +21,8 @@ def riscv_rolw : SDNode<"RISCVISD::ROLW", SDTIntShiftOp>;
 def riscv_rorw : SDNode<"RISCVISD::RORW", SDTIntShiftOp>;
 def riscv_fslw : SDNode<"RISCVISD::FSLW", SDTIntShiftDOp>;
 def riscv_fsrw : SDNode<"RISCVISD::FSRW", SDTIntShiftDOp>;
+def riscv_fsl  : SDNode<"RISCVISD::FSL",  SDTIntShiftDOp>;
+def riscv_fsr  : SDNode<"RISCVISD::FSR",  SDTIntShiftDOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -88,18 +90,6 @@ def BSETINVXForm : SDNodeXForm<imm, [{
   // Find the lowest 1.
   return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
                                    SDLoc(N), N->getValueType(0));
-}]>;
-
-// Similar to above, but makes sure the immediate has 33 sign bits. When used
-// with an AND/OR/XOR where the other operand has at least 33 sign bits, the
-// result will have 33 sign bits. This can match BCLRIW/BSETIW/BINVIW.
-def BCLRWMask : ImmLeaf<i64, [{
-  // After checking the sign bits, truncate to 32 bits for power of 2 check.
-  return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(~Imm);
-}]>;
-
-def BSETINVWMask : ImmLeaf<i64, [{
-  return isInt<32>(Imm) && !isInt<12>(Imm) && isPowerOf2_32(Imm);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -380,6 +370,8 @@ def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">, Sched<[]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
+// NOTE: These instructions have been removed from the 0.94 spec. As a result
+// we have no isel patterns for them.
 def BCLRW : ALUW_rr<0b0100100, 0b001, "bclrw">, Sched<[]>;
 def BSETW : ALUW_rr<0b0010100, 0b001, "bsetw">, Sched<[]>;
 def BINVW : ALUW_rr<0b0110100, 0b001, "binvw">, Sched<[]>;
@@ -404,6 +396,8 @@ let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
 def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">, Sched<[]>;
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
+// NOTE: These instructions have been removed from the 0.94 spec. As a result
+// we have no isel patterns for them.
 def BCLRIW : RVBShiftW_ri<0b0100100, 0b001, OPC_OP_IMM_32, "bclriw">,
               Sched<[]>;
 def BSETIW : RVBShiftW_ri<0b0010100, 0b001, OPC_OP_IMM_32, "bsetiw">,
@@ -784,31 +778,17 @@ def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
 // instruction use different orders. fshl will return its first operand for
 // shift of zero, fshr will return its second operand. fsl and fsr both return
 // $rs1 so the patterns need to have different operand orders.
-//
-// fshl and fshr only read the lower log2(xlen) bits of the shift amount, but
-// fsl/fsr instructions read log2(xlen)+1 bits. DAG combine may have removed
-// an AND mask on the shift amount that we need to add back to avoid a one in
-// the extra bit.
-// FIXME: If we can prove that the extra bit in the shift amount is zero, we
-// don't need this mask.
-let Predicates = [HasStdExtZbt, IsRV32] in {
-def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
-          (FSR GPR:$rs1, (ANDI GPR:$rs2, 31), GPR:$rs3)>;
-}
-let Predicates = [HasStdExtZbt, IsRV64] in {
-def : Pat<(fshl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, GPR:$rs2),
-          (FSR GPR:$rs1, (ANDI GPR:$rs2, 63), GPR:$rs3)>;
-}
 let Predicates = [HasStdExtZbt] in {
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
+          (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, GPR:$rs2),
+          (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+
+def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
 // We can use FSRI for fshl by immediate if we subtract the immediate from
 // XLen and swap the operands.
-def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
@@ -953,34 +933,6 @@ def : Pat<(riscv_rorw GPR:$rs1, uimm5:$rs2),
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
-
-let Predicates = [HasStdExtZbs, IsRV64] in {
-def : Pat<(and (not (riscv_sllw 1, GPR:$rs2)), (assertsexti32 GPR:$rs1)),
-          (BCLRW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (and (not (riscv_sllw 1, GPR:$rs2)), GPR:$rs1), i32),
-          (BCLRW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
-          (BSETW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (or (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
-          (BSETW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(xor (riscv_sllw 1, GPR:$rs2), (assertsexti32 GPR:$rs1)),
-          (BINVW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (xor (riscv_sllw 1, GPR:$rs2), GPR:$rs1), i32),
-          (BINVW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(and (riscv_srlw GPR:$rs1, GPR:$rs2), 1),
-          (BEXTW GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(riscv_sllw 1, GPR:$rs2),
-          (BSETW X0, GPR:$rs2)>;
-
-def : Pat<(and (assertsexti32 GPR:$rs1), BCLRWMask:$mask),
-          (BCLRIW GPR:$rs1, (BCLRXForm imm:$mask))>;
-def : Pat<(or (assertsexti32 GPR:$rs1), BSETINVWMask:$mask),
-          (BSETIW GPR:$rs1, (BSETINVXForm imm:$mask))>;
-def : Pat<(xor (assertsexti32 GPR:$rs1), BSETINVWMask:$mask),
-          (BINVIW GPR:$rs1, (BSETINVXForm imm:$mask))>;
-
-} // Predicates = [HasStdExtZbs, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(sext_inreg (SLOIPat GPR:$rs1, uimm5:$shamt), i32),

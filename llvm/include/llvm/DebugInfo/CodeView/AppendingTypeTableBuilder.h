@@ -16,10 +16,8 @@
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Allocator.h"
-#include <cassert>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace llvm {
 namespace codeview {

@@ -202,6 +202,49 @@ DeclTypeSpec &Scope::MakeDerivedType(
   return declTypeSpecs_.emplace_back(category, std::move(spec));
 }
 
+const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
+  if (auto dyType{expr.GetType()}) {
+    if (dyType->IsAssumedType()) {
+      return &MakeTypeStarType();
+    } else if (dyType->IsUnlimitedPolymorphic()) {
+      return &MakeClassStarType();
+    } else {
+      switch (dyType->category()) {
+      case TypeCategory::Integer:
+      case TypeCategory::Real:
+      case TypeCategory::Complex:
+        return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});
+      case TypeCategory::Character:
+        if (const ParamValue * lenParam{dyType->charLength()}) {
+          return &MakeCharacterType(
+              ParamValue{*lenParam}, KindExpr{dyType->kind()});
+        } else {
+          auto lenExpr{dyType->GetCharLength()};
+          if (!lenExpr) {
+            lenExpr =
+                std::get<evaluate::Expr<evaluate::SomeCharacter>>(expr.u).LEN();
+          }
+          if (lenExpr) {
+            return &MakeCharacterType(
+                ParamValue{SomeIntExpr{std::move(*lenExpr)},
+                    common::TypeParamAttr::Len},
+                KindExpr{dyType->kind()});
+          }
+        }
+        break;
+      case TypeCategory::Logical:
+        return &MakeLogicalType(KindExpr{dyType->kind()});
+      case TypeCategory::Derived:
+        return &MakeDerivedType(dyType->IsPolymorphic()
+                ? DeclTypeSpec::ClassDerived
+                : DeclTypeSpec::TypeDerived,
+            DerivedTypeSpec{dyType->GetDerivedTypeSpec()});
+      }
+    }
+  }
+  return nullptr;
+}
+
 Scope::ImportKind Scope::GetImportKind() const {
   if (importKind_) {
     return *importKind_;

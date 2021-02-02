@@ -239,10 +239,12 @@ struct VTableSlotSummary {
   uint64_t ByteOffset;
 };
 
-void updateVCallVisibilityInModule(Module &M,
-                                   bool WholeProgramVisibilityEnabledInLTO);
-void updateVCallVisibilityInIndex(ModuleSummaryIndex &Index,
-                                  bool WholeProgramVisibilityEnabledInLTO);
+void updateVCallVisibilityInModule(
+    Module &M, bool WholeProgramVisibilityEnabledInLTO,
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
+void updateVCallVisibilityInIndex(
+    ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
+    const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);
 
 /// Perform index-based whole program devirtualization on the \p Summary
 /// index. Any devirtualized targets used by a type test in another module

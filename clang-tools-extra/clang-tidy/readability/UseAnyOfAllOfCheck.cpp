@@ -42,32 +42,32 @@ namespace tidy {
 namespace readability {
 
 void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
-  auto returns = [](bool V) {
+  auto Returns = [](bool V) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
-  auto returnsButNotTrue =
+  auto ReturnsButNotTrue =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
-  auto returnsButNotFalse =
+  auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
 
   Finder->addMatcher(
       cxxForRangeStmt(
-          nextStmt(returns(false).bind("final_return")),
-          hasBody(allOf(hasDescendant(returns(true)),
+          nextStmt(Returns(false).bind("final_return")),
+          hasBody(allOf(hasDescendant(Returns(true)),
                         unless(anyOf(hasDescendant(breakStmt()),
                                      hasDescendant(gotoStmt()),
-                                     hasDescendant(returnsButNotTrue))))))
+                                     hasDescendant(ReturnsButNotTrue))))))
           .bind("any_of_loop"),
       this);
 
   Finder->addMatcher(
       cxxForRangeStmt(
-          nextStmt(returns(true).bind("final_return")),
-          hasBody(allOf(hasDescendant(returns(false)),
+          nextStmt(Returns(true).bind("final_return")),
+          hasBody(allOf(hasDescendant(Returns(false)),
                         unless(anyOf(hasDescendant(breakStmt()),
                                      hasDescendant(gotoStmt()),
-                                     hasDescendant(returnsButNotFalse))))))
+                                     hasDescendant(ReturnsButNotFalse))))))
           .bind("all_of_loop"),
       this);
 }

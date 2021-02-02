@@ -1,6 +1,10 @@
 ; RUN: opt -module-summary %s -o %t.bc
-; RUN: llvm-lto -hot-cold-split=true -thinlto-action=run %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
-; RUN: llvm-lto -hot-cold-split=true %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
+; RUN: llvm-lto -use-new-pm=false -hot-cold-split=true \
+; RUN:          -thinlto-action=run %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
+; RUN: llvm-lto -use-new-pm=false -hot-cold-split=true \
+; RUN:          %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
+
+; FIXME: Update checks for new pass manager.
 
 ; REQUIRES: asserts
 

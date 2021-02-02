@@ -45,7 +45,7 @@ macro(add_scudo_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;ADDITIONAL_RTOBJECTS" ${ARGN})
   if (COMPILER_RT_HAS_GWP_ASAN)
     list(APPEND TEST_ADDITIONAL_RTOBJECTS
-         RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler RTGwpAsanOptionsParser)
+         RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
   endif()
 
   if(COMPILER_RT_HAS_SCUDO_STANDALONE)

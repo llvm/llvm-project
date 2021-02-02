@@ -305,26 +305,30 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   }
 }
 
-class ScalarExpansionVisitor : public AnyTraverse<ScalarExpansionVisitor,
-                                   std::optional<Expr<SomeType>>> {
+class ArrayConstantBoundChanger {
 public:
-  using Result = std::optional<Expr<SomeType>>;
-  using Base = AnyTraverse<ScalarExpansionVisitor, Result>;
-  ScalarExpansionVisitor(
-      ConstantSubscripts &&shape, std::optional<ConstantSubscripts> &&lb)
-      : Base{*this}, shape_{std::move(shape)}, lbounds_{std::move(lb)} {}
-  using Base::operator();
-  template <typename T> Result operator()(const Constant<T> &x) {
-    auto expanded{x.Reshape(std::move(shape_))};
-    if (lbounds_) {
-      expanded.set_lbounds(std::move(*lbounds_));
-    }
-    return AsGenericExpr(std::move(expanded));
+  ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
+      : lbounds_{std::move(lbounds)} {}
+
+  template <typename A> A ChangeLbounds(A &&x) const {
+    return std::move(x); // default case
+  }
+  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
+    x.set_lbounds(std::move(lbounds_));
+    return std::move(x);
+  }
+  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
+    return ChangeLbounds(
+        std::move(x.left())); // Constant<> can be parenthesized
+  }
+  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
+    return std::visit(
+        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
+        std::move(x.u)); // recurse until we hit a constant
   }
 
 private:
-  ConstantSubscripts shape_;
-  std::optional<ConstantSubscripts> lbounds_;
+  ConstantSubscripts &&lbounds_;
 };
 
 // Converts, folds, and then checks type, rank, and shape of an
@@ -351,7 +355,11 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 symbol.name(), symRank, folded.Rank());
           }
         } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
-          if (folded.Rank() == 0 && symRank > 0) {
+          if (folded.Rank() == 0 && symRank == 0) {
+            // symbol and constant are both scalars
+            return {std::move(folded)};
+          } else if (folded.Rank() == 0 && symRank > 0) {
+            // expand the scalar constant to an array
             return ScalarConstantExpander{std::move(*extents),
                 AsConstantExtents(
                     context, GetLowerBounds(context, NamedEntity{symbol}))}
@@ -360,7 +368,11 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
             if (CheckConformance(context.messages(), symTS->shape(),
                     *resultShape, "initialized object",
                     "initialization expression", false, false)) {
-              return {std::move(folded)};
+              // make a constant array with adjusted lower bounds
+              return ArrayConstantBoundChanger{
+                  std::move(*AsConstantExtents(
+                      context, GetLowerBounds(context, NamedEntity{symbol})))}
+                  .ChangeLbounds(std::move(folded));
             }
           }
         } else if (IsNamedConstant(symbol)) {

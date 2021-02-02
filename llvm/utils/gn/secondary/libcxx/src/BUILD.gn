@@ -54,7 +54,7 @@ config("cxx_config") {
     "-Wno-covered-switch-default",
   ]
   cflags_cc = [
-    "-std=c++17",
+    "-std=c++20",
     "-nostdinc++",
   ]
   defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
@@ -122,6 +122,7 @@ cxx_sources = [
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
   "exception.cpp",
+  "format.cpp",
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
@@ -183,6 +184,7 @@ if (libcxx_enable_filesystem) {
     "filesystem/directory_iterator.cpp",
     "filesystem/filesystem_common.h",
     "filesystem/operations.cpp",
+    "filesystem/posix_compat.h",
   ]
   if (libcxx_use_compiler_rt) {
     cxx_sources += [ "filesystem/int128_builtins.cpp" ]

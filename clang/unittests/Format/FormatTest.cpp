@@ -10248,6 +10248,21 @@ TEST_F(FormatTest, SplitEmptyClass) {
                "{\n"
                "};",
                Style);
+
+  verifyFormat("#include \"stdint.h\"\n"
+               "namespace rep {}",
+               Style);
+  verifyFormat("#include <stdint.h>\n"
+               "namespace rep {}",
+               Style);
+  verifyFormat("#include <stdint.h>\n"
+               "namespace rep {}",
+               "#include <stdint.h>\n"
+               "namespace rep {\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, SplitEmptyStruct) {
@@ -15979,6 +15994,26 @@ TEST_F(FormatTest, ParsesConfiguration) {
               "      - 'CPPEVAL'\n"
               "    CanonicalDelimiter: 'cc'",
               RawStringFormats, ExpectedRawStringFormats);
+
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 0\n"
+              "  Maximum: 0",
+              SpacesInLineCommentPrefix.Minimum, 0u);
+  EXPECT_EQ(Style.SpacesInLineCommentPrefix.Maximum, 0u);
+  Style.SpacesInLineCommentPrefix.Minimum = 1;
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 2",
+              SpacesInLineCommentPrefix.Minimum, 0u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Maximum: -1",
+              SpacesInLineCommentPrefix.Maximum, -1u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 2",
+              SpacesInLineCommentPrefix.Minimum, 2u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Maximum: 1",
+              SpacesInLineCommentPrefix.Maximum, 1u);
+  EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
 }
 
 TEST_F(FormatTest, ParsesConfigurationWithLanguages) {

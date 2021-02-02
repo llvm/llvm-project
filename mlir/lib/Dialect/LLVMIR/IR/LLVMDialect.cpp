@@ -1375,6 +1375,17 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
     return success();
   }
 
+  // Complex types are compatible with the two-element structs.
+  if (auto complexType = type.dyn_cast<ComplexType>()) {
+    auto structType = llvmType.dyn_cast<LLVMStructType>();
+    if (!structType || structType.getBody().size() != 2 ||
+        structType.getBody()[0] != structType.getBody()[1] ||
+        structType.getBody()[0] != complexType.getElementType())
+      return op->emitOpError("expected 'complex' to map to two-element struct "
+                             "with identical element types");
+    return success();
+  }
+
   // Everything else is not supported.
   return op->emitError("unsupported cast");
 }

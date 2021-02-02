@@ -69,11 +69,6 @@ HoistCheapInsts("hoist-cheap-insts",
                 cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-SinkInstsToAvoidSpills("sink-insts-to-avoid-spills",
-                       cl::desc("MachineLICM should sink instructions into "
-                                "loops to avoid register spills"),
-                       cl::init(false), cl::Hidden);
-static cl::opt<bool>
 HoistConstStores("hoist-const-stores",
                  cl::desc("Hoist invariant stores"),
                  cl::init(true), cl::Hidden);
@@ -246,8 +241,6 @@ namespace {
 
     void HoistOutOfLoop(MachineDomTreeNode *HeaderN);
 
-    void SinkIntoLoop();
-
     void InitRegPressure(MachineBasicBlock *BB);
 
     DenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
@@ -395,9 +388,6 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
       FirstInLoop = true;
       HoistOutOfLoop(N);
       CSEMap.clear();
-
-      if (SinkInstsToAvoidSpills)
-        SinkIntoLoop();
     }
   }
 
@@ -787,88 +777,6 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN) {
   }
 }
 
-/// Sink instructions into loops if profitable. This especially tries to prevent
-/// register spills caused by register pressure if there is little to no
-/// overhead moving instructions into loops.
-void MachineLICMBase::SinkIntoLoop() {
-  MachineBasicBlock *Preheader = getCurPreheader();
-  if (!Preheader)
-    return;
-
-  SmallVector<MachineInstr *, 8> Candidates;
-  for (MachineBasicBlock::instr_iterator I = Preheader->instr_begin();
-       I != Preheader->instr_end(); ++I) {
-    // We need to ensure that we can safely move this instruction into the loop.
-    // As such, it must not have side-effects, e.g. such as a call has.
-    LLVM_DEBUG(dbgs() << "LICM: Analysing sink candidate: " << *I);
-    if (IsLoopInvariantInst(*I) && !HasLoopPHIUse(&*I)) {
-      LLVM_DEBUG(dbgs() << "LICM: Added as sink candidate.\n");
-      Candidates.push_back(&*I);
-      continue;
-    }
-    LLVM_DEBUG(dbgs() << "LICM: Not added as sink candidate.\n");
-  }
-
-  for (MachineInstr *I : Candidates) {
-    const MachineOperand &MO = I->getOperand(0);
-    if (!MO.isDef() || !MO.isReg() || !MO.getReg())
-      continue;
-    if (!MRI->hasOneDef(MO.getReg()))
-      continue;
-    bool CanSink = true;
-    MachineBasicBlock *SinkBlock = nullptr;
-    LLVM_DEBUG(dbgs() << "LICM: Try sinking: " << *I);
-
-    for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
-      LLVM_DEBUG(dbgs() << "LICM:    Analysing use: "; MI.dump());
-      // FIXME: Come up with a proper cost model that estimates whether sinking
-      // the instruction (and thus possibly executing it on every loop
-      // iteration) is more expensive than a register.
-      // For now assumes that copies are cheap and thus almost always worth it.
-      if (!MI.isCopy()) {
-        CanSink = false;
-        break;
-      }
-      if (!SinkBlock) {
-        SinkBlock = MI.getParent();
-        LLVM_DEBUG(dbgs() << "LICM:   Setting sink block to: "
-                          << printMBBReference(*SinkBlock) << "\n");
-        continue;
-      }
-      SinkBlock = DT->findNearestCommonDominator(SinkBlock, MI.getParent());
-      if (!SinkBlock) {
-        LLVM_DEBUG(dbgs() << "LICM:   Can't find nearest dominator\n");
-        CanSink = false;
-        break;
-      }
-      LLVM_DEBUG(dbgs() << "LICM:   Setting nearest common dom block: " <<
-                 printMBBReference(*SinkBlock) << "\n");
-    }
-    if (!CanSink) {
-      LLVM_DEBUG(dbgs() << "LICM: Can't sink instruction.\n");
-      continue;
-    }
-    if (!SinkBlock) {
-      LLVM_DEBUG(dbgs() << "LICM: Not sinking, can't find sink block.\n");
-      continue;
-    }
-    if (SinkBlock == Preheader) {
-      LLVM_DEBUG(dbgs() << "LICM: Not sinking, sink block is the preheader\n");
-      continue;
-    }
-
-    LLVM_DEBUG(dbgs() << "LICM: Sinking to " << printMBBReference(*SinkBlock)
-                      << " from " << printMBBReference(*I->getParent())
-                      << ": " << *I);
-    SinkBlock->splice(SinkBlock->getFirstNonPHI(), Preheader, I);
-
-    // The instruction is moved from its basic block, so do not retain the
-    // debug information.
-    assert(!I->isDebugInstr() && "Should not sink debug inst");
-    I->setDebugLoc(DebugLoc());
-  }
-}
-
 static bool isOperandKill(const MachineOperand &MO, MachineRegisterInfo *MRI) {
   return MO.isKill() || MRI->hasOneNonDBGUse(MO.getReg());
 }
@@ -1056,11 +964,11 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
     return false;
   }
 
-  // If it is load then check if it is guaranteed to execute by making sure that
-  // it dominates all exiting blocks. If it doesn't, then there is a path out of
-  // the loop which does not execute this load, so we can't hoist it. Loads
-  // from constant memory are not safe to speculate all the time, for example
-  // indexed load from a jump table.
+  // If it is a load then check if it is guaranteed to execute by making sure
+  // that it dominates all exiting blocks. If it doesn't, then there is a path
+  // out of the loop which does not execute this load, so we can't hoist it.
+  // Loads from constant memory are safe to speculate, for example indexed load
+  // from a jump table.
   // Stores and side effects are already checked by isSafeToMove.
   if (I.mayLoad() && !mayLoadFromGOTOrConstantPool(I) &&
       !IsGuaranteedToExecute(I.getParent())) {

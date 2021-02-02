@@ -71,5 +71,25 @@ TEST_CASE(create_symlink_basic)
     }
 }
 
+TEST_CASE(create_symlink_dest_cleanup)
+{
+    scoped_test_env env;
+    const path dir = env.create_dir("dir");
+    const path file = env.create_file("file", 42);
+    const path sym = dir / "link";
+    // The target path has to be normalized to backslashes before creating
+    // the link on windows, otherwise the link isn't dereferencable.
+    const path sym_target = "../file";
+    path sym_target_normalized = sym_target;
+    sym_target_normalized.make_preferred();
+    std::error_code ec;
+    fs::create_symlink(sym_target, sym, ec);
+    TEST_REQUIRE(!ec);
+    TEST_CHECK(equivalent(sym, file, ec));
+    const path ret = fs::read_symlink(sym, ec);
+    TEST_CHECK(!ec);
+    TEST_CHECK(ret.native() == sym_target_normalized.native());
+}
+
 
 TEST_SUITE_END()

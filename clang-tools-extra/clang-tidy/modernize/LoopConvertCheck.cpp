@@ -71,20 +71,20 @@ static const char EndVarName[] = "endVar";
 static const char DerefByValueResultName[] = "derefByValueResult";
 static const char DerefByRefResultName[] = "derefByRefResult";
 // shared matchers
-static const TypeMatcher AnyType() { return anything(); }
+static const TypeMatcher anyType() { return anything(); }
 
-static const StatementMatcher IntegerComparisonMatcher() {
+static const StatementMatcher integerComparisonMatcher() {
   return expr(ignoringParenImpCasts(
       declRefExpr(to(varDecl(hasType(isInteger())).bind(ConditionVarName)))));
 }
 
-static const DeclarationMatcher InitToZeroMatcher() {
+static const DeclarationMatcher initToZeroMatcher() {
   return varDecl(
              hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
       .bind(InitVarName);
 }
 
-static const StatementMatcher IncrementVarMatcher() {
+static const StatementMatcher incrementVarMatcher() {
   return declRefExpr(to(varDecl(hasType(isInteger())).bind(IncrementVarName)));
 }
 
@@ -112,15 +112,16 @@ StatementMatcher makeArrayLoopMatcher() {
 
   return forStmt(
              unless(isInTemplateInstantiation()),
-             hasLoopInit(declStmt(hasSingleDecl(InitToZeroMatcher()))),
+             hasLoopInit(declStmt(hasSingleDecl(initToZeroMatcher()))),
              hasCondition(anyOf(
                  binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher()),
+                                hasLHS(integerComparisonMatcher()),
                                 hasRHS(ArrayBoundMatcher)),
                  binaryOperator(hasOperatorName(">"), hasLHS(ArrayBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher())))),
-             hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher()))))
+                                hasRHS(integerComparisonMatcher())))),
+             hasIncrement(
+                 unaryOperator(hasOperatorName("++"),
+                               hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNameArray);
 }
 
@@ -226,7 +227,7 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
              hasIncrement(anyOf(
                  unaryOperator(hasOperatorName("++"),
                                hasUnaryOperand(declRefExpr(
-                                   to(varDecl(hasType(pointsTo(AnyType())))
+                                   to(varDecl(hasType(pointsTo(anyType())))
                                           .bind(IncrementVarName))))),
                  cxxOperatorCallExpr(
                      hasOverloadedOperatorName("++"),
@@ -313,17 +314,18 @@ StatementMatcher makePseudoArrayLoopMatcher() {
              unless(isInTemplateInstantiation()),
              hasLoopInit(
                  anyOf(declStmt(declCountIs(2),
-                                containsDeclaration(0, InitToZeroMatcher()),
+                                containsDeclaration(0, initToZeroMatcher()),
                                 containsDeclaration(1, EndDeclMatcher)),
-                       declStmt(hasSingleDecl(InitToZeroMatcher())))),
+                       declStmt(hasSingleDecl(initToZeroMatcher())))),
              hasCondition(anyOf(
                  binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher()),
+                                hasLHS(integerComparisonMatcher()),
                                 hasRHS(IndexBoundMatcher)),
                  binaryOperator(hasOperatorName(">"), hasLHS(IndexBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher())))),
-             hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher()))))
+                                hasRHS(integerComparisonMatcher())))),
+             hasIncrement(
+                 unaryOperator(hasOperatorName("++"),
+                               hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNamePseudoArray);
 }
 

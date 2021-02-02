@@ -28,7 +28,6 @@
 #ifdef GWP_ASAN_HOOKS
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/optional/backtrace.h"
-#include "gwp_asan/optional/options_parser.h"
 #include "gwp_asan/optional/segv_handler.h"
 #endif // GWP_ASAN_HOOKS
 
@@ -184,12 +183,17 @@ public:
   // be functional, best called from PostInitCallback.
   void initGwpAsan() {
 #ifdef GWP_ASAN_HOOKS
+    gwp_asan::options::Options Opt;
+    Opt.Enabled = getFlags()->GWP_ASAN_Enabled;
     // Bear in mind - Scudo has its own alignment guarantees that are strictly
     // enforced. Scudo exposes the same allocation function for everything from
     // malloc() to posix_memalign, so in general this flag goes unused, as Scudo
     // will always ask GWP-ASan for an aligned amount of bytes.
-    gwp_asan::options::initOptions(getEnv("GWP_ASAN_OPTIONS"), Printf);
-    gwp_asan::options::Options Opt = gwp_asan::options::getOptions();
+    Opt.PerfectlyRightAlign = getFlags()->GWP_ASAN_PerfectlyRightAlign;
+    Opt.MaxSimultaneousAllocations =
+        getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
+    Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
+    Opt.InstallSignalHandlers = getFlags()->GWP_ASAN_InstallSignalHandlers;
     // Embedded GWP-ASan is locked through the Scudo atfork handler (via
     // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
     // handler.

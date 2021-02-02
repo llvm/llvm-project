@@ -58,13 +58,13 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  auto printPolicy = PrintingPolicy(getLangOpts());
-  printPolicy.SuppressScope = true;
-  printPolicy.ConstantArraySizeAsWritten = true;
-  printPolicy.UseVoidForZeroParams = false;
-  printPolicy.PrintInjectedClassNameWithArguments = false;
+  PrintingPolicy PrintPolicy(getLangOpts());
+  PrintPolicy.SuppressScope = true;
+  PrintPolicy.ConstantArraySizeAsWritten = true;
+  PrintPolicy.UseVoidForZeroParams = false;
+  PrintPolicy.PrintInjectedClassNameWithArguments = false;
 
-  std::string Type = MatchedDecl->getUnderlyingType().getAsString(printPolicy);
+  std::string Type = MatchedDecl->getUnderlyingType().getAsString(PrintPolicy);
   std::string Name = MatchedDecl->getNameAsString();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 

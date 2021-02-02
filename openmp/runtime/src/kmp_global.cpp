@@ -166,6 +166,7 @@ int __kmp_zero_bt = FALSE;
 int __kmp_ncores = 0;
 #endif
 int __kmp_chunk = 0;
+int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
 #if KMP_OS_LINUX && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
@@ -208,6 +209,8 @@ const char *__kmp_speculative_statsfile = "-";
 int __kmp_display_env = FALSE;
 int __kmp_display_env_verbose = FALSE;
 int __kmp_omp_cancellation = FALSE;
+int __kmp_nteams = 0;
+int __kmp_teams_thread_limit = 0;
 
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
 int __kmp_user_level_mwait = FALSE;
@@ -284,6 +287,7 @@ int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
 
 kmp_hws_item_t __kmp_hws_socket = {0, 0};
+kmp_hws_item_t __kmp_hws_die = {0, 0};
 kmp_hws_item_t __kmp_hws_node = {0, 0};
 kmp_hws_item_t __kmp_hws_tile = {0, 0};
 kmp_hws_item_t __kmp_hws_core = {0, 0};

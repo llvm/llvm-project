@@ -224,9 +224,41 @@ private:
 using chrono::duration;
 using chrono::duration_cast;
 
+#if defined(_LIBCPP_WIN32API)
+// Various C runtime versions (UCRT, or the legacy msvcrt.dll used by
+// some mingw toolchains) provide different stat function implementations,
+// with a number of limitations with respect to what we want from the
+// stat function. Instead provide our own (in the anonymous detail namespace
+// in posix_compat.h) which does exactly what we want, along with our own
+// stat structure and flag macros.
+
+struct TimeSpec {
+  int64_t tv_sec;
+  int64_t tv_nsec;
+};
+struct StatT {
+  unsigned st_mode;
+  TimeSpec st_atim;
+  TimeSpec st_mtim;
+  uint64_t st_dev; // FILE_ID_INFO::VolumeSerialNumber
+  struct FileIdStruct {
+    unsigned char id[16]; // FILE_ID_INFO::FileId
+    bool operator==(const FileIdStruct &other) const {
+      for (int i = 0; i < 16; i++)
+        if (id[i] != other.id[i])
+          return false;
+      return true;
+    }
+  } st_ino;
+  uint32_t st_nlink;
+  uintmax_t st_size;
+};
+
+#else
 using TimeSpec = struct timespec;
 using TimeVal = struct timeval;
 using StatT = struct stat;
+#endif
 
 template <class FileTimeT, class TimeT,
           bool IsFloat = is_floating_point<typename FileTimeT::rep>::value>
@@ -405,7 +437,11 @@ public:
   }
 };
 
+#if defined(_LIBCPP_WIN32API)
+using fs_time = time_util<file_time_type, int64_t, TimeSpec>;
+#else
 using fs_time = time_util<file_time_type, time_t, TimeSpec>;
+#endif
 
 #if defined(__APPLE__)
 inline TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
@@ -424,6 +460,7 @@ inline TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
 inline TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
 #endif
 
+#if !defined(_LIBCPP_WIN32API)
 inline TimeVal make_timeval(TimeSpec const& ts) {
   using namespace chrono;
   auto Convert = [](long nsec) {
@@ -466,6 +503,7 @@ bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
   return posix_utimensat(p, TS, ec);
 #endif
 }
+#endif /* !_LIBCPP_WIN32API */
 
 } // namespace
 } // end namespace detail

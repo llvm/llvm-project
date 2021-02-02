@@ -4,23 +4,23 @@
 
 # RUN: yaml2obj %s -o %t1.obj
 # RUN: yaml2obj %p/Inputs/pdb-type-server-missing-2.yaml -o %t2.obj
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=WARN
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug:ghash -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=WARN
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 2>&1 | FileCheck %s -check-prefix=IGNORE -allow-empty
-# RUN: not lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /WX 2>&1 | FileCheck %s -check-prefix=ERR
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 /WX 2>&1 | FileCheck %s -check-prefix=IGNORE-ERR -allow-empty
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=WARN
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug:ghash -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=WARN
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=IGNORE -allow-empty
+# RUN: not lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /WX 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=ERR
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 /WX 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=IGNORE-ERR -allow-empty
 
 # WARN: warning: Cannot use debug info for '{{.*}}.obj' [LNK4099]
-# WARN-NEXT: {{N|n}}o such file or directory
+# WARN-NEXT: [[MSG]]
 
 # IGNORE-NOT: warning: Cannot use debug info for '{{.*}}.obj' [LNK4099]
-# IGNORE-NOT: {{N|n}}o such file or directory
+# IGNORE-NOT: [[MSG]]
 
 # ERR: error: Cannot use debug info for '{{.*}}.obj' [LNK4099]
-# ERR-NEXT: {{N|n}}o such file or directory
+# ERR-NEXT: [[MSG]]
 
 # IGNORE-ERR-NOT: error: Cannot use debug info for '{{.*}}.obj' [LNK4099]
-# IGNORE-ERR-NOT: {{N|n}}o such file or directory
+# IGNORE-ERR-NOT: [[MSG]]
 
 --- !COFF
 header:

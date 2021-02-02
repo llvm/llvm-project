@@ -139,11 +139,11 @@ StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
   return StringRef();
 }
 
-std::string asBool(StringRef text, bool NeedsStaticCast) {
+std::string asBool(StringRef Text, bool NeedsStaticCast) {
   if (NeedsStaticCast)
-    return ("static_cast<bool>(" + text + ")").str();
+    return ("static_cast<bool>(" + Text + ")").str();
 
-  return std::string(text);
+  return std::string(Text);
 }
 
 bool needsNullPtrComparison(const Expr *E) {
@@ -398,8 +398,8 @@ void SimplifyBooleanExprCheck::reportBinOp(
 
   bool BoolValue = Bool->getValue();
 
-  auto replaceWithExpression = [this, &Result, LHS, RHS, Bool](
-                                   const Expr *ReplaceWith, bool Negated) {
+  auto ReplaceWithExpression = [this, &Result, LHS, RHS,
+                                Bool](const Expr *ReplaceWith, bool Negated) {
     std::string Replacement =
         replacementExpression(Result, Negated, ReplaceWith);
     SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
@@ -411,28 +411,28 @@ void SimplifyBooleanExprCheck::reportBinOp(
     case BO_LAnd:
       if (BoolValue) {
         // expr && true -> expr
-        replaceWithExpression(Other, /*Negated=*/false);
+        ReplaceWithExpression(Other, /*Negated=*/false);
       } else {
         // expr && false -> false
-        replaceWithExpression(Bool, /*Negated=*/false);
+        ReplaceWithExpression(Bool, /*Negated=*/false);
       }
       break;
     case BO_LOr:
       if (BoolValue) {
         // expr || true -> true
-        replaceWithExpression(Bool, /*Negated=*/false);
+        ReplaceWithExpression(Bool, /*Negated=*/false);
       } else {
         // expr || false -> expr
-        replaceWithExpression(Other, /*Negated=*/false);
+        ReplaceWithExpression(Other, /*Negated=*/false);
       }
       break;
     case BO_EQ:
       // expr == true -> expr, expr == false -> !expr
-      replaceWithExpression(Other, /*Negated=*/!BoolValue);
+      ReplaceWithExpression(Other, /*Negated=*/!BoolValue);
       break;
     case BO_NE:
       // expr != true -> !expr, expr != false -> expr
-      replaceWithExpression(Other, /*Negated=*/BoolValue);
+      ReplaceWithExpression(Other, /*Negated=*/BoolValue);
       break;
     default:
       break;

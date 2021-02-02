@@ -79,9 +79,20 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);
 
 struct ReferencesResult {
-  std::vector<Location> References;
+  // Bitmask describing whether the occurrence is a declaration, definition etc.
+  enum ReferenceAttributes : unsigned {
+    Declaration = 1 << 0,
+    Definition = 1 << 1,
+  };
+  struct Reference {
+    Location Loc;
+    unsigned Attributes = 0;
+  };
+  std::vector<Reference> References;
   bool HasMore = false;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const ReferencesResult::Reference &);
 
 /// Returns implementations at a specified \p Pos:
 ///   - overrides for a virtual method;

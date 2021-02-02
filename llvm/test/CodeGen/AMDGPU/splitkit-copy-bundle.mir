@@ -308,12 +308,12 @@ body:             |
     ; VR: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr12, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr13, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr15, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr10_sgpr11 = IMPLICIT_DEF
+    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22, 0, 0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22, 0, 0 :: (dereferenceable invariant load 4)
     ; VR: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, implicit killed renamable $sgpr10_sgpr11, implicit killed renamable $sgpr8, implicit killed renamable $sgpr9, implicit killed renamable $sgpr12, implicit killed renamable $sgpr13, implicit killed renamable $sgpr14, implicit killed renamable $sgpr15, implicit killed renamable $sgpr16, implicit killed renamable $sgpr17
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sreg_64 = IMPLICIT_DEF

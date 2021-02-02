@@ -10,45 +10,61 @@
 
 // template<RandomAccessIterator Iter>
 //   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
-//   void
+//   constexpr void  // constexpr in C++20
 //   sort_heap(Iter first, Iter last);
 
 #include <algorithm>
-#include <random>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-std::mt19937 randomness;
+#include "test_macros.h"
+#include "test_iterators.h"
+#include "MoveOnly.h"
 
-void test(int N)
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    int* ia = new int [N];
-    for (int i = 0; i < N; ++i)
-        ia[i] = i;
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N);
-    std::sort_heap(ia, ia+N);
-    assert(std::is_sorted(ia, ia+N));
+    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    for (int n = 0; n < 15; ++n) {
+        std::make_heap(work, work+n);
+        std::sort_heap(Iter(work), Iter(work+n));
+        assert(std::is_sorted(work, work+n));
+        assert(std::is_permutation(work, work+n, orig));
+        std::copy(orig, orig+n, work);
+    }
 
-    typedef random_access_iterator<int *> RI;
-    std::shuffle(RI(ia), RI(ia+N), randomness);
-    std::make_heap(RI(ia), RI(ia+N));
-    std::sort_heap(RI(ia), RI(ia+N));
-    assert(std::is_sorted(RI(ia), RI(ia+N)));
-
-    delete [] ia;
+    {
+        T input[] = {5, 3, 4, 1, 2};
+        assert(std::is_heap(input, input + 5));
+        std::sort_heap(Iter(input), Iter(input + 5));
+        assert(input[0] == 1);
+        assert(input[1] == 2);
+        assert(input[2] == 3);
+        assert(input[3] == 4);
+        assert(input[4] == 5);
+    }
+    return true;
 }
 
 int main(int, char**)
 {
-    test(0);
-    test(1);
-    test(2);
-    test(3);
-    test(10);
-    test(1000);
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
 
-  return 0;
+#if TEST_STD_VER >= 11
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
+#endif
+
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

@@ -258,10 +258,9 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %rax, %xmm4
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; X64-NEXT:    movq %xmm2, %rcx
 ; X64-NEXT:    psllq $31, %xmm0
 ; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    movd %xmm1, %ecx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx
 ; X64-NEXT:    movq %rax, %xmm2

@@ -38,7 +38,7 @@ void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Adds the type and expression of a buffer that is used in the MPI call
   // expression to the captured containers.
-  auto addBuffer = [&CE, &Result, &BufferTypes,
+  auto AddBuffer = [&CE, &Result, &BufferTypes,
                     &BufferExprs](const size_t BufferIdx) {
     // Skip null pointer constants and in place 'operators'.
     if (CE->getArg(BufferIdx)->isNullPointerConstant(
@@ -61,18 +61,18 @@ void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
   // MPI call expression. The number passed to the lambda corresponds to the
   // argument index of the currently verified MPI function call.
   if (FuncClassifier.isPointToPointType(Identifier)) {
-    addBuffer(0);
+    AddBuffer(0);
   } else if (FuncClassifier.isCollectiveType(Identifier)) {
     if (FuncClassifier.isReduceType(Identifier)) {
-      addBuffer(0);
-      addBuffer(1);
+      AddBuffer(0);
+      AddBuffer(1);
     } else if (FuncClassifier.isScatterType(Identifier) ||
                FuncClassifier.isGatherType(Identifier) ||
                FuncClassifier.isAlltoallType(Identifier)) {
-      addBuffer(0);
-      addBuffer(3);
+      AddBuffer(0);
+      AddBuffer(3);
     } else if (FuncClassifier.isBcastType(Identifier)) {
-      addBuffer(0);
+      AddBuffer(0);
     }
   }
 
@@ -81,9 +81,9 @@ void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
 
 void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
                                     ArrayRef<const Expr *> BufferExprs) {
-  for (size_t i = 0; i < BufferTypes.size(); ++i) {
+  for (size_t I = 0; I < BufferTypes.size(); ++I) {
     unsigned IndirectionCount = 0;
-    const Type *BufferType = BufferTypes[i];
+    const Type *BufferType = BufferTypes[I];
     llvm::SmallVector<IndirectionType, 1> Indirections;
 
     // Capture the depth and types of indirections for the passed buffer.
@@ -120,7 +120,7 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
         }
       }
 
-      const auto Loc = BufferExprs[i]->getSourceRange().getBegin();
+      const auto Loc = BufferExprs[I]->getSourceRange().getBegin();
       diag(Loc, "buffer is insufficiently dereferenced: %0") << IndirectionDesc;
     }
   }

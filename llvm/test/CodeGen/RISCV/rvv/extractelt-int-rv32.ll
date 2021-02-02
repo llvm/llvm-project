@@ -2,417 +2,495 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+experimental-zfh,+experimental-v -target-abi=ilp32d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-define i8 @extractelt_nxv1i8_0(<vscale x 1 x i8> %v) {
+define signext i8 @extractelt_nxv1i8_0(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv1i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv1i8_imm(<vscale x 1 x i8> %v) {
+define signext i8 @extractelt_nxv1i8_imm(<vscale x 1 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv1i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv1i8_idx(<vscale x 1 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv1i8_idx(<vscale x 1 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv1i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv2i8_0(<vscale x 2 x i8> %v) {
+define signext i8 @extractelt_nxv2i8_0(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv2i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv2i8_imm(<vscale x 2 x i8> %v) {
+define signext i8 @extractelt_nxv2i8_imm(<vscale x 2 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv2i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv2i8_idx(<vscale x 2 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv2i8_idx(<vscale x 2 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv2i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv4i8_0(<vscale x 4 x i8> %v) {
+define signext i8 @extractelt_nxv4i8_0(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv4i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv4i8_imm(<vscale x 4 x i8> %v) {
+define signext i8 @extractelt_nxv4i8_imm(<vscale x 4 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv4i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv4i8_idx(<vscale x 4 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv4i8_idx(<vscale x 4 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv4i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv8i8_0(<vscale x 8 x i8> %v) {
+define signext i8 @extractelt_nxv8i8_0(<vscale x 8 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv8i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv8i8_imm(<vscale x 8 x i8> %v) {
+define signext i8 @extractelt_nxv8i8_imm(<vscale x 8 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv8i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv8i8_idx(<vscale x 8 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv8i8_idx(<vscale x 8 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv8i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv16i8_0(<vscale x 16 x i8> %v) {
+define signext i8 @extractelt_nxv16i8_0(<vscale x 16 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv16i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,m2,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv16i8_imm(<vscale x 16 x i8> %v) {
+define signext i8 @extractelt_nxv16i8_imm(<vscale x 16 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv16i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v26, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v26
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv16i8_idx(<vscale x 16 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv16i8_idx(<vscale x 16 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv16i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v26, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v26
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv32i8_0(<vscale x 32 x i8> %v) {
+define signext i8 @extractelt_nxv32i8_0(<vscale x 32 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv32i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,m4,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv32i8_imm(<vscale x 32 x i8> %v) {
+define signext i8 @extractelt_nxv32i8_imm(<vscale x 32 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv32i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v28
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv32i8_idx(<vscale x 32 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv32i8_idx(<vscale x 32 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv32i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v28, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v28
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i8 @extractelt_nxv64i8_0(<vscale x 64 x i8> %v) {
+define signext i8 @extractelt_nxv64i8_0(<vscale x 64 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv64i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e8,m8,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 64 x i8> %v, i32 0
   ret i8 %r
 }
 
-define i8 @extractelt_nxv64i8_imm(<vscale x 64 x i8> %v) {
+define signext i8 @extractelt_nxv64i8_imm(<vscale x 64 x i8> %v) {
 ; CHECK-LABEL: extractelt_nxv64i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 64 x i8> %v, i32 2
   ret i8 %r
 }
 
-define i8 @extractelt_nxv64i8_idx(<vscale x 64 x i8> %v, i32 %idx) {
+define signext i8 @extractelt_nxv64i8_idx(<vscale x 64 x i8> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv64i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 24
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 64 x i8> %v, i32 %idx
   ret i8 %r
 }
 
-define i16 @extractelt_nxv1i16_0(<vscale x 1 x i16> %v) {
+define signext i16 @extractelt_nxv1i16_0(<vscale x 1 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv1i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv1i16_imm(<vscale x 1 x i16> %v) {
+define signext i16 @extractelt_nxv1i16_imm(<vscale x 1 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv1i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv1i16_idx(<vscale x 1 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv1i16_idx(<vscale x 1 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv1i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x i16> %v, i32 %idx
   ret i16 %r
 }
 
-define i16 @extractelt_nxv2i16_0(<vscale x 2 x i16> %v) {
+define signext i16 @extractelt_nxv2i16_0(<vscale x 2 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv2i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv2i16_imm(<vscale x 2 x i16> %v) {
+define signext i16 @extractelt_nxv2i16_imm(<vscale x 2 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv2i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv2i16_idx(<vscale x 2 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv2i16_idx(<vscale x 2 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv2i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x i16> %v, i32 %idx
   ret i16 %r
 }
 
-define i16 @extractelt_nxv4i16_0(<vscale x 4 x i16> %v) {
+define signext i16 @extractelt_nxv4i16_0(<vscale x 4 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv4i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv4i16_imm(<vscale x 4 x i16> %v) {
+define signext i16 @extractelt_nxv4i16_imm(<vscale x 4 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv4i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv4i16_idx(<vscale x 4 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv4i16_idx(<vscale x 4 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv4i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x i16> %v, i32 %idx
   ret i16 %r
 }
 
-define i16 @extractelt_nxv8i16_0(<vscale x 8 x i16> %v) {
+define signext i16 @extractelt_nxv8i16_0(<vscale x 8 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv8i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv8i16_imm(<vscale x 8 x i16> %v) {
+define signext i16 @extractelt_nxv8i16_imm(<vscale x 8 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv8i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v26, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v26
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv8i16_idx(<vscale x 8 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv8i16_idx(<vscale x 8 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv8i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v26, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v26
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x i16> %v, i32 %idx
   ret i16 %r
 }
 
-define i16 @extractelt_nxv16i16_0(<vscale x 16 x i16> %v) {
+define signext i16 @extractelt_nxv16i16_0(<vscale x 16 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv16i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv16i16_imm(<vscale x 16 x i16> %v) {
+define signext i16 @extractelt_nxv16i16_imm(<vscale x 16 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv16i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v28
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv16i16_idx(<vscale x 16 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv16i16_idx(<vscale x 16 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv16i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v28, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v28
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x i16> %v, i32 %idx
   ret i16 %r
 }
 
-define i16 @extractelt_nxv32i16_0(<vscale x 32 x i16> %v) {
+define signext i16 @extractelt_nxv32i16_0(<vscale x 32 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv32i16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i16> %v, i32 0
   ret i16 %r
 }
 
-define i16 @extractelt_nxv32i16_imm(<vscale x 32 x i16> %v) {
+define signext i16 @extractelt_nxv32i16_imm(<vscale x 32 x i16> %v) {
 ; CHECK-LABEL: extractelt_nxv32i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i16> %v, i32 2
   ret i16 %r
 }
 
-define i16 @extractelt_nxv32i16_idx(<vscale x 32 x i16> %v, i32 %idx) {
+define signext i16 @extractelt_nxv32i16_idx(<vscale x 32 x i16> %v, i32 %idx) {
 ; CHECK-LABEL: extractelt_nxv32i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i16> %v, i32 %idx
   ret i16 %r

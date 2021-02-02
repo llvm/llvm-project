@@ -23,6 +23,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include <list>
 #include <map>
+#include <vector>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -42,7 +43,7 @@ public:
         CallSiteLoc(CallLoc){};
   ContextTrieNode *getChildContext(const LineLocation &CallSite,
                                    StringRef CalleeName);
-  ContextTrieNode *getChildContext(const LineLocation &CallSite);
+  ContextTrieNode *getHottestChildContext(const LineLocation &CallSite);
   ContextTrieNode *getOrCreateChildContext(const LineLocation &CallSite,
                                            StringRef CalleeName,
                                            bool AllowCreate = true);
@@ -53,7 +54,7 @@ public:
                                       bool DeleteNode = true);
   void removeChildContext(const LineLocation &CallSite, StringRef CalleeName);
   std::map<uint32_t, ContextTrieNode> &getAllChildContext();
-  const StringRef getFuncName() const;
+  StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
   LineLocation getCallSiteLoc() const;
@@ -94,6 +95,9 @@ public:
   // call-site. The full context is identified by location of call instruction.
   FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
                                               StringRef CalleeName);
+  // Get samples for indirect call targets for call site at given location.
+  std::vector<const FunctionSamples *>
+  getIndirectCalleeContextSamplesFor(const DILocation *DIL);
   // Query context profile for a given location. The full context
   // is identified by input DILocation.
   FunctionSamples *getContextSamplesFor(const DILocation *DIL);

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-unknown -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-unknown -fms-extensions | FileCheck %s --check-prefixes=CHECK,CHECK-V12
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-unknown -fms-extensions -fclang-abi-compat=11 | FileCheck %s --check-prefixes=CHECK,CHECK-V11
 // rdar://17784718
 
 typedef struct _GUID
@@ -24,11 +25,16 @@ struct __declspec(uuid("EAFA1952-66F8-438B-8FBA-AF1BBAE42191")) TestStruct
 
 struct __declspec(uuid("EAFA1952-66F8-438B-8FBA-AF1BBAE42191")) OtherStruct {};
 
-template <class T> void test_uuidofType(void *arg[sizeof(__uuidof(T))] = 0) {}
+template <class T> void test_uuidofType(decltype(__uuidof(T)) arg) {}
 
-template <class T> void test_uuidofExpr(void *arg[sizeof(__uuidof(typename T::member))] = 0) {}
+template <class T> void test_uuidofExpr(decltype(__uuidof(T::member)) arg) {}
 
-struct HasMember { typedef TestStruct member; };
+struct HasMember {
+  TestStruct member;
+};
+
+// Ensure that mangling an "expr-primary" argument is handled properly.
+template <class T> void test_uuidofExpr2(decltype(T{}, __uuidof(HasMember::member)) arg) {}
 
 template<const GUID&> struct UUIDTestTwo { UUIDTestTwo(); };
 
@@ -39,19 +45,27 @@ int main(int argc, const char * argv[])
     // type had better not mention TestStruct or OtherStruct!
     UUIDTestTwo<__uuidof(TestStruct)> uuidof_test2;
     UUIDTestTwo<__uuidof(OtherStruct)> uuidof_test3;
-    test_uuidofType<TestStruct>();
-    test_uuidofExpr<HasMember>();
+    test_uuidofType<TestStruct>(GUID{});
+    test_uuidofExpr<HasMember>(GUID{});
+    test_uuidofExpr2<TestStruct>(GUID{});
     return 0;
 }
 
 // CHECK: define{{.*}} i32 @main
-// CHECK: call void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
-// CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
-// CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
-// CHECK: call void @_Z15test_uuidofTypeI10TestStructEvPPv(i8** null)
-// CHECK: call void @_Z15test_uuidofExprI9HasMemberEvPPv(i8** null)
-
+// CHECK: call void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev(
+// CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev(
+// CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev(
+// CHECK-V11: call void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidoftT_E(
+// CHECK-V12: call void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidofT_EE(
+// CHECK-V11: call void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofzsrT_6memberE(
+// CHECK-V12: call void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofXsrT_6memberEEE(
+// CHECK-V11: call void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofzL_ZN9HasMember6memberEEE(
+// CHECK-V12: call void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofL_ZN9HasMember6memberEEEE(
 // CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
-// CHECK: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvPPv
-// CHECK: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvPPv
+// CHECK-V11: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidoftT_E(
+// CHECK-V12: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvDTu8__uuidofT_EE(
+// CHECK-V11: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofzsrT_6memberE(
+// CHECK-V12: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvDTu8__uuidofXsrT_6memberEEE(
+// CHECK-V11: define linkonce_odr void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofzL_ZN9HasMember6memberEEE(
+// CHECK-V12: define linkonce_odr void @_Z16test_uuidofExpr2I10TestStructEvDTcmtlT_Eu8__uuidofL_ZN9HasMember6memberEEEE(
 // CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC2Ev

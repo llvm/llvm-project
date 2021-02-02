@@ -62,7 +62,7 @@ struct NewSuffix {
   llvm::Optional<FixItHint> FixIt;
 };
 
-llvm::Optional<SourceLocation> GetMacroAwareLocation(SourceLocation Loc,
+llvm::Optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
                                                      const SourceManager &SM) {
   // Do nothing if the provided location is invalid.
   if (Loc.isInvalid())
@@ -74,11 +74,11 @@ llvm::Optional<SourceLocation> GetMacroAwareLocation(SourceLocation Loc,
   return SpellingLoc;
 }
 
-llvm::Optional<SourceRange> GetMacroAwareSourceRange(SourceRange Loc,
+llvm::Optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
                                                      const SourceManager &SM) {
   llvm::Optional<SourceLocation> Begin =
-      GetMacroAwareLocation(Loc.getBegin(), SM);
-  llvm::Optional<SourceLocation> End = GetMacroAwareLocation(Loc.getEnd(), SM);
+      getMacroAwareLocation(Loc.getBegin(), SM);
+  llvm::Optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
   if (!Begin || !End)
     return llvm::None;
   return SourceRange(*Begin, *End);
@@ -120,7 +120,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
 
   // The literal may have macro expansion, we need the final expanded src range.
   llvm::Optional<SourceRange> Range =
-      GetMacroAwareSourceRange(ReplacementDsc.LiteralLocation, SM);
+      getMacroAwareSourceRange(ReplacementDsc.LiteralLocation, SM);
   if (!Range)
     return llvm::None;
 

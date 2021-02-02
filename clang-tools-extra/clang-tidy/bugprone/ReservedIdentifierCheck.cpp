@@ -172,8 +172,8 @@ ReservedIdentifierCheck::GetMacroFailureInfo(const Token &MacroNameTok,
 RenamerClangTidyCheck::DiagInfo
 ReservedIdentifierCheck::GetDiagInfo(const NamingCheckId &ID,
                                      const NamingCheckFailure &Failure) const {
-  return DiagInfo{Message, [&](DiagnosticBuilder &diag) {
-                    diag << ID.second
+  return DiagInfo{Message, [&](DiagnosticBuilder &Diag) {
+                    Diag << ID.second
                          << getMessageSelectIndex(Failure.Info.KindName);
                   }};
 }

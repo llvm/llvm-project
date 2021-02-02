@@ -1,10 +1,10 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1001 %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1001 -mattr=-xnack %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney %s 2>&1 | FileCheck -check-prefix=XNACKERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -show-encoding %s | FileCheck -check-prefix=XNACK %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack %s 2>&1 | FileCheck -check-prefix=XNACKERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s | FileCheck -check-prefix=XNACK %s
 
 s_mov_b64 xnack_mask, -1
 // NOSICIVI10: error: register not available on this GPU

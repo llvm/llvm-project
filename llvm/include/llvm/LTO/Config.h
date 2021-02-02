@@ -38,6 +38,10 @@ namespace lto {
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
 struct Config {
+  enum VisScheme {
+    FromPrevailing,
+    ELF,
+  };
   // Note: when adding fields here, consider whether they need to be added to
   // computeCacheKey in LTO.cpp.
   std::string CPU;
@@ -74,6 +78,12 @@ struct Config {
   /// LTO modules were linked. This option is useful for some build system which
   /// want to know a priori all possible output files.
   bool AlwaysEmitRegularLTOObj = false;
+
+  /// Allows non-imported definitions to get the potentially more constraining
+  /// visibility from the prevailing definition. FromPrevailing is the default
+  /// because it works for many binary formats. ELF can use the more optimized
+  /// 'ELF' scheme.
+  VisScheme VisibilityScheme = FromPrevailing;
 
   /// If this field is set, the set of passes run in the middle-end optimizer
   /// will be the one specified by the string. Only works with the new pass

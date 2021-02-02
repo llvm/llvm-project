@@ -17220,6 +17220,24 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
   }
+  case WebAssembly::BI__builtin_wasm_widen_s_i8x16_i32x4:
+  case WebAssembly::BI__builtin_wasm_widen_u_i8x16_i32x4: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    llvm::APSInt SubVecConst =
+        *E->getArg(1)->getIntegerConstantExpr(getContext());
+    Value *SubVec = llvm::ConstantInt::get(getLLVMContext(), SubVecConst);
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_widen_s_i8x16_i32x4:
+      IntNo = Intrinsic::wasm_widen_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_widen_u_i8x16_i32x4:
+      IntNo = Intrinsic::wasm_widen_unsigned;
+      break;
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo);
+    return Builder.CreateCall(Callee, {Vec, SubVec});
+  }
   case WebAssembly::BI__builtin_wasm_convert_low_s_i32x4_f64x2:
   case WebAssembly::BI__builtin_wasm_convert_low_u_i32x4_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));

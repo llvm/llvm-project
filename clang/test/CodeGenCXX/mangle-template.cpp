@@ -270,7 +270,7 @@ namespace test17 {
   // Note: there is no J...E here, because we can't form a pack argument, and
   // the 5u and 6u are mangled with the original type 'j' (unsigned int) not
   // with the resolved type 'i' (signed int).
-  // CHECK: define {{.*}} @_ZN6test171hILi4EJLi1ELi2ELi3EEEEvNS_1XIXspT0_EXLj5EEXT_EXLj6EEEE
+  // CHECK: define {{.*}} @_ZN6test171hILi4EJLi1ELi2ELi3EEEEvNS_1XIXspT0_ELj5EXT_ELj6EEE
   template<int D, int ...C> void h(X<C..., 5u, D, 6u>) {}
   void i() { h<4, 1, 2, 3>({}); }
 
@@ -323,7 +323,7 @@ namespace partially_dependent_template_args {
     // callee is unresolved, the rest mangle the converted argument Lj0E
     // because the callee is resolved.
     void h() {
-      // CHECK: @_ZN33partially_dependent_template_args5test22g1INS0_1XEEEvDTcl1fIXLi0EEEcvT__EEE
+      // CHECK: @_ZN33partially_dependent_template_args5test22g1INS0_1XEEEvDTcl1fILi0EEcvT__EEE
       g1<X>({});
       // CHECK: @_ZN33partially_dependent_template_args5test22g2IiEEvDTplclL_ZNS0_1fILj0EEEiNS0_1XEEilEEcvT__EE
       g2<int>({});

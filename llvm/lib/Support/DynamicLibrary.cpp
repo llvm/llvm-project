@@ -116,7 +116,7 @@ static llvm::ManagedStatic<llvm::StringMap<void *>> ExplicitSymbols;
 static llvm::ManagedStatic<DynamicLibrary::HandleSet> OpenedHandles;
 // Lock for ExplicitSymbols and OpenedHandles.
 static llvm::ManagedStatic<llvm::sys::SmartMutex<true>> SymbolsMutex;
-}
+} // namespace
 
 #ifdef _WIN32
 
@@ -136,7 +136,7 @@ namespace llvm {
 void *SearchForAddressOfSpecialSymbol(const char *SymbolName) {
   return DoSearch(SymbolName); // DynamicLibrary.inc
 }
-}
+} // namespace llvm
 
 void DynamicLibrary::AddSymbol(StringRef SymbolName, void *SymbolValue) {
   SmartScopedLock<true> Lock(*SymbolsMutex);

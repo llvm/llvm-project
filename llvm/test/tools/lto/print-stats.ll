@@ -5,5 +5,12 @@
 
 target triple = "x86_64-apple-macosx10.8.0"
 
+define i32 @test(i32 %a) {
+  %r = add i32 %a, 1
+  %r.1 = add i32 1, %a
+  %r.2 = add i32 %r, %r.1
+  ret i32 %r.2
+}
+
 ; STATS: Statistics Collected
 ; NO_STATS-NOT: Statistics Collected

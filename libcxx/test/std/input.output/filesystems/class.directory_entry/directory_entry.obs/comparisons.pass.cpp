@@ -28,13 +28,14 @@
 
 
 #define CHECK_OP(Op) \
-  static_assert(std::is_same<decltype(ce. operator Op (ce)), bool>::value, ""); \
-  static_assert(noexcept(ce.operator Op (ce)), "Operation must be noexcept" )
+  static_assert(std::is_same<decltype(ce Op ce), bool>::value, ""); \
+  static_assert(noexcept(ce Op ce), "Operation must be noexcept" )
 
 void test_comparison_signatures() {
   using namespace fs;
   path const p("foo/bar/baz");
-  // Check that the operators are member functions with the correct signatures.
+  // Check that the operators are valid, yield bool, and are not
+  // potentially-throwing.
   {
     directory_entry const ce(p);
     CHECK_OP(==);

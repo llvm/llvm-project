@@ -324,9 +324,7 @@ static const IntrinsicData IntrinsicsWithChain[] = {
  * Find Intrinsic data by intrinsic ID
  */
 static const IntrinsicData* getIntrinsicWithChain(unsigned IntNo) {
-  const IntrinsicData *Data =  std::lower_bound(std::begin(IntrinsicsWithChain),
-                                                std::end(IntrinsicsWithChain),
-                                                IntNo);
+  const IntrinsicData *Data = lower_bound(IntrinsicsWithChain, IntNo);
   if (Data != std::end(IntrinsicsWithChain) && Data->Id == IntNo)
     return Data;
   return nullptr;
@@ -1152,9 +1150,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
  * Return nullptr if intrinsic is not defined in the table.
  */
 static const IntrinsicData* getIntrinsicWithoutChain(unsigned IntNo) {
-  const IntrinsicData *Data = std::lower_bound(std::begin(IntrinsicsWithoutChain),
-                                               std::end(IntrinsicsWithoutChain),
-                                               IntNo);
+  const IntrinsicData *Data = lower_bound(IntrinsicsWithoutChain, IntNo);
   if (Data != std::end(IntrinsicsWithoutChain) && Data->Id == IntNo)
     return Data;
   return nullptr;

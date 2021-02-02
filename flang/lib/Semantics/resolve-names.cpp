@@ -741,6 +741,7 @@ public:
   bool Pre(const parser::BindStmt &) { return BeginAttrs(); }
   void Post(const parser::BindStmt &) { EndAttrs(); }
   bool Pre(const parser::BindEntity &);
+  bool Pre(const parser::OldParameterStmt &);
   bool Pre(const parser::NamedConstantDef &);
   bool Pre(const parser::NamedConstant &);
   void Post(const parser::EnumDef &);
@@ -907,6 +908,8 @@ private:
     // Enum value must hold inside a C_INT (7.6.2).
     std::optional<int> value{0};
   } enumerationState_;
+  // Set for OldParameterStmt processing
+  bool inOldStyleParameterStmt_{false};
 
   bool HandleAttributeStmt(Attr, const std::list<parser::Name> &);
   Symbol &HandleAttributeStmt(Attr, const parser::Name &);
@@ -3285,6 +3288,12 @@ bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
   SetBindNameOn(*symbol);
   return false;
 }
+bool DeclarationVisitor::Pre(const parser::OldParameterStmt &x) {
+  inOldStyleParameterStmt_ = true;
+  Walk(x.v);
+  inOldStyleParameterStmt_ = false;
+  return false;
+}
 bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &name{std::get<parser::NamedConstant>(x.t).v};
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
@@ -3296,11 +3305,44 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     return false;
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
-  ApplyImplicitRules(symbol);
-  Walk(expr);
-  if (auto converted{EvaluateNonPointerInitializer(
-          symbol, expr, expr.thing.value().source)}) {
-    symbol.get<ObjectEntityDetails>().set_init(std::move(*converted));
+  auto &details{symbol.get<ObjectEntityDetails>()};
+  if (inOldStyleParameterStmt_) {
+    // non-standard extension PARAMETER statement (no parentheses)
+    Walk(expr);
+    auto folded{EvaluateExpr(expr)};
+    if (details.type()) {
+      SayWithDecl(name, symbol,
+          "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
+    } else if (folded) {
+      auto at{expr.thing.value().source};
+      if (evaluate::IsActuallyConstant(*folded)) {
+        if (const auto *type{currScope().GetType(*folded)}) {
+          if (type->IsPolymorphic()) {
+            Say(at, "The expression must not be polymorphic"_err_en_US);
+          } else if (auto shape{ToArraySpec(
+                         GetFoldingContext(), evaluate::GetShape(*folded))}) {
+            // The type of the named constant is assumed from the expression.
+            details.set_type(*type);
+            details.set_init(std::move(*folded));
+            details.set_shape(std::move(*shape));
+          } else {
+            Say(at, "The expression must have constant shape"_err_en_US);
+          }
+        } else {
+          Say(at, "The expression must have a known type"_err_en_US);
+        }
+      } else {
+        Say(at, "The expression must be a constant of known type"_err_en_US);
+      }
+    }
+  } else {
+    // standard-conforming PARAMETER statement (with parentheses)
+    ApplyImplicitRules(symbol);
+    Walk(expr);
+    if (auto converted{EvaluateNonPointerInitializer(
+            symbol, expr, expr.thing.value().source)}) {
+      details.set_init(std::move(*converted));
+    }
   }
   return false;
 }

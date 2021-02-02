@@ -399,6 +399,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
   if (j == tokens) {
     return;
   }
+  CHECK(prescanner); // TODO: change to reference
   if (dir.TokenAt(j).ToString() != "#") {
     prescanner->Say(dir.GetTokenProvenanceRange(j), "missing '#'"_err_en_US);
     return;
@@ -578,6 +579,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
       return;
     }
     std::string include;
+    std::optional<std::string> prependPath;
     if (dir.TokenAt(j).ToString() == "<") { // #include <foo>
       std::size_t k{j + 1};
       if (k >= tokens) {
@@ -598,6 +600,12 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
     } else if ((include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" &&
         include.substr(include.size() - 1, 1) == "\"") { // #include "foo"
       include = include.substr(1, include.size() - 2);
+      // #include "foo" starts search in directory of file containing
+      // the directive
+      auto prov{dir.GetTokenProvenanceRange(dirOffset).start()};
+      if (const auto *currentFile{allSources_.GetSourceFile(prov)}) {
+        prependPath = DirectoryName(currentFile->path());
+      }
     } else {
       prescanner->Say(dir.GetTokenProvenanceRange(j < tokens ? j : tokens - 1),
           "#include: expected name of file to include"_err_en_US);
@@ -615,7 +623,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};
-    const SourceFile *included{allSources_.Open(include, error)};
+    const SourceFile *included{
+        allSources_.Open(include, error, std::move(prependPath))};
     if (!included) {
       prescanner->Say(dir.GetTokenProvenanceRange(dirOffset),
           "#include: %s"_err_en_US, error.str());

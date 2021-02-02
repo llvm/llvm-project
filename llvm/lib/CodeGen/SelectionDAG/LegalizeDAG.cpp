@@ -182,7 +182,6 @@ private:
   SDValue PromoteLegalFP_TO_INT_SAT(SDNode *Node, const SDLoc &dl);
 
   SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
-  SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
   SDValue ExpandPARITY(SDValue Op, const SDLoc &dl);
 
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
@@ -2846,58 +2845,6 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
   return Tmp;
 }
 
-/// Open code the operations for BSWAP of the specified operation.
-SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, const SDLoc &dl) {
-  EVT VT = Op.getValueType();
-  EVT SHVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-  SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5, Tmp6, Tmp7, Tmp8;
-  switch (VT.getSimpleVT().getScalarType().SimpleTy) {
-  default: llvm_unreachable("Unhandled Expand type in BSWAP!");
-  case MVT::i16:
-    // Use a rotate by 8. This can be further expanded if necessary.
-    return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
-  case MVT::i32:
-    Tmp4 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-    Tmp3 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
-    Tmp2 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
-    Tmp1 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-    Tmp3 = DAG.getNode(ISD::AND, dl, VT, Tmp3,
-                       DAG.getConstant(0xFF0000, dl, VT));
-    Tmp2 = DAG.getNode(ISD::AND, dl, VT, Tmp2, DAG.getConstant(0xFF00, dl, VT));
-    Tmp4 = DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp3);
-    Tmp2 = DAG.getNode(ISD::OR, dl, VT, Tmp2, Tmp1);
-    return DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp2);
-  case MVT::i64:
-    Tmp8 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(56, dl, SHVT));
-    Tmp7 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(40, dl, SHVT));
-    Tmp6 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-    Tmp5 = DAG.getNode(ISD::SHL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
-    Tmp4 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
-    Tmp3 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(24, dl, SHVT));
-    Tmp2 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(40, dl, SHVT));
-    Tmp1 = DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(56, dl, SHVT));
-    Tmp7 = DAG.getNode(ISD::AND, dl, VT, Tmp7,
-                       DAG.getConstant(255ULL<<48, dl, VT));
-    Tmp6 = DAG.getNode(ISD::AND, dl, VT, Tmp6,
-                       DAG.getConstant(255ULL<<40, dl, VT));
-    Tmp5 = DAG.getNode(ISD::AND, dl, VT, Tmp5,
-                       DAG.getConstant(255ULL<<32, dl, VT));
-    Tmp4 = DAG.getNode(ISD::AND, dl, VT, Tmp4,
-                       DAG.getConstant(255ULL<<24, dl, VT));
-    Tmp3 = DAG.getNode(ISD::AND, dl, VT, Tmp3,
-                       DAG.getConstant(255ULL<<16, dl, VT));
-    Tmp2 = DAG.getNode(ISD::AND, dl, VT, Tmp2,
-                       DAG.getConstant(255ULL<<8 , dl, VT));
-    Tmp8 = DAG.getNode(ISD::OR, dl, VT, Tmp8, Tmp7);
-    Tmp6 = DAG.getNode(ISD::OR, dl, VT, Tmp6, Tmp5);
-    Tmp4 = DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp3);
-    Tmp2 = DAG.getNode(ISD::OR, dl, VT, Tmp2, Tmp1);
-    Tmp8 = DAG.getNode(ISD::OR, dl, VT, Tmp8, Tmp6);
-    Tmp4 = DAG.getNode(ISD::OR, dl, VT, Tmp4, Tmp2);
-    return DAG.getNode(ISD::OR, dl, VT, Tmp8, Tmp4);
-  }
-}
-
 /// Open code the operations for PARITY of the specified operation.
 SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
   EVT VT = Op.getValueType();
@@ -2949,7 +2896,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandBITREVERSE(Node->getOperand(0), dl));
     break;
   case ISD::BSWAP:
-    Results.push_back(ExpandBSWAP(Node->getOperand(0), dl));
+    if ((Tmp1 = TLI.expandBSWAP(Node, DAG)))
+      Results.push_back(Tmp1);
     break;
   case ISD::PARITY:
     Results.push_back(ExpandPARITY(Node->getOperand(0), dl));

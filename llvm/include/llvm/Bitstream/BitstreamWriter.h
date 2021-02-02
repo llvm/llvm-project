@@ -302,10 +302,8 @@ public:
 
     // If there is a blockinfo for this BlockID, add all the predefined abbrevs
     // to the abbrev list.
-    if (BlockInfo *Info = getBlockInfo(BlockID)) {
-      CurAbbrevs.insert(CurAbbrevs.end(), Info->Abbrevs.begin(),
-                        Info->Abbrevs.end());
-    }
+    if (BlockInfo *Info = getBlockInfo(BlockID))
+      append_range(CurAbbrevs, Info->Abbrevs);
   }
 
   void ExitBlock() {

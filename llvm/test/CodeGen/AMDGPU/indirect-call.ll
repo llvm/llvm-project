@@ -53,7 +53,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     is_ptr64 = 1
 ; GCN-NEXT:     is_dynamic_callstack = 1
 ; GCN-NEXT:     is_debug_enabled = 0
-; GCN-NEXT:     is_xnack_enabled = 1
+; GCN-NEXT:     is_xnack_enabled = 0
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0
@@ -149,7 +149,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     is_ptr64 = 1
 ; GCN-NEXT:     is_dynamic_callstack = 1
 ; GCN-NEXT:     is_debug_enabled = 0
-; GCN-NEXT:     is_xnack_enabled = 1
+; GCN-NEXT:     is_xnack_enabled = 0
 ; GCN-NEXT:     workitem_private_segment_byte_size = 16384
 ; GCN-NEXT:     workgroup_group_segment_byte_size = 0
 ; GCN-NEXT:     gds_segment_byte_size = 0

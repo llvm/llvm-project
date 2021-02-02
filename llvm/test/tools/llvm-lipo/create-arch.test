@@ -13,5 +13,5 @@
 # # RUN: not llvm-lipo -arch i3866 %t-32.o -create -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
 # INVALID_ARCH: error: Invalid architecture: i3866
 #
-# RUN: not llvm-lipo -arch i386 %t-33.o -create -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID_FILE %s
-# INVALID_FILE: {{[nN]}}o such file or directory
+# RUN: not llvm-lipo -arch i386 %t-33.o -create -o /dev/null 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=INVALID_FILE %s
+# INVALID_FILE: [[MSG]]

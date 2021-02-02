@@ -17,6 +17,8 @@
 #include "characters.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
+#include <list>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,8 +30,8 @@ class raw_ostream;
 namespace Fortran::parser {
 
 std::string DirectoryName(std::string path);
-std::string LocateSourceFile(
-    std::string name, const std::vector<std::string> &searchPath);
+std::optional<std::string> LocateSourceFile(
+    std::string name, const std::list<std::string> &searchPath);
 
 class SourceFile;
 

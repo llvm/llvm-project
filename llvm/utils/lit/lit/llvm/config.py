@@ -345,6 +345,17 @@ class LLVMConfig(object):
         self.config.substitutions.extend(substitutions)
         return True
 
+    def add_err_msg_substitutions(self):
+        if (sys.platform == 'zos'):
+            self.config.substitutions.append(('%errc_ENOENT', '\'EDC5129I No such file or directory.\''))
+            self.config.substitutions.append(('%errc_EISDIR', '\'EDC5123I Is a directory.\''))
+        elif (sys.platform == 'win32'):
+            self.config.substitutions.append(('%errc_ENOENT', '\'no such file or directory\''))
+            self.config.substitutions.append(('%errc_EISDIR', '\'is a directory\''))
+        else:
+            self.config.substitutions.append(('%errc_ENOENT', '\'No such file or directory\''))
+            self.config.substitutions.append(('%errc_EISDIR', '\'Is a directory\''))
+
     def use_default_substitutions(self):
         tool_patterns = [
             ToolSubst('FileCheck', unresolved='fatal'),
@@ -357,6 +368,8 @@ class LLVMConfig(object):
 
         self.add_tool_substitutions(
             tool_patterns, [self.config.llvm_tools_dir])
+
+        self.add_err_msg_substitutions()
 
     def use_llvm_tool(self, name, search_env=None, required=False, quiet=False):
         """Find the executable program 'name', optionally using the specified

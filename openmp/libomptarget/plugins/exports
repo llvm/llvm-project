@@ -19,6 +19,8 @@ VERS1.0 {
     __tgt_rtl_run_target_region;
     __tgt_rtl_run_target_region_async;
     __tgt_rtl_synchronize;
+    __tgt_rtl_register_lib;
+    __tgt_rtl_unregister_lib;
   local:
     *;
 };

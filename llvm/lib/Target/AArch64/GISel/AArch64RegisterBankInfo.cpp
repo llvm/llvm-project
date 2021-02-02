@@ -478,7 +478,8 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
 
   // No. Check if we have a copy-like instruction. If we do, then we could
   // still be fed by floating point instructions.
-  if (Op != TargetOpcode::COPY && !MI.isPHI())
+  if (Op != TargetOpcode::COPY && !MI.isPHI() &&
+      !isPreISelGenericOptimizationHint(Op))
     return false;
 
   // Check if we already know the register bank.

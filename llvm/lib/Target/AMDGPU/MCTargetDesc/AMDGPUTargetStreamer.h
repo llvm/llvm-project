@@ -23,6 +23,7 @@ class MCSymbol;
 class MDNode;
 class Module;
 class Type;
+class formatted_raw_ostream;
 
 namespace AMDGPU {
 namespace HSAMD {

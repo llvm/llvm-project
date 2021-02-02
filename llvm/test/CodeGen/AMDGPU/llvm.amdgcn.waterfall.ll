@@ -188,9 +188,9 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GCN-32: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[FIRSTVAL]], [[IDX]]
 ; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
 ; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
-; GCN-DAG: s_lshl_b64 [[FIRSTVALSHIFTED:s[[0-9]+:[0-9]+]]], s{{\[}}[[FIRSTVAL]]:{{[0-9]+}}], 5
+; GCN-DAG: s_lshl_b64 s[{{[0-9]+:[0-9]+}}], s{{\[}}[[FIRSTVAL]]:{{[0-9]+}}], 5
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
-; GCN: s_load_dwordx8 [[PTR:s\[[0-9]+:[0-9]+\]]], [[FIRSTVALSHIFTED]], 0x0
+; GCN: s_load_dwordx8 [[PTR:s\[[0-9]+:[0-9]+\]]], s[{{[0-9]+:[0-9]+}}], 0x0
 ; GCN: s_load_dwordx4 [[PTR2:s\[[0-9]+:[0-9]+\]]], s[{{[0-9]+:[0-9]+}}], 0x0 
 ; GCN: s_waitcnt lgkmcnt(0)
 ; GCN: image_sample v{{\[}}[[VALSTART:[0-9]+]]:[[VALEND:[0-9]+]]{{\]}}, v{{[0-9]+}}, [[PTR]], [[PTR2]] dmask:0xf

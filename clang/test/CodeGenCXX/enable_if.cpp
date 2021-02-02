@@ -5,7 +5,7 @@ int test5(int);
 template <typename T>
 T test5(T) __attribute__((enable_if(1, "better than non-template")));
 
-// CHECK: @_Z5test5IiEUa9enable_ifIXLi1EEET_S0_
+// CHECK: @_Z5test5IiEUa9enable_ifILi1EET_S0_
 int (*Ptr)(int) = &test5;
 
 // Test itanium mangling for attribute enable_if

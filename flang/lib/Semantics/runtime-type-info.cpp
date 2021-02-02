@@ -616,7 +616,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const std::string &distinctName, const SymbolVector *parameters) {
   evaluate::StructureConstructorValues values;
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
-      object, context_.foldingContext())};
+      symbol, context_.foldingContext())};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   const auto &shape{typeAndShape->shape()};

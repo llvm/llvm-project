@@ -132,7 +132,7 @@ declare void @func_external()
 ; CHECK-NEXT:           Index:           2
 ; CHECK-NEXT:         Functions:       [ 4, 3 ]
 
-; check the generated code in __wasm_call_ctors and __wasm_apply_relocs functions
+; check the generated code in __wasm_call_ctors and __wasm_apply_data_relocs functions
 ; TODO(sbc): Disassemble and verify instructions.
 
 ; CHECK:        - Type:            CODE

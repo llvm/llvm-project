@@ -456,6 +456,12 @@ public:
   /// by default.
   virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
 
+  /// Test whether this toolchain supports outline atomics by default.
+  virtual bool
+  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const {
+    return false;
+  }
+
   /// Test whether this toolchain defaults to PIC.
   virtual bool isPICDefault() const = 0;
 

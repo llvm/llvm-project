@@ -248,8 +248,8 @@ Options for ``libomptarget``
   out-of-tree builds.
 
 **LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER** = ``""``
-  Path of the folder that contains ``libomp.so``.  This is required for testing
-  out-of-tree builds.
+  Path of the folder that contains ``libomp.so``, and ``libLLVMSupport.so``
+  when profiling is enabled.  This is required for testing.
 
 Options for ``NVPTX device RTL``
 --------------------------------
@@ -281,7 +281,7 @@ Options for ``NVPTX device RTL``
 
  **LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES** = ``35``
   List of CUDA compute capabilities that should be supported by the NVPTX
-  device RTL. E.g. for compute capabilities 6.0 and 7.0, the option "60,70"
+  device RTL. E.g. for compute capabilities 6.0 and 7.0, the option "60;70"
   should be used. Compute capability 3.5 is the minimum required.
 
  **LIBOMPTARGET_NVPTX_DEBUG** = ``OFF|ON``

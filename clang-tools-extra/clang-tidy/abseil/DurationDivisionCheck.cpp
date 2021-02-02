@@ -17,10 +17,10 @@ namespace abseil {
 
 using namespace clang::ast_matchers;
 
-void DurationDivisionCheck::registerMatchers(MatchFinder *finder) {
+void DurationDivisionCheck::registerMatchers(MatchFinder *Finder) {
   const auto DurationExpr =
       expr(hasType(cxxRecordDecl(hasName("::absl::Duration"))));
-  finder->addMatcher(
+  Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
                    hasSourceExpression(ignoringParenCasts(
@@ -35,8 +35,8 @@ void DurationDivisionCheck::registerMatchers(MatchFinder *finder) {
       this);
 }
 
-void DurationDivisionCheck::check(const MatchFinder::MatchResult &result) {
-  const auto *OpCall = result.Nodes.getNodeAs<CXXOperatorCallExpr>("OpCall");
+void DurationDivisionCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *OpCall = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("OpCall");
   diag(OpCall->getOperatorLoc(),
        "operator/ on absl::Duration objects performs integer division; "
        "did you mean to use FDivDuration()?")
@@ -47,8 +47,8 @@ void DurationDivisionCheck::check(const MatchFinder::MatchResult &result) {
              ", ")
       << FixItHint::CreateInsertion(
              Lexer::getLocForEndOfToken(
-                 result.SourceManager->getSpellingLoc(OpCall->getEndLoc()), 0,
-                 *result.SourceManager, result.Context->getLangOpts()),
+                 Result.SourceManager->getSpellingLoc(OpCall->getEndLoc()), 0,
+                 *Result.SourceManager, Result.Context->getLangOpts()),
              ")");
 }
 

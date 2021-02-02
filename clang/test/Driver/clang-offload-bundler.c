@@ -70,9 +70,11 @@
 // RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.i,%t.tgt1 -inputs=%t.bundle.i -unbundle 2>&1 | FileCheck %s --check-prefix CK-ERR4
 // CK-ERR4: error: number of output files and targets should match in unbundling mode
 
-// RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -inputs=%t.i,%t.tgt1,%t.tgt2.notexist -outputs=%t.bundle.i 2>&1 | FileCheck %s -DFILE=%t.tgt2.notexist --check-prefix CK-ERR5
-// RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.i,%t.tgt1,%t.tgt2 -inputs=%t.bundle.i.notexist -unbundle 2>&1 | FileCheck %s -DFILE=%t.bundle.i.notexist --check-prefix CK-ERR5
-// CK-ERR5: error: '[[FILE]]': {{N|n}}o such file or directory
+// RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -inputs=%t.i,%t.tgt1,%t.tgt2.notexist -outputs=%t.bundle.i 2>&1 | \
+// RUN:   FileCheck %s -DFILE=%t.tgt2.notexist -DMSG=%errc_ENOENT --check-prefix CK-ERR5
+// RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -outputs=%t.i,%t.tgt1,%t.tgt2 -inputs=%t.bundle.i.notexist -unbundle 2>&1 | \
+// RUN:   FileCheck %s -DFILE=%t.bundle.i.notexist -DMSG=%errc_ENOENT --check-prefix CK-ERR5
+// CK-ERR5: error: '[[FILE]]': [[MSG]]
 
 // RUN: not clang-offload-bundler -type=invalid -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -inputs=%t.i,%t.tgt1,%t.tgt2 -outputs=%t.bundle.i 2>&1 | FileCheck %s -DTYPE=invalid --check-prefix CK-ERR6
 // CK-ERR6: error: '[[TYPE]]': invalid file type specified

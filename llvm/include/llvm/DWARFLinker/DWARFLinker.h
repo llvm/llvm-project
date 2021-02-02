@@ -61,32 +61,33 @@ public:
   virtual bool areRelocationsResolved() const = 0;
 
   /// Checks that there are valid relocations against a .debug_info
-  /// section. Reset current relocation pointer if neccessary.
-  virtual bool hasValidRelocs(bool ResetRelocsPtr = true) = 0;
+  /// section.
+  virtual bool hasValidRelocs() = 0;
 
   /// Checks that the specified DIE has a DW_AT_Location attribute
-  /// that references into a live code section. This function
-  /// must be called with DIE offsets in strictly ascending order.
+  /// that references into a live code section.
+  ///
+  /// \returns true and sets Info.InDebugMap if it is the case.
   virtual bool hasLiveMemoryLocation(const DWARFDie &DIE,
                                      CompileUnit::DIEInfo &Info) = 0;
 
   /// Checks that the specified DIE has a DW_AT_Low_pc attribute
-  /// that references into a live code section. This function
-  /// must be called with DIE offsets in strictly ascending order.
+  /// that references into a live code section.
+  ///
+  /// \returns true and sets Info.InDebugMap if it is the case.
   virtual bool hasLiveAddressRange(const DWARFDie &DIE,
                                    CompileUnit::DIEInfo &Info) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the debug_info section.
   ///
-  /// This function must be called with monotonic \p BaseOffset values.
-  ///
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
 
   /// Relocate the given address offset if a valid relocation exists.
-  virtual llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t Offset) = 0;
+  virtual llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
+                                                       uint64_t EndOffset) = 0;
 
   /// Returns all valid functions address ranges(i.e., those ranges
   /// which points to sections with code).

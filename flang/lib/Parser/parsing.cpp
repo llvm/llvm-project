@@ -25,7 +25,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   AllSources &allSources{allCooked_.allSources()};
   if (options.isModuleFile) {
     for (const auto &path : options.searchDirectories) {
-      allSources.PushSearchPathDirectory(path);
+      allSources.AppendSearchPathDirectory(path);
     }
   }
 
@@ -35,7 +35,8 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (path == "-") {
     sourceFile = allSources.ReadStandardInput(fileError);
   } else {
-    sourceFile = allSources.Open(path, fileError);
+    std::optional<std::string> currentDirectory{"."};
+    sourceFile = allSources.Open(path, fileError, std::move(currentDirectory));
   }
   if (!fileError.str().empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};
@@ -46,12 +47,12 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
 
   if (!options.isModuleFile) {
     // For .mod files we always want to look in the search directories.
-    // For normal source files we don't push them until after the primary
+    // For normal source files we don't add them until after the primary
     // source file has been opened.  If foo.f is missing from the current
     // working directory, we don't want to accidentally read another foo.f
     // from another directory that's on the search path.
     for (const auto &path : options.searchDirectories) {
-      allSources.PushSearchPathDirectory(path);
+      allSources.AppendSearchPathDirectory(path);
     }
   }
 

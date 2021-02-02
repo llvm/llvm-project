@@ -1451,4 +1451,22 @@ const std::optional<parser::Name> &MaybeGetNodeName(
       construct);
 }
 
+std::optional<ArraySpec> ToArraySpec(
+    evaluate::FoldingContext &context, const evaluate::Shape &shape) {
+  if (auto extents{evaluate::AsConstantExtents(context, shape)}) {
+    ArraySpec result;
+    for (const auto &extent : *extents) {
+      result.emplace_back(ShapeSpec::MakeExplicit(Bound{extent}));
+    }
+    return {std::move(result)};
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<ArraySpec> ToArraySpec(evaluate::FoldingContext &context,
+    const std::optional<evaluate::Shape> &shape) {
+  return shape ? ToArraySpec(context, *shape) : std::nullopt;
+}
+
 } // namespace Fortran::semantics

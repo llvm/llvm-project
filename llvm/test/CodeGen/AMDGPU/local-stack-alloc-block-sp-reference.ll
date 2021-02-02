@@ -44,14 +44,14 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-NEXT:    v_add_u32_e32 v1, 0x20d0, v1
 ; MUBUF-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen glc
+; MUBUF-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v3
-; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
+; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v4
+; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v5, vcc
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
@@ -135,16 +135,16 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-NEXT:    v_add_u32_e32 v3, 0x20d0, v3
 ; MUBUF-NEXT:    buffer_load_dword v4, v3, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v5, v3, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen glc
+; MUBUF-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_sub_u32 s32, s32, 0x180000
 ; MUBUF-NEXT:    s_mov_b32 s33, s5
-; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v4, v5
-; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v6, vcc
+; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v4, v6
+; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v5, v7, vcc
 ; MUBUF-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
@@ -234,25 +234,26 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; MUBUF-NEXT:    v_or_b32_e32 v2, 0x12c4, v0
 ; MUBUF-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen glc
+; MUBUF-NEXT:    buffer_load_dword v7, v1, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v2, 0x12cc, v0
+; MUBUF-NEXT:    v_or_b32_e32 v1, 0x12cc, v0
 ; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12c8, v0
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen glc
+; MUBUF-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    v_mov_b32_e32 v12, 0
 ; MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v7, v13, s[0:3], 0 offen glc
+; MUBUF-NEXT:    buffer_load_dword v8, v13, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v8, v13, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v9, v13, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v2, v13, s[0:3], 0 offen offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v9, v13, s[0:3], 0 offen offset:12 glc
+; MUBUF-NEXT:    buffer_load_dword v3, v13, s[0:3], 0 offen offset:12 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v10, v13, s[0:3], 0 offen offset:16 glc
@@ -260,11 +261,10 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; MUBUF-NEXT:    v_mov_b32_e32 v13, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v11, v13, s[0:3], 0 offen offset:20 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v12, 0
 ; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
-; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v9, vcc
-; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v1, v7
-; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v6, v8, vcc
+; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v1, v3, vcc
+; MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v7, v8
+; MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v6, v9, vcc
 ; MUBUF-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v10
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v11, vcc
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)

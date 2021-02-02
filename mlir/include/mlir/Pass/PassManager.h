@@ -375,6 +375,9 @@ private:
   /// An optional factory to use when generating a crash reproducer if valid.
   ReproducerStreamFactory crashReproducerStreamFactory;
 
+  /// A hash key used to detect when reinitialization is necessary.
+  llvm::hash_code initializationKey;
+
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
 

@@ -27,4 +27,4 @@ void BuryPointer(const void *Ptr) {
   GraveYard[Idx] = Ptr;
 }
 
-}
+} // namespace llvm

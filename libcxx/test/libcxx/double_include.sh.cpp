@@ -91,6 +91,7 @@
 #    include <filesystem>
 #endif
 #include <float.h>
+#include <format>
 #include <forward_list>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <fstream>

@@ -35,10 +35,12 @@ AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
   if (const auto *CE = dyn_cast<CastExpr>(E)) {
     const auto M = hasSizeOfDescendant(Depth - 1, InnerMatcher);
     return M.matches(*CE->getSubExpr(), Finder, Builder);
-  } else if (const auto *UE = dyn_cast<UnaryOperator>(E)) {
+  }
+  if (const auto *UE = dyn_cast<UnaryOperator>(E)) {
     const auto M = hasSizeOfDescendant(Depth - 1, InnerMatcher);
     return M.matches(*UE->getSubExpr(), Finder, Builder);
-  } else if (const auto *BE = dyn_cast<BinaryOperator>(E)) {
+  }
+  if (const auto *BE = dyn_cast<BinaryOperator>(E)) {
     const auto LHS = hasSizeOfDescendant(Depth - 1, InnerMatcher);
     const auto RHS = hasSizeOfDescendant(Depth - 1, InnerMatcher);
     return LHS.matches(*BE->getLHS(), Finder, Builder) ||

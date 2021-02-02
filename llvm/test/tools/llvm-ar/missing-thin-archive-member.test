@@ -12,6 +12,6 @@
 ## File has been deleted.
 # RUN: llvm-ar qT %t-archive.a %t-temp.txt
 # RUN: rm %t-temp.txt
-# RUN: not llvm-ar p %t-archive.a 2>&1 | FileCheck %s --check-prefix=DELETED
+# RUN: not llvm-ar p %t-archive.a 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=DELETED
 
-# DELETED: error: {{[Nn]}}o such file or directory
+# DELETED: error: [[MSG]]

@@ -596,8 +596,8 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
       FileName(FileName), ContextProvider(Opts.ContextProvider), CDB(CDB),
       Callbacks(Callbacks), Barrier(Barrier), Done(false),
       Status(FileName, Callbacks),
-      PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory,
-                   RunSync || !Opts.AsyncPreambleBuilds, Status, *this) {
+      PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory, RunSync,
+                   Status, *this) {
   // Set a fallback command because compile command can be accessed before
   // `Inputs` is initialized. Other fields are only used after initialization
   // from client inputs.
@@ -648,7 +648,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     log("ASTWorker building file {0} version {1} with command {2}\n[{3}]\n{4}",
         FileName, Inputs.Version, Inputs.CompileCommand.Heuristic,
         Inputs.CompileCommand.Directory,
-        llvm::join(Inputs.CompileCommand.CommandLine, " "));
+        printArgv(Inputs.CompileCommand.CommandLine));
 
     StoreDiags CompilerInvocationDiagConsumer;
     std::vector<std::string> CC1Args;
@@ -656,7 +656,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
         Inputs, CompilerInvocationDiagConsumer, &CC1Args);
     // Log cc1 args even (especially!) if creating invocation failed.
     if (!CC1Args.empty())
-      vlog("Driver produced command: cc1 {0}", llvm::join(CC1Args, " "));
+      vlog("Driver produced command: cc1 {0}", printArgv(CC1Args));
     std::vector<Diag> CompilerInvocationDiags =
         CompilerInvocationDiagConsumer.take();
     if (!Invocation) {

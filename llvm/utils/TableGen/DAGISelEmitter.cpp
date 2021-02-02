@@ -153,9 +153,8 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   // Add all the patterns to a temporary list so we can sort them.
   Records.startTimer("Sort patterns");
   std::vector<const PatternToMatch*> Patterns;
-  for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(), E = CGP.ptm_end();
-       I != E; ++I)
-    Patterns.push_back(&*I);
+  for (const PatternToMatch &PTM : CGP.ptms())
+    Patterns.push_back(&PTM);
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.

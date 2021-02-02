@@ -383,6 +383,8 @@ public:
     Default,
     Disabled,
     Ranges,
+    Expressions,
+    Form,
   };
 
 private:
@@ -704,6 +706,18 @@ public:
   /// lists.
   bool alwaysUseRanges() const {
     return MinimizeAddr == MinimizeAddrInV5::Ranges;
+  }
+
+  // Returns whether novel exprloc addrx+offset encodings should be used to
+  // reduce debug_addr size.
+  bool useAddrOffsetExpressions() const {
+    return MinimizeAddr == MinimizeAddrInV5::Expressions;
+  }
+
+  // Returns whether addrx+offset LLVM extension form should be used to reduce
+  // debug_addr size.
+  bool useAddrOffsetForm() const {
+    return MinimizeAddr == MinimizeAddrInV5::Form;
   }
 
   /// Returns whether to use sections as labels rather than temp symbols.

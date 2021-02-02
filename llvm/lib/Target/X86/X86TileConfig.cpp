@@ -22,6 +22,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -130,13 +131,14 @@ static MachineInstr *storeImmToStackSlot(MachineBasicBlock &MBB,
 }
 
 MachineInstr *X86TileConfig::getTileConfigPoint() {
-  for (MachineBasicBlock &MBB : *MF) {
-
-    // Traverse the basic block.
-    for (MachineInstr &MI : MBB)
+  MachineBasicBlock *Entry = &*MF->begin();
+  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(Entry);
+  for (MachineBasicBlock *MBB : RPOT) {
+    for (MachineInstr &MI : *MBB)
       // Refer X86PreTileConfig.cpp.
-      // We only support one tile config for now.
-      if (MI.getOpcode() == X86::PLDTILECFG)
+      // We only support one tile config for now. The other ldtilecfg
+      // is for spill purpose and is dominated by the first ldtilecfg.
+      if (MI.getOpcode() == X86::LDTILECFG)
         return &MI;
   }
 
@@ -148,7 +150,7 @@ void X86TileConfig::tileConfig() {
   if (!MI)
     return;
   MachineBasicBlock *MBB = MI->getParent();
-  int SS = MI->getOperand(1).getIndex();
+  int SS = MI->getOperand(0).getIndex();
   BitVector PhysRegs(TRI->getNumRegs());
 
   // Fill in the palette first.

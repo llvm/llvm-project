@@ -1092,24 +1092,26 @@ foreach coordTy = [Int, Float] in {
 }
 
 // --- Table 23: Sampler-less Read Functions ---
-foreach aQual = ["RO", "RW"] in {
-  foreach imgTy = [Image2d, Image1dArray] in {
-    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+let MinVersion = CL12 in {
+  foreach aQual = ["RO", "RW"] in {
+    foreach imgTy = [Image2d, Image1dArray] in {
+      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    }
+    foreach imgTy = [Image3d, Image2dArray] in {
+      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+    }
+    foreach imgTy = [Image1d, Image1dBuffer] in {
+      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+    }
+    def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
   }
-  foreach imgTy = [Image3d, Image2dArray] in {
-    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-  }
-  foreach imgTy = [Image1d, Image1dBuffer] in {
-    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-  }
-  def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
-  def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
 }
 
 // --- Table 24: Image Write Functions ---
@@ -1187,16 +1189,18 @@ foreach aQual = ["RO"] in {
 }
 // OpenCL extension v2.0 s5.1.10: Built-in Image Sampler-less Read Functions
 // --- Table 9 ---
-foreach aQual = ["RO", "RW"] in {
-  foreach name = ["read_imageh"] in {
-    foreach imgTy = [Image2d, Image1dArray] in {
-      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    }
-    foreach imgTy = [Image3d, Image2dArray] in {
-      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-    }
-    foreach imgTy = [Image1d, Image1dBuffer] in {
-      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+let MinVersion = CL12 in {
+  foreach aQual = ["RO", "RW"] in {
+    foreach name = ["read_imageh"] in {
+      foreach imgTy = [Image2d, Image1dArray] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+      }
+      foreach imgTy = [Image3d, Image2dArray] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+      }
+      foreach imgTy = [Image1d, Image1dBuffer] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+      }
     }
   }
 }

@@ -1318,6 +1318,10 @@ public:
             getIndexedMaskedStoreAction(IdxMode, VT.getSimpleVT()) == Custom);
   }
 
+  /// Returns true if the index type for a masked gather/scatter requires
+  /// extending
+  virtual bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const { return false; }
+
   // Returns true if VT is a legal index type for masked gathers/scatters
   // on this target
   virtual bool shouldRemoveExtendFromGSIndex(EVT VT) const { return false; }
@@ -4395,6 +4399,12 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG,
                  bool IsNegative = false) const;
+
+  /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
+  /// scalar types. Returns SDValue() if expand fails.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand

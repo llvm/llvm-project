@@ -41,6 +41,20 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
       return std::make_pair(Def->getOperand(1).getReg(), Offset);
   }
 
+  // Handle G_PTRTOINT (G_PTR_ADD base, const) case
+  if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
+    MachineInstr *Base;
+    if (mi_match(Def->getOperand(1).getReg(), MRI,
+                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+      // If Base was int converted to pointer, simply return int and offset.
+      if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
+        return std::make_pair(Base->getOperand(1).getReg(), Offset);
+
+      // Register returned here will be of pointer type.
+      return std::make_pair(Base->getOperand(0).getReg(), Offset);
+    }
+  }
+
   return std::make_pair(Reg, 0);
 }
 

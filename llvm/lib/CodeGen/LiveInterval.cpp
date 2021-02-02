@@ -487,7 +487,7 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
 /// by [Start, End).
 bool LiveRange::overlaps(SlotIndex Start, SlotIndex End) const {
   assert(Start < End && "Invalid range");
-  const_iterator I = std::lower_bound(begin(), end(), End);
+  const_iterator I = lower_bound(*this, End);
   return I != begin() && (--I)->end > Start;
 }
 

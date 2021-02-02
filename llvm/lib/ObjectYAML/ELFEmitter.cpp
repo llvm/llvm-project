@@ -555,7 +555,8 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
   const ELFYAML::SectionHeaderTable &SectionHeaders =
       Doc.getSectionHeaderTable();
   if (SectionHeaders.IsImplicit ||
-      (SectionHeaders.NoHeaders && !SectionHeaders.NoHeaders.getValue()))
+      (SectionHeaders.NoHeaders && !SectionHeaders.NoHeaders.getValue()) ||
+      SectionHeaders.isDefault())
     return Index;
 
   assert(!SectionHeaders.NoHeaders.getValueOr(false) ||
@@ -1744,7 +1745,8 @@ template <class ELFT>
 DenseMap<StringRef, size_t> ELFState<ELFT>::buildSectionHeaderReorderMap() {
   const ELFYAML::SectionHeaderTable &SectionHeaders =
       Doc.getSectionHeaderTable();
-  if (SectionHeaders.IsImplicit || SectionHeaders.NoHeaders)
+  if (SectionHeaders.IsImplicit || SectionHeaders.NoHeaders ||
+      SectionHeaders.isDefault())
     return DenseMap<StringRef, size_t>();
 
   DenseMap<StringRef, size_t> Ret;

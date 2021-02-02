@@ -166,6 +166,12 @@ public:
   Dialect *getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                             function_ref<std::unique_ptr<Dialect>()> ctor);
 
+  /// Returns a hash of the registry of the context that may be used to give
+  /// a rough indicator of if the state of the context registry has changed. The
+  /// context registry correlates to loaded dialects and their entities
+  /// (attributes, operations, types, etc.).
+  llvm::hash_code getRegistryHash();
+
 private:
   const std::unique_ptr<MLIRContextImpl> impl;
 

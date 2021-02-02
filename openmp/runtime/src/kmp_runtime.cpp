@@ -32,7 +32,7 @@
 #include "ompt-specific.h"
 #endif
 
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
 #include "llvm/Support/TimeProfiler.h"
 static char *ProfileTraceFile = nullptr;
 #endif
@@ -2752,6 +2752,19 @@ int __kmp_get_max_active_levels(int gtid) {
                 thread->th.th_current_task->td_icvs.max_active_levels));
   return thread->th.th_current_task->td_icvs.max_active_levels;
 }
+
+// nteams-var per-device ICV
+void __kmp_set_num_teams(int num_teams) {
+  if (num_teams > 0)
+    __kmp_nteams = num_teams;
+}
+int __kmp_get_max_teams(void) { return __kmp_nteams; }
+// teams-thread-limit-var per-device ICV
+void __kmp_set_teams_thread_limit(int limit) {
+  if (limit > 0)
+    __kmp_teams_thread_limit = limit;
+}
+int __kmp_get_teams_thread_limit(void) { return __kmp_teams_thread_limit; }
 
 KMP_BUILD_ASSERT(sizeof(kmp_sched_t) == sizeof(int));
 KMP_BUILD_ASSERT(sizeof(enum sched_type) == sizeof(int));
@@ -5740,7 +5753,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
 /* ------------------------------------------------------------------------ */
 
 void *__kmp_launch_thread(kmp_info_t *this_thr) {
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
   ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
@@ -5848,7 +5861,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   KA_TRACE(10, ("__kmp_launch_thread: T#%d done\n", gtid));
   KMP_MB();
 
-#if OMPTARGET_PROFILING_SUPPORT
+#if OMP_PROFILING_SUPPORT
   llvm::timeTraceProfilerFinishThread();
 #endif
   return this_thr;
@@ -7420,8 +7433,13 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
   KMP_DEBUG_ASSERT(num_teams >= 0);
   KMP_DEBUG_ASSERT(num_threads >= 0);
 
-  if (num_teams == 0)
-    num_teams = 1; // default number of teams is 1.
+  if (num_teams == 0) {
+    if (__kmp_nteams > 0) {
+      num_teams = __kmp_nteams;
+    } else {
+      num_teams = 1; // default number of teams is 1.
+    }
+  }
   if (num_teams > __kmp_teams_max_nth) { // if too many teams requested?
     if (!__kmp_reserve_warn) {
       __kmp_reserve_warn = 1;
@@ -7441,7 +7459,11 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
   KMP_DEBUG_ASSERT(__kmp_avail_proc);
   KMP_DEBUG_ASSERT(__kmp_dflt_team_nth);
   if (num_threads == 0) {
-    num_threads = __kmp_avail_proc / num_teams;
+    if (__kmp_teams_thread_limit > 0) {
+      num_threads = __kmp_teams_thread_limit;
+    } else {
+      num_threads = __kmp_avail_proc / num_teams;
+    }
     // adjust num_threads w/o warning as it is not user setting
     // num_threads = min(num_threads, nthreads-var, thread-limit-var)
     // no thread_limit clause specified -  do not change thread-limit-var ICV

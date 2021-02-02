@@ -90,6 +90,13 @@ struct Config {
   struct {
     bool SuppressAll = false;
     llvm::StringSet<> Suppress;
+
+    /// Configures what clang-tidy checks to run and options to use with them.
+    struct {
+      // A comma-seperated list of globs specify which clang-tidy checks to run.
+      std::string Checks;
+      llvm::StringMap<std::string> CheckOptions;
+    } ClangTidy;
   } Diagnostics;
 
   /// Style of the codebase.
@@ -99,14 +106,6 @@ struct Config {
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
   } Style;
-
-  /// Configures what clang-tidy checks to run and options to use with them.
-  struct {
-    // A comma-seperated list of globs to specify which clang-tidy checks to
-    // run.
-    std::string Checks;
-    llvm::StringMap<std::string> CheckOptions;
-  } ClangTidy;
 };
 
 } // namespace clangd

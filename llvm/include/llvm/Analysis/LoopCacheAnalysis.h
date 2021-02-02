@@ -205,7 +205,7 @@ public:
   }
 
   /// Return the estimated ordered loop costs.
-  const ArrayRef<LoopCacheCostTy> getLoopCosts() const { return LoopCosts; }
+  ArrayRef<LoopCacheCostTy> getLoopCosts() const { return LoopCosts; }
 
 private:
   /// Calculate the cache footprint of each loop in the nest (when it is

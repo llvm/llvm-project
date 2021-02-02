@@ -18,7 +18,7 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"
 
-; CHECK:      @var1 = external global i32, align 4
+; CHECK:      @var1 = external hidden global i32, align 4
 ; CHECK-NEXT: @var2 = available_externally hidden global i32 1, align 4
 
 @var1 = weak global i32 1, align 4
@@ -26,8 +26,9 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 declare void @ext(void ()*)
 
-; CHECK: declare i32 @hidden_def_weak_def()
-;; Currently the visibility is not propagated for an unimported function.
+; CHECK: declare hidden i32 @hidden_def_weak_def()
+;; Currently the visibility is not propagated onto an unimported function,
+;; because we don't have summaries for declarations.
 ; CHECK: declare extern_weak dso_local void @not_imported()
 ; CHECK: define available_externally hidden void @hidden_def_ref() !thinlto_src_module !0
 ; CHECK: define available_externally hidden void @hidden_def_weak_ref() !thinlto_src_module !0

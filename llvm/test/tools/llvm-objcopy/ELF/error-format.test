@@ -1,9 +1,9 @@
 ## This test shows that we include the tool name in error/warning messages.
 
-# RUN: not llvm-objcopy %S/non-existent 2>&1 | FileCheck --check-prefix=ERR %s -DTOOL=objcopy
-# RUN: not llvm-strip %S/non-existent 2>&1 | FileCheck --check-prefix=ERR %s -DTOOL=strip
+# RUN: not llvm-objcopy %S/non-existent 2>&1 | FileCheck --check-prefix=ERR %s -DTOOL=objcopy -DMSG=%errc_ENOENT
+# RUN: not llvm-strip %S/non-existent 2>&1 | FileCheck --check-prefix=ERR %s -DTOOL=strip -DMSG=%errc_ENOENT
 
-# ERR: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}': {{[Nn]}}o such file or directory
+# ERR: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}': [[MSG]]
 
 ## Currently llvm-objcopy does not issue warnings, so it is not tested.
 

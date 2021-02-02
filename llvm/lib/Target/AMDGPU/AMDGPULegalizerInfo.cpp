@@ -3518,11 +3518,16 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   Register BaseReg;
   unsigned TotalConstOffset;
   const LLT S32 = LLT::scalar(32);
+  MachineRegisterInfo &MRI = *B.getMRI();
 
   std::tie(BaseReg, TotalConstOffset) =
-      AMDGPU::getBaseWithConstantOffset(*B.getMRI(), OrigOffset);
+      AMDGPU::getBaseWithConstantOffset(MRI, OrigOffset);
 
   unsigned ImmOffset = TotalConstOffset;
+
+  // If BaseReg is a pointer, convert it to int.
+  if (MRI.getType(BaseReg).isPointer())
+    BaseReg = B.buildPtrToInt(MRI.getType(OrigOffset), BaseReg).getReg(0);
 
   // If the immediate value is too big for the immoffset field, put the value
   // and -4096 into the immoffset field so that the value that is copied/added

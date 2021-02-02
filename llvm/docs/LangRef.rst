@@ -19726,6 +19726,37 @@ specified by C standard:
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
 
+
+'``llvm.set.rounding``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.set.rounding(i32 <val>)
+
+Overview:
+"""""""""
+
+The '``llvm.set.rounding``' intrinsic sets current rounding mode.
+
+Arguments:
+""""""""""
+
+The argument is the required rounding mode. Encoding of rounding mode is
+the same as used by '``llvm.flt.rounds``'.
+
+Semantics:
+""""""""""
+
+The '``llvm.set.rounding``' intrinsic sets the current rounding mode. It is
+similar to C library function 'fesetround', however this intrinsic does not
+return any value and uses platform-independent representation of IEEE rounding
+modes.
+
+
 General Intrinsics
 ------------------
 

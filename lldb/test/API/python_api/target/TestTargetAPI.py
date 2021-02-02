@@ -476,3 +476,41 @@ class TargetAPITestCase(TestBase):
         desc2 = get_description(symbol2)
         self.assertTrue(desc1 and desc2 and desc1 == desc2,
                         "The two addresses should resolve to the same symbol")
+    def test_default_arch(self):
+        """ Test the other two target create methods using LLDB_ARCH_DEFAULT. """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
+        self.assertTrue(target.IsValid(), "Default arch made a valid target.")
+        # This should also work with the target's triple:
+        target2 = self.dbg.CreateTargetWithFileAndArch(exe, target.GetTriple())
+        self.assertTrue(target2.IsValid(), "Round trip with triple works")
+        # And this triple should work for the FileAndTriple API:
+        target3 = self.dbg.CreateTargetWithFileAndTargetTriple(exe, target.GetTriple())
+        self.assertTrue(target3.IsValid())
+
+
+    @add_test_categories(['pyapi'])
+    @skipIfWindows
+    def test_is_loaded(self):
+        """Exercise SBTarget.IsLoaded(SBModule&) API."""
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target('b.out')
+
+        self.assertFalse(target.IsLoaded(lldb.SBModule()))
+
+        num_modules = target.GetNumModules()
+        for i in range(num_modules):
+            module = target.GetModuleAtIndex(i)
+            self.assertFalse(target.IsLoaded(module), "Target that isn't "
+                             "running shouldn't have any module loaded.")
+
+        process = target.LaunchSimple(None, None,
+                                      self.get_process_working_directory())
+
+        for i in range(num_modules):
+            module = target.GetModuleAtIndex(i)
+            self.assertTrue(target.IsLoaded(module), "Running the target should "
+                            "have loaded its modules.")

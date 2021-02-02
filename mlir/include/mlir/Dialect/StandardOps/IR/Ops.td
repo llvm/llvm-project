@@ -1956,6 +1956,19 @@ def MemRefReinterpretCastOp:
   );
   let results = (outs AnyMemRef:$result);
 
+  let assemblyFormat = [{
+    $source `to` `offset` `` `:`
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    `` `,` `sizes` `` `:`
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) `` `,` `strides`
+    `` `:`
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let parser=?;
+  let printer=?;
+
   let builders = [
     // Build a ReinterpretCastOp with mixed static and dynamic entries.
     OpBuilderDAG<(ins "MemRefType":$resultType, "Value":$source,
@@ -1986,7 +1999,7 @@ def MemRefReinterpretCastOp:
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned resultRank = getResult().getType().cast<ShapedType>().getRank();
       return {1, resultRank, resultRank};
     }
@@ -2931,6 +2944,14 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
   );
   let results = (outs AnyMemRef:$result);
 
+  let assemblyFormat = [{
+    $source ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
   let builders = [
     // Build a SubViewOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.
@@ -2983,7 +3004,7 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
@@ -3053,6 +3074,14 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
   );
   let results = (outs AnyRankedTensor:$result);
 
+  let assemblyFormat = [{
+    $source ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
   let builders = [
     // Build a SubTensorOp with mixed static and dynamic entries and inferred
     // result type.
@@ -3097,7 +3126,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
@@ -3115,7 +3144,10 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 //===----------------------------------------------------------------------===//
 
 def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
-    "subtensor_insert", [OffsetSizeAndStrideOpInterface]> {
+    "subtensor_insert",
+    [OffsetSizeAndStrideOpInterface,
+     TypesMatchWith<"expected result type to match dest type",
+                    "dest", "result", "$_self">]> {
   let summary = "subtensor_insert operation";
   let description = [{
     The "subtensor_insert" operation insert a tensor `source` into another
@@ -3159,6 +3191,16 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
   );
   let results = (outs AnyRankedTensor:$result);
 
+  let assemblyFormat = [{
+    $source `into` $dest ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `into` type($dest)
+  }];
+
+  let verifier = ?;
+
   let builders = [
     // Build a SubTensorInsertOp with mixed static and dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "Value":$dest,
@@ -3184,7 +3226,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
-    std::array<unsigned, 3> getArrayAttrRanks() {
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank = getType().getRank();
       return {rank, rank, rank};
     }

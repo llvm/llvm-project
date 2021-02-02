@@ -342,9 +342,15 @@ private:
 };
 
 int main(int argc, const char **argv) {
-  CommonOptionsParser OP(argc, argv, InstrCategory,
-                         "Utility for generating the macros for LLDB's "
-                         "instrumentation framework.");
+  auto ExpectedParser = CommonOptionsParser::create(
+      argc, argv, InstrCategory, llvm::cl::OneOrMore,
+      "Utility for generating the macros for LLDB's "
+      "instrumentation framework.");
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &OP = ExpectedParser.get();
 
   auto PCHOpts = std::make_shared<PCHContainerOperations>();
   PCHOpts->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());

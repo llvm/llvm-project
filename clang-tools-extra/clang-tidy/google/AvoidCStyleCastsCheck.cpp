@@ -67,7 +67,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   if (CastExpr->getCastKind() == CK_ToVoid)
     return;
 
-  auto isFunction = [](QualType T) {
+  auto IsFunction = [](QualType T) {
     T = T.getCanonicalType().getNonReferenceType();
     return T->isFunctionType() || T->isFunctionPointerType() ||
            T->isMemberFunctionPointerType();
@@ -84,7 +84,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       CastExpr->getLParenLoc(), CastExpr->getSubExprAsWritten()->getBeginLoc());
 
   bool FnToFnCast =
-      isFunction(SourceTypeAsWritten) && isFunction(DestTypeAsWritten);
+      IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
       DestTypeAsWritten->isRecordType() &&

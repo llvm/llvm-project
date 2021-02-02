@@ -259,32 +259,36 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
 }
 
 TEST_F(ConfigCompileTests, Tidy) {
-  Frag.ClangTidy.Add.emplace_back("bugprone-use-after-move");
-  Frag.ClangTidy.Add.emplace_back("llvm-*");
-  Frag.ClangTidy.Remove.emplace_back("llvm-include-order");
-  Frag.ClangTidy.Remove.emplace_back("readability-*");
-  Frag.ClangTidy.CheckOptions.emplace_back(
+  auto &Tidy = Frag.Diagnostics.ClangTidy;
+  Tidy.Add.emplace_back("bugprone-use-after-move");
+  Tidy.Add.emplace_back("llvm-*");
+  Tidy.Remove.emplace_back("llvm-include-order");
+  Tidy.Remove.emplace_back("readability-*");
+  Tidy.CheckOptions.emplace_back(
       std::make_pair(std::string("StrictMode"), std::string("true")));
-  Frag.ClangTidy.CheckOptions.emplace_back(std::make_pair(
+  Tidy.CheckOptions.emplace_back(std::make_pair(
       std::string("example-check.ExampleOption"), std::string("0")));
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(
-      Conf.ClangTidy.Checks,
+      Conf.Diagnostics.ClangTidy.Checks,
       "bugprone-use-after-move,llvm-*,-llvm-include-order,-readability-*");
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.size(), 2U);
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("StrictMode"), "true");
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("example-check.ExampleOption"),
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 2U);
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup("StrictMode"),
+            "true");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup(
+                "example-check.ExampleOption"),
             "0");
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
 }
 
 TEST_F(ConfigCompileTests, TidyBadChecks) {
-  Frag.ClangTidy.Add.emplace_back("unknown-check");
-  Frag.ClangTidy.Remove.emplace_back("*");
-  Frag.ClangTidy.Remove.emplace_back("llvm-includeorder");
+  auto &Tidy = Frag.Diagnostics.ClangTidy;
+  Tidy.Add.emplace_back("unknown-check");
+  Tidy.Remove.emplace_back("*");
+  Tidy.Remove.emplace_back("llvm-includeorder");
   EXPECT_TRUE(compileAndApply());
   // Ensure bad checks are stripped from the glob.
-  EXPECT_EQ(Conf.ClangTidy.Checks, "-*");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.Checks, "-*");
   EXPECT_THAT(
       Diags.Diagnostics,
       ElementsAre(

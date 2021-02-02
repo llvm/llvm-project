@@ -501,4 +501,10 @@ bool DWARFExpression::printCompact(raw_ostream &OS, const MCRegisterInfo &MRI) {
   return printCompactDWARFExpr(OS, begin(), end(), MRI);
 }
 
+bool DWARFExpression::operator==(const DWARFExpression &RHS) const {
+  if (AddressSize != RHS.AddressSize || Format != RHS.Format)
+    return false;
+  return Data.getData() == RHS.Data.getData();
+}
+
 } // namespace llvm

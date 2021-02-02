@@ -408,7 +408,7 @@ int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 }
 
 bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
-  if (!MI->mayLoadOrStore())
+  if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 
   int64_t FullOffset = Offset + getScratchInstrOffset(MI);

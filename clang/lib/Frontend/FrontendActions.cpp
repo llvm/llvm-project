@@ -136,13 +136,9 @@ bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 std::unique_ptr<llvm::raw_pwrite_stream>
 GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
                                     std::string &OutputFile) {
-  // We use createOutputFile here because this is exposed via libclang, and we
-  // must disable the RemoveFileOnSignal behavior.
-  // We use a temporary to avoid race conditions.
-  std::unique_ptr<raw_pwrite_stream> OS =
-      CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
-                          /*RemoveFileOnSignal=*/false, InFile,
-                          /*Extension=*/"", CI.getFrontendOpts().UseTemporary);
+  // Because this is exposed via libclang we must disable RemoveFileOnSignal.
+  std::unique_ptr<raw_pwrite_stream> OS = CI.createDefaultOutputFile(
+      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false);
   if (!OS)
     return nullptr;
 
@@ -219,13 +215,10 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                    ModuleMapFile);
   }
 
-  // We use createOutputFile here because this is exposed via libclang, and we
-  // must disable the RemoveFileOnSignal behavior.
-  // We use a temporary to avoid race conditions.
-  return CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
-                             /*RemoveFileOnSignal=*/false, InFile,
-                             /*Extension=*/"", /*UseTemporary=*/true,
-                             /*CreateMissingDirectories=*/true);
+  // Because this is exposed via libclang we must disable RemoveFileOnSignal.
+  return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
+                                    /*RemoveFileOnSignal=*/false,
+                                    /*CreateMissingDirectories=*/true);
 }
 
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(

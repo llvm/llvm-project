@@ -307,6 +307,10 @@ public:
     AddrOffsetSectionBase = Base;
   }
 
+  Optional<uint64_t> getAddrOffsetSectionBase() const {
+    return AddrOffsetSectionBase;
+  }
+
   /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
 

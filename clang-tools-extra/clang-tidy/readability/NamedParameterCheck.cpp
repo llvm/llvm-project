@@ -62,7 +62,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Skip gmock testing::Unused parameters.
-    if (auto Typedef = Parm->getType()->getAs<clang::TypedefType>())
+    if (const auto *Typedef = Parm->getType()->getAs<clang::TypedefType>())
       if (Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
         continue;
 

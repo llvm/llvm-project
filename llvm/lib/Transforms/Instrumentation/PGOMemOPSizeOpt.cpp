@@ -245,7 +245,7 @@ public:
   void visitMemIntrinsic(MemIntrinsic &MI) {
     Value *Length = MI.getLength();
     // Not perform on constant length calls.
-    if (dyn_cast<ConstantInt>(Length))
+    if (isa<ConstantInt>(Length))
       return;
     WorkList.push_back(MemOp(&MI));
   }

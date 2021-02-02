@@ -456,8 +456,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
 
 static void splitCodeGen(const Config &C, TargetMachine *TM,
                          AddStreamFn AddStream,
-                         unsigned ParallelCodeGenParallelismLevel,
-                         std::unique_ptr<Module> Mod,
+                         unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
   ThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
@@ -465,7 +464,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
   const Target *T = &TM->getTarget();
 
   SplitModule(
-      std::move(Mod), ParallelCodeGenParallelismLevel,
+      Mod, ParallelCodeGenParallelismLevel,
       [&](std::unique_ptr<Module> MPart) {
         // We want to clone the module in a new context to multi-thread the
         // codegen. We do it by serializing partition modules to bitcode
@@ -532,27 +531,26 @@ Error lto::finalizeOptimizationRemarks(
 }
 
 Error lto::backend(const Config &C, AddStreamFn AddStream,
-                   unsigned ParallelCodeGenParallelismLevel,
-                   std::unique_ptr<Module> Mod,
+                   unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                    ModuleSummaryIndex &CombinedIndex) {
-  Expected<const Target *> TOrErr = initAndLookupTarget(C, *Mod);
+  Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
 
-  std::unique_ptr<TargetMachine> TM = createTargetMachine(C, *TOrErr, *Mod);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(C, *TOrErr, Mod);
 
   if (!C.CodeGenOnly) {
-    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false,
+    if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
              /*CmdArgs*/ std::vector<uint8_t>()))
       return Error::success();
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    codegen(C, TM.get(), AddStream, 0, *Mod, CombinedIndex);
+    codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
   } else {
-    splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
-                 std::move(Mod), CombinedIndex);
+    splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
+                 CombinedIndex);
   }
   return Error::success();
 }

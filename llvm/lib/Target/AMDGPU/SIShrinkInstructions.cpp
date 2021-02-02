@@ -75,17 +75,19 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
         MachineOperand &MovSrc = Def->getOperand(1);
         bool ConstantFolded = false;
 
-        if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
-                               isUInt<32>(MovSrc.getImm()))) {
-          Src0.ChangeToImmediate(MovSrc.getImm());
-          ConstantFolded = true;
-        } else if (MovSrc.isFI()) {
-          Src0.ChangeToFrameIndex(MovSrc.getIndex());
-          ConstantFolded = true;
-        } else if (MovSrc.isGlobal()) {
-          Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
-                          MovSrc.getTargetFlags());
-          ConstantFolded = true;
+        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
+          if (MovSrc.isImm() &&
+              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
+            Src0.ChangeToImmediate(MovSrc.getImm());
+            ConstantFolded = true;
+          } else if (MovSrc.isFI()) {
+            Src0.ChangeToFrameIndex(MovSrc.getIndex());
+            ConstantFolded = true;
+          } else if (MovSrc.isGlobal()) {
+            Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
+                            MovSrc.getTargetFlags());
+            ConstantFolded = true;
+          }
         }
 
         if (ConstantFolded) {

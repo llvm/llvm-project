@@ -1256,7 +1256,6 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
 defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
                       "extadd_pairwise_i16x8_u", 0xa6>;
 
-
 // Prototype f64x2 conversions
 defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_signed,
                       "convert_low_i32x4_s", 0x53>;
@@ -1270,6 +1269,25 @@ defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
                       "demote_zero_f64x2", 0x57>;
 defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
                       "promote_low_f32x4", 0x69>;
+
+// Prototype i8x16 to i32x4 widening
+defm WIDEN_I8x16_TO_I32x4_S :
+  SIMD_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
+         (outs), (ins vec_i8imm_op:$idx),
+         [(set (I32x4.vt V128:$dst),
+            (I32x4.vt (int_wasm_widen_signed
+              (I8x16.vt V128:$vec), (i32 timm:$idx))))],
+         "i32x4.widen_i8x16_s\t$dst, $vec, $idx",
+         "i32x4.widen_i8x16_s\t$idx", 0x67>;
+defm WIDEN_I8x16_TO_I32x4_U :
+  SIMD_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
+         (outs), (ins vec_i8imm_op:$idx),
+         [(set (I32x4.vt V128:$dst),
+            (I32x4.vt (int_wasm_widen_unsigned
+              (I8x16.vt V128:$vec), (i32 timm:$idx))))],
+         "i32x4.widen_i8x16_u\t$dst, $vec, $idx",
+         "i32x4.widen_i8x16_u\t$idx", 0x68>;
+
 
 //===----------------------------------------------------------------------===//
 // Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)

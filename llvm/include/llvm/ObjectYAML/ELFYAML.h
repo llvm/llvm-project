@@ -155,9 +155,9 @@ struct DynamicEntry {
 
 struct BBAddrMapEntry {
   struct BBEntry {
-    llvm::yaml::Hex32 AddressOffset;
-    llvm::yaml::Hex32 Size;
-    llvm::yaml::Hex32 Metadata;
+    llvm::yaml::Hex64 AddressOffset;
+    llvm::yaml::Hex64 Size;
+    llvm::yaml::Hex64 Metadata;
   };
   llvm::yaml::Hex64 Address;
   Optional<std::vector<BBEntry>> BBEntries;
@@ -296,12 +296,14 @@ struct SectionHeaderTable : Chunk {
   Optional<bool> NoHeaders;
 
   size_t getNumHeaders(size_t SectionsNum) const {
-    if (IsImplicit)
+    if (IsImplicit || isDefault())
       return SectionsNum;
     if (NoHeaders)
       return (*NoHeaders) ? 0 : SectionsNum;
     return (Sections ? Sections->size() : 0) + /*Null section*/ 1;
   }
+
+  bool isDefault() const { return !Sections && !Excluded && !NoHeaders; }
 
   static constexpr StringRef TypeStr = "SectionHeaderTable";
 };

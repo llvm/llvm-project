@@ -1370,7 +1370,7 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
     // matched to more than one vldN/vstN instruction.
     int BaseCost = ST->hasMVEIntegerOps() ? ST->getMVEVectorCostFactor() : 1;
     if (NumElts % Factor == 0 &&
-        TLI->isLegalInterleavedAccessType(Factor, SubVecTy, DL))
+        TLI->isLegalInterleavedAccessType(Factor, SubVecTy, Alignment, DL))
       return Factor * BaseCost * TLI->getNumInterleavedAccesses(SubVecTy, DL);
 
     // Some smaller than legal interleaved patterns are cheap as we can make

@@ -685,7 +685,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     UniqueID = NextUniqueID++;
     Flags |= ELF::SHF_LINK_ORDER;
   } else {
-    if (getContext().getAsmInfo()->useIntegratedAssembler()) {
+    if (getContext().getAsmInfo()->useIntegratedAssembler() ||
+        getContext().getAsmInfo()->binutilsIsAtLeast(2, 35)) {
       // Symbols must be placed into sections with compatible entry
       // sizes. Generate unique sections for symbols that have not
       // been assigned to compatible sections.
@@ -736,8 +737,9 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
 
-  if (!getContext().getAsmInfo()->useIntegratedAssembler()) {
-    // If we are not using the integrated assembler then this symbol might have
+  if (!(getContext().getAsmInfo()->useIntegratedAssembler() ||
+        getContext().getAsmInfo()->binutilsIsAtLeast(2, 35))) {
+    // If we are using GNU as before 2.35, then this symbol might have
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
     if ((Section->getFlags() & ELF::SHF_MERGE) &&

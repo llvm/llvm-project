@@ -213,6 +213,14 @@ HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
 
+/// Instructions which should not exist past instruction selection, but do not
+/// generate code. These instructions only act as optimization hints.
+HANDLE_TARGET_OPCODE(G_ASSERT_ZEXT)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPTIMIZATION_HINT_START,
+                            G_ASSERT_ZEXT)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPTIMIZATION_HINT_END,
+                            G_ASSERT_ZEXT)
+
 /// Generic ADD instruction. This is an integer add.
 HANDLE_TARGET_OPCODE(G_ADD)
 HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)

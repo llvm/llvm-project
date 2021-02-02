@@ -414,13 +414,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
   OS << "  };\n";
   OS << "  KeyType Key = {";
-  bool NeedComma = false;
+  ListSeparator LS;
   for (const auto &Field : Index.Fields) {
-    if (NeedComma)
-      OS << ", ";
-    NeedComma = true;
-
-    OS << Field.Name;
+    OS << LS << Field.Name;
     if (isa<StringRecTy>(Field.RecType)) {
       OS << ".upper()";
       if (IsPrimary)
@@ -482,15 +478,10 @@ void SearchableTableEmitter::emitLookupDeclaration(const GenericTable &Table,
                                                    raw_ostream &OS) {
   OS << "const " << Table.CppTypeName << " *" << Index.Name << "(";
 
-  bool NeedComma = false;
-  for (const auto &Field : Index.Fields) {
-    if (NeedComma)
-      OS << ", ";
-    NeedComma = true;
-
-    OS << searchableFieldType(Table, Index, Field, TypeInArgument) << " "
+  ListSeparator LS;
+  for (const auto &Field : Index.Fields)
+    OS << LS << searchableFieldType(Table, Index, Field, TypeInArgument) << " "
        << Field.Name;
-  }
   OS << ")";
 }
 

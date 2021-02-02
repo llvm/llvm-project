@@ -494,6 +494,8 @@ HANDLE_DW_FORM(0x1f02, GNU_str_index, 0, GNU)
 // Alternate debug sections proposal (output of "dwz" tool).
 HANDLE_DW_FORM(0x1f20, GNU_ref_alt, 0, GNU)
 HANDLE_DW_FORM(0x1f21, GNU_strp_alt, 0, GNU)
+// LLVM addr+offset extension
+HANDLE_DW_FORM(0x2001, LLVM_addrx_offset, 0, LLVM)
 
 // DWARF Expression operators.
 HANDLE_DW_OP(0x03, addr, 2, DWARF)

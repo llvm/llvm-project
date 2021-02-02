@@ -100,14 +100,14 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
   AllTypesMatch<["a", "b"]>,
   TypesMatchWith<"k1 has the same number of bits as elements in a",
                  "a", "k1",
-                 "IntegerType::get($_self.getContext(), "
-                 "($_self.cast<VectorType>().getShape()[0]))">,
+                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "IntegerType::get($_self.getContext(), 1))">,
   TypesMatchWith<"k2 has the same number of bits as elements in b",
                  // Should use `b` instead of `a`, but that would require
                  // adding `type($b)` to assemblyFormat.
                  "a", "k2",
-                 "IntegerType::get($_self.getContext(), "
-                 "($_self.cast<VectorType>().getShape()[0]))">]> {
+                 "VectorType::get({$_self.cast<VectorType>().getShape()[0]}, "
+                 "IntegerType::get($_self.getContext(), 1))">]> {
   let summary = "Vp2Intersect op";
   let description = [{
     The `vp2intersect` op is an AVX512 specific op that can lower to the proper
@@ -126,8 +126,8 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
   let arguments = (ins VectorOfLengthAndType<[16, 8], [I32, I64]>:$a,
                    VectorOfLengthAndType<[16, 8], [I32, I64]>:$b
                    );
-  let results = (outs AnyTypeOf<[I16, I8]>:$k1,
-                 AnyTypeOf<[I16, I8]>:$k2
+  let results = (outs VectorOfLengthAndType<[16, 8], [I1, I1]>:$k1,
+                 VectorOfLengthAndType<[16, 8], [I1, I1]>:$k2
                  );
   let assemblyFormat =
     "$a `,` $b attr-dict `:` type($a)";

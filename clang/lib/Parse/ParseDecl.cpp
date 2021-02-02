@@ -103,6 +103,24 @@ static bool FindLocsWithCommonFileID(Preprocessor &PP, SourceLocation StartLoc,
   return AttrStartIsInMacro && AttrEndIsInMacro;
 }
 
+void Parser::ParseAttributes(unsigned WhichAttrKinds,
+                             ParsedAttributesWithRange &Attrs,
+                             SourceLocation *End,
+                             LateParsedAttrList *LateAttrs) {
+  bool MoreToParse;
+  do {
+    // Assume there's nothing left to parse, but if any attributes are in fact
+    // parsed, loop to ensure all specified attribute combinations are parsed.
+    MoreToParse = false;
+    if (WhichAttrKinds & PAKM_CXX11)
+      MoreToParse |= MaybeParseCXX11Attributes(Attrs, End);
+    if (WhichAttrKinds & PAKM_GNU)
+      MoreToParse |= MaybeParseGNUAttributes(Attrs, End, LateAttrs);
+    if (WhichAttrKinds & PAKM_Declspec)
+      MoreToParse |= MaybeParseMicrosoftDeclSpecs(Attrs, End);
+  } while (MoreToParse);
+}
+
 /// ParseGNUAttributes - Parse a non-empty attributes list.
 ///
 /// [GNU] attributes:
@@ -3485,14 +3503,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-    // GNU attributes support.
+    // Attributes support.
     case tok::kw___attribute:
-      ParseGNUAttributes(DS.getAttributes(), nullptr, LateAttrs);
-      continue;
-
-    // Microsoft declspec support.
     case tok::kw___declspec:
-      ParseMicrosoftDeclSpecs(DS.getAttributes());
+      ParseAttributes(PAKM_GNU | PAKM_Declspec, DS.getAttributes(), nullptr,
+                      LateAttrs);
       continue;
 
     // Microsoft single token adornments.
@@ -4216,7 +4231,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     // Parse _Static_assert declaration.
-    if (Tok.is(tok::kw__Static_assert)) {
+    if (Tok.isOneOf(tok::kw__Static_assert, tok::kw_static_assert)) {
       SourceLocation DeclEnd;
       ParseStaticAssertDeclaration(DeclEnd);
       continue;
@@ -4354,9 +4369,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // If attributes exist after tag, parse them.
   ParsedAttributesWithRange attrs(AttrFactory);
-  MaybeParseGNUAttributes(attrs);
-  MaybeParseCXX11Attributes(attrs);
-  MaybeParseMicrosoftDeclSpecs(attrs);
+  MaybeParseAttributes(PAKM_GNU | PAKM_Declspec | PAKM_CXX11, attrs);
 
   SourceLocation ScopedEnumKWLoc;
   bool IsScopedUsingClassTag = false;
@@ -4373,9 +4386,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     ProhibitAttributes(attrs);
 
     // They are allowed afterwards, though.
-    MaybeParseGNUAttributes(attrs);
-    MaybeParseCXX11Attributes(attrs);
-    MaybeParseMicrosoftDeclSpecs(attrs);
+    MaybeParseAttributes(PAKM_GNU | PAKM_Declspec | PAKM_CXX11, attrs);
   }
 
   // C++11 [temp.explicit]p12:
@@ -5180,6 +5191,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_friend:
 
     // static_assert-declaration
+  case tok::kw_static_assert:
   case tok::kw__Static_assert:
 
     // GNU typeof support.

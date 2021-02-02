@@ -488,7 +488,11 @@ protected:
   /// \brief Whether samples are collected based on pseudo probes.
   bool ProfileIsProbeBased = false;
 
+  /// Whether function profiles are context-sensitive.
   bool ProfileIsCS = false;
+
+  /// Number of context-sensitive profiles.
+  uint32_t CSProfileCount = 0;
 
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;

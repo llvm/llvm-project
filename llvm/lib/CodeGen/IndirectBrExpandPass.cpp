@@ -28,9 +28,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -59,6 +61,10 @@ public:
     initializeIndirectBrExpandPassPass(*PassRegistry::getPassRegistry());
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+
   bool runOnFunction(Function &F) override;
 };
 
@@ -66,8 +72,11 @@ public:
 
 char IndirectBrExpandPass::ID = 0;
 
-INITIALIZE_PASS(IndirectBrExpandPass, DEBUG_TYPE,
-                "Expand indirectbr instructions", false, false)
+INITIALIZE_PASS_BEGIN(IndirectBrExpandPass, DEBUG_TYPE,
+                      "Expand indirectbr instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(IndirectBrExpandPass, DEBUG_TYPE,
+                    "Expand indirectbr instructions", false, false)
 
 FunctionPass *llvm::createIndirectBrExpandPass() {
   return new IndirectBrExpandPass();
@@ -84,6 +93,10 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
   if (!STI.enableIndirectBrExpand())
     return false;
   TLI = STI.getTargetLowering();
+
+  Optional<DomTreeUpdater> DTU;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 
   SmallVector<IndirectBrInst *, 1> IndirectBrs;
 
@@ -158,9 +171,21 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
   if (BBs.empty()) {
     // There are no blocks whose address is taken, so any indirectbr instruction
     // cannot get a valid input and we can replace all of them with unreachable.
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    if (DTU)
+      Updates.reserve(IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
+      if (DTU) {
+        for (BasicBlock *SuccBB : IBr->successors())
+          Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
+      }
       (void)new UnreachableInst(F.getContext(), IBr);
       IBr->eraseFromParent();
+    }
+    if (DTU) {
+      assert(Updates.size() == IndirectBrSuccs.size() &&
+             "Got unexpected update count.");
+      DTU->applyUpdates(Updates);
     }
     return true;
   }
@@ -183,12 +208,22 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
         Twine(IBr->getAddress()->getName()) + ".switch_cast", IBr);
   };
 
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+
   if (IndirectBrs.size() == 1) {
     // If we only have one indirectbr, we can just directly replace it within
     // its block.
-    SwitchBB = IndirectBrs[0]->getParent();
-    SwitchValue = GetSwitchValue(IndirectBrs[0]);
-    IndirectBrs[0]->eraseFromParent();
+    IndirectBrInst *IBr = IndirectBrs[0];
+    SwitchBB = IBr->getParent();
+    SwitchValue = GetSwitchValue(IBr);
+    if (DTU) {
+      Updates.reserve(IndirectBrSuccs.size());
+      for (BasicBlock *SuccBB : IBr->successors())
+        Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
+      assert(Updates.size() == IndirectBrSuccs.size() &&
+             "Got unexpected update count.");
+    }
+    IBr->eraseFromParent();
   } else {
     // Otherwise we need to create a new block to hold the switch across BBs,
     // jump to that block instead of each indirectbr, and phi together the
@@ -200,9 +235,16 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
 
     // Now replace the indirectbr instructions with direct branches to the
     // switch block and fill out the PHI operands.
+    if (DTU)
+      Updates.reserve(IndirectBrs.size() + 2 * IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       SwitchPN->addIncoming(GetSwitchValue(IBr), IBr->getParent());
       BranchInst::Create(SwitchBB, IBr);
+      if (DTU) {
+        Updates.push_back({DominatorTree::Insert, IBr->getParent(), SwitchBB});
+        for (BasicBlock *SuccBB : IBr->successors())
+          Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
+      }
       IBr->eraseFromParent();
     }
   }
@@ -214,6 +256,16 @@ bool IndirectBrExpandPass::runOnFunction(Function &F) {
   // Add a case for each block.
   for (int i : llvm::seq<int>(1, BBs.size()))
     SI->addCase(ConstantInt::get(CommonITy, i + 1), BBs[i]);
+
+  if (DTU) {
+    // If there were multiple indirectbr's, they may have common successors,
+    // but in the dominator tree, we only track unique edges.
+    SmallPtrSet<BasicBlock *, 8> UniqueSuccessors(BBs.begin(), BBs.end());
+    Updates.reserve(Updates.size() + UniqueSuccessors.size());
+    for (BasicBlock *BB : UniqueSuccessors)
+      Updates.push_back({DominatorTree::Insert, SwitchBB, BB});
+    DTU->applyUpdates(Updates);
+  }
 
   return true;
 }

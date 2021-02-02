@@ -23,7 +23,7 @@
 .section .rela.dyn, "a", @0x60000001
 .ascii "APS2"
 
-# ERR-PAST-END: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_REL section with index 3: malformed sleb128, extends past end
+# ERR-PAST-END: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_REL section with index 3: unable to decode LEB128 at offset 0x{{([[:xdigit:]]{8})}}: malformed sleb128, extends past end
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/asm3.s -o %t3.o
 # RUN: llvm-readobj --relocations %t3.o 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=ERR-PAST-END

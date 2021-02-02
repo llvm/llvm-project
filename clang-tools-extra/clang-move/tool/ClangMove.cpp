@@ -95,7 +95,13 @@ cl::opt<bool> DumpDecls(
 
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  tooling::CommonOptionsParser OptionsParser(argc, argv, ClangMoveCategory);
+  auto ExpectedParser =
+      tooling::CommonOptionsParser::create(argc, argv, ClangMoveCategory);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  tooling::CommonOptionsParser &OptionsParser = ExpectedParser.get();
 
   if (OldDependOnNew && NewDependOnOld) {
     llvm::errs() << "Provide either --old_depend_on_new or "

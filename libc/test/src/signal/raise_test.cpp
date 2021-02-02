@@ -18,5 +18,5 @@ TEST(LlvmLibcSignalTest, Raise) {
 
   // SIGKILL is chosen because other fatal signals could be caught by sanitizers
   // for example and incorrectly report test failure.
-  EXPECT_DEATH([] { __llvm_libc::raise(SIGKILL); }, SIGKILL);
+  EXPECT_DEATH([] { __llvm_libc::raise(SIGKILL); }, WITH_SIGNAL(SIGKILL));
 }

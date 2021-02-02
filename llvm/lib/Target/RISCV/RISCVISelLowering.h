@@ -53,6 +53,10 @@ enum NodeType : unsigned {
   // instructions.
   ROLW,
   RORW,
+  // RV64IB/RV32IB funnel shifts, with the semantics of the named RISC-V
+  // instructions, but the same operand order as fshl/fshr intrinsics.
+  FSR,
+  FSL,
   // RV64IB funnel shifts, with the semantics of the named RISC-V instructions,
   // but the same operand order as fshl/fshr intrinsics.
   FSRW,
@@ -99,11 +103,6 @@ enum NodeType : unsigned {
   // Unit-stride fault-only-first load
   VLEFF,
   VLEFF_MASK,
-  // Unit-stride fault-only-first segment load
-  VLSEGFF,
-  VLSEGFF_MASK,
-  // read vl CSR
-  READ_VL,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
   // pass-thru operand, the second is the source vector, and the third is the
   // XLenVT index (either constant or non-constant).
@@ -111,6 +110,10 @@ enum NodeType : unsigned {
   VSLIDEDOWN,
   // Matches the semantics of the unmasked vid.v instruction.
   VID,
+  // Matches the semantics of the vfcnvt.rod function (Convert double-width
+  // float to single-width float, rounding towards odd). Takes a double-width
+  // float vector and produces a single-width float vector.
+  VFNCVT_ROD,
 };
 } // namespace RISCVISD
 
@@ -327,8 +330,8 @@ private:
 namespace RISCVVIntrinsicsTable {
 
 struct RISCVVIntrinsicInfo {
-  unsigned int IntrinsicID;
-  unsigned int ExtendedOperand;
+  unsigned IntrinsicID;
+  uint8_t ExtendedOperand;
 };
 
 using namespace RISCV;
@@ -341,11 +344,11 @@ using namespace RISCV;
 namespace RISCVZvlssegTable {
 
 struct RISCVZvlsseg {
-  unsigned int IntrinsicID;
-  unsigned int SEW;
-  unsigned int LMUL;
-  unsigned int IndexLMUL;
-  unsigned int Pseudo;
+  unsigned IntrinsicID;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint8_t IndexLMUL;
+  uint16_t Pseudo;
 };
 
 using namespace RISCV;

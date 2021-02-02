@@ -114,7 +114,7 @@ including creations, are required to be performed via the `PatternRewriter`
 class. This is required because the underlying pattern driver may have state
 that would be invalidated when a mutation takes place. Examples of some of the
 more prevalent `PatternRewriter` API is shown below, please refer to the
-[class documentation](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/PatternMatch.h#L235)
+[class documentation](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/PatternMatch.h#L235)
 for a more up-to-date listing of the available API:
 
 *   Erase an Operation : `eraseOp`

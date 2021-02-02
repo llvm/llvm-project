@@ -55,6 +55,11 @@ LogicalResult verifyCompatibleShape(ArrayRef<int64_t> shape1,
 /// does not matter.
 LogicalResult verifyCompatibleShape(Type type1, Type type2);
 
+/// Returns success if the given two arrays have the same number of elements and
+/// each pair wise entries have compatible shape.
+LogicalResult verifyCompatibleShapes(ArrayRef<Type> types1,
+                                     ArrayRef<Type> types2);
+
 //===----------------------------------------------------------------------===//
 // Utility Iterators
 //===----------------------------------------------------------------------===//

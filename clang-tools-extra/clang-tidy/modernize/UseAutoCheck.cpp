@@ -27,7 +27,7 @@ const char DeclWithNewId[] = "decl_new";
 const char DeclWithCastId[] = "decl_cast";
 const char DeclWithTemplateCastId[] = "decl_template";
 
-size_t GetTypeNameLength(bool RemoveStars, StringRef Text) {
+size_t getTypeNameLength(bool RemoveStars, StringRef Text) {
   enum CharType { Space, Alpha, Punctuation };
   CharType LastChar = Space, BeforeSpace = Punctuation;
   size_t NumChars = 0;
@@ -399,7 +399,7 @@ void UseAutoCheck::replaceExpr(
   SourceRange Range(Loc.getSourceRange());
 
   if (MinTypeNameLength != 0 &&
-      GetTypeNameLength(RemoveStars,
+      getTypeNameLength(RemoveStars,
                         tooling::fixit::getText(Loc.getSourceRange(),
                                                 FirstDecl->getASTContext())) <
           MinTypeNameLength)

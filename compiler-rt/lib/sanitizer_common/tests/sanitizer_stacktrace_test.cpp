@@ -32,6 +32,14 @@ class FastUnwindTest : public ::testing::Test {
   uhwptr fake_top;
   uhwptr fake_bottom;
   BufferedStackTrace trace;
+
+#if defined(__riscv)
+  const uptr kFpOffset = 4;
+  const uptr kBpOffset = 2;
+#else
+  const uptr kFpOffset = 2;
+  const uptr kBpOffset = 0;
+#endif
 };
 
 static uptr PC(uptr idx) {
@@ -49,17 +57,17 @@ void FastUnwindTest::SetUp() {
   // Fill an array of pointers with fake fp+retaddr pairs.  Frame pointers have
   // even indices.
   for (uptr i = 0; i + 1 < fake_stack_size; i += 2) {
-    fake_stack[i] = (uptr)&fake_stack[i+2];  // fp
+    fake_stack[i] = (uptr)&fake_stack[i + kFpOffset];  // fp
     fake_stack[i+1] = PC(i + 1); // retaddr
   }
   // Mark the last fp point back up to terminate the stack trace.
   fake_stack[RoundDownTo(fake_stack_size - 1, 2)] = (uhwptr)&fake_stack[0];
 
   // Top is two slots past the end because UnwindFast subtracts two.
-  fake_top = (uhwptr)&fake_stack[fake_stack_size + 2];
+  fake_top = (uhwptr)&fake_stack[fake_stack_size + kFpOffset];
   // Bottom is one slot before the start because UnwindFast uses >.
   fake_bottom = (uhwptr)mapping;
-  fake_bp = (uptr)&fake_stack[0];
+  fake_bp = (uptr)&fake_stack[kBpOffset];
   start_pc = PC(0);
 }
 
@@ -120,7 +128,7 @@ TEST_F(FastUnwindTest, OneFrameStackTrace) {
   trace.Unwind(start_pc, fake_bp, nullptr, true, 1);
   EXPECT_EQ(1U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
-  EXPECT_EQ((uhwptr)&fake_stack[0], trace.top_frame_bp);
+  EXPECT_EQ((uhwptr)&fake_stack[kBpOffset], trace.top_frame_bp);
 }
 
 TEST_F(FastUnwindTest, ZeroFramesStackTrace) {

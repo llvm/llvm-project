@@ -7,15 +7,21 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+//
+// Use descriptive names for opaque pointers.
+//
+!Filename = type !llvm.ptr<i8>
+!Tensor   = type !llvm.ptr<i8>
+
 module {
   //
   // Example of using the sparse runtime support library to read a sparse matrix
   // in the Matrix Market Exchange Format (https://math.nist.gov/MatrixMarket).
   //
-  func private @openTensor(!llvm.ptr<i8>, memref<?xindex>) -> (!llvm.ptr<i8>)
-  func private @readTensorItem(!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>) -> ()
-  func private @closeTensor(!llvm.ptr<i8>) -> ()
-  func private @getTensorFilename(index) -> (!llvm.ptr<i8>)
+  func private @getTensorFilename(index) -> (!Filename)
+  func private @openTensor(!Filename, memref<?xindex>) -> (!Tensor)
+  func private @readTensorItem(!Tensor, memref<?xindex>, memref<?xf64>) -> ()
+  func private @closeTensor(!Tensor) -> ()
 
   func @entry() {
     %d0  = constant 0.0 : f64
@@ -35,7 +41,7 @@ module {
     //
     // Obtain the sparse matrix filename through this test helper.
     //
-    %fileName = call @getTensorFilename(%c0) : (index) -> (!llvm.ptr<i8>)
+    %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
 
     //
     // Read a sparse matrix. The call yields a pointer to an opaque
@@ -44,8 +50,7 @@ module {
     // provides the rank (always 2 for the Matrix Market), number of
     // nonzero elements (nnz), and the size (m x n) through a memref array.
     //
-    %tensor = call @openTensor(%fileName, %idata)
-      : (!llvm.ptr<i8>, memref<?xindex>) -> (!llvm.ptr<i8>)
+    %tensor = call @openTensor(%fileName, %idata) : (!Filename, memref<?xindex>) -> (!Tensor)
     %rank = load %idata[%c0] : memref<?xindex>
     %nnz  = load %idata[%c1] : memref<?xindex>
     %m    = load %idata[%c2] : memref<?xindex>
@@ -69,8 +74,7 @@ module {
     // simply insert them in the dense matrix.
     //
     scf.for %k = %c0 to %nnz step %c1 {
-      call @readTensorItem(%tensor, %idata, %ddata)
-        : (!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>) -> ()
+      call @readTensorItem(%tensor, %idata, %ddata) : (!Tensor, memref<?xindex>, memref<?xf64>) -> ()
       %i = load %idata[%c0] : memref<?xindex>
       %j = load %idata[%c1] : memref<?xindex>
       %d = load %ddata[%c0] : memref<?xf64>
@@ -82,7 +86,7 @@ module {
     // storage scheme, make sure to close the matrix to release its
     // memory resources.
     //
-    call @closeTensor(%tensor) : (!llvm.ptr<i8>) -> ()
+    call @closeTensor(%tensor) : (!Tensor) -> ()
 
     //
     // Verify that the results are as expected.

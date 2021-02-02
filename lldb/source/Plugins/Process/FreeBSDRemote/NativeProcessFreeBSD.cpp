@@ -354,6 +354,27 @@ Status NativeProcessFreeBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   return error;
 }
 
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+NativeProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
+  static const uint8_t g_arm_opcode[] = {0xfe, 0xde, 0xff, 0xe7};
+  static const uint8_t g_thumb_opcode[] = {0x01, 0xde};
+
+  switch (GetArchitecture().GetMachine()) {
+  case llvm::Triple::arm:
+    switch (size_hint) {
+    case 2:
+      return llvm::makeArrayRef(g_thumb_opcode);
+    case 4:
+      return llvm::makeArrayRef(g_arm_opcode);
+    default:
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Unrecognised trap opcode size hint!");
+    }
+  default:
+    return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);
+  }
+}
+
 Status NativeProcessFreeBSD::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOG(log, "pid {0}", GetID());

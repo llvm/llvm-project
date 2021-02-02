@@ -247,6 +247,10 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = config->relocatable || sym->isUsedInRegularObj ||
                             (r.Prevailing && sym->includeInDynsym()) ||
                             usedStartStop.count(objSym.getSectionName());
+    // Identify symbols exported dynamically, and that therefore could be
+    // referenced by a shared library not visible to the linker.
+    r.ExportDynamic = sym->isExportDynamic(sym->kind(), sym->visibility) ||
+                      sym->exportDynamic || sym->inDynamicList;
     const auto *dr = dyn_cast<Defined>(sym);
     r.FinalDefinitionInLinkageUnit =
         (isExec || sym->visibility != STV_DEFAULT) && dr &&

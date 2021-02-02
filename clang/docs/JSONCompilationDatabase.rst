@@ -94,6 +94,18 @@ to parse C++ code in the source tree.
 
 Alternatives
 ============
-For simple projects, Clang tools also recognize a compile_flags.txt file.
-This should contain one flag per line. The same flags will be used to compile
-any file.
+For simple projects, Clang tools also recognize a ``compile_flags.txt`` file.
+This should contain one argument per line. The same flags will be used to
+compile any file.
+
+Example:
+
+::
+
+    -xc++
+    -I
+    libwidget/include/
+
+Here ``-I libwidget/include`` is two arguments, and so becomes two lines.
+Paths are relative to the directory containing ``compile_flags.txt``.
+

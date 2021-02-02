@@ -390,6 +390,7 @@ private:
   SDValue PromoteIntOp_FIX(SDNode *N);
   SDValue PromoteIntOp_FPOWI(SDNode *N);
   SDValue PromoteIntOp_VECREDUCE(SDNode *N);
+  SDValue PromoteIntOp_SET_ROUNDING(SDNode *N);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 

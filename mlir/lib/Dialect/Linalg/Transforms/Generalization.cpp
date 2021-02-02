@@ -63,7 +63,8 @@ namespace {
 // into auto-generated ones.
 template <typename ConcretePattern, typename RootOp>
 struct LinalgGeneralizationPattern : OpRewritePattern<RootOp> {
-  LinalgGeneralizationPattern(MLIRContext *context, linalg::LinalgMarker marker,
+  LinalgGeneralizationPattern(MLIRContext *context,
+                              linalg::LinalgTransformationFilter marker,
                               PatternBenefit benefit = 1)
       : OpRewritePattern<RootOp>(context, benefit), marker(std::move(marker)) {}
 
@@ -81,12 +82,13 @@ struct LinalgGeneralizationPattern : OpRewritePattern<RootOp> {
       return failure();
 
     rewriter.replaceOp(rootOp, genericOp.getResults());
-    marker.replaceLinalgMarker(rewriter, genericOp.getOperation());
+    marker.replaceLinalgTransformationFilter(rewriter,
+                                             genericOp.getOperation());
     return success();
   }
 
 private:
-  linalg::LinalgMarker marker;
+  linalg::LinalgTransformationFilter marker;
 };
 
 struct GeneralizeConvOp
@@ -100,7 +102,7 @@ struct GeneralizeConvOp
 /// linalg.generic.
 struct LinalgNamedOpGeneralizationPattern : RewritePattern {
   LinalgNamedOpGeneralizationPattern(MLIRContext *context,
-                                     linalg::LinalgMarker marker,
+                                     linalg::LinalgTransformationFilter marker,
                                      PatternBenefit benefit = 1)
       : RewritePattern(benefit, MatchAnyOpTypeTag()),
         marker(std::move(marker)) {}
@@ -123,12 +125,13 @@ struct LinalgNamedOpGeneralizationPattern : RewritePattern {
       return failure();
 
     rewriter.replaceOp(rootOp, genericOp.getResults());
-    marker.replaceLinalgMarker(rewriter, genericOp.getOperation());
+    marker.replaceLinalgTransformationFilter(rewriter,
+                                             genericOp.getOperation());
     return success();
   }
 
 private:
-  linalg::LinalgMarker marker;
+  linalg::LinalgTransformationFilter marker;
 };
 
 struct LinalgGeneralizationPass
@@ -165,13 +168,13 @@ linalg::GenericOp GeneralizeConvOp::createGenericOp(linalg::ConvOp convOp,
 
 void mlir::linalg::populateLinalgConvGeneralizationPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns,
-    linalg::LinalgMarker marker) {
+    linalg::LinalgTransformationFilter marker) {
   patterns.insert<GeneralizeConvOp>(context, marker);
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns,
-    linalg::LinalgMarker marker) {
+    linalg::LinalgTransformationFilter marker) {
   patterns.insert<LinalgNamedOpGeneralizationPattern>(context, marker);
 }
 

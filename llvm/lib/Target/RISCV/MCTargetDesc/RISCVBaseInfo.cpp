@@ -94,13 +94,6 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 
 } // namespace RISCVFeatures
 
-namespace RISCVVPseudosTable {
-
-#define GET_RISCVVPseudosTable_IMPL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace RISCVVPseudosTable
-
 void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
   RISCVVSEW VSEW = getVSEW(VType);
   RISCVVLMUL VLMUL = getVLMUL(VType);

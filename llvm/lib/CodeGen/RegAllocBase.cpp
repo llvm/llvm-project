@@ -124,7 +124,12 @@ void RegAllocBase::allocatePhysRegs() {
         if (MI->isInlineAsm())
           break;
       }
-      if (MI && MI->isInlineAsm()) {
+
+      const TargetRegisterClass *RC = MRI->getRegClass(VirtReg->reg());
+      ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
+      if (AllocOrder.empty())
+        report_fatal_error("no registers from class available to allocate");
+      else if (MI && MI->isInlineAsm()) {
         MI->emitError("inline assembly requires more registers than available");
       } else if (MI) {
         LLVMContext &Context =
@@ -133,10 +138,9 @@ void RegAllocBase::allocatePhysRegs() {
       } else {
         report_fatal_error("ran out of registers during register allocation");
       }
+
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(
-          VirtReg->reg(),
-          RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg())).front());
+      VRM->assignVirt2Phys(VirtReg->reg(), AllocOrder.front());
       continue;
     }
 

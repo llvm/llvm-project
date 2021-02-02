@@ -16,7 +16,7 @@ define dso_local i32 @f() {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Classifying expressions for: @f
 ; CHECK-NEXT:    %storemerge23 = phi i32 [ 3, %entry ], [ %dec16, %for.inc13.3 ]
-; CHECK-NEXT:    --> {3,+,-1}<nsw><%outer.loop> U: [-2147483648,4) S: [-2147483648,4) Exits: 3 LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
+; CHECK-NEXT:    --> {3,+,-1}<nsw><%outer.loop> U: [1,4) S: [1,4) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:    %storemerge1921 = phi i32 [ 3, %outer.loop ], [ %dec, %for.end ]
 ; CHECK-NEXT:    --> {3,+,-1}<nuw><nsw><%for.cond6> U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %for.cond6: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %idxprom20 = zext i32 %storemerge1921 to i64
@@ -56,7 +56,7 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    %storemerge1921.lcssa25.3 = phi i32 [ %storemerge1921.3, %for.end.3 ]
 ; CHECK-NEXT:    --> %storemerge1921.lcssa25.3 U: [3,4) S: [3,4) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Variant, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:    %dec16 = add nsw i32 %storemerge23, -1
-; CHECK-NEXT:    --> {2,+,-1}<nw><%outer.loop> U: full-set S: full-set Exits: 2 LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
+; CHECK-NEXT:    --> {2,+,-1}<nsw><%outer.loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %for.cond6: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: 0
@@ -68,14 +68,12 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    exit count for for.end.3: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %inner.loop: max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %inner.loop: Unpredictable predicated backedge-taken count.
-; CHECK-NEXT:  Loop %outer.loop: <multiple exits> backedge-taken count is 0
-; CHECK-NEXT:    exit count for for.cond6: 0
-; CHECK-NEXT:    exit count for inner.loop: 0
+; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for for.cond6: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for inner.loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for for.inc13.3: 2
-; CHECK-NEXT:  Loop %outer.loop: max backedge-taken count is 0
-; CHECK-NEXT:  Loop %outer.loop: Predicated backedge-taken count is 0
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %outer.loop: Trip multiple is 0
+; CHECK-NEXT:  Loop %outer.loop: max backedge-taken count is 2
+; CHECK-NEXT:  Loop %outer.loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   store i32 3, i32* @a, align 4

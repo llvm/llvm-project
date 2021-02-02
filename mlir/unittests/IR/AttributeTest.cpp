@@ -192,4 +192,15 @@ TEST(DenseComplexTest, ComplexAPIntSplat) {
   testSplat(complexType, value);
 }
 
+TEST(DenseScalarTest, ExtractZeroRankElement) {
+  MLIRContext context;
+  const int elementValue = 12;
+  IntegerType intTy = IntegerType::get(&context, 32);
+  Attribute value = IntegerAttr::get(intTy, elementValue);
+  RankedTensorType shape = RankedTensorType::get({}, intTy);
+
+  auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
+  EXPECT_TRUE(attr.getValue({0}) == value);
+}
+
 } // end namespace

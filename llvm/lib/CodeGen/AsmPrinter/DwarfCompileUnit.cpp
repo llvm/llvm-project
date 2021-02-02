@@ -16,6 +16,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -73,11 +74,35 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
   if (Label)
     DD->addArangeLabel(SymbolCU(this, Label));
 
-  unsigned idx = DD->getAddressPool().getIndex(Label);
-  Die.addValue(DIEValueAllocator, Attribute,
-               DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
-                                          : dwarf::DW_FORM_GNU_addr_index,
-               DIEInteger(idx));
+  bool UseAddrOffsetFormOrExpressions =
+      DD->useAddrOffsetForm() || DD->useAddrOffsetExpressions();
+
+  const MCSymbol *Base = nullptr;
+  if (Label->isInSection() && UseAddrOffsetFormOrExpressions)
+    Base = DD->getSectionLabel(&Label->getSection());
+
+  if (!Base || Base == Label) {
+    unsigned idx = DD->getAddressPool().getIndex(Label);
+    Die.addValue(DIEValueAllocator, Attribute,
+                 DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
+                                            : dwarf::DW_FORM_GNU_addr_index,
+                 DIEInteger(idx));
+    return;
+  }
+
+  // Could be extended to work with DWARFv4 Split DWARF if that's important for
+  // someone. In that case DW_FORM_data would be used.
+  assert(DD->getDwarfVersion() >= 5 &&
+         "Addr+offset expressions are only valuable when using debug_addr (to "
+         "reduce relocations) available in DWARFv5 or higher");
+  if (DD->useAddrOffsetExpressions()) {
+    auto *Loc = new (DIEValueAllocator) DIEBlock();
+    addPoolOpAddress(*Loc, Label);
+    addBlock(Die, Attribute, dwarf::DW_FORM_exprloc, Loc);
+  } else
+    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
+                 new (DIEValueAllocator) DIEAddrOffset(
+                     DD->getAddressPool().getIndex(Base), Label, Base));
 }
 
 void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,

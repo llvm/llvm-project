@@ -29,7 +29,7 @@ def R0 : Core< 0, "%r0">, DwarfRegNum<[0]>;
 def R1 : Core< 1, "%r1">, DwarfRegNum<[1]>;
 def R2 : Core< 2, "%r2">, DwarfRegNum<[2]>;
 def R3 : Core< 3, "%r3">, DwarfRegNum<[3]>;
-let CostPerUse=1 in {
+let CostPerUse=[1] in {
 def R4 : Core< 4, "%r4">, DwarfRegNum<[4]>;
 def R5 : Core< 5, "%r5">, DwarfRegNum<[5]>;
 def R6 : Core< 6, "%r6">, DwarfRegNum<[6]>;
@@ -44,7 +44,7 @@ def R13 : Core<13, "%r13">, DwarfRegNum<[13]>;
 def R14 : Core<14, "%r14">, DwarfRegNum<[14]>;
 def R15 : Core<15, "%r15">, DwarfRegNum<[15]>;
 
-let CostPerUse=1 in {
+let CostPerUse=[1] in {
 def R16 : Core<16, "%r16">, DwarfRegNum<[16]>;
 def R17 : Core<17, "%r17">, DwarfRegNum<[17]>;
 def R18 : Core<18, "%r18">, DwarfRegNum<[18]>;

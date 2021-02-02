@@ -160,10 +160,11 @@ public:
   /// Add a dwarf op address data and value using the form given and an
   /// op of either DW_FORM_addr or DW_FORM_GNU_addr_index.
   void addOpAddress(DIELoc &Die, const MCSymbol *Sym);
+  void addPoolOpAddress(DIEValueList &Die, const MCSymbol *Label);
 
   /// Add a label delta attribute data and value.
-  void addLabelDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
-                     const MCSymbol *Lo);
+  void addLabelDelta(DIEValueList &Die, dwarf::Attribute Attribute,
+                     const MCSymbol *Hi, const MCSymbol *Lo);
 
   /// Add a DIE attribute data and value.
   void addDIEEntry(DIE &Die, dwarf::Attribute Attribute, DIE &Entry);
@@ -179,6 +180,8 @@ public:
 
   /// Add block data.
   void addBlock(DIE &Die, dwarf::Attribute Attribute, DIEBlock *Block);
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
+                DIEBlock *Block);
 
   /// Add location information to specified debug information entry.
   void addSourceLine(DIE &Die, unsigned Line, const DIFile *File);

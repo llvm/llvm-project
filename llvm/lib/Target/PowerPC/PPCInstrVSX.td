@@ -1009,13 +1009,13 @@ let hasSideEffects = 0 in {
                         (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                         "xxlandc $XT, $XA, $XB", IIC_VecGeneral,
                         [(set v4i32:$XT, (and v4i32:$XA,
-                                              (vnot_ppc v4i32:$XB)))]>;
+                                              (vnot v4i32:$XB)))]>;
   let isCommutable = 1 in {
   def XXLNOR : XX3Form<60, 162,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                        "xxlnor $XT, $XA, $XB", IIC_VecGeneral,
-                       [(set v4i32:$XT, (vnot_ppc (or v4i32:$XA,
-                                                   v4i32:$XB)))]>;
+                       [(set v4i32:$XT, (vnot (or v4i32:$XA,
+                                               v4i32:$XB)))]>;
   def XXLOR : XX3Form<60, 146,
                       (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                       "xxlor $XT, $XA, $XB", IIC_VecGeneral,
@@ -1092,12 +1092,11 @@ let Predicates = [HasVSX, HasP8Vector] in {
     def XXLEQV : XX3Form<60, 186,
                          (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                          "xxleqv $XT, $XA, $XB", IIC_VecGeneral,
-                         [(set v4i32:$XT, (vnot_ppc (xor v4i32:$XA, v4i32:$XB)))]>;
+                         [(set v4i32:$XT, (vnot (xor v4i32:$XA, v4i32:$XB)))]>;
     def XXLNAND : XX3Form<60, 178,
                           (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                           "xxlnand $XT, $XA, $XB", IIC_VecGeneral,
-                          [(set v4i32:$XT, (vnot_ppc (and v4i32:$XA,
-                                                    v4i32:$XB)))]>;
+                          [(set v4i32:$XT, (vnot (and v4i32:$XA, v4i32:$XB)))]>;
   } // isCommutable
 
   let isCodeGenOnly = 1, isMoveImm = 1, isAsCheapAsAMove = 1,
@@ -1110,7 +1109,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def XXLORC : XX3Form<60, 170,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                        "xxlorc $XT, $XA, $XB", IIC_VecGeneral,
-                       [(set v4i32:$XT, (or v4i32:$XA, (vnot_ppc v4i32:$XB)))]>;
+                       [(set v4i32:$XT, (or v4i32:$XA, (vnot v4i32:$XB)))]>;
 
   // VSX scalar loads introduced in ISA 2.07
   let mayLoad = 1, mayStore = 0 in {
@@ -2453,9 +2452,9 @@ let Predicates = [HasVSX, IsBigEndian, HasP8Altivec] in
 let AddedComplexity = 400 in {
 // Valid for any VSX subtarget, regardless of endianness.
 let Predicates = [HasVSX] in {
-def : Pat<(v4i32 (vnot_ppc v4i32:$A)),
+def : Pat<(v4i32 (vnot v4i32:$A)),
           (v4i32 (XXLNOR $A, $A))>;
-def : Pat<(v4i32 (or (and (vnot_ppc v4i32:$C), v4i32:$A),
+def : Pat<(v4i32 (or (and (vnot v4i32:$C), v4i32:$A),
                      (and v4i32:$B, v4i32:$C))),
           (v4i32 (XXSEL $A, $B, $C))>;
 

@@ -2641,9 +2641,7 @@ std::tuple<bool, bool> InstrRefBasedLDV::vlocJoin(
   auto &ILS = *ILSIt->second;
 
   // Order predecessors by RPOT order, for exploring them in that order.
-  SmallVector<MachineBasicBlock *, 8> BlockOrders;
-  for (auto p : MBB.predecessors())
-    BlockOrders.push_back(p);
+  SmallVector<MachineBasicBlock *, 8> BlockOrders(MBB.predecessors());
 
   auto Cmp = [&](MachineBasicBlock *A, MachineBasicBlock *B) {
     return BBToOrder[A] < BBToOrder[B];

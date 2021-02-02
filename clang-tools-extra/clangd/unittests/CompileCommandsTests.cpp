@@ -214,7 +214,7 @@ static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
   ArgStripper S;
   S.strip(Arg);
   S.process(Args);
-  return llvm::join(Args, " ");
+  return printArgv(Args);
 }
 
 TEST(ArgStripperTest, Spellings) {
@@ -365,6 +365,14 @@ TEST(ArgStripperTest, OrderDependent) {
                                    "foo.cc"};
   S.process(Args);
   EXPECT_THAT(Args, ElementsAre("clang", "foo.cc"));
+}
+
+TEST(PrintArgvTest, All) {
+  std::vector<llvm::StringRef> Args = {
+      "one", "two", "thr ee", "f\"o\"ur", "fi\\ve", "$"
+  };
+  const char *Expected = R"(one two "thr ee" "f\"o\"ur" "fi\\ve" $)";
+  EXPECT_EQ(Expected, printArgv(Args));
 }
 
 } // namespace

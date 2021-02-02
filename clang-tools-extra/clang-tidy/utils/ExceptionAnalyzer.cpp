@@ -158,8 +158,8 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
-    for (unsigned i = 0; i < Try->getNumHandlers(); ++i) {
-      const CXXCatchStmt *Catch = Try->getHandler(i);
+    for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
+      const CXXCatchStmt *Catch = Try->getHandler(I);
 
       // Everything is catched through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {

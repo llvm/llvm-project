@@ -2615,33 +2615,30 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
   // and(A, or(B, C))
   def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
   // and(A, nor(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (or v4i32:$vB, v4i32:$vC))),
-                       8>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
   // and(A, eqv(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (xor v4i32:$vB, v4i32:$vC))),
-                       9>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
   // and(A, nand(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (and v4i32:$vB, v4i32:$vC))),
-                       14>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
 
   // NAND
   // nand(A, B, C)
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
                        !sub(255, 1)>;
   // nand(A, xor(B, C))
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
                        !sub(255, 6)>;
   // nand(A, or(B, C))
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
                        !sub(255, 7)>;
   // nand(A, nor(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
                        !sub(255, 8)>;
   // nand(A, eqv(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
                        !sub(255, 9)>;
   // nand(A, nand(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                        !sub(255, 14)>;
 }
 

@@ -329,9 +329,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         WasmYAML::ElemSegment Seg;
         Seg.TableIndex = Segment.TableIndex;
         Seg.Offset = Segment.Offset;
-        for (auto &Func : Segment.Functions) {
-          Seg.Functions.push_back(Func);
-        }
+        append_range(Seg.Functions, Segment.Functions);
         ElemSec->Segments.push_back(Seg);
       }
       S = std::move(ElemSec);

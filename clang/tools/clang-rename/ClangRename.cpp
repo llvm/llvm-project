@@ -98,7 +98,13 @@ static cl::opt<bool> Force("force",
                            cl::cat(ClangRenameOptions));
 
 int main(int argc, const char **argv) {
-  tooling::CommonOptionsParser OP(argc, argv, ClangRenameOptions);
+  auto ExpectedParser =
+      tooling::CommonOptionsParser::create(argc, argv, ClangRenameOptions);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  tooling::CommonOptionsParser &OP = ExpectedParser.get();
 
   if (!Input.empty()) {
     // Populate QualifiedNames and NewNames from a YAML file.

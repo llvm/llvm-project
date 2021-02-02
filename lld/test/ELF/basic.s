@@ -219,16 +219,16 @@ _start:
 # INVRSP: invalid response file quoting: patatino
 
 # RUN: not ld.lld %t.foo -o /dev/null 2>&1 | \
-# RUN:  FileCheck --check-prefix=MISSING %s
-# MISSING: cannot open {{.*}}.foo: {{[Nn]}}o such file or directory
+# RUN:  FileCheck -DMSG=%errc_ENOENT --check-prefix=MISSING %s
+# MISSING: cannot open {{.*}}.foo: [[MSG]]
 
 # RUN: not ld.lld -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=NO_INPUT %s
 # NO_INPUT: ld.lld{{.*}}: no input files
 
 # RUN: not ld.lld %t.no.such.file -o /dev/null 2>&1 | \
-# RUN:  FileCheck --check-prefix=CANNOT_OPEN %s
-# CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
+# RUN:  FileCheck -DMSG=%errc_ENOENT --check-prefix=CANNOT_OPEN %s
+# CANNOT_OPEN: cannot open {{.*}}.no.such.file: [[MSG]]
 
 # RUN: not ld.lld --foo 2>&1 | FileCheck --check-prefix=UNKNOWN %s
 # UNKNOWN: unknown argument '--foo'

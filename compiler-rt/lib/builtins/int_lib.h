@@ -70,12 +70,21 @@
 #error Unsupported target
 #endif
 
-#if defined(__NetBSD__) && (defined(_KERNEL) || defined(_STANDALONE))
+#if (defined(__FreeBSD__) || defined(__NetBSD__)) &&                           \
+    (defined(_KERNEL) || defined(_STANDALONE))
 //
 // Kernel and boot environment can't use normal headers,
 // so use the equivalent system headers.
+// NB: FreeBSD (and OpenBSD) deprecate machine/limits.h in
+// favour of sys/limits.h, so prefer the former, but fall
+// back on the latter if not available since NetBSD only has
+// the latter.
 //
+#if defined(__has_include) && __has_include(<sys/limits.h>)
+#include <sys/limits.h>
+#else
 #include <machine/limits.h>
+#endif
 #include <sys/stdint.h>
 #include <sys/types.h>
 #else

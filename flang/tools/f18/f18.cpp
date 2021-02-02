@@ -84,7 +84,7 @@ struct DriverOptions {
   bool verbose{false}; // -v
   bool compileOnly{false}; // -c
   std::string outputPath; // -o path
-  std::vector<std::string> searchDirectories{"."s}; // -I dir
+  std::vector<std::string> searchDirectories; // -I dir
   std::string moduleDirectory{"."s}; // -module dir
   std::string moduleFileSuffix{".mod"}; // -moduleSuffix suff
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
@@ -518,6 +518,9 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-fimplicit-none-type-never") {
       options.features.Enable(
           Fortran::common::LanguageFeature::ImplicitNoneTypeNever);
+    } else if (arg == "-falternative-parameter-statement") {
+      options.features.Enable(
+          Fortran::common::LanguageFeature::OldStyleParameter, true);
     } else if (arg == "-fdebug-dump-provenance") {
       driver.dumpProvenance = true;
       options.needProvenanceRangeToCharBlockMappings = true;

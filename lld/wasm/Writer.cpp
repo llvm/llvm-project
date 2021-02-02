@@ -1121,8 +1121,8 @@ void Writer::createStartFunction() {
 
 // For -shared (PIC) output, we create create a synthetic function which will
 // apply any relocations to the data segments on startup.  This function is
-// called __wasm_apply_relocs and is added at the beginning of __wasm_call_ctors
-// before any of the constructors run.
+// called `__wasm_apply_data_relocs` and is added at the beginning of
+// `__wasm_call_ctors` before any of the constructors run.
 void Writer::createApplyDataRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
   // First write the body's contents to a string.
@@ -1160,7 +1160,7 @@ void Writer::createApplyGlobalRelocationsFunction() {
 // in input object.
 void Writer::createCallCtorsFunction() {
   // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
-  // aren't calling `__wasm_apply_relocs` for Emscripten-style PIC, don't
+  // aren't calling `__wasm_apply_data_relocs` for Emscripten-style PIC, don't
   // define the `__wasm_call_ctors` function.
   if (!WasmSym::callCtors->isLive() && !WasmSym::applyDataRelocs &&
       initFunctions.empty())
@@ -1203,9 +1203,8 @@ void Writer::createCommandExportWrapper(uint32_t functionIndex,
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
 
-    // If we have any ctors, or we're calling `__wasm_apply_relocs` for
-    // Emscripten-style PIC, call `__wasm_call_ctors` which performs those
-    // calls.
+    // Call `__wasm_call_ctors` which call static constructors (and
+    // applies any runtime relocations in Emscripten-style PIC mode)
     if (WasmSym::callCtors->isLive()) {
       writeU8(os, WASM_OPCODE_CALL, "CALL");
       writeUleb128(os, WasmSym::callCtors->getFunctionIndex(),

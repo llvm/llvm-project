@@ -212,7 +212,6 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
   return LLVM::LLVMPointerType::get(converted);
 }
 
-
 // Function types are converted to LLVM Function types by recursively converting
 // argument and result types.  If MLIR Function has zero results, the LLVM
 // Function has one VoidType result.  If MLIR Function has more than one result,
@@ -525,10 +524,11 @@ MemRefDescriptor::fromStaticShape(OpBuilder &builder, Location loc,
   auto result = getStridesAndOffset(type, strides, offset);
   (void)result;
   assert(succeeded(result) && "unexpected failure in stride computation");
-  assert(offset != MemRefType::getDynamicStrideOrOffset() &&
+  assert(!MemRefType::isDynamicStrideOrOffset(offset) &&
          "expected static offset");
-  assert(!llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) &&
-         "expected static strides");
+  assert(!llvm::any_of(strides, [](int64_t stride) {
+    return MemRefType::isDynamicStrideOrOffset(stride);
+  }) && "expected static strides");
 
   auto convertedType = typeConverter.convertType(type);
   assert(convertedType && "unexpected failure in memref type conversion");
@@ -1044,14 +1044,14 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 
   Value index;
   if (offset != 0) // Skip if offset is zero.
-    index = offset == MemRefType::getDynamicStrideOrOffset()
+    index = MemRefType::isDynamicStrideOrOffset(offset)
                 ? memRefDescriptor.offset(rewriter, loc)
                 : createIndexConstant(rewriter, loc, offset);
 
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride = strides[i] == MemRefType::getDynamicStrideOrOffset()
+      Value stride = MemRefType::isDynamicStrideOrOffset(strides[i])
                          ? memRefDescriptor.stride(rewriter, loc, i)
                          : createIndexConstant(rewriter, loc, strides[i]);
       increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
@@ -1472,10 +1472,10 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
 // 1-D LLVM vectors.
 struct NDVectorTypeInfo {
   // LLVM array struct which encodes n-D vectors.
-  Type llvmArrayTy;
+  Type llvmNDVectorTy;
   // LLVM vector type which encodes the inner 1-D vector type.
-  Type llvmVectorTy;
-  // Multiplicity of llvmArrayTy to llvmVectorTy.
+  Type llvm1DVectorTy;
+  // Multiplicity of llvmNDVectorTy to llvm1DVectorTy.
   SmallVector<int64_t, 4> arraySizes;
 };
 } // namespace
@@ -1488,13 +1488,13 @@ static NDVectorTypeInfo extractNDVectorTypeInfo(VectorType vectorType,
                                                 LLVMTypeConverter &converter) {
   assert(vectorType.getRank() > 1 && "expected >1D vector type");
   NDVectorTypeInfo info;
-  info.llvmArrayTy = converter.convertType(vectorType);
-  if (!info.llvmArrayTy || !LLVM::isCompatibleType(info.llvmArrayTy)) {
-    info.llvmArrayTy = nullptr;
+  info.llvmNDVectorTy = converter.convertType(vectorType);
+  if (!info.llvmNDVectorTy || !LLVM::isCompatibleType(info.llvmNDVectorTy)) {
+    info.llvmNDVectorTy = nullptr;
     return info;
   }
   info.arraySizes.reserve(vectorType.getRank() - 1);
-  auto llvmTy = info.llvmArrayTy;
+  auto llvmTy = info.llvmNDVectorTy;
   while (llvmTy.isa<LLVM::LLVMArrayType>()) {
     info.arraySizes.push_back(
         llvmTy.cast<LLVM::LLVMArrayType>().getNumElements());
@@ -1502,7 +1502,7 @@ static NDVectorTypeInfo extractNDVectorTypeInfo(VectorType vectorType,
   }
   if (!LLVM::isCompatibleVectorType(llvmTy))
     return info;
-  info.llvmVectorTy = llvmTy;
+  info.llvm1DVectorTy = llvmTy;
   return info;
 }
 
@@ -1591,27 +1591,29 @@ static LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter) {
-  auto vectorType = op->getResult(0).getType().dyn_cast<VectorType>();
-  if (!vectorType)
-    return failure();
-  auto vectorTypeInfo = extractNDVectorTypeInfo(vectorType, typeConverter);
-  auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
-  auto llvmArrayTy = operands[0].getType();
-  if (!llvmVectorTy || llvmArrayTy != vectorTypeInfo.llvmArrayTy)
-    return failure();
+  auto operandNDVectorType = op->getOperand(0).getType().dyn_cast<VectorType>();
+  auto resultNDVectorType = op->getResult(0).getType().dyn_cast<VectorType>();
+  assert(operandNDVectorType && resultNDVectorType && "expected vector types");
 
+  auto resultTypeInfo =
+      extractNDVectorTypeInfo(resultNDVectorType, typeConverter);
+  auto operandTypeInfo =
+      extractNDVectorTypeInfo(operandNDVectorType, typeConverter);
+  auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
+  auto operand1DVectorTy = operandTypeInfo.llvm1DVectorTy;
+  auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
-  Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayTy);
-  nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
+  Value desc = rewriter.create<LLVM::UndefOp>(loc, resultNDVectoryTy);
+  nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayAttr position) {
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
     for (auto operand : operands)
       extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          loc, llvmVectorTy, operand, position));
-    Value newVal = createOperand(llvmVectorTy, extractedOperands);
-    desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmArrayTy, desc, newVal,
-                                                position);
+          loc, operand1DVectorTy, operand, position));
+    Value newVal = createOperand(result1DVectorTy, extractedOperands);
+    desc = rewriter.create<LLVM::InsertValueOp>(loc, resultNDVectoryTy, desc,
+                                                newVal, position);
   });
   rewriter.replaceOp(op, desc);
   return success();
@@ -1627,14 +1629,14 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
                     [](Type t) { return isCompatibleType(t); }))
     return failure();
 
-  auto llvmArrayTy = operands[0].getType();
-  if (!llvmArrayTy.isa<LLVM::LLVMArrayType>())
+  auto llvmNDVectorTy = operands[0].getType();
+  if (!llvmNDVectorTy.isa<LLVM::LLVMArrayType>())
     return oneToOneRewrite(op, targetOp, operands, typeConverter, rewriter);
 
-  auto callback = [op, targetOp, &rewriter](Type llvmVectorTy,
+  auto callback = [op, targetOp, &rewriter](Type llvm1DVectorTy,
                                             ValueRange operands) {
     OperationState state(op->getLoc(), targetOp);
-    state.addTypes(llvmVectorTy);
+    state.addTypes(llvm1DVectorTy);
     state.addOperands(operands);
     state.addAttributes(op->getAttrs());
     return rewriter.createOperation(state)->getResult(0);
@@ -1668,6 +1670,8 @@ using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<PowFOp, LLVM::PowOp>;
 using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
 using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
+using SignExtendIOpLowering =
+    VectorConvertToLLVMPattern<SignExtendIOp, LLVM::SExtOp>;
 using ShiftLeftOpLowering =
     OneToOneConvertToLLVMPattern<ShiftLeftOp, LLVM::ShlOp>;
 using SignedDivIOpLowering =
@@ -1687,6 +1691,8 @@ using UnsignedRemIOpLowering =
 using UnsignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
 using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
+using ZeroExtendIOpLowering =
+    VectorConvertToLLVMPattern<ZeroExtendIOp, LLVM::ZExtOp>;
 
 /// Lower `std.assert`. The default lowering calls the `abort` function if the
 /// assertion is violated and has no effect otherwise. The failure message is
@@ -2366,17 +2372,17 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
 
     return handleMultidimensionalVectors(
         op.getOperation(), operands, *getTypeConverter(),
-        [&](Type llvmVectorTy, ValueRange operands) {
+        [&](Type llvm1DVectorTy, ValueRange operands) {
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get(
-                  {LLVM::getVectorNumElements(llvmVectorTy).getFixedValue()},
+                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
                   floatType),
               floatOne);
           auto one =
-              rewriter.create<LLVM::ConstantOp>(loc, llvmVectorTy, splatAttr);
+              rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
           auto sqrt =
-              rewriter.create<LLVM::SqrtOp>(loc, llvmVectorTy, operands[0]);
-          return rewriter.create<LLVM::FDivOp>(loc, llvmVectorTy, one, sqrt);
+              rewriter.create<LLVM::SqrtOp>(loc, llvm1DVectorTy, operands[0]);
+          return rewriter.create<LLVM::FDivOp>(loc, llvm1DVectorTy, one, sqrt);
         },
         rewriter);
   }
@@ -3050,18 +3056,8 @@ struct FPTruncLowering
   using Super::Super;
 };
 
-struct SignExtendIOpLowering
-    : public OneToOneConvertToLLVMPattern<SignExtendIOp, LLVM::SExtOp> {
-  using Super::Super;
-};
-
 struct TruncateIOpLowering
     : public OneToOneConvertToLLVMPattern<TruncateIOp, LLVM::TruncOp> {
-  using Super::Super;
-};
-
-struct ZeroExtendIOpLowering
-    : public OneToOneConvertToLLVMPattern<ZeroExtendIOp, LLVM::ZExtOp> {
   using Super::Super;
 };
 
@@ -3211,21 +3207,21 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
     auto loc = splatOp.getLoc();
     auto vectorTypeInfo =
         extractNDVectorTypeInfo(resultType, *getTypeConverter());
-    auto llvmArrayTy = vectorTypeInfo.llvmArrayTy;
-    auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
-    if (!llvmArrayTy || !llvmVectorTy)
+    auto llvmNDVectorTy = vectorTypeInfo.llvmNDVectorTy;
+    auto llvm1DVectorTy = vectorTypeInfo.llvm1DVectorTy;
+    if (!llvmNDVectorTy || !llvm1DVectorTy)
       return failure();
 
     // Construct returned value.
-    Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayTy);
+    Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmNDVectorTy);
 
     // Construct a 1-D vector with the splatted value that we insert in all the
     // places within the returned descriptor.
-    Value vdesc = rewriter.create<LLVM::UndefOp>(loc, llvmVectorTy);
+    Value vdesc = rewriter.create<LLVM::UndefOp>(loc, llvm1DVectorTy);
     auto zero = rewriter.create<LLVM::ConstantOp>(
         loc, typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
-    Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvmVectorTy, vdesc,
+    Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvm1DVectorTy, vdesc,
                                                      adaptor.input(), zero);
 
     // Shuffle the value across the desired number of elements.
@@ -3237,7 +3233,7 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
     // Iterate of linear index, convert to coords space and insert splatted 1-D
     // vector in each position.
     nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmArrayTy, desc, v,
+      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmNDVectorTy, desc, v,
                                                   position);
     });
     rewriter.replaceOp(splatOp, desc);
@@ -3308,7 +3304,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
         extracted);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
-    // Copy the buffer pointer from the old descriptor to the new one.
+    // Copy the aligned pointer from the old descriptor to the new one.
     extracted = sourceMemRef.alignedPtr(rewriter, loc);
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
@@ -3336,8 +3332,14 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
       targetMemRef.setConstantOffset(rewriter, loc, offset);
     } else {
       Value baseOffset = sourceMemRef.offset(rewriter, loc);
-      for (unsigned i = 0; i < inferredShapeRank; ++i) {
+      // `inferredShapeRank` may be larger than the number of offset operands
+      // because of trailing semantics. In this case, the offset is guaranteed
+      // to be interpreted as 0 and we can just skip the extra dimensions.
+      for (unsigned i = 0, e = std::min(inferredShapeRank,
+                                        subViewOp.getMixedOffsets().size());
+           i < e; ++i) {
         Value offset =
+            // TODO: need OpFoldResult ODS adaptor to clean this up.
             subViewOp.isDynamicOffset(i)
                 ? operands[subViewOp.getIndexOfDynamicOffset(i)]
                 : rewriter.create<LLVM::ConstantOp>(
@@ -3350,31 +3352,47 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     }
 
     // Update sizes and strides.
+    SmallVector<OpFoldResult> mixedSizes = subViewOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = subViewOp.getMixedStrides();
+    assert(mixedSizes.size() == mixedStrides.size() &&
+           "expected sizes and strides of equal length");
     for (int i = inferredShapeRank - 1, j = resultShapeRank - 1;
          i >= 0 && j >= 0; --i) {
       if (!mask[i])
         continue;
 
-      Value size =
-          subViewOp.isDynamicSize(i)
-              ? operands[subViewOp.getIndexOfDynamicSize(i)]
-              : rewriter.create<LLVM::ConstantOp>(
-                    loc, llvmIndexType,
-                    rewriter.getI64IntegerAttr(subViewOp.getStaticSize(i)));
-      targetMemRef.setSize(rewriter, loc, j, size);
-      Value stride;
-      if (!ShapedType::isDynamicStrideOrOffset(strides[i])) {
+      // `i` may overflow subViewOp.getMixedSizes because of trailing semantics.
+      // In this case, the size is guaranteed to be interpreted as Dim and the
+      // stride as 1.
+      Value size, stride;
+      if (static_cast<unsigned>(i) >= mixedSizes.size()) {
+        size = rewriter.create<LLVM::DialectCastOp>(
+            loc, llvmIndexType,
+            rewriter.create<DimOp>(loc, subViewOp.source(), i));
         stride = rewriter.create<LLVM::ConstantOp>(
-            loc, llvmIndexType, rewriter.getI64IntegerAttr(strides[i]));
+            loc, llvmIndexType, rewriter.getI64IntegerAttr(1));
       } else {
-        stride =
-            subViewOp.isDynamicStride(i)
-                ? operands[subViewOp.getIndexOfDynamicStride(i)]
+        // TODO: need OpFoldResult ODS adaptor to clean this up.
+        size =
+            subViewOp.isDynamicSize(i)
+                ? operands[subViewOp.getIndexOfDynamicSize(i)]
                 : rewriter.create<LLVM::ConstantOp>(
                       loc, llvmIndexType,
-                      rewriter.getI64IntegerAttr(subViewOp.getStaticStride(i)));
-        stride = rewriter.create<LLVM::MulOp>(loc, stride, strideValues[i]);
+                      rewriter.getI64IntegerAttr(subViewOp.getStaticSize(i)));
+        if (!ShapedType::isDynamicStrideOrOffset(strides[i])) {
+          stride = rewriter.create<LLVM::ConstantOp>(
+              loc, llvmIndexType, rewriter.getI64IntegerAttr(strides[i]));
+        } else {
+          stride = subViewOp.isDynamicStride(i)
+                       ? operands[subViewOp.getIndexOfDynamicStride(i)]
+                       : rewriter.create<LLVM::ConstantOp>(
+                             loc, llvmIndexType,
+                             rewriter.getI64IntegerAttr(
+                                 subViewOp.getStaticStride(i)));
+          stride = rewriter.create<LLVM::MulOp>(loc, stride, strideValues[i]);
+        }
       }
+      targetMemRef.setSize(rewriter, loc, j, size);
       targetMemRef.setStride(rewriter, loc, j, stride);
       j--;
     }
@@ -3465,7 +3483,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
                   ArrayRef<int64_t> strides, Value nextSize,
                   Value runningStride, unsigned idx) const {
     assert(idx < strides.size());
-    if (strides[idx] != MemRefType::getDynamicStrideOrOffset())
+    if (!MemRefType::isDynamicStrideOrOffset(strides[idx]))
       return createIndexConstant(rewriter, loc, strides[idx]);
     if (nextSize)
       return runningStride

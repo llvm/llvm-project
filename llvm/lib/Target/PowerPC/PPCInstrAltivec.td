@@ -30,11 +30,6 @@
 // Altivec transformation functions and pattern fragments.
 //
 
-// Since we canonicalize buildvectors to v16i8, all vnots "-1" operands will be
-// of that type.
-def vnot_ppc : PatFrag<(ops node:$in),
-                       (xor node:$in, (bitconvert (v16i8 immAllOnesV)))>;
-
 def vpkuhum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
@@ -521,7 +516,7 @@ def VAND : VXForm_1<1028, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
 def VANDC : VXForm_1<1092, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                      "vandc $vD, $vA, $vB", IIC_VecFP,
                      [(set v4i32:$vD, (and v4i32:$vA,
-                                           (vnot_ppc v4i32:$vB)))]>;
+                                           (vnot v4i32:$vB)))]>;
 
 def VCFSX  : VXForm_1<842, (outs vrrc:$vD), (ins u5imm:$UIMM, vrrc:$vB),
                       "vcfsx $vD, $vB, $UIMM", IIC_VecFP,
@@ -684,8 +679,8 @@ let hasSideEffects = 1 in {
 
 def VNOR : VXForm_1<1284, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                     "vnor $vD, $vA, $vB", IIC_VecFP,
-                    [(set v4i32:$vD, (vnot_ppc (or v4i32:$vA,
-                                                   v4i32:$vB)))]>;
+                    [(set v4i32:$vD, (vnot (or v4i32:$vA,
+                                               v4i32:$vB)))]>;
 let isCommutable = 1 in {
 def VOR : VXForm_1<1156, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vor $vD, $vA, $vB", IIC_VecFP,
@@ -1034,11 +1029,11 @@ def:Pat<(vmrghw_swapped_shuffle v16i8:$vA, v16i8:$vB),
         (VMRGHW $vB, $vA)>;
 
 // Logical Operations
-def : Pat<(vnot_ppc v4i32:$vA), (VNOR $vA, $vA)>;
+def : Pat<(vnot v4i32:$vA), (VNOR $vA, $vA)>;
 
-def : Pat<(vnot_ppc (or v4i32:$A, v4i32:$B)),
+def : Pat<(vnot (or v4i32:$A, v4i32:$B)),
           (VNOR $A, $B)>;
-def : Pat<(and v4i32:$A, (vnot_ppc v4i32:$B)),
+def : Pat<(and v4i32:$A, (vnot v4i32:$B)),
           (VANDC $A, $B)>;
 
 def : Pat<(fmul v4f32:$vA, v4f32:$vB),
@@ -1142,17 +1137,17 @@ def : Pat<(v2f64 (vselect v2i64:$vA, v2f64:$vB, v2f64:$vC)),
           (VSEL $vC, $vB, $vA)>;
 
 // Vector Integer Average Instructions
-def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot_ppc v4i32:$vB)),
+def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot v4i32:$vB)),
           (v4i32 (immEQOneV)))), (v4i32 (VAVGSW $vA, $vB))>;
-def : Pat<(v8i16 (sra (sub v8i16:$vA, (v8i16 (bitconvert(vnot_ppc v4i32:$vB)))),
+def : Pat<(v8i16 (sra (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
           (v8i16 (immEQOneV)))), (v8i16 (VAVGSH $vA, $vB))>;
-def : Pat<(v16i8 (sra (sub v16i8:$vA, (v16i8 (bitconvert(vnot_ppc v4i32:$vB)))),
+def : Pat<(v16i8 (sra (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
           (v16i8 (immEQOneV)))), (v16i8 (VAVGSB $vA, $vB))>;
-def : Pat<(v4i32 (srl (sub v4i32:$vA, (vnot_ppc v4i32:$vB)),
+def : Pat<(v4i32 (srl (sub v4i32:$vA, (vnot v4i32:$vB)),
           (v4i32 (immEQOneV)))), (v4i32 (VAVGUW $vA, $vB))>;
-def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot_ppc v4i32:$vB)))),
+def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
           (v8i16 (immEQOneV)))), (v8i16 (VAVGUH $vA, $vB))>;
-def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot_ppc v4i32:$vB)))),
+def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
           (v16i8 (immEQOneV)))), (v16i8 (VAVGUB $vA, $vB))>;
 
 } // end HasAltivec
@@ -1299,16 +1294,16 @@ let isCommutable = 1 in {
 //           if we find situations where Altivec is really preferred over VSX.
 def VEQV  : VXForm_1<1668, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                      "veqv $vD, $vA, $vB", IIC_VecGeneral,
-                     [(set v4i32:$vD, (vnot_ppc (xor v4i32:$vA, v4i32:$vB)))]>;
+                     [(set v4i32:$vD, (vnot (xor v4i32:$vA, v4i32:$vB)))]>;
 def VNAND : VXForm_1<1412, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                      "vnand $vD, $vA, $vB", IIC_VecGeneral,
-                     [(set v4i32:$vD, (vnot_ppc (and v4i32:$vA, v4i32:$vB)))]>;
+                     [(set v4i32:$vD, (vnot (and v4i32:$vA, v4i32:$vB)))]>;
 } // isCommutable
 
 def VORC : VXForm_1<1348, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                       "vorc $vD, $vA, $vB", IIC_VecGeneral,
                       [(set v4i32:$vD, (or v4i32:$vA,
-                                           (vnot_ppc v4i32:$vB)))]>;
+                                           (vnot v4i32:$vB)))]>;
 
 // i64 element comparisons.
 def VCMPEQUD  : VCMP <199, "vcmpequd $vD, $vA, $vB" , v2i64>;
@@ -1503,8 +1498,7 @@ def VNEGW : VX_VT5_EO5_VB5<1538, 6, "vnegw",
 
 def VNEGD : VX_VT5_EO5_VB5<1538, 7, "vnegd",
                            [(set v2i64:$vD,
-                            (sub (v2i64 (bitconvert (v4i32 immAllZerosV))),
-                                  v2i64:$vB))]>;
+                            (sub (v2i64 immAllZerosV), v2i64:$vB))]>;
 
 // Vector Parity Byte
 def VPRTYBW : VX_VT5_EO5_VB5<1538, 8, "vprtybw", [(set v4i32:$vD,
