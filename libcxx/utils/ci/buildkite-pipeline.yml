@@ -214,7 +214,7 @@ steps:
       - "**/test-results.xml"
       - "**/*.abilist"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -270,7 +270,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -281,7 +281,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -293,7 +293,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -304,7 +304,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
