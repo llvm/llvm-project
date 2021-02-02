@@ -140,13 +140,12 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
 
   auto Bitcast = B.buildBitcast({S32}, CvtPk);
 
-  auto Med3 = B.buildInstr(AMDGPU::G_AMDGPU_MED3_S32,
+  auto Med3 = B.buildInstr(AMDGPU::G_AMDGPU_MED3,
     {S32},
     {MinBoundaryDst.getReg(0), Bitcast.getReg(0), MaxBoundaryDst.getReg(0)},
     MI.getFlags());
   
-  auto Trunc = B.buildTrunc(LLT::scalar(16), Med3);
-  B.buildCopy(MI.getOperand(0).getReg(), Trunc);
+  B.buildTrunc(MI.getOperand(0).getReg(), Med3);
 
   MI.eraseFromParent();
 }
