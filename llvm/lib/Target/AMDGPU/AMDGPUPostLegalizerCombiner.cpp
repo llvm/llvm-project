@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
@@ -20,6 +21,12 @@
 #include "AMDGPUTargetMachine.h"
 >>>>>>> clang-format
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+=======
+#include "AMDGPUTargetMachine.h"
+#include "AMDGPULegalizerInfo.h"
+
+
+>>>>>>> Updating formatting changes.
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -31,7 +38,11 @@
 #include "llvm/Target/TargetMachine.h"
 =======
 #include "llvm/Support/Debug.h"
+<<<<<<< HEAD
 >>>>>>> clang-format
+=======
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+>>>>>>> Updating formatting changes.
 
 #define DEBUG_TYPE "amdgpu-postlegalizer-combiner"
 
@@ -374,8 +385,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const AMDGPULegalizerInfo *LI =
-      static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
+  const AMDGPULegalizerInfo *LI
+    = static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
@@ -388,8 +399,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
 char AMDGPUPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
-                      "Combine AMDGPU machine instrs after legalization", false,
-                      false)
+                      "Combine AMDGPU machine instrs after legalization", 
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
