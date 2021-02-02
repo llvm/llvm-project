@@ -1,5 +1,5 @@
-//RUN: %clang_cc1 %s -cl-std=clc++ -verify -fsyntax-only
-//RUN: %clang_cc1 %s -cl-std=clc++ -verify -fsyntax-only -DFPTREXT
+//RUN: %clang_cc1 %s -cl-std=clc++ -verify -fsyntax-only -triple spir
+//RUN: %clang_cc1 %s -cl-std=clc++ -verify -fsyntax-only -DFPTREXT -triple spir
 
 #ifdef FPTREXT
 #pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
