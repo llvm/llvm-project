@@ -798,6 +798,8 @@ def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  Requires<[HasFP16]>,
             Sched<[WriteFPCVT]>;
 
+// AddedComplexity to use over the dual-insert MVE pattern
+let AddedComplexity = 6 in
 def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_odd:$lane),
               (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1), (VCVTTSH SPR:$src2),
                                     (SSubReg_f16_reg imm:$lane)))>;
@@ -1126,9 +1128,12 @@ def VMOVH  : ASuInp<0b11101, 0b11, 0b0000, 0b01, 0,
              Requires<[HasFullFP16]>;
 
 def VINSH  : ASuInp<0b11101, 0b11, 0b0000, 0b11, 0,
-                  (outs SPR:$Sd), (ins SPR:$Sm),
+                  (outs SPR:$Sd), (ins SPR:$Sda, SPR:$Sm),
                   IIC_fpUNA16, "vins.f16\t$Sd, $Sm", []>,
-             Requires<[HasFullFP16]>;
+             Requires<[HasFullFP16]> {
+  let Constraints = "$Sd = $Sda";
+}
+
 } // PostEncoderMethod
 } // hasSideEffects
 
