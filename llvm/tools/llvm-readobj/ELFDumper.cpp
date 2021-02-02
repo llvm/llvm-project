@@ -1201,6 +1201,7 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_COMPRESSED,       "C"),
+  ENUM_ENT(SHF_GNU_RETAIN,       "R"),
   ENUM_ENT(SHF_EXCLUDE,          "E"),
 };
 
@@ -3483,15 +3484,14 @@ static void printSectionDescription(formatted_raw_ostream &OS,
   OS << "  L (link order), O (extra OS processing required), G (group), T "
         "(TLS),\n";
   OS << "  C (compressed), x (unknown), o (OS specific), E (exclude),\n";
+  OS << "  R (retain)";
 
   if (EMachine == EM_X86_64)
-    OS << "  l (large), ";
+    OS << ", l (large)";
   else if (EMachine == EM_ARM)
-    OS << "  y (purecode), ";
-  else
-    OS << "  ";
+    OS << ", y (purecode)";
 
-  OS << "p (processor specific)\n";
+  OS << ", p (processor specific)\n";
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
