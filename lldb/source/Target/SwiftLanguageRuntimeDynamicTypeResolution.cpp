@@ -886,7 +886,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
   auto frame = instance ? instance->GetExecutionContextRef().GetFrameSP().get()
                         : nullptr;
   if (auto *ti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
-          GetTypeInfo(instance_type, frame))) {
+          GetSwiftRuntimeTypeInfo(instance_type, frame))) {
     auto fields = ti->getFields();
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "using record type info");
@@ -1040,10 +1040,11 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   auto frame =
       valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
   const swift::reflection::TypeRef *tr = nullptr;
-  auto *ti = GetTypeInfo(type, frame, &tr);
+  auto *ti = GetSwiftRuntimeTypeInfo(type, frame, &tr);
+  if (!ti)
+    return {};
   // Structs and Tuples.
-  if (auto *rti =
-          llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
+  if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
     switch (rti->getRecordKind()) {
     case swift::reflection::RecordKind::ExistentialMetatype:
     case swift::reflection::RecordKind::ThickFunction:
@@ -1060,13 +1061,11 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       return rti->getNumFields();
     }
   }
-  if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
+  if (auto *eti = llvm::dyn_cast<swift::reflection::EnumTypeInfo>(ti)) {
     return eti->getNumPayloadCases();
   }
   // Objects.
-  if (auto *rti =
-      llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
-
+  if (auto *rti = llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
@@ -1113,7 +1112,9 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   using namespace swift::reflection;
   // Try the static type metadata.
   const TypeRef *tr = nullptr;
-  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  if (!ti)
+    return {};
   // Structs and Tuples.
   switch (ti->getKind()) {
   case TypeInfoKind::Record: {
@@ -1246,7 +1247,9 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   using namespace swift::reflection;
   using namespace swift::remote;
-  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr());
+  auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr());
+  if (!ti)
+    return {};
   if (ti->getKind() != TypeInfoKind::Enum)
     return {};
 
@@ -1278,7 +1281,9 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
   using namespace swift::reflection;
   // Try the static type metadata.
   const TypeRef *tr = nullptr;
-  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  if (!ti)
+    return {};
   switch (ti->getKind()) {
   case TypeInfoKind::Record: {
     // Structs and Tuples.
@@ -1391,7 +1396,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   // Try the static type metadata.
   auto frame =
       valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
-  auto *ti = GetTypeInfo(type, frame);
+  auto *ti = GetSwiftRuntimeTypeInfo(type, frame);
+  if (!ti)
+    return {};
   // Structs and Tuples.
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
@@ -2772,7 +2779,8 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   return type_ref;
 }
 
-const swift::reflection::TypeInfo *SwiftLanguageRuntimeImpl::GetTypeInfo(
+const swift::reflection::TypeInfo *
+SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
     CompilerType type, ExecutionContextScope *exe_scope,
     swift::reflection::TypeRef const **out_tr) {
   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
@@ -2814,7 +2822,7 @@ const swift::reflection::TypeInfo *SwiftLanguageRuntimeImpl::GetTypeInfo(
 }
 
 bool SwiftLanguageRuntimeImpl::IsStoredInlineInBuffer(CompilerType type) {
-  if (auto *type_info = GetTypeInfo(type, nullptr))
+  if (auto *type_info = GetSwiftRuntimeTypeInfo(type, nullptr))
     return type_info->isBitwiseTakable() && type_info->getSize() <= 24;
   return true;
 }
@@ -2822,14 +2830,14 @@ bool SwiftLanguageRuntimeImpl::IsStoredInlineInBuffer(CompilerType type) {
 llvm::Optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetBitSize(CompilerType type,
                                      ExecutionContextScope *exe_scope) {
-  if (auto *type_info = GetTypeInfo(type, exe_scope))
+  if (auto *type_info = GetSwiftRuntimeTypeInfo(type, exe_scope))
     return type_info->getSize() * 8;
   return {};
 }
 
 llvm::Optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetByteStride(CompilerType type) {
-  if (auto *type_info = GetTypeInfo(type, nullptr))
+  if (auto *type_info = GetSwiftRuntimeTypeInfo(type, nullptr))
     return type_info->getStride();
   return {};
 }
@@ -2837,7 +2845,7 @@ SwiftLanguageRuntimeImpl::GetByteStride(CompilerType type) {
 llvm::Optional<size_t>
 SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type,
                                           ExecutionContextScope *exe_scope) {
-  if (auto *type_info = GetTypeInfo(type, exe_scope))
+  if (auto *type_info = GetSwiftRuntimeTypeInfo(type, exe_scope))
     return type_info->getAlignment() * 8;
   return {};
 }
