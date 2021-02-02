@@ -472,15 +472,37 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
 }
 
-// Following clauses do not have a seperate node in parse-tree.h.
-// They fall under 'struct OmpClause' in parse-tree.h.
+// Following clauses do not have a separate node in parse-tree.h.
+CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
+CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
+CHECK_SIMPLE_CLAUSE(AtomicDefaultMemOrder, OMPC_atomic_default_mem_order)
+CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
+CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Copyin, OMPC_copyin)
 CHECK_SIMPLE_CLAUSE(Copyprivate, OMPC_copyprivate)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
+CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
+CHECK_SIMPLE_CLAUSE(Destroy, OMPC_destroy)
+CHECK_SIMPLE_CLAUSE(Detach, OMPC_detach)
 CHECK_SIMPLE_CLAUSE(Device, OMPC_device)
+CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
+CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
+CHECK_SIMPLE_CLAUSE(DynamicAllocators, OMPC_dynamic_allocators)
+CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
+CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(From, OMPC_from)
+CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
+CHECK_SIMPLE_CLAUSE(InReduction, OMPC_in_reduction)
+CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
+CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
+CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
+CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
+CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
+CHECK_SIMPLE_CLAUSE(ReverseOffload, OMPC_reverse_offload)
+CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
+CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(IsDevicePtr, OMPC_is_device_ptr)
 CHECK_SIMPLE_CLAUSE(Lastprivate, OMPC_lastprivate)
@@ -489,20 +511,24 @@ CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
 CHECK_SIMPLE_CLAUSE(Nowait, OMPC_nowait)
+CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
 CHECK_SIMPLE_CLAUSE(Reduction, OMPC_reduction)
-CHECK_SIMPLE_CLAUSE(TaskReduction, OMPC_task_reduction)
-CHECK_SIMPLE_CLAUSE(To, OMPC_to)
-CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
-CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
-CHECK_SIMPLE_CLAUSE(UseDevicePtr, OMPC_use_device_ptr)
-CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
-CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
-CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
-CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
-CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
-CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
+CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
+CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
+CHECK_SIMPLE_CLAUSE(TaskReduction, OMPC_task_reduction)
+CHECK_SIMPLE_CLAUSE(To, OMPC_to)
+CHECK_SIMPLE_CLAUSE(UnifiedAddress, OMPC_unified_address)
+CHECK_SIMPLE_CLAUSE(UnifiedSharedMemory, OMPC_unified_shared_memory)
+CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
+CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
+CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
+CHECK_SIMPLE_CLAUSE(UseDevicePtr, OMPC_use_device_ptr)
+CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
+CHECK_SIMPLE_CLAUSE(Update, OMPC_update)
+CHECK_SIMPLE_CLAUSE(UseDeviceAddr, OMPC_use_device_addr)
+CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
@@ -615,27 +641,26 @@ void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
 }
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
-void OmpStructureChecker::Enter(const parser::OmpAlignedClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_aligned);
 
   if (const auto &expr{
-          std::get<std::optional<parser::ScalarIntConstantExpr>>(x.t)}) {
+          std::get<std::optional<parser::ScalarIntConstantExpr>>(x.v.t)}) {
     RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_aligned, *expr);
   }
   // 2.8.1 TODO: list-item attribute check
 }
-void OmpStructureChecker::Enter(const parser::OmpDefaultmapClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_defaultmap);
   using VariableCategory = parser::OmpDefaultmapClause::VariableCategory;
-  if (!std::get<std::optional<VariableCategory>>(x.t)) {
+  if (!std::get<std::optional<VariableCategory>>(x.v.t)) {
     context_.Say(GetContext().clauseSource,
         "The argument TOFROM:SCALAR must be specified on the DEFAULTMAP "
         "clause"_err_en_US);
   }
 }
-void OmpStructureChecker::Enter(const parser::OmpIfClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_if);
-
   using dirNameModifier = parser::OmpIfClause::DirectiveNameModifier;
   static std::unordered_map<dirNameModifier, OmpDirectiveSet>
       dirNameModifierMap{{dirNameModifier::Parallel, llvm::omp::parallelSet},
@@ -651,7 +676,7 @@ void OmpStructureChecker::Enter(const parser::OmpIfClause &x) {
           {dirNameModifier::Task, {llvm::omp::Directive::OMPD_task}},
           {dirNameModifier::Taskloop, llvm::omp::taskloopSet}};
   if (const auto &directiveName{
-          std::get<std::optional<dirNameModifier>>(x.t)}) {
+          std::get<std::optional<dirNameModifier>>(x.v.t)}) {
     auto search{dirNameModifierMap.find(*directiveName)};
     if (search == dirNameModifierMap.end() ||
         !search->second.test(GetContext().directive)) {
@@ -666,12 +691,12 @@ void OmpStructureChecker::Enter(const parser::OmpIfClause &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpLinearClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_linear);
 
   // 2.7 Loop Construct Restriction
   if ((llvm::omp::doSet | llvm::omp::simdSet).test(GetContext().directive)) {
-    if (std::holds_alternative<parser::OmpLinearClause::WithModifier>(x.u)) {
+    if (std::holds_alternative<parser::OmpLinearClause::WithModifier>(x.v.u)) {
       context_.Say(GetContext().clauseSource,
           "A modifier may not be specified in a LINEAR clause "
           "on the %s directive"_err_en_US,
@@ -701,9 +726,10 @@ void OmpStructureChecker::CheckAllowedMapTypes(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpMapClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_map);
-  if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
+
+  if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.v.t)}) {
     using Type = parser::OmpMapType::Type;
     const Type &type{std::get<Type>(maptype->t)};
     switch (GetContext().directive) {
@@ -746,13 +772,14 @@ bool OmpStructureChecker::ScheduleModifierHasType(
   }
   return false;
 }
-void OmpStructureChecker::Enter(const parser::OmpScheduleClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_schedule);
+  const parser::OmpScheduleClause &scheduleClause = x.v;
 
   // 2.7 Loop Construct Restriction
   if (llvm::omp::doSet.test(GetContext().directive)) {
-    const auto &kind{std::get<1>(x.t)};
-    const auto &chunk{std::get<2>(x.t)};
+    const auto &kind{std::get<1>(scheduleClause.t)};
+    const auto &chunk{std::get<2>(scheduleClause.t)};
     if (chunk) {
       if (kind == parser::OmpScheduleClause::ScheduleType::Runtime ||
           kind == parser::OmpScheduleClause::ScheduleType::Auto) {
@@ -762,15 +789,15 @@ void OmpStructureChecker::Enter(const parser::OmpScheduleClause &x) {
             parser::ToUpperCaseLetters(
                 parser::OmpScheduleClause::EnumToString(kind)));
       }
-      if (const auto &chunkExpr{
-              std::get<std::optional<parser::ScalarIntExpr>>(x.t)}) {
+      if (const auto &chunkExpr{std::get<std::optional<parser::ScalarIntExpr>>(
+              scheduleClause.t)}) {
         RequiresPositiveParameter(
             llvm::omp::Clause::OMPC_schedule, *chunkExpr, "chunk size");
       }
     }
 
-    if (ScheduleModifierHasType(
-            x, parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
+    if (ScheduleModifierHasType(scheduleClause,
+            parser::OmpScheduleModifierType::ModType::Nonmonotonic)) {
       if (kind != parser::OmpScheduleClause::ScheduleType::Dynamic &&
           kind != parser::OmpScheduleClause::ScheduleType::Guided) {
         context_.Say(GetContext().clauseSource,
@@ -781,9 +808,9 @@ void OmpStructureChecker::Enter(const parser::OmpScheduleClause &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpDependClause &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_depend);
-  if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.u)}) {
+  if (const auto *inOut{std::get_if<parser::OmpDependClause::InOut>(&x.v.u)}) {
     const auto &designators{std::get<std::list<parser::Designator>>(inOut->t)};
     for (const auto &ele : designators) {
       if (const auto *dataRef{std::get_if<parser::DataRef>(&ele.u)}) {

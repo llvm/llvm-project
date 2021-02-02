@@ -1100,8 +1100,8 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
 static std::string getEnumNameForToken(StringRef Str) {
   std::string Res;
 
-  for (StringRef::iterator it = Str.begin(), ie = Str.end(); it != ie; ++it) {
-    switch (*it) {
+  for (char C : Str) {
+    switch (C) {
     case '*': Res += "_STAR_"; break;
     case '%': Res += "_PCT_"; break;
     case ':': Res += "_COLON_"; break;
@@ -1112,10 +1112,10 @@ static std::string getEnumNameForToken(StringRef Str) {
     case '-': Res += "_MINUS_"; break;
     case '#': Res += "_HASH_"; break;
     default:
-      if (isAlnum(*it))
-        Res += *it;
+      if (isAlnum(C))
+        Res += C;
       else
-        Res += "_" + utostr((unsigned) *it) + "_";
+        Res += "_" + utostr((unsigned)C) + "_";
     }
   }
 

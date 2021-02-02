@@ -551,6 +551,38 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
     return;
   }
+  case ISD::SRL: {
+    // Optimize (srl (and X, 0xffff), C) -> (srli (slli X, 16), 16 + C).
+    // Taking into account that the 0xffff may have had lower bits unset by
+    // SimplifyDemandedBits. This avoids materializing the 0xffff immediate.
+    // This pattern occurs when type legalizing i16 right shifts.
+    // FIXME: This could be extended to other AND masks.
+    auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+    if (N1C) {
+      uint64_t ShAmt = N1C->getZExtValue();
+      SDValue N0 = Node->getOperand(0);
+      if (ShAmt < 16 && N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
+          isa<ConstantSDNode>(N0.getOperand(1))) {
+        uint64_t Mask = N0.getConstantOperandVal(1);
+        Mask |= maskTrailingOnes<uint64_t>(ShAmt);
+        if (Mask == 0xffff) {
+          SDLoc DL(Node);
+          unsigned SLLOpc = Subtarget->is64Bit() ? RISCV::SLLIW : RISCV::SLLI;
+          unsigned SRLOpc = Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI;
+          SDNode *SLLI =
+              CurDAG->getMachineNode(SLLOpc, DL, VT, N0->getOperand(0),
+                                     CurDAG->getTargetConstant(16, DL, VT));
+          SDNode *SRLI = CurDAG->getMachineNode(
+              SRLOpc, DL, VT, SDValue(SLLI, 0),
+              CurDAG->getTargetConstant(16 + ShAmt, DL, VT));
+          ReplaceNode(Node, SRLI);
+          return;
+        }
+      }
+    }
+
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     switch (IntNo) {
@@ -977,6 +1009,23 @@ bool RISCVDAGToDAGISel::MatchSLLIUW(SDNode *N) const {
   // Immediate range should be enforced by uimm5 predicate.
   assert(VC2 < 32 && "Unexpected immediate");
   return (VC1 >> VC2) == UINT64_C(0xFFFFFFFF);
+}
+
+// X0 has special meaning for vsetvl/vsetvli.
+//  rd | rs1 |   AVL value | Effect on vl
+//--------------------------------------------------------------
+// !X0 |  X0 |       VLMAX | Set vl to VLMAX
+//  X0 |  X0 | Value in vl | Keep current vl, just change vtype.
+bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
+  // If the VL value is a constant 0, manually select it to an ADDI with 0
+  // immediate to prevent the default selection path from matching it to X0.
+  auto *C = dyn_cast<ConstantSDNode>(N);
+  if (C && C->isNullValue())
+    VL = SDValue(selectImm(CurDAG, SDLoc(N), 0, Subtarget->getXLenVT()), 0);
+  else
+    VL = N;
+
+  return true;
 }
 
 bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {

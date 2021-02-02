@@ -17,6 +17,8 @@ int main(int argc, char *argv[]) {
   result = base + 0;
   // CHECK-NOTYPE-C: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior {{.*}}summary.cpp:[[@LINE-1]]:17
   // CHECK-TYPE-C: SUMMARY: UndefinedBehaviorSanitizer: nullptr-with-offset {{.*}}summary.cpp:[[@LINE-2]]:17
+  // CHECK-NOTYPE-CPP-NOT: SUMMARY:
+  // CHECK-TYPE-CPP-NOT: SUMMARY:
 
   base = (char *)0;
   result = base + 1;

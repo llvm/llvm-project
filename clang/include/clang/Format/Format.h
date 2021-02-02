@@ -2613,13 +2613,44 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
-  /// If ``true``, clang-format will sort ``#includes``.
-  /// \code
-  ///    false:                                 true:
-  ///    #include "b.h"                 vs.     #include "a.h"
-  ///    #include "a.h"                         #include "b.h"
-  /// \endcode
-  bool SortIncludes;
+  /// Include sorting options.
+  enum SortIncludesOptions : unsigned char {
+    /// Includes are never sorted.
+    /// \code
+    ///    #include "B/A.h"
+    ///    #include "A/B.h"
+    ///    #include "a/b.h"
+    ///    #include "A/b.h"
+    ///    #include "B/a.h"
+    /// \endcode
+    SI_Never,
+    /// Includes are sorted in an ASCIIbetical or case insensitive fashion.
+    /// \code
+    ///    #include "A/B.h"
+    ///    #include "A/b.h"
+    ///    #include "B/A.h"
+    ///    #include "B/a.h"
+    ///    #include "a/b.h"
+    /// \endcode
+    SI_CaseInsensitive,
+    /// Includes are sorted in an alphabetical or case sensitive fashion.
+    /// \code
+    ///    #include "A/B.h"
+    ///    #include "A/b.h"
+    ///    #include "a/b.h"
+    ///    #include "B/A.h"
+    ///    #include "B/a.h"
+    /// \endcode
+    SI_CaseSensitive,
+  };
+
+  /// Controls if and how clang-format will sort ``#includes``.
+  /// If ``Never``, includes are never sorted.
+  /// If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case
+  /// insensitive fashion.
+  /// If ``CaseSensitive``, includes are sorted in an alphabetical or case
+  /// sensitive fashion.
+  SortIncludesOptions SortIncludes;
 
   /// Position for Java Static imports.
   enum SortJavaStaticImportOptions : unsigned char {
@@ -2894,6 +2925,43 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInCStyleCastParentheses;
 
+  /// Control of spaces within a single line comment
+  struct SpacesInLineComment {
+    /// The minimum number of spaces at the start of the comment.
+    unsigned Minimum;
+    /// The maximum number of spaces at the start of the comment.
+    unsigned Maximum;
+  };
+
+  /// How many spaces are allowed at the start of a line comment. To disable the
+  /// maximum set it to ``-1``, apart from that the maximum takes precedence
+  /// over the minimum.
+  /// \code Minimum = 1 Maximum = -1
+  /// // One space is forced
+  ///
+  /// //  but more spaces are possible
+  ///
+  /// Minimum = 0
+  /// Maximum = 0
+  /// //Forces to start every comment directly after the slashes
+  /// \endcode
+  ///
+  /// Note that in line comment sections the relative indent of the subsequent
+  /// lines is kept, that means the following:
+  /// \code
+  /// before:                                   after:
+  /// Minimum: 1
+  /// //if (b) {                                // if (b) {
+  /// //  return true;                          //   return true;
+  /// //}                                       // }
+  ///
+  /// Maximum: 0
+  /// /// List:                                 ///List:
+  /// ///  - Foo                                /// - Foo
+  /// ///    - Bar                              ///   - Bar
+  /// \endcode
+  SpacesInLineComment SpacesInLineCommentPrefix;
+
   /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// \code
   ///    true:                                  false:
@@ -3124,6 +3192,7 @@ struct FormatStyle {
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
+           SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
@@ -3145,6 +3214,10 @@ struct FormatStyle {
            SpacesInConditionalStatement == R.SpacesInConditionalStatement &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
+           SpacesInLineCommentPrefix.Minimum ==
+               R.SpacesInLineCommentPrefix.Minimum &&
+           SpacesInLineCommentPrefix.Maximum ==
+               R.SpacesInLineCommentPrefix.Maximum &&
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&

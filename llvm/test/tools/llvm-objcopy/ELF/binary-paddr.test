@@ -183,3 +183,34 @@ Sections:
   - Name:         .data
     Type:         SHT_PROGBITS
     Flags:        [ SHF_ALLOC, SHF_WRITE ]
+
+## NOBITS sections should not appear in output.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-objcopy -O binary %t6 %t6.out
+# RUN: od -A x -t x2 %t6.out | FileCheck %s --check-prefix=SKIPNOBITS --ignore-case
+
+# SKIPNOBITS:      000000 c3c3 c3c3
+# SKIPNOBITS-NEXT: 000004
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Size:         0x123
+  - Name:         gap
+    Type:         Fill
+    Size:         0xffd
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x4000
+    AddressAlign: 0x1000
+    Content:      "c3c3c3c3"

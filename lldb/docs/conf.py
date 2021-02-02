@@ -130,7 +130,9 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'font_size': '11pt'
+    'font_size': '11pt',
+    # Don't generate any links to GitHub.
+    'github_button' : 'false',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

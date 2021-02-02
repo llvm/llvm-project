@@ -8240,23 +8240,27 @@ On exit from a function:
     * GFX6-GFX8: M0
     * All SGPR registers except the clobbered registers of SGPR4-31.
     * VGPR40-47
-      VGPR56-63
-      VGPR72-79
-      VGPR88-95
-      VGPR104-111
-      VGPR120-127
-      VGPR136-143
-      VGPR152-159
-      VGPR168-175
-      VGPR184-191
-      VGPR200-207
-      VGPR216-223
-      VGPR232-239
-      VGPR248-255
+    * VGPR56-63
+    * VGPR72-79
+    * VGPR88-95
+    * VGPR104-111
+    * VGPR120-127
+    * VGPR136-143
+    * VGPR152-159
+    * VGPR168-175
+    * VGPR184-191
+    * VGPR200-207
+    * VGPR216-223
+    * VGPR232-239
+    * VGPR248-255
 
-        *Except the argument registers, the VGPR clobbered and the preserved
-        registers are intermixed at regular intervals in order to
-        get a better occupancy.*
+        .. note::
+
+          Except the argument registers, the VGPRs clobbered and the preserved
+          registers are intermixed at regular intervals in order to keep a
+          similar ratio independent of the number of allocated VGPRs.
+
+    * Lanes of all VGPRs that are inactive at the call site.
 
       For the AMDGPU backend, an inter-procedural register allocation (IPRA)
       optimization may mark some of clobbered SGPR and VGPR registers as

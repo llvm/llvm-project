@@ -398,6 +398,14 @@ def getFPAs32BitInt : SDNodeXForm<fpimm, [{
                                    SDLoc(N), MVT::i32);
 }]>;
 
+def imm34 : PatLeaf<(imm), [{
+  return isInt<34>(N->getSExtValue());
+}]>;
+
+def getImmAs64BitInt : SDNodeXForm<imm, [{
+  return getI64Imm(N->getSExtValue(), SDLoc(N));
+}]>;
+
 def SHL32 : SDNodeXForm<imm, [{
   // Transformation function: 31 - imm
   return getI32Imm(31 - N->getZExtValue(), SDLoc(N));

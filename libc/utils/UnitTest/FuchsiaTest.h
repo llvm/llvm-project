@@ -11,4 +11,6 @@
 
 #include <zxtest/zxtest.h>
 
+#define WITH_SIGNAL(X) #X
+
 #endif // LLVM_LIBC_UTILS_UNITTEST_FUCHSIATEST_H

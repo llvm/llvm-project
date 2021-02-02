@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can remove uninteresting function arguments from function definitions as well as their calls.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
+; RUN: llvm-reduce --test FileCheck --test-arg --check-prefix=CHECK-ALL --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefix=CHECK-ALL %s < %t
 
 ; CHECK-ALL: @uninteresting1 = global
 ; CHECK-ALL: @uninteresting2 = global

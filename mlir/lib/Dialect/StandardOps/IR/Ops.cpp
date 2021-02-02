@@ -2148,67 +2148,6 @@ void mlir::MemRefReinterpretCastOp::build(OpBuilder &b, OperationState &result,
   build(b, result, resultType, source, offset, sizeValues, strideValues, attrs);
 }
 
-/// Print a memref_reinterpret_cast op of the form:
-/// ```
-///   `memref_reinterpret_cast` ssa-name to
-///       offset: `[` offset `]`
-///       sizes: `[` size-list `]`
-///       strides:`[` stride-list `]`
-///   `:` any-memref-type to strided-memref-type
-/// ```
-static void print(OpAsmPrinter &p, MemRefReinterpretCastOp op) {
-  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
-  p << op.source() << " ";
-  printOffsetsSizesAndStrides(
-      p, op, /*offsetPrefix=*/"to offset: ", /*sizePrefix=*/", sizes: ",
-      /*stridePrefix=*/", strides: ");
-  p << ": " << op.source().getType() << " to " << op.getType();
-}
-
-/// Parse a memref_reinterpret_cast op of the form:
-/// ```
-///   `memref_reinterpret_cast` ssa-name to
-///       offset: `[` offset `]`
-///       sizes: `[` size-list `]`
-///       strides:`[` stride-list `]`
-///   `:` any-memref-type to strided-memref-type
-/// ```
-static ParseResult parseMemRefReinterpretCastOp(OpAsmParser &parser,
-                                                OperationState &result) {
-  // Parse `operand`
-  OpAsmParser::OperandType srcInfo;
-  if (parser.parseOperand(srcInfo))
-    return failure();
-
-  auto parseOffsetPrefix = [](OpAsmParser &parser) {
-    return failure(parser.parseKeyword("to") || parser.parseKeyword("offset") ||
-                   parser.parseColon());
-  };
-  auto parseSizePrefix = [](OpAsmParser &parser) {
-    return failure(parser.parseComma() || parser.parseKeyword("sizes") ||
-                   parser.parseColon());
-  };
-  auto parseStridePrefix = [](OpAsmParser &parser) {
-    return failure(parser.parseComma() || parser.parseKeyword("strides") ||
-                   parser.parseColon());
-  };
-
-  Type srcType, dstType;
-  auto preResolutionFn = [&](OpAsmParser &parser, OperationState &result) {
-    return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                   parser.parseColonType(srcType) ||
-                   parser.parseKeywordType("to", dstType) ||
-                   parser.resolveOperand(srcInfo, srcType, result.operands));
-  };
-  if (failed(parseOffsetsSizesAndStrides(parser, result,
-                                         /*segmentSizes=*/{1}, // source memref
-                                         preResolutionFn, parseOffsetPrefix,
-                                         parseSizePrefix, parseStridePrefix)))
-    return failure();
-  return parser.addTypeToList(dstType, result.types);
-}
-
 // TODO: ponder whether we want to allow missing trailing sizes/strides that are
 // completed automatically, like we have for subview and subtensor.
 static LogicalResult verify(MemRefReinterpretCastOp op) {
@@ -2892,45 +2831,6 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
       sourceMemRefType.getMemorySpace());
 }
 
-/// Print a subview op of the form:
-/// ```
-///   `subview` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` strided-memref-type `to` strided-memref-type
-/// ```
-static void print(OpAsmPrinter &p, SubViewOp op) {
-  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
-  p << op.source();
-  printOffsetsSizesAndStrides(p, op);
-  p << " : " << op.source().getType() << " to " << op.getType();
-}
-
-/// Parse a subview op of the form:
-/// ```
-///   `subview` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` strided-memref-type `to` strided-memref-type
-/// ```
-static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  if (parser.parseOperand(srcInfo))
-    return failure();
-  Type srcType, dstType;
-  auto preResolutionFn = [&](OpAsmParser &parser, OperationState &result) {
-    return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                   parser.parseColonType(srcType) ||
-                   parser.parseKeywordType("to", dstType) ||
-                   parser.resolveOperand(srcInfo, srcType, result.operands));
-  };
-
-  if (failed(parseOffsetsSizesAndStrides(parser, result,
-                                         /*segmentSizes=*/{1}, // source memref
-                                         preResolutionFn)))
-    return failure();
-  return parser.addTypeToList(dstType, result.types);
-}
-
 // Build a SubViewOp with mixed static and dynamic entries and custom result
 // type. If the type passed is nullptr, it is inferred.
 void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
@@ -3466,46 +3366,6 @@ OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
 // SubTensorOp
 //===----------------------------------------------------------------------===//
 
-/// Print a subtensor op of the form:
-/// ```
-///   `subtensor` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` ranked-tensor-type `to` ranked-tensor-type
-/// ```
-static void print(OpAsmPrinter &p, SubTensorOp op) {
-  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
-  p << op.source();
-  printOffsetsSizesAndStrides(p, op);
-  p << " : " << op.getSourceType() << " to " << op.getType();
-}
-
-/// Parse a subtensor op of the form:
-/// ```
-///   `subtensor` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` ranked-tensor-type `to` ranked-tensor-type
-/// ```
-static ParseResult parseSubTensorOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  if (parser.parseOperand(srcInfo))
-    return failure();
-  Type srcType, dstType;
-  auto preResolutionFn = [&](OpAsmParser &parser, OperationState &result) {
-    return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                   parser.parseColonType(srcType) ||
-                   parser.parseKeywordType("to", dstType) ||
-                   parser.resolveOperand(srcInfo, srcType, result.operands));
-  };
-
-  if (failed(parseOffsetsSizesAndStrides(parser, result,
-                                         /*segmentSizes=*/{1}, // source tensor
-                                         preResolutionFn)))
-    return failure();
-  return parser.addTypeToList(dstType, result.types);
-}
-
 /// A subtensor result type can be fully inferred from the source type and the
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
@@ -3612,49 +3472,6 @@ void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 // SubTensorInsertOp
 //===----------------------------------------------------------------------===//
 
-/// Print a subtensor_insert op of the form:
-/// ```
-///   `subtensor_insert` ssa-name `into` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` ranked-tensor-type `into` ranked-tensor-type
-/// ```
-static void print(OpAsmPrinter &p, SubTensorInsertOp op) {
-  int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
-  p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
-  p << op.source() << " into " << op.dest();
-  printOffsetsSizesAndStrides(p, op);
-  p << " : " << op.getSourceType() << " into " << op.getType();
-}
-
-/// Parse a subtensor_insert op of the form:
-/// ```
-///   `subtensor_insert` ssa-name `into` ssa-name
-///     `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` ranked-tensor-type `into` ranked-tensor-type
-/// ```
-static ParseResult parseSubTensorInsertOp(OpAsmParser &parser,
-                                          OperationState &result) {
-  OpAsmParser::OperandType srcInfo, dstInfo;
-  if (parser.parseOperand(srcInfo) || parser.parseKeyword("into") ||
-      parser.parseOperand(dstInfo))
-    return failure();
-  Type srcType, dstType;
-  auto preResolutionFn = [&](OpAsmParser &parser, OperationState &result) {
-    return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                   parser.parseColonType(srcType) ||
-                   parser.parseKeywordType("into", dstType) ||
-                   parser.resolveOperand(srcInfo, srcType, result.operands) ||
-                   parser.resolveOperand(dstInfo, dstType, result.operands));
-  };
-
-  if (failed(parseOffsetsSizesAndStrides(
-          parser, result,
-          /*segmentSizes=*/{1, 1}, // source tensor, destination tensor
-          preResolutionFn)))
-    return failure();
-  return parser.addTypeToList(dstType, result.types);
-}
-
 // Build a SubTensorInsertOp with mixed static and dynamic entries.
 void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
                                     Value source, Value dest,
@@ -3689,13 +3506,6 @@ void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
   SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
       llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
-}
-
-/// Verifier for SubViewOp.
-static LogicalResult verify(SubTensorInsertOp op) {
-  if (op.getType() != op.dest().getType())
-    return op.emitError("expected result type to be ") << op.dest().getType();
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -84,6 +84,10 @@ bool Fortran::frontend::ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
 
 static InputKind ParseFrontendArgs(FrontendOptions &opts,
     llvm::opt::ArgList &args, clang::DiagnosticsEngine &diags) {
+
+  // By default the frontend driver creates a ParseSyntaxOnly action.
+  opts.programAction_ = ParseSyntaxOnly;
+
   // Identify the action (i.e. opts.ProgramAction)
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_Action_Group)) {

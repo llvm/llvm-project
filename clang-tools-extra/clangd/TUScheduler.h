@@ -196,10 +196,6 @@ public:
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
 
-    /// Whether to run PreamblePeer asynchronously.
-    /// No-op if AsyncThreadsCount is 0.
-    bool AsyncPreambleBuilds = true;
-
     /// Used to create a context that wraps each single operation.
     /// Typically to inject per-file configuration.
     /// If the path is empty, context sholud be "generic".

@@ -1,6 +1,12 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefix=BIN %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN32 %s
+
+# Same again for wasm64
+
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# Check that it converts to .o without errors:
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN64 %s
 
 # Minimal test for data sections.
 
@@ -44,6 +50,7 @@ test0:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
+# BIN64-NEXT:         Flags:           [ IS_64 ]
 # BIN-NEXT:           Initial:         0x1
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
@@ -63,7 +70,8 @@ test0:
 # BIN-NEXT:       - SectionOffset:   6
 # BIN-NEXT:         InitFlags:       0
 # BIN-NEXT:         Offset:
-# BIN-NEXT:           Opcode:          I32_CONST
+# BIN32-NEXT:         Opcode:          I32_CONST
+# BIN64-NEXT:         Opcode:          I64_CONST
 # BIN-NEXT:           Value:           0
 # BIN-NEXT:         Content:         '64'
 # BIN-NEXT:   - Type:            CUSTOM

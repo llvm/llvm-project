@@ -100,35 +100,13 @@ define double @return_double() {
 }
 
 define <4 x i32> @return_v4i32() {
-; CHECK-LE-LABEL: return_v4i32:
-; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    adr r0, .LCPI6_0
-; CHECK-LE-NEXT:    vld1.64 {d16, d17}, [r0:128]
-; CHECK-LE-NEXT:    vmov r0, r1, d16
-; CHECK-LE-NEXT:    vmov r2, r3, d17
-; CHECK-LE-NEXT:    bx lr
-; CHECK-LE-NEXT:    .p2align 4
-; CHECK-LE-NEXT:  @ %bb.1:
-; CHECK-LE-NEXT:  .LCPI6_0:
-; CHECK-LE-NEXT:    .long 42 @ double 9.1245819032257467E-313
-; CHECK-LE-NEXT:    .long 43
-; CHECK-LE-NEXT:    .long 44 @ double 9.5489810615176143E-313
-; CHECK-LE-NEXT:    .long 45
-;
-; CHECK-BE-LABEL: return_v4i32:
-; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    adr r0, .LCPI6_0
-; CHECK-BE-NEXT:    vld1.64 {d16, d17}, [r0:128]
-; CHECK-BE-NEXT:    vmov r1, r0, d16
-; CHECK-BE-NEXT:    vmov r3, r2, d17
-; CHECK-BE-NEXT:    bx lr
-; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  @ %bb.1:
-; CHECK-BE-NEXT:  .LCPI6_0:
-; CHECK-BE-NEXT:    .long 42 @ double 8.912382324178626E-313
-; CHECK-BE-NEXT:    .long 43
-; CHECK-BE-NEXT:    .long 44 @ double 9.3367814824704935E-313
-; CHECK-BE-NEXT:    .long 45
+; CHECK-LABEL: return_v4i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r0, #42
+; CHECK-NEXT:    mov r1, #43
+; CHECK-NEXT:    mov r2, #44
+; CHECK-NEXT:    mov r3, #45
+; CHECK-NEXT:    bx lr
    ret < 4 x i32> < i32 42, i32 43, i32 44, i32 45 >
 }
 

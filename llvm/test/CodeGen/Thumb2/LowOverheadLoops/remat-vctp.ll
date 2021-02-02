@@ -106,7 +106,6 @@ define void @dont_remat_predicated_vctp(i32* %arg, i32* %arg1, i32* %arg2, i32* 
 ; CHECK-NEXT:    add.w lr, r5, #3
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    add.w lr, r5, lr, lsr #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_1: @ %bb6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r12

@@ -15463,7 +15463,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
   CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(ReflowComments);
-  CHECK_PARSE_BOOL(SortIncludes);
   CHECK_PARSE_BOOL(SortUsingDeclarations);
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
@@ -15959,6 +15958,16 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("IncludeIsMainSourceRegex: 'abc$'",
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
+  Style.SortIncludes = FormatStyle::SI_Never;
+  CHECK_PARSE("SortIncludes: true", SortIncludes,
+              FormatStyle::SI_CaseInsensitive);
+  CHECK_PARSE("SortIncludes: false", SortIncludes, FormatStyle::SI_Never);
+  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
+              FormatStyle::SI_CaseInsensitive);
+  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
+              FormatStyle::SI_CaseSensitive);
+  CHECK_PARSE("SortIncludes: Never", SortIncludes, FormatStyle::SI_Never);
+
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
       {
@@ -15994,6 +16003,26 @@ TEST_F(FormatTest, ParsesConfiguration) {
               "      - 'CPPEVAL'\n"
               "    CanonicalDelimiter: 'cc'",
               RawStringFormats, ExpectedRawStringFormats);
+
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 0\n"
+              "  Maximum: 0",
+              SpacesInLineCommentPrefix.Minimum, 0u);
+  EXPECT_EQ(Style.SpacesInLineCommentPrefix.Maximum, 0u);
+  Style.SpacesInLineCommentPrefix.Minimum = 1;
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 2",
+              SpacesInLineCommentPrefix.Minimum, 0u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Maximum: -1",
+              SpacesInLineCommentPrefix.Maximum, -1u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Minimum: 2",
+              SpacesInLineCommentPrefix.Minimum, 2u);
+  CHECK_PARSE("SpacesInLineCommentPrefix:\n"
+              "  Maximum: 1",
+              SpacesInLineCommentPrefix.Maximum, 1u);
+  EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
 }
 
 TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
@@ -17950,7 +17979,7 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
                             "#include \"b.h\"\n")});
 
   format::FormatStyle Style = format::getLLVMStyle();
-  Style.SortIncludes = true;
+  Style.SortIncludes = FormatStyle::SI_CaseInsensitive;
   auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
   EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
       << llvm::toString(FormattedReplaces.takeError()) << "\n";

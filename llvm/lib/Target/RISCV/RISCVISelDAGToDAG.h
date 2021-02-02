@@ -53,6 +53,8 @@ public:
   bool MatchSROIW(SDNode *N) const;
   bool MatchSLLIUW(SDNode *N) const;
 
+  bool selectVLOp(SDValue N, SDValue &VL);
+
   bool selectVSplat(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5(SDValue N, SDValue &SplatVal);
   bool selectVSplatUimm5(SDValue N, SDValue &SplatVal);

@@ -17,7 +17,6 @@ define dso_local i32 @mul_reduce_add(i32* noalias nocapture readonly %a, i32* no
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -94,7 +93,6 @@ define dso_local i32 @mul_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    subs r1, #4
 ; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -165,7 +163,6 @@ define dso_local i32 @add_reduce_add_const(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    subs r1, #4
 ; CHECK-NEXT:    add.w lr, r3, r1, lsr #2
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2

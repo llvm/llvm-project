@@ -1033,12 +1033,50 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
   return nullptr;
 }
 
+// Try to select instructions to generate a 64 bit immediate using prefix as
+// well as non prefix instructions. The function will return the SDNode
+// to materialize that constant or it will return nullptr if it does not
+// find one. The variable InstCnt is set to the number of instructions that
+// were selected.
+static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
+                                        uint64_t Imm, unsigned &InstCnt) {
+  // Following patterns use 1 instruction to materialize Imm.
+  InstCnt = 1;
+
+  // The pli instruction can materialize up to 34 bits directly.
+  // It is defined in the TD file and so we just return the constant.
+  if (isInt<34>(Imm))
+    return cast<ConstantSDNode>(CurDAG->getConstant(Imm, dl, MVT::i64));
+
+  InstCnt = 0;
+  return nullptr;
+}
+
 static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl, uint64_t Imm,
                             unsigned *InstCnt = nullptr) {
   unsigned InstCntDirect = 0;
   // No more than 3 instructions is used if we can select the i64 immediate
   // directly.
   SDNode *Result = selectI64ImmDirect(CurDAG, dl, Imm, InstCntDirect);
+
+  const PPCSubtarget &Subtarget =
+      CurDAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+
+  if (Subtarget.hasPrefixInstrs()) {
+    unsigned InstCntDirectP = 0;
+    SDNode *ResultP = selectI64ImmDirectPrefix(CurDAG, dl, Imm, InstCntDirectP);
+    // Use the prefix case in either of two cases:
+    // 1) We have no result from the non-prefix case to use.
+    // 2) The non-prefix case uses more instructions than the prefix case.
+    // If the prefix and non-prefix cases use the same number of instructions
+    // we will prefer the non-prefix case.
+    if (ResultP && (!Result || InstCntDirectP < InstCntDirect)) {
+      if (InstCnt)
+        *InstCnt = InstCntDirectP;
+      return ResultP;
+    }
+  }
+
   if (Result) {
     if (InstCnt)
       *InstCnt = InstCntDirect;
@@ -4728,8 +4766,11 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
-      ReplaceNode(N, selectI64Imm(CurDAG, N));
-      return;
+      SDNode *ResNode = selectI64Imm(CurDAG, N);
+      if (!isa<ConstantSDNode>(ResNode)) {
+        ReplaceNode(N, ResNode);
+        return;
+      }
     }
     break;
 

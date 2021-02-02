@@ -334,10 +334,12 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
         // No avr-libc found and so no runtime linked.
         D.Diag(diag::warn_drv_avr_libc_not_found);
       } else { // We have enough information to link stdlibs
-        std::string GCCRoot = std::string(GCCInstallation.getInstallPath());
+        std::string GCCRoot(GCCInstallation.getInstallPath());
+        std::string GCCParentPath(GCCInstallation.getParentLibPath());
         std::string LibcRoot = AVRLibcRoot.getValue();
         std::string SubPath = GetMCUSubPath(CPU);
 
+        getProgramPaths().push_back(GCCParentPath + "/../bin");
         getFilePaths().push_back(LibcRoot + std::string("/lib/") + SubPath);
         getFilePaths().push_back(GCCRoot + std::string("/") + SubPath);
 
@@ -419,9 +421,10 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 llvm::Optional<std::string> AVRToolChain::findAVRLibcInstallation() const {
   for (StringRef PossiblePath : PossibleAVRLibcLocations) {
+    std::string Path = getDriver().SysRoot + PossiblePath.str();
     // Return the first avr-libc installation that exists.
-    if (llvm::sys::fs::is_directory(PossiblePath))
-      return Optional<std::string>(std::string(PossiblePath));
+    if (llvm::sys::fs::is_directory(Path))
+      return Optional<std::string>(Path);
   }
 
   return llvm::None;

@@ -62,8 +62,8 @@ body:             |
     ; GFX8: frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
     ; GFX8: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; GFX8: frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x05, 0x90, 0x82, 0x14, 0xe4, 0x00
-    ; GFX8: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294443008, implicit-def $scc
+    ; GFX8: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; GFX8: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
     ; GFX8: frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33_lo16
     ; GFX8: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
     ; GFX8: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
@@ -116,8 +116,8 @@ body:             |
     ; GFX9: frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
     ; GFX9: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; GFX9: frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x05, 0x90, 0x82, 0x14, 0xe4, 0x00
-    ; GFX9: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
-    ; GFX9: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294443008, implicit-def $scc
+    ; GFX9: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; GFX9: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
     ; GFX9: frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33_lo16
     ; GFX9: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
     ; GFX9: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
@@ -169,8 +169,8 @@ body:             |
     ; GFX9-FLATSCR: frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
     ; GFX9-FLATSCR: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; GFX9-FLATSCR: frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x05, 0x90, 0x82, 0x14, 0xe4, 0x00
-    ; GFX9-FLATSCR: $sgpr4 = frame-setup S_ADD_U32 $sgpr32, 8191, implicit-def $scc
-    ; GFX9-FLATSCR: $sgpr33 = frame-setup S_AND_B32 killed $sgpr4, 4294959104, implicit-def $scc
+    ; GFX9-FLATSCR: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 8191, implicit-def $scc
+    ; GFX9-FLATSCR: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def $scc
     ; GFX9-FLATSCR: frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33_lo16
     ; GFX9-FLATSCR: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 24576, implicit-def $scc
     ; GFX9-FLATSCR: $vgpr0 = V_MOV_B32_e32 $sgpr33, implicit $exec

@@ -7541,34 +7541,32 @@ define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v4f64_v4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vmovd %xmm1, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm3
-; AVX1-NEXT:    vmovq %xmm2, %rax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX1-NEXT:    vextractps $2, %xmm0, %eax
 ; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm1
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    movl %eax, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm4
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm4[0],xmm3[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm5, %xmm3
+; AVX1-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm5, %xmm1
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractps $3, %xmm2, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
-; AVX1-NEXT:    vextractps $1, %xmm2, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm5, %xmm3
 ; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm5, %xmm0
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_uitofp_v4f64_v4i64:

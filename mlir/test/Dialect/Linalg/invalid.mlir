@@ -643,7 +643,7 @@ func @pad_number_of_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9
 // -----
 
 func @pad_no_block(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
-  // expected-error @+1 {{expected region with 1 block}}
+  // expected-error @+1 {{op region #0 ('region') failed to verify constraint: region with 1 blocks}}
   %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
   } : tensor<?x4xi32> to tensor<?x9xi32>
   return %0 : tensor<?x9xi32>

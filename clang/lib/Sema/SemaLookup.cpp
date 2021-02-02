@@ -743,18 +743,6 @@ static void GetOpenCLBuiltinFctOverloads(
   }
 }
 
-/// Add extensions to the function declaration.
-/// \param S (in/out) The Sema instance.
-/// \param BIDecl (in) Description of the builtin.
-/// \param FDecl (in/out) FunctionDecl instance.
-static void AddOpenCLExtensions(Sema &S, const OpenCLBuiltinStruct &BIDecl,
-                                FunctionDecl *FDecl) {
-  // Fetch extension associated with a function prototype.
-  StringRef E = FunctionExtensionTable[BIDecl.Extension];
-  if (E != "")
-    S.setOpenCLExtensionForDecl(FDecl, E);
-}
-
 /// When trying to resolve a function name, if isOpenCLBuiltin() returns a
 /// non-null <Index, Len> pair, then the name is referencing an OpenCL
 /// builtin function.  Add all candidate signatures to the LookUpResult.
@@ -788,6 +776,13 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
       continue;
     if ((OpenCLBuiltin.MaxVersion != 0) &&
         (OpenCLVersion >= OpenCLBuiltin.MaxVersion))
+      continue;
+
+    // Ignore this builtin function if it carries an extension macro that is
+    // not defined. This indicates that the extension is not supported by the
+    // target, so the builtin function should not be available.
+    StringRef Ext = FunctionExtensionTable[OpenCLBuiltin.Extension];
+    if (!Ext.empty() && !S.getPreprocessor().isMacroDefined(Ext))
       continue;
 
     SmallVector<QualType, 1> RetTypes;
@@ -842,8 +837,6 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
 
       if (!S.getLangOpts().OpenCLCPlusPlus)
         NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
-
-      AddOpenCLExtensions(S, OpenCLBuiltin, NewOpenCLBuiltin);
 
       LR.addDecl(NewOpenCLBuiltin);
     }
