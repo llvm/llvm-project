@@ -58,10 +58,26 @@ MinGW Improvements
   (`D93950 <https://reviews.llvm.org/D93950>`_)
 
 
-MachO Improvements
+Mach-O Improvements
 ------------------
 
-* Item 1.
+We've gotten the new implementation of LLD for Mach-O to the point where it is
+able to link large x86_64 programs, and we'd love to get some alpha testing on
+it. The new Darwin back-end can be invoked as follows:
+
+.. code-block::
+   clang -fuse-ld=lld.darwinnew /path/to/file.c
+
+To reach this point, we implemented numerous features, and it's easier to list
+the major features we *haven't* yet completed:
+
+* LTO support
+* Stack unwinding for exceptions
+* Support for arm64, arm, and i386 architectures
+
+If you stumble upon an issue and it doesn't fall into one of these categories,
+please file a bug report!
+
 
 WebAssembly Improvements
 ------------------------
