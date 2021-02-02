@@ -38,9 +38,8 @@ template <template <typename> class PatternType, typename ConcreteOpType,
 void sfinae_enqueue(OwningRewritePatternList &patterList, OptionsType options,
                     MLIRContext *context, StringRef opName,
                     linalg::LinalgTransformationFilter m) {
-  assert(opName.empty() ||
-         opName == ConcreteOpType::getOperationName() &&
-             "explicit name must match ConcreteOpType::getOperationName");
+  assert(opName == ConcreteOpType::getOperationName() &&
+         "explicit name must match ConcreteOpType::getOperationName");
   patterList.insert<PatternType<ConcreteOpType>>(context, options, m);
 }
 
@@ -61,7 +60,8 @@ template <typename LinalgOpType>
 struct Tile : public Transformation {
   explicit Tile(linalg::LinalgTilingOptions options,
                 linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(f), opName(""), options(options) {}
+      : Transformation(f), opName(LinalgOpType::getOperationName()),
+        options(options) {}
 
   Tile(StringRef name, linalg::LinalgTilingOptions options,
        linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
@@ -88,7 +88,8 @@ struct Promote : public Transformation {
   explicit Promote(
       linalg::LinalgPromotionOptions options,
       linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(f), opName(""), options(options) {}
+      : Transformation(f), opName(LinalgOpType::getOperationName()),
+        options(options) {}
 
   Promote(StringRef name, linalg::LinalgPromotionOptions options,
           linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
@@ -116,7 +117,8 @@ struct Vectorize : public Transformation {
   explicit Vectorize(
       linalg::LinalgVectorizationOptions options,
       linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(f), opName(""), options(options) {}
+      : Transformation(f), opName(LinalgOpType::getOperationName()),
+        options(options) {}
 
   Vectorize(StringRef name, linalg::LinalgVectorizationOptions options,
             linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
