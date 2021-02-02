@@ -80,12 +80,18 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
   Register Base;
 
   // match max / min pattern
-  if (!mi_match(MI.getOperand(1).getReg(), MRI, m_GSMin(m_Reg(Base), m_ICst(MatchInfo.Cmp1))))
-    return false;
+  if (mi_match(MI.getOperand(1).getReg(), MRI, m_GSMin(m_Reg(Base), m_ICst(MatchInfo.Cmp1)))) {
+    if (!mi_match(Base, MRI, m_GSMax(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2)))) {
+      return false;
+    }
+  }
 
-  if (!mi_match(Base, MRI, m_GSMax(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2))))
-    return false;
-
+  if (mi_match(MI.getOperand(1).getReg(), MRI, m_GSMax(m_Reg(Base), m_ICst(MatchInfo.Cmp1)))) {
+    if (!mi_match(Base, MRI, m_GSMin(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2)))) {
+      return false;
+    }
+  }
+   
   const auto Cmp1 = MatchInfo.Cmp1;
   const auto Cmp2 = MatchInfo.Cmp2;
   const auto Diff = std::abs(Cmp2 - Cmp1);
