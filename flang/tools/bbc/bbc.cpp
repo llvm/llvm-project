@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file
 /// This is a tool for translating Fortran sources to the FIR dialect of MLIR.
 ///
 //===----------------------------------------------------------------------===//
@@ -21,9 +20,9 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/OptPasses.h"
 #include "flang/Optimizer/Support/FIRContext.h"
+#include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Parser/characters.h"
@@ -239,7 +238,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   fir::NameUniquer nameUniquer;
   mlir::MLIRContext ctx;
-  fir::registerAndLoadDialects(ctx);
+  fir::support::registerAndLoadDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
@@ -332,7 +331,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 }
 
 int main(int argc, char **argv) {
-  fir::registerFIRPasses();
+  fir::support::registerFIRPasses();
   fir::registerOptPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
 
