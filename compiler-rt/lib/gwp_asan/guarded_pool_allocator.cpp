@@ -12,6 +12,7 @@
 #include "gwp_asan/utilities.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 using AllocationMetadata = gwp_asan::AllocationMetadata;
 using Error = gwp_asan::Error;
@@ -32,6 +33,8 @@ size_t roundUpTo(size_t Size, size_t Boundary) {
 uintptr_t getPageAddr(uintptr_t Ptr, uintptr_t PageSize) {
   return Ptr & ~(PageSize - 1);
 }
+
+bool isPowerOfTwo(uintptr_t x) { return (x & (x - 1)) == 0; }
 } // anonymous namespace
 
 // Gets the singleton implementation of this class. Thread-compatible until
@@ -62,8 +65,6 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   // getPageAddr() and roundUpTo() assume the page size to be a power of 2.
   assert((PageSize & (PageSize - 1)) == 0);
   State.PageSize = PageSize;
-
-  PerfectlyRightAlign = Opts.PerfectlyRightAlign;
 
   size_t PoolBytesRequired =
       PageSize * (1 + State.MaxSimultaneousAllocations) +
@@ -113,7 +114,7 @@ void GuardedPoolAllocator::iterate(void *Base, size_t Size, iterate_callback Cb,
     const AllocationMetadata &Meta = Metadata[i];
     if (Meta.Addr && !Meta.IsDeallocated && Meta.Addr >= Start &&
         Meta.Addr < Start + Size)
-      Cb(Meta.Addr, Meta.Size, Arg);
+      Cb(Meta.Addr, Meta.RequestedSize, Arg);
   }
 }
 
@@ -138,7 +139,39 @@ void GuardedPoolAllocator::uninitTestOnly() {
   *getThreadLocals() = ThreadLocalPackedVariables();
 }
 
-void *GuardedPoolAllocator::allocate(size_t Size) {
+// Note, minimum backing allocation size in GWP-ASan is always one page, and
+// each slot could potentially be multiple pages (but always in
+// page-increments). Thus, for anything that requires less than page size
+// alignment, we don't need to allocate extra padding to ensure the alignment
+// can be met.
+size_t GuardedPoolAllocator::getRequiredBackingSize(size_t Size,
+                                                    size_t Alignment,
+                                                    size_t PageSize) {
+  assert(isPowerOfTwo(Alignment) && "Alignment must be a power of two!");
+  assert(Alignment != 0 && "Alignment should be non-zero");
+  assert(Size != 0 && "Size should be non-zero");
+
+  if (Alignment <= PageSize)
+    return Size;
+
+  return Size + Alignment - PageSize;
+}
+
+uintptr_t GuardedPoolAllocator::getAlignedPtr(uintptr_t Ptr, size_t Alignment,
+                                              bool IsRightAligned) {
+  assert(isPowerOfTwo(Alignment) && "Alignment must be a power of two!");
+  assert(Alignment != 0 && "Alignment should be non-zero");
+  if ((Ptr & (Alignment - 1)) == 0)
+    return Ptr;
+
+  if (IsRightAligned)
+    Ptr -= Ptr & (Alignment - 1);
+  else
+    Ptr += Alignment - (Ptr & (Alignment - 1));
+  return Ptr;
+}
+
+void *GuardedPoolAllocator::allocate(size_t Size, size_t Alignment) {
   // GuardedPagePoolEnd == 0 when GWP-ASan is disabled. If we are disabled, fall
   // back to the supporting allocator.
   if (State.GuardedPagePoolEnd == 0) {
@@ -148,13 +181,23 @@ void *GuardedPoolAllocator::allocate(size_t Size) {
     return nullptr;
   }
 
+  if (Size == 0)
+    Size = 1;
+  if (Alignment == 0)
+    Alignment = 1;
+
+  if (!isPowerOfTwo(Alignment) || Alignment > State.maximumAllocationSize() ||
+      Size > State.maximumAllocationSize())
+    return nullptr;
+
+  size_t BackingSize = getRequiredBackingSize(Size, Alignment, State.PageSize);
+  if (BackingSize > State.maximumAllocationSize())
+    return nullptr;
+
   // Protect against recursivity.
   if (getThreadLocals()->RecursiveGuard)
     return nullptr;
   ScopedRecursiveGuard SRG;
-
-  if (Size == 0 || Size > State.maximumAllocationSize())
-    return nullptr;
 
   size_t Index;
   {
@@ -165,28 +208,33 @@ void *GuardedPoolAllocator::allocate(size_t Size) {
   if (Index == kInvalidSlotID)
     return nullptr;
 
-  uintptr_t Ptr = State.slotToAddr(Index);
-  // Should we right-align this allocation?
-  if (getRandomUnsigned32() % 2 == 0) {
-    AlignmentStrategy Align = AlignmentStrategy::DEFAULT;
-    if (PerfectlyRightAlign)
-      Align = AlignmentStrategy::PERFECT;
-    Ptr +=
-        State.maximumAllocationSize() - rightAlignedAllocationSize(Size, Align);
-  }
-  AllocationMetadata *Meta = addrToMetadata(Ptr);
+  uintptr_t SlotStart = State.slotToAddr(Index);
+  AllocationMetadata *Meta = addrToMetadata(SlotStart);
+  uintptr_t SlotEnd = State.slotToAddr(Index) + State.maximumAllocationSize();
+  uintptr_t UserPtr;
+  // Randomly choose whether to left-align or right-align the allocation, and
+  // then apply the necessary adjustments to get an aligned pointer.
+  if (getRandomUnsigned32() % 2 == 0)
+    UserPtr = getAlignedPtr(SlotStart, Alignment, /* IsRightAligned */ false);
+  else
+    UserPtr =
+        getAlignedPtr(SlotEnd - Size, Alignment, /* IsRightAligned */ true);
+
+  assert(UserPtr >= SlotStart);
+  assert(UserPtr + Size <= SlotEnd);
 
   // If a slot is multiple pages in size, and the allocation takes up a single
   // page, we can improve overflow detection by leaving the unused pages as
   // unmapped.
   const size_t PageSize = State.PageSize;
-  allocateInGuardedPool(reinterpret_cast<void *>(getPageAddr(Ptr, PageSize)),
-                        roundUpTo(Size, PageSize));
+  allocateInGuardedPool(
+      reinterpret_cast<void *>(getPageAddr(UserPtr, PageSize)),
+      roundUpTo(Size, PageSize));
 
-  Meta->RecordAllocation(Ptr, Size);
+  Meta->RecordAllocation(UserPtr, Size);
   Meta->AllocationTrace.RecordBacktrace(Backtrace);
 
-  return reinterpret_cast<void *>(Ptr);
+  return reinterpret_cast<void *>(UserPtr);
 }
 
 void GuardedPoolAllocator::trapOnAddress(uintptr_t Address, Error E) {
@@ -250,7 +298,7 @@ size_t GuardedPoolAllocator::getSize(const void *Ptr) {
   ScopedLock L(PoolMutex);
   AllocationMetadata *Meta = addrToMetadata(reinterpret_cast<uintptr_t>(Ptr));
   assert(Meta->Addr == reinterpret_cast<uintptr_t>(Ptr));
-  return Meta->Size;
+  return Meta->RequestedSize;
 }
 
 AllocationMetadata *GuardedPoolAllocator::addrToMetadata(uintptr_t Ptr) const {
