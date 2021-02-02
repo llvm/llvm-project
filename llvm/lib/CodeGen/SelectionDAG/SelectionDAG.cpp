@@ -3922,6 +3922,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
     EVT VecVT = InVec.getValueType();
+    // ComputeNumSignBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
     const unsigned BitWidth = Op.getValueSizeInBits();
     const unsigned EltBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
