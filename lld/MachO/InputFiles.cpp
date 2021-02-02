@@ -203,6 +203,38 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
   return it->second;
 }
 
+static bool validateRelocationInfo(MemoryBufferRef mb, const section_64 &sec,
+                                   relocation_info rel) {
+  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(rel.r_type);
+  bool valid = true;
+  auto message = [relocAttrs, mb, sec, rel, &valid](const Twine &diagnostic) {
+    valid = false;
+    return (relocAttrs.name + " relocation " + diagnostic + " at offset " +
+            std::to_string(rel.r_address) + " of " + sec.segname + "," +
+            sec.sectname + " in " + mb.getBufferIdentifier())
+        .str();
+  };
+
+  if (!relocAttrs.hasAttr(RelocAttrBits::LOCAL) && !rel.r_extern)
+    error(message("must be extern"));
+  if (relocAttrs.hasAttr(RelocAttrBits::PCREL) != rel.r_pcrel)
+    error(message(Twine("must ") + (rel.r_pcrel ? "not " : "") +
+                  "be PC-relative"));
+  if (isThreadLocalVariables(sec.flags) &&
+      (!relocAttrs.hasAttr(RelocAttrBits::TLV) ||
+       relocAttrs.hasAttr(RelocAttrBits::LOAD)))
+    error(message("not allowed in thread-local section, must be UNSIGNED"));
+  if (rel.r_length < 2 || rel.r_length > 3 ||
+      !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
+    static SmallVector<StringRef, 4> widths{"INVALID", "4", "8", "4 or 8"};
+    error(message("has width " + std::to_string(1 << rel.r_length) +
+                  " bytes, but must be " +
+                  widths[(static_cast<int>(relocAttrs.bits) >> 2) & 3] +
+                  " bytes"));
+  }
+  return valid;
+}
+
 void ObjFile::parseRelocations(const section_64 &sec,
                                SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
@@ -217,8 +249,8 @@ void ObjFile::parseRelocations(const section_64 &sec,
     //
     // The {X86_64,ARM64}_RELOC_SUBTRACTOR record holds the subtrahend,
     // and the paired *_RELOC_UNSIGNED record holds the minuend. The
-    // datum for each is a symbolic address. The result is the runtime
-    // offset between two addresses.
+    // datum for each is a symbolic address. The result is the offset
+    // between two addresses.
     //
     // The ARM64_RELOC_ADDEND record holds the addend, and the paired
     // ARM64_RELOC_BRANCH26 or ARM64_RELOC_PAGE21/PAGEOFF12 holds the
@@ -235,23 +267,35 @@ void ObjFile::parseRelocations(const section_64 &sec,
     // and insert them. Storing addends in the instruction stream is
     // possible, but inconvenient and more costly at link time.
 
-    relocation_info pairedInfo = relInfos[i];
-    relocation_info relInfo =
-        target->isPairedReloc(pairedInfo) ? relInfos[++i] : pairedInfo;
+    uint64_t pairedAddend = 0;
+    relocation_info relInfo = relInfos[i];
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::ADDEND)) {
+      pairedAddend = SignExtend64<24>(relInfo.r_symbolnum);
+      relInfo = relInfos[++i];
+    }
     assert(i < relInfos.size());
+    if (!validateRelocationInfo(mb, sec, relInfo))
+      continue;
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
+    uint64_t embeddedAddend = target->getEmbeddedAddend(mb, sec, relInfo);
+    assert(!(embeddedAddend && pairedAddend));
+    uint64_t totalAddend = pairedAddend + embeddedAddend;
 
+    Reloc p;
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND)) {
+      p.type = relInfo.r_type;
+      p.referent = symbols[relInfo.r_symbolnum];
+      relInfo = relInfos[++i];
+    }
     Reloc r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
-    // For unpaired relocs, pairdInfo (just a copy of relInfo) is ignored
-    uint64_t rawAddend = target->getAddend(mb, sec, relInfo, pairedInfo);
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = rawAddend;
+      r.addend = totalAddend;
     } else {
       SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
       const section_64 &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
@@ -263,16 +307,19 @@ void ObjFile::parseRelocations(const section_64 &sec,
         // TODO: The offset of 4 is probably not right for ARM64, nor for
         //       relocations with r_length != 2.
         referentOffset =
-            sec.addr + relInfo.r_address + 4 + rawAddend - referentSec.addr;
+            sec.addr + relInfo.r_address + 4 + totalAddend - referentSec.addr;
       } else {
         // The addend for a non-pcrel relocation is its absolute address.
-        referentOffset = rawAddend - referentSec.addr;
+        referentOffset = totalAddend - referentSec.addr;
       }
       r.referent = findContainingSubsection(referentSubsecMap, &referentOffset);
       r.addend = referentOffset;
     }
 
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
+    if (p.type != GENERIC_RELOC_INVALID &&
+        target->hasAttr(p.type, RelocAttrBits::SUBTRAHEND))
+      subsec->relocs.push_back(p);
     subsec->relocs.push_back(r);
   }
 }

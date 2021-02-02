@@ -399,6 +399,7 @@ enum RelocationInfoType {
   // Constant values for the r_type field in an
   // llvm::MachO::relocation_info or llvm::MachO::scattered_relocation_info
   // structure.
+  GENERIC_RELOC_INVALID = 0xff,
   GENERIC_RELOC_VANILLA = 0,
   GENERIC_RELOC_PAIR = 1,
   GENERIC_RELOC_SECTDIFF = 2,
