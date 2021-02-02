@@ -11,7 +11,6 @@
 ; RUN: opt < %s -mtriple=mips64-unknown-linux -instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC-SEXT
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -vp-static-alloc=false -instrprof -S | FileCheck %s --check-prefix=DYN
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=DYN
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -counter-link-order -vp-static-alloc=true -S | FileCheck %s --check-prefix=METADATA
 
 
 @__profn_foo = private constant [3 x i8] c"foo"
@@ -58,12 +57,3 @@ attributes #0 = { nounwind }
 ; STATIC: declare void @__llvm_profile_instrument_target(i64, i8*, i32)
 ; STATIC-EXT: declare void @__llvm_profile_instrument_target(i64, i8*, i32 zeroext)
 ; STATIC-SEXT: declare void @__llvm_profile_instrument_target(i64, i8*, i32 signext)
-
-; METADATA: @__profc_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", align 8, !associated !0
-; METADATA: @__profvp_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", align 8, !associated !1
-; METADATA: @__profc_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profd_bar), align 8, !associated !2
-; METADATA: @__profvp_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profd_bar), align 8, !associated !3
-; METADATA: !0 = !{i32 (i32 ()*)* @foo}
-; METADATA: !1 = !{[1 x i64]* @__profc_foo}
-; METADATA: !2 = !{i32 (i32 ()*)* @bar}
-; METADATA: !3 = !{[1 x i64]* @__profc_bar}
