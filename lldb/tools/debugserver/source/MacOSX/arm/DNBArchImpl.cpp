@@ -1762,13 +1762,13 @@ const DNBRegisterInfo DNBArchMachARM::g_vfp_registers[] = {
 const DNBRegisterInfo DNBArchMachARM::g_exc_registers[] = {
     {e_regSetVFP, exc_exception, "exception", NULL, Uint, Hex, 4,
      EXC_OFFSET(exception), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
-     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM},
+     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
     {e_regSetVFP, exc_fsr, "fsr", NULL, Uint, Hex, 4, EXC_OFFSET(fsr),
      INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
-     INVALID_NUB_REGNUM},
+     INVALID_NUB_REGNUM, NULL, NULL},
     {e_regSetVFP, exc_far, "far", NULL, Uint, Hex, 4, EXC_OFFSET(far),
      INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
-     INVALID_NUB_REGNUM}};
+     INVALID_NUB_REGNUM, NULL, NULL}};
 
 // Number of registers in each register set
 const size_t DNBArchMachARM::k_num_gpr_registers =
