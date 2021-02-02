@@ -306,6 +306,18 @@ m_GAShr(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_ASHR, false>(L, R);
 }
 
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>
+m_GSMax(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>
+m_GSMin(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>(L, R);
+}
+
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
 template <typename SrcTy, unsigned Opcode> struct UnaryOp_match {
   SrcTy L;
@@ -460,6 +472,7 @@ struct TernaryOp_match {
     return false;
   }
 };
+
 template <typename Src0Ty, typename Src1Ty, typename Src2Ty>
 inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
                        TargetOpcode::G_INSERT_VECTOR_ELT>

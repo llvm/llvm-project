@@ -37,27 +37,27 @@ def cvt_f32_ubyteN : GICombineRule<
          [{ return PostLegalizerHelper.matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
   (apply [{ PostLegalizerHelper.applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
-def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
+def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
 
 def clamp_i64_to_i16 : GICombineRule<
   (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
   (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
-      [{ return PostLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
-  (apply [{ PostLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
+      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
+  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
 
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
-
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines]> {
+  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines, clamp_i64_to_i16]> {
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
+  let StateClass = "AMDGPUPreLegalizerCombinerHelperState";
 }
 
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN, clamp_i64_to_i16]> {
+   uchar_to_float, cvt_f32_ubyteN]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];
