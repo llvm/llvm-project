@@ -24,6 +24,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -3033,6 +3034,36 @@ static LogicalResult verify(spirv::VariableOp varOp) {
              << attr << "' attribute (only allowed in spv.globalVariable)";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.VectorShuffle
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::VectorShuffleOp shuffleOp) {
+  VectorType resultType = shuffleOp.getType().cast<VectorType>();
+
+  size_t numResultElements = resultType.getNumElements();
+  if (numResultElements != shuffleOp.components().size())
+    return shuffleOp.emitOpError("result type element count (")
+           << numResultElements
+           << ") mismatch with the number of component selectors ("
+           << shuffleOp.components().size() << ")";
+
+  size_t totalSrcElements =
+      shuffleOp.vector1().getType().cast<VectorType>().getNumElements() +
+      shuffleOp.vector2().getType().cast<VectorType>().getNumElements();
+
+  for (const auto &selector :
+       shuffleOp.components().getAsValueRange<IntegerAttr>()) {
+    uint32_t index = selector.getZExtValue();
+    if (index >= totalSrcElements &&
+        index != std::numeric_limits<uint32_t>().max())
+      return shuffleOp.emitOpError("component selector ")
+             << index << " out of range: expected to be in [0, "
+             << totalSrcElements << ") or 0xffffffff";
+  }
   return success();
 }
 
