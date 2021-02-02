@@ -57,3 +57,18 @@ program p
   if (a1(4,8) .ne. a2(1)) print *, "mismatch 9", a1(4,8), a2(1)
 
 end program p
+
+! Slice operation on array of CHARACTER
+! CHECK-LABEL: func @_QPsub
+subroutine sub(a)
+  character :: a(10)
+  ! CHECK-DAG: %[[ten:.*]] = constant 10 : index
+  ! CHECK-DAG: %[[one:.*]] = constant 1 : i64
+  ! CHECK-DAG: %[[five:.*]] = constant 5 : i64
+  ! CHECK-DAG: %[[two:.*]] = constant 2 : i64
+  ! CHECK: %[[shape:.*]] = fir.shape %[[ten]] :
+  ! CHECK: %[[slice:.*]] = fir.slice %[[one]], %[[five]], %[[two]] :
+  ! CHECK: fir.array_coor %{{.*}}(%[[shape]]) [%[[slice]]] %
+  ! CHECK: fir.embox %{{.*}} : (!fir.heap<!fir.array<3x!fir.char<1>>>) -> !fir.box<!fir.array<3x!fir.char<1>>>
+  print *, "a = ", a(1:5:2)
+end subroutine sub
