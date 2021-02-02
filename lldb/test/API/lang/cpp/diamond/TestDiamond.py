@@ -33,8 +33,8 @@ class CPPTestDiamondInheritance(TestBase):
         j1_Derived2_VBase = j1_Derived2.GetChildAtIndex(0)
         j1_Derived1_VBase_m_value = j1_Derived1_VBase.GetChildAtIndex(0)
         j1_Derived2_VBase_m_value = j1_Derived2_VBase.GetChildAtIndex(0)
-        self.assertTrue(
-            j1_Derived1_VBase.GetLoadAddress() == j1_Derived2_VBase.GetLoadAddress(),
+        self.assertEqual(
+            j1_Derived1_VBase.GetLoadAddress(), j1_Derived2_VBase.GetLoadAddress(),
             "ensure virtual base class is the same between Derived1 and Derived2")
         self.assertTrue(j1_Derived1_VBase_m_value.GetValueAsUnsigned(
             1) == j1_Derived2_VBase_m_value.GetValueAsUnsigned(2), "ensure m_value in VBase is the same")

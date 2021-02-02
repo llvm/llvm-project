@@ -38,15 +38,15 @@ class TestMembersAndLocalsWithSameName(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
 
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         self._test_globals()
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)
@@ -67,8 +67,8 @@ class TestMembersAndLocalsWithSameName(TestBase):
         self.assertEqual(val.GetValueAsUnsigned(), 34567)
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)
@@ -89,8 +89,8 @@ class TestMembersAndLocalsWithSameName(TestBase):
         self.assertEqual(val.GetValueAsUnsigned(), 10003)
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)
@@ -140,15 +140,15 @@ class TestMembersAndLocalsWithSameName(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
 
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         self._test_globals()
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)
@@ -171,8 +171,8 @@ class TestMembersAndLocalsWithSameName(TestBase):
         self.assertEqual(val.GetValueAsUnsigned(), 34567)
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)
@@ -199,8 +199,8 @@ class TestMembersAndLocalsWithSameName(TestBase):
         self.assertEqual(val.GetValueAsUnsigned(), 1)
 
         self.process.Continue()
-        self.assertTrue(
-            self.process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            self.process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             self.process, lldb.eStopReasonBreakpoint)

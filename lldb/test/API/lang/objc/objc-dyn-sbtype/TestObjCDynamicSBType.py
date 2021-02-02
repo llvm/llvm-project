@@ -46,34 +46,34 @@ class ObjCDynamicSBTypeTestCase(TestBase):
             "object").GetDynamicValue(lldb.eDynamicCanRunTarget)
         v_base = self.frame().FindVariable(
             "base").GetDynamicValue(lldb.eDynamicCanRunTarget)
-        self.assertTrue(
-            v_object.GetTypeName() == "MyDerivedClass *",
+        self.assertEqual(
+            v_object.GetTypeName(), "MyDerivedClass *",
             "The NSObject is properly type-named")
-        self.assertTrue(
-            v_base.GetTypeName() == "MyDerivedClass *",
+        self.assertEqual(
+            v_base.GetTypeName(), "MyDerivedClass *",
             "The Base is properly type-named")
         object_type = v_object.GetType()
         base_type = v_base.GetType()
-        self.assertTrue(
-            object_type.GetName() == "MyDerivedClass *",
+        self.assertEqual(
+            object_type.GetName(), "MyDerivedClass *",
             "The dynamic SBType for NSObject is for the correct type")
-        self.assertTrue(
-            base_type.GetName() == "MyDerivedClass *",
+        self.assertEqual(
+            base_type.GetName(), "MyDerivedClass *",
             "The dynamic SBType for Base is for the correct type")
         object_pointee_type = object_type.GetPointeeType()
         base_pointee_type = base_type.GetPointeeType()
-        self.assertTrue(
-            object_pointee_type.GetName() == "MyDerivedClass",
+        self.assertEqual(
+            object_pointee_type.GetName(), "MyDerivedClass",
             "The dynamic type for NSObject figures out its pointee type just fine")
-        self.assertTrue(
-            base_pointee_type.GetName() == "MyDerivedClass",
+        self.assertEqual(
+            base_pointee_type.GetName(), "MyDerivedClass",
             "The dynamic type for Base figures out its pointee type just fine")
 
-        self.assertTrue(
-            object_pointee_type.GetDirectBaseClassAtIndex(0).GetName() == "MyBaseClass",
+        self.assertEqual(
+            object_pointee_type.GetDirectBaseClassAtIndex(0).GetName(), "MyBaseClass",
             "The dynamic type for NSObject can go back to its base class")
-        self.assertTrue(
-            base_pointee_type.GetDirectBaseClassAtIndex(0).GetName() == "MyBaseClass",
+        self.assertEqual(
+            base_pointee_type.GetDirectBaseClassAtIndex(0).GetName(), "MyBaseClass",
             "The dynamic type for Base can go back to its base class")
 
         self.assertTrue(object_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(
@@ -81,9 +81,9 @@ class ObjCDynamicSBTypeTestCase(TestBase):
         self.assertTrue(base_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(
             0).GetName() == "NSObject", "The dynamic type for Base can go up the hierarchy")
 
-        self.assertTrue(
-            object_pointee_type.GetNumberOfFields() == 2,
+        self.assertEqual(
+            object_pointee_type.GetNumberOfFields(), 2,
             "The dynamic type for NSObject has 2 fields")
-        self.assertTrue(
-            base_pointee_type.GetNumberOfFields() == 2,
+        self.assertEqual(
+            base_pointee_type.GetNumberOfFields(), 2,
             "The dynamic type for Base has 2 fields")

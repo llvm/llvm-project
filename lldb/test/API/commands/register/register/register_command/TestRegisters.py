@@ -297,8 +297,8 @@ class RegisterCommandsTestCase(TestBase):
                 error)
         self.assertSuccess(error, "Launch succeeds")
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         thread = process.GetThreadAtIndex(0)
