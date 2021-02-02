@@ -152,9 +152,14 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
   Register MedDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   MRI.setType(MedDst, S32);
 
-  B.buildInstr(AMDGPU::V_MED3_I32,
+  Register CvtDst32 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setType(CvtDst32, S32);
+
+  B.buildBitcast(CvtDst32, CvtDst);
+
+  B.buildInstr(AMDGPU::G_AMDGPU_MED3_S32,
     {MedDst},
-    {MinBoundaryDst.getReg(0), CvtDst, MaxBoundaryDst.getReg(0)},
+    {MinBoundaryDst.getReg(0), CvtDst32, MaxBoundaryDst.getReg(0)},
     MI.getFlags());
   
   Register TruncDst = MRI.createGenericVirtualRegister(LLT::scalar(16));
