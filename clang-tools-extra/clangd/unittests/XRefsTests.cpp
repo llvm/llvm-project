@@ -1706,6 +1706,15 @@ void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
   for (const auto &R : T.ranges("decl"))
     ExpectedLocations.push_back(
         AllOf(RangeIs(R), AttrsAre(ReferencesResult::Declaration)));
+  for (const auto &R : T.ranges("overridedecl"))
+    ExpectedLocations.push_back(AllOf(
+        RangeIs(R),
+        AttrsAre(ReferencesResult::Declaration | ReferencesResult::Override)));
+  for (const auto &R : T.ranges("overridedef"))
+    ExpectedLocations.push_back(
+        AllOf(RangeIs(R), AttrsAre(ReferencesResult::Declaration |
+                                   ReferencesResult::Definition |
+                                   ReferencesResult::Override)));
   EXPECT_THAT(
       findReferences(AST, T.point(), 0, UseIndex ? TU.index().get() : nullptr)
           .References,
@@ -1871,10 +1880,11 @@ TEST(FindReferences, IncludeOverrides) {
         };
         class Derived : public Base {
         public:
-          void [[func]]() override;
+          void $overridedecl[[func]]() override;
         };
+        void Derived::$overridedef[[func]]() {}
         void test(Derived* D) {
-          D->[[func]]();
+          D->func();  // No references to the overrides.
         })cpp";
   checkFindRefs(Test, /*UseIndex=*/true);
 }
