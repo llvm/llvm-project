@@ -274,11 +274,8 @@ define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_sext(<2 x i16> %x) {
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    sxth r0, r0
-; CHECK-NEXT:    vmov.32 q1[0], r0
 ; CHECK-NEXT:    asrs r1, r0, #31
-; CHECK-NEXT:    vmov.32 q1[1], r1
 ; CHECK-NEXT:    sxth r2, r2
-; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adc.w r1, r1, r2, asr #31
 ; CHECK-NEXT:    bx lr
@@ -798,11 +795,8 @@ define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_sext(<2 x i8> %x) {
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    sxtb r0, r0
-; CHECK-NEXT:    vmov.32 q1[0], r0
 ; CHECK-NEXT:    asrs r1, r0, #31
-; CHECK-NEXT:    vmov.32 q1[1], r1
 ; CHECK-NEXT:    sxtb r2, r2
-; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adc.w r1, r1, r2, asr #31
 ; CHECK-NEXT:    bx lr
@@ -1131,15 +1125,12 @@ define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_acc_sext(<2 x i16> %x, i64 %a) {
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    sxth r2, r2
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    asrs r2, r2, #31
-; CHECK-NEXT:    vmov.32 q1[1], r2
+; CHECK-NEXT:    asr.w r12, r2, #31
 ; CHECK-NEXT:    sxth r3, r3
-; CHECK-NEXT:    vmov r12, s4
-; CHECK-NEXT:    adds.w r12, r12, r3
-; CHECK-NEXT:    adc.w r2, r2, r3, asr #31
-; CHECK-NEXT:    adds.w r0, r0, r12
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    adc.w r3, r12, r3, asr #31
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <2 x i16> %x to <2 x i64>
@@ -1694,15 +1685,12 @@ define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_acc_sext(<2 x i8> %x, i64 %a) {
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vmov r3, s2
 ; CHECK-NEXT:    sxtb r2, r2
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    asrs r2, r2, #31
-; CHECK-NEXT:    vmov.32 q1[1], r2
+; CHECK-NEXT:    asr.w r12, r2, #31
 ; CHECK-NEXT:    sxtb r3, r3
-; CHECK-NEXT:    vmov r12, s4
-; CHECK-NEXT:    adds.w r12, r12, r3
-; CHECK-NEXT:    adc.w r2, r2, r3, asr #31
-; CHECK-NEXT:    adds.w r0, r0, r12
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    adc.w r3, r12, r3, asr #31
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <2 x i8> %x to <2 x i64>
