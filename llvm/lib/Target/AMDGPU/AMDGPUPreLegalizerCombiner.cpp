@@ -91,7 +91,8 @@ bool AMDGPUPreLegalizerCombinerHelper::matchClampI64ToI16(
   const auto Cmp2 = MatchInfo.Cmp2;
   const auto Diff = std::abs(Cmp2 - Cmp1);
 
-  // If the difference between both comparison values is 0 or 1, there is no need to clamp.
+  // If the difference between both comparison values is 0 or 1, there is no
+  // need to clamp.
   if (Diff == 0 || Diff == 1)
     return false;
 
