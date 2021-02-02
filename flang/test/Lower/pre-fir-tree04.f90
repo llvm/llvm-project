@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-pre-fir-tree -fparse-only %s | FileCheck %s
+! RUN: %f18 -fdebug-pre-fir-tree -fsyntax-only %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the coarray related statements
 

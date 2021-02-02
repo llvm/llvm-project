@@ -6,5 +6,5 @@ program main
   x = y
 end program
 
-! RUN: %f18 -fget-definition 6 3 4 -fparse-only %s | FileCheck %s
+! RUN: %f18 -fget-definition 6 3 4 -fsyntax-only %s | FileCheck %s
 ! CHECK: x:{{.*}}getdefinition04.f90, 3, 14-15
