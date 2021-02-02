@@ -676,30 +676,6 @@ static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 // InitTensorOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseInitTensorOp(OpAsmParser &parser,
-                                     OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  Type dstType;
-  SmallVector<OpAsmParser::OperandType, 2> sizeInfo;
-  IndexType indexType = parser.getBuilder().getIndexType();
-  if (failed(parseListOfOperandsOrIntegers(
-          parser, result, InitTensorOp::getStaticSizesAttrName(),
-          ShapedType::kDynamicSize, sizeInfo)) ||
-      failed(parser.parseOptionalAttrDict(result.attributes)) ||
-      failed(parser.parseColonType(dstType)) ||
-      failed(parser.resolveOperands(sizeInfo, indexType, result.operands)))
-    return failure();
-  return parser.addTypeToList(dstType, result.types);
-}
-
-static void print(OpAsmPrinter &p, InitTensorOp op) {
-  p << op.getOperation()->getName() << ' ';
-  printListOfOperandsOrIntegers(p, op.sizes(), op.static_sizes(),
-                                ShapedType::isDynamic);
-  p.printOptionalAttrDict(op.getAttrs(),
-                          InitTensorOp::getStaticSizesAttrName());
-  p << " : " << op.getType();
-}
 
 static LogicalResult verify(InitTensorOp op) {
   RankedTensorType resultType = op.getType();
@@ -981,8 +957,6 @@ static LogicalResult verify(PadTensorOp op) {
   }
 
   auto &region = op.region();
-  if (!llvm::hasSingleElement(region))
-    return op.emitOpError("expected region with 1 block");
   unsigned rank = resultType.getRank();
   Block &block = region.front();
   if (block.getNumArguments() != rank)
@@ -1018,67 +992,6 @@ RankedTensorType PadTensorOp::inferResultType(RankedTensorType sourceType,
   }
 
   return RankedTensorType::get(resultShape, sourceType.getElementType());
-}
-
-static ParseResult parsePadTensorOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  OpAsmParser::OperandType baseInfo;
-  SmallVector<OpAsmParser::OperandType, 8> operands;
-  SmallVector<Type, 8> types;
-  if (parser.parseOperand(baseInfo))
-    return failure();
-
-  IndexType indexType = parser.getBuilder().getIndexType();
-  SmallVector<OpAsmParser::OperandType, 4> lowPadding, highPadding;
-  if (parser.parseKeyword("low") ||
-      parseListOfOperandsOrIntegers(parser, result,
-                                    PadTensorOp::getStaticLowAttrName(),
-                                    ShapedType::kDynamicSize, lowPadding))
-    return failure();
-  if (parser.parseKeyword("high") ||
-      parseListOfOperandsOrIntegers(parser, result,
-                                    PadTensorOp::getStaticHighAttrName(),
-                                    ShapedType::kDynamicSize, highPadding))
-    return failure();
-
-  SmallVector<OpAsmParser::OperandType, 8> regionOperands;
-  std::unique_ptr<Region> region = std::make_unique<Region>();
-  SmallVector<Type, 8> operandTypes, regionTypes;
-  if (parser.parseRegion(*region, regionOperands, regionTypes))
-    return failure();
-  result.addRegion(std::move(region));
-
-  Type srcType, dstType;
-  if (parser.parseColonType(srcType) || parser.parseKeywordType("to", dstType))
-    return failure();
-
-  if (parser.addTypeToList(dstType, result.types))
-    return failure();
-
-  SmallVector<int, 4> segmentSizesFinal = {1}; // source tensor
-  segmentSizesFinal.append({static_cast<int>(lowPadding.size()),
-                            static_cast<int>(highPadding.size())});
-  result.addAttribute(
-      OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
-      parser.getBuilder().getI32VectorAttr(segmentSizesFinal));
-  return failure(
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.resolveOperand(baseInfo, srcType, result.operands) ||
-      parser.resolveOperands(lowPadding, indexType, result.operands) ||
-      parser.resolveOperands(highPadding, indexType, result.operands));
-}
-
-static void print(OpAsmPrinter &p, PadTensorOp op) {
-  p << op->getName().getStringRef() << ' ';
-  p << op.source();
-  p << " low";
-  printListOfOperandsOrIntegers(p, op.low(), op.static_low(),
-                                ShapedType::isDynamic);
-  p << " high";
-  printListOfOperandsOrIntegers(p, op.high(), op.static_high(),
-                                ShapedType::isDynamic);
-  p.printRegion(op.region());
-  p << " : " << op.source().getType() << " to " << op.getType();
 }
 
 /// Helper function to dispatch an OpFoldResult into either the `dynamicVec` if

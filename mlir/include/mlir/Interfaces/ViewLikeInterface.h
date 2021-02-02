@@ -36,78 +36,68 @@ LogicalResult verify(OffsetSizeAndStrideOpInterface op);
 #include "mlir/Interfaces/ViewLikeInterface.h.inc"
 
 namespace mlir {
-/// Print a list with either (1) the static integer value in `arrayAttr` if
-/// `isDynamic` evaluates to false or (2) the next value otherwise.
-/// This allows idiomatic printing of mixed value and integer attributes in a
+
+/// Printer hook for custom directive in assemblyFormat.
+///
+///   custom<OperandsOrIntegersOffsetsOrStridesList>($values, $integers)
+///
+/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// type `I64ArrayAttr`.  for use in in assemblyFormat. Prints a list with
+/// either (1) the static integer value in `integers` if the value is
+/// ShapedType::kDynamicStrideOrOffset or (2) the next value otherwise.  This
+/// allows idiomatic printing of mixed value and integer attributes in a
 /// list. E.g. `[%arg0, 7, 42, %arg42]`.
-void printListOfOperandsOrIntegers(OpAsmPrinter &p, ValueRange values,
-                                   ArrayAttr arrayAttr,
-                                   llvm::function_ref<bool(int64_t)> isDynamic);
+void printOperandsOrIntegersOffsetsOrStridesList(OpAsmPrinter &printer,
+                                                 Operation *op,
+                                                 OperandRange values,
+                                                 ArrayAttr integers);
 
-/// Print part of an op of the form:
-/// ```
-///   <optional-offset-prefix>`[` offset-list `]`
-///   <optional-size-prefix>`[` size-list `]`
-///   <optional-stride-prefix>[` stride-list `]`
-/// ```
-void printOffsetsSizesAndStrides(
-    OpAsmPrinter &p, OffsetSizeAndStrideOpInterface op,
-    StringRef offsetPrefix = "", StringRef sizePrefix = " ",
-    StringRef stridePrefix = " ",
-    ArrayRef<StringRef> elidedAttrs =
-        OffsetSizeAndStrideOpInterface::getSpecialAttrNames());
+/// Printer hook for custom directive in assemblyFormat.
+///
+///   custom<OperandsOrIntegersSizesList>($values, $integers)
+///
+/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// type `I64ArrayAttr`.  for use in in assemblyFormat. Prints a list with
+/// either (1) the static integer value in `integers` if the value is
+/// ShapedType::kDynamicSize or (2) the next value otherwise.  This
+/// allows idiomatic printing of mixed value and integer attributes in a
+/// list. E.g. `[%arg0, 7, 42, %arg42]`.
+void printOperandsOrIntegersSizesList(OpAsmPrinter &printer, Operation *op,
+                                      OperandRange values, ArrayAttr integers);
 
-/// Parse a mixed list with either (1) static integer values or (2) SSA values.
-/// Fill `result` with the integer ArrayAttr named `attrName` where `dynVal`
-/// encode the position of SSA values. Add the parsed SSA values to `ssa`
-/// in-order.
+/// Pasrer hook for custom directive in assemblyFormat.
+///
+///   custom<OperandsOrIntegersOffsetsOrStridesList>($values, $integers)
+///
+/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// type `I64ArrayAttr`.  for use in in assemblyFormat. Parse a mixed list with
+/// either (1) static integer values or (2) SSA values.  Fill `integers` with
+/// the integer ArrayAttr, where ShapedType::kDynamicStrideOrOffset encodes the
+/// position of SSA values. Add the parsed SSA values to `values` in-order.
 //
 /// E.g. after parsing "[%arg0, 7, 42, %arg42]":
 ///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
-ParseResult
-parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
-                              StringRef attrName, int64_t dynVal,
-                              SmallVectorImpl<OpAsmParser::OperandType> &ssa);
+ParseResult parseOperandsOrIntegersOffsetsOrStridesList(
+    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    ArrayAttr &integers);
 
-/// Parse trailing part of an op of the form:
-/// ```
-///   <optional-offset-prefix>`[` offset-list `]`
-///   <optional-size-prefix>`[` size-list `]`
-///   <optional-stride-prefix>[` stride-list `]`
-/// ```
-/// Each entry in the offset, size and stride list either resolves to an integer
-/// constant or an operand of index type.
-/// Constants are added to the `result` as named integer array attributes with
-/// name `OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName()` (resp.
-/// `getStaticSizesAttrName()`, `getStaticStridesAttrName()`).
+/// Pasrer hook for custom directive in assemblyFormat.
 ///
-/// Append the number of offset, size and stride operands to `segmentSizes`
-/// before adding it to `result` as the named attribute:
-/// `OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr()`.
+///   custom<OperandsOrIntegersSizesList>($values, $integers)
 ///
-/// Offset, size and stride operands resolution occurs after `preResolutionFn`
-/// to give a chance to leading operands to resolve first, after parsing the
-/// types.
-ParseResult parseOffsetsSizesAndStrides(
-    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
-    llvm::function_ref<ParseResult(OpAsmParser &, OperationState &)>
-        preResolutionFn = nullptr,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix =
-        nullptr,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix =
-        nullptr,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix =
-        nullptr);
-/// `preResolutionFn`-less version of `parseOffsetsSizesAndStrides`.
-ParseResult parseOffsetsSizesAndStrides(
-    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix =
-        nullptr,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix =
-        nullptr,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix =
-        nullptr);
+/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// type `I64ArrayAttr`.  for use in in assemblyFormat. Parse a mixed list with
+/// either (1) static integer values or (2) SSA values.  Fill `integers` with
+/// the integer ArrayAttr, where ShapedType::kDynamicSize encodes the
+/// position of SSA values. Add the parsed SSA values to `values` in-order.
+//
+/// E.g. after parsing "[%arg0, 7, 42, %arg42]":
+///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
+///   2. `ssa` is filled with "[%arg0, %arg1]".
+ParseResult parseOperandsOrIntegersSizesList(
+    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    ArrayAttr &integers);
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.
