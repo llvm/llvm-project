@@ -47,7 +47,7 @@ class TestVSCode_console(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = [breakpoint1_line]
         # Set breakpoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
         # Cause a "scopes" to be sent for frame zero which should update the
