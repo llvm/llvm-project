@@ -100,7 +100,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (f32 (int_amdgcn_lds_param_load timm:$attr, timm:$attrchan, M0)),
+  (f32 (int_amdgcn_lds_param_load timm:$attrchan, timm:$attr, M0)),
   (LDS_PARAM_LOAD timm:$attr, timm:$attrchan, 0)
 >;
 
