@@ -155,9 +155,9 @@ struct DynamicEntry {
 
 struct BBAddrMapEntry {
   struct BBEntry {
-    llvm::yaml::Hex32 AddressOffset;
-    llvm::yaml::Hex32 Size;
-    llvm::yaml::Hex32 Metadata;
+    llvm::yaml::Hex64 AddressOffset;
+    llvm::yaml::Hex64 Size;
+    llvm::yaml::Hex64 Metadata;
   };
   llvm::yaml::Hex64 Address;
   Optional<std::vector<BBEntry>> BBEntries;
