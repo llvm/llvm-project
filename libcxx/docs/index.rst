@@ -219,4 +219,4 @@ Quick Links
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `libcxx-commits Mailing List`_
 * `libcxx-dev Mailing List`_
-* `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/master/libcxx/>`_
+* `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

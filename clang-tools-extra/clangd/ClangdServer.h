@@ -97,21 +97,13 @@ public:
 
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
-    /// Reuse even stale preambles, and rebuild them in the background.
-    /// This improves latency at the cost of accuracy.
-    bool AsyncPreambleBuilds = true;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
     bool BuildDynamicSymbolIndex = false;
-    /// Use a heavier and faster in-memory index implementation.
-    bool HeavyweightDynamicSymbolIndex = true;
     /// If true, ClangdServer automatically indexes files in the current project
     /// on background threads. The index is stored in the project root.
     bool BackgroundIndex = false;
-
-    /// Store refs to main-file symbols in the index.
-    bool CollectMainFileRefs = true;
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;

@@ -12,7 +12,7 @@ Please refer to the `LLVM Getting Started Guide
 general instructions on how to check out the LLVM monorepo, which contains the
 LLDB sources.
 
-Git browser: https://github.com/llvm/llvm-project/tree/master/lldb
+Git browser: https://github.com/llvm/llvm-project/tree/main/lldb
 
 Preliminaries
 -------------
@@ -326,7 +326,7 @@ CMake scripts and can be useful to reproduce builds for particular use-cases
 A cache is passed to CMake with the ``-C`` flag, following the absolute path to
 the file on disk. Subsequent ``-D`` options are still allowed. Please find the
 currently available caches in the `lldb/cmake/caches/
-<https://github.com/llvm/llvm-project/tree/master/lldb/cmake/caches>`_
+<https://github.com/llvm/llvm-project/tree/main/lldb/cmake/caches>`_
 directory.
 
 Common configurations on macOS

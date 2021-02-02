@@ -122,7 +122,6 @@ ClangdServer::Options ClangdServer::optsForTest() {
   Opts.StorePreamblesInMemory = true;
   Opts.AsyncThreadsCount = 4; // Consistent!
   Opts.TheiaSemanticHighlighting = true;
-  Opts.AsyncPreambleBuilds = true;
   return Opts;
 }
 
@@ -132,7 +131,6 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   Opts.RetentionPolicy = RetentionPolicy;
   Opts.StorePreamblesInMemory = StorePreamblesInMemory;
   Opts.UpdateDebounce = UpdateDebounce;
-  Opts.AsyncPreambleBuilds = AsyncPreambleBuilds;
   Opts.ContextProvider = ContextProvider;
   return Opts;
 }
@@ -141,10 +139,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
     : CDB(CDB), TFS(TFS),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex
-                     ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
-                                     Opts.CollectMainFileRefs)
-                     : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -175,7 +170,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Callbacks->onBackgroundIndexProgress(S);
     };
     BGOpts.ContextProvider = Opts.ContextProvider;
-    BGOpts.CollectMainFileRefs = Opts.CollectMainFileRefs;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(

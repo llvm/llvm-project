@@ -1681,16 +1681,10 @@ struct __atomic_base  // false
 
 #ifndef _LIBCPP_CXX03_LANG
     __atomic_base(const __atomic_base&) = delete;
-    __atomic_base& operator=(const __atomic_base&) = delete;
-    __atomic_base& operator=(const __atomic_base&) volatile = delete;
 #else
 private:
     _LIBCPP_INLINE_VISIBILITY
     __atomic_base(const __atomic_base&);
-    _LIBCPP_INLINE_VISIBILITY
-    __atomic_base& operator=(const __atomic_base&);
-    _LIBCPP_INLINE_VISIBILITY
-    __atomic_base& operator=(const __atomic_base&) volatile;
 #endif
 };
 
@@ -1800,6 +1794,9 @@ struct atomic
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator=(_Tp __d) _NOEXCEPT
         {__base::store(__d); return __d;}
+
+    atomic& operator=(const atomic&) = delete;
+    atomic& operator=(const atomic&) volatile = delete;
 };
 
 // atomic<T*>
@@ -1862,6 +1859,9 @@ struct atomic<_Tp*>
     _Tp* operator-=(ptrdiff_t __op) volatile _NOEXCEPT {return fetch_sub(__op) - __op;}
     _LIBCPP_INLINE_VISIBILITY
     _Tp* operator-=(ptrdiff_t __op) _NOEXCEPT          {return fetch_sub(__op) - __op;}
+
+    atomic& operator=(const atomic&) = delete;
+    atomic& operator=(const atomic&) volatile = delete;
 };
 
 // atomic_is_lock_free

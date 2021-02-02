@@ -179,8 +179,8 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
 static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
                              const DenseMap<Record *, unsigned> &FeatureMap) {
   std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
-  for (unsigned j = 0, M = FeatureList.size(); j < M; ++j) {
-    unsigned Bit = FeatureMap.lookup(FeatureList[j]);
+  for (const Record *Feature : FeatureList) {
+    unsigned Bit = FeatureMap.lookup(Feature);
     Mask[Bit / 64] |= 1ULL << (Bit % 64);
   }
 
@@ -215,10 +215,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   // For each feature
   unsigned NumFeatures = 0;
-  for (unsigned i = 0, N = FeatureList.size(); i < N; ++i) {
+  for (const Record *Feature : FeatureList) {
     // Next feature
-    Record *Feature = FeatureList[i];
-
     StringRef Name = Feature->getName();
     StringRef CommandLineName = Feature->getValueAsString("Name");
     StringRef Desc = Feature->getValueAsString("Desc");

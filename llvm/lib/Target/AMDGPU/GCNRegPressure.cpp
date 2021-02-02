@@ -384,6 +384,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
 
 void GCNDownwardRPTracker::advanceToNext() {
   LastTrackedMI = &*NextMI++;
+  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
 
   // Add new registers or mask bits.
   for (const auto &MO : LastTrackedMI->operands()) {

@@ -442,6 +442,12 @@
 
     extern int __KAI_KMPC_CONVENTION omp_get_supported_active_levels(void);
 
+    /* OpenMP 5.1 */
+    extern void __KAI_KMPC_CONVENTION omp_set_num_teams(int num_teams);
+    extern int __KAI_KMPC_CONVENTION omp_get_max_teams(void);
+    extern void __KAI_KMPC_CONVENTION omp_set_teams_thread_limit(int limit);
+    extern int __KAI_KMPC_CONVENTION omp_get_teams_thread_limit(void);
+
     /* OpenMP 5.1 Display Environment */
     extern void omp_display_env(int verbose);
 

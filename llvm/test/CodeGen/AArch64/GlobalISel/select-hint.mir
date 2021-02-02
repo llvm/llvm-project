@@ -62,3 +62,27 @@ body:             |
     %copy_assert_zext:fpr(s32) = G_ASSERT_ZEXT %copy, 16
     $w1 = COPY %copy_assert_zext(s32)
     RET_ReallyLR implicit $w1
+
+...
+---
+name:            assert_zext_decided_dst_class
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; Users of G_ASSERT_ZEXT may end up deciding the destination register class.
+    ; Make sure that the source register class is constrained.
+
+    ; CHECK-LABEL: name: assert_zext_decided_dst_class
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %copy_with_rc:gpr32sp = COPY $w2
+    ; CHECK: $w1 = COPY %copy_with_rc
+    ; CHECK: RET_ReallyLR implicit $w1
+    %copy:gpr(s32) = COPY $w0
+    %copy_assert_zext:gpr(s32) = G_ASSERT_ZEXT %copy, 16
+    %copy_with_rc:gpr32sp(s32) = COPY $w2
+    $w1 = COPY %copy_with_rc(s32)
+    RET_ReallyLR implicit $w1

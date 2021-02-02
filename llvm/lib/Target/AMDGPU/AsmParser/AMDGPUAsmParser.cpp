@@ -4942,9 +4942,6 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       Mode = OperandMode_NSA;
     OperandMatchResultTy Res = parseOperand(Operands, Name, Mode);
 
-    // Eat the comma or space if there is one.
-    trySkipToken(AsmToken::Comma);
-
     if (Res != MatchOperand_Success) {
       checkUnsupportedInstruction(Name, NameLoc);
       if (!Parser.hasPendingError()) {
@@ -4959,6 +4956,9 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       }
       return true;
     }
+
+    // Eat the comma or space if there is one.
+    trySkipToken(AsmToken::Comma);
   }
 
   return false;

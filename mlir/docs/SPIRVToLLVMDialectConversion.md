@@ -951,4 +951,4 @@ llvm.func @main() {
 
 [LLVMFunctionAttributes]: https://llvm.org/docs/LangRef.html#function-attributes
 [SPIRVFunctionAttributes]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_function_control_a_function_control
-[VulkanLayoutUtils]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/LayoutUtils.h
+[VulkanLayoutUtils]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/SPIRV/LayoutUtils.h

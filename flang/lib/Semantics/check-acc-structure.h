@@ -66,50 +66,8 @@ public:
   void Leave(const parser::AccClauseList &);
   void Enter(const parser::AccClause &);
 
-  void Enter(const parser::AccClause::Auto &);
-  void Enter(const parser::AccClause::Async &);
-  void Enter(const parser::AccClause::Attach &);
-  void Enter(const parser::AccClause::Bind &);
-  void Enter(const parser::AccClause::Capture &);
-  void Enter(const parser::AccClause::Create &);
-  void Enter(const parser::AccClause::Collapse &);
-  void Enter(const parser::AccClause::Copy &);
-  void Enter(const parser::AccClause::Copyin &);
-  void Enter(const parser::AccClause::Copyout &);
-  void Enter(const parser::AccClause::Default &);
-  void Enter(const parser::AccClause::DefaultAsync &);
-  void Enter(const parser::AccClause::Delete &);
-  void Enter(const parser::AccClause::Detach &);
-  void Enter(const parser::AccClause::Device &);
-  void Enter(const parser::AccClause::DeviceNum &);
-  void Enter(const parser::AccClause::Deviceptr &);
-  void Enter(const parser::AccClause::DeviceResident &);
-  void Enter(const parser::AccClause::DeviceType &);
-  void Enter(const parser::AccClause::Finalize &);
-  void Enter(const parser::AccClause::Firstprivate &);
-  void Enter(const parser::AccClause::Gang &);
-  void Enter(const parser::AccClause::Host &);
-  void Enter(const parser::AccClause::If &);
-  void Enter(const parser::AccClause::IfPresent &);
-  void Enter(const parser::AccClause::Independent &);
-  void Enter(const parser::AccClause::Link &);
-  void Enter(const parser::AccClause::NoCreate &);
-  void Enter(const parser::AccClause::Nohost &);
-  void Enter(const parser::AccClause::NumGangs &);
-  void Enter(const parser::AccClause::NumWorkers &);
-  void Enter(const parser::AccClause::Present &);
-  void Enter(const parser::AccClause::Private &);
-  void Enter(const parser::AccClause::Read &);
-  void Enter(const parser::AccClause::Reduction &);
-  void Enter(const parser::AccClause::Self &);
-  void Enter(const parser::AccClause::Seq &);
-  void Enter(const parser::AccClause::Tile &);
-  void Enter(const parser::AccClause::UseDevice &);
-  void Enter(const parser::AccClause::Vector &);
-  void Enter(const parser::AccClause::VectorLength &);
-  void Enter(const parser::AccClause::Wait &);
-  void Enter(const parser::AccClause::Worker &);
-  void Enter(const parser::AccClause::Write &);
+#define GEN_FLANG_CLAUSE_CHECK_ENTER
+#include "llvm/Frontend/OpenACC/ACC.inc"
 
 private:
 

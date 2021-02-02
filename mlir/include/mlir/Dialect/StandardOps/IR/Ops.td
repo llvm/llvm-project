@@ -1956,6 +1956,19 @@ def MemRefReinterpretCastOp:
   );
   let results = (outs AnyMemRef:$result);
 
+  let assemblyFormat = [{
+    $source `to` `offset` `` `:`
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    `` `,` `sizes` `` `:`
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) `` `,` `strides`
+    `` `:`
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let parser=?;
+  let printer=?;
+
   let builders = [
     // Build a ReinterpretCastOp with mixed static and dynamic entries.
     OpBuilderDAG<(ins "MemRefType":$resultType, "Value":$source,
@@ -2931,6 +2944,14 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
   );
   let results = (outs AnyMemRef:$result);
 
+  let assemblyFormat = [{
+    $source ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
   let builders = [
     // Build a SubViewOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.
@@ -3053,6 +3074,14 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
   );
   let results = (outs AnyRankedTensor:$result);
 
+  let assemblyFormat = [{
+    $source ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
   let builders = [
     // Build a SubTensorOp with mixed static and dynamic entries and inferred
     // result type.
@@ -3115,7 +3144,10 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 //===----------------------------------------------------------------------===//
 
 def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
-    "subtensor_insert", [OffsetSizeAndStrideOpInterface]> {
+    "subtensor_insert",
+    [OffsetSizeAndStrideOpInterface,
+     TypesMatchWith<"expected result type to match dest type",
+                    "dest", "result", "$_self">]> {
   let summary = "subtensor_insert operation";
   let description = [{
     The "subtensor_insert" operation insert a tensor `source` into another
@@ -3158,6 +3190,16 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
     I64ArrayAttr:$static_strides
   );
   let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = [{
+    $source `into` $dest ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `into` type($dest)
+  }];
+
+  let verifier = ?;
 
   let builders = [
     // Build a SubTensorInsertOp with mixed static and dynamic entries.

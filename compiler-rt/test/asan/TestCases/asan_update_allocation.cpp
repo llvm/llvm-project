@@ -1,9 +1,9 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 
-// RUN: not %run %t 10 0 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefixes=CHECK,T0
+// RUN: not %run %t 10 0 2>&1 | FileCheck %s --check-prefixes=CHECK,T0
 // RUN: not %run %t 10000000 0 2>&1 | FileCheck %s --check-prefixes=CHECK,T0
 
-// RUN: not %run %t 10 1 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefixes=CHECK,T1
+// RUN: not %run %t 10 1 2>&1 | FileCheck %s --check-prefixes=CHECK,T1
 // RUN: not %run %t 10000000 1 2>&1 | FileCheck %s --check-prefixes=CHECK,T1
 
 // REQUIRES: stable-runtime

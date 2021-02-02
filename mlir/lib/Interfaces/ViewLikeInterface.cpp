@@ -69,14 +69,18 @@ LogicalResult mlir::verify(OffsetSizeAndStrideOpInterface op) {
   return success();
 }
 
-void mlir::printListOfOperandsOrIntegers(
-    OpAsmPrinter &p, ValueRange values, ArrayAttr arrayAttr,
-    llvm::function_ref<bool(int64_t)> isDynamic) {
+template <int64_t dynVal>
+static void printOperandsOrIntegersListImpl(OpAsmPrinter &p, ValueRange values,
+                                            ArrayAttr arrayAttr) {
   p << '[';
+  if (arrayAttr.empty()) {
+    p << "]";
+    return;
+  }
   unsigned idx = 0;
   llvm::interleaveComma(arrayAttr, p, [&](Attribute a) {
     int64_t val = a.cast<IntegerAttr>().getInt();
-    if (isDynamic(val))
+    if (val == dynVal)
       p << values[idx++];
     else
       p << val;
@@ -84,32 +88,31 @@ void mlir::printListOfOperandsOrIntegers(
   p << ']';
 }
 
-void mlir::printOffsetsSizesAndStrides(OpAsmPrinter &p,
-                                       OffsetSizeAndStrideOpInterface op,
-                                       StringRef offsetPrefix,
-                                       StringRef sizePrefix,
-                                       StringRef stridePrefix,
-                                       ArrayRef<StringRef> elidedAttrs) {
-  p << offsetPrefix;
-  printListOfOperandsOrIntegers(p, op.offsets(), op.static_offsets(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p << sizePrefix;
-  printListOfOperandsOrIntegers(p, op.sizes(), op.static_sizes(),
-                                ShapedType::isDynamic);
-  p << stridePrefix;
-  printListOfOperandsOrIntegers(p, op.strides(), op.static_strides(),
-                                ShapedType::isDynamicStrideOrOffset);
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
+void mlir::printOperandsOrIntegersOffsetsOrStridesList(OpAsmPrinter &p,
+                                                       Operation *op,
+                                                       OperandRange values,
+                                                       ArrayAttr integers) {
+  return printOperandsOrIntegersListImpl<ShapedType::kDynamicStrideOrOffset>(
+      p, values, integers);
 }
 
-ParseResult mlir::parseListOfOperandsOrIntegers(
-    OpAsmParser &parser, OperationState &result, StringRef attrName,
-    int64_t dynVal, SmallVectorImpl<OpAsmParser::OperandType> &ssa) {
+void mlir::printOperandsOrIntegersSizesList(OpAsmPrinter &p, Operation *op,
+                                            OperandRange values,
+                                            ArrayAttr integers) {
+  return printOperandsOrIntegersListImpl<ShapedType::kDynamicSize>(p, values,
+                                                                   integers);
+}
+
+template <int64_t dynVal>
+static ParseResult
+parseOperandsOrIntegersImpl(OpAsmParser &parser,
+                            SmallVectorImpl<OpAsmParser::OperandType> &values,
+                            ArrayAttr &integers) {
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.
   if (succeeded(parser.parseOptionalRSquare())) {
-    result.addAttribute(attrName, parser.getBuilder().getArrayAttr({}));
+    integers = parser.getBuilder().getArrayAttr({});
     return success();
   }
 
@@ -118,7 +121,7 @@ ParseResult mlir::parseListOfOperandsOrIntegers(
     OpAsmParser::OperandType operand;
     auto res = parser.parseOptionalOperand(operand);
     if (res.hasValue() && succeeded(res.getValue())) {
-      ssa.push_back(operand);
+      values.push_back(operand);
       attrVals.push_back(dynVal);
     } else {
       IntegerAttr attr;
@@ -134,59 +137,20 @@ ParseResult mlir::parseListOfOperandsOrIntegers(
       return failure();
     break;
   }
-
-  auto arrayAttr = parser.getBuilder().getI64ArrayAttr(attrVals);
-  result.addAttribute(attrName, arrayAttr);
+  integers = parser.getBuilder().getI64ArrayAttr(attrVals);
   return success();
 }
 
-ParseResult mlir::parseOffsetsSizesAndStrides(
-    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix) {
-  return parseOffsetsSizesAndStrides(
-      parser, result, segmentSizes, nullptr, parseOptionalOffsetPrefix,
-      parseOptionalSizePrefix, parseOptionalStridePrefix);
+ParseResult mlir::parseOperandsOrIntegersOffsetsOrStridesList(
+    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    ArrayAttr &integers) {
+  return parseOperandsOrIntegersImpl<ShapedType::kDynamicStrideOrOffset>(
+      parser, values, integers);
 }
 
-ParseResult mlir::parseOffsetsSizesAndStrides(
-    OpAsmParser &parser, OperationState &result, ArrayRef<int> segmentSizes,
-    llvm::function_ref<ParseResult(OpAsmParser &, OperationState &)>
-        preResolutionFn,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalOffsetPrefix,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalSizePrefix,
-    llvm::function_ref<ParseResult(OpAsmParser &)> parseOptionalStridePrefix) {
-  SmallVector<OpAsmParser::OperandType, 4> offsetsInfo, sizesInfo, stridesInfo;
-  auto indexType = parser.getBuilder().getIndexType();
-  if ((parseOptionalOffsetPrefix && parseOptionalOffsetPrefix(parser)) ||
-      parseListOfOperandsOrIntegers(
-          parser, result,
-          OffsetSizeAndStrideOpInterface::getStaticOffsetsAttrName(),
-          ShapedType::kDynamicStrideOrOffset, offsetsInfo) ||
-      (parseOptionalSizePrefix && parseOptionalSizePrefix(parser)) ||
-      parseListOfOperandsOrIntegers(
-          parser, result,
-          OffsetSizeAndStrideOpInterface::getStaticSizesAttrName(),
-          ShapedType::kDynamicSize, sizesInfo) ||
-      (parseOptionalStridePrefix && parseOptionalStridePrefix(parser)) ||
-      parseListOfOperandsOrIntegers(
-          parser, result,
-          OffsetSizeAndStrideOpInterface::getStaticStridesAttrName(),
-          ShapedType::kDynamicStrideOrOffset, stridesInfo))
-    return failure();
-  // Add segment sizes to result
-  SmallVector<int, 4> segmentSizesFinal(segmentSizes.begin(),
-                                        segmentSizes.end());
-  segmentSizesFinal.append({static_cast<int>(offsetsInfo.size()),
-                            static_cast<int>(sizesInfo.size()),
-                            static_cast<int>(stridesInfo.size())});
-  result.addAttribute(
-      OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
-      parser.getBuilder().getI32VectorAttr(segmentSizesFinal));
-  return failure(
-      (preResolutionFn && preResolutionFn(parser, result)) ||
-      parser.resolveOperands(offsetsInfo, indexType, result.operands) ||
-      parser.resolveOperands(sizesInfo, indexType, result.operands) ||
-      parser.resolveOperands(stridesInfo, indexType, result.operands));
+ParseResult mlir::parseOperandsOrIntegersSizesList(
+    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    ArrayAttr &integers) {
+  return parseOperandsOrIntegersImpl<ShapedType::kDynamicSize>(parser, values,
+                                                               integers);
 }

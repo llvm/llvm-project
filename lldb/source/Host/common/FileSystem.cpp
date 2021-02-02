@@ -478,20 +478,18 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
     return path.str();
 
   // If VFS mapped we know the underlying FS is a RedirectingFileSystem.
-  ErrorOr<vfs::RedirectingFileSystem::Entry *> E =
+  ErrorOr<vfs::RedirectingFileSystem::LookupResult> Result =
       static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path.str());
-  if (!E) {
-    if (E.getError() == llvm::errc::no_such_file_or_directory) {
+  if (!Result) {
+    if (Result.getError() == llvm::errc::no_such_file_or_directory) {
       return path.str();
     }
-    return E.getError();
+    return Result.getError();
   }
 
-  auto *F = dyn_cast<vfs::RedirectingFileSystem::FileEntry>(*E);
-  if (!F)
-    return make_error_code(llvm::errc::not_supported);
-
-  return F->getExternalContentsPath().str();
+  if (Optional<StringRef> ExtRedirect = Result->getExternalRedirect())
+    return std::string(*ExtRedirect);
+  return make_error_code(llvm::errc::not_supported);
 }
 
 ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {
