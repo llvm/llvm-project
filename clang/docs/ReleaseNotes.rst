@@ -159,6 +159,35 @@ clang-format
 - Option ``SpacesInLineCommentPrefix`` has been added to control the
   number of spaces in a line comments prefix.
 
+- Option ``SortIncludes`` has been updated from a ``bool`` to an
+  ``enum`` with backwards compatibility. In addition to the previous
+  ``true``/``false`` states (now ``CaseInsensitive``/``Never``), a third
+  state has been added (``CaseSensitive``) which causes an alphabetical sort
+  with case used as a tie-breaker.
+
+  .. code-block:: c++
+
+    // Never (previously false)
+    #include "B/A.h"
+    #include "A/B.h"
+    #include "a/b.h"
+    #include "A/b.h"
+    #include "B/a.h"
+
+    // CaseInsensitive (previously true)
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
+    #include "a/b.h"
+
+    // CaseSensitive
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "a/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
+
 libclang
 --------
 

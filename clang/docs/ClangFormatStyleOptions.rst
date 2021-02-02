@@ -3004,14 +3004,43 @@ the configuration (without a prefix: ``Auto``).
      /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
       * information */
 
-**SortIncludes** (``bool``)
-  If ``true``, clang-format will sort ``#includes``.
+**SortIncludes** (``SortIncludesOptions``)
+  Controls if and how clang-format will sort ``#includes``.
 
-  .. code-block:: c++
+  Possible Values:
 
-     false:                                 true:
-     #include "b.h"                 vs.     #include "a.h"
-     #include "a.h"                         #include "b.h"
+  * ``SI_Never`` (in configuration ``Never``)
+    Includes are never sorted.
+
+    .. code-block:: c++
+
+      #include "B/A.h"
+      #include "A/B.h"
+      #include "a/b.h"
+      #include "A/b.h"
+      #include "B/a.h"
+
+  * ``SI_CaseInsensitive`` (in configuration ``CaseInsensitive``)
+    Includes are sorted in an ASCIIbetical or case insensitive fashion.
+
+    .. code-block:: c++
+
+      #include "A/B.h"
+      #include "A/b.h"
+      #include "B/A.h"
+      #include "B/a.h"
+      #include "a/b.h"
+
+  * ``SI_CaseSensitive`` (in configuration ``CaseSensitive``)
+    Includes are sorted in an alphabetical or case sensitive fashion.
+
+    .. code-block:: c++
+
+      #include "A/B.h"
+      #include "A/b.h"
+      #include "a/b.h"
+      #include "B/A.h"
+      #include "B/a.h"
 
 **SortJavaStaticImport** (``SortJavaStaticImportOptions``)
   When sorting Java imports, by default static imports are placed before
