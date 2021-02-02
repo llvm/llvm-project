@@ -1683,6 +1683,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                      m_description,
                      target ? target->GetArchitecture().GetTriple() : triple,
                      target)));
+  bool suppress_config_log = false;
+  auto defer_log = llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
+    // To avoid spamming the log with useless info, we don't log the
+    // configuration if everything went fine and the current module
+    // doesn't have any Swift contents (i.e., the shared cache dylibs).
+    if (!suppress_config_log)
+      swift_ast_sp->LogConfiguration();
+  });
 
   // This is a module AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = false;
@@ -1695,9 +1703,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   bool set_triple = false;
   bool found_swift_modules = false;
-
   SymbolFile *sym_file = module.GetSymbolFile();
-
   std::string target_triple;
 
   if (sym_file) {
@@ -1820,7 +1826,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   std::vector<std::string> module_names;
   swift_ast_sp->RegisterSectionModules(module, module_names);
-  if (module_names.size()) {
+  if (!module_names.size()) {
+    // This dylib has no Swift contents; logging the configuration is pointless.
+    suppress_config_log = true;
+  } else {
     swift_ast_sp->ValidateSectionModules(module, module_names);
     if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES)) {
       std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
@@ -1828,7 +1837,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                  static_cast<void *>(&module),
                  module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
                  static_cast<void *>(swift_ast_sp.get()));
-      swift_ast_sp->LogConfiguration();
     }
   }
 
@@ -1915,6 +1923,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // detect if we have a iOS simulator.
   std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
       new SwiftASTContextForExpressions(m_description, target));
+  auto defer_log = llvm::make_scope_exit(
+      [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
 
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(Target)");
 
@@ -2269,7 +2279,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "((Target*)%p) = %p",
              static_cast<void *>(&target),
              static_cast<void *>(swift_ast_sp.get()));
-  swift_ast_sp->LogConfiguration();
 
   if (swift_ast_sp->HasFatalErrors()) {
     logError(swift_ast_sp->GetFatalErrors().AsCString());
@@ -4914,8 +4923,8 @@ void SwiftASTContext::ClearModuleDependentCaches() {
 }
 
 void SwiftASTContext::LogConfiguration() {
-  VALID_OR_RETURN_VOID();
-
+  // It makes no sense to call VALID_OR_RETURN here. We specifically
+  // want the logs in the error case!
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   if (!log)
     return;
