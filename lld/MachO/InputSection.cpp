@@ -10,6 +10,7 @@
 #include "InputFiles.h"
 #include "OutputSegment.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/Memory.h"
@@ -33,17 +34,46 @@ uint64_t InputSection::getFileSize() const {
 
 uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
+static uint64_t resolveSymbolVA(uint8_t *loc, const lld::macho::Symbol &sym,
+                                uint8_t type) {
+  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(type);
+  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
+    if (sym.isInStubs())
+      return in.stubs->addr + sym.stubsIndex * target->stubSize;
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT | RelocAttrBits::LOAD)) {
+    if (sym.isInGot())
+      return in.got->addr + sym.gotIndex * WordSize;
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
+    return in.got->addr + sym.gotIndex * WordSize;
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::LOAD)) {
+    if (sym.isInGot())
+      return in.tlvPointers->addr + sym.gotIndex * WordSize;
+    assert(isa<Defined>(&sym));
+  }
+  return sym.getVA();
+}
+
 void InputSection::writeTo(uint8_t *buf) {
   if (getFileSize() == 0)
     return;
 
   memcpy(buf, data.data(), data.size());
 
-  for (Reloc &r : relocs) {
+  for (size_t i = 0; i < relocs.size(); i++) {
+    const Reloc &r = relocs[i];
+    uint8_t *loc = buf + r.offset;
+    auto *fromSym = target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)
+                        ? relocs[i++].referent.dyn_cast<Symbol *>()
+                        : nullptr;
     uint64_t referentVA = 0;
-    if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
-      referentVA =
-          target->resolveSymbolVA(buf + r.offset, *referentSym, r.type);
+    if (fromSym) {
+      auto *toSym = r.referent.dyn_cast<Symbol *>();
+      referentVA = toSym->getVA() - fromSym->getVA();
+    } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
+      if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
+          !referentSym->isInGot())
+        target->relaxGotLoad(loc, r.type);
+      referentVA = resolveSymbolVA(loc, *referentSym, r.type);
 
       if (isThreadLocalVariables(flags)) {
         // References from thread-local variable sections are treated as offsets
@@ -56,11 +86,7 @@ void InputSection::writeTo(uint8_t *buf) {
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       referentVA = referentIsec->getVA();
     }
-
-    uint64_t referentVal = referentVA + r.addend;
-    if (r.pcrel)
-      referentVal -= getVA() + r.offset;
-    target->relocateOne(buf + r.offset, r, referentVal);
+    target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }
 }
 
