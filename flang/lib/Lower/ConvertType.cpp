@@ -167,7 +167,7 @@ genFIRType<Fortran::common::TypeCategory::Complex>(mlir::MLIRContext *context,
                                                    int KIND) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Complex, KIND))
-    return fir::CplxType::get(context, KIND);
+    return fir::ComplexType::get(context, KIND);
   return {};
 }
 

@@ -167,6 +167,16 @@ template<class _Tp, class... _Args>
 concept constructible_from =
     destructible<_Tp> && _VSTD::is_constructible_v<_Tp, _Args...>;
 
+// [concept.default.init]
+
+template<class _Tp>
+concept __default_initializable = requires { ::new _Tp; };
+
+template<class _Tp>
+concept default_initializable = constructible_from<_Tp> &&
+    requires { _Tp{}; } && __default_initializable<_Tp>;
+
+
 #endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
 _LIBCPP_END_NAMESPACE_STD

@@ -262,7 +262,8 @@ loop.exit:
   ret float %sum.lcssa
 }
 
-; FIXME: Some fcmp are 'nnan ninf', some are 'fast', but the reduction is sequential?
+; New instructions should have the same FMF as the original code.
+; Note that the select inherits FMF from its fcmp condition.
 
 define float @PR35538(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-LABEL: @PR35538(
@@ -299,9 +300,9 @@ define float @PR35538(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x float> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf ogt <4 x float> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -349,6 +350,8 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+; Same as above, but this time the select already has matching FMF with its condition.
+
 define float @PR35538_more_FMF(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-LABEL: @PR35538_more_FMF(
 ; CHECK-NEXT:  entry:
@@ -384,8 +387,8 @@ define float @PR35538_more_FMF(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x float> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf ogt <4 x float> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]

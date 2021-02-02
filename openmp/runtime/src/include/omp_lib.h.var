@@ -582,6 +582,28 @@
           integer (kind=kmp_size_t_kind) :: omp_capture_affinity
         end function omp_capture_affinity
 
+        subroutine omp_set_num_teams(num_teams) bind(c)
+          import
+          integer (kind=omp_integer_kind), value :: num_teams
+        end subroutine omp_set_num_teams
+
+        function omp_get_max_teams() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_max_teams
+        end function omp_get_max_teams
+
+        subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
+          import
+          use omp_lib_kinds
+          integer (kind=omp_integer_kind), value :: thread_limit
+        end subroutine omp_set_teams_thread_limit
+
+        function omp_get_teams_thread_limit() bind(c)
+          import
+          use omp_lib_kinds
+          integer (kind=omp_integer_kind) omp_get_teams_thread_limit
+        end function omp_get_teams_thread_limit
+
         subroutine omp_display_env(verbose) bind(c)
           import
           logical (kind=omp_logical_kind), value :: verbose

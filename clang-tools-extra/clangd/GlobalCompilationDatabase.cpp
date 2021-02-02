@@ -395,20 +395,6 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   return None;
 }
 
-// For platforms where paths are case-insensitive (but case-preserving),
-// we need to do case-insensitive comparisons and use lowercase keys.
-// FIXME: Make Path a real class with desired semantics instead.
-//        This class is not the only place this problem exists.
-// FIXME: Mac filesystems default to case-insensitive, but may be sensitive.
-
-static std::string maybeCaseFoldPath(PathRef Path) {
-#if defined(_WIN32) || defined(__APPLE__)
-  return Path.lower();
-#else
-  return std::string(Path);
-#endif
-}
-
 std::vector<DirectoryBasedGlobalCompilationDatabase::DirectoryCache *>
 DirectoryBasedGlobalCompilationDatabase::getDirectoryCaches(
     llvm::ArrayRef<llvm::StringRef> Dirs) const {

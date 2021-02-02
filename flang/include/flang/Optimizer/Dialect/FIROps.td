@@ -32,7 +32,7 @@ def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
 // Fortran intrinsic types
 def fir_CharacterType : Type<CPred<"$_self.isa<fir::CharacterType>()">,
     "FIR character type">;
-def fir_ComplexType : Type<CPred<"$_self.isa<fir::CplxType>()">,
+def fir_ComplexType : Type<CPred<"$_self.isa<fir::ComplexType>()">,
     "FIR complex type">;
 def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntType>()">,
     "FIR integer type">;
@@ -2427,7 +2427,7 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
   }];
 
   let verifier = [{
-    if (!getType().isa<fir::CplxType>())
+    if (!getType().isa<fir::ComplexType>())
       return emitOpError("must be a !fir.complex type");
     return mlir::success();
   }];
@@ -2563,7 +2563,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
 
 def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<TypeAttr>()">,
     Or<[CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CharacterType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CplxType>()">,
+        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::ComplexType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::LogicalType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RealType>()">,

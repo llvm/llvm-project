@@ -550,8 +550,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
   WorkList.push_back(CmpPHI);
   VisitedInsts.insert(CmpPHI);
   while (!WorkList.empty()) {
-    PHINode *P = WorkList.back();
-    WorkList.pop_back();
+    PHINode *P = WorkList.pop_back_val();
     for (BasicBlock *B : P->blocks()) {
       // Skip blocks that aren't part of the loop
       if (!L->contains(B))

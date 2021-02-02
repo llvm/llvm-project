@@ -201,7 +201,7 @@ test:
 # BIN-NEXT:       - SectionOffset:   6
 # BIN-NEXT:         InitFlags:       0
 # BIN-NEXT:         Offset:
-# BIN-NEXT:           Opcode:          I32_CONST
+# BIN-NEXT:           Opcode:          I64_CONST
 # BIN-NEXT:           Value:           0
 # BIN-NEXT:         Content:         48656C6C6F2C20576F726C64212121000000000000000000
 # BIN-NEXT:   - Type:            CUSTOM

@@ -107,7 +107,8 @@ static bool isSMEMClauseInst(const MachineInstr &MI) {
 // There no sense to create store clauses, they do not define anything,
 // thus there is nothing to set early-clobber.
 static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
-  if (MI.isDebugValue() || MI.isBundled())
+  assert(!MI.isDebugInstr() && "debug instructions should not reach here");
+  if (MI.isBundled())
     return false;
   if (!MI.mayLoad() || MI.mayStore())
     return false;
@@ -322,12 +323,17 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
   unsigned FuncMaxClause = AMDGPU::getIntegerAttribute(
       MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
 
+  SmallVector<MachineInstr *> DbgInstrs;
+
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
       Next = std::next(I);
+
+      if (MI.isDebugInstr())
+        continue;
 
       bool IsVMEM = isVMEMClauseInst(MI);
 
@@ -350,6 +356,11 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       unsigned Length = 1;
       for ( ; Next != E && Length < FuncMaxClause; ++Next) {
+        // Debug instructions should not change the bundling. We need to move
+        // these after the bundle
+        if (Next->isDebugInstr())
+          continue;
+
         if (!isValidClauseInst(*Next, IsVMEM))
           break;
 
@@ -374,8 +385,17 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       // Restore the state after processing the bundle.
       RPT.reset(*B, &LiveRegsCopy);
+      DbgInstrs.clear();
 
-      for (auto BI = I; BI != Next; ++BI) {
+      auto BundleNext = I;
+      for (auto BI = I; BI != Next; BI = BundleNext) {
+        BundleNext = std::next(BI);
+
+        if (BI->isDebugValue()) {
+          DbgInstrs.push_back(BI->removeFromParent());
+          continue;
+        }
+
         BI->bundleWithPred();
         Ind->removeSingleMachineInstrFromMaps(*BI);
 
@@ -383,6 +403,10 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
           if (MO.readsReg())
             MO.setIsInternalRead(true);
       }
+
+      // Replace any debug instructions after the new bundle.
+      for (MachineInstr *DbgInst : DbgInstrs)
+        MBB.insert(Next, DbgInst);
 
       for (auto &&R : Defs) {
         forAllLanes(R.first, R.second.second, [&R, &B](unsigned SubReg) {

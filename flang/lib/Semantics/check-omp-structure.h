@@ -127,50 +127,6 @@ public:
 
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
-  void Enter(const parser::OmpClause::Allocate &);
-  void Enter(const parser::OmpClause::Allocator &);
-  void Enter(const parser::OmpClause::Inbranch &);
-  void Enter(const parser::OmpClause::Mergeable &);
-  void Enter(const parser::OmpClause::Nogroup &);
-  void Enter(const parser::OmpClause::Nowait &);
-  void Enter(const parser::OmpClause::Notinbranch &);
-  void Enter(const parser::OmpClause::Untied &);
-  void Enter(const parser::OmpClause::Collapse &);
-  void Enter(const parser::OmpClause::Copyin &);
-  void Enter(const parser::OmpClause::Copyprivate &);
-  void Enter(const parser::OmpClause::Default &);
-  void Enter(const parser::OmpClause::Device &);
-  void Enter(const parser::OmpClause::DistSchedule &);
-  void Enter(const parser::OmpClause::Final &);
-  void Enter(const parser::OmpClause::Firstprivate &);
-  void Enter(const parser::OmpClause::From &);
-  void Enter(const parser::OmpClause::Grainsize &);
-  void Enter(const parser::OmpClause::Lastprivate &);
-  void Enter(const parser::OmpClause::NumTasks &);
-  void Enter(const parser::OmpClause::NumTeams &);
-  void Enter(const parser::OmpClause::NumThreads &);
-  void Enter(const parser::OmpClause::Ordered &);
-  void Enter(const parser::OmpClause::Priority &);
-  void Enter(const parser::OmpClause::Private &);
-  void Enter(const parser::OmpClause::ProcBind &);
-  void Enter(const parser::OmpClause::Reduction &);
-  void Enter(const parser::OmpClause::Safelen &);
-  void Enter(const parser::OmpClause::Shared &);
-  void Enter(const parser::OmpClause::Simdlen &);
-  void Enter(const parser::OmpClause::TaskReduction &);
-  void Enter(const parser::OmpClause::ThreadLimit &);
-  void Enter(const parser::OmpClause::To &);
-  void Enter(const parser::OmpClause::Link &);
-  void Enter(const parser::OmpClause::Uniform &);
-  void Enter(const parser::OmpClause::UseDevicePtr &);
-  void Enter(const parser::OmpClause::IsDevicePtr &);
-  // Memory-order-clause
-  void Enter(const parser::OmpClause::SeqCst &);
-  void Enter(const parser::OmpClause::AcqRel &);
-  void Enter(const parser::OmpClause::Release &);
-  void Enter(const parser::OmpClause::Acquire &);
-  void Enter(const parser::OmpClause::Relaxed &);
-  void Enter(const parser::OmpClause::Hint &);
 
   void Enter(const parser::OmpAtomicRead &);
   void Leave(const parser::OmpAtomicRead &);
@@ -180,13 +136,9 @@ public:
   void Leave(const parser::OmpAtomicUpdate &);
   void Enter(const parser::OmpAtomicCapture &);
   void Leave(const parser::OmpAtomic &);
-  void Enter(const parser::OmpAlignedClause &);
-  void Enter(const parser::OmpDefaultmapClause &);
-  void Enter(const parser::OmpDependClause &);
-  void Enter(const parser::OmpIfClause &);
-  void Enter(const parser::OmpLinearClause &);
-  void Enter(const parser::OmpMapClause &);
-  void Enter(const parser::OmpScheduleClause &);
+
+#define GEN_FLANG_CLAUSE_CHECK_ENTER
+#include "llvm/Frontend/OpenMP/OMP.inc"
 
 private:
   bool HasInvalidWorksharingNesting(
