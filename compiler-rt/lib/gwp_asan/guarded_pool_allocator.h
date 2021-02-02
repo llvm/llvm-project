@@ -19,7 +19,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-// IWYU pragma: no_include <__stddef_max_align_t.h>
 
 namespace gwp_asan {
 // This class is the primary implementation of the allocator portion of GWP-
@@ -94,13 +93,10 @@ public:
     return State.pointerIsMine(Ptr);
   }
 
-  // Allocate memory in a guarded slot, with the specified `Alignment`. Returns
-  // nullptr if the pool is empty, if the alignnment is not a power of two, or
-  // if the size/alignment makes the allocation too large for this pool to
-  // handle. By default, uses strong alignment (i.e. `max_align_t`), see
-  // http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2293.htm for discussion of
-  // alignment issues in the standard.
-  void *allocate(size_t Size, size_t Alignment = alignof(max_align_t));
+  // Allocate memory in a guarded slot, and return a pointer to the new
+  // allocation. Returns nullptr if the pool is empty, the requested size is too
+  // large for this pool to handle, or the requested size is zero.
+  void *allocate(size_t Size);
 
   // Deallocate memory in a guarded slot. The provided pointer must have been
   // allocated using this pool. This will set the guarded slot as inaccessible.
@@ -114,18 +110,6 @@ public:
 
   // Returns a pointer to the AllocatorState region.
   const AllocatorState *getAllocatorState() const { return &State; }
-
-  // Exposed as protected for testing.
-protected:
-  // Returns the actual allocation size required to service an allocation with
-  // the provided Size and Alignment.
-  static size_t getRequiredBackingSize(size_t Size, size_t Alignment,
-                                       size_t PageSize);
-
-  // Returns the provided pointer that meets the specified alignment, depending
-  // on whether it's left or right aligned.
-  static uintptr_t getAlignedPtr(uintptr_t Ptr, size_t Alignment,
-                                 bool IsRightAligned);
 
 private:
   // Name of actively-occupied slot mappings.
