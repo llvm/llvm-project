@@ -25,6 +25,7 @@ TEST_F(CostTest, Operators) {
   InstructionCost VSix = 6;
   InstructionCost IThreeA = InstructionCost::getInvalid(3);
   InstructionCost IThreeB = InstructionCost::getInvalid(3);
+  InstructionCost ITwo = InstructionCost::getInvalid(2);
   InstructionCost TmpCost;
 
   EXPECT_NE(VThree, VNegTwo);
@@ -37,6 +38,9 @@ TEST_F(CostTest, Operators) {
   EXPECT_EQ(VThree - VNegTwo, 5);
   EXPECT_EQ(VThree * VNegTwo, -6);
   EXPECT_EQ(VSix / VThree, 2);
+  EXPECT_NE(IThreeA, ITwo);
+  EXPECT_LT(ITwo, IThreeA);
+  EXPECT_GT(IThreeA, ITwo);
 
   EXPECT_FALSE(IThreeA.isValid());
   EXPECT_EQ(IThreeA.getState(), InstructionCost::Invalid);
