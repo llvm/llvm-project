@@ -43,6 +43,14 @@ llvm_config.use_default_substitutions()
 
 llvm_config.use_clang()
 
+# FIXME: remove this when we flip the default value for --allow-unused-prefixes
+# to false.
+fc = ToolSubst('FileCheck', unresolved='fatal')
+# Insert this first. Then, we'll first update the blank FileCheck command; then,
+# the default substitution of FileCheck will replace it to its full path.
+config.substitutions.insert(0, (fc.regex,
+    'FileCheck --allow-unused-prefixes=false'))
+
 config.substitutions.append(
     ('%src_include_dir', config.clang_src_dir + '/include'))
 
