@@ -215,7 +215,6 @@ struct Configuration {
   bool warnBackrefs;
   std::vector<llvm::GlobPattern> warnBackrefsExclude;
   bool warnCommon;
-  bool warnIfuncTextrel;
   bool warnMissingEntry;
   bool warnSymbolOrdering;
   bool writeAddends;
