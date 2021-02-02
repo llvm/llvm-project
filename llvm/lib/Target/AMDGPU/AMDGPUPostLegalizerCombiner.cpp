@@ -288,6 +288,12 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
                         m_Reg(MatchInfo.Origin)))) {
     const auto Cmp1 = MatchInfo.Cmp1;
     const auto Cmp2 = MatchInfo.Cmp2;
+    const auto Diff = std::abs(Cmp2 - Cmp1);
+
+    // we don't need to clamp here.
+    if (Diff == 0 || Diff == 1) {
+      return false;
+    }
 
     const int64_t Min = std::numeric_limits<int16_t>::min();
     const int64_t Max = std::numeric_limits<int16_t>::max();
@@ -329,7 +335,10 @@ void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
   constexpr unsigned int CvtOpcode = AMDGPU::V_CVT_PK_I16_I32_e64;
   assert(MI.getOpcode() != CvtOpcode);
 
-  Register CvtDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  const auto REG_CLASS = &AMDGPU::VGPR_32RegClass;
+
+  Register CvtDst = MRI.createVirtualRegister(REG_CLASS);
+  MRI.setType(CvtDst, S32);
 
   auto CvtPk = B.buildInstr(CvtOpcode);
   CvtPk.addDef(CvtDst);
@@ -340,13 +349,16 @@ void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
   auto min = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto max = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
 
-  Register MinBoundaryDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MinBoundaryDst = MRI.createVirtualRegister(REG_CLASS);
+  MRI.setType(MinBoundaryDst, S32);
   B.buildConstant(MinBoundaryDst, min);
 
-  Register MaxBoundaryDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MaxBoundaryDst = MRI.createVirtualRegister(REG_CLASS);
+  MRI.setType(MaxBoundaryDst, S32);
   B.buildConstant(MaxBoundaryDst, max);
 
-  Register MedDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register MedDst = MRI.createVirtualRegister(REG_CLASS);
+  MRI.setType(MedDst, S32);
 
   auto Med = B.buildInstr(AMDGPU::V_MED3_I32);
   Med.addDef(MedDst);
