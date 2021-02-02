@@ -872,6 +872,7 @@ public:
   struct Reference {
     syntax::Token SpelledTok;
     index::SymbolRoleSet Role;
+    SymbolID Target;
 
     Range range(const SourceManager &SM) const {
       return halfOpenToRange(SM, SpelledTok.range(SM).toCharRange(SM));
@@ -906,13 +907,15 @@ public:
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     const SourceManager &SM = AST.getSourceManager();
-    if (!isInsideMainFile(Loc, SM) ||
-        TargetIDs.find(getSymbolID(D)) == TargetIDs.end())
+    if (!isInsideMainFile(Loc, SM))
+      return true;
+    SymbolID ID = getSymbolID(D);
+    if (!TargetIDs.contains(ID))
       return true;
     const auto &TB = AST.getTokens();
     Loc = SM.getFileLoc(Loc);
     if (const auto *Tok = TB.spelledTokenAt(Loc))
-      References.push_back({*Tok, Roles});
+      References.push_back({*Tok, Roles, ID});
     return true;
   }
 
@@ -1297,7 +1300,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     return {};
   }
 
-  RefsRequest Req;
+  llvm::DenseSet<SymbolID> IDs;
 
   const auto *IdentifierAtCursor =
       syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
@@ -1312,13 +1315,17 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       auto Refs = IDToRefs.find(MacroSID);
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
-          Location Result;
-          Result.range = Ref.Rng;
-          Result.uri = URIMainFile;
+          ReferencesResult::Reference Result;
+          Result.Loc.range = Ref.Rng;
+          Result.Loc.uri = URIMainFile;
+          if (Ref.IsDefinition) {
+            Result.Attributes |= ReferencesResult::Declaration;
+            Result.Attributes |= ReferencesResult::Definition;
+          }
           Results.References.push_back(std::move(Result));
         }
       }
-      Req.IDs.insert(MacroSID);
+      IDs.insert(MacroSID);
     }
   } else {
     // Handle references to Decls.
@@ -1332,26 +1339,19 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       if (auto ID = getSymbolID(D))
         Targets.insert(ID);
 
-    llvm::DenseSet<SymbolID> Overrides;
+    RelationsRequest OverriddenBy;
     if (Index) {
-      RelationsRequest FindOverrides;
-      FindOverrides.Predicate = RelationKind::OverriddenBy;
+      OverriddenBy.Predicate = RelationKind::OverriddenBy;
       for (const NamedDecl *ND : Decls) {
-        // Special case: virtual void meth^od() = 0 includes refs of overrides.
+        // Special case: Inlcude declaration of overridding methods.
         if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-          if (CMD->isPure())
+          if (CMD->isVirtual())
             if (IdentifierAtCursor && SM.getSpellingLoc(CMD->getLocation()) ==
                                           IdentifierAtCursor->location())
               if (auto ID = getSymbolID(CMD))
-                FindOverrides.Subjects.insert(ID);
+                OverriddenBy.Subjects.insert(ID);
         }
       }
-      if (!FindOverrides.Subjects.empty())
-        Index->relations(FindOverrides,
-                         [&](const SymbolID &Subject, const Symbol &Object) {
-                           Overrides.insert(Object.ID);
-                         });
-      Targets.insert(Overrides.begin(), Overrides.end());
     }
 
     // We traverse the AST to find references in the main file.
@@ -1367,13 +1367,41 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
-      Location Result;
-      Result.range = Ref.range(SM);
-      Result.uri = URIMainFile;
+      ReferencesResult::Reference Result;
+      Result.Loc.range = Ref.range(SM);
+      Result.Loc.uri = URIMainFile;
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Declaration))
+        Result.Attributes |= ReferencesResult::Declaration;
+      // clang-index doesn't report definitions as declarations, but they are.
+      if (Ref.Role & static_cast<unsigned>(index::SymbolRole::Definition))
+        Result.Attributes |=
+            ReferencesResult::Definition | ReferencesResult::Declaration;
       Results.References.push_back(std::move(Result));
     }
+    // Add decl/def of overridding methods.
+    if (Index && Results.References.size() <= Limit &&
+        !OverriddenBy.Subjects.empty())
+      Index->relations(
+          OverriddenBy, [&](const SymbolID &Subject, const Symbol &Object) {
+            if (auto LSPLoc =
+                    toLSPLocation(Object.CanonicalDeclaration, *MainFilePath)) {
+              ReferencesResult::Reference Result;
+              Result.Loc = std::move(*LSPLoc);
+              Result.Attributes =
+                  ReferencesResult::Declaration | ReferencesResult::Override;
+              Results.References.push_back(std::move(Result));
+            }
+            if (auto LSPLoc = toLSPLocation(Object.Definition, *MainFilePath)) {
+              ReferencesResult::Reference Result;
+              Result.Loc = std::move(*LSPLoc);
+              Result.Attributes = ReferencesResult::Declaration |
+                                  ReferencesResult::Definition |
+                                  ReferencesResult::Override;
+              Results.References.push_back(std::move(Result));
+            }
+          });
+
     if (Index && Results.References.size() <= Limit) {
-      Req.IDs = std::move(Overrides);
       for (const Decl *D : Decls) {
         // Not all symbols can be referenced from outside (e.g.
         // function-locals).
@@ -1382,13 +1410,17 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         if (D->getParentFunctionOrMethod())
           continue;
         if (auto ID = getSymbolID(D))
-          Req.IDs.insert(ID);
+          IDs.insert(ID);
       }
     }
   }
   // Now query the index for references from other files.
-  if (!Req.IDs.empty() && Index && Results.References.size() <= Limit) {
+  auto QueryIndex = [&](llvm::DenseSet<SymbolID> IDs, bool AllowAttributes) {
+    RefsRequest Req;
+    Req.IDs = std::move(IDs);
     Req.Limit = Limit;
+    if (Req.IDs.empty() || !Index || Results.References.size() > Limit)
+      return;
     Results.HasMore |= Index->refs(Req, [&](const Ref &R) {
       // No need to continue process if we reach the limit.
       if (Results.References.size() > Limit)
@@ -1397,14 +1429,25 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       // Avoid indexed results for the main file - the AST is authoritative.
       if (!LSPLoc || LSPLoc->uri.file() == *MainFilePath)
         return;
-
-      Results.References.push_back(std::move(*LSPLoc));
+      ReferencesResult::Reference Result;
+      Result.Loc = std::move(*LSPLoc);
+      if (AllowAttributes) {
+        if ((R.Kind & RefKind::Declaration) == RefKind::Declaration)
+          Result.Attributes |= ReferencesResult::Declaration;
+        // FIXME: our index should definitely store def | decl separately!
+        if ((R.Kind & RefKind::Definition) == RefKind::Definition)
+          Result.Attributes |=
+              ReferencesResult::Declaration | ReferencesResult::Definition;
+      }
+      Results.References.push_back(std::move(Result));
     });
-  }
+  };
+  QueryIndex(std::move(IDs), /*AllowAttributes=*/true);
   if (Results.References.size() > Limit) {
     Results.HasMore = true;
     Results.References.resize(Limit);
   }
+  // FIXME: Report refs of base methods.
   return Results;
 }
 
@@ -1466,6 +1509,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LocatedSymbol &S) {
   OS << S.Name << ": " << S.PreferredDeclaration;
   if (S.Definition)
     OS << " def=" << *S.Definition;
+  return OS;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const ReferencesResult::Reference &R) {
+  OS << R.Loc;
+  if (R.Attributes & ReferencesResult::Declaration)
+    OS << " [decl]";
+  if (R.Attributes & ReferencesResult::Definition)
+    OS << " [def]";
+  if (R.Attributes & ReferencesResult::Override)
+    OS << " [override]";
   return OS;
 }
 

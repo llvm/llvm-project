@@ -186,11 +186,7 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
-  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
-    if (!isa<ScalableVectorType>(DataType) || !ST->hasSVE())
-      return false;
-
-    Type *Ty = cast<ScalableVectorType>(DataType)->getElementType();
+  bool isLegalScalarTypeForSVEMaskedMemOp(Type *Ty) const {
     if (Ty->isPointerTy())
       return true;
 
@@ -205,12 +201,33 @@ public:
     return false;
   }
 
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
+    if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
+      return false;
+
+    return isLegalScalarTypeForSVEMaskedMemOp(DataType->getScalarType());
+  }
+
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
+  bool isLegalMaskedGatherScatter(Type *DataType) const {
+    if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
+      return false;
+
+    return isLegalScalarTypeForSVEMaskedMemOp(DataType->getScalarType());
+  }
+
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
+    return isLegalMaskedGatherScatter(DataType);
+  }
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
+    return isLegalMaskedGatherScatter(DataType);
   }
 
   bool isLegalNTStore(Type *DataType, Align Alignment) {

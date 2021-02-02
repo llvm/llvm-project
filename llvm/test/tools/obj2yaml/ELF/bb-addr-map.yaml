@@ -22,10 +22,10 @@
 # VALID-NEXT:           - AddressOffset:    0x4
 # VALID-NEXT:             Size:             0x5
 # VALID-NEXT:             Metadata:         0x6
-# VALID-NEXT:           - AddressOffset:    0x7
-# VALID-NEXT:             Size:             0x8
-# VALID-NEXT:             Metadata:         0x9
-# VALID-NEXT:       - Address:   0x20
+# VALID-NEXT:           - AddressOffset:    0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:             Size:             0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:             Metadata:         0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:       - Address:   0xFFFFFFFFFFFFFF20
 # VALID-NEXT:         BBEntries:
 # VALID-NEXT:           - AddressOffset:    0xA
 # VALID-NEXT:             Size:             0xB
@@ -48,10 +48,10 @@ Sections:
           - AddressOffset:    0x4
             Size:             0x5
             Metadata:         0x6
-          - AddressOffset:    0x7
-            Size:             0x8
-            Metadata:         0x9
-      - Address:   0x20
+          - AddressOffset:    0xFFFFFFFFFFFFFFF7
+            Size:             0xFFFFFFFFFFFFFFF8
+            Metadata:         0xFFFFFFFFFFFFFFF9
+      - Address:   0xFFFFFFFFFFFFFF20
         BBEntries:
           - AddressOffset:    0xA
             Size:             0xB

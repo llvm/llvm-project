@@ -87,8 +87,8 @@ CharacterType parseCharacter(mlir::DialectAsmParser &parser) {
 }
 
 // `complex` `<` kind `>`
-CplxType parseComplex(mlir::DialectAsmParser &parser) {
-  return parseKindSingleton<CplxType>(parser);
+fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
+  return parseKindSingleton<fir::ComplexType>(parser);
 }
 
 // `dims` `<` rank `>`
@@ -493,17 +493,17 @@ private:
 };
 
 /// `COMPLEX` storage
-struct CplxTypeStorage : public mlir::TypeStorage {
+struct ComplexTypeStorage : public mlir::TypeStorage {
   using KeyTy = KindTy;
 
   static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
 
   bool operator==(const KeyTy &key) const { return key == getFKind(); }
 
-  static CplxTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                    KindTy kind) {
-    auto *storage = allocator.allocate<CplxTypeStorage>();
-    return new (storage) CplxTypeStorage{kind};
+  static ComplexTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                       KindTy kind) {
+    auto *storage = allocator.allocate<ComplexTypeStorage>();
+    return new (storage) ComplexTypeStorage{kind};
   }
 
   KindTy getFKind() const { return kind; }
@@ -512,8 +512,8 @@ protected:
   KindTy kind;
 
 private:
-  CplxTypeStorage() = delete;
-  explicit CplxTypeStorage(KindTy kind) : kind{kind} {}
+  ComplexTypeStorage() = delete;
+  explicit ComplexTypeStorage(KindTy kind) : kind{kind} {}
 };
 
 /// `REAL` storage (for reals of unsupported sizes)
@@ -833,8 +833,8 @@ bool isa_std_type(mlir::Type t) {
 
 bool isa_fir_or_std_type(mlir::Type t) {
   if (auto funcType = t.dyn_cast<mlir::FunctionType>())
-    return llvm::all_of(funcType.getInputs(), isa_fir_or_std_type) &&  
-      llvm::all_of(funcType.getResults(), isa_fir_or_std_type);
+    return llvm::all_of(funcType.getInputs(), isa_fir_or_std_type) &&
+           llvm::all_of(funcType.getResults(), isa_fir_or_std_type);
   return isa_fir_type(t) || isa_std_type(t);
 }
 
@@ -909,15 +909,15 @@ int fir::IntType::getFKind() const { return getImpl()->getFKind(); }
 
 // COMPLEX
 
-CplxType fir::CplxType::get(mlir::MLIRContext *ctxt, KindTy kind) {
+fir::ComplexType fir::ComplexType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-mlir::Type fir::CplxType::getElementType() const {
+mlir::Type fir::ComplexType::getElementType() const {
   return fir::RealType::get(getContext(), getFKind());
 }
 
-KindTy fir::CplxType::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::ComplexType::getFKind() const { return getImpl()->getFKind(); }
 
 // REAL
 
@@ -1245,7 +1245,7 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << "char<" << type.getFKind() << '>';
     return;
   }
-  if (auto type = ty.dyn_cast<CplxType>()) {
+  if (auto type = ty.dyn_cast<fir::ComplexType>()) {
     os << "complex<" << type.getFKind() << '>';
     return;
   }

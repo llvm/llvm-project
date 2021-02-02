@@ -53,7 +53,7 @@ TEST(LlvmLibcSigaction, CustomAction) {
   action.sa_handler = SIG_DFL;
   EXPECT_THAT(__llvm_libc::sigaction(SIGUSR1, &action, nullptr), Succeeds());
 
-  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, SIGUSR1);
+  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, WITH_SIGNAL(SIGUSR1));
 }
 
 TEST(LlvmLibcSigaction, Ignore) {

@@ -62,3 +62,18 @@ func @test_valid_result_legalization() {
   %result = "test.type_producer"() : () -> f32
   "foo.return"(%result) : (f32) -> ()
 }
+
+// -----
+
+// Should not segfault here but gracefully fail.
+// CHECK-LABEL: func @test_signature_conversion_undo
+func @test_signature_conversion_undo() {
+  // CHECK: test.signature_conversion_undo
+  "test.signature_conversion_undo"() ({
+  // CHECK: ^{{.*}}(%{{.*}}: f32):
+  ^bb0(%arg0: f32):
+    "test.type_consumer"(%arg0) : (f32) -> ()
+    "test.return"(%arg0) : (f32) -> ()
+  }) : () -> ()
+  return
+}

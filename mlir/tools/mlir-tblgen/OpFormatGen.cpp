@@ -1581,6 +1581,8 @@ static void genSpacePrinter(bool value, OpMethodBody &body,
   if (value) {
     body << "  p << ' ';\n";
     lastWasPunctuation = false;
+  } else {
+    lastWasPunctuation = true;
   }
   shouldEmitSpace = false;
 }

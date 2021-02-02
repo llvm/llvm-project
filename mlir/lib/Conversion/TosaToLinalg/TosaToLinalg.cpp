@@ -29,7 +29,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                             PatternRewriter &rewriter) {
   Location loc = op->getLoc();
   auto elementTy =
-      op->getResult(0).getType().cast<ShapedType>().getElementType();
+      op->getOperand(0).getType().cast<ShapedType>().getElementType();
 
   // tosa::AbsOp
   if (isa<tosa::AbsOp>(op) && elementTy.isa<FloatType>())
@@ -66,6 +66,14 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::PowOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::PowFOp>(loc, resultTypes, args);
 
+  // tosa::LogOp
+  if (isa<tosa::LogOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::LogOp>(loc, resultTypes, args);
+
+  // tosa::ExpOp
+  if (isa<tosa::ExpOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::ExpOp>(loc, resultTypes, args);
+
   // tosa::SubOp
   if (isa<tosa::SubOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::SubFOp>(loc, resultTypes, args);
@@ -76,6 +84,58 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   // tosa::TanhOp
   if (isa<tosa::TanhOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::TanhOp>(loc, resultTypes, args);
+
+  // tosa::GreaterOp
+  if (isa<tosa::GreaterOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGT, args[0],
+                                         args[1]);
+
+  if (isa<tosa::GreaterOp>(op) && elementTy.isSignlessInteger())
+    return rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, args[0],
+                                         args[1]);
+
+  // tosa::GreaterEqualOp
+  if (isa<tosa::GreaterEqualOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGE, args[0],
+                                         args[1]);
+
+  if (isa<tosa::GreaterEqualOp>(op) && elementTy.isSignlessInteger())
+    return rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sge, args[0],
+                                         args[1]);
+
+  // tosa::MaximumOp
+  if (isa<tosa::MaximumOp>(op) && elementTy.isa<FloatType>()) {
+    auto predicate = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGT,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
+    auto predicate = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  // tosa::MinimumOp
+  if (isa<tosa::MinimumOp>(op) && elementTy.isa<FloatType>()) {
+    auto predicate = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OLT,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
+    auto predicate = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::slt,
+                                                   args[0], args[1]);
+    return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
+  }
+
+  // tosa::CeilOp
+  if (isa<tosa::CeilOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::CeilFOp>(loc, resultTypes, args);
+
+  // tosa::FloorOp
+  if (isa<tosa::FloorOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::FloorFOp>(loc, resultTypes, args);
 
   rewriter.notifyMatchFailure(
       op, "unhandled op for linalg body calculation for elementwise op");
@@ -94,19 +154,21 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
   // For now require no broadcasting. Consider making it support broadcasting
   // operations.
-  Type uniqueTy = operation->getOperand(0).getType();
+  Type uniqueInTy = operation->getOperand(0).getType();
   bool allInputTypesEqual =
       llvm::all_of(operation->getOperandTypes(),
-                   [&](Type operandTy) { return operandTy == uniqueTy; });
+                   [&](Type operandTy) { return operandTy == uniqueInTy; });
   if (!allInputTypesEqual)
     return rewriter.notifyMatchFailure(operation,
                                        "All operands must have the same type");
-  bool allResultTypesEqual =
-      llvm::all_of(operation->getResultTypes(),
-                   [&](Type resultTy) { return resultTy == uniqueTy; });
-  if (!allResultTypesEqual)
+  bool resultAndInputShapeEqual =
+      llvm::all_of(operation->getResultTypes(), [&](Type resultTy) {
+        return resultTy.cast<ShapedType>().getShape() == t0.getShape();
+      });
+
+  if (!resultAndInputShapeEqual)
     return rewriter.notifyMatchFailure(
-        operation, "All results must have the same type as the input");
+        operation, "All results must have the same shape as the input");
 
   // Construct the indexing maps needed for linalg.generic ops.
   SmallVector<Type> bodyArgTypes;
@@ -179,10 +241,16 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
     MLIRContext *context, OwningRewritePatternList *patterns) {
   patterns->insert<
       PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
-      PointwiseConverter<tosa::PowOp>, PointwiseConverter<tosa::AbsOp>,
+      PointwiseConverter<tosa::PowOp>, PointwiseConverter<tosa::LogOp>,
+      PointwiseConverter<tosa::ExpOp>, PointwiseConverter<tosa::AbsOp>,
       PointwiseConverter<tosa::TanhOp>, PointwiseConverter<tosa::BitwiseAndOp>,
       PointwiseConverter<tosa::BitwiseOrOp>,
       PointwiseConverter<tosa::BitwiseXorOp>,
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
-      PointwiseConverter<tosa::LogicalRightShiftOp>>(context);
+      PointwiseConverter<tosa::LogicalRightShiftOp>,
+      PointwiseConverter<tosa::GreaterOp>,
+      PointwiseConverter<tosa::GreaterEqualOp>,
+      PointwiseConverter<tosa::MaximumOp>, PointwiseConverter<tosa::MinimumOp>,
+      PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>>(
+      context);
 }

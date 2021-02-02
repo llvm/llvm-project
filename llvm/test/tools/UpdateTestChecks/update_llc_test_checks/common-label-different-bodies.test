@@ -3,7 +3,9 @@
 # RUN: cp -f %S/Inputs/common-label-different-bodies-1.ll %t-1.ll
 # RUN: cp -f %S/Inputs/common-label-different-bodies-2.ll %t-2.ll
 # RUN: cp -f %S/Inputs/common-label-different-bodies-3.ll %t-3.ll
-# RUN: %update_llc_test_checks %t-1.ll
+# RUN: cp -f %S/Inputs/common-label-different-bodies-3.ll %t-4.ll
+# RUN: %update_llc_test_checks %t-1.ll 2>&1 | FileCheck %s --check-prefix=WARNINGS
+# RUN: %update_llc_test_checks --disable-verbose-prefix-warnings %t-4.ll 2>&1 | FileCheck %s --check-prefix=NOWARNINGS --allow-empty
 # RUN: %update_llc_test_checks %t-2.ll
 # RUN: %update_llc_test_checks %t-3.ll
 # RUN: FileCheck --input-file=%t-1.ll %s
@@ -12,3 +14,6 @@
 
 # CHECK: B-LABEL: fold_v2i64
 # CHECK-NOT: A-LABEL: fold_v2i64
+# WARNINGS: WARNING: Function fold_v2i64 had conflicting output from different RUN lines for prefix A
+# WARNINGS: WARNING: Prefix A had conflicting output from different RUN lines for all functions
+# NOWARNINGS-NOT: WARNING

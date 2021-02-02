@@ -1653,25 +1653,16 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) {
 ;
 ; SKX-LABEL: test_insertelement_variable_v32i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:    .cfi_offset %rbp, -16
-; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:    .cfi_def_cfa_register %rbp
-; SKX-NEXT:    andq $-32, %rsp
-; SKX-NEXT:    subq $64, %rsp
-; SKX-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; SKX-NEXT:    vptestmb %ymm0, %ymm0, %k0
-; SKX-NEXT:    andl $31, %esi
 ; SKX-NEXT:    testb %dil, %dil
+; SKX-NEXT:    setne %al
+; SKX-NEXT:    vpbroadcastb %esi, %ymm0
+; SKX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %k1
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
-; SKX-NEXT:    vmovdqa %ymm0, (%rsp)
-; SKX-NEXT:    setne (%rsp,%rsi)
-; SKX-NEXT:    vpsllw $7, (%rsp), %ymm0
+; SKX-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
+; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovb2m %ymm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    movq %rbp, %rsp
-; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, zeroinitializer
@@ -1731,25 +1722,16 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ;
 ; SKX-LABEL: test_insertelement_variable_v64i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:    .cfi_offset %rbp, -16
-; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:    .cfi_def_cfa_register %rbp
-; SKX-NEXT:    andq $-64, %rsp
-; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
-; SKX-NEXT:    andl $63, %esi
 ; SKX-NEXT:    testb %dil, %dil
+; SKX-NEXT:    setne %al
+; SKX-NEXT:    vpbroadcastb %esi, %zmm0
+; SKX-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k1
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
-; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
-; SKX-NEXT:    setne (%rsp,%rsi)
-; SKX-NEXT:    vpsllw $7, (%rsp), %zmm0
+; SKX-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
+; SKX-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
 ; SKX-NEXT:    kmovq %k0, %rax
-; SKX-NEXT:    movq %rbp, %rsp
-; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <64 x i8> %a, zeroinitializer

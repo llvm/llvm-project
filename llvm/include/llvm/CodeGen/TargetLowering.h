@@ -1318,6 +1318,10 @@ public:
             getIndexedMaskedStoreAction(IdxMode, VT.getSimpleVT()) == Custom);
   }
 
+  /// Returns true if the index type for a masked gather/scatter requires
+  /// extending
+  virtual bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const { return false; }
+
   // Returns true if VT is a legal index type for masked gathers/scatters
   // on this target
   virtual bool shouldRemoveExtendFromGSIndex(EVT VT) const { return false; }

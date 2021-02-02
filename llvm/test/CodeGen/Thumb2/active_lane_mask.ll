@@ -424,7 +424,6 @@ define void @test_width2(i32* nocapture readnone %x, i32* nocapture %y, i8 zeroe
 ; CHECK-NEXT:    vldrw.u32 q2, [r2]
 ; CHECK-NEXT:    add.w lr, r3, r0, lsr #1
 ; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vand q1, q1, q0
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
