@@ -18,8 +18,7 @@ was implemented to workaround/support the initialization of iostreams
 (implemented as a namespace scope static in the header - only to be provided
 when that specific header is included in the program).
 
-FOO: module asm "narf"
-USE: module asm "narf"
+BOTH: module asm "narf"
 
 FOO: $_Z2f1PKcz = comdat any
 FOO: $_ZN13implicit_dtorD1Ev = comdat any
