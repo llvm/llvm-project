@@ -4,11 +4,11 @@
 ; reduction instead.
 
 ; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
-; RUN: cat %t | FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-FINAL %s
+; RUN: FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-FINAL %s < %t
 
 ; Check that the call is removed by instruction reduction passes
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=ALL,CHECK-FUNC --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-NOCALL %s
+; RUN: llvm-reduce --test FileCheck --test-arg --check-prefix=ALL --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck -implicit-check-not=uninteresting --check-prefixes=ALL,CHECK-NOCALL %s < %t
 
 
 declare i8* @llvm.sponentry.p0i8()
