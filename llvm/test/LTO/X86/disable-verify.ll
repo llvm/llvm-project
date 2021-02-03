@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ; -disable-verify should disable verification from the optimization pipeline.
 ; CHECK: Pass Arguments:
-; CHECK-NOT: -verify {{.*}} -verify
+; CHECK-NOT: -verify
 
 ; VERIFY: Pass Arguments: {{.*}} -verify {{.*}} -verify
 

@@ -41,8 +41,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
-#include "llvm/LTO/Config.h"
-#include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -74,10 +72,6 @@ struct LTOCodeGenerator {
 
   LTOCodeGenerator(LLVMContext &Context);
   ~LTOCodeGenerator();
-
-  /// Return a lto::Config object which contains the options set in
-  /// LTOCodeGenerator.
-  lto::Config toConfig() const;
 
   /// Merge given module.  Return true on success.
   ///
@@ -171,14 +165,14 @@ struct LTOCodeGenerator {
   /// if the compilation was not successful.
   std::unique_ptr<MemoryBuffer> compileOptimized();
 
-  /// Compile the merged optimized module \p ParallelismLevel output files each
+  /// Compile the merged optimized module into out.size() output files each
   /// representing a linkable partition of the module. If out contains more
-  /// than one element, code generation is done in parallel with \p
-  /// ParallelismLevel threads.  Output files will be written to the streams
-  /// created using the \p AddStream callback. Returns true on success.
+  /// than one element, code generation is done in parallel with out.size()
+  /// threads.  Output files will be written to members of out. Returns true on
+  /// success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool compileOptimized(lto::AddStreamFn AddStream, unsigned ParallelismLevel);
+  bool compileOptimized(ArrayRef<raw_pwrite_stream *> Out);
 
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
@@ -194,6 +188,8 @@ struct LTOCodeGenerator {
   void DiagnosticHandler(const DiagnosticInfo &DI);
 
 private:
+  void initializeLTOPasses();
+
   /// Verify the merged module on first call.
   ///
   /// Sets \a HasVerifiedInput on first call and doesn't run again on the same
