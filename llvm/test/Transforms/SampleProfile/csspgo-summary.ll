@@ -1,37 +1,11 @@
-; Test for CSSPGO's new early inliner using priority queue
+; Test for CSSPGO's profile summary computation with and without pre-merging context profiles
 
-; Note that we need new pass manager to enable top-down processing for sample profile loader
-; Test we inlined the following in top-down order with old inliner
-;   main:3 @ _Z5funcAi
-;   main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
-;   _Z5funcBi:1 @ _Z8funcLeafi
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
-;
-; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, so we get less inlining for given profile
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-NEW
-;
-; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, tuning hot cutoff can get us the same inlining
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
-;
-; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, tuning cold sample profile inline threshold can get us the same inlining
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
-;
-; With new FDO early inliner and tuned cutoff, we can control inlining through size growth tuning knob.
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -sample-profile-inline-limit-min=0 -sample-profile-inline-growth-limit=1 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=INLINE-NEW-LIMIT1
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -sample-profile-inline-limit-min=10 -sample-profile-inline-growth-limit=1 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-NEW-LIMIT2
+; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=0 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-UNMERGED
+; RUN: opt < %s -passes=sample-profile,print-profile-summary -sample-profile-file=%S/Inputs/profile-context-tracker.prof -profile-summary-cutoff-hot=999900 -profile-sample-accurate -profile-summary-contextless=1 -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUMMARY-MERGED
 
+; SUMMARY-UNMERGED: main :hot entry
+; SUMMARY-MERGED-NOT: main :hot entry
 
-; INLINE-BASE: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
-; INLINE-BASE: remark: merged.cpp:27:11: _Z8funcLeafi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11 @ main:3:10
-; INLINE-BASE: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
-
-; INLINE-NEW: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
-; INLINE-NEW-NOT: remark
-
-; INLINE-NEW-LIMIT1-NOT: remark
-
-; INLINE-NEW-LIMIT2: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
-; INLINE-NEW-LIMIT2-NOT: remark
 
 @factor = dso_local global i32 3, align 4, !dbg !0
 

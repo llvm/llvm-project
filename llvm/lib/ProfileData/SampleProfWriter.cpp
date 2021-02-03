@@ -752,9 +752,5 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
 void SampleProfileWriter::computeSummary(
     const StringMap<FunctionSamples> &ProfileMap) {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
-  for (const auto &I : ProfileMap) {
-    const FunctionSamples &Profile = I.second;
-    Builder.addRecord(Profile);
-  }
-  Summary = Builder.getSummary();
+  Summary = Builder.computeSummaryForProfiles(ProfileMap);
 }
