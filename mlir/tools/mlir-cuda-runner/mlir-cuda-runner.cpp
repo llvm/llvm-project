@@ -101,6 +101,7 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
 
   // This will also destroy the cubin data.
   RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState), "cuLinkDestroy");
+  RETURN_ON_CUDA_ERROR(cuCtxDestroy(context), "cuCtxDestroy");
 
   return result;
 }
