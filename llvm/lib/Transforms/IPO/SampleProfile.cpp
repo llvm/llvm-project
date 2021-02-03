@@ -238,8 +238,6 @@ class SampleProfileLoader;
 
 class SampleCoverageTracker {
 public:
-  SampleCoverageTracker(SampleProfileLoader &SPL) : SPLoader(SPL){};
-
   bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
                        uint32_t Discriminator, uint64_t Samples);
   unsigned computeCoverage(unsigned Used, unsigned Total) const;
@@ -255,6 +253,7 @@ public:
     SampleCoverage.clear();
     TotalUsedSamples = 0;
   }
+  inline void setProfAccForSymsInList(bool V) { ProfAccForSymsInList = V; }
 
 private:
   using BodySampleCoverageMap = std::map<LineLocation, unsigned>;
@@ -285,7 +284,9 @@ private:
   /// every function, so we just need to keep a single counter.
   uint64_t TotalUsedSamples = 0;
 
-  SampleProfileLoader &SPLoader;
+  // For symbol in profile symbol list, whether to regard their profiles
+  // to be accurate. This is passed from the SampleLoader instance.
+  bool ProfAccForSymsInList = false;
 };
 
 class GUIDToFuncNameMapper {
@@ -402,8 +403,8 @@ public:
       std::function<const TargetLibraryInfo &(Function &)> GetTLI)
       : GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
-        CoverageTracker(*this), Filename(std::string(Name)),
-        RemappingFilename(std::string(RemapName)), LTOPhase(LTOPhase) {}
+        Filename(std::string(Name)), RemappingFilename(std::string(RemapName)),
+        LTOPhase(LTOPhase) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -461,8 +462,6 @@ protected:
   bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
   void computeDominanceAndLoopInfo(Function &F);
   void clearFunctionData();
-  bool callsiteIsHot(const FunctionSamples *CallsiteFS,
-                     ProfileSummaryInfo *PSI);
 
   /// Map basic blocks to their computed weights.
   ///
@@ -652,8 +651,8 @@ private:
 /// be regarded as cold and much less inlining will happen in CGSCC inlining
 /// pass, so we tend to lower the hot criteria here to allow more early
 /// inlining to happen for warm callsites and it is helpful for performance.
-bool SampleProfileLoader::callsiteIsHot(const FunctionSamples *CallsiteFS,
-                                        ProfileSummaryInfo *PSI) {
+static bool callsiteIsHot(const FunctionSamples *CallsiteFS,
+                          ProfileSummaryInfo *PSI, bool ProfAccForSymsInList) {
   if (!CallsiteFS)
     return false; // The callsite was not inlined in the original binary.
 
@@ -699,7 +698,7 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
+      if (callsiteIsHot(CalleeSamples, PSI, ProfAccForSymsInList))
         Count += countUsedRecords(CalleeSamples, PSI);
     }
 
@@ -718,7 +717,7 @@ SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
+      if (callsiteIsHot(CalleeSamples, PSI, ProfAccForSymsInList))
         Count += countBodyRecords(CalleeSamples, PSI);
     }
 
@@ -739,7 +738,7 @@ SampleCoverageTracker::countBodySamples(const FunctionSamples *FS,
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (SPLoader.callsiteIsHot(CalleeSamples, PSI))
+      if (callsiteIsHot(CalleeSamples, PSI, ProfAccForSymsInList))
         Total += countBodySamples(CalleeSamples, PSI);
     }
 
@@ -1230,7 +1229,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             AllCandidates.push_back(CB);
             if (FS->getEntrySamples() > 0 || ProfileIsCS)
               LocalNotInlinedCallSites.try_emplace(CB, FS);
-            if (callsiteIsHot(FS, PSI))
+            if (callsiteIsHot(FS, PSI, ProfAccForSymsInList))
               Hot = true;
             else if (shouldInlineColdCallee(*CB))
               ColdCandidates.push_back(CB);
@@ -1266,7 +1265,7 @@ bool SampleProfileLoader::inlineHotFunctions(
                                      PSI->getOrCompHotCountThreshold());
             continue;
           }
-          if (!callsiteIsHot(FS, PSI))
+          if (!callsiteIsHot(FS, PSI, ProfAccForSymsInList))
             continue;
 
           Candidate = {I, FS, FS->getEntrySamples(), 1.0};
@@ -2343,6 +2342,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
     NamesInProfile.clear();
     if (auto NameTable = Reader->getNameTable())
       NamesInProfile.insert(NameTable->begin(), NameTable->end());
+    CoverageTracker.setProfAccForSymsInList(true);
   }
 
   if (FAM && !ProfileInlineReplayFile.empty()) {
@@ -2477,6 +2477,7 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // than symbol list. When profile-sample-accurate is on, ignore symbol list.
     ProfAccForSymsInList = false;
   }
+  CoverageTracker.setProfAccForSymsInList(ProfAccForSymsInList);
 
   // PSL -- profile symbol list include all the symbols in sampled binary.
   // If ProfileAccurateForSymsInList is enabled, PSL is used to treat
