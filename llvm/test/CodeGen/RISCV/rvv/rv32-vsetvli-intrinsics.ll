@@ -16,8 +16,7 @@ define void @test_vsetvli_e64mf8(i32 %avl) nounwind {
 define void @test_vsetvli_e8mf2_zero_avl() nounwind {
 ; CHECK-LABEL: test_vsetvli_e8mf2_zero_avl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a0, zero
-; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli a0, 0, e8,mf2,ta,mu
 ; CHECK-NEXT:    ret
   call i32 @llvm.riscv.vsetvli.i32(i32 0, i32 0, i32 7)
   ret void
