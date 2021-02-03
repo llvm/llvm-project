@@ -155,6 +155,27 @@ void test_strcmp() {
 #endif
 }
 
+void test_strcat() {
+  char src[] = "world";
+  char dst[] = "hello \0    ";
+  char *p = dst;
+  dfsan_set_label(k_label, &p, sizeof(p));
+  dfsan_set_label(i_label, src, sizeof(src));
+  dfsan_set_label(j_label, dst, sizeof(dst));
+  char *ret = strcat(p, src);
+  ASSERT_LABEL(ret, k_label);
+  assert(ret == dst);
+  assert(strcmp(src, dst + 6) == 0);
+  for (int i = 0; i < 6; ++i) {
+    ASSERT_LABEL(dst[i], j_label);
+  }
+  for (int i = 6; i < strlen(dst); ++i) {
+    ASSERT_LABEL(dst[i], i_label);
+    assert(dfsan_get_label(dst[i]) == dfsan_get_label(src[i - 6]));
+  }
+  ASSERT_LABEL(dst[11], j_label);
+}
+
 void test_strlen() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -1360,6 +1381,7 @@ int main(void) {
   test_strcasecmp();
   test_strchr();
   test_strcmp();
+  test_strcat();
   test_strcpy();
   test_strdup();
   test_strlen();
