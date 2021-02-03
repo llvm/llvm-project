@@ -276,10 +276,13 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          inputFiles.insert(make<ObjFile>(member.mbref, member.modTime, path));
-          printArchiveMemberLoad(
-              (forceLoadArchive ? "-force_load" : "-all_load"),
-              inputFiles.back());
+          if (Optional<InputFile *> file = loadArchiveMember(
+                  member.mbref, member.modTime, path, /*objCOnly=*/false)) {
+            inputFiles.insert(*file);
+            printArchiveMemberLoad(
+                (forceLoadArchive ? "-force_load" : "-all_load"),
+                inputFiles.back());
+          }
         }
       }
     } else if (config->forceLoadObjC) {
@@ -294,9 +297,9 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
       // these files here and below (as part of the ArchiveFile).
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          if (hasObjCSection(member.mbref)) {
-            inputFiles.insert(
-                make<ObjFile>(member.mbref, member.modTime, path));
+          if (Optional<InputFile *> file = loadArchiveMember(
+                  member.mbref, member.modTime, path, /*objCOnly=*/true)) {
+            inputFiles.insert(*file);
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
         }
