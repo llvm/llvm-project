@@ -847,10 +847,23 @@ void test_sigaction() {
   struct sigaction oldact;
   assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
   assert(oldact.sa_sigaction == SignalAction);
+  assert(oldact.sa_flags & SA_SIGINFO);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  newact_with_sighandler.sa_handler = SIG_IGN;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SignalHandler);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+
+  newact_with_sighandler.sa_handler = SIG_DFL;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SIG_IGN);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
 
   // Restore sigaction to the orginal setting, check the last one is SignalHandler
   assert(0 == sigaction(SIGUSR1, &origin_act, &oldact));
-  assert(oldact.sa_handler == SignalHandler);
+  assert(oldact.sa_handler == SIG_DFL);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
 }
 
 void test_signal() {
