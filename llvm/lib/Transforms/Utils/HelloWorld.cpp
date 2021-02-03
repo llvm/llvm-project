@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/HelloNew/HelloWorld.h"
+#include "llvm/Transforms/Utils/HelloWorld.h"
 
 using namespace llvm;
 
