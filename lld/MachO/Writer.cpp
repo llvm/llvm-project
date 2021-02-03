@@ -439,8 +439,8 @@ void Writer::scanRelocations() {
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
         continue;
       if (auto *sym = r.referent.dyn_cast<lld::macho::Symbol *>()) {
-        if (isa<Undefined>(sym))
-          treatUndefinedSymbol(toString(*sym), toString(isec->file));
+        if (auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined);
         else if (target->validateSymbolRelocation(sym, isec, r))
           prepareSymbolRelocation(sym, isec, r);
       } else {
@@ -458,7 +458,8 @@ void Writer::scanSymbols() {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      dysym->file->refState = std::max(dysym->file->refState, dysym->refState);
+      dysym->getFile()->refState =
+          std::max(dysym->getFile()->refState, dysym->refState);
     }
   }
 }
