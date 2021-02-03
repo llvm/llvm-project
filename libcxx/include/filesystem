@@ -1495,7 +1495,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
       "'char' or 'char8_t'");
 #if defined(_LIBCPP_WIN32API)
   using _Traits = __is_pathable<_Source>;
-  return u8path(__unwrap_iter(_Traits::__range_begin(__s)), __unwrap_iter(_Traits::__range_end(__s)));
+  return u8path(_VSTD::__unwrap_iter(_Traits::__range_begin(__s)), _VSTD::__unwrap_iter(_Traits::__range_end(__s)));
 #else
   return path(__s);
 #endif
