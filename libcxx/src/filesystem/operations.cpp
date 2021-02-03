@@ -1227,21 +1227,25 @@ void __permissions(const path& p, perms prms, perm_options opts,
 path __read_symlink(const path& p, error_code* ec) {
   ErrorHandler<path> err("read_symlink", ec, &p);
 
-#ifdef PATH_MAX
+#if defined(PATH_MAX) || defined(MAX_SYMLINK_SIZE)
   struct NullDeleter { void operator()(void*) const {} };
+#ifdef MAX_SYMLINK_SIZE
+  const size_t size = MAX_SYMLINK_SIZE + 1;
+#else
   const size_t size = PATH_MAX + 1;
-  char stack_buff[size];
-  auto buff = std::unique_ptr<char[], NullDeleter>(stack_buff);
+#endif
+  path::value_type stack_buff[size];
+  auto buff = std::unique_ptr<path::value_type[], NullDeleter>(stack_buff);
 #else
   StatT sb;
   if (detail::lstat(p.c_str(), &sb) == -1) {
     return err.report(capture_errno());
   }
   const size_t size = sb.st_size + 1;
-  auto buff = unique_ptr<char[]>(new char[size]);
+  auto buff = unique_ptr<path::value_type[]>(new path::value_type[size]);
 #endif
-  ::ssize_t ret;
-  if ((ret = ::readlink(p.c_str(), buff.get(), size)) == -1)
+  detail::SSizeT ret;
+  if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
     return err.report(capture_errno());
   _LIBCPP_ASSERT(ret > 0, "TODO");
   if (static_cast<size_t>(ret) >= size)
