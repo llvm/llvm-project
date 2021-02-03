@@ -20,14 +20,16 @@ jobs:
   build_lldb:
     name: lldb build
     runs-on: ${{ matrix.os }}
+    # Workaround for build faliure on Mac OS X: llvm.org/PR46190, https://github.com/actions/virtual-environments/issues/2274
+    env:
+      CPLUS_INCLUDE_PATH: /usr/local/opt/llvm/include/c++/v1:/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - windows-latest
-          # macOS build disabled due to: llvm.org/PR46190
-          #- macOS-latest
+          - macOS-latest
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
