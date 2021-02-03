@@ -217,7 +217,7 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 }
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
-  if (!Def->getDef() && OrigLoop->isLoopInvariant(Def->getLiveInIRValue()))
+  if (!Def->getDef())
     return Def->getLiveInIRValue();
 
   if (hasScalarValue(Def, Instance))
@@ -888,10 +888,11 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
   O << "WIDEN-INDUCTION";
-  if (Trunc) {
+  if (getTruncInst()) {
     O << "\\l\"";
     O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc);
+    O << " +\n" << Indent << "\"  ";
+    getVPValue(0)->printAsOperand(O, SlotTracker);
   } else
     O << " " << VPlanIngredient(IV);
 }
