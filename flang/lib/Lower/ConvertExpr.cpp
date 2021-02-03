@@ -959,23 +959,25 @@ public:
     auto *base = reverseComponents(cmpt, list);
     llvm::SmallVector<mlir::Value, 4> coorArgs;
     auto obj = gen(*base);
-    auto *sym = &cmpt.GetFirstSymbol();
+    const auto *sym = &cmpt.GetFirstSymbol();
     auto ty = converter.genType(*sym);
     auto loc = getLoc();
+    auto fldTy = fir::FieldType::get(&converter.getMLIRContext());
+    // FIXME: need to thread the LEN type parameters here.
     for (auto *field : list) {
       auto recTy = ty.cast<fir::RecordType>();
       sym = &field->GetLastSymbol();
       auto name = toStringRef(sym->name());
-      auto fldTy = recTy.getType(name);
       coorArgs.push_back(builder.create<fir::FieldIndexOp>(
           loc, fldTy, name, mlir::TypeAttr::get(recTy),
           /*lenparams=*/mlir::ValueRange{}));
-      ty = fldTy;
+      ty = recTy.getType(name);
     }
     assert(sym && "no component(s)?");
     ty = builder.getRefType(ty);
-    return builder.create<fir::CoordinateOp>(loc, ty, fir::getBase(obj),
-                                             coorArgs);
+    return fir::substBase(obj, builder.create<fir::CoordinateOp>(
+                                   loc, ty, fir::getBase(obj), coorArgs,
+                                   /*lenParams=*/mlir::ValueRange{}));
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::Component &cmpt) {

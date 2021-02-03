@@ -13,13 +13,13 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
@@ -44,7 +44,7 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
-        op.getMemRef(), *maybeExpandedMap);
+        op.getMemRef(), *maybeExpandedMap, /*lenparams=*/mlir::ValueRange{});
 
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
     return success();
@@ -65,7 +65,7 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
-        op.getMemRef(), *maybeExpandedMap);
+        op.getMemRef(), *maybeExpandedMap, /*lenparams=*/mlir::ValueRange{});
     rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValueToStore(),
                                               coorOp.getResult());
     return success();
