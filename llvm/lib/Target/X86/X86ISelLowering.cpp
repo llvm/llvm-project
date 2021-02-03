@@ -18824,8 +18824,10 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   if (!N2C) {
     // Variable insertion indices, usually we're better off spilling to stack,
     // but AVX512 can use a variable compare+select by comparing against all
-    // possible vector indices.
-    if (!(Subtarget.hasBWI() || (Subtarget.hasAVX512() && EltSizeInBits >= 32)))
+    // possible vector indices, and FP insertion has less gpr->simd traffic.
+    if (!(Subtarget.hasBWI() ||
+          (Subtarget.hasAVX512() && EltSizeInBits >= 32) ||
+          (Subtarget.hasSSE41() && VT.isFloatingPoint())))
       return SDValue();
 
     MVT IdxSVT = MVT::getIntegerVT(EltSizeInBits);

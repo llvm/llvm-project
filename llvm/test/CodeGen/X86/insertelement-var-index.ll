@@ -825,23 +825,43 @@ define <2 x i64> @arg_i64_v2i64(<2 x i64> %v, i64 %x, i32 %y) nounwind {
 }
 
 define <4 x float> @arg_f32_v4f32(<4 x float> %v, float %x, i32 %y) nounwind {
-; SSE-LABEL: arg_f32_v4f32:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $3, %edi
-; SSE-NEXT:    movss %xmm1, -24(%rsp,%rdi,4)
-; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: arg_f32_v4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    andl $3, %edi
+; SSE2-NEXT:    movss %xmm1, -24(%rsp,%rdi,4)
+; SSE2-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX1OR2-LABEL: arg_f32_v4f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $3, %edi
-; AVX1OR2-NEXT:    vmovss %xmm1, -24(%rsp,%rdi,4)
-; AVX1OR2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX1OR2-NEXT:    retq
+; SSE41-LABEL: arg_f32_v4f32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps %xmm0, %xmm2
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE41-NEXT:    movd %edi, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movaps %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: arg_f32_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vmovd %edi, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: arg_f32_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX2-NEXT:    vmovd %edi, %xmm2
+; AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: arg_f32_v4f32:
 ; AVX512:       # %bb.0:
@@ -854,23 +874,46 @@ define <4 x float> @arg_f32_v4f32(<4 x float> %v, float %x, i32 %y) nounwind {
 }
 
 define <2 x double> @arg_f64_v2f64(<2 x double> %v, double %x, i32 %y) nounwind {
-; SSE-LABEL: arg_f64_v2f64:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $1, %edi
-; SSE-NEXT:    movsd %xmm1, -24(%rsp,%rdi,8)
-; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: arg_f64_v2f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    andl $1, %edi
+; SSE2-NEXT:    movsd %xmm1, -24(%rsp,%rdi,8)
+; SSE2-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX1OR2-LABEL: arg_f64_v2f64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $1, %edi
-; AVX1OR2-NEXT:    vmovsd %xmm1, -24(%rsp,%rdi,8)
-; AVX1OR2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX1OR2-NEXT:    retq
+; SSE41-LABEL: arg_f64_v2f64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm2
+; SSE41-NEXT:    movddup {{.*#+}} xmm1 = xmm1[0,0]
+; SSE41-NEXT:    movslq %edi, %rax
+; SSE41-NEXT:    movq %rax, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: arg_f64_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX1-NEXT:    movslq %edi, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: arg_f64_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX2-NEXT:    movslq %edi, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: arg_f64_v2f64:
 ; AVX512:       # %bb.0:
@@ -1033,25 +1076,45 @@ define <2 x i64> @load_i64_v2i64(<2 x i64> %v, i64* %p, i32 %y) nounwind {
 }
 
 define <4 x float> @load_f32_v4f32(<4 x float> %v, float* %p, i32 %y) nounwind {
-; SSE-LABEL: load_f32_v4f32:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $3, %esi
-; SSE-NEXT:    movss %xmm1, -24(%rsp,%rsi,4)
-; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: load_f32_v4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    andl $3, %esi
+; SSE2-NEXT:    movss %xmm1, -24(%rsp,%rsi,4)
+; SSE2-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX1OR2-LABEL: load_f32_v4f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $3, %esi
-; AVX1OR2-NEXT:    vmovss %xmm1, -24(%rsp,%rsi,4)
-; AVX1OR2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX1OR2-NEXT:    retq
+; SSE41-LABEL: load_f32_v4f32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE41-NEXT:    movd %esi, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: load_f32_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss (%rdi), %xmm1
+; AVX1-NEXT:    vmovd %esi, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_f32_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss (%rdi), %xmm1
+; AVX2-NEXT:    vmovd %esi, %xmm2
+; AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_f32_v4f32:
 ; AVX512:       # %bb.0:
@@ -1065,25 +1128,47 @@ define <4 x float> @load_f32_v4f32(<4 x float> %v, float* %p, i32 %y) nounwind {
 }
 
 define <2 x double> @load_f64_v2f64(<2 x double> %v, double* %p, i32 %y) nounwind {
-; SSE-LABEL: load_f64_v2f64:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $1, %esi
-; SSE-NEXT:    movsd %xmm1, -24(%rsp,%rsi,8)
-; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: load_f64_v2f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    andl $1, %esi
+; SSE2-NEXT:    movsd %xmm1, -24(%rsp,%rsi,8)
+; SSE2-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX1OR2-LABEL: load_f64_v2f64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $1, %esi
-; AVX1OR2-NEXT:    vmovsd %xmm1, -24(%rsp,%rsi,8)
-; AVX1OR2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
-; AVX1OR2-NEXT:    retq
+; SSE41-LABEL: load_f64_v2f64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm1
+; SSE41-NEXT:    movddup {{.*#+}} xmm2 = mem[0,0]
+; SSE41-NEXT:    movslq %esi, %rax
+; SSE41-NEXT:    movq %rax, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: load_f64_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX1-NEXT:    movslq %esi, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_f64_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX2-NEXT:    movslq %esi, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_f64_v2f64:
 ; AVX512:       # %bb.0:
@@ -1288,20 +1373,26 @@ define <8 x float> @arg_f32_v8f32(<8 x float> %v, float %x, i32 %y) nounwind {
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: arg_f32_v8f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    pushq %rbp
-; AVX1OR2-NEXT:    movq %rsp, %rbp
-; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1OR2-NEXT:    andl $7, %edi
-; AVX1OR2-NEXT:    vmovss %xmm1, (%rsp,%rdi,4)
-; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0
-; AVX1OR2-NEXT:    movq %rbp, %rsp
-; AVX1OR2-NEXT:    popq %rbp
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: arg_f32_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vmovd %edi, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm2, %xmm3
+; AVX1-NEXT:    vpcmpeqd {{\.LCPI.*}}+{{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: arg_f32_v8f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm1, %ymm1
+; AVX2-NEXT:    vmovd %edi, %xmm2
+; AVX2-NEXT:    vpbroadcastd %xmm2, %ymm2
+; AVX2-NEXT:    vpcmpeqd {{.*}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: arg_f32_v8f32:
 ; AVX512:       # %bb.0:
@@ -1325,20 +1416,28 @@ define <4 x double> @arg_f64_v4f64(<4 x double> %v, double %x, i32 %y) nounwind 
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: arg_f64_v4f64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    pushq %rbp
-; AVX1OR2-NEXT:    movq %rsp, %rbp
-; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1OR2-NEXT:    andl $3, %edi
-; AVX1OR2-NEXT:    vmovsd %xmm1, (%rsp,%rdi,8)
-; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0
-; AVX1OR2-NEXT:    movq %rbp, %rsp
-; AVX1OR2-NEXT:    popq %rbp
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: arg_f64_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    movslq %edi, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm2
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = xmm2[0,0]
+; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm2, %xmm3
+; AVX1-NEXT:    vpcmpeqq {{\.LCPI.*}}+{{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: arg_f64_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-NEXT:    movslq %edi, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: arg_f64_v4f64:
 ; AVX512:       # %bb.0:
@@ -1557,21 +1656,25 @@ define <8 x float> @load_f32_v8f32(<8 x float> %v, float* %p, i32 %y) nounwind {
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: load_f32_v8f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    pushq %rbp
-; AVX1OR2-NEXT:    movq %rsp, %rbp
-; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
-; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1OR2-NEXT:    andl $7, %esi
-; AVX1OR2-NEXT:    vmovss %xmm1, (%rsp,%rsi,4)
-; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0
-; AVX1OR2-NEXT:    movq %rbp, %rsp
-; AVX1OR2-NEXT:    popq %rbp
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: load_f32_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %esi, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd {{\.LCPI.*}}+{{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vbroadcastss (%rdi), %ymm2
+; AVX1-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_f32_v8f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss (%rdi), %ymm1
+; AVX2-NEXT:    vmovd %esi, %xmm2
+; AVX2-NEXT:    vpbroadcastd %xmm2, %ymm2
+; AVX2-NEXT:    vpcmpeqd {{.*}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_f32_v8f32:
 ; AVX512:       # %bb.0:
@@ -1597,21 +1700,27 @@ define <4 x double> @load_f64_v4f64(<4 x double> %v, double* %p, i32 %y) nounwin
 ; SSE-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: load_f64_v4f64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    pushq %rbp
-; AVX1OR2-NEXT:    movq %rsp, %rbp
-; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
-; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1OR2-NEXT:    andl $3, %esi
-; AVX1OR2-NEXT:    vmovsd %xmm1, (%rsp,%rsi,8)
-; AVX1OR2-NEXT:    vmovaps (%rsp), %ymm0
-; AVX1OR2-NEXT:    movq %rbp, %rsp
-; AVX1OR2-NEXT:    popq %rbp
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: load_f64_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movslq %esi, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqq {{\.LCPI.*}}+{{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm2
+; AVX1-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_f64_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; AVX2-NEXT:    movslq %esi, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_f64_v4f64:
 ; AVX512:       # %bb.0:
