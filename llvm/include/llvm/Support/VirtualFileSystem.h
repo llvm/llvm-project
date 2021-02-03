@@ -678,6 +678,7 @@ public:
       case EK_Directory:
         return false;
       }
+      llvm_unreachable("invalid entry kind");
     }
   };
 
