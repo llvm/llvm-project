@@ -20,9 +20,11 @@ namespace macho {
 class ArchiveFile;
 class DylibFile;
 class InputFile;
+class ObjFile;
 class InputSection;
 class MachHeaderSection;
 class Symbol;
+class Undefined;
 
 /*
  * Note that the SymbolTable handles name collisions by calling
@@ -32,10 +34,10 @@ class Symbol;
  */
 class SymbolTable {
 public:
-  Symbol *addDefined(StringRef name, InputSection *isec, uint32_t value,
-                     bool isWeakDef, bool isPrivateExtern);
+  Symbol *addDefined(StringRef name, InputFile *, InputSection *,
+                     uint32_t value, bool isWeakDef, bool isPrivateExtern);
 
-  Symbol *addUndefined(StringRef name, bool isWeakRef);
+  Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
   Symbol *addCommon(StringRef name, InputFile *, uint64_t size, uint32_t align,
                     bool isPrivateExtern);
@@ -56,7 +58,7 @@ private:
   std::vector<Symbol *> symVector;
 };
 
-extern void treatUndefinedSymbol(StringRef symbolName, StringRef fileName);
+void treatUndefinedSymbol(const Undefined &);
 
 extern SymbolTable *symtab;
 

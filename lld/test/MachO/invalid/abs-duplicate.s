@@ -4,7 +4,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weakfoo.s -o %t/weakfoo.o
 # RUN: not %lld -lSystem %t/test.o %t/weakfoo.o -o %t/test 2>&1 | FileCheck %s
 
-# CHECK: lld: error: duplicate symbol: _weakfoo
+# CHECK:      error: duplicate symbol: _weakfoo
+# CHECK-NEXT: >>> defined in {{.*}}/test.o
+# CHECK-NEXT: >>> defined in {{.*}}/weakfoo.o
 
 #--- weakfoo.s
 .globl _weakfoo
