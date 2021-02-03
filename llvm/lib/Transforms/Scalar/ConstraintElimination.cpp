@@ -247,6 +247,15 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (!Br || !Br->isConditional())
       continue;
 
+    // Returns true if we can add a known condition from BB to its successor
+    // block Succ. Each predecessor of Succ can either be BB or be dominated by
+    // Succ (e.g. the case when adding a condition from a pre-header to a loop
+    // header).
+    auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
+      return all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
+        return Pred == &BB || DT.dominates(Succ, Pred);
+      });
+    };
     // If the condition is an OR of 2 compares and the false successor only has
     // the current block as predecessor, queue both negated conditions for the
     // false successor.
@@ -254,7 +263,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
         match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
       BasicBlock *FalseSuccessor = Br->getSuccessor(1);
-      if (FalseSuccessor->getSinglePredecessor()) {
+      if (CanAdd(FalseSuccessor)) {
         WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op0),
                               true);
         WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op1),
@@ -269,7 +278,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
         match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
       BasicBlock *TrueSuccessor = Br->getSuccessor(0);
-      if (TrueSuccessor->getSinglePredecessor()) {
+      if (CanAdd(TrueSuccessor)) {
         WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op0),
                               false);
         WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op1),
@@ -281,9 +290,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     auto *CmpI = dyn_cast<CmpInst>(Br->getCondition());
     if (!CmpI)
       continue;
-    if (Br->getSuccessor(0)->getSinglePredecessor())
+    if (CanAdd(Br->getSuccessor(0)))
       WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
-    if (Br->getSuccessor(1)->getSinglePredecessor())
+    if (CanAdd(Br->getSuccessor(1)))
       WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
   }
 
