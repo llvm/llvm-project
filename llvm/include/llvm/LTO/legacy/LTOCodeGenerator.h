@@ -75,6 +75,10 @@ struct LTOCodeGenerator {
   LTOCodeGenerator(LLVMContext &Context);
   ~LTOCodeGenerator();
 
+  /// Return a lto::Config object which contains the options set in
+  /// LTOCodeGenerator.
+  lto::Config toConfig() const;
+
   /// Merge given module.  Return true on success.
   ///
   /// Resets \a HasVerifiedInput.
@@ -88,16 +92,14 @@ struct LTOCodeGenerator {
   void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
-  void setCodePICModel(Optional<Reloc::Model> Model) {
-    Config.RelocModel = Model;
-  }
+  void setCodePICModel(Optional<Reloc::Model> Model) { RelocModel = Model; }
 
   /// Set the file type to be emitted (assembly or object code).
   /// The default is CGFT_ObjectFile.
-  void setFileType(CodeGenFileType FT) { Config.CGFileType = FT; }
+  void setFileType(CodeGenFileType FT) { FileType = FT; }
 
-  void setCpu(StringRef MCpu) { Config.CPU = std::string(MCpu); }
-  void setAttrs(std::vector<std::string> MAttrs) { Config.MAttrs = MAttrs; }
+  void setCpu(StringRef MCpu) { this->MCpu = std::string(MCpu); }
+  void setAttrs(std::vector<std::string> MAttrs) { this->MAttrs = MAttrs; }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
@@ -180,11 +182,11 @@ struct LTOCodeGenerator {
 
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
-  void setFreestanding(bool Enabled) { Config.Freestanding = Enabled; }
+  void setFreestanding(bool Enabled) { Freestanding = Enabled; }
 
-  void setDisableVerify(bool Value) { Config.DisableVerify = Value; }
+  void setDisableVerify(bool Value) { DisableVerify = Value; }
 
-  void setUseNewPM(bool Value) { Config.UseNewPM = Value; }
+  void setUseNewPM(bool Value) { UseNewPM = Value; }
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
@@ -222,23 +224,31 @@ private:
   bool EmitDwarfDebugInfo = false;
   bool ScopeRestrictionsDone = false;
   bool HasVerifiedInput = false;
+  Optional<Reloc::Model> RelocModel;
   StringSet<> MustPreserveSymbols;
   StringSet<> AsmUndefinedRefs;
   StringMap<GlobalValue::LinkageTypes> ExternalSymbols;
   std::vector<std::string> CodegenOptions;
   std::string FeatureStr;
+  std::string MCpu;
+  std::vector<std::string> MAttrs;
   std::string NativeObjectPath;
+  TargetOptions Options;
+  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   const Target *MArch = nullptr;
   std::string TripleStr;
+  unsigned OptLevel = 2;
   lto_diagnostic_handler_t DiagHandler = nullptr;
   void *DiagContext = nullptr;
   bool ShouldInternalize = EnableLTOInternalization;
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
+  CodeGenFileType FileType = CGFT_ObjectFile;
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  bool Freestanding = false;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
-
-  lto::Config Config;
+  bool DisableVerify = false;
+  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
 };
 }
 #endif
