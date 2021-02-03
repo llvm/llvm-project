@@ -25,11 +25,11 @@ define <2 x i32> @zero_dividend_vector_undef_elt(<2 x i32> %A) {
   ret <2 x i32> %B
 }
 
-; Division-by-zero is poison. UB in any vector lane means the whole op is poison.
+; Division-by-zero is undef. UB in any vector lane means the whole op is undef.
 
 define <2 x i8> @sdiv_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> undef
 ;
   %div = sdiv <2 x i8> <i8 1, i8 2>, <i8 0, i8 -42>
   ret <2 x i8> %div
@@ -37,7 +37,7 @@ define <2 x i8> @sdiv_zero_elt_vec_constfold(<2 x i8> %x) {
 
 define <2 x i8> @udiv_zero_elt_vec_constfold(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_zero_elt_vec_constfold(
-; CHECK-NEXT:    ret <2 x i8> poison
+; CHECK-NEXT:    ret <2 x i8> undef
 ;
   %div = udiv <2 x i8> <i8 1, i8 2>, <i8 42, i8 0>
   ret <2 x i8> %div
@@ -191,39 +191,6 @@ define i32 @div1() {
   %call = call i32 @external(), !range !0
   %urem = udiv i32 %call, 3
   ret i32 %urem
-}
-
-define i8 @sdiv_minusone_divisor() {
-; CHECK-LABEL: @sdiv_minusone_divisor(
-; CHECK-NEXT:    ret i8 poison
-;
-  %v = sdiv i8 -128, -1
-  ret i8 %v
-}
-
-define i32 @poison(i32 %x) {
-; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i32 poison
-;
-  %v = udiv i32 %x, poison
-  ret i32 %v
-}
-
-; TODO: this should be poison
-define i32 @poison2(i32 %x) {
-; CHECK-LABEL: @poison2(
-; CHECK-NEXT:    ret i32 0
-;
-  %v = udiv i32 poison, %x
-  ret i32 %v
-}
-
-define <2 x i32> @poison3(<2 x i32> %x) {
-; CHECK-LABEL: @poison3(
-; CHECK-NEXT:    ret <2 x i32> poison
-;
-  %v = udiv <2 x i32> %x, <i32 poison, i32 1>
-  ret <2 x i32> %v
 }
 
 !0 = !{i32 0, i32 3}
