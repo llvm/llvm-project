@@ -1,5 +1,5 @@
 ! RUN: not %flang-new -fc1 -fsyntax-only %s 2>&1 | FileCheck %s
-! RUN: not %f18 -fparse-only %s 2>&1 | FileCheck %s
+! RUN: not %f18 -fsyntax-only %s 2>&1 | FileCheck %s
 
 ! REQUIRES: new-flang-driver
 

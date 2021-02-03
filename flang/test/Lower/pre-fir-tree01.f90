@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-pre-fir-tree -fparse-only %s | FileCheck %s
+! RUN: %f18 -fdebug-pre-fir-tree -fsyntax-only %s | FileCheck %s
 
 ! Test structure of the Pre-FIR tree
 
