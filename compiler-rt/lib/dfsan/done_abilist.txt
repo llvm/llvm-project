@@ -224,6 +224,7 @@ fun:strtol=custom
 fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
+fun:strcat=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.

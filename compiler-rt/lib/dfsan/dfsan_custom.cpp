@@ -353,6 +353,20 @@ void *__dfsw_memset(void *s, int c, size_t n,
   return s;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strcat(char *dest, const char *src,
+                                                  dfsan_label dest_label,
+                                                  dfsan_label src_label,
+                                                  dfsan_label *ret_label) {
+  size_t dest_len = strlen(dest);
+  char *ret = strcat(dest, src);
+  dfsan_label *sdest = shadow_for(dest + dest_len);
+  const dfsan_label *ssrc = shadow_for(src);
+  internal_memcpy((void *)sdest, (const void *)ssrc,
+                  strlen(src) * sizeof(dfsan_label));
+  *ret_label = dest_label;
+  return ret;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE char *
 __dfsw_strdup(const char *s, dfsan_label s_label, dfsan_label *ret_label) {
   size_t len = strlen(s);
