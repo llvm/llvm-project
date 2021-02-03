@@ -614,6 +614,7 @@ void ScalarEnumerationTraits<WasmYAML::RelocType>::enumeration(
 #define WASM_RELOC(name, value) IO.enumCase(Type, #name, wasm::name);
 #include "llvm/BinaryFormat/WasmRelocs.def"
 #undef WASM_RELOC
+  IO.enumFallback<Hex32>(Type);
 }
 
 } // end namespace yaml
