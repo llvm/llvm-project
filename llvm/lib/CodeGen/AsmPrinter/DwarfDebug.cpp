@@ -1783,10 +1783,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Instruction ranges, specifying where IV is accessible.
     const auto &HistoryMapEntries = I.second;
-
-    // Try to find any non-empty variable location. Do not create a concrete
-    // entity if there are no locations.
-    if (!DbgValues.hasNonEmptyLocation(HistoryMapEntries))
+    if (HistoryMapEntries.empty())
       continue;
 
     LexicalScope *Scope = nullptr;
