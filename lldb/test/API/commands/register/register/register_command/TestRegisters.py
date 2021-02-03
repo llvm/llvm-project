@@ -222,7 +222,7 @@ class RegisterCommandsTestCase(TestBase):
         self.assertTrue(matched, STOPPED_DUE_TO_SIGNAL)
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         thread = process.GetThreadAtIndex(0)

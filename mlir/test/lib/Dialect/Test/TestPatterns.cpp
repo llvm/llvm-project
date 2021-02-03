@@ -492,8 +492,17 @@ struct TestTypeConverter : public TypeConverter {
   TestTypeConverter() {
     addConversion(convertType);
     addArgumentMaterialization(materializeCast);
-    addArgumentMaterialization(materializeOneToOneCast);
     addSourceMaterialization(materializeCast);
+
+    /// Materialize the cast for one-to-one conversion from i64 to f64.
+    const auto materializeOneToOneCast =
+        [](OpBuilder &builder, IntegerType resultType, ValueRange inputs,
+           Location loc) -> Optional<Value> {
+      if (resultType.getWidth() == 42 && inputs.size() == 1)
+        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+      return llvm::None;
+    };
+    addArgumentMaterialization(materializeOneToOneCast);
   }
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
@@ -531,16 +540,6 @@ struct TestTypeConverter : public TypeConverter {
     if (inputs.size() == 1)
       return inputs[0];
     return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
-  }
-
-  /// Materialize the cast for one-to-one conversion from i64 to f64.
-  static Optional<Value> materializeOneToOneCast(OpBuilder &builder,
-                                                 IntegerType resultType,
-                                                 ValueRange inputs,
-                                                 Location loc) {
-    if (resultType.getWidth() == 42 && inputs.size() == 1)
-      return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
-    return llvm::None;
   }
 };
 

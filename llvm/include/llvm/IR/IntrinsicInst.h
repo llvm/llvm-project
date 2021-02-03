@@ -981,12 +981,16 @@ public:
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(0)));
   }
 
+  ConstantInt *getIndex() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
+  }
+
   ConstantInt *getAttributes() const {
     return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
   }
 
-  ConstantInt *getIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
+  ConstantInt *getFactor() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
   }
 };
 

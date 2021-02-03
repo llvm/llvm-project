@@ -865,7 +865,7 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass>:
 }
 
 class VPseudoBinaryMask<VReg RetClass,
-                        VReg Op1Class,
+                        RegisterClass Op1Class,
                         DAGOperand Op2Class,
                         string Constraint> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
@@ -911,7 +911,7 @@ class VPseudoBinaryCarryIn<VReg RetClass,
 }
 
 class VPseudoTernaryNoMask<VReg RetClass,
-                           VReg Op1Class,
+                           RegisterClass Op1Class,
                            DAGOperand Op2Class,
                            string Constraint> :
         Pseudo<(outs RetClass:$rd),
@@ -1696,8 +1696,8 @@ multiclass VPseudoBinaryV_WV_WX_WI {
 }
 
 multiclass VPseudoTernary<VReg RetClass,
-                          VReg Op1Class,
-                          RegisterClass Op2Class,
+                          RegisterClass Op1Class,
+                          DAGOperand Op2Class,
                           LMULInfo MInfo,
                           string Constraint = ""> {
   let VLMul = MInfo.value in {
@@ -2147,8 +2147,8 @@ class VPatAMOWDMask<string intrinsic_name,
 
 multiclass VPatUSLoad<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       VReg reg_class>
@@ -2166,8 +2166,8 @@ multiclass VPatUSLoad<string intrinsic,
 }
 
 multiclass VPatUSLoadFF<string inst,
-                        LLVMType type,
-                        LLVMType mask_type,
+                        ValueType type,
+                        ValueType mask_type,
                         int sew,
                         LMULInfo vlmul,
                         VReg reg_class>
@@ -2184,8 +2184,8 @@ multiclass VPatUSLoadFF<string inst,
 
 multiclass VPatSLoad<string intrinsic,
                      string inst,
-                     LLVMType type,
-                     LLVMType mask_type,
+                     ValueType type,
+                     ValueType mask_type,
                      int sew,
                      LMULInfo vlmul,
                      VReg reg_class>
@@ -2204,9 +2204,9 @@ multiclass VPatSLoad<string intrinsic,
 
 multiclass VPatILoad<string intrinsic,
                      string inst,
-                     LLVMType type,
-                     LLVMType idx_type,
-                     LLVMType mask_type,
+                     ValueType type,
+                     ValueType idx_type,
+                     ValueType mask_type,
                      int sew,
                      LMULInfo vlmul,
                      LMULInfo idx_vlmul,
@@ -2229,8 +2229,8 @@ multiclass VPatILoad<string intrinsic,
 
 multiclass VPatUSStore<string intrinsic,
                        string inst,
-                       LLVMType type,
-                       LLVMType mask_type,
+                       ValueType type,
+                       ValueType mask_type,
                        int sew,
                        LMULInfo vlmul,
                        VReg reg_class>
@@ -2247,8 +2247,8 @@ multiclass VPatUSStore<string intrinsic,
 
 multiclass VPatSStore<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       VReg reg_class>
@@ -2265,9 +2265,9 @@ multiclass VPatSStore<string intrinsic,
 
 multiclass VPatIStore<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType idx_type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType idx_type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       LMULInfo idx_vlmul,

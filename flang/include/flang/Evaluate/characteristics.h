@@ -146,6 +146,8 @@ public:
       const char *thisIs = "pointer", const char *thatIs = "target",
       bool isElemental = false, bool thisIsDeferredShape = false,
       bool thatIsDeferredShape = false) const;
+  std::optional<Expr<SubscriptInteger>> MeasureElementSizeInBytes(
+      FoldingContext &, bool align) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
       FoldingContext &) const;
 

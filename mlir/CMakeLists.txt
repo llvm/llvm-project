@@ -1,10 +1,37 @@
 # MLIR project.
+
+# Check if MLIR is built as a standalone project.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(mlir)
+  cmake_minimum_required(VERSION 3.13.4)
+
+  find_package(LLVM CONFIG REQUIRED)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
+  include(HandleLLVMOptions)
+  include(AddLLVM)
+  include(TableGen)
+
+  include_directories(${LLVM_INCLUDE_DIRS})
+
+  set(LLVM_MAIN_SRC_DIR ${CMAKE_SOURCE_DIR}/../llvm CACHE PATH
+      "Path to LLVM source tree")
+  set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
+  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
+    add_subdirectory(${UNITTEST_DIR} utils/unittest)
+  endif()
+
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+endif()
+
 set(MLIR_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  )
 set(MLIR_MAIN_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include )
 
 set(MLIR_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(MLIR_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(MLIR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(MLIR_TOOLS_DIR   ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -106,7 +133,11 @@ add_subdirectory(lib)
 add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
-  add_subdirectory(unittests)
+  if (TARGET gtest)
+    add_subdirectory(unittests)
+  else()
+    message(WARNING "gtest not found, unittests will not be available")
+  endif()
   add_subdirectory(test)
 endif()
 if (MLIR_INCLUDE_INTEGRATION_TESTS)

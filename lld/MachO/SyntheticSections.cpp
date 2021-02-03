@@ -380,9 +380,7 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
     in.rebase->addEntry(section, offset);
     if (defined->isExternalWeakDef())
       in.weakBinding->addEntry(sym, section, offset, addend);
-  } else if (isa<DSOHandle>(sym)) {
-    error("cannot bind to " + DSOHandle::name);
-  } else {
+  } else if (!isa<DSOHandle>(sym)) {
     // Undefined symbols are filtered out in scanRelocations(); we should never
     // get here
     llvm_unreachable("cannot bind to an undefined symbol");

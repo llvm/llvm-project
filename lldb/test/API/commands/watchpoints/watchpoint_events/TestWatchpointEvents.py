@@ -84,7 +84,7 @@ class TestWatchpointEvents (TestBase):
         local_watch.SetCondition(condition)
         self.GetWatchpointEvent(lldb.eWatchpointEventTypeConditionChanged)
 
-        self.assertTrue(local_watch.GetCondition() == condition,
+        self.assertEqual(local_watch.GetCondition(), condition,
                         'make sure watchpoint condition is "' + condition + '"')
 
     def GetWatchpointEvent(self, event_type):

@@ -50,7 +50,7 @@ class ValueAsLinkedListTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -80,7 +80,7 @@ class ValueAsLinkedListTestCase(TestBase):
         # Sanity checks that the we visited all the items (no more, no less).
         if self.TraceOn():
             print("visited IDs:", list)
-        self.assertTrue(visitedIDs == list)
+        self.assertEqual(visitedIDs, list)
 
         # Let's exercise the linked_list_iter() API again, this time supplying
         # our end of list test function.
@@ -111,7 +111,7 @@ class ValueAsLinkedListTestCase(TestBase):
         # Sanity checks that the we visited all the items (no more, no less).
         if self.TraceOn():
             print("visited IDs:", list)
-        self.assertTrue(visitedIDs == list)
+        self.assertEqual(visitedIDs, list)
 
         # Get variable 'empty_task_head'.
         empty_task_head = frame0.FindVariable('empty_task_head')
@@ -125,7 +125,7 @@ class ValueAsLinkedListTestCase(TestBase):
                 print(cvf.format(t))
             list.append(int(t.GetChildMemberWithName("id").GetValue()))
 
-        self.assertTrue(len(list) == 0)
+        self.assertEqual(len(list), 0)
 
         # Get variable 'task_evil'.
         task_evil = frame0.FindVariable('task_evil')
@@ -139,4 +139,4 @@ class ValueAsLinkedListTestCase(TestBase):
                 print(cvf.format(t))
             list.append(int(t.GetChildMemberWithName("id").GetValue()))
 
-        self.assertTrue(len(list) == 3)
+        self.assertEqual(len(list), 3)
