@@ -799,7 +799,7 @@ class VRegClass<int numRegs, list<ValueType> regTypes, dag regList> :
 def VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16, p0, p1, p4],
                         (add VGPR_64)>;
 def VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
-def VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, i128], (add VGPR_128)>;
+def VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64], (add VGPR_128)>;
 def VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
 def VReg_192 : VRegClass<6, [untyped], (add VGPR_192)>;
 def VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64], (add VGPR_256)>;
