@@ -53,6 +53,7 @@ class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
 def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrSubgroupNonUniformVote     : FunctionExtension<"cl_khr_subgroup_non_uniform_vote">;
 def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ballot">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
@@ -1494,7 +1495,12 @@ let Extension = FuncExtKhrSubgroups in {
 // TODO
 
 // Section 38.5.1 - cl_khr_subgroup_non_uniform_vote
-// TODO
+let Extension = FuncExtKhrSubgroupNonUniformVote in {
+  def : Builtin<"sub_group_elect", [Int]>;
+  def : Builtin<"sub_group_non_uniform_all", [Int, Int]>;
+  def : Builtin<"sub_group_non_uniform_any", [Int, Int]>;
+  def : Builtin<"sub_group_non_uniform_all_equal", [Int, AGenType1]>;
+}
 
 // Section 38.6.1 - cl_khr_subgroup_ballot
 let Extension = FuncExtKhrSubgroupBallot in {
