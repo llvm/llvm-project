@@ -528,8 +528,9 @@ public:
   /// Widen an integer or floating-point induction variable \p IV. If \p Trunc
   /// is provided, the integer induction variable will first be truncated to
   /// the corresponding type.
-  void widenIntOrFpInduction(PHINode *IV, Value *Start,
-                             TruncInst *Trunc = nullptr);
+  void widenIntOrFpInduction(PHINode *IV, Value *Start, TruncInst *Trunc,
+                             VPValue *Def, VPValue *CastDef,
+                             VPTransformState &State);
 
   /// getOrCreateVectorValue and getOrCreateScalarValue coordinate to generate a
   /// vector or scalar value on-demand if one is not yet available. When
@@ -558,6 +559,10 @@ public:
     VectorLoopValueMap.setVectorValue(Scalar, Part, Vector);
   }
 
+  void setScalarValue(Value *Scalar, const VPIteration &Instance, Value *V) {
+    VectorLoopValueMap.setScalarValue(Scalar, Instance, V);
+  }
+
   /// Return a value in the new loop corresponding to \p V from the original
   /// loop at unroll and vector indices \p Instance. If the value has been
   /// vectorized but not scalarized, the necessary extractelement instruction
@@ -566,6 +571,9 @@ public:
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
   void packScalarIntoVectorValue(Value *V, const VPIteration &Instance);
+
+  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance,
+                                 VPTransformState &State);
 
   /// Try to vectorize interleaved access group \p Group with the base address
   /// given in \p Addr, optionally masking the vector operations if \p
@@ -591,6 +599,13 @@ public:
 
   /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
   void fixNonInductionPHIs(void);
+
+  /// Create a broadcast instruction. This method generates a broadcast
+  /// instruction (shuffle) for loop invariant values and for the induction
+  /// value. If this is the induction variable then we extend it to N, N+1, ...
+  /// this is needed because each iteration in the loop corresponds to a SIMD
+  /// element.
+  virtual Value *getBroadcastInstrs(Value *V);
 
 protected:
   friend class LoopVectorizationPlanner;
@@ -642,13 +657,6 @@ protected:
   /// represented as.
   void truncateToMinimalBitwidths();
 
-  /// Create a broadcast instruction. This method generates a broadcast
-  /// instruction (shuffle) for loop invariant values and for the induction
-  /// value. If this is the induction variable then we extend it to N, N+1, ...
-  /// this is needed because each iteration in the loop corresponds to a SIMD
-  /// element.
-  virtual Value *getBroadcastInstrs(Value *V);
-
   /// This function adds (StartIdx, StartIdx + Step, StartIdx + 2*Step, ...)
   /// to each vector element of Val. The sequence starts at StartIndex.
   /// \p Opcode is relevant for FP induction variable.
@@ -662,7 +670,8 @@ protected:
   /// Note that \p EntryVal doesn't have to be an induction variable - it
   /// can also be a truncate instruction.
   void buildScalarSteps(Value *ScalarIV, Value *Step, Instruction *EntryVal,
-                        const InductionDescriptor &ID);
+                        const InductionDescriptor &ID, VPValue *Def,
+                        VPValue *CastDef, VPTransformState &State);
 
   /// Create a vector induction phi node based on an existing scalar one. \p
   /// EntryVal is the value from the original loop that maps to the vector phi
@@ -671,7 +680,9 @@ protected:
   /// version of the IV truncated to \p EntryVal's type.
   void createVectorIntOrFpInductionPHI(const InductionDescriptor &II,
                                        Value *Step, Value *Start,
-                                       Instruction *EntryVal);
+                                       Instruction *EntryVal, VPValue *Def,
+                                       VPValue *CastDef,
+                                       VPTransformState &State);
 
   /// Returns true if an instruction \p I should be scalarized instead of
   /// vectorized for the chosen vectorization factor.
@@ -698,11 +709,10 @@ protected:
   /// latter case \p EntryVal is a TruncInst and we must not record anything for
   /// that IV, but it's error-prone to expect callers of this routine to care
   /// about that, hence this explicit parameter.
-  void recordVectorLoopValueForInductionCast(const InductionDescriptor &ID,
-                                             const Instruction *EntryVal,
-                                             Value *VectorLoopValue,
-                                             unsigned Part,
-                                             unsigned Lane = UINT_MAX);
+  void recordVectorLoopValueForInductionCast(
+      const InductionDescriptor &ID, const Instruction *EntryVal,
+      Value *VectorLoopValue, VPValue *CastDef, VPTransformState &State,
+      unsigned Part, unsigned Lane = UINT_MAX);
 
   /// Generate a shuffle sequence that will reverse the vector Vec.
   virtual Value *reverseVector(Value *Vec);
@@ -2025,7 +2035,8 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
 
 void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
     const InductionDescriptor &II, Value *Step, Value *Start,
-    Instruction *EntryVal) {
+    Instruction *EntryVal, VPValue *Def, VPValue *CastDef,
+    VPTransformState &State) {
   assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
          "Expected either an induction phi-node or a truncate of it!");
 
@@ -2079,11 +2090,12 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
   VecInd->setDebugLoc(EntryVal->getDebugLoc());
   Instruction *LastInduction = VecInd;
   for (unsigned Part = 0; Part < UF; ++Part) {
-    VectorLoopValueMap.setVectorValue(EntryVal, Part, LastInduction);
+    State.set(Def, EntryVal, LastInduction, Part);
 
     if (isa<TruncInst>(EntryVal))
       addMetadata(LastInduction, EntryVal);
-    recordVectorLoopValueForInductionCast(II, EntryVal, LastInduction, Part);
+    recordVectorLoopValueForInductionCast(II, EntryVal, LastInduction, CastDef,
+                                          State, Part);
 
     LastInduction = cast<Instruction>(addFastMathFlag(
         Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add")));
@@ -2119,7 +2131,8 @@ bool InnerLoopVectorizer::needsScalarInduction(Instruction *IV) const {
 
 void InnerLoopVectorizer::recordVectorLoopValueForInductionCast(
     const InductionDescriptor &ID, const Instruction *EntryVal,
-    Value *VectorLoopVal, unsigned Part, unsigned Lane) {
+    Value *VectorLoopVal, VPValue *CastDef, VPTransformState &State,
+    unsigned Part, unsigned Lane) {
   assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
          "Expected either an induction phi-node or a truncate of it!");
 
@@ -2138,16 +2151,16 @@ void InnerLoopVectorizer::recordVectorLoopValueForInductionCast(
   // Only the first Cast instruction in the Casts vector is of interest.
   // The rest of the Casts (if exist) have no uses outside the
   // induction update chain itself.
-  Instruction *CastInst = *Casts.begin();
   if (Lane < UINT_MAX)
-    VectorLoopValueMap.setScalarValue(CastInst, VPIteration(Part, Lane),
-                                      VectorLoopVal);
+    State.set(CastDef, VectorLoopVal, VPIteration(Part, Lane));
   else
-    VectorLoopValueMap.setVectorValue(CastInst, Part, VectorLoopVal);
+    State.set(CastDef, VectorLoopVal, Part);
 }
 
 void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
-                                                TruncInst *Trunc) {
+                                                TruncInst *Trunc, VPValue *Def,
+                                                VPValue *CastDef,
+                                                VPTransformState &State) {
   assert((IV->getType()->isIntegerTy() || IV != OldInduction) &&
          "Primary induction variable must have an integer type");
 
@@ -2209,10 +2222,11 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
       Value *EntryPart =
           getStepVector(Broadcasted, VF.getKnownMinValue() * Part, Step,
                         ID.getInductionOpcode());
-      VectorLoopValueMap.setVectorValue(EntryVal, Part, EntryPart);
+      State.set(Def, EntryVal, EntryPart, Part);
       if (Trunc)
         addMetadata(EntryPart, Trunc);
-      recordVectorLoopValueForInductionCast(ID, EntryVal, EntryPart, Part);
+      recordVectorLoopValueForInductionCast(ID, EntryVal, EntryPart, CastDef,
+                                            State, Part);
     }
   };
 
@@ -2229,7 +2243,8 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
   // least one user in the loop that is not widened.
   auto NeedsScalarIV = needsScalarInduction(EntryVal);
   if (!NeedsScalarIV) {
-    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal);
+    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, CastDef,
+                                    State);
     return;
   }
 
@@ -2237,13 +2252,14 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
   // create the phi node, we will splat the scalar induction variable in each
   // loop iteration.
   if (!shouldScalarizeInstruction(EntryVal)) {
-    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal);
+    createVectorIntOrFpInductionPHI(ID, Step, Start, EntryVal, Def, CastDef,
+                                    State);
     Value *ScalarIV = CreateScalarIV(Step);
     // Create scalar steps that can be used by instructions we will later
     // scalarize. Note that the addition of the scalar steps will not increase
     // the number of instructions in the loop in the common case prior to
     // InstCombine. We will be trading one vector extract for each scalar step.
-    buildScalarSteps(ScalarIV, Step, EntryVal, ID);
+    buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, CastDef, State);
     return;
   }
 
@@ -2253,7 +2269,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
   Value *ScalarIV = CreateScalarIV(Step);
   if (!Cost->isScalarEpilogueAllowed())
     CreateSplatIV(ScalarIV, Step);
-  buildScalarSteps(ScalarIV, Step, EntryVal, ID);
+  buildScalarSteps(ScalarIV, Step, EntryVal, ID, Def, CastDef, State);
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
@@ -2314,7 +2330,9 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
 
 void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
                                            Instruction *EntryVal,
-                                           const InductionDescriptor &ID) {
+                                           const InductionDescriptor &ID,
+                                           VPValue *Def, VPValue *CastDef,
+                                           VPTransformState &State) {
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(VF.isVector() && "VF should be greater than one");
   // Get the value type and ensure it and the step have the same integer type.
@@ -2361,8 +2379,9 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
              "scalable");
       auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
       auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
-      VectorLoopValueMap.setScalarValue(EntryVal, VPIteration(Part, Lane), Add);
-      recordVectorLoopValueForInductionCast(ID, EntryVal, Add, Part, Lane);
+      State.set(Def, Add, VPIteration(Part, Lane));
+      recordVectorLoopValueForInductionCast(ID, EntryVal, Add, CastDef, State,
+                                            Part, Lane);
     }
   }
 }
@@ -2491,6 +2510,16 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(
   VectorValue = Builder.CreateInsertElement(VectorValue, ScalarInst,
                                             Builder.getInt32(Instance.Lane));
   VectorLoopValueMap.resetVectorValue(V, Instance.Part, VectorValue);
+}
+
+void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
+                                                    const VPIteration &Instance,
+                                                    VPTransformState &State) {
+  Value *ScalarInst = State.get(Def, Instance);
+  Value *VectorValue = State.get(Def, Instance.Part);
+  VectorValue = Builder.CreateInsertElement(
+      VectorValue, ScalarInst, State.Builder.getInt32(Instance.Lane));
+  State.set(Def, VectorValue, Instance.Part);
 }
 
 Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
@@ -7734,7 +7763,6 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
 
   VPTransformState State{*BestVF,
                          BestUF,
-                         OrigLoop,
                          LI,
                          DT,
                          ILV.Builder,
@@ -8324,7 +8352,9 @@ VPRecipeBuilder::tryToOptimizeInductionPHI(PHINode *Phi, VPlan &Plan) const {
   if (II.getKind() == InductionDescriptor::IK_IntInduction ||
       II.getKind() == InductionDescriptor::IK_FpInduction) {
     VPValue *Start = Plan.getOrAddVPValue(II.getStartValue());
-    return new VPWidenIntOrFpInductionRecipe(Phi, Start);
+    const SmallVectorImpl<Instruction *> &Casts = II.getCastInsts();
+    return new VPWidenIntOrFpInductionRecipe(
+        Phi, Start, Casts.empty() ? nullptr : Casts.front());
   }
 
   return nullptr;
@@ -8354,7 +8384,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(TruncInst *I, VFRange &Range,
         Legal->getInductionVars().lookup(cast<PHINode>(I->getOperand(0)));
     VPValue *Start = Plan.getOrAddVPValue(II.getStartValue());
     return new VPWidenIntOrFpInductionRecipe(cast<PHINode>(I->getOperand(0)),
-                                             Start, I);
+                                             Start, nullptr, I);
   }
   return nullptr;
 }
@@ -8992,7 +9022,8 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Int or FP induction being replicated.");
   State.ILV->widenIntOrFpInduction(IV, getStartValue()->getLiveInIRValue(),
-                                   Trunc);
+                                   getTruncInst(), getVPValue(0),
+                                   getCastValue(), State);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
@@ -9229,9 +9260,69 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
 }
 
 void VPTransformState::set(VPValue *Def, Value *IRDef, Value *V,
+                           const VPIteration &Instance) {
+  set(Def, V, Instance);
+  ILV->setScalarValue(IRDef, Instance, V);
+}
+
+void VPTransformState::set(VPValue *Def, Value *IRDef, Value *V,
                            unsigned Part) {
   set(Def, V, Part);
   ILV->setVectorValue(IRDef, Part, V);
+}
+
+Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+  // If Values have been set for this Def return the one relevant for \p Part.
+  if (hasVectorValue(Def, Part))
+    return Data.PerPartOutput[Def][Part];
+
+  // TODO: Remove the callback once all scalar recipes are managed using
+  // VPValues.
+  if (!hasScalarValue(Def, {Part, 0}))
+    return Callback.getOrCreateVectorValues(VPValue2Value[Def], Part);
+
+  Value *ScalarValue = get(Def, {Part, 0});
+  // If we aren't vectorizing, we can just copy the scalar map values over
+  // to the vector map.
+  if (VF.isScalar()) {
+    set(Def, ScalarValue, Part);
+    return ScalarValue;
+  }
+
+  auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
+  bool IsUniform = RepR && RepR->isUniform();
+
+  unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
+  auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
+
+  // Set the insert point after the last scalarized instruction. This
+  // ensures the insertelement sequence will directly follow the scalar
+  // definitions.
+  auto OldIP = Builder.saveIP();
+  auto NewIP = std::next(BasicBlock::iterator(LastInst));
+  Builder.SetInsertPoint(&*NewIP);
+
+  // However, if we are vectorizing, we need to construct the vector values.
+  // If the value is known to be uniform after vectorization, we can just
+  // broadcast the scalar value corresponding to lane zero for each unroll
+  // iteration. Otherwise, we construct the vector values using
+  // insertelement instructions. Since the resulting vectors are stored in
+  // VectorLoopValueMap, we will only generate the insertelements once.
+  Value *VectorValue = nullptr;
+  if (IsUniform) {
+    VectorValue = ILV->getBroadcastInstrs(ScalarValue);
+    set(Def, VectorValue, Part);
+  } else {
+    // Initialize packing with insertelements to start from undef.
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    Value *Undef = UndefValue::get(VectorType::get(LastInst->getType(), VF));
+    set(Def, Undef, Part);
+    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
+      ILV->packScalarIntoVectorValue(Def, {Part, Lane}, *this);
+    VectorValue = get(Def, Part);
+  }
+  Builder.restoreIP(OldIP);
+  return VectorValue;
 }
 
 // Process the loop in the VPlan-native vectorization path. This path builds
