@@ -349,6 +349,57 @@ wchar_t *realpath(const wchar_t *path, wchar_t *resolved_name) {
   }
   return buff.release();
 }
+
+#define AT_FDCWD -1
+#define AT_SYMLINK_NOFOLLOW 1
+using ModeT = int;
+
+int fchmod_handle(HANDLE h, int perms) {
+  FILE_BASIC_INFO basic;
+  if (!GetFileInformationByHandleEx(h, FileBasicInfo, &basic, sizeof(basic)))
+    return set_errno();
+  DWORD orig_attributes = basic.FileAttributes;
+  basic.FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+  if ((perms & 0222) == 0)
+    basic.FileAttributes |= FILE_ATTRIBUTE_READONLY;
+  if (basic.FileAttributes != orig_attributes &&
+      !SetFileInformationByHandle(h, FileBasicInfo, &basic, sizeof(basic)))
+    return set_errno();
+  return 0;
+}
+
+int fchmodat(int fd, const wchar_t *path, int perms, int flag) {
+  DWORD attributes = GetFileAttributesW(path);
+  if (attributes == INVALID_FILE_ATTRIBUTES)
+    return set_errno();
+  if (attributes & FILE_ATTRIBUTE_REPARSE_POINT &&
+      !(flag & AT_SYMLINK_NOFOLLOW)) {
+    // If the file is a symlink, and we are supposed to operate on the target
+    // of the symlink, we need to open a handle to it, without the
+    // FILE_FLAG_OPEN_REPARSE_POINT flag, to open the destination of the
+    // symlink, and operate on it via the handle.
+    detail::WinHandle h(path, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES, 0);
+    if (!h)
+      return set_errno();
+    return fchmod_handle(h, perms);
+  } else {
+    // For a non-symlink, or if operating on the symlink itself instead of
+    // its target, we can use SetFileAttributesW, saving a few calls.
+    DWORD orig_attributes = attributes;
+    attributes &= ~FILE_ATTRIBUTE_READONLY;
+    if ((perms & 0222) == 0)
+      attributes |= FILE_ATTRIBUTE_READONLY;
+    if (attributes != orig_attributes && !SetFileAttributesW(path, attributes))
+      return set_errno();
+  }
+  return 0;
+}
+
+int fchmod(int fd, int perms) {
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  return fchmod_handle(h, perms);
+}
+
 #else
 int symlink_file(const char *oldname, const char *newname) {
   return ::symlink(oldname, newname);
@@ -358,6 +409,8 @@ int symlink_dir(const char *oldname, const char *newname) {
 }
 using ::chdir;
 using ::close;
+using ::fchmod;
+using ::fchmodat;
 using ::fstat;
 using ::ftruncate;
 using ::getcwd;
@@ -375,6 +428,7 @@ using ::truncate;
 #define O_BINARY 0
 
 using StatVFS = struct statvfs;
+using ModeT = ::mode_t;
 
 #endif
 
