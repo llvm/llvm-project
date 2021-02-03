@@ -56,7 +56,7 @@ jobs:
 
       - name: Get LLVM version
         id: version
-        uses: tstellar/actions/get-llvm-version@get-version
+        uses: llvm/actions/get-llvm-version@main
 
       - name: Setup Variables
         id: vars
