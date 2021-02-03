@@ -853,6 +853,20 @@ void test_sigaction() {
   assert(oldact.sa_handler == SignalHandler);
 }
 
+void test_signal() {
+  // Set signal to be SignalHandler, save the previous one into
+  // old_signal_handler.
+  sighandler_t old_signal_handler = signal(SIGHUP, SignalHandler);
+  ASSERT_ZERO_LABEL(old_signal_handler);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  assert(SignalHandler == signal(SIGHUP, SIG_DFL));
+  assert(SIG_DFL == signal(SIGHUP, SIG_IGN));
+
+  // Restore signal to old_signal_handler.
+  assert(SIG_IGN == signal(SIGHUP, old_signal_handler));
+}
+
 void test_sigaltstack() {
   stack_t old_altstack = {};
   dfsan_set_label(j_label, &old_altstack, sizeof(old_altstack));
@@ -1323,6 +1337,7 @@ int main(void) {
   test_sched_getaffinity();
   test_select();
   test_sigaction();
+  test_signal();
   test_sigaltstack();
   test_sigemptyset();
   test_snprintf();

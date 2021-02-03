@@ -952,6 +952,29 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+sighandler_t __dfsw_signal(int signum,
+                           void *(*handler_trampoline)(void *, int, dfsan_label,
+                                                       dfsan_label *),
+                           sighandler_t handler, dfsan_label signum_label,
+                           dfsan_label handler_label, dfsan_label *ret_label) {
+  CHECK_LT(signum, kMaxSignals);
+  SignalSpinLocker lock;
+  uptr old_cb = atomic_load(&sigactions[signum], memory_order_relaxed);
+  if (handler != SIG_IGN && handler != SIG_DFL) {
+    atomic_store(&sigactions[signum], (uptr)handler, memory_order_relaxed);
+    handler = &SignalHandler;
+  }
+
+  sighandler_t ret = signal(signum, handler);
+
+  if (ret == SignalHandler)
+    ret = (sighandler_t)old_cb;
+
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
                        dfsan_label old_ss_label, dfsan_label *ret_label) {
   int ret = sigaltstack(ss, old_ss);
