@@ -3114,6 +3114,13 @@ void JoinVals::pruneValues(JoinVals &Other,
   }
 }
 
+// Check if the segment consists of a copied live-through value (i.e. the copy
+// in the block only extended the liveness, of an undef value which we may need
+// to handle).
+static bool isLiveThrough(const LiveQueryResult Q) {
+  return Q.valueIn() && Q.valueIn()->isPHIDef() && Q.valueIn() == Q.valueOut();
+}
+
 /// Consider the following situation when coalescing the copy between
 /// %31 and %45 at 800. (The vertical lines represent live range segments.)
 ///
@@ -3196,11 +3203,21 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
           // with V.OtherVNI.
           LIS->extendToIndices(S, EndPoints);
         }
+
+        // We may need to eliminate the subrange if the copy introduced a live
+        // out undef value.
+        if (ValueOut->isPHIDef())
+          ShrinkMask |= S.LaneMask;
         continue;
       }
+
       // If a subrange ends at the copy, then a value was copied but only
       // partially used later. Shrink the subregister range appropriately.
-      if (Q.valueIn() != nullptr && Q.valueOut() == nullptr) {
+      //
+      // Ultimately this calls shrinkToUses, so assuming ShrinkMask is
+      // conservatively correct.
+      if ((Q.valueIn() != nullptr && Q.valueOut() == nullptr) ||
+          (V.Resolution == CR_Erase && isLiveThrough(Q))) {
         LLVM_DEBUG(dbgs() << "\t\tDead uses at sublane "
                           << PrintLaneMask(S.LaneMask) << " at " << Def
                           << "\n");
