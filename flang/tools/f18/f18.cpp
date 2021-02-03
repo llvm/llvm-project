@@ -92,7 +92,7 @@ struct DriverOptions {
   bool warningsAreErrors{false}; // -Werror
   bool byteswapio{false}; // -byteswapio
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
-  bool parseOnly{false};
+  bool syntaxOnly{false};
   bool dumpProvenance{false};
   bool dumpCookedChars{false};
   bool dumpUnparse{false};
@@ -327,7 +327,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       exitStatus = EXIT_FAILURE;
     }
   }
-  if (driver.parseOnly) {
+  if (driver.syntaxOnly) {
     return {};
   }
 
@@ -544,8 +544,8 @@ int main(int argc, char *const argv[]) {
       driver.dumpUnparseWithSymbols = true;
     } else if (arg == "-funparse-typed-exprs-to-f18-fc") {
       driver.unparseTypedExprsToF18_FC = true;
-    } else if (arg == "-fparse-only") {
-      driver.parseOnly = true;
+    } else if (arg == "-fparse-only" || arg == "-fsyntax-only") {
+      driver.syntaxOnly = true;
     } else if (arg == "-c") {
       driver.compileOnly = true;
     } else if (arg == "-o") {
@@ -649,7 +649,7 @@ int main(int argc, char *const argv[]) {
           << "  -module dir          module output directory (default .)\n"
           << "  -flatin              interpret source as Latin-1 (ISO 8859-1) "
              "rather than UTF-8\n"
-          << "  -fparse-only         parse only, no output except messages\n"
+          << "  -fsyntax-only        parsing and semantics only, no output except messages\n"
           << "  -funparse            parse & reformat only, no code "
              "generation\n"
           << "  -funparse-with-symbols  parse, resolve symbols, and unparse\n"
