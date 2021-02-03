@@ -449,6 +449,10 @@ private:
            cat == Fortran::common::TypeCategory::Logical;
   }
 
+  bool isLogicalCategory(Fortran::common::TypeCategory cat) {
+    return cat == Fortran::common::TypeCategory::Logical;
+  }
+
   bool isCharacterCategory(Fortran::common::TypeCategory cat) {
     return cat == Fortran::common::TypeCategory::Character;
   }
@@ -1180,18 +1184,23 @@ private:
 
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     auto &eval = getEval();
-    using ScalarExpr = Fortran::parser::Scalar<Fortran::parser::Expr>;
-    MLIRContext *context = builder->getContext();
+    auto *context = builder->getContext();
     auto loc = toLocation();
     Fortran::lower::StatementContext stmtCtx;
-    auto selectExpr = createFIRExpr(
-        toLocation(), Fortran::semantics::GetExpr(std::get<ScalarExpr>(stmt.t)),
-        stmtCtx);
-    auto selectType = selectExpr.getType();
-    Fortran::lower::CharacterExprHelper helper{*builder, loc};
-    if (helper.isCharacterScalar(selectExpr.getType())) {
-      TODO("");
+    const auto *expr = 
+        Fortran::semantics::GetExpr(
+            std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    auto exprType = expr->GetType();
+    mlir::Value selectExpr;
+    if (isCharacterCategory(exprType->category())) {
+      TODO("Select Case selector of type Character");
+    } else {
+      selectExpr = createFIRExpr(loc, expr, stmtCtx);
+      if (isLogicalCategory(exprType->category()))
+        selectExpr =
+            builder->createConvert(loc, builder->getI1Type(), selectExpr);
     }
+    auto selectType = selectExpr.getType();
     llvm::SmallVector<mlir::Attribute, 10> attrList;
     llvm::SmallVector<mlir::Value, 10> valueList;
     llvm::SmallVector<mlir::Block *, 10> blockList;
@@ -1240,6 +1249,9 @@ private:
         }
       }
     }
+    // Skip a logical default block that can never be referenced.
+    if (selectType == builder->getI1Type() && attrList.size() == 2)
+      defaultBlock = eval.parentConstruct->constructExit->block;
     attrList.push_back(mlir::UnitAttr::get(context));
     blockList.push_back(defaultBlock);
     stmtCtx.finalize();
