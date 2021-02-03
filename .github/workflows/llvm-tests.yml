@@ -29,16 +29,16 @@ jobs:
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
-      uses: llvm/actions/setup-windows@master
+      uses: llvm/actions/setup-windows@main
       with:
         arch: amd64
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@master
+      uses: llvm/actions/install-ninja@main
     - uses: actions/checkout@v1
       with:
         fetch-depth: 1
     - name: Test llvm
-      uses: llvm/actions/build-test-llvm-project@master
+      uses: llvm/actions/build-test-llvm-project@main
       with:
         cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release
 
@@ -60,7 +60,7 @@ jobs:
             repo: ${{ github.repository }}
     steps:
     - name: Install Ninja
-      uses: llvm/actions/install-ninja@master
+      uses: llvm/actions/install-ninja@main
     - name: Install abi-compliance-checker
       run: |
         sudo apt-get install abi-dumper autoconf pkg-config
@@ -72,7 +72,7 @@ jobs:
         ./configure
         sudo make install
     - name: Download source code
-      uses: llvm/actions/get-llvm-project-src@master
+      uses: llvm/actions/get-llvm-project-src@main
       with:
         ref: ${{ matrix.ref }}
         repo: ${{ matrix.repo }}
