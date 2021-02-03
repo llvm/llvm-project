@@ -44,7 +44,7 @@ uint64_t Defined::getFileOffset() const {
   return isec->getFileOffset() + value;
 }
 
-void LazySymbol::fetchArchiveMember() { file->fetch(sym); }
+void LazySymbol::fetchArchiveMember() { getFile()->fetch(sym); }
 
 uint64_t DSOHandle::getVA() const { return header->addr; }
 

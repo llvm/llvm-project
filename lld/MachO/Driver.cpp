@@ -285,7 +285,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
-          symtab->addUndefined(sym.getName(), /*isWeakRef=*/false);
+          symtab->addUndefined(sym.getName(), /*file=*/nullptr,
+                               /*isWeakRef=*/false);
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol. We should also
@@ -510,7 +511,7 @@ static void replaceCommonSymbols() {
       continue;
 
     auto *isec = make<InputSection>();
-    isec->file = common->file;
+    isec->file = common->getFile();
     isec->name = section_names::common;
     isec->segname = segment_names::data;
     isec->align = common->align;
@@ -521,7 +522,7 @@ static void replaceCommonSymbols() {
     isec->flags = S_ZEROFILL;
     inputSections.push_back(isec);
 
-    replaceSymbol<Defined>(sym, sym->getName(), isec, /*value=*/0,
+    replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern);
   }
@@ -721,6 +722,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   target = createTargetInfo(args);
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                       /*file=*/nullptr,
                                        /*isWeakRef=*/false);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =

@@ -336,23 +336,23 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
 
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
-    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF,
-                              sym.n_type & N_PEXT);
+    return symtab->addDefined(name, isec->file, isec, value,
+                              sym.n_desc & N_WEAK_DEF, sym.n_type & N_PEXT);
   }
-  return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
+  return make<Defined>(name, isec->file, isec, value, sym.n_desc & N_WEAK_DEF,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
-                                     StringRef name) {
+                                     InputFile *file, StringRef name) {
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
-    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false,
-                              sym.n_type & N_PEXT);
+    return symtab->addDefined(name, file, nullptr, sym.n_value,
+                              /*isWeakDef=*/false, sym.n_type & N_PEXT);
   }
-  return make<Defined>(name, nullptr, sym.n_value, /*isWeakDef=*/false,
+  return make<Defined>(name, file, nullptr, sym.n_value, /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
@@ -362,12 +362,12 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
   switch (type) {
   case N_UNDF:
     return sym.n_value == 0
-               ? symtab->addUndefined(name, sym.n_desc & N_WEAK_REF)
+               ? symtab->addUndefined(name, this, sym.n_desc & N_WEAK_REF)
                : symtab->addCommon(name, this, sym.n_value,
                                    1 << GET_COMM_ALIGN(sym.n_desc),
                                    sym.n_type & N_PEXT);
   case N_ABS:
-    return createAbsolute(sym, name);
+    return createAbsolute(sym, this, name);
   case N_PBUD:
   case N_INDR:
     error("TODO: support symbols of type " + std::to_string(type));
