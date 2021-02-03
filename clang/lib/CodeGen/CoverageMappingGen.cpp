@@ -1462,7 +1462,7 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     Counter TrueCount = getRegionCounter(E);
 
-    Visit(E->getCond());
+    propagateCounts(ParentCount, E->getCond());
 
     if (!isa<BinaryConditionalOperator>(E)) {
       // The 'then' count applies to the area immediately after the condition.
