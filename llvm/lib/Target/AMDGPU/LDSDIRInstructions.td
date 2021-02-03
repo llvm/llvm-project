@@ -115,5 +115,5 @@ multiclass LDSDIR_Real_gfx11<bits<2> op, LDSDIR_Pseudo lds = !cast<LDSDIR_Pseudo
   }
 }
 
-defm LDS_DIRECT_LOAD : LDSDIR_Real_gfx11<0x0>;
-defm LDS_PARAM_LOAD : LDSDIR_Real_gfx11<0x1>;
+defm LDS_PARAM_LOAD : LDSDIR_Real_gfx11<0x0>;
+defm LDS_DIRECT_LOAD : LDSDIR_Real_gfx11<0x1>;
