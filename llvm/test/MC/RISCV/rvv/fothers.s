@@ -22,26 +22,26 @@ vfsqrt.v v8, v4
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 14 40 4e <unknown>
 
-vfrsqrte7.v v8, v4, v0.t
-# CHECK-INST: vfrsqrte7.v v8, v4, v0.t
+vfrsqrt7.v v8, v4, v0.t
+# CHECK-INST: vfrsqrt7.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x42,0x4c]
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 14 42 4c <unknown>
 
-vfrsqrte7.v v8, v4
-# CHECK-INST: vfrsqrte7.v v8, v4
+vfrsqrt7.v v8, v4
+# CHECK-INST: vfrsqrt7.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x42,0x4e]
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 14 42 4e <unknown>
 
-vfrece7.v v8, v4, v0.t
-# CHECK-INST: vfrece7.v v8, v4, v0.t
+vfrec7.v v8, v4, v0.t
+# CHECK-INST: vfrec7.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x42,0x4c]
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 94 42 4c <unknown>
 
-vfrece7.v v8, v4
-# CHECK-INST: vfrece7.v v8, v4
+vfrec7.v v8, v4
+# CHECK-INST: vfrec7.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x42,0x4e]
 # CHECK-ERROR: instruction requires the following: 'F'{{.*}}'V'
 # CHECK-UNKNOWN: 57 94 42 4e <unknown>

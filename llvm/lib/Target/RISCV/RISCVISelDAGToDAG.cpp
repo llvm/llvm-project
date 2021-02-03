@@ -607,12 +607,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       SDValue VLOperand = Node->getOperand(2);
       if (auto *C = dyn_cast<ConstantSDNode>(VLOperand)) {
-        if (C->isNullValue()) {
-          VLOperand = SDValue(
-              CurDAG->getMachineNode(RISCV::ADDI, DL, XLenVT,
-                                     CurDAG->getRegister(RISCV::X0, XLenVT),
-                                     CurDAG->getTargetConstant(0, DL, XLenVT)),
-              0);
+        uint64_t AVL = C->getZExtValue();
+        if (isUInt<5>(AVL)) {
+          SDValue VLImm = CurDAG->getTargetConstant(AVL, DL, XLenVT);
+          ReplaceNode(Node,
+                      CurDAG->getMachineNode(RISCV::PseudoVSETIVLI, DL, XLenVT,
+                                             MVT::Other, VLImm, VTypeIOp,
+                                             /* Chain */ Node->getOperand(0)));
+          return;
         }
       }
 

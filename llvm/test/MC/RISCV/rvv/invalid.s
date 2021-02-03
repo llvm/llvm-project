@@ -1,6 +1,15 @@
 # RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-v --mattr=+f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
+vsetivli a2, 32, e8,m1
+# CHECK-ERROR: unknown operand
+
+vsetivli a2, zero, e8,m1
+# CHECK-ERROR: unknown operand
+
+vsetivli a2, 5, e31
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetvli a2, a0, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
