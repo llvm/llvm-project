@@ -15,7 +15,6 @@
 #include "string_utils.h"
 
 #include <lib/sync/mutex.h> // for sync_mutex_t
-#include <limits.h>         // for PAGE_SIZE
 #include <stdlib.h>         // for getenv()
 #include <zircon/compiler.h>
 #include <zircon/sanitizer.h>
@@ -23,7 +22,7 @@
 
 namespace scudo {
 
-uptr getPageSize() { return PAGE_SIZE; }
+uptr getPageSize() { return _zx_system_get_page_size(); }
 
 void NORETURN die() { __builtin_trap(); }
 
