@@ -261,7 +261,8 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
-static InputFile *addFile(StringRef path, bool forceLoadArchive) {
+static InputFile *addFile(StringRef path, bool forceLoadArchive,
+                          bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -324,6 +325,16 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     break;
   case file_magic::bitcode:
     newFile = make<BitcodeFile>(mbref);
+    break;
+  case file_magic::macho_executable:
+  case file_magic::macho_bundle:
+    // We only allow executable and bundle type here if it is used
+    // as a bundle loader.
+    if (!isBundleLoader)
+      error(path + ": unhandled file type");
+    if (Optional<DylibFile *> dylibFile =
+            loadDylib(mbref, nullptr, isBundleLoader))
+      newFile = *dylibFile;
     break;
   default:
     error(path + ": unhandled file type");
@@ -747,6 +758,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
+  if (const opt::Arg *arg = args.getLastArg(OPT_bundle_loader)) {
+    if (config->outputType != MH_BUNDLE)
+      error("-bundle_loader can only be used with MachO bundle output");
+    addFile(arg->getValue(), false, true);
+  }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
       args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
@@ -796,6 +812,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     const auto &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
     warnIfUnimplementedOption(opt);
+
     // TODO: are any of these better handled via filtered() or getLastArg()?
     switch (opt.getID()) {
     case OPT_INPUT:
