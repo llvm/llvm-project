@@ -315,7 +315,8 @@ class InitListChecker {
                            InitListExpr *IList, QualType ElemType,
                            unsigned &Index,
                            InitListExpr *StructuredList,
-                           unsigned &StructuredIndex);
+                           unsigned &StructuredIndex,
+                           bool DirectlyDesignated = false);
   void CheckComplexType(const InitializedEntity &Entity,
                         InitListExpr *IList, QualType DeclType,
                         unsigned &Index,
@@ -1326,7 +1327,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
                                           QualType ElemType,
                                           unsigned &Index,
                                           InitListExpr *StructuredList,
-                                          unsigned &StructuredIndex) {
+                                          unsigned &StructuredIndex,
+                                          bool DirectlyDesignated) {
   Expr *expr = IList->getInit(Index);
 
   if (ElemType->isReferenceType())
@@ -1462,6 +1464,20 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     CheckImplicitInitList(Entity, IList, ElemType, Index, StructuredList,
                           StructuredIndex);
     ++StructuredIndex;
+
+    // In C++20, brace elision is not permitted for a designated initializer.
+    if (DirectlyDesignated && SemaRef.getLangOpts().CPlusPlus && !hadError) {
+      if (InOverloadResolution)
+        hadError = true;
+      if (!VerifyOnly) {
+        SemaRef.Diag(expr->getBeginLoc(),
+                     diag::ext_designated_init_brace_elision)
+            << expr->getSourceRange()
+            << FixItHint::CreateInsertion(expr->getBeginLoc(), "{")
+            << FixItHint::CreateInsertion(
+                   SemaRef.getLocForEndOfToken(expr->getEndLoc()), "}");
+      }
+    }
   } else {
     if (!VerifyOnly) {
       // We cannot initialize this element, so let PerformCopyInitialization
@@ -2413,8 +2429,8 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     unsigned OldIndex = Index;
     IList->setInit(OldIndex, DIE->getInit());
 
-    CheckSubElementType(Entity, IList, CurrentObjectType, Index,
-                        StructuredList, StructuredIndex);
+    CheckSubElementType(Entity, IList, CurrentObjectType, Index, StructuredList,
+                        StructuredIndex, /*DirectlyDesignated=*/true);
 
     // Restore the designated initializer expression in the syntactic
     // form of the initializer list.
