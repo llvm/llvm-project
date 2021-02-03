@@ -61,5 +61,5 @@ class TestTailCallFrameSBAPI(TestBase):
             # platform-dependent. E.g we see "void sink(void)" on Windows, but
             # "sink()" on Darwin. This seems like a bug -- just work around it
             # for now.
-            self.assertTrue(name in frame.GetDisplayFunctionName())
+            self.assertIn(name, frame.GetDisplayFunctionName())
             self.assertEqual(frame.IsArtificial(), is_artificial)

@@ -33,8 +33,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(output and len(output) > 0,
                         "expect program output")
         lines = output.splitlines()
-        self.assertTrue(program in lines[0],
-                        "make sure program path is in first argument")
+        self.assertIn(program, lines[0],
+                      "make sure program path is in first argument")
 
     @skipIfWindows
     @skipIfRemote
@@ -104,9 +104,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             if line.startswith('cwd = \"'):
                 quote_path = '"%s"' % (program_parent_dir)
                 found = True
-                self.assertTrue(quote_path in line,
-                                "working directory '%s' not in '%s'" % (
-                                    program_parent_dir, line))
+                self.assertIn(quote_path, line,
+                              "working directory '%s' not in '%s'" % (
+                                  program_parent_dir, line))
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
@@ -202,9 +202,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (program)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" expanded to "%s"' % (
-                                    glob, program))
+                self.assertIn(quote_path, line,
+                              'verify "%s" expanded to "%s"' % (
+                                  glob, program))
 
     @skipIfWindows
     @skipIfRemote
@@ -228,9 +228,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (glob)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" stayed to "%s"' % (
-                                    glob, glob))
+                self.assertIn(quote_path, line,
+                              'verify "%s" stayed to "%s"' % (
+                                  glob, glob))
 
     @skipIfWindows
     @skipIfRemote
@@ -255,8 +255,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Make sure arguments we specified are correct
         for (i, arg) in enumerate(args):
             quoted_arg = '"%s"' % (arg)
-            self.assertTrue(quoted_arg in lines[i],
-                            'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
+            self.assertIn(quoted_arg, lines[i],
+                          'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
     @skipIfRemote

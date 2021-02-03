@@ -138,7 +138,7 @@ class StaticVariableTestCase(TestBase):
         for val in valList:
             self.DebugSBValue(val)
             name = val.GetName()
-            self.assertTrue(name in ['g_points', 'A::g_points'])
+            self.assertIn(name, ['g_points', 'A::g_points'])
             if name == 'g_points':
                 self.assertEqual(
                     val.GetValueType(), lldb.eValueTypeVariableStatic)
