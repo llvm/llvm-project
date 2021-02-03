@@ -455,10 +455,6 @@ perms posix_get_perms(const StatT& st) noexcept {
   return static_cast<perms>(st.st_mode) & perms::mask;
 }
 
-::mode_t posix_convert_perms(perms prms) {
-  return static_cast< ::mode_t>(prms & perms::mask);
-}
-
 file_status create_file_status(error_code& m_ec, path const& p,
                                const StatT& path_stat, error_code* ec) {
   if (ec)
@@ -530,7 +526,7 @@ bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
 }
 
 bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
-  if (::fchmod(fd.fd, st.st_mode) == -1) {
+  if (detail::fchmod(fd.fd, st.st_mode) == -1) {
     ec = capture_errno();
     return true;
   }
@@ -1212,11 +1208,11 @@ void __permissions(const path& p, perms prms, perm_options opts,
     else if (remove_perms)
       prms = st.permissions() & ~prms;
   }
-  const auto real_perms = detail::posix_convert_perms(prms);
+  const auto real_perms = static_cast<detail::ModeT>(prms & perms::mask);
 
 #if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
   const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;
-  if (::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
+  if (detail::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
     return err.report(capture_errno());
   }
 #else
@@ -1231,21 +1227,25 @@ void __permissions(const path& p, perms prms, perm_options opts,
 path __read_symlink(const path& p, error_code* ec) {
   ErrorHandler<path> err("read_symlink", ec, &p);
 
-#ifdef PATH_MAX
+#if defined(PATH_MAX) || defined(MAX_SYMLINK_SIZE)
   struct NullDeleter { void operator()(void*) const {} };
+#ifdef MAX_SYMLINK_SIZE
+  const size_t size = MAX_SYMLINK_SIZE + 1;
+#else
   const size_t size = PATH_MAX + 1;
-  char stack_buff[size];
-  auto buff = std::unique_ptr<char[], NullDeleter>(stack_buff);
+#endif
+  path::value_type stack_buff[size];
+  auto buff = std::unique_ptr<path::value_type[], NullDeleter>(stack_buff);
 #else
   StatT sb;
   if (detail::lstat(p.c_str(), &sb) == -1) {
     return err.report(capture_errno());
   }
   const size_t size = sb.st_size + 1;
-  auto buff = unique_ptr<char[]>(new char[size]);
+  auto buff = unique_ptr<path::value_type[]>(new path::value_type[size]);
 #endif
-  ::ssize_t ret;
-  if ((ret = ::readlink(p.c_str(), buff.get(), size)) == -1)
+  detail::SSizeT ret;
+  if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
     return err.report(capture_errno());
   _LIBCPP_ASSERT(ret > 0, "TODO");
   if (static_cast<size_t>(ret) >= size)
