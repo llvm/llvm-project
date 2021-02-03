@@ -542,7 +542,8 @@ RUN lines:
  Some error messages may be substituted to allow different spellings
  based on the host platform.
 
-   The following error codes are currently supported: ENOENT, EISDIR.
+   The following error codes are currently supported:
+   ENOENT, EISDIR, EINVAL, EACCES.
 
    Example: ``Linux %errc_ENOENT: No such file or directory``
 

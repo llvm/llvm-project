@@ -349,12 +349,18 @@ class LLVMConfig(object):
         if (sys.platform == 'zos'):
             self.config.substitutions.append(('%errc_ENOENT', '\'EDC5129I No such file or directory.\''))
             self.config.substitutions.append(('%errc_EISDIR', '\'EDC5123I Is a directory.\''))
+            self.config.substitutions.append(('%errc_EINVAL', '\'EDC5121I Invalid argument.\''))
+            self.config.substitutions.append(('%errc_EACCES', '\'EDC5111I Permission denied.\''))
         elif (sys.platform == 'win32'):
             self.config.substitutions.append(('%errc_ENOENT', '\'no such file or directory\''))
             self.config.substitutions.append(('%errc_EISDIR', '\'is a directory\''))
+            self.config.substitutions.append(('%errc_EINVAL', '\'invalid argument\''))
+            self.config.substitutions.append(('%errc_EACCES', '\'permission denied\''))
         else:
             self.config.substitutions.append(('%errc_ENOENT', '\'No such file or directory\''))
             self.config.substitutions.append(('%errc_EISDIR', '\'Is a directory\''))
+            self.config.substitutions.append(('%errc_EINVAL', '\'Invalid argument\''))
+            self.config.substitutions.append(('%errc_EACCES', '\'Permission denied\''))
 
     def use_default_substitutions(self):
         tool_patterns = [
