@@ -83,6 +83,9 @@ private:
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
 
+  /// Returns true if the use of !associated metadata is enabled.
+  bool isCounterLinkOrderEnabled() const;
+
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
 
