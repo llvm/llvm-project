@@ -1,0 +1,271 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+xnack -run-pass=si-form-memory-clauses -verify-machineinstrs -o - %s | FileCheck %s
+
+# The VGPR pressure at the point the scalar clause would form decreases the
+# occupancy. However, this occupancy decrease is not due to the introduction of
+# the bundle so the bundle should still be inserted.
+
+---
+name: form_sgpr_clause_high_vgpr_pressure
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  waveLimiter:     false
+  memoryBound: false
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24
+    ; CHECK-LABEL: name: form_sgpr_clause_high_vgpr_pressure
+    ; CHECK: early-clobber %26:sreg_32_xm0_xexec, early-clobber %27:sreg_32_xm0_xexec = BUNDLE [[REG:%[0-9]+]] {
+    ; CHECK:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG]], 0, 0, 0 :: (load 4, addrspace 4)
+    ; CHECK:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG]], 8, 0, 0 :: (load 4, addrspace 4)
+    ; CHECK: }
+    %0:sreg_64 = COPY $sgpr4_sgpr5
+    %1:vgpr_32 = COPY $vgpr0
+    %2:vgpr_32 = COPY $vgpr1
+    %3:vgpr_32 = COPY $vgpr2
+    %4:vgpr_32 = COPY $vgpr3
+    %5:vgpr_32 = COPY $vgpr4
+    %6:vgpr_32 = COPY $vgpr5
+    %7:vgpr_32 = COPY $vgpr6
+    %8:vgpr_32 = COPY $vgpr7
+    %9:vgpr_32 = COPY $vgpr8
+    %10:vgpr_32 = COPY $vgpr9
+    %11:vgpr_32 = COPY $vgpr10
+    %12:vgpr_32 = COPY $vgpr11
+    %13:vgpr_32 = COPY $vgpr12
+    %14:vgpr_32 = COPY $vgpr13
+    %15:vgpr_32 = COPY $vgpr14
+    %16:vgpr_32 = COPY $vgpr15
+    %17:vgpr_32 = COPY $vgpr16
+    %18:vgpr_32 = COPY $vgpr17
+    %19:vgpr_32 = COPY $vgpr18
+    %20:vgpr_32 = COPY $vgpr19
+    %21:vgpr_32 = COPY $vgpr20
+    %22:vgpr_32 = COPY $vgpr21
+    %23:vgpr_32 = COPY $vgpr22
+    %24:vgpr_32 = COPY $vgpr23
+    %27:vgpr_32 = COPY $vgpr24
+    %25:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0, 0 :: (load 4, align 4, addrspace 4)
+    %26:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 8, 0, 0 :: (load 4, align 4, addrspace 4)
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_NOP 0, implicit %4
+    S_NOP 0, implicit %5
+    S_NOP 0, implicit %6
+    S_NOP 0, implicit %7
+    S_NOP 0, implicit %8
+    S_NOP 0, implicit %9
+    S_NOP 0, implicit %10
+    S_NOP 0, implicit %11
+    S_NOP 0, implicit %12
+    S_NOP 0, implicit %13
+    S_NOP 0, implicit %14
+    S_NOP 0, implicit %15
+    S_NOP 0, implicit %16
+    S_NOP 0, implicit %17
+    S_NOP 0, implicit %18
+    S_NOP 0, implicit %19
+    S_NOP 0, implicit %20
+    S_NOP 0, implicit %21
+    S_NOP 0, implicit %22
+    S_NOP 0, implicit %23
+    S_NOP 0, implicit %24
+    S_NOP 0, implicit %27
+    S_ENDPGM 0, implicit %25, implicit %26
+
+...
+
+# The SGPR pressure at the point the vector clause would form decreases the
+# occupancy. However, this occupancy decrease is not due to the introduction of
+# the bundle so the bundle should still be inserted.
+---
+name: form_vgpr_clause_high_sgpr_pressure
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  waveLimiter:     false
+  memoryBound: false
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $sgpr40, $sgpr41, $sgpr42, $sgpr43, $sgpr44, $sgpr45, $sgpr46, $sgpr47, $sgpr48, $sgpr49, $sgpr50, $sgpr51, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $sgpr56, $sgpr57, $sgpr58, $sgpr59, $sgpr60, $sgpr61, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80
+    ; CHECK-LABEL: name: form_vgpr_clause_high_sgpr_pressure
+    ; CHECK: early-clobber %82:vgpr_32, early-clobber %83:vgpr_32 = BUNDLE [[REG:%[0-9]+]], implicit $exec {
+    ; CHECK:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG]], 0, 0, 0, 0, implicit $exec :: (load 4, addrspace 1)
+    ; CHECK:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[REG]], 8, 0, 0, 0, implicit $exec :: (load 4, addrspace 1)
+    ; CHECK: }
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %1:sgpr_32 = COPY $sgpr0
+    %2:sgpr_32 = COPY $sgpr1
+    %3:sgpr_32 = COPY $sgpr2
+    %4:sgpr_32 = COPY $sgpr3
+    %5:sgpr_32 = COPY $sgpr4
+    %6:sgpr_32 = COPY $sgpr5
+    %7:sgpr_32 = COPY $sgpr6
+    %8:sgpr_32 = COPY $sgpr7
+    %9:sgpr_32 = COPY $sgpr8
+    %10:sgpr_32 = COPY $sgpr9
+    %11:sgpr_32 = COPY $sgpr10
+    %12:sgpr_32 = COPY $sgpr11
+    %13:sgpr_32 = COPY $sgpr12
+    %14:sgpr_32 = COPY $sgpr13
+    %15:sgpr_32 = COPY $sgpr14
+    %16:sgpr_32 = COPY $sgpr15
+    %17:sgpr_32 = COPY $sgpr16
+    %18:sgpr_32 = COPY $sgpr17
+    %19:sgpr_32 = COPY $sgpr18
+    %20:sgpr_32 = COPY $sgpr19
+    %21:sgpr_32 = COPY $sgpr20
+    %22:sgpr_32 = COPY $sgpr21
+    %23:sgpr_32 = COPY $sgpr22
+    %24:sgpr_32 = COPY $sgpr23
+    %25:sgpr_32 = COPY $sgpr24
+    %26:sgpr_32 = COPY $sgpr25
+    %27:sgpr_32 = COPY $sgpr26
+    %28:sgpr_32 = COPY $sgpr27
+    %29:sgpr_32 = COPY $sgpr28
+    %30:sgpr_32 = COPY $sgpr29
+    %31:sgpr_32 = COPY $sgpr30
+    %32:sgpr_32 = COPY $sgpr31
+    %33:sgpr_32 = COPY $sgpr32
+    %34:sgpr_32 = COPY $sgpr33
+    %35:sgpr_32 = COPY $sgpr34
+    %36:sgpr_32 = COPY $sgpr35
+    %37:sgpr_32 = COPY $sgpr36
+    %38:sgpr_32 = COPY $sgpr37
+    %39:sgpr_32 = COPY $sgpr38
+    %40:sgpr_32 = COPY $sgpr39
+    %41:sgpr_32 = COPY $sgpr40
+    %42:sgpr_32 = COPY $sgpr41
+    %43:sgpr_32 = COPY $sgpr42
+    %44:sgpr_32 = COPY $sgpr43
+    %45:sgpr_32 = COPY $sgpr44
+    %46:sgpr_32 = COPY $sgpr45
+    %47:sgpr_32 = COPY $sgpr46
+    %48:sgpr_32 = COPY $sgpr47
+    %49:sgpr_32 = COPY $sgpr48
+    %50:sgpr_32 = COPY $sgpr49
+    %51:sgpr_32 = COPY $sgpr50
+    %52:sgpr_32 = COPY $sgpr51
+    %53:sgpr_32 = COPY $sgpr52
+    %54:sgpr_32 = COPY $sgpr53
+    %55:sgpr_32 = COPY $sgpr54
+    %56:sgpr_32 = COPY $sgpr55
+    %57:sgpr_32 = COPY $sgpr56
+    %58:sgpr_32 = COPY $sgpr57
+    %59:sgpr_32 = COPY $sgpr58
+    %60:sgpr_32 = COPY $sgpr59
+    %61:sgpr_32 = COPY $sgpr60
+    %62:sgpr_32 = COPY $sgpr61
+    %63:sgpr_32 = COPY $sgpr62
+    %64:sgpr_32 = COPY $sgpr63
+    %65:sgpr_32 = COPY $sgpr64
+    %66:sgpr_32 = COPY $sgpr65
+    %67:sgpr_32 = COPY $sgpr66
+    %68:sgpr_32 = COPY $sgpr67
+    %69:sgpr_32 = COPY $sgpr68
+    %70:sgpr_32 = COPY $sgpr69
+    %71:sgpr_32 = COPY $sgpr70
+    %72:sgpr_32 = COPY $sgpr71
+    %73:sgpr_32 = COPY $sgpr72
+    %74:sgpr_32 = COPY $sgpr73
+    %75:sgpr_32 = COPY $sgpr74
+    %76:sgpr_32 = COPY $sgpr75
+    %77:sgpr_32 = COPY $sgpr76
+    %78:sgpr_32 = COPY $sgpr77
+    %79:sgpr_32 = COPY $sgpr78
+    %80:sgpr_32 = COPY $sgpr79
+    %81:sgpr_32 = COPY $sgpr80
+    %82:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec :: (load 4, align 4, addrspace 1)
+    %83:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, 0, 0, implicit $exec :: (load 4, align 4, addrspace 1)
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %3
+    S_NOP 0, implicit %4
+    S_NOP 0, implicit %5
+    S_NOP 0, implicit %6
+    S_NOP 0, implicit %7
+    S_NOP 0, implicit %8
+    S_NOP 0, implicit %9
+    S_NOP 0, implicit %10
+    S_NOP 0, implicit %11
+    S_NOP 0, implicit %12
+    S_NOP 0, implicit %13
+    S_NOP 0, implicit %14
+    S_NOP 0, implicit %15
+    S_NOP 0, implicit %16
+    S_NOP 0, implicit %17
+    S_NOP 0, implicit %18
+    S_NOP 0, implicit %19
+    S_NOP 0, implicit %20
+    S_NOP 0, implicit %21
+    S_NOP 0, implicit %22
+    S_NOP 0, implicit %23
+    S_NOP 0, implicit %24
+    S_NOP 0, implicit %25
+    S_NOP 0, implicit %26
+    S_NOP 0, implicit %27
+    S_NOP 0, implicit %28
+    S_NOP 0, implicit %29
+    S_NOP 0, implicit %30
+    S_NOP 0, implicit %31
+    S_NOP 0, implicit %32
+    S_NOP 0, implicit %33
+    S_NOP 0, implicit %34
+    S_NOP 0, implicit %35
+    S_NOP 0, implicit %36
+    S_NOP 0, implicit %37
+    S_NOP 0, implicit %38
+    S_NOP 0, implicit %39
+    S_NOP 0, implicit %40
+    S_NOP 0, implicit %41
+    S_NOP 0, implicit %42
+    S_NOP 0, implicit %43
+    S_NOP 0, implicit %44
+    S_NOP 0, implicit %45
+    S_NOP 0, implicit %46
+    S_NOP 0, implicit %47
+    S_NOP 0, implicit %48
+    S_NOP 0, implicit %49
+    S_NOP 0, implicit %50
+    S_NOP 0, implicit %51
+    S_NOP 0, implicit %52
+    S_NOP 0, implicit %53
+    S_NOP 0, implicit %54
+    S_NOP 0, implicit %55
+    S_NOP 0, implicit %56
+    S_NOP 0, implicit %57
+    S_NOP 0, implicit %58
+    S_NOP 0, implicit %59
+    S_NOP 0, implicit %60
+    S_NOP 0, implicit %61
+    S_NOP 0, implicit %62
+    S_NOP 0, implicit %63
+    S_NOP 0, implicit %64
+    S_NOP 0, implicit %65
+    S_NOP 0, implicit %66
+    S_NOP 0, implicit %67
+    S_NOP 0, implicit %68
+    S_NOP 0, implicit %69
+    S_NOP 0, implicit %70
+    S_NOP 0, implicit %71
+    S_NOP 0, implicit %72
+    S_NOP 0, implicit %73
+    S_NOP 0, implicit %74
+    S_NOP 0, implicit %75
+    S_NOP 0, implicit %76
+    S_NOP 0, implicit %77
+    S_NOP 0, implicit %78
+    S_NOP 0, implicit %79
+    S_NOP 0, implicit %80
+    S_NOP 0, implicit %81
+    S_ENDPGM 0, implicit %82, implicit %83
+...
