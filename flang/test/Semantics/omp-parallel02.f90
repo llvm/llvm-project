@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-
+! RUN: not %f18 -fparse-only -fopenmp %s 2>&1 | FileCheck %s
 ! OpenMP Version 4.5
 ! 2.5 parallel construct.
 ! A program that branches into or out of a parallel region
@@ -8,16 +7,18 @@
 program omp_parallel
   integer i, j, k
 
+  !CHECK: invalid branch into an OpenMP structured block
+  goto 10
+
   !$omp parallel
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
-      !ERROR: Control flow escapes from PARALLEL
-      goto 10
+      !CHECK: In the enclosing PARALLEL directive branched into
+      !CHECK: STOP statement is not allowed in a PARALLEL construct
+      10 stop
     end do
   end do
   !$omp end parallel
-
-  10 stop
 
 end program omp_parallel
