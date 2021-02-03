@@ -48,7 +48,7 @@ class TestObjCIvarsInBlocks(TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEqual(len(thread_list), 1)
         thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
@@ -113,7 +113,7 @@ class TestObjCIvarsInBlocks(TestBase):
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint_two)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEqual(len(thread_list), 1)
         thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
