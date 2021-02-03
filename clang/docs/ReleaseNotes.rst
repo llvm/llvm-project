@@ -250,15 +250,41 @@ release of Clang. Users of the build system should adjust accordingly.
 AST Matchers
 ------------
 
-- The behavior of TK_IgnoreUnlessSpelledInSource with the traverse() matcher
-  has been changed to no longer match on template instantiations or on
+- The ``mapAnyOf()`` matcher was added. This allows convenient matching of
+  different AST nodes which have a compatible matcher API. For example,
+  ``mapAnyOf(ifStmt, forStmt).with(hasCondition(integerLiteral()))``
+  matches any ``IfStmt`` or ``ForStmt`` with a integer literal as the
+  condition.
+
+- The ``binaryOperation()`` matcher allows matching expressions which
+  appear like binary operators in the code, even if they are really
+  ``CXXOperatorCallExpr`` for example. It is based on the ``mapAnyOf()``
+  matcher functionality. The matcher API for the latter node has been
+  extended with ``hasLHS()`` etc to facilitate the abstraction.
+
+- Matcher API for ``CXXRewrittenBinaryOperator`` has been added. In addition
+  to explicit matching with the ``cxxRewrittenBinaryOperator()`` matcher, the
+  ``binaryOperation()`` matches on nodes of this type.
+
+- The behavior of ``TK_IgnoreUnlessSpelledInSource`` with the ``traverse()``
+  matcher has been changed to no longer match on template instantiations or on
   implicit nodes which are not spelled in the source.
 
-- The TK_IgnoreImplicitCastsAndParentheses traversal kind was removed. It
-  is recommended to use TK_IgnoreUnlessSpelledInSource instead.
+- The ``TK_IgnoreImplicitCastsAndParentheses`` traversal kind was removed. It
+  is recommended to use ``TK_IgnoreUnlessSpelledInSource`` instead.
 
-- The behavior of the forEach() matcher was changed to not internally ignore
-  implicit and parenthesis nodes.
+- The behavior of the ``forEach()`` matcher was changed to not internally
+  ignore implicit and parenthesis nodes.  This makes it consistent with
+  the ``has()`` matcher.  Uses of ``forEach()`` relying on the old behavior
+  can now use the  ``traverse()`` matcher or ``ignoringParenCasts()``.
+
+- Several AST Matchers have been changed to match based on the active
+  traversal mode.  For example, ``argumentCountIs()`` matches the number of
+  arguments written in the source, ignoring default arguments represented
+  by ``CXXDefaultArgExpr`` nodes.
+
+- Improvements in AST Matchers allow more matching of template declarations,
+  independent of their template instantations.
 
 clang-format
 ------------
