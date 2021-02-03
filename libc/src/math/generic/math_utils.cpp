@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/math_utils.h"
 #include "math_utils.h"
 
 namespace __llvm_libc {
