@@ -1211,6 +1211,14 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   return std::error_code();
 }
 
+std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
+  auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
+  // Retry if fchown call fails due to interruption.
+  if ((sys::RetryAfterSignal(-1, FChown)) < 0)
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
+}
+
 } // end namespace fs
 
 namespace path {
