@@ -77,9 +77,10 @@ public:
                             Status &error);
 
   /// Ask Remote Mirrors for the type info about a Swift type.
+  /// This will return a nullptr if the lookup fails.
   const swift::reflection::TypeInfo *
-  GetTypeInfo(CompilerType type, ExecutionContextScope *exe_scope,
-              swift::reflection::TypeRef const **out_tr = nullptr);
+  GetSwiftRuntimeTypeInfo(CompilerType type, ExecutionContextScope *exe_scope,
+                          swift::reflection::TypeRef const **out_tr = nullptr);
 
   llvm::Optional<const swift::reflection::TypeInfo *>
   lookupClangTypeInfo(CompilerType clang_type);

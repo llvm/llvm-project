@@ -421,7 +421,8 @@ def main():
         'GetFatalErrors',
         'PrintDiagnostics',
         'GetASTContext',
-        'SetTriple'
+        'SetTriple',
+        'LogConfiguration'
     ]
 
     for method in methods:
