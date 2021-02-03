@@ -351,7 +351,7 @@ public:
     FlagInserter &operator=(const FlagInserter &) = delete;
     ~FlagInserter() { DAG.setFlagInserter(LastInserter); }
 
-    const SDNodeFlags getFlags() const { return Flags; }
+    SDNodeFlags getFlags() const { return Flags; }
   };
 
   /// When true, additional steps are taken to
