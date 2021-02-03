@@ -709,8 +709,9 @@ TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
           ExtractSwiftName(reader->lookupObjCProtocolInfo(default_name));
     else if (llvm::isa<clang::TagDecl>(clang_decl))
       swift_name = ExtractSwiftName(reader->lookupTag(default_name));
-    else
+    else {
       assert(false && "unhandled clang decl kind");
+    }
     if (!swift_name.empty())
       return swift_name;
   }
@@ -2154,11 +2155,11 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     return {};
   };
   FALLBACK(GetBitSize, (ReconstructType(type), exe_scope));
-  if (exe_scope && exe_scope->CalculateProcess())
+  if (exe_scope && exe_scope->CalculateProcess()) {
     VALIDATE_AND_RETURN(impl, GetBitSize, type,
                         (ReconstructType(type), exe_scope),
                         (ReconstructType(type), exe_scope));
-  else
+  } else
     return impl();
 }
 
