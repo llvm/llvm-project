@@ -145,7 +145,6 @@ lto::Config LTOCodeGenerator::toConfig() const {
   Conf.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
     PM.add(createObjCARCContractPass());
   };
-  Conf.UseNewPM = UseNewPM;
 
   return Conf;
 }
