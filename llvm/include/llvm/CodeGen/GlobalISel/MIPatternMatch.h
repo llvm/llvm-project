@@ -306,18 +306,6 @@ m_GAShr(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_ASHR, false>(L, R);
 }
 
-template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>
-m_GSMax(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>
-m_GSMin(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>(L, R);
-}
-
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
 template <typename SrcTy, unsigned Opcode> struct UnaryOp_match {
   SrcTy L;
@@ -480,13 +468,6 @@ m_GInsertVecElt(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
                          TargetOpcode::G_INSERT_VECTOR_ELT>(Src0, Src1, Src2);
 }
 
-template <typename Src0Ty, typename Src1Ty, typename Src2Ty>
-inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty, TargetOpcode::G_SELECT>
-m_GISelect(const Src0Ty &Src0, const Src1Ty &Src1, const Src2Ty &Src2) {
-  return TernaryOp_match<Src0Ty, Src1Ty, Src2Ty, TargetOpcode::G_SELECT>(
-      Src0, Src1, Src2);
-}
-
 /// Matches a register negated by a G_SUB.
 /// G_SUB 0, %negated_reg
 template <typename SrcTy>
@@ -503,7 +484,7 @@ m_Not(const SrcTy &&Src) {
   return m_GXor(Src, m_AllOnesInt());
 }
 
-} // namespace MIPatternMatch
+} // namespace GMIPatternMatch
 } // namespace llvm
 
 #endif
