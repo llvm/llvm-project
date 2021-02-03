@@ -132,3 +132,16 @@ entry:
   store <2 x i64> %r.val, <2 x i64> addrspace(1)* %r
   ret void
 }
+
+; GCN-LABEL: {{^}}fptosi_f16_to_i1:
+; SI: v_cvt_f32_f16_e32 v{{[0-9+]}}, s{{[0-9]+}}
+; SI: v_cmp_eq_f32_e32 vcc, -1.0, v{{[0-9]+}}
+; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
+; VI: v_cmp_eq_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, 0xbc00, s{{[0-9]+}}
+; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[0:1]
+define amdgpu_kernel void @fptosi_f16_to_i1(i1 addrspace(1)* %out, half %in) {
+entry:
+  %conv = fptosi half %in to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
