@@ -7,7 +7,7 @@ program main
  x = f
 end program
 
-! RUN: %f18 -fget-symbols-sources -fparse-only %s 2>&1 | FileCheck %s
+! RUN: %f18 -fget-symbols-sources -fsyntax-only %s 2>&1 | FileCheck %s
 ! CHECK:f:{{.*}}getsymbols03-b.f90, 2, 12-13
 ! CHECK:main:{{.*}}getsymbols03-a.f90, 4, 9-13
 ! CHECK:mm3:{{.*}}getsymbols03-a.f90, 5, 6-9

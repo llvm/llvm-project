@@ -348,7 +348,7 @@ define void @test_sroa_gep_phi_select_same_block() {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi %pair* [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[SELECT]] = select i1 undef, %pair* [[PHI]], %pair* undef
 ; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[PHI]], i64 1
-; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 undef, %pair* [[PHI_SROA_GEP]], %pair* poison
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 undef, %pair* [[PHI_SROA_GEP]], %pair* undef
 ; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    unreachable

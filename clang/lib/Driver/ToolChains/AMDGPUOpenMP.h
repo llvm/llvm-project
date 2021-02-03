@@ -28,7 +28,8 @@ namespace AMDGCN {
 // device library, then compiles it to ISA in a shared object.
 class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
 public:
-  OpenMPLinker(const ToolChain &TC) : Tool("AMDGCN::OpenMPLinker", "amdgcn-link", TC) {}
+  OpenMPLinker(const ToolChain &TC)
+      : Tool("AMDGCN::OpenMPLinker", "amdgcn-link", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -79,12 +80,13 @@ private:
 } // end namespace tools
 
 namespace toolchains {
-
-class LLVM_LIBRARY_VISIBILITY AMDGPUOpenMPToolChain final : public ROCMToolChain {
+class LLVM_LIBRARY_VISIBILITY AMDGPUOpenMPToolChain final
+    : public ROCMToolChain {
 public:
   AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple &Triple,
-               const ToolChain &HostTC, const llvm::opt::ArgList &Args,
-               const Action::OffloadKind OK);
+                        const ToolChain &HostTC,
+                        const llvm::opt::ArgList &Args,
+                        const Action::OffloadKind OK);
 
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();
@@ -93,9 +95,10 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   bool useIntegratedAs() const override { return true; }
   bool isCrossCompiling() const override { return true; }

@@ -6,7 +6,7 @@
 ! RUN: %flang-new -fc1 -E -I %S/Inputs/ %s 2>&1 | FileCheck %s
 
 ! Test with -fsyntax-only (i.e. ParseSyntaxOnlyAction, stops after semantic checks)
-! RUN: %f18 -fparse-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
+! RUN: %f18 -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 ! RUN: %flang-new -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 ! RUN: %flang-new -fc1 -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 

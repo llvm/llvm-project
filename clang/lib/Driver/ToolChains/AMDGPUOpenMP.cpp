@@ -67,11 +67,11 @@ static const char *getOutputFileName(Compilation &C, StringRef Base,
   return OutputFileName;
 }
 
-static void addOptLevelArgs(const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs,
-                            bool IsLlc = false) {
+static void addLLCOptArg(const llvm::opt::ArgList &Args,
+                         llvm::opt::ArgStringList &CmdArgs,
+			 bool IsLlc = false) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    StringRef OOpt = "3";
+    StringRef OOpt = "0";
     if (A->getOption().matches(options::OPT_O4) ||
         A->getOption().matches(options::OPT_Ofast))
       OOpt = "3";
@@ -89,7 +89,7 @@ static void addOptLevelArgs(const llvm::opt::ArgList &Args,
                  .Case("s", IsLlc ? "2" : "s")
                  .Case("z", IsLlc ? "2" : "z")
                  .Case("g", "1")
-                 .Default("2");
+                 .Default("0");
     }
     CmdArgs.push_back(Args.MakeArgString("-O" + OOpt));
   }
@@ -264,7 +264,7 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   // The input to opt is the output from llvm-link.
   OptArgs.push_back(InputFileName);
   // Pass optimization arg to opt.
-  addOptLevelArgs(Args, OptArgs);
+  addLLCOptArg(Args, OptArgs);
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
 
@@ -303,7 +303,7 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   // The input to llc is the output from opt.
   LlcArgs.push_back(InputFileName);
   // Pass optimization arg to llc.
-  addOptLevelArgs(Args, LlcArgs, /*IsLlc=*/true);
+  addLLCOptArg(Args, LlcArgs, /*IsLlc=*/true);
   LlcArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   LlcArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
   LlcArgs.push_back(
@@ -347,7 +347,7 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
 
   // Add output filename
   LlcArgs.push_back("-o");
-  auto LlcOutputFile =
+  const char *LlcOutputFile =
       getOutputFileName(C, OutputFilePrefix, "", OutputIsAsm ? "s" : "o");
   LlcArgs.push_back(LlcOutputFile);
   const char *Llc = Args.MakeArgString(getToolChain().GetProgramPath("llc"));
@@ -357,11 +357,10 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   return LlcOutputFile;
 }
 
-void AMDGCN::OpenMPLinker::constructLldCommand(Compilation &C, const JobAction &JA,
-                                          const InputInfoList &Inputs,
-                                          const InputInfo &Output,
-                                          const llvm::opt::ArgList &Args,
-                                          const char *InputFileName) const {
+void AMDGCN::OpenMPLinker::constructLldCommand(
+    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
+    const InputInfo &Output, const llvm::opt::ArgList &Args,
+    const char *InputFileName) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
   ArgStringList LldArgs{"-flavor",    "gnu", "--no-undefined",
@@ -396,27 +395,29 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   assert(getToolChain().getTriple().isAMDGCN() && "Unsupported target");
 
-  std::string SubArchName = JA.getOffloadingArch();
-  assert(StringRef(SubArchName).startswith("gfx") && "Unsupported sub arch");
+  StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
+  assert(GPUArch.startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
   std::string Prefix;
   for (const auto &II : Inputs)
     if (II.isFilename())
       Prefix =
-          llvm::sys::path::stem(II.getFilename()).str() + "-" + SubArchName;
+          llvm::sys::path::stem(II.getFilename()).str() + "-" + GPUArch.str();
   assert(Prefix.length() && "no linker inputs are files ");
 
   // Each command outputs different files.
   const char *LLVMLinkCommand =
-      constructLLVMLinkCommand( C, JA, Inputs, Args, SubArchName, Prefix);
-  const char *OptCommand = constructOptCommand(C, JA, Inputs, Args, SubArchName,
+      constructLLVMLinkCommand( C, JA, Inputs, Args,  GPUArch.str(), Prefix);
+  const char *OptCommand = constructOptCommand(C, JA, Inputs, Args,
+		                               GPUArch.str(),
                                                Prefix, LLVMLinkCommand);
   if (C.getDriver().isSaveTempsEnabled())
-    constructLlcCommand(C, JA, Inputs, Args, SubArchName, Prefix, OptCommand,
+    constructLlcCommand(C, JA, Inputs, Args, GPUArch.str(), Prefix, OptCommand,
                         /*OutputIsAsm=*/true);
   const char *LlcCommand =
-      constructLlcCommand(C, JA, Inputs, Args, SubArchName, Prefix, OptCommand);
+      constructLlcCommand(C, JA, Inputs, Args, GPUArch.str(), Prefix,
+		          OptCommand);
   constructLldCommand(C, JA, Inputs, Output, Args, LlcCommand);
 }
 
@@ -430,8 +431,7 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args,
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
@@ -555,10 +555,10 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   }
 }
 
-llvm::opt::DerivedArgList *
-AMDGPUOpenMPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
-                             Action::OffloadKind DeviceOffloadKind) const {
+llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
+    const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+    Action::OffloadKind DeviceOffloadKind) const {
+
   DerivedArgList *DAL =
       HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
   if (!DAL)
@@ -574,7 +574,8 @@ AMDGPUOpenMPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), BoundArch);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
+                      BoundArch);
   }
 
   return DAL;
@@ -585,7 +586,8 @@ Tool *AMDGPUOpenMPToolChain::buildLinker() const {
   return new tools::AMDGCN::OpenMPLinker(*this);
 }
 
-void AMDGPUOpenMPToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+void AMDGPUOpenMPToolChain::addClangWarningOptions(
+    ArgStringList &CC1Args) const {
   HostTC.addClangWarningOptions(CC1Args);
 }
 
@@ -658,15 +660,15 @@ void AMDGPUOpenMPToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
 }
 
 void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
-                                        ArgStringList &CC1Args) const {
+                                                ArgStringList &CC1Args) const {
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
 SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
-  // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it allows
-  // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The AMDGPUOpenMPToolChain will actually ignore any command line
-  // arguments for any of these "supported" sanitizers. That means that no
+  // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it
+  // allows sanitizer arguments on the command line if they are supported by the
+  // host toolchain. The AMDGPUOpenMPToolChain will actually ignore any command
+  // line arguments for any of these "supported" sanitizers. That means that no
   // sanitization of device code is actually supported at this time.
   //
   // This behavior is necessary because the host and device toolchains
@@ -675,7 +677,8 @@ SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
   return HostTC.getSupportedSanitizers();
 }
 
-VersionTuple AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
-                                               const ArgList &Args) const {
+VersionTuple
+AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
+                                          const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
 }

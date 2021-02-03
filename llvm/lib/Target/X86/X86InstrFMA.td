@@ -35,7 +35,7 @@
 
 multiclass fma3p_rm_213<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op, X86FoldableSchedWrite sched> {
+                        SDPatternOperator Op, X86FoldableSchedWrite sched> {
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
                    !strconcat(OpcodeStr,
@@ -55,7 +55,7 @@ multiclass fma3p_rm_213<bits<8> opc, string OpcodeStr, RegisterClass RC,
 
 multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op, X86FoldableSchedWrite sched> {
+                        SDPatternOperator Op, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
@@ -75,7 +75,7 @@ multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
 
 multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
                         ValueType VT, X86MemOperand x86memop, PatFrag MemFrag,
-                        SDNode Op, X86FoldableSchedWrite sched> {
+                        SDPatternOperator Op, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
@@ -100,7 +100,7 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0, isCommutable = 1,
 multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpcodeStr, string PackTy, string Suff,
                        PatFrag MemFrag128, PatFrag MemFrag256,
-                       SDNode Op, ValueType OpTy128, ValueType OpTy256,
+                       SDPatternOperator Op, ValueType OpTy128, ValueType OpTy256,
                        X86SchedWriteWidths sched> {
   defm NAME#213#Suff : fma3p_rm_213<opc213, !strconcat(OpcodeStr, "213", PackTy),
                                     VR128, OpTy128, f128mem, MemFrag128, Op, sched.XMM>;
@@ -241,7 +241,7 @@ let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
     hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpStr, string PackTy, string Suff,
-                       SDNode OpNode, RegisterClass RC,
+                       SDPatternOperator OpNode, RegisterClass RC,
                        X86MemOperand x86memop, X86FoldableSchedWrite sched> {
   defm NAME#213#Suff : fma3s_rm_213<opc213, !strconcat(OpStr, "213", PackTy),
                                     x86memop, RC, OpNode, sched>;
@@ -305,7 +305,7 @@ multiclass fma3s_int_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 }
 
 multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
-                 string OpStr, SDNode OpNode, X86FoldableSchedWrite sched> {
+                 string OpStr, SDPatternOperator OpNode, X86FoldableSchedWrite sched> {
   let ExeDomain = SSEPackedSingle in
   defm NAME : fma3s_forms<opc132, opc213, opc231, OpStr, "ss", "SS", OpNode,
                           FR32, f32mem, sched>,
@@ -329,7 +329,7 @@ defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86any_Fnmadd,
 defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86any_Fnmsub,
                      SchedWriteFMA.Scl>, VEX_LIG;
 
-multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
+multiclass scalar_fma_patterns<SDPatternOperator Op, string Prefix, string Suffix,
                                SDNode Move, ValueType VT, ValueType EltVT,
                                RegisterClass RC, PatFrag mem_frag> {
   let Predicates = [HasFMA, NoAVX512] in {
@@ -388,7 +388,7 @@ defm : scalar_fma_patterns<X86any_Fnmsub, "VFNMSUB", "SD", X86Movsd, v2f64, f64,
 
 let Uses = [MXCSR], mayRaiseFPException = 1 in
 multiclass fma4s<bits<8> opc, string OpcodeStr, RegisterClass RC,
-                 X86MemOperand x86memop, ValueType OpVT, SDNode OpNode,
+                 X86MemOperand x86memop, ValueType OpVT, SDPatternOperator OpNode,
                  PatFrag mem_frag, X86FoldableSchedWrite sched> {
   let isCommutable = 1 in
   def rr : FMA4S<opc, MRMSrcRegOp4, (outs RC:$dst),
@@ -463,7 +463,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0,
 }
 
 let Uses = [MXCSR], mayRaiseFPException = 1 in
-multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass fma4p<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                  ValueType OpVT128, ValueType OpVT256,
                  PatFrag ld_frag128, PatFrag ld_frag256,
                  X86SchedWriteWidths sched> {
@@ -602,7 +602,7 @@ let ExeDomain = SSEPackedDouble in {
                             loadv2f64, loadv4f64, SchedWriteFMA>;
 }
 
-multiclass scalar_fma4_patterns<SDNode Op, string Name,
+multiclass scalar_fma4_patterns<SDPatternOperator Op, string Name,
                                ValueType VT, ValueType EltVT,
                                RegisterClass RC, PatFrag mem_frag> {
   let Predicates = [HasFMA4] in {

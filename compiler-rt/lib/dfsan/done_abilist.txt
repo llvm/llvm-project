@@ -214,6 +214,7 @@ fun:ctime_r=custom
 fun:inet_pton=custom
 fun:localtime_r=custom
 fun:memcpy=custom
+fun:memmove=custom
 fun:memset=custom
 fun:strcpy=custom
 fun:strdup=custom
@@ -223,6 +224,7 @@ fun:strtol=custom
 fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
+fun:strcat=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
@@ -252,6 +254,7 @@ fun:sched_getaffinity=custom
 fun:select=custom
 fun:sigemptyset=custom
 fun:sigaction=custom
+fun:signal=custom
 fun:gettimeofday=custom
 
 # sprintf-like

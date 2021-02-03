@@ -344,7 +344,7 @@ int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
 //
 // 2: Reduce register pressure.
 // Try to reassociate FMA with FSUB and a constant like below:
-// C is a floatint point const.
+// C is a floating point const.
 //
 // Pattern 1:
 //   A = FSUB  X,  Y      (Leaf)
@@ -362,7 +362,7 @@ int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
 //
 //  Before the transformation, A must be assigned with different hardware
 //  register with D. After the transformation, A and D must be assigned with
-//  same hardware register due to TIE attricute of FMA instructions.
+//  same hardware register due to TIE attribute of FMA instructions.
 //
 bool PPCInstrInfo::getFMAPatterns(
     MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,

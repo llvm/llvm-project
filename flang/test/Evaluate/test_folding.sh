@@ -32,7 +32,7 @@ temp=$1
 mkdir -p $temp
 shift
 
-CMD="$* -fdebug-dump-symbols -fparse-only"
+CMD="$* -fdebug-dump-symbols -fsyntax-only"
 
 # Check if tests should assume folding is using libpgmath
 if [[ $LIBPGMATH ]]; then

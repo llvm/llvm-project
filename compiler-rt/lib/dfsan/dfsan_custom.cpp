@@ -309,6 +309,12 @@ __dfsw_strlen(const char *s, dfsan_label s_label, dfsan_label *ret_label) {
   return ret;
 }
 
+static void *dfsan_memmove(void *dest, const void *src, size_t n) {
+  dfsan_label *sdest = shadow_for(dest);
+  const dfsan_label *ssrc = shadow_for(src);
+  internal_memmove((void *)sdest, (const void *)ssrc, n * sizeof(dfsan_label));
+  return internal_memmove(dest, src, n);
+}
 
 static void *dfsan_memcpy(void *dest, const void *src, size_t n) {
   dfsan_label *sdest = shadow_for(dest);
@@ -331,12 +337,34 @@ void *__dfsw_memcpy(void *dest, const void *src, size_t n,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void *__dfsw_memmove(void *dest, const void *src, size_t n,
+                     dfsan_label dest_label, dfsan_label src_label,
+                     dfsan_label n_label, dfsan_label *ret_label) {
+  *ret_label = dest_label;
+  return dfsan_memmove(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void *__dfsw_memset(void *s, int c, size_t n,
                     dfsan_label s_label, dfsan_label c_label,
                     dfsan_label n_label, dfsan_label *ret_label) {
   dfsan_memset(s, c, c_label, n);
   *ret_label = s_label;
   return s;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strcat(char *dest, const char *src,
+                                                  dfsan_label dest_label,
+                                                  dfsan_label src_label,
+                                                  dfsan_label *ret_label) {
+  size_t dest_len = strlen(dest);
+  char *ret = strcat(dest, src);
+  dfsan_label *sdest = shadow_for(dest + dest_len);
+  const dfsan_label *ssrc = shadow_for(src);
+  internal_memcpy((void *)sdest, (const void *)ssrc,
+                  strlen(src) * sizeof(dfsan_label));
+  *ret_label = dest_label;
+  return ret;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE char *
@@ -933,6 +961,29 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
   if (oldact) {
     dfsan_set_label(0, oldact, sizeof(struct sigaction));
   }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+sighandler_t __dfsw_signal(int signum,
+                           void *(*handler_trampoline)(void *, int, dfsan_label,
+                                                       dfsan_label *),
+                           sighandler_t handler, dfsan_label signum_label,
+                           dfsan_label handler_label, dfsan_label *ret_label) {
+  CHECK_LT(signum, kMaxSignals);
+  SignalSpinLocker lock;
+  uptr old_cb = atomic_load(&sigactions[signum], memory_order_relaxed);
+  if (handler != SIG_IGN && handler != SIG_DFL) {
+    atomic_store(&sigactions[signum], (uptr)handler, memory_order_relaxed);
+    handler = &SignalHandler;
+  }
+
+  sighandler_t ret = signal(signum, handler);
+
+  if (ret == SignalHandler)
+    ret = (sighandler_t)old_cb;
+
   *ret_label = 0;
   return ret;
 }

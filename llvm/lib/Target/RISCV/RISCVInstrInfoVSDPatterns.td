@@ -45,8 +45,7 @@ class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
 
-multiclass VPatUSLoadStoreSDNode<ValueType type,
-                                 ValueType mask_type,
+multiclass VPatUSLoadStoreSDNode<LLVMType type,
                                  int sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
@@ -60,6 +59,18 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   // Store
   def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
             (store_instr reg_class:$rs2, RVVBaseAddr:$rs1, avl, sew)>;
+}
+
+multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
+{
+  defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
+  defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#m.BX);
+  // Load
+  def : Pat<(m.Mask (load RVVBaseAddr:$rs1)),
+            (load_instr RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  // Store
+  def : Pat<(store m.Mask:$rs2, RVVBaseAddr:$rs1),
+            (store_instr VR:$rs2, RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
 }
 
 class VPatBinarySDNode_VV<SDNode vop,
@@ -352,8 +363,10 @@ let Predicates = [HasStdExtV] in {
 
 // 7.4. Vector Unit-Stride Instructions
 foreach vti = AllVectors in
-  defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.Mask, vti.SEW, vti.LMul,
+  defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.SEW, vti.LMul,
                                   vti.AVL, vti.RegClass>;
+foreach mti = AllMasks in
+  defm "" : VPatUSLoadStoreMaskSDNode<mti>;
 
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinarySDNode_VV_VX_VI<add, "PseudoVADD">;

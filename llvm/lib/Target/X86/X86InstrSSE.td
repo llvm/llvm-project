@@ -17,7 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 /// sse12_fp_scalar - SSE 1 & 2 scalar instructions class
-multiclass sse12_fp_scalar<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass sse12_fp_scalar<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                            RegisterClass RC, X86MemOperand x86memop,
                            Domain d, X86FoldableSchedWrite sched,
                            bit Is2Addr = 1> {
@@ -63,7 +63,7 @@ let hasSideEffects = 0 in {
 }
 
 /// sse12_fp_packed - SSE 1 & 2 packed instructions class
-multiclass sse12_fp_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass sse12_fp_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                            RegisterClass RC, ValueType vt,
                            X86MemOperand x86memop, PatFrag mem_frag,
                            Domain d, X86FoldableSchedWrite sched,
@@ -616,7 +616,7 @@ let Predicates = [UseSSE1] in {
 // SSE 1 & 2 - Move Low packed FP Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass sse12_mov_hilo_packed_base<bits<8>opc,  SDNode pdnode,
+multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDPatternOperator pdnode,
                                       string base_opc, string asm_opr> {
   // No pattern as they need be special cased between high and low.
   let hasSideEffects = 0, mayLoad = 1 in
@@ -811,7 +811,7 @@ let Constraints = "$src1 = $dst" in {
 //===----------------------------------------------------------------------===//
 
 multiclass sse12_cvt_s<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
-                     SDNode OpNode, X86MemOperand x86memop, PatFrag ld_frag,
+                     SDPatternOperator OpNode, X86MemOperand x86memop, PatFrag ld_frag,
                      string asm, string mem, X86FoldableSchedWrite sched,
                      Domain d,
                      SchedRead Int2Fpu = ReadDefault> {
@@ -1837,7 +1837,7 @@ let Constraints = "$src1 = $dst" in {
 }
 
 // sse12_ord_cmp - Unordered/Ordered scalar fp compare and set EFLAGS
-multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
+multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDPatternOperator OpNode,
                          ValueType vt, X86MemOperand x86memop,
                          PatFrag ld_frag, string OpcodeStr, Domain d,
                          X86FoldableSchedWrite sched = WriteFComX> {
@@ -2589,7 +2589,7 @@ def : Pat<(X86fandn VR128:$src1, (memopv4f32 addr:$src2)),
 /// FIXME: once all 256-bit intrinsics are matched, cleanup and refactor those
 /// classes below
 multiclass basic_sse12_fp_binop_p<bits<8> opc, string OpcodeStr,
-                                  SDNode OpNode, X86SchedWriteSizes sched> {
+                                  SDPatternOperator OpNode, X86SchedWriteSizes sched> {
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
   let Predicates = [HasAVX, NoVLX] in {
   defm V#NAME#PS : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
@@ -2618,7 +2618,7 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
 }
 }
 
-multiclass basic_sse12_fp_binop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass basic_sse12_fp_binop_s<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                   X86SchedWriteSizes sched> {
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
   defm V#NAME#SS : sse12_fp_scalar<opc, !strconcat(OpcodeStr, "ss"),
@@ -2732,10 +2732,10 @@ let isCodeGenOnly = 1 in {
 
 // TODO: Some canonicalization in lowering would simplify the number of
 // patterns we have to try to match.
-multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
-                                    ValueType VT, ValueType EltTy,
-                                    RegisterClass RC, PatFrag ld_frag,
-                                    Predicate BasePredicate> {
+multiclass scalar_math_patterns<SDPatternOperator Op, string OpcPrefix, SDNode Move,
+                                ValueType VT, ValueType EltTy,
+                                RegisterClass RC, PatFrag ld_frag,
+                                Predicate BasePredicate> {
   let Predicates = [BasePredicate] in {
     // extracted scalar math op with insert via movss/movsd
     def : Pat<(VT (Move (VT VR128:$dst),
@@ -2791,7 +2791,7 @@ defm : scalar_math_patterns<any_fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, loadf
 /// the HW instructions are 2 operand / destructive.
 multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                           ValueType ScalarVT, X86MemOperand x86memop,
-                          Operand intmemop, SDNode OpNode, Domain d,
+                          Operand intmemop, SDPatternOperator OpNode, Domain d,
                           X86FoldableSchedWrite sched, Predicate target> {
   let isCodeGenOnly = 1, hasSideEffects = 0 in {
   def r : I<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src1),
@@ -2857,7 +2857,7 @@ multiclass avx_fp_unop_s_intr<RegisterClass RC, ValueType vt, PatFrags mem_frags
 
 multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                           ValueType ScalarVT, X86MemOperand x86memop,
-                          Operand intmemop, SDNode OpNode, Domain d,
+                          Operand intmemop, SDPatternOperator OpNode, Domain d,
                           X86FoldableSchedWrite sched, Predicate target> {
   let isCodeGenOnly = 1, hasSideEffects = 0 in {
   def r : I<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
@@ -2901,7 +2901,7 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
 }
 
 /// sse1_fp_unop_p - SSE1 unops in packed form.
-multiclass sse1_fp_unop_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass sse1_fp_unop_p<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                           X86SchedWriteWidths sched, list<Predicate> prds> {
 let Predicates = prds in {
   def V#NAME#PSr : PSI<opc, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
@@ -2938,7 +2938,7 @@ let Predicates = prds in {
 
 /// sse2_fp_unop_p - SSE2 unops in vector forms.
 multiclass sse2_fp_unop_p<bits<8> opc, string OpcodeStr,
-                          SDNode OpNode, X86SchedWriteWidths sched> {
+                          SDPatternOperator OpNode, X86SchedWriteWidths sched> {
 let Predicates = [HasAVX, NoVLX] in {
   def V#NAME#PDr : PDI<opc, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        !strconcat("v", OpcodeStr,
@@ -2983,7 +2983,7 @@ multiclass sse1_fp_unop_s_intr<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable;
 }
 
-multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                           X86SchedWriteWidths sched, Predicate AVXTarget> {
   defm SS        :  sse_fp_unop_s<opc, OpcodeStr#ss, FR32, f32, f32mem,
                       ssmem, OpNode, SSEPackedSingle, sched.Scl, UseSSE1>, XS;
@@ -2992,7 +2992,7 @@ multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        XS, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
-multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                           X86SchedWriteWidths sched, Predicate AVXTarget> {
   defm SD         : sse_fp_unop_s<opc, OpcodeStr#sd, FR64, f64, f64mem,
                          sdmem, OpNode, SSEPackedDouble, sched.Scl, UseSSE2>, XD;
@@ -3018,7 +3018,7 @@ defm RCP   : sse1_fp_unop_s<0x53, "rcp", X86frcp, SchedWriteFRcp, HasAVX>,
 
 // There is no f64 version of the reciprocal approximation instructions.
 
-multiclass scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix, SDNode Move,
+multiclass scalar_unary_math_patterns<SDPatternOperator OpNode, string OpcPrefix, SDNode Move,
                                       ValueType VT, Predicate BasePredicate> {
   let Predicates = [BasePredicate] in {
     def : Pat<(VT (Move VT:$dst, (scalar_to_vector
@@ -5386,7 +5386,7 @@ let ExeDomain = SSEPackedSingle in {
 
 multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
                            X86MemOperand x86memop, RegisterClass RC,
-                           ValueType VT, PatFrag mem_frag, SDNode OpNode,
+                           ValueType VT, PatFrag mem_frag, SDPatternOperator OpNode,
                            X86FoldableSchedWrite sched> {
   // Intrinsic operation, reg.
   // Vector intrinsic operation, reg

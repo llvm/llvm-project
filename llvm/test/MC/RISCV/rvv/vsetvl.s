@@ -79,3 +79,21 @@ vsetvl a2, a0, a1
 # CHECK-ENCODING: [0x57,0x76,0xb5,0x80]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 76 b5 80 <unknown>
+
+vsetivli a2, 0, e32,m1,ta,ma
+# CHECK-INST: vsetivli a2, 0, e32,m1,ta,ma
+# CHECK-ENCODING: [0x57,0x76,0x00,0xcd]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 76 00 cd <unknown>
+
+vsetivli a2, 15, e32,m1,ta,ma
+# CHECK-INST: vsetivli a2, 15, e32,m1,ta,ma
+# CHECK-ENCODING: [0x57,0xf6,0x07,0xcd]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 f6 07 cd <unknown>
+
+vsetivli a2, 31, e32,m1,ta,ma
+# CHECK-INST: vsetivli a2, 31, e32,m1,ta,ma
+# CHECK-ENCODING: [0x57,0xf6,0x0f,0xcd]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 f6 0f cd <unknown>

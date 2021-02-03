@@ -46,7 +46,7 @@ foreach(filename ${MODULES})
     set(depends ${include}/__fortran_builtins.mod)
   endif()
   add_custom_command(OUTPUT ${include}/${filename}.mod
-    COMMAND f18 -fparse-only -I${include}
+    COMMAND f18 -fsyntax-only -I${include}
       ${FLANG_SOURCE_DIR}/module/${filename}.f90
     WORKING_DIRECTORY ${include}
     DEPENDS f18 ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
