@@ -17,7 +17,7 @@
 include "mlir/Pass/PassBase.td"
 
 def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
-  let summary = "Promotes fir.loop and fir.where to affine.for and affine.if where possible";
+  let summary = "Promotes fir.do_loop and fir.where to affine.for and affine.if where possible";
   let description = [{
     TODO
   }];
