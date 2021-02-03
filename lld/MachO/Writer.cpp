@@ -432,8 +432,6 @@ void Writer::scanRelocations() {
     // before Writer runs might be cleaner...
     if (isec->segname == segment_names::ld)
       continue;
-    if (isec->name == section_names::ehFrame)
-      continue;
 
     for (Reloc &r : isec->relocs) {
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
