@@ -244,11 +244,11 @@ class TargetAPITestCase(TestBase):
         # Make sure we hit our breakpoint:
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
-        self.assertTrue(len(thread_list) == 1)
+        self.assertEqual(len(thread_list), 1)
 
         value_list = target.FindGlobalVariables(
             'my_global_var_of_char_type', 3)
-        self.assertTrue(value_list.GetSize() == 1)
+        self.assertEqual(value_list.GetSize(), 1)
         my_global_var = value_list.GetValueAtIndex(0)
         self.DebugSBValue(my_global_var)
         self.assertTrue(my_global_var)
@@ -267,7 +267,7 @@ class TargetAPITestCase(TestBase):
                 if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
                     value_list = m.FindGlobalVariables(
                         target, 'my_global_var_of_char_type', 3)
-                    self.assertTrue(value_list.GetSize() == 1)
+                    self.assertEqual(value_list.GetSize(), 1)
                     self.assertTrue(
                         value_list.GetValueAtIndex(0).GetValue() == "'X'")
                     break
@@ -296,15 +296,15 @@ class TargetAPITestCase(TestBase):
 
         # Try it with a null name:
         list = target.FindFunctions(None, lldb.eFunctionNameTypeAuto)
-        self.assertTrue(list.GetSize() == 0)
+        self.assertEqual(list.GetSize(), 0)
 
         list = target.FindFunctions('c', lldb.eFunctionNameTypeAuto)
-        self.assertTrue(list.GetSize() == 1)
+        self.assertEqual(list.GetSize(), 1)
 
         for sc in list:
             self.assertTrue(
                 sc.GetModule().GetFileSpec().GetFilename() == exe_name)
-            self.assertTrue(sc.GetSymbol().GetName() == 'c')
+            self.assertEqual(sc.GetSymbol().GetName(), 'c')
 
     def get_description(self):
         """Exercise SBTaget.GetDescription() API."""
@@ -422,7 +422,7 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -431,13 +431,13 @@ class TargetAPITestCase(TestBase):
         #self.runCmd("process status")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertTrue(lineEntry.GetLine() == self.line1)
+        self.assertEqual(lineEntry.GetLine(), self.line1)
 
         address1 = lineEntry.GetStartAddress()
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -446,7 +446,7 @@ class TargetAPITestCase(TestBase):
         #self.runCmd("process status")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertTrue(lineEntry.GetLine() == self.line2)
+        self.assertEqual(lineEntry.GetLine(), self.line2)
 
         address2 = lineEntry.GetStartAddress()
 

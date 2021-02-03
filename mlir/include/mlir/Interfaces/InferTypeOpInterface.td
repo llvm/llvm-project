@@ -90,14 +90,14 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       may be returned by this function while returning success. E.g., partial
       population of components is not error condition.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypeComponents",
-      /*args=*/(ins "MLIRContext*":$context,
-                    "Optional<Location>":$location,
-                    "ValueRange":$operands,
-                    "DictionaryAttr":$attributes,
-                    "RegionRange":$regions,
-                    "SmallVectorImpl<ShapedTypeComponents>&":
+      /*args=*/(ins "::mlir::MLIRContext*":$context,
+                    "::mlir::Optional<::mlir::Location>":$location,
+                    "::mlir::ValueRange":$operands,
+                    "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::RegionRange":$regions,
+                    "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
                       $inferredReturnShapes)
     >,
     InterfaceMethod<
@@ -106,12 +106,12 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       Insert operations using the given OpBuilder that computes the result
       shape.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"reifyReturnTypeShapes",
-      /*args=*/(ins "OpBuilder&":$builder,
-                    "SmallVectorImpl<Value>&":$reifiedReturnShapes),
+      /*args=*/(ins "::mlir::OpBuilder&":$builder,
+                    "::mlir::SmallVectorImpl<::mlir::Value>&":$reifiedReturnShapes),
       /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{ return failure(); }]
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >,
   ];
 }

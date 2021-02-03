@@ -124,7 +124,7 @@ class ReturnValueTestCase(TestBase):
         #self.assertTrue(return_value.IsValid())
         #return_float = float(return_value.GetValue())
 
-        #self.assertTrue(in_float == return_float)
+        #self.assertEqual(in_float, return_float)
 
         if not self.affected_by_radar_34562999() and not self.affected_by_pr44132():
             self.return_and_test_struct_value("return_one_int")

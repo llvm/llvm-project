@@ -139,8 +139,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
 
-  auto ADec = decompose(Op0);
-  auto BDec = decompose(Op1);
+  auto ADec = decompose(Op0->stripPointerCasts());
+  auto BDec = decompose(Op1->stripPointerCasts());
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -216,6 +216,7 @@ struct StackEntry {
 };
 } // namespace
 
+#ifndef NDEBUG
 static void dumpWithNames(ConstraintTy &C,
                           DenseMap<Value *, unsigned> &Value2Index) {
   SmallVector<std::string> Names(Value2Index.size(), "");
@@ -226,6 +227,7 @@ static void dumpWithNames(ConstraintTy &C,
   CS.addVariableRowFill(C.Coefficients);
   CS.dump(Names);
 }
+#endif
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;

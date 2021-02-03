@@ -55,7 +55,9 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
     return failure();
   if (!retTypeFn.isCompatibleReturnTypes(inferredReturnTypes,
                                          op->getResultTypes()))
-    return op->emitOpError(
-        "inferred type incompatible with return type of operation");
+    return op->emitOpError("inferred type(s) ")
+           << inferredReturnTypes
+           << " are incompatible with return type(s) of operation "
+           << op->getResultTypes();
   return success();
 }

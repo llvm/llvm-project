@@ -31,4 +31,11 @@ module __Fortran_builtins
   end type
 
   procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
+
+  intrinsic :: __builtin_ieee_support_datatype, &
+    __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &
+    __builtin_ieee_support_inf, __builtin_ieee_support_io, &
+    __builtin_ieee_support_nan, __builtin_ieee_support_sqrt, &
+    __builtin_ieee_support_standard, __builtin_ieee_support_subnormal, &
+    __builtin_ieee_support_underflow_control
 end module

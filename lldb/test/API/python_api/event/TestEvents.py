@@ -315,5 +315,5 @@ class EventAPITestCase(TestBase):
         my_thread.join()
 
         # The final judgement. :-)
-        self.assertTrue(self.state == 'stopped',
+        self.assertEqual(self.state, 'stopped',
                         "Both expected state changed events received")

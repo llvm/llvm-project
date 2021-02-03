@@ -3896,6 +3896,14 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
                     Sched<[]>;
 }
 
+// Pseudo instructions for homogeneous prolog/epilog
+let isPseudo = 1 in {
+  // Save CSRs in order, {FPOffset}
+  def HOM_Prolog : Pseudo<(outs), (ins variable_ops), []>, Sched<[]>;
+  // Restore CSRs in order
+  def HOM_Epilog : Pseudo<(outs), (ins variable_ops), []>, Sched<[]>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point immediate move.
 //===----------------------------------------------------------------------===//
