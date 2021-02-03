@@ -2416,13 +2416,13 @@ bool SBTarget::IsLoaded(const SBModule &module) const {
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
-    return LLDB_RECORD_RESULT(false);
+    return false;
 
   ModuleSP module_sp(module.GetSP());
   if (!module_sp)
-    return LLDB_RECORD_RESULT(false);
+    return false;
 
-  return LLDB_RECORD_RESULT(module_sp->IsLoadedInTarget(target_sp.get()));
+  return module_sp->IsLoadedInTarget(target_sp.get());
 }
 
 lldb::SBLaunchInfo SBTarget::GetLaunchInfo() const {
