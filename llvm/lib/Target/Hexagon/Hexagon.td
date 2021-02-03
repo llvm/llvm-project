@@ -48,7 +48,10 @@ def ExtensionHVXV66: SubtargetFeature<"hvxv66", "HexagonHVXVersion",
 def ExtensionHVXV67: SubtargetFeature<"hvxv67", "HexagonHVXVersion",
       "Hexagon::ArchEnum::V67", "Hexagon HVX instructions",
       [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66]>;
-
+def ExtensionHVXV68: SubtargetFeature<"hvxv68", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V68", "Hexagon HVX instructions",
+      [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
+       ExtensionHVXV67]>;
 
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
@@ -107,6 +110,8 @@ def UseHVXV66          : Predicate<"HST->useHVXV66Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV66)>;
 def UseHVXV67          : Predicate<"HST->useHVXV67Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV67)>;
+def UseHVXV68          : Predicate<"HST->useHVXV68Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV68)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
                          AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
@@ -392,6 +397,11 @@ def : Proc<"hexagonv66", HexagonModelV66,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv67", HexagonModelV67,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv68", HexagonModelV68,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 // Need to update the correct features for tiny core.
