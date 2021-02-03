@@ -95,6 +95,16 @@ inline bool is_TC2(unsigned SchedClass) {
   }
 }
 
+inline bool is_TC2early(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_45f9d1be:
+  case Hexagon::Sched::tc_a4ee89db:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool is_TC3x(unsigned SchedClass) {
   switch (SchedClass) {
   case Hexagon::Sched::tc_01e1be3b:
@@ -120,16 +130,6 @@ inline bool is_TC3x(unsigned SchedClass) {
   case Hexagon::Sched::tc_db596beb:
   case Hexagon::Sched::tc_f0cdeccf:
   case Hexagon::Sched::tc_fae9dfa5:
-    return true;
-  default:
-    return false;
-  }
-}
-
-inline bool is_TC2early(unsigned SchedClass) {
-  switch (SchedClass) {
-  case Hexagon::Sched::tc_45f9d1be:
-  case Hexagon::Sched::tc_a4ee89db:
     return true;
   default:
     return false;
