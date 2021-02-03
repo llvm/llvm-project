@@ -62,7 +62,7 @@ public:
 
 private:
   // Allow a little bias due the rounding to integral factors.
-  constexpr static float DistributionFactorVariance = 0.02;
+  constexpr static float DistributionFactorVariance = 0.02f;
   // Distribution factors from last pass.
   FuncProbeFactorMap FunctionProbeFactors;
 
