@@ -182,8 +182,6 @@ struct AsyncGroup : public RefCounted {
   std::vector<std::function<void()>> awaiters;
 };
 
-} // namespace runtime
-} // namespace mlir
 
 // Adds references to reference counted runtime object.
 extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
@@ -369,10 +367,20 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 //===----------------------------------------------------------------------===//
 
 // Export symbols for the MLIR runner integration. All other symbols are hidden.
-#ifndef _WIN32
+#ifdef _WIN32
+#define API __declspec(dllexport)
+#else
 #define API __attribute__((visibility("default")))
+#endif
 
-extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
+// Visual Studio had a bug that fails to compile nested generic lambdas
+// inside an `extern "C"` function.
+//   https://developercommunity.visualstudio.com/content/problem/475494/clexe-error-with-lambda-inside-function-templates.html
+// The bug is fixed in VS2019 16.1. Separating the declaration and definition is
+// a work around for older versions of Visual Studio.
+extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols);
+
+void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
     assert(exportSymbols.count(name) == 0 && "symbol already exists");
     exportSymbols[name] = reinterpret_cast<void *>(ptr);
@@ -416,6 +424,7 @@ extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
 
 extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
 
-#endif // _WIN32
+} // namespace runtime
+} // namespace mlir
 
 #endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
