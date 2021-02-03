@@ -141,6 +141,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     PushContextAndClauseSets(beginDir.source, llvm::omp::Directive::OMPD_do);
   }
   SetLoopInfo(x);
+
+  if (const auto &doConstruct{
+          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+    const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
+    CheckNoBranching(doBlock, beginDir.v, beginDir.source);
+  }
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
@@ -221,6 +227,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
+  const auto &sectionBlocks{std::get<parser::OmpSectionBlocks>(x.t)};
+  for (const auto &block : sectionBlocks.v) {
+    CheckNoBranching(block, beginDir.v, beginDir.source);
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
@@ -324,6 +334,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   const auto &dir{std::get<parser::OmpCriticalDirective>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_critical);
+  const auto &block{std::get<parser::Block>(x.t)};
+  CheckNoBranching(block, llvm::omp::Directive::OMPD_critical, dir.source);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
