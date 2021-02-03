@@ -97,6 +97,10 @@ struct VPIteration {
 
   /// in [0..VF)
   unsigned Lane;
+
+  VPIteration(unsigned Part, unsigned Lane) : Part(Part), Lane(Lane) {}
+
+  bool isFirstIteration() const { return Part == 0 && Lane == 0; }
 };
 
 /// This is a helper struct for maintaining vectorization state. It's used for
