@@ -81,7 +81,8 @@ void CallGraph::addToCallGraph(Function *F) {
   // it is not a callback, then anything could call it.
   if (!F->hasLocalLinkage() ||
       F->hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
-                         /* IgnoreAssumeLikeCalls */ true))
+                         /* IgnoreAssumeLikeCalls */ true,
+                         /* IgnoreLLVMUsed */ true))
     ExternalCallingNode->addCalledFunction(nullptr, Node);
 
   populateCallGraphNode(Node);
