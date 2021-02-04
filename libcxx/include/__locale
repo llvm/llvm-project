@@ -21,30 +21,30 @@
 #include <locale.h>
 #if defined(_LIBCPP_MSVCRT_LIKE)
 # include <cstring>
-# include <support/win32/locale_win32.h>
+# include <__support/win32/locale_win32.h>
 #elif defined(__NuttX__)
-# include <support/nuttx/xlocale.h>
+# include <__support/nuttx/xlocale.h>
 #elif defined(_AIX) || defined(__MVS__)
-# include <support/ibm/xlocale.h>
+# include <__support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
-# include <support/android/locale_bionic.h>
+# include <__support/android/locale_bionic.h>
 #elif defined(__sun__)
 # include <xlocale.h>
-# include <support/solaris/xlocale.h>
+# include <__support/solaris/xlocale.h>
 #elif defined(_NEWLIB_VERSION)
-# include <support/newlib/xlocale.h>
+# include <__support/newlib/xlocale.h>
 #elif defined(__OpenBSD__)
-# include <support/openbsd/xlocale.h>
+# include <__support/openbsd/xlocale.h>
 #elif (defined(__APPLE__)      || defined(__FreeBSD__) \
     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
 # include <xlocale.h>
 #elif defined(__Fuchsia__)
-# include <support/fuchsia/xlocale.h>
+# include <__support/fuchsia/xlocale.h>
 #elif defined(__wasi__)
 // WASI libc uses musl's locales support.
-# include <support/musl/xlocale.h>
+# include <__support/musl/xlocale.h>
 #elif defined(_LIBCPP_HAS_MUSL_LIBC)
-# include <support/musl/xlocale.h>
+# include <__support/musl/xlocale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
