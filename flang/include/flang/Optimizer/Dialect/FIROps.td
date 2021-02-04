@@ -98,9 +98,8 @@ def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     "any reference or box">;
 
 // A vector of Fortran triple notation describing a multidimensional array
-def fir_DimsType : Type<CPred<"$_self.isa<fir::DimsType>()">, "dim type">;
 def AnyEmboxLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_DimsType.predicate]>,
+    Index.predicate, fir_IntegerType.predicate]>,
     "any legal embox argument type">;
 def AnyEmboxArg : Type<AnyEmboxLike.predicate, "embox argument type">;
 
@@ -1077,17 +1076,12 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
       } else {
         return emitOpError("LEN parameters require !fir.type type");
       }
-      for (auto lp : getLenParams())
-        if (lp.getType().isa<fir::DimsType>())
-          return emitOpError("LEN parameters must be integral type");
     }
     if (dims().size() == 0) {
       // Ok. If there is no dims and no layout map, then emboxing a scalar.
       // TODO: Should the type be enforced? It already must agree.
     } else if (dims().size() == 1) {
       auto d = *dims().begin();
-      if (!d.getType().isa<fir::DimsType>())
-        return emitOpError("dimension argument must have !fir.dims type");
     } else {
       return emitOpError("embox can only have one !fir.dim argument");
     }
@@ -1263,7 +1257,7 @@ def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
     AnyIntegerLike,     // rank of data
     fir_TypeDescType,   // abstract type descriptor
     AnyIntegerLike,     // attribute flags (bitfields)
-    fir_DimsType        // dimension information (if any)
+    fir_SequenceType    // dimension information (if any)
   );
 }
 
@@ -1719,42 +1713,6 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
-  }];
-}
-
-def fir_GenDimsOp : fir_OneResultOp<"gendims", [NoSideEffect]> {
-
-  let summary = "generate a value of type `!fir.dims`";
-
-  let description = [{
-    The arguments are an ordered list of integral type values that is a
-    multiple of 3 in length.  Each such triple is defined as: the lower
-    index, the extent, and the stride for that dimension. The dimension
-    information is given in the same row-to-column order as Fortran. This
-    abstract dimension value must describe a reified object, so all dimension
-    information must be specified.  The extent must be nonnegative and the
-    stride must not be zero.
-
-    ```mlir
-      %d = fir.gendims %lo, %ext, %str : (index, index, index) -> !fir.dims<1>
-    ```
-  }];
-
-  let arguments = (ins Variadic<AnyIntegerType>:$triples);
-
-  let results = (outs fir_DimsType);
-
-  let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
-  }];
-
-  let verifier = [{
-    auto size = triples().size();
-    if (size < 1 || size > 16 * 3)
-      return emitOpError("incorrect number of args");
-    if (size % 3 != 0)
-      return emitOpError("requires a multiple of 3 args");
-    return mlir::success();
   }];
 }
 

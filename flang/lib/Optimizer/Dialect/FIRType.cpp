@@ -91,11 +91,6 @@ fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<fir::ComplexType>(parser);
 }
 
-// `dims` `<` rank `>`
-DimsType parseDims(mlir::DialectAsmParser &parser) {
-  return parseRankSingleton<DimsType>(parser);
-}
-
 // `field`
 FieldType parseField(mlir::DialectAsmParser &parser) {
   return FieldType::get(parser.getBuilder().getContext());
@@ -186,9 +181,8 @@ static bool isaIntegerType(mlir::Type ty) {
 
 bool verifyRecordMemberType(mlir::Type ty) {
   return !(ty.isa<BoxType>() || ty.isa<BoxCharType>() ||
-           ty.isa<BoxProcType>() || ty.isa<DimsType>() || ty.isa<FieldType>() ||
-           ty.isa<LenType>() || ty.isa<ReferenceType>() ||
-           ty.isa<TypeDescType>());
+           ty.isa<BoxProcType>() || ty.isa<FieldType>() || ty.isa<LenType>() ||
+           ty.isa<ReferenceType>() || ty.isa<TypeDescType>());
 }
 
 bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
@@ -325,8 +319,6 @@ mlir::Type fir::parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser) {
     return parseCharacter(parser);
   if (typeNameLit == "complex")
     return parseComplex(parser);
-  if (typeNameLit == "dims")
-    return parseDims(parser);
   if (typeNameLit == "field")
     return parseField(parser);
   if (typeNameLit == "heap")
@@ -381,29 +373,6 @@ protected:
 private:
   CharacterTypeStorage() = delete;
   explicit CharacterTypeStorage(KindTy kind) : kind{kind} {}
-};
-
-struct DimsTypeStorage : public mlir::TypeStorage {
-  using KeyTy = unsigned;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getRank(); }
-
-  static DimsTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                    unsigned rank) {
-    auto *storage = allocator.allocate<DimsTypeStorage>();
-    return new (storage) DimsTypeStorage{rank};
-  }
-
-  unsigned getRank() const { return rank; }
-
-protected:
-  unsigned rank;
-
-private:
-  DimsTypeStorage() = delete;
-  explicit DimsTypeStorage(unsigned rank) : rank{rank} {}
 };
 
 /// The type of a derived type part reference
@@ -871,14 +840,6 @@ CharacterType fir::CharacterType::get(mlir::MLIRContext *ctxt, KindTy kind) {
 
 int fir::CharacterType::getFKind() const { return getImpl()->getFKind(); }
 
-// Dims
-
-DimsType fir::DimsType::get(mlir::MLIRContext *ctxt, unsigned rank) {
-  return Base::get(ctxt, rank);
-}
-
-unsigned fir::DimsType::getRank() const { return getImpl()->getRank(); }
-
 // Field
 
 FieldType fir::FieldType::get(mlir::MLIRContext *ctxt) {
@@ -992,7 +953,7 @@ mlir::Type fir::ReferenceType::getEleTy() const {
 mlir::LogicalResult
 fir::ReferenceType::verifyConstructionInvariants(mlir::Location loc,
                                                  mlir::Type eleTy) {
-  if (eleTy.isa<DimsType>() || eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
+  if (eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
       eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>())
     return mlir::emitError(loc, "cannot build a reference to type: ")
            << eleTy << '\n';
@@ -1012,10 +973,10 @@ mlir::Type fir::PointerType::getEleTy() const {
 
 static bool canBePointerOrHeapElementType(mlir::Type eleTy) {
   return eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-         eleTy.isa<BoxProcType>() || eleTy.isa<DimsType>() ||
-         eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
-         eleTy.isa<HeapType>() || eleTy.isa<PointerType>() ||
-         eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>();
+         eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
+         eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
+         eleTy.isa<PointerType>() || eleTy.isa<ReferenceType>() ||
+         eleTy.isa<TypeDescType>();
 }
 
 mlir::LogicalResult
@@ -1100,8 +1061,8 @@ mlir::LogicalResult fir::SequenceType::verifyConstructionInvariants(
     mlir::AffineMapAttr map) {
   // DIMENSION attribute can only be applied to an intrinsic or record type
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-      eleTy.isa<BoxProcType>() || eleTy.isa<DimsType>() ||
-      eleTy.isa<FieldType>() || eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
+      eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
+      eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
       eleTy.isa<PointerType>() || eleTy.isa<ReferenceType>() ||
       eleTy.isa<TypeDescType>() || eleTy.isa<SequenceType>())
     return mlir::emitError(loc, "cannot build an array of this element type: ")
@@ -1186,9 +1147,9 @@ mlir::LogicalResult
 fir::TypeDescType::verifyConstructionInvariants(mlir::Location loc,
                                                 mlir::Type eleTy) {
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-      eleTy.isa<BoxProcType>() || eleTy.isa<DimsType>() ||
-      eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
-      eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>())
+      eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
+      eleTy.isa<LenType>() || eleTy.isa<ReferenceType>() ||
+      eleTy.isa<TypeDescType>())
     return mlir::emitError(loc, "cannot build a type descriptor of type: ")
            << eleTy << '\n';
   return mlir::success();
@@ -1274,10 +1235,6 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
       recordTypeVisited.erase(type.uniqueKey());
     }
     os << '>';
-    return;
-  }
-  if (auto type = ty.dyn_cast<DimsType>()) {
-    os << "dims<" << type.getRank() << '>';
     return;
   }
   if (ty.isa<FieldType>()) {
