@@ -642,11 +642,32 @@ foreach vti = AllFloatVectors in {
             (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX)
                  vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
 
-  // 14.10. Vector Floating-Point Sign-Injection Instructions
+  // 14.12. Vector Floating-Point Sign-Injection Instructions
+  def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
+            (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
   // Handle fneg with VFSGNJN using the same input for both operands.
   def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
+
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector vti.RegClass:$rs2))),
+            (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (splat_vector vti.ScalarRegClass:$rs2)))),
+            (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
+
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (fneg vti.RegClass:$rs2)))),
+            (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (fneg (splat_vector vti.ScalarRegClass:$rs2))))),
+            (!cast<Instruction>("PseudoVFSGNJN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
 }
 
 // 14.11. Vector Floating-Point Compare Instructions
