@@ -1068,8 +1068,29 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(
+        void func() {
+          for (int V^ar = 14, Conflict = 42;;) {
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
         void func(int Conflict) {
           bool V^ar;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int V^ar) {
+          bool Conflict;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int V^ar, int Conflict) {
         }
       )cpp",
        "conflict", !HeaderFile, nullptr, "Conflict"},
