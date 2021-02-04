@@ -463,4 +463,4 @@ define double @test_atomicrmw_fadd_f64_local(double addrspace(3)* %ptr, double %
   ret double %res
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
