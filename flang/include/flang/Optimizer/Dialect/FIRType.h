@@ -40,7 +40,6 @@ struct BoxCharTypeStorage;
 struct BoxProcTypeStorage;
 struct CharacterTypeStorage;
 struct ComplexTypeStorage;
-struct DimsTypeStorage;
 struct FieldTypeStorage;
 struct HeapTypeStorage;
 struct IntegerTypeStorage;
@@ -189,20 +188,6 @@ public:
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
                                                           mlir::Type eleTy);
-};
-
-/// The type of a runtime vector that describes triples of array dimension
-/// information. A triple consists of a lower bound, upper bound, and
-/// stride. Each dimension of an array entity may have an associated triple that
-/// maps how elements of the array are accessed.
-class DimsType : public mlir::Type::TypeBase<DimsType, mlir::Type,
-                                             detail::DimsTypeStorage> {
-public:
-  using Base::Base;
-  static DimsType get(mlir::MLIRContext *ctx, unsigned rank);
-
-  /// returns -1 if the rank is unknown
-  unsigned getRank() const;
 };
 
 /// The type of a field name. Implementations may defer the layout of a Fortran
