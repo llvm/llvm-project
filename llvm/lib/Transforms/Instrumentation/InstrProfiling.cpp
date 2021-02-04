@@ -69,11 +69,6 @@ cl::opt<bool> RuntimeCounterRelocation(
     cl::desc("Enable relocating counters at runtime."),
     cl::init(false));
 
-cl::opt<bool> CounterLinkOrder(
-    "counter-link-order",
-    cl::desc("Set counter associated metadata to enable garbage collection at link time."),
-    cl::init(false));
-
 cl::opt<bool> ValueProfileStaticAlloc(
     "vp-static-alloc",
     cl::desc("Do static counter allocation for value profiler"),
@@ -484,13 +479,6 @@ bool InstrProfiling::isCounterPromotionEnabled() const {
   return Options.DoCounterPromotion;
 }
 
-bool InstrProfiling::isCounterLinkOrderEnabled() const {
-  if (CounterLinkOrder.getNumOccurrences() > 0)
-    return CounterLinkOrder;
-
-  return Options.CounterLinkOrder;
-}
-
 void InstrProfiling::promoteCounterLoadStores(Function *F) {
   if (!isCounterPromotionEnabled())
     return;
@@ -862,12 +850,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setAlignment(Align(8));
   MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
-  // We need a self-link for the counter variable because the ELF section name
-  // (that is __llvm_prf_cnts) is a C identifier and considered a GC root in the
-  // absence of the SHF_LINK_ORDER flag.
-  if (isCounterLinkOrderEnabled())
-    CounterPtr->setMetadata(LLVMContext::MD_associated,
-                            MDNode::get(Ctx, ValueAsMetadata::get(Fn)));
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -889,10 +871,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
           getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
       ValuesVar->setAlignment(Align(8));
       MaybeSetComdat(ValuesVar);
-      if (isCounterLinkOrderEnabled())
-        ValuesVar->setMetadata(
-            LLVMContext::MD_associated,
-            MDNode::get(Ctx, ValueAsMetadata::get(CounterPtr)));
       ValuesPtrExpr =
           ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
     }
@@ -927,9 +905,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   MaybeSetComdat(Data);
   Data->setLinkage(Linkage);
-  if (isCounterLinkOrderEnabled())
-    Data->setMetadata(LLVMContext::MD_associated,
-                      MDNode::get(Ctx, ValueAsMetadata::get(CounterPtr)));
 
   PD.RegionCounters = CounterPtr;
   PD.DataVar = Data;

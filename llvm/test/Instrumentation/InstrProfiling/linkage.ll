@@ -8,8 +8,6 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=POSIX,LINUX
 ; RUN: opt < %s -mtriple=x86_64-unknown-fuchsia -passes=instrprof -S | FileCheck %s --check-prefixes=POSIX,LINUX
 ; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COFF
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -counter-link-order -S | FileCheck %s --check-prefixes=LINUX,POSIX,METADATA
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -counter-link-order -S | FileCheck %s --check-prefixes=LINUX,POSIX,METADATA
 
 ; MACHO: @__llvm_profile_runtime = external global i32
 ; LINUX-NOT: @__llvm_profile_runtime = external global i32
@@ -21,9 +19,7 @@
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
 ; POSIX: @__profc_foo = hidden global
-; METADATA-SAME: !associated !0
 ; POSIX: @__profd_foo = hidden global
-; METADATA-SAME: !associated !1
 ; COFF: @__profc_foo = internal global
 ; COFF-NOT: comdat
 ; COFF: @__profd_foo = internal global
@@ -33,9 +29,7 @@ define void @foo() {
 }
 
 ; POSIX: @__profc_foo_weak = weak hidden global
-; METADATA: !associated !2
 ; POSIX: @__profd_foo_weak = weak hidden global
-; METADATA: !associated !3
 ; COFF: @__profc_foo_weak = internal global
 ; COFF: @__profd_foo_weak = internal global
 define weak void @foo_weak() {
@@ -44,9 +38,7 @@ define weak void @foo_weak() {
 }
 
 ; POSIX: @"__profc_linkage.ll:foo_internal" = internal global
-; METADATA-SAME: !associated !4
 ; POSIX: @"__profd_linkage.ll:foo_internal" = internal global
-; METADATA-SAME: !associated !5
 ; COFF: @"__profc_linkage.ll:foo_internal" = internal global
 ; COFF: @"__profd_linkage.ll:foo_internal" = internal global
 define internal void @foo_internal() {
@@ -55,9 +47,7 @@ define internal void @foo_internal() {
 }
 
 ; POSIX: @__profc_foo_inline = linkonce_odr hidden global
-; METADATA-SAME: !associated !6
 ; POSIX: @__profd_foo_inline = linkonce_odr hidden global
-; METADATA-SAME: !associated !7
 ; COFF: @__profc_foo_inline = internal global{{.*}} section ".lprfc$M", align 8
 ; COFF: @__profd_foo_inline = internal global{{.*}} section ".lprfd$M", align 8
 define linkonce_odr void @foo_inline() {
@@ -66,9 +56,7 @@ define linkonce_odr void @foo_inline() {
 }
 
 ; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profd_foo_extern), align 8
-; METADATA-SAME: !associated !8
 ; LINUX: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat, align 8
-; METADATA-SAME: !associated !9
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
@@ -87,14 +75,3 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
 ; LINUX-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; LINUX-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
-
-; METADATA: !0 = !{void ()* @foo}
-; METADATA: !1 = !{[1 x i64]* @__profc_foo}
-; METADATA: !2 = !{void ()* @foo_weak}
-; METADATA: !3 = !{[1 x i64]* @__profc_foo_weak}
-; METADATA: !4 = !{void ()* @foo_internal}
-; METADATA: !5 = !{[1 x i64]* @"__profc_linkage.ll:foo_internal"}
-; METADATA: !6 = !{void ()* @foo_inline}
-; METADATA: !7 = !{[1 x i64]* @__profc_foo_inline}
-; METADATA: !8 = !{void ()* @foo_extern}
-; METADATA: !9 = !{[1 x i64]* @__profc_foo_extern}
