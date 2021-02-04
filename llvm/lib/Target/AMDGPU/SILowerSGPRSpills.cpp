@@ -88,6 +88,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
@@ -96,8 +98,13 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                              TRI);
+      // If this value was already livein, we probably have a direct use of the
+      // incoming register value, so don't kill at the spill point. This happens
+      // since we pass some special inputs (workgroup IDs) in the callee saved
+      // range.
+      const bool IsLiveIn = MRI.isLiveIn(Reg);
+      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
+                              RC, TRI);
 
       if (LIS) {
         assert(std::distance(MIS.begin(), I) == 1);
