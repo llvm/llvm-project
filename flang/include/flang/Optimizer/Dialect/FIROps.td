@@ -34,7 +34,7 @@ def fir_CharacterType : Type<CPred<"$_self.isa<fir::CharacterType>()">,
     "FIR character type">;
 def fir_ComplexType : Type<CPred<"$_self.isa<fir::ComplexType>()">,
     "FIR complex type">;
-def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntType>()">,
+def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
     "FIR integer type">;
 def fir_LogicalType : Type<CPred<"$_self.isa<fir::LogicalType>()">,
     "FIR logical type">;
@@ -709,7 +709,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
   let verifier = [{
     if (!(getSelector().getType().isa<mlir::IntegerType>() ||
           getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntType>()))
+          getSelector().getType().isa<fir::IntegerType>()))
       return emitOpError("must be an integer");
     auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
@@ -835,7 +835,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
   let verifier = [{
     if (!(getSelector().getType().isa<mlir::IntegerType>() ||
           getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntType>() ||
+          getSelector().getType().isa<fir::IntegerType>() ||
           getSelector().getType().isa<fir::LogicalType>() ||
           getSelector().getType().isa<fir::CharacterType>()))
       return emitOpError("must be an integer, character, or logical");
@@ -2564,7 +2564,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
 def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<TypeAttr>()">,
     Or<[CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CharacterType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::ComplexType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntType>()">,
+        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntegerType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::LogicalType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RealType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
