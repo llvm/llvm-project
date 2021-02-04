@@ -38,6 +38,70 @@ using llvm::dbgs;
 
 #define DEBUG_TYPE "linalg-vectorization"
 
+/// Return true if the use-def chain from `v` to `from` consists of 0 or more
+/// unary single-operand operations.
+// TODO: relax to multi-operands with constants, which are technically unary ops
+// as needed (e.g. add5).
+static bool isChainOfUnaryOpsFrom(Value v, Value from) {
+  while (v != from) {
+    Operation *op = v.getDefiningOp();
+    if (!op || op->getNumOperands() != 1)
+      return false;
+    v = op->getOperand(0);
+  };
+  return true;
+}
+
+/// Return the unique instance of OpType in `block` if it is indeed unique.
+/// Return null if none or more than 1 instances exist.
+template <typename OpType>
+static OpType getSingleOpOfType(Block &block) {
+  OpType res;
+  block.walk([&](OpType op) {
+    if (res) {
+      res = nullptr;
+      return WalkResult::interrupt();
+    }
+    res = op;
+    return WalkResult::advance();
+  });
+  return res;
+}
+
+/// Detect whether res is any permutation of `u5(u1(c) + u2(u3(a) * u4(b)))`
+/// on the field (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent
+/// unary operations that may change the type.
+template <typename AddOpType, typename MulOpType>
+static bool isAddMul(Block &block) {
+  if (block.getNumArguments() != 3)
+    return false;
+  Operation *yieldOp = block.getTerminator();
+  if (yieldOp->getNumOperands() != 1)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: isAddMul: "; block.dump());
+  AddOpType addOp = getSingleOpOfType<AddOpType>(block);
+  MulOpType mulOp = getSingleOpOfType<MulOpType>(block);
+  if (!addOp || !mulOp)
+    return false;
+
+  Value argA = block.getArgument(0), argB = block.getArgument(1);
+  Value a = mulOp->getOperand(0), b = mulOp->getOperand(1);
+  Value mul = mulOp->getResult(0);
+  Value argC = block.getArgument(2);
+  Value c1 = addOp->getOperand(0), c2 = addOp->getOperand(1);
+  Value add = addOp->getResult(0);
+  Value res = yieldOp->getOperand(0);
+  // Result traces back to add.
+  auto un = isChainOfUnaryOpsFrom;
+  bool success = un(res, add);
+  // One of the operands of add traces back to argC, the other to the mul.
+  success |= (un(c1, argC) && un(c2, mul)) || ((un(c1, mul)) && un(c2, argC));
+  // One of the operands of mul traces back to argA, the other to argB.
+  success |= (un(a, argA) && un(b, argB)) || ((un(a, argB)) && un(b, argA));
+  return success;
+}
+
 /// Helper data structure to represent the result of vectorization.
 /// In certain specific cases, like terminators, we do not want to propagate/
 enum VectorizationStatus {
@@ -146,7 +210,7 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
       results.push_back(result);
   }
   return VectorizationResult{VectorizationStatus::NoReplace, nullptr};
-};
+}
 
 /// Generic vectorization for a single operation `op`, given already vectorized
 /// operands carried by `bvm`. Vectorization occurs as follows:
@@ -305,55 +369,34 @@ static LogicalResult vectorizeAsLinalgGeneric(
   return success();
 }
 
-/// Detect whether `r` exactly computes a floating-point or integer
-/// multiply-accumulate.
-static bool hasMultiplyAddBody(Region &r) {
-  if (!llvm::hasSingleElement(r))
-    return false;
-  if (!llvm::hasNItems(r.front().begin(), r.front().end(), 3))
-    return false;
-
-  using mlir::matchers::m_Val;
-  auto a = m_Val(r.getArgument(0));
-  auto b = m_Val(r.getArgument(1));
-  auto c = m_Val(r.getArgument(2));
-  // TODO: Update this detection once we have  matcher support for specifying
-  // that any permutation of operands matches.
-  auto pattern1 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(a, b), c));
-  auto pattern2 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(a, b)));
-  auto pattern3 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(b, a), c));
-  auto pattern4 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(b, a)));
-  auto pattern5 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(a, b), c));
-  auto pattern6 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(a, b)));
-  auto pattern7 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(b, a), c));
-  auto pattern8 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(b, a)));
-  return pattern1.match(&r.front().back()) ||
-         pattern2.match(&r.front().back()) ||
-         pattern3.match(&r.front().back()) ||
-         pattern4.match(&r.front().back()) ||
-         pattern5.match(&r.front().back()) ||
-         pattern6.match(&r.front().back()) ||
-         pattern7.match(&r.front().back()) || pattern8.match(&r.front().back());
-}
-
 /// Detect whether the LinalgOp `op` is a contraction.
-// TODO: Should be Tablegen'd from a single source that generates the op itself.
+/// A Linalg contraction is defined in general terms:
+///   1. Has 2 input and 1 output shapes.
+///   2. Has at least one reduction dimension.
+///   3. Has only projected permutation indexing maps.
+///   4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
+///   (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
+///   operations that may change the type (e.g. for mixed-precision).
+/// As a consequence, when vectorization of such an op occurs, the only special
+/// behavior is that the (unique) MulOpType is vectorized into a
+/// `vector.contract`. All other ops are handled in a generic fashion.
+/// In the future, we may wish to allow more input arguments and elementwise and
+/// constant operations that do not involve the reduction dimension(s).
 static LogicalResult isContraction(Operation *op) {
-  // TODO: interface for named ops.
-  if (isa<linalg::BatchMatmulOp, linalg::MatmulOp, linalg::MatmulColumnMajorOp,
-          linalg::MatvecOp, linalg::VecmatOp, linalg::DotOp>(op))
-    return success();
-
-  auto genericOp = dyn_cast<linalg::GenericOp>(op);
-  if (!genericOp)
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: isContraction: "; op->dump());
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
     return failure();
 
-  auto mapRange = genericOp.indexing_maps().getAsValueRange<AffineMapAttr>();
+  auto mapRange = linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>();
   return success(
-      genericOp.getNumInputs() == 2 && genericOp.getNumOutputs() == 1 &&
+      linalgOp.getNumInputs() == 2 && linalgOp.getNumOutputs() == 1 &&
+      linalgOp.getNumReductionLoops() > 0 &&
       llvm::all_of(mapRange,
                    [](AffineMap m) { return m.isProjectedPermutation(); }) &&
-      hasMultiplyAddBody(genericOp.region()));
+      // TODO: more fields than add/mul.
+      (isAddMul<AddFOp, MulFOp>(linalgOp->getRegion(0).front()) ||
+       isAddMul<AddIOp, MulIOp>(linalgOp->getRegion(0).front())));
 }
 
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
@@ -382,7 +425,7 @@ static bool isElementwise(Operation *op) {
     if (!genericOp.getOutputIndexingMap(i).isIdentity())
       return false;
   }
-  // Currently limit the input indexing map to minor identity as other
+  // Currently bound the input indexing map to minor identity as other
   // permutations might require adding transpose ops to convert the vector read
   // to the right shape.
   for (unsigned i = 0, e = genericOp.getNumInputs(); i < e; i++) {
@@ -478,6 +521,150 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
   assert(succeeded(status) &&
          "Unexpected vectorization failed despite preconditions");
 }
+
+//----------------------------------------------------------------------------//
+// Misc. conv vectorization patterns.
+//----------------------------------------------------------------------------//
+// TODO: cleanup all this.
+template <class ConvOp, int N>
+LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
+    ConvOp op, PatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  MLIRContext *context = op.getContext();
+  edsc::ScopedContext scope(rewriter, loc);
+
+  ShapedType inShapeType = op.getInputShapedType(0);
+  ShapedType kShapeType = op.getInputShapedType(1);
+
+  ArrayRef<int64_t> inShape = inShapeType.getShape();
+  ArrayRef<int64_t> kShape = kShapeType.getShape();
+
+  if (!inShapeType.hasStaticShape() || !kShapeType.hasStaticShape())
+    return failure();
+
+  SmallVector<AffineExpr, 4> mapping;
+  SmallVector<int64_t, 4> vectorDims;
+  // Fail to apply when the size of not vectorized dimension is not 1.
+  for (unsigned i = 0; i < N; i++) {
+    if (!mask[i] && (inShape[i] != 1 || kShape[i] != 1))
+      return failure();
+
+    if (mask[i] && inShape[i] != kShape[i])
+      return failure();
+
+    if (mask[i]) {
+      mapping.push_back(getAffineDimExpr(i, context));
+      vectorDims.push_back(inShape[i]);
+    }
+  }
+
+  Value input = op.getInput(0);
+  Value kernel = op.getInput(1);
+  Value output = op.getOutputBuffer(0);
+
+  unsigned rank = inShapeType.getRank();
+  unsigned numDims = mapping.size();
+  Type elemType = inShapeType.getElementType();
+
+  auto map = AffineMap::get(rank, 0, mapping, context);
+  SmallVector<Value, 4> zeros(rank, std_constant_index(0));
+  auto vecType = VectorType::get(vectorDims, elemType);
+
+  auto inputVec = vector_transfer_read(vecType, input, zeros, map);
+  auto kernelVec = vector_transfer_read(vecType, kernel, zeros, map);
+
+  auto acc = std_constant(elemType, rewriter.getZeroAttr(elemType));
+
+  std::array<AffineMap, 3> indexingMaps{
+      AffineMap::getMultiDimIdentityMap(numDims, context),
+      AffineMap::getMultiDimIdentityMap(numDims, context),
+      AffineMap::get(numDims, 0, {}, context)};
+
+  std::vector<StringRef> iteratorTypes(numDims, "reduction");
+
+  auto result = rewriter.create<vector::ContractionOp>(
+      loc, inputVec, kernelVec, acc,
+      rewriter.getAffineMapArrayAttr(indexingMaps),
+      rewriter.getStrArrayAttr(iteratorTypes));
+
+  rewriter.create<StoreOp>(loc, result, output, ValueRange(zeros));
+  rewriter.eraseOp(op);
+  return success();
+}
+
+using ConvOpConst = ConvOpVectorization<ConvWOp, 1>;
+
+/// Inserts tiling, promotion and vectorization pattern for ConvOp
+/// conversion into corresponding pattern lists.
+template <typename ConvOp, unsigned N>
+static void
+populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
+                              OwningRewritePatternList &promotionPatterns,
+                              OwningRewritePatternList &vectorizationPatterns,
+                              ArrayRef<int64_t> tileSizes,
+                              MLIRContext *context) {
+  if (tileSizes.size() < N)
+    return;
+
+  constexpr static StringRef kTiledMarker = "TILED";
+  constexpr static StringRef kPromotedMarker = "PROMOTED";
+  tilingPatterns.insert<LinalgTilingPattern<ConvOp>>(
+      context, LinalgTilingOptions().setTileSizes(tileSizes),
+      LinalgTransformationFilter(ArrayRef<Identifier>{},
+                                 Identifier::get(kTiledMarker, context)));
+
+  promotionPatterns.insert<LinalgPromotionPattern<ConvOp>>(
+      context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
+      LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
+                                 Identifier::get(kPromotedMarker, context)));
+
+  SmallVector<bool, 4> mask(N);
+  int offset = tileSizes.size() - N;
+  std::transform(tileSizes.begin() + offset, tileSizes.end(), mask.begin(),
+                 [](int64_t i) -> bool { return i > 1; });
+
+  vectorizationPatterns.insert<ConvOpVectorization<ConvOp, N>>(context, mask);
+}
+
+void mlir::linalg::populateConvVectorizationPatterns(
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
+    ArrayRef<int64_t> tileSizes) {
+  OwningRewritePatternList tiling, promotion, vectorization;
+  populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
+                                            tileSizes, context);
+
+  populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
+
+  populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
+
+  populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
+                                             tileSizes, context);
+
+  populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
+                                               tileSizes, context);
+
+  populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
+                                               tileSizes, context);
+
+  populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
+
+  populateVectorizationPatterns<ConvNDHWCOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
+
+  populateVectorizationPatterns<ConvNCDHWOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
+
+  patterns.push_back(std::move(tiling));
+  patterns.push_back(std::move(promotion));
+  patterns.push_back(std::move(vectorization));
+}
+
+//----------------------------------------------------------------------------//
+// Forwarding patterns
+//----------------------------------------------------------------------------//
 
 /// Check whether there is any interleaved use of any `values` between `firstOp`
 /// and `secondOp`. Conservatively return `true` if any op or value is in a
@@ -648,140 +835,4 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   rewriter.eraseOp(xferOp);
 
   return success();
-}
-
-template <class ConvOp, int N>
-LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
-    ConvOp op, PatternRewriter &rewriter) const {
-  Location loc = op.getLoc();
-  MLIRContext *context = op.getContext();
-  edsc::ScopedContext scope(rewriter, loc);
-
-  ShapedType inShapeType = op.getInputShapedType(0);
-  ShapedType kShapeType = op.getInputShapedType(1);
-
-  ArrayRef<int64_t> inShape = inShapeType.getShape();
-  ArrayRef<int64_t> kShape = kShapeType.getShape();
-
-  if (!inShapeType.hasStaticShape() || !kShapeType.hasStaticShape())
-    return failure();
-
-  SmallVector<AffineExpr, 4> mapping;
-  SmallVector<int64_t, 4> vectorDims;
-  // Fail to apply when the size of not vectorized dimension is not 1.
-  for (unsigned i = 0; i < N; i++) {
-    if (!mask[i] && (inShape[i] != 1 || kShape[i] != 1))
-      return failure();
-
-    if (mask[i] && inShape[i] != kShape[i])
-      return failure();
-
-    if (mask[i]) {
-      mapping.push_back(getAffineDimExpr(i, context));
-      vectorDims.push_back(inShape[i]);
-    }
-  }
-
-  Value input = op.getInput(0);
-  Value kernel = op.getInput(1);
-  Value output = op.getOutputBuffer(0);
-
-  unsigned rank = inShapeType.getRank();
-  unsigned numDims = mapping.size();
-  Type elemType = inShapeType.getElementType();
-
-  auto map = AffineMap::get(rank, 0, mapping, context);
-  SmallVector<Value, 4> zeros(rank, std_constant_index(0));
-  auto vecType = VectorType::get(vectorDims, elemType);
-
-  auto inputVec = vector_transfer_read(vecType, input, zeros, map);
-  auto kernelVec = vector_transfer_read(vecType, kernel, zeros, map);
-
-  auto acc = std_constant(elemType, rewriter.getZeroAttr(elemType));
-
-  std::array<AffineMap, 3> indexingMaps{
-      AffineMap::getMultiDimIdentityMap(numDims, context),
-      AffineMap::getMultiDimIdentityMap(numDims, context),
-      AffineMap::get(numDims, 0, {}, context)};
-
-  std::vector<StringRef> iteratorTypes(numDims, "reduction");
-
-  auto result = rewriter.create<vector::ContractionOp>(
-      loc, inputVec, kernelVec, acc,
-      rewriter.getAffineMapArrayAttr(indexingMaps),
-      rewriter.getStrArrayAttr(iteratorTypes));
-
-  rewriter.create<StoreOp>(loc, result, output, ValueRange(zeros));
-  rewriter.eraseOp(op);
-  return success();
-}
-
-using ConvOpConst = ConvOpVectorization<ConvWOp, 1>;
-
-/// Inserts tiling, promotion and vectorization pattern for ConvOp
-/// conversion into corresponding pattern lists.
-template <typename ConvOp, unsigned N>
-static void
-populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
-                              OwningRewritePatternList &promotionPatterns,
-                              OwningRewritePatternList &vectorizationPatterns,
-                              ArrayRef<int64_t> tileSizes,
-                              MLIRContext *context) {
-  if (tileSizes.size() < N)
-    return;
-
-  constexpr static StringRef kTiledMarker = "TILED";
-  constexpr static StringRef kPromotedMarker = "PROMOTED";
-  tilingPatterns.insert<LinalgTilingPattern<ConvOp>>(
-      context, LinalgTilingOptions().setTileSizes(tileSizes),
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get(kTiledMarker, context)));
-
-  promotionPatterns.insert<LinalgPromotionPattern<ConvOp>>(
-      context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
-                                 Identifier::get(kPromotedMarker, context)));
-
-  SmallVector<bool, 4> mask(N);
-  int offset = tileSizes.size() - N;
-  std::transform(tileSizes.begin() + offset, tileSizes.end(), mask.begin(),
-                 [](int64_t i) -> bool { return i > 1; });
-
-  vectorizationPatterns.insert<ConvOpVectorization<ConvOp, N>>(context, mask);
-}
-
-void mlir::linalg::populateConvVectorizationPatterns(
-    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
-    ArrayRef<int64_t> tileSizes) {
-  OwningRewritePatternList tiling, promotion, vectorization;
-  populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
-                                            tileSizes, context);
-
-  populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
-
-  populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
-
-  populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
-                                             tileSizes, context);
-
-  populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes, context);
-
-  populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes, context);
-
-  populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
-
-  populateVectorizationPatterns<ConvNDHWCOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
-
-  populateVectorizationPatterns<ConvNCDHWOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
-
-  patterns.push_back(std::move(tiling));
-  patterns.push_back(std::move(promotion));
-  patterns.push_back(std::move(vectorization));
 }
