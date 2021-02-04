@@ -109,6 +109,10 @@ Deprecated Compiler Flags
 The following options are deprecated and ignored. They will be removed in
 future versions of Clang.
 
+- The clang-cl ``/fallback`` flag, which made clang-cl invoke Microsoft Visual
+  C++ on files it couldn't compile itself, has been deprecated. It will be
+  removed in Clang 13.
+
 - ...
 
 Modified Compiler Flags
