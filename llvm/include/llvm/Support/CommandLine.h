@@ -369,8 +369,21 @@ public:
 
   virtual void setDefault() = 0;
 
+  // Prints the help string for an option.
+  //
+  // This maintains the Indent for multi-line descriptions.
+  // FirstLineIndentedBy is the count of chars of the first line
+  //      i.e. the one containing the --<option name>.
   static void printHelpStr(StringRef HelpStr, size_t Indent,
                            size_t FirstLineIndentedBy);
+
+  // Prints the help string for an enum value.
+  //
+  // This maintains the Indent for multi-line descriptions.
+  // FirstLineIndentedBy is the count of chars of the first line
+  //      i.e. the one containing the =<value>.
+  static void printEnumValHelpStr(StringRef HelpStr, size_t Indent,
+                                  size_t FirstLineIndentedBy);
 
   virtual void getExtraOptionNames(SmallVectorImpl<StringRef> &) {}
 
