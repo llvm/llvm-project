@@ -548,8 +548,17 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
     return getOrCreateTypeDIE(T);
   if (auto *NS = dyn_cast<DINamespace>(Context))
     return getOrCreateNameSpace(NS);
-  if (auto *SP = dyn_cast<DISubprogram>(Context))
-    return getOrCreateSubprogramDIE(SP);
+  if (auto *SP = dyn_cast<DISubprogram>(Context)) {
+    assert(SP->isDefinition());
+    // When generating type units, each unit gets its own subprogram.
+    if (DD->generateTypeUnits())
+      return getOrCreateSubprogramDIE(SP);
+
+    // Subprogram definitions should be created in the Unit that they specify,
+    // which might not be "this" unit when type definitions move around under
+    // LTO.
+    return &DD->constructSubprogramDefinitionDIE(SP);
+  }
   if (auto *M = dyn_cast<DIModule>(Context))
     return getOrCreateModule(M);
   return getDIE(Context);

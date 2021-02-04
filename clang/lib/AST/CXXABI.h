@@ -22,9 +22,8 @@ class ASTContext;
 class CXXConstructorDecl;
 class DeclaratorDecl;
 class Expr;
-class MangleContext;
-class MangleNumberingContext;
 class MemberPointerType;
+class MangleNumberingContext;
 
 /// Implements C++ ABI-specific semantic analysis functions.
 class CXXABI {
@@ -76,8 +75,6 @@ public:
 /// Creates an instance of a C++ ABI class.
 CXXABI *CreateItaniumCXXABI(ASTContext &Ctx);
 CXXABI *CreateMicrosoftCXXABI(ASTContext &Ctx);
-std::unique_ptr<MangleNumberingContext>
-createItaniumNumberingContext(MangleContext *);
 }
 
 #endif

@@ -74,6 +74,18 @@ enum class Language : uint8_t {
   Fortran,
 };
 
+// Source file layout
+enum class FortranForm {
+  /// The user has not specified a form. Base the form off the file extension.
+  Unknown,
+
+  /// -ffree-form
+  FixedForm,
+
+  /// -ffixed-form
+  FreeForm
+};
+
 /// The kind of a file that we've been handed as an input.
 class InputKind {
 private:
@@ -158,6 +170,13 @@ public:
 
   /// The frontend action to perform.
   frontend::ActionKind programAction_;
+
+  // The form to process files in, if specified.
+  FortranForm fortranForm_ = FortranForm::Unknown;
+
+  // The column after which characters are ignored in fixed form lines in the
+  // source file.
+  int fixedFormColumns_ = 72;
 
 public:
   FrontendOptions() : showHelp_(false), showVersion_(false) {}

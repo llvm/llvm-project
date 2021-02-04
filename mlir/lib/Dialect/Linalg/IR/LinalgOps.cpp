@@ -1319,83 +1319,6 @@ void TensorReshapeOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// SliceOp
-//===----------------------------------------------------------------------===//
-void mlir::linalg::SliceOp::build(OpBuilder &b, OperationState &result,
-                                  Value base, ValueRange indexings) {
-  result.addOperands(base);
-  result.addOperands(indexings);
-
-  auto memRefType = base.getType().cast<MemRefType>();
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto res = getStridesAndOffset(memRefType, strides, offset);
-  assert(succeeded(res) && strides.size() == indexings.size());
-  (void)res;
-
-  unsigned rank = memRefType.getRank();
-  // TODO: propagate static size and stride information when available.
-  SmallVector<int64_t, 4> sizes(rank, -1); // -1 encodes dynamic size.
-  result.addTypes({MemRefType::Builder(memRefType)
-                       .setShape(sizes)
-                       .setAffineMaps(makeStridedLinearLayoutMap(
-                           strides, offset, b.getContext()))});
-}
-
-static void print(OpAsmPrinter &p, SliceOp op) {
-  auto indexings = op.indexings();
-  p << SliceOp::getOperationName() << " " << op.view() << "[" << indexings
-    << "] ";
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getBaseViewType();
-  if (!indexings.empty())
-    p << ", " << op.indexings().getTypes();
-  p << ", " << op.getType();
-}
-
-static ParseResult parseSliceOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType baseInfo;
-  SmallVector<OpAsmParser::OperandType, 8> operands;
-  SmallVector<Type, 8> types;
-  if (parser.parseOperand(baseInfo) ||
-      parser.parseOperandList(operands, OpAsmParser::Delimiter::Square) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(types))
-    return failure();
-
-  if (types.size() < 2)
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected at least input and result view types");
-
-  ArrayRef<Type> indexingTypes = ArrayRef<Type>(types).drop_front().drop_back();
-  return failure(
-      parser.resolveOperand(baseInfo, types.front(), result.operands) ||
-      (!operands.empty() &&
-       parser.resolveOperands(operands, indexingTypes,
-                              operands.front().location, result.operands)) ||
-      parser.addTypeToList(types.back(), result.types));
-}
-
-static LogicalResult verify(SliceOp op) {
-  unsigned rank = op.getBaseViewRank();
-  if (rank != llvm::size(op.indexings()))
-    return op.emitOpError("expected ")
-           << rank << " indexings, got " << llvm::size(op.indexings());
-  unsigned index = 0;
-  for (auto indexing : op.indexings()) {
-    if (indexing.getType().isa<IndexType>())
-      --rank;
-    ++index;
-  }
-  if (op.getRank() != rank)
-    return op.emitOpError() << "expected rank of the view(" << op.getRank()
-                            << ") to be the number of ranges(" << rank << ")";
-  return success();
-}
-
-Value SliceOp::getViewSource() { return view(); }
-
-//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1745,11 +1668,6 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
   return foldReshapeOp(*this, operands);
-}
-OpFoldResult SliceOp::fold(ArrayRef<Attribute>) {
-  if (succeeded(foldMemRefCast(*this)))
-    return getResult();
-  return {};
 }
 OpFoldResult TensorReshapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp(*this, operands);

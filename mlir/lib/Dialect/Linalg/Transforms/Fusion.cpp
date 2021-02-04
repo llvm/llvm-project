@@ -426,9 +426,8 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   // Must be a subview or a slice to guarantee there are loops we can fuse
   // into.
   auto subView = consumerOpOperand.get().getDefiningOp<SubViewOp>();
-  auto slice = consumerOpOperand.get().getDefiningOp<SliceOp>();
-  if (!subView && !slice) {
-    LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview or slice)");
+  if (!subView) {
+    LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview)");
     return llvm::None;
   }
 
