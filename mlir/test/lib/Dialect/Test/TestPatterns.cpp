@@ -801,6 +801,17 @@ struct TestTypeConsumerForward
   }
 };
 
+struct TestTypeConversionAnotherProducer
+    : public OpRewritePattern<TestAnotherTypeProducerOp> {
+  using OpRewritePattern<TestAnotherTypeProducerOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TestAnotherTypeProducerOp op,
+                                PatternRewriter &rewriter) const final {
+    rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, op.getType());
+    return success();
+  }
+};
+
 struct TestTypeConversionDriver
     : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -865,6 +876,7 @@ struct TestTypeConversionDriver
     OwningRewritePatternList patterns;
     patterns.insert<TestTypeConsumerForward, TestTypeConversionProducer,
                     TestSignatureConversionUndo>(converter, &getContext());
+    patterns.insert<TestTypeConversionAnotherProducer>(&getContext());
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
 

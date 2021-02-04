@@ -1281,6 +1281,8 @@ def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 def TestTypeProducerOp : TEST_Op<"type_producer">,
   Results<(outs AnyType)>;
+def TestAnotherTypeProducerOp : TEST_Op<"another_type_producer">,
+  Results<(outs AnyType)>;
 def TestTypeConsumerOp : TEST_Op<"type_consumer">,
   Arguments<(ins AnyType)>;
 def TestValidOp : TEST_Op<"valid", [Terminator]>,
