@@ -8,7 +8,6 @@
 
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
-#include "ProfileGenerator.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +128,7 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
 std::string
 ProfiledBinary::getExpandedContextStr(const std::list<uint64_t> &Stack) const {
   std::string ContextStr;
-  SmallVector<std::string, 16> ContextVec;
+  SmallVector<std::string, 8> ContextVec;
   // Process from frame root to leaf
   for (auto Iter = Stack.rbegin(); Iter != Stack.rend(); Iter++) {
     uint64_t Offset = virtualAddrToOffset(*Iter);
@@ -140,22 +139,21 @@ ProfiledBinary::getExpandedContextStr(const std::list<uint64_t> &Stack) const {
   }
 
   assert(ContextVec.size() && "Context length should be at least 1");
-  // Compress the context string except for the leaf frame
-  std::string LeafFrame = ContextVec.back();
-  ContextVec.pop_back();
-  CSProfileGenerator::compressRecursionContext<std::string>(ContextVec);
 
   std::ostringstream OContextStr;
   for (uint32_t I = 0; I < (uint32_t)ContextVec.size(); I++) {
     if (OContextStr.str().size()) {
       OContextStr << " @ ";
     }
-    OContextStr << ContextVec[I];
+
+    if (I == ContextVec.size() - 1) {
+      // Only keep the function name for the leaf frame
+      StringRef Ref(ContextVec[I]);
+      OContextStr << Ref.split(":").first.str();
+    } else {
+      OContextStr << ContextVec[I];
+    }
   }
-  // Only keep the function name for the leaf frame
-  if (OContextStr.str().size())
-    OContextStr << " @ ";
-  OContextStr << StringRef(LeafFrame).split(":").first.str();
   return OContextStr.str();
 }
 
