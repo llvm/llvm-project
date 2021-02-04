@@ -6551,23 +6551,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  // Finally add the compile command to the compilation.
-  if (Args.hasArg(options::OPT__SLASH_fallback) &&
-      Output.getType() == types::TY_Object &&
-      (InputType == types::TY_C || InputType == types::TY_CXX)) {
-    auto CLCommand =
-        getCLFallback()->GetCommand(C, JA, Output, Inputs, Args, LinkingOutput);
-    C.addCommand(std::make_unique<FallbackCommand>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
-        Output, std::move(CLCommand)));
-  } else if (Args.hasArg(options::OPT__SLASH_fallback) &&
-             isa<PrecompileJobAction>(JA)) {
-    // In /fallback builds, run the main compilation even if the pch generation
-    // fails, so that the main compilation's fallback to cl.exe runs.
-    C.addCommand(std::make_unique<ForceSuccessCommand>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
-        Output));
-  } else if (D.CC1Main && !D.CCGenDiagnostics) {
+  if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
     C.addCommand(std::make_unique<CC1Command>(JA, *this,
                                               ResponseFileSupport::AtFileUTF8(),
@@ -6933,11 +6917,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
  if (Args.hasFlag(options::OPT__SLASH_Zc_dllexportInlines_,
                   options::OPT__SLASH_Zc_dllexportInlines,
                   false)) {
-   if (Args.hasArg(options::OPT__SLASH_fallback)) {
-     D.Diag(clang::diag::err_drv_dllexport_inlines_and_fallback);
-   } else {
-    CmdArgs.push_back("-fno-dllexport-inlines");
-   }
+  CmdArgs.push_back("-fno-dllexport-inlines");
  }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
@@ -7006,10 +6986,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   if (!Args.hasArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");
-    if (Args.hasArg(options::OPT__SLASH_fallback))
-      CmdArgs.push_back("msvc-fallback");
-    else
-      CmdArgs.push_back("msvc");
+    CmdArgs.push_back("msvc");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
@@ -7028,13 +7005,6 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
   }
 }
-
-visualstudio::Compiler *Clang::getCLFallback() const {
-  if (!CLFallback)
-    CLFallback.reset(new visualstudio::Compiler(getToolChain()));
-  return CLFallback.get();
-}
-
 
 const char *Clang::getBaseInputName(const ArgList &Args,
                                     const InputInfo &Input) {
