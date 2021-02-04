@@ -1,0 +1,6 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("LLVMProfgenTests") {
+  deps = [ "//llvm/lib/Testing/Support" ]
+  sources = [ "ContextCompressionTest.cpp" ]
+}
