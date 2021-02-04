@@ -75,7 +75,7 @@ func @main() {
   scf.for %arg0 = %c0 to %iters step %c1 {
     // linalg.matmul writes %C in place, need to reset it to zero every time.
     // This is accounts for about 10-15% perf hit on small sizes.
-    // Once linalg on tensors is ready, fusing fill at teh register level will
+    // Once linalg on tensors is ready, fusing fill at the register level will
     // be easy.
     linalg.fill(%cC, %f0) : !column_major_C, !elem_type_c
     call @matmul_column_major(%cA, %cB, %cC) : (!column_major_A, !column_major_B, !column_major_C) -> ()

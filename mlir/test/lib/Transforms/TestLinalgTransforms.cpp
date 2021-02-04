@@ -493,9 +493,11 @@ static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
 
 static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   OwningRewritePatternList patterns;
+  // TODO: remove all this in favor of a single LinalgOp.
   patterns.insert<
       LinalgVectorizationPattern<BatchMatmulOp>,
       LinalgVectorizationPattern<MatmulOp>,
+      LinalgVectorizationPattern<MatmulI8I8I32Op>,
       LinalgVectorizationPattern<MatvecOp>,
       LinalgVectorizationPattern<VecmatOp>, LinalgVectorizationPattern<DotOp>,
       LinalgVectorizationPattern<FillOp>, LinalgVectorizationPattern<CopyOp>,

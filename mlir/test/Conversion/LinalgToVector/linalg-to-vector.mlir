@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -test-conv-vectorization="tile-sizes=1,3" --cse | FileCheck %s
+// RUN: mlir-opt %s -test-conv-vectorization="tile-sizes=1,3" --cse -split-input-file
+// | FileCheck %s
 
 // CHECK-DAG:  #[[$map0:.*]] = affine_map<(d0)[s0] -> (1, -d0 + s0)>
 // CHECK-DAG:  #[[$map1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
@@ -6,16 +7,11 @@
 // CHECK-DAG:  #[[$map3:.*]] = affine_map<(d0, d1)[s0] -> (3, -d0 - d1 + s0)>
 // CHECK-DAG:  #[[$map4:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
 
-func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
-  linalg.conv_1d ins(%arg0, %arg1 : memref<?xf32>, memref<?xf32>)
-                outs(%arg2 : memref<?xf32>)
-  return
-}
-
 // CHECK-LABEL: @conv_1d
 //  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?xf32
+func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
 //   CHECK-DAG:   %[[c12:.*]] = constant 12 : index
 //   CHECK-DAG:   %[[c4:.*]] = constant 4 : index
 //   CHECK-DAG:   %[[cst:.*]] = constant 0.000000e+00 : f32
@@ -50,3 +46,8 @@ func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) 
 //       CHECK:       scf.for %[[arg5:.*]] = %[[c0]] to %[[v9]] step %[[c1]] {
 //       CHECK:         %[[v23:.*]] = load %[[v11]][%[[arg5]]] : memref<?xf32>
 //       CHECK:         store %[[v23]], %[[v10]][%[[arg5]]] : memref<?xf32, #[[$map1]]>
+  linalg.conv_1d ins(%arg0, %arg1 : memref<?xf32>, memref<?xf32>)
+                outs(%arg2 : memref<?xf32>)
+  return
+}
+

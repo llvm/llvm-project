@@ -1,4 +1,4 @@
-//===- LinalgStructuredInterface.td- Linalg StructuredIfce -*- tablegen -*-===//
+//===- LinalgInterfaces.td - Linalg Interfaces Declaration -*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the definition file for the structured interface for Linalg ops.
+// This is the definition file for the structured interface sfor Linalg ops.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LINALG_IR_STRUCTURED_OPS_INTERFACE
-#define LINALG_IR_STRUCTURED_OPS_INTERFACE
+#ifndef LINALG_IR_LINALGINTERFACES
+#define LINALG_IR_LINALGINTERFACES
 
-include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/IR/OpBase.td"
 
 // The linalg 'LinalgStructuredInterface' provides access to the 'LinalgOp'
 // interface.
@@ -33,10 +33,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodName=*/"getNumPayloadInductionVariables",
       /*args=*/(ins),
       /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return isa<IndexedGenericOp>(this->getOperation()) ?
-          $_op.getNumLoops() : 0;
-      }]
+      /*defaultImplementation=*/""
     >,
     //===------------------------------------------------------------------===//
     // Loop types handling.
@@ -570,7 +567,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         unsigned bbArgNumber =
-          getNumPayloadInductionVariables() + opOperand->getOperandNumber();
+          $_op.getNumPayloadInductionVariables() + opOperand->getOperandNumber();
         // Safeguard against the named linalg ops that are manually defined and
         // that only support buffer semantics: we should not be there.
         // Such ops have an empty regionBuilder and are not constructed with a
@@ -1117,4 +1114,4 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   let verify = [{ return detail::verifyStructuredOpInterface($_op); }];
 }
 
-#endif // LINALG_IR_STRUCTURED_OPS_INTERFACE
+#endif // LINALG_IR_LINALGINTERFACES
