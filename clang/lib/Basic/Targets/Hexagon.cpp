@@ -65,6 +65,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv67t") {
     Builder.defineMacro("__HEXAGON_V67T__");
     Builder.defineMacro("__HEXAGON_ARCH__", "67");
+  } else if (CPU == "hexagonv68") {
+    Builder.defineMacro("__HEXAGON_V68__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "68");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -188,6 +191,7 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
     {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
     {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
+    {{"hexagonv68"}, {"68"}},
 };
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
