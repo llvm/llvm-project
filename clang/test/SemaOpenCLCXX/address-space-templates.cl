@@ -1,4 +1,4 @@
-//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -verify -fsyntax-only
+//RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -verify -ast-dump  | FileCheck %s
 
 template <typename T>
 struct S {
@@ -28,8 +28,10 @@ template <class _Tp> struct as_pointer {
     typedef typename remove_reference<_Tp>::type* type;
 };
 
+// Check address space deduction in template parameter deduction.
 struct rep {
-  // CHECK |-CXXConstructorDecl {{.*}} rep 'void (const __generic rep &__private) __generic'
+  // When there is no address space on a reference use __generic.
+  // CHECK: |-CXXConstructorDecl {{.*}} rep 'void (const __generic rep &__private) __generic'
   template<class U, class = typename as_pointer<U>::type>
   rep(U&& v) {}
 };
@@ -39,11 +41,22 @@ struct rep_outer : private rep {
     : rep(0) {}
 };
 
+
+template<class T, class F>
+void foo4(T t, F f){
+  f(t);
+}
+
 void bar() {
   S<const __global int> sintgl; // expected-note{{in instantiation of template class 'S<const __global int>' requested here}}
 
   foo1<__local int>(1); // expected-error{{no matching function for call to 'foo1'}}
   foo2<__global int>(0);
   foo3<__global int>(); // expected-note{{in instantiation of function template specialization 'foo3<__global int>' requested here}}
+
   rep_outer r;
+  int i;
+  // Preserve the address space of the type in forwarding reference.
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (__private int &__private) const __generic'
+  foo4(i, [](auto&& x){;});
 }
