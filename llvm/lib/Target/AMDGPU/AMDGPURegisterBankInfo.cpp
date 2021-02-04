@@ -591,21 +591,6 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
 
     return AltMappings;
   }
-  case TargetOpcode::G_SMIN:
-  case TargetOpcode::G_SMAX:
-  case TargetOpcode::G_UMIN:
-  case TargetOpcode::G_UMAX: {
-    static const OpRegBankEntry<3> Table[2] = {
-      { { AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID }, 1 },
-
-      // Scalar requires cmp+select, and extends if 16-bit.
-      // FIXME: Should there be separate costs for 32 and 16-bit
-      { { AMDGPU::SGPRRegBankID, AMDGPU::SGPRRegBankID, AMDGPU::SGPRRegBankID }, 3 }
-    };
-
-    const std::array<unsigned, 3> RegSrcOpIdx = { { 0, 1, 2 } };
-    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
-  }
   case TargetOpcode::G_UADDE:
   case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SADDE:
@@ -1576,23 +1561,8 @@ bool AMDGPURegisterBankInfo::applyMappingBFEIntrinsic(
   return true;
 }
 
-// FIXME: Duplicated from LegalizerHelper
-static CmpInst::Predicate minMaxToCompare(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_SMIN:
-    return CmpInst::ICMP_SLT;
-  case TargetOpcode::G_SMAX:
-    return CmpInst::ICMP_SGT;
-  case TargetOpcode::G_UMIN:
-    return CmpInst::ICMP_ULT;
-  case TargetOpcode::G_UMAX:
-    return CmpInst::ICMP_UGT;
-  default:
-    llvm_unreachable("not in integer min/max");
-  }
-}
-
-static unsigned minMaxToExtend(unsigned Opc) {
+// Return a suitable opcode for extending the operands of Opc when widening.
+static unsigned getExtendOp(unsigned Opc) {
   switch (Opc) {
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
@@ -1601,7 +1571,7 @@ static unsigned minMaxToExtend(unsigned Opc) {
   case TargetOpcode::G_UMAX:
     return TargetOpcode::G_ZEXT;
   default:
-    llvm_unreachable("not in integer min/max");
+    return TargetOpcode::G_ANYEXT;
   }
 }
 
@@ -1626,30 +1596,6 @@ unpackV2S16ToS32(MachineIRBuilder &B, Register Src, unsigned ExtOpcode) {
 
   assert(ExtOpcode == TargetOpcode::G_ANYEXT);
   return std::make_pair(Bitcast.getReg(0), ShiftHi.getReg(0));
-}
-
-static MachineInstr *buildExpandedScalarMinMax(MachineIRBuilder &B,
-                                               CmpInst::Predicate Pred,
-                                               Register Dst, Register Src0,
-                                               Register Src1) {
-  const LLT CmpType = LLT::scalar(32);
-  auto Cmp = B.buildICmp(Pred, CmpType, Src0, Src1);
-  return B.buildSelect(Dst, Cmp, Src0, Src1);
-}
-
-// FIXME: Duplicated from LegalizerHelper, except changing the boolean type.
-void AMDGPURegisterBankInfo::lowerScalarMinMax(MachineIRBuilder &B,
-                                               MachineInstr &MI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src0 = MI.getOperand(1).getReg();
-  Register Src1 = MI.getOperand(2).getReg();
-
-  const CmpInst::Predicate Pred = minMaxToCompare(MI.getOpcode());
-  MachineInstr *Sel = buildExpandedScalarMinMax(B, Pred, Dst, Src0, Src1);
-
-  Register CmpReg = Sel->getOperand(1).getReg();
-  B.getMRI()->setRegBank(CmpReg, AMDGPU::SGPRRegBank);
-  MI.eraseFromParent();
 }
 
 // For cases where only a single copy is inserted for matching register banks.
@@ -2341,7 +2287,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_MUL:
   case AMDGPU::G_SHL:
   case AMDGPU::G_LSHR:
-  case AMDGPU::G_ASHR: {
+  case AMDGPU::G_ASHR:
+  case AMDGPU::G_SMIN:
+  case AMDGPU::G_SMAX:
+  case AMDGPU::G_UMIN:
+  case AMDGPU::G_UMAX: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
 
@@ -2365,10 +2315,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       Register WideSrc0Lo, WideSrc0Hi;
       Register WideSrc1Lo, WideSrc1Hi;
 
+      unsigned ExtendOp = getExtendOp(MI.getOpcode());
       std::tie(WideSrc0Lo, WideSrc0Hi)
-        = unpackV2S16ToS32(B, MI.getOperand(1).getReg(), AMDGPU::G_ANYEXT);
+        = unpackV2S16ToS32(B, MI.getOperand(1).getReg(), ExtendOp);
       std::tie(WideSrc1Lo, WideSrc1Hi)
-        = unpackV2S16ToS32(B, MI.getOperand(2).getReg(), AMDGPU::G_ANYEXT);
+        = unpackV2S16ToS32(B, MI.getOperand(2).getReg(), ExtendOp);
       auto Lo = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Lo, WideSrc1Lo});
       auto Hi = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Hi, WideSrc1Hi});
       B.buildBuildVectorTrunc(DstReg, {Lo.getReg(0), Hi.getReg(0)});
@@ -2387,73 +2338,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
           llvm_unreachable("widen scalar should have succeeded");
       }
     }
-
-    return;
-  }
-  case AMDGPU::G_SMIN:
-  case AMDGPU::G_SMAX:
-  case AMDGPU::G_UMIN:
-  case AMDGPU::G_UMAX: {
-    Register DstReg = MI.getOperand(0).getReg();
-    const RegisterBank *DstBank =
-      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
-    if (DstBank == &AMDGPU::VGPRRegBank)
-      break;
-
-    MachineFunction *MF = MI.getParent()->getParent();
-    MachineIRBuilder B(MI);
-
-    // Turn scalar min/max into a compare and select.
-    LLT Ty = MRI.getType(DstReg);
-    const LLT S32 = LLT::scalar(32);
-    const LLT S16 = LLT::scalar(16);
-    const LLT V2S16 = LLT::vector(2, 16);
-
-    if (Ty == V2S16) {
-      ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
-      B.setChangeObserver(ApplySALU);
-
-      // Need to widen to s32, and expand as cmp + select, and avoid producing
-      // illegal vector extends or unmerges that would need further
-      // legalization.
-      //
-      // TODO: Should we just readfirstlane? That should probably be handled
-      // with a UniformVGPR register bank that wouldn't need special
-      // consideration here.
-
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src0 = MI.getOperand(1).getReg();
-      Register Src1 = MI.getOperand(2).getReg();
-
-      Register WideSrc0Lo, WideSrc0Hi;
-      Register WideSrc1Lo, WideSrc1Hi;
-
-      unsigned ExtendOp = minMaxToExtend(MI.getOpcode());
-
-      std::tie(WideSrc0Lo, WideSrc0Hi) = unpackV2S16ToS32(B, Src0, ExtendOp);
-      std::tie(WideSrc1Lo, WideSrc1Hi) = unpackV2S16ToS32(B, Src1, ExtendOp);
-
-      Register Lo = MRI.createGenericVirtualRegister(S32);
-      Register Hi = MRI.createGenericVirtualRegister(S32);
-      const CmpInst::Predicate Pred = minMaxToCompare(MI.getOpcode());
-      buildExpandedScalarMinMax(B, Pred, Lo, WideSrc0Lo, WideSrc1Lo);
-      buildExpandedScalarMinMax(B, Pred, Hi, WideSrc0Hi, WideSrc1Hi);
-
-      B.buildBuildVectorTrunc(Dst, {Lo, Hi});
-      MI.eraseFromParent();
-    } else if (Ty == S16) {
-      ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
-      B.setChangeObserver(ApplySALU);
-      LegalizerHelper Helper(*MF, ApplySALU, B);
-
-      // Need to widen to s32, and expand as cmp + select.
-      if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
-        llvm_unreachable("widenScalar should have succeeded");
-
-      // FIXME: This is relying on widenScalar leaving MI in place.
-      lowerScalarMinMax(B, MI);
-    } else
-      lowerScalarMinMax(B, MI);
 
     return;
   }
