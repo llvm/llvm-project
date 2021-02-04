@@ -1907,21 +1907,17 @@ void SampleProfileLoader::buildEdges(Function &F) {
     SmallPtrSet<BasicBlock *, 16> Visited;
     if (!Predecessors[B1].empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
-    for (pred_iterator PI = pred_begin(B1), PE = pred_end(B1); PI != PE; ++PI) {
-      BasicBlock *B2 = *PI;
+    for (BasicBlock *B2 : predecessors(B1))
       if (Visited.insert(B2).second)
         Predecessors[B1].push_back(B2);
-    }
 
     // Add successors for B1.
     Visited.clear();
     if (!Successors[B1].empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
-    for (succ_iterator SI = succ_begin(B1), SE = succ_end(B1); SI != SE; ++SI) {
-      BasicBlock *B2 = *SI;
+    for (BasicBlock *B2 : successors(B1))
       if (Visited.insert(B2).second)
         Successors[B1].push_back(B2);
-    }
   }
 }
 
