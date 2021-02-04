@@ -378,6 +378,7 @@ public:
   std::string ARCMTMigrateReportOut;
 
   std::string IndexStorePath;
+  std::string IndexUnitOutputPath;
 
   /// The input files and their types.
   SmallVector<FrontendInputFile, 0> Inputs;
