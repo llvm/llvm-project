@@ -75,7 +75,7 @@ class {0} : public ::mlir::Dialect {
   void initialize();
   friend class ::mlir::MLIRContext;
 public:
-  static ::llvm::StringLiteral getDialectNamespace() { return "{1}"; }
+  static ::llvm::StringRef getDialectNamespace() { return "{1}"; }
 )";
 
 /// Registration for a single dependent dialect: to be inserted in the ctor
