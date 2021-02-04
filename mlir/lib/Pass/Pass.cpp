@@ -783,7 +783,7 @@ void RecoveryReproducerContext::crashHandler(void *) {
   // a reproducer for all of them.
   std::string ignored;
   for (RecoveryReproducerContext *context : *reproducerSet)
-    context->generate(ignored);
+    (void)context->generate(ignored);
 }
 
 void RecoveryReproducerContext::registerSignalHandler() {

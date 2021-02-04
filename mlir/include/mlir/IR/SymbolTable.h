@@ -189,17 +189,17 @@ public:
   /// 'from'. This does not traverse into any nested symbol tables. If there are
   /// any unknown operations that may potentially be symbol tables, no uses are
   /// replaced and failure is returned.
-  LLVM_NODISCARD static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
-                                                           StringRef newSymbol,
-                                                           Operation *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(Operation *oldSymbol, StringRef newSymbolName,
-                       Operation *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(StringRef oldSymbol, StringRef newSymbol, Region *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(Operation *oldSymbol, StringRef newSymbolName,
-                       Region *from);
+  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
+                                            StringRef newSymbol,
+                                            Operation *from);
+  static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
+                                            StringRef newSymbolName,
+                                            Operation *from);
+  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
+                                            StringRef newSymbol, Region *from);
+  static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
+                                            StringRef newSymbolName,
+                                            Region *from);
 
 private:
   Operation *symbolTableOp;

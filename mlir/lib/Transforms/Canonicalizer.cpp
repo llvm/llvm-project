@@ -30,7 +30,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     patterns = std::move(owningPatterns);
   }
   void runOnOperation() override {
-    applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
   }
 
   FrozenRewritePatternList patterns;

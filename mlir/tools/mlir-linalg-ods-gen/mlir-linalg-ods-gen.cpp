@@ -618,31 +618,33 @@ AffineExpr AffineParser::getAffineBinaryOpExpr(AffineHighPrecOp op,
   switch (op) {
   case Mul:
     if (!lhs.isSymbolicOrConstant() && !rhs.isSymbolicOrConstant()) {
-      parser.emitError(opLoc,
-                       "non-affine expression: at least one of the multiply "
-                       "operands has to be either a constant or symbolic");
+      (void)parser.emitError(
+          opLoc, "non-affine expression: at least one of the multiply "
+                 "operands has to be either a constant or symbolic");
       return nullptr;
     }
     return lhs * rhs;
   case FloorDiv:
     if (!rhs.isSymbolicOrConstant()) {
-      parser.emitError(opLoc,
-                       "non-affine expression: right operand of floordiv "
-                       "has to be either a constant or symbolic");
+      (void)parser.emitError(opLoc,
+                             "non-affine expression: right operand of floordiv "
+                             "has to be either a constant or symbolic");
       return nullptr;
     }
     return lhs.floorDiv(rhs);
   case CeilDiv:
     if (!rhs.isSymbolicOrConstant()) {
-      parser.emitError(opLoc, "non-affine expression: right operand of ceildiv "
-                              "has to be either a constant or symbolic");
+      (void)parser.emitError(opLoc,
+                             "non-affine expression: right operand of ceildiv "
+                             "has to be either a constant or symbolic");
       return nullptr;
     }
     return lhs.ceilDiv(rhs);
   case Mod:
     if (!rhs.isSymbolicOrConstant()) {
-      parser.emitError(opLoc, "non-affine expression: right operand of mod "
-                              "has to be either a constant or symbolic");
+      (void)parser.emitError(opLoc,
+                             "non-affine expression: right operand of mod "
+                             "has to be either a constant or symbolic");
       return nullptr;
     }
     return lhs % rhs;
@@ -748,7 +750,8 @@ AffineExpr AffineParser::parseParentheticalExpr() {
   if (failed(parser.parseToken(Token::Kind::l_paren, "expected '('")))
     return nullptr;
   if (parser.curToken.is(Token::Kind::r_paren))
-    return (parser.emitError("no expression inside parentheses"), nullptr);
+    return ((void)parser.emitError("no expression inside parentheses"),
+            nullptr);
 
   auto expr = parseAffineExpr();
   if (!expr)
@@ -773,7 +776,7 @@ AffineExpr AffineParser::parseNegateExpression(AffineExpr lhs) {
   if (!operand)
     // Extra error message although parseAffineOperandExpr would have
     // complained. Leads to a better diagnostic.
-    return (parser.emitError("missing operand of negation"), nullptr);
+    return ((void)parser.emitError("missing operand of negation"), nullptr);
   return (-1) * operand;
 }
 
@@ -788,7 +791,7 @@ AffineExpr AffineParser::parseAttrUseOrBareIdExpr() {
 ///   affine-expr ::= bare-id
 AffineExpr AffineParser::parseBareIdExpr() {
   if (parser.curToken.isNot(Token::Kind::id))
-    return (parser.emitError("expected id"), nullptr);
+    return ((void)parser.emitError("expected id"), nullptr);
 
   StringRef sRef = parser.curToken.getSpelling();
   for (auto &list : {dims, symbols}) {
@@ -807,7 +810,7 @@ AffineExpr AffineParser::parseBareIdExpr() {
     return expr;
   }
 
-  return (parser.emitError("use of undeclared id"), nullptr);
+  return ((void)parser.emitError("use of undeclared id"), nullptr);
 }
 
 /// Parse a positive integral constant appearing in an affine expression.
@@ -816,7 +819,7 @@ AffineExpr AffineParser::parseBareIdExpr() {
 AffineExpr AffineParser::parseIntegerExpr() {
   auto val = parser.curToken.getUInt64IntegerValue();
   if (!val.hasValue() || (int64_t)val.getValue() < 0)
-    return (parser.emitError("constant too large for index"), nullptr);
+    return ((void)parser.emitError("constant too large for index"), nullptr);
 
   parser.consumeToken(Token::Kind::integer);
   return getAffineConstantExpr((int64_t)val.getValue(), parser.context);
@@ -847,15 +850,15 @@ AffineExpr AffineParser::parseAffineOperandExpr(AffineExpr lhs) {
   case Token::Kind::plus:
   case Token::Kind::star:
     if (lhs)
-      parser.emitError("missing right operand of binary operator");
+      (void)parser.emitError("missing right operand of binary operator");
     else
-      parser.emitError("missing left operand of binary operator");
+      (void)parser.emitError("missing left operand of binary operator");
     return nullptr;
   default:
     if (lhs)
-      parser.emitError("missing right operand of binary operator");
+      (void)parser.emitError("missing right operand of binary operator");
     else
-      parser.emitError("expected affine expression");
+      (void)parser.emitError("expected affine expression");
     return nullptr;
   }
 }
@@ -943,7 +946,9 @@ AffineExpr AffineParser::parseAffineExpr() {
 
 SmallVector<AffineExpr, 4> AffineParser::parseAffineExprs(Token::Kind lDelim,
                                                           Token::Kind rDelim) {
-  parser.parseToken(lDelim, "expected lDelim at start of affine expr list");
+  if (failed(parser.parseToken(lDelim,
+                               "expected lDelim at start of affine expr list")))
+    return {};
 
   SmallVector<AffineExpr, 4> exprs;
   auto parseElt = [&]() -> LogicalResult {
@@ -1376,7 +1381,8 @@ LogicalResult TCParser::parseAttrDef() {
   SmallVector<uint64_t, 4> vectorDims;
   while (parser.curToken.is(Token::Kind::integer)) {
     uint64_t value;
-    parser.parseInteger(value);
+    if (failed(parser.parseInteger(value)))
+      return failure();
     vectorDims.push_back(value);
 
     StringRef spelling = parser.curToken.getSpelling();
@@ -1550,10 +1556,8 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
   unsigned idx = 0;
   auto parseExpr = [&]() -> LogicalResult {
     std::unique_ptr<Expression> expr;
-    if (idx >= definitions.size()) {
-      parser.emitError("Fewer LHS definitions than RHS expressions");
-      return failure();
-    }
+    if (idx >= definitions.size())
+      return parser.emitError("Fewer LHS definitions than RHS expressions");
     if (failed(parseExpression(definitions[idx++], expr, state)))
       return failure();
     state.expressions.push_back(std::move(expr));
@@ -1562,10 +1566,8 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
   if (failed(parser.parseCommaSeparatedListUntil(
           Token::Kind::semicolon, parseExpr, /*allowEmptyList=*/true)))
     return failure();
-  if (idx != definitions.size()) {
-    parser.emitError("Fewer RHS expressions than LHS definitions");
-    return failure();
-  }
+  if (idx != definitions.size())
+    return parser.emitError("Fewer RHS expressions than LHS definitions");
 
   // 3. Postprocess.
   // 3.a. Normalize all maps to the proper state.dims and symbols counts.
@@ -1586,10 +1588,8 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
   // 3.b. Traverse definitions
   llvm::DenseSet<StringRef> seenDefs;
   for (auto &def : definitions) {
-    if (seenDefs.count(def.tensorId) > 0) {
-      parser.emitError("Unexpected multi-write to a single tensor");
-      return failure();
-    }
+    if (seenDefs.count(def.tensorId) > 0)
+      return parser.emitError("Unexpected multi-write to a single tensor");
     seenDefs.insert(def.tensorId);
     auto tensorIter = registeredTensors.find(def.tensorId);
     assert(tensorIter != registeredTensors.end() && "unregistered tensor");
@@ -1612,7 +1612,7 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
       auto &tensor = tensorIter->getValue();
       if (tensor.indexingMap && state.orderedTensorArgs.count(use) == 0) {
         LLVM_DEBUG(llvm::dbgs() << "\nexisting: " << tensor.indexingMap);
-        parser.emitError(
+        (void)parser.emitError(
             "Unexpected multi-read of a tensor with different accesses");
         failed = true;
         return;
@@ -1752,15 +1752,14 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
                                      perComprehensionStates.back())))
       return failure();
   };
-  parser.parseToken(Token::Kind::r_brace, "expected '}'");
+  if (failed(parser.parseToken(Token::Kind::r_brace, "expected '}'")))
+    return failure();
 
   // Print.
   auto nComprehensions = perComprehensionStates.size();
-  if (nComprehensions != 1) {
-    parser.emitError("only 1 comprehension supported for now, got: " +
-                     llvm::Twine(nComprehensions));
-    return failure();
-  }
+  if (nComprehensions != 1)
+    return parser.emitError("only 1 comprehension supported for now, got: " +
+                            llvm::Twine(nComprehensions));
   if (genODSDecl) {
     auto &state = perComprehensionStates.back();
     printODS(os, cppOpName, tcName, interfaces, state);
@@ -1800,8 +1799,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
                               .Case("i64", "I64")
                               .Default("");
     if (odsType.empty()) {
-      parser.emitError("unimplemented support for attribute element type: " +
-                       elementType);
+      (void)parser.emitError(
+          "unimplemented support for attribute element type: " + elementType);
       return;
     }
 
@@ -2088,7 +2087,8 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
     assert(it != registeredAttrs.end() && "uses should point to valid attr!");
     std::string getValueFn = it->second.getValueFn(attrUse.value().indices);
     if (getValueFn.empty()) {
-      parser.emitError("unimplemented getValueFn for attribute: " + attrName);
+      (void)parser.emitError("unimplemented getValueFn for attribute: " +
+                             attrName);
       return;
     }
     std::string cstVal = llvm::formatv("{0}().{1}", attrName, getValueFn);
@@ -2283,7 +2283,7 @@ int main(int argc, char **argv) {
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
   Parser parser(mgr, &context);
-  parseAndEmitAllTensorComprehensions(output->os(), parser);
+  (void)parseAndEmitAllTensorComprehensions(output->os(), parser);
   output->keep();
 
   return 0;

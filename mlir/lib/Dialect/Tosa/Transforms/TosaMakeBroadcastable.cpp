@@ -265,7 +265,7 @@ public:
     patterns.insert<ConvertTosaOp<tosa::LogicalLeftShiftOp>>(ctx);
     patterns.insert<ConvertTosaOp<tosa::ArithmeticRightShiftOp>>(ctx);
     patterns.insert<ConvertTosaOp<tosa::LogicalRightShiftOp>>(ctx);
-    applyPatternsAndFoldGreedily(func, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };
 } // end anonymous namespace
