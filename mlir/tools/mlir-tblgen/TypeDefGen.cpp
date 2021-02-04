@@ -277,8 +277,9 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
 
   // Emit the mnenomic, if specified.
   if (auto mnenomic = typeDef.getMnemonic()) {
-    os << "    static ::llvm::StringRef getMnemonic() { return \"" << mnenomic
-       << "\"; }\n";
+    os << "    static constexpr ::llvm::StringLiteral getMnemonic() {\n"
+       << "      return ::llvm::StringLiteral(\"" << mnenomic << "\");\n"
+       << "    }\n";
 
     // If mnemonic specified, emit print/parse declarations.
     if (typeDef.getParserCode() || typeDef.getPrinterCode() || !params.empty())
