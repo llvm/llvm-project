@@ -50,6 +50,7 @@ protected:
   */
   void findDisjointRanges(RangeSample &DisjointRanges,
                           const RangeSample &Ranges);
+
   // Used by SampleProfileWriter
   StringMap<FunctionSamples> ProfileMap;
 };
@@ -91,6 +92,110 @@ public:
     populateInferredFunctionSamples();
   }
 
+  // Remove adjacent repeated context sequences up to a given sequence length,
+  // -1 means no size limit. Note that repeated sequences are identified based
+  // on the exact call site, this is finer granularity than function recursion.
+  template <typename T>
+  static void compressRecursionContext(SmallVectorImpl<T> &Context,
+                                       int32_t CSize = MaxCompressionSize) {
+    uint32_t I = 1;
+    uint32_t HS = static_cast<uint32_t>(Context.size() / 2);
+    uint32_t MaxDedupSize =
+        CSize == -1 ? HS : std::min(static_cast<uint32_t>(CSize), HS);
+    auto BeginIter = Context.begin();
+    // Use an in-place algorithm to save memory copy
+    // End indicates the end location of current iteration's data
+    uint32_t End = 0;
+    // Deduplicate from length 1 to the max possible size of a repeated
+    // sequence.
+    while (I <= MaxDedupSize) {
+      // This is a linear algorithm that deduplicates adjacent repeated
+      // sequences of size I. The deduplication detection runs on a sliding
+      // window whose size is 2*I and it keeps sliding the window to deduplicate
+      // the data inside. Once duplication is detected, deduplicate it by
+      // skipping the right half part of the window, otherwise just copy back
+      // the new one by appending them at the back of End pointer(for the next
+      // iteration).
+      //
+      // For example:
+      // Input: [a1, a2, b1, b2]
+      // (Added index to distinguish the same char, the origin is [a, a, b,
+      // b], the size of the dedup window is 2(I = 1) at the beginning)
+      //
+      // 1) The initial status is a dummy window[null, a1], then just copy the
+      // right half of the window(End = 0), then slide the window.
+      // Result: [a1], a2, b1, b2 (End points to the element right before ],
+      // after ] is the data of the previous iteration)
+      //
+      // 2) Next window is [a1, a2]. Since a1 == a2, then skip the right half of
+      // the window i.e the duplication happen. Only slide the window.
+      // Result: [a1], a2, b1, b2
+      //
+      // 3) Next window is [a2, b1], copy the right half of the window(b1 is
+      // new) to the End and slide the window.
+      // Result: [a1, b1], b1, b2
+      //
+      // 4) Next window is [b1, b2], same to 2), skip b2.
+      // Result: [a1, b1], b1, b2
+      // After resize, it will be [a, b]
+
+      // Use pointers like below to do comparison inside the window
+      //    [a         b         c        a       b        c]
+      //     |         |         |                |        |
+      // LeftBoundary Left     Right           Left+I    Right+I
+      // A duplication found if Left < LeftBoundry.
+
+      int32_t Right = I - 1;
+      End = I;
+      int32_t LeftBoundary = 0;
+      while (Right + I < Context.size()) {
+        // To avoids scanning a part of a sequence repeatedly, it finds out
+        // the common suffix of two hald in the window. The common suffix will
+        // serve as the common prefix of next possible pair of duplicate
+        // sequences. The non-common part will be ignored and never scanned
+        // again.
+
+        // For example.
+        // Input: [a, b1], c1, b2, c2
+        // I = 2
+        //
+        // 1) For the window [a, b1, c1, b2], non-common-suffix for the right
+        // part is 'c1', copy it and only slide the window 1 step.
+        // Result: [a, b1, c1], b2, c2
+        //
+        // 2) Next window is [b1, c1, b2, c2], so duplication happen.
+        // Result after resize: [a, b, c]
+
+        int32_t Left = Right;
+        while (Left >= LeftBoundary && Context[Left] == Context[Left + I]) {
+          // Find the longest suffix inside the window. When stops, Left points
+          // at the diverging point in the current sequence.
+          Left--;
+        }
+
+        bool DuplicationFound = (Left < LeftBoundary);
+        // Don't need to recheck the data before Right
+        LeftBoundary = Right + 1;
+        if (DuplicationFound) {
+          // Duplication found, skip right half of the window.
+          Right += I;
+        } else {
+          // Copy the non-common-suffix part of the adjacent sequence.
+          std::copy(BeginIter + Right + 1, BeginIter + Left + I + 1,
+                    BeginIter + End);
+          End += Left + I - Right;
+          // Only slide the window by the size of non-common-suffix
+          Right = Left + I;
+        }
+      }
+      // Don't forget the remaining part that's not scanned.
+      std::copy(BeginIter + Right + 1, Context.end(), BeginIter + End);
+      End += Context.size() - Right - 1;
+      I++;
+      Context.resize(End);
+    }
+  }
+
 protected:
   // Lookup or create FunctionSamples for the context
   FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
@@ -109,6 +214,11 @@ private:
                                        const BranchSample &BranchCounters,
                                        ProfiledBinary *Binary);
   void populateInferredFunctionSamples();
+
+public:
+  // Deduplicate adjacent repeated context sequences up to a given sequence
+  // length. -1 means no size limit.
+  static int32_t MaxCompressionSize;
 };
 
 using ProbeCounterMap = std::unordered_map<const PseudoProbe *, uint64_t>;
@@ -127,22 +237,23 @@ private:
                               ProbeCounterMap &ProbeCounter,
                               ProfiledBinary *Binary);
   // Fill in function body samples from probes
-  void populateBodySamplesWithProbes(const RangeSample &RangeCounter,
-                                     StringRef PrefixContextId,
-                                     ProfiledBinary *Binary);
+  void
+  populateBodySamplesWithProbes(const RangeSample &RangeCounter,
+                                SmallVectorImpl<std::string> &ContextStrStack,
+                                ProfiledBinary *Binary);
   // Fill in boundary samples for a call probe
-  void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
-                                         StringRef PrefixContextId,
-                                         ProfiledBinary *Binary);
+  void populateBoundarySamplesWithProbes(
+      const BranchSample &BranchCounter,
+      SmallVectorImpl<std::string> &ContextStrStack, ProfiledBinary *Binary);
   // Helper function to get FunctionSamples for the leaf inlined context
-  FunctionSamples &getFunctionProfileForLeafProbe(
-      StringRef PrefixContextId,
-      SmallVector<std::string, 16> &LeafInlinedContext,
-      const PseudoProbeFuncDesc *LeafFuncDesc);
+  FunctionSamples &
+  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
+                                 const PseudoProbeFuncDesc *LeafFuncDesc);
   // Helper function to get FunctionSamples for the leaf probe
-  FunctionSamples &getFunctionProfileForLeafProbe(StringRef PrefixContextId,
-                                                  const PseudoProbe *LeafProbe,
-                                                  ProfiledBinary *Binary);
+  FunctionSamples &
+  getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
+                                 const PseudoProbe *LeafProbe,
+                                 ProfiledBinary *Binary);
 };
 
 } // end namespace sampleprof
