@@ -4,12 +4,6 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck -check-prefix=CHECK-NVPTX %s
 
-; operator new routines
-declare i8* @_Znwj(i64 )
-; CHECK: declare noalias noundef nonnull i8* @_Znwj(i64) [[INACCESSIBLEMEMONLY_NOFREE_WILLRETURN:#[0-9]+]]
-declare i8* @_Znwm(i64)
-; CHECK: declare noalias noundef nonnull i8* @_Znwm(i64) [[INACCESSIBLEMEMONLY_NOFREE_WILLRETURN]]
-
 declare i32 @__nvvm_reflect(i8*)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
 ; CHECK-NVPTX: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nounwind readnone }
