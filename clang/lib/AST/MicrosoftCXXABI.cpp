@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
@@ -64,6 +65,19 @@ public:
   }
 };
 
+class MSHIPNumberingContext : public MicrosoftNumberingContext {
+  std::unique_ptr<MangleNumberingContext> DeviceCtx;
+
+public:
+  MSHIPNumberingContext(MangleContext *DeviceMangler) {
+    DeviceCtx = createItaniumNumberingContext(DeviceMangler);
+  }
+
+  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
+    return DeviceCtx->getManglingNumber(CallOperator);
+  }
+};
+
 class MicrosoftCXXABI : public CXXABI {
   ASTContext &Context;
   llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> RecordToCopyCtor;
@@ -73,8 +87,20 @@ class MicrosoftCXXABI : public CXXABI {
   llvm::SmallDenseMap<TagDecl *, TypedefNameDecl *>
       UnnamedTagDeclToTypedefNameDecl;
 
+  // MangleContext for device numbering context, which is based on Itanium C++
+  // ABI.
+  std::unique_ptr<MangleContext> DeviceMangler;
+
 public:
-  MicrosoftCXXABI(ASTContext &Ctx) : Context(Ctx) { }
+  MicrosoftCXXABI(ASTContext &Ctx) : Context(Ctx) {
+    if (Context.getLangOpts().CUDA && Context.getAuxTargetInfo()) {
+      assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+             Context.getAuxTargetInfo()->getCXXABI().isItaniumFamily() &&
+             "Unexpected combination of C++ ABIs.");
+      DeviceMangler.reset(
+          Context.createMangleContext(Context.getAuxTargetInfo()));
+    }
+  }
 
   MemberPointerInfo
   getMemberPointerInfo(const MemberPointerType *MPT) const override;
@@ -133,6 +159,10 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
+    if (Context.getLangOpts().CUDA && Context.getAuxTargetInfo()) {
+      assert(DeviceMangler && "Missing device mangler");
+      return std::make_unique<MSHIPNumberingContext>(DeviceMangler.get());
+    }
     return std::make_unique<MicrosoftNumberingContext>();
   }
 };
@@ -266,4 +296,3 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
 CXXABI *clang::CreateMicrosoftCXXABI(ASTContext &Ctx) {
   return new MicrosoftCXXABI(Ctx);
 }
-
