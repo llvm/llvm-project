@@ -418,12 +418,12 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
       [&ORE](SmallVectorImpl<BasicBlock *> &BlockList) -> BasicBlock * {
     BasicBlock *ExitBlock = nullptr;
     for (auto *Block : BlockList) {
-      for (auto SI = succ_begin(Block); SI != succ_end(Block); ++SI) {
-        if (!is_contained(BlockList, *SI)) {
+      for (BasicBlock *Succ : successors(Block)) {
+        if (!is_contained(BlockList, Succ)) {
           if (ExitBlock) {
             ORE.emit([&]() {
               return OptimizationRemarkMissed(DEBUG_TYPE, "MultiExitRegion",
-                                              &SI->front())
+                                              &Succ->front())
                      << "Region dominated by "
                      << ore::NV("Block", BlockList.front()->getName())
                      << " has more than one region exit edge.";
