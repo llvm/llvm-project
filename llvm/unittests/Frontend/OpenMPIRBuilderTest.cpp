@@ -1160,6 +1160,99 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+
+  Type *LCTy = F->getArg(0)->getType();
+  Constant *One = ConstantInt::get(LCTy, 1);
+  Constant *Two = ConstantInt::get(LCTy, 2);
+  Value *OuterTripCount =
+      Builder.CreateAdd(F->getArg(0), Two, "tripcount.outer");
+  Value *InnerTripCount =
+      Builder.CreateAdd(F->getArg(0), One, "tripcount.inner");
+
+  // Fix an insertion point for ComputeIP.
+  BasicBlock *LoopNextEnter =
+      BasicBlock::Create(M->getContext(), "loopnest.enter", F,
+                         Builder.GetInsertBlock()->getNextNode());
+  BranchInst *EnterBr = Builder.CreateBr(LoopNextEnter);
+  InsertPointTy ComputeIP{EnterBr->getParent(), EnterBr->getIterator()};
+
+  Builder.SetInsertPoint(LoopNextEnter);
+  OpenMPIRBuilder::LocationDescription OuterLoc(Builder.saveIP(), DL);
+
+  CanonicalLoopInfo *InnerLoop = nullptr;
+  CallInst *InbetweenLead = nullptr;
+  CallInst *InbetweenTrail = nullptr;
+  CallInst *Call = nullptr;
+  auto OuterLoopBodyGenCB = [&](InsertPointTy OuterCodeGenIP, Value *OuterLC) {
+    Builder.restoreIP(OuterCodeGenIP);
+    InbetweenLead =
+        createPrintfCall(Builder, "In-between lead i=%d\\n", {OuterLC});
+
+    auto InnerLoopBodyGenCB = [&](InsertPointTy InnerCodeGenIP,
+                                  Value *InnerLC) {
+      Builder.restoreIP(InnerCodeGenIP);
+      Call = createPrintfCall(Builder, "body i=%d j=%d\\n", {OuterLC, InnerLC});
+    };
+    InnerLoop = OMPBuilder.createCanonicalLoop(
+        Builder.saveIP(), InnerLoopBodyGenCB, InnerTripCount, "inner");
+
+    Builder.restoreIP(InnerLoop->getAfterIP());
+    InbetweenTrail =
+        createPrintfCall(Builder, "In-between trail i=%d\\n", {OuterLC});
+  };
+  CanonicalLoopInfo *OuterLoop = OMPBuilder.createCanonicalLoop(
+      OuterLoc, OuterLoopBodyGenCB, OuterTripCount, "outer");
+
+  // Finish the function.
+  Builder.restoreIP(OuterLoop->getAfterIP());
+  Builder.CreateRetVoid();
+
+  CanonicalLoopInfo *Collapsed =
+      OMPBuilder.collapseLoops(DL, {OuterLoop, InnerLoop}, ComputeIP);
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // Verify control flow and BB order.
+  BasicBlock *RefOrder[] = {
+      Collapsed->getPreheader(),   Collapsed->getHeader(),
+      Collapsed->getCond(),        Collapsed->getBody(),
+      InbetweenLead->getParent(),  Call->getParent(),
+      InbetweenTrail->getParent(), Collapsed->getLatch(),
+      Collapsed->getExit(),        Collapsed->getAfter(),
+  };
+  EXPECT_TRUE(verifyDFSOrder(F, RefOrder));
+  EXPECT_TRUE(verifyListOrder(F, RefOrder));
+
+  // Verify the total trip count.
+  auto *TripCount = cast<MulOperator>(Collapsed->getTripCount());
+  EXPECT_EQ(TripCount->getOperand(0), OuterTripCount);
+  EXPECT_EQ(TripCount->getOperand(1), InnerTripCount);
+
+  // Verify the changed indvar.
+  auto *OuterIV = cast<BinaryOperator>(Call->getOperand(1));
+  EXPECT_EQ(OuterIV->getOpcode(), Instruction::UDiv);
+  EXPECT_EQ(OuterIV->getParent(), Collapsed->getBody());
+  EXPECT_EQ(OuterIV->getOperand(1), InnerTripCount);
+  EXPECT_EQ(OuterIV->getOperand(0), Collapsed->getIndVar());
+
+  auto *InnerIV = cast<BinaryOperator>(Call->getOperand(2));
+  EXPECT_EQ(InnerIV->getOpcode(), Instruction::URem);
+  EXPECT_EQ(InnerIV->getParent(), Collapsed->getBody());
+  EXPECT_EQ(InnerIV->getOperand(0), Collapsed->getIndVar());
+  EXPECT_EQ(InnerIV->getOperand(1), InnerTripCount);
+
+  EXPECT_EQ(InbetweenLead->getOperand(1), OuterIV);
+  EXPECT_EQ(InbetweenTrail->getOperand(1), OuterIV);
+}
+
 TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
