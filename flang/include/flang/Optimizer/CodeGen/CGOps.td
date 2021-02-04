@@ -91,7 +91,8 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
     be converted to an extended embox. This op will have the following sets of
     arguments.
 
-       - memref: The memory reference of the array's data.
+       - memref: The memory reference of the array's data. It can be a fir.box if
+         the underlying data is not contiguous.
        - shape: A vector that is the runtime shape of the underlying array.
        - shift: A vector that is the runtime origin of the first element.
          The default is a vector of the value 1.
@@ -102,12 +103,13 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
        - LEN type parameters: A vector of runtime LEN type parameters that
          describe an correspond to the elemental derived type.
 
-    The memref, shape, and indices arguments are mandatory. The rest are
-    optional.
+    The memref and indices arguments are mandatory.
+    The shape argument is mandatory if the memref is not a box, and should be
+    omitted otherwise. The rest of the arguments are optional.
   }];
 
   let arguments = (ins
-    AnyReferenceLike:$memref,
+    AnyRefOrBox:$memref,
     Variadic<AnyIntegerType>:$shape,
     Variadic<AnyIntegerType>:$shift,
     Variadic<AnyIntegerType>:$slice,
@@ -124,7 +126,7 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
   }];
 
   let extraClassDeclaration = [{
-    unsigned getRank() { return shape().size(); }
+    unsigned getRank();
   }];
 }
 
