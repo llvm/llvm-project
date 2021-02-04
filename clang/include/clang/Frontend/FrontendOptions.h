@@ -378,6 +378,7 @@ public:
   std::string ARCMTMigrateReportOut;
 
   std::string IndexStorePath;
+  std::string IndexUnitOutputPath;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
