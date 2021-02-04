@@ -800,6 +800,30 @@ public:
     return true;
   }
 
+  bool TraverseIfStmt(IfStmt *S) {
+    bool Result = [&, this]() {
+      if (S->getInit() && !TraverseStmt(S->getInit())) {
+        return false;
+      }
+      // In cases where the condition is an initialized declaration in a
+      // statement, we want to preserve the declaration and ignore the
+      // implicit condition expression in the syntax tree.
+      if (S->hasVarStorage()) {
+        if (!TraverseStmt(S->getConditionVariableDeclStmt()))
+          return false;
+      } else if (S->getCond() && !TraverseStmt(S->getCond()))
+        return false;
+
+      if (S->getThen() && !TraverseStmt(S->getThen()))
+        return false;
+      if (S->getElse() && !TraverseStmt(S->getElse()))
+        return false;
+      return true;
+    }();
+    WalkUpFromIfStmt(S);
+    return Result;
+  }
+
   bool TraverseCXXForRangeStmt(CXXForRangeStmt *S) {
     // We override to traverse range initializer as VarDecl.
     // RAV traverses it as a statement, we produce invalid node kinds in that
@@ -1426,6 +1450,10 @@ public:
 
   bool WalkUpFromIfStmt(IfStmt *S) {
     Builder.markChildToken(S->getIfLoc(), syntax::NodeRole::IntroducerKeyword);
+    Stmt *ConditionStatement = S->getCond();
+    if (S->hasVarStorage())
+      ConditionStatement = S->getConditionVariableDeclStmt();
+    Builder.markStmtChild(ConditionStatement, syntax::NodeRole::Condition);
     Builder.markStmtChild(S->getThen(), syntax::NodeRole::ThenStatement);
     Builder.markChildToken(S->getElseLoc(), syntax::NodeRole::ElseKeyword);
     Builder.markStmtChild(S->getElse(), syntax::NodeRole::ElseStatement);
