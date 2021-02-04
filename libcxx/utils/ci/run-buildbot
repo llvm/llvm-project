@@ -8,6 +8,7 @@
 #===----------------------------------------------------------------------===##
 
 set -ex
+set -o pipefail
 
 PROGNAME="$(basename "${0}")"
 
@@ -105,6 +106,21 @@ function check-cxx-benchmarks() {
 }
 
 case "${BUILDER}" in
+check-format)
+    clean
+    echo "+++ Checking formatting"
+    # We need to set --extensions so that clang-format checks extensionless files.
+    mkdir -p ${BUILD_DIR}
+    git-clang-format \
+        --binary /usr/bin/clang-format --diff \
+        --extensions ',h,hh,hpp,hxx,c,cc,cxx,cpp' HEAD~1 \
+        -- \
+            libcxx/{benchmarks,include,src,test} \
+            libcxxabi/{fuzz,include,src,test} \
+        | tee ${BUILD_DIR}/clang-format.patch
+    # Check if the diff is empty, fail otherwise.
+    ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
+;;
 generic-cxx03)
     export CC=clang
     export CXX=clang++
