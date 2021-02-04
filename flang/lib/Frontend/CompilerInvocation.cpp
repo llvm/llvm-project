@@ -162,6 +162,40 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
 
     opts.inputs_.emplace_back(std::move(inputs[i]), ik);
   }
+
+  // Set fortranForm_ based on options -ffree-form and -ffixed-form.
+  if (const auto *arg = args.getLastArg(clang::driver::options::OPT_ffixed_form,
+          clang::driver::options::OPT_ffree_form)) {
+    opts.fortranForm_ =
+        arg->getOption().matches(clang::driver::options::OPT_ffixed_form)
+        ? FortranForm::FixedForm
+        : FortranForm::FreeForm;
+  }
+
+  // Set fixedFormColumns_ based on -ffixed-line-length=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::driver::options::OPT_ffixed_line_length_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    std::int64_t columns = -1;
+    if (argValue == "none") {
+      columns = 0;
+    } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
+      columns = -1;
+    }
+    if (columns < 0) {
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getOption().getName() << arg->getValue()
+          << "value must be 'none' or a non-negative integer";
+    } else if (columns == 0) {
+      opts.fixedFormColumns_ = 1000000;
+    } else if (columns < 7) {
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getOption().getName() << arg->getValue()
+          << "value must be at least seven";
+    } else {
+      opts.fixedFormColumns_ = columns;
+    }
+  }
   return dashX;
 }
 
@@ -278,7 +312,14 @@ void CompilerInvocation::SetDefaultFortranOpts() {
 
 void CompilerInvocation::setFortranOpts() {
   auto &fortranOptions = fortranOpts();
+  const auto &frontendOptions = frontendOpts();
   const auto &preprocessorOptions = preprocessorOpts();
+
+  if (frontendOptions.fortranForm_ != FortranForm::Unknown) {
+    fortranOptions.isFixedForm =
+        frontendOptions.fortranForm_ == FortranForm::FixedForm;
+  }
+  fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns_;
 
   collectMacroDefinitions(preprocessorOptions, fortranOptions);
 
