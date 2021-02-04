@@ -39,32 +39,38 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
 
+def RVVBaseAddr : ComplexPattern<iPTR, 1, "SelectRVVBaseAddr">;
+
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
 
 multiclass VPatUSLoadStoreSDNode<LLVMType type,
-                                 LLVMType mask_type,
                                  int sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
-                                 RegisterClass reg_rs1,
                                  VReg reg_class>
 {
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
-  def : Pat<(type (load reg_rs1:$rs1)),
-            (load_instr reg_rs1:$rs1, avl, sew)>;
+  def : Pat<(type (load RVVBaseAddr:$rs1)),
+            (load_instr RVVBaseAddr:$rs1, avl, sew)>;
   // Store
-  def : Pat<(store type:$rs2, reg_rs1:$rs1),
-            (store_instr reg_class:$rs2, reg_rs1:$rs1, avl, sew)>;
+  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
+            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1, avl, sew)>;
 }
 
-multiclass VPatUSLoadStoreSDNodes<RegisterClass reg_rs1> {
-  foreach vti = AllVectors in
-    defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.Mask, vti.SEW, vti.LMul,
-                                    vti.AVL, reg_rs1, vti.RegClass>;
+multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
+{
+  defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
+  defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#m.BX);
+  // Load
+  def : Pat<(m.Mask (load RVVBaseAddr:$rs1)),
+            (load_instr RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  // Store
+  def : Pat<(store m.Mask:$rs2, RVVBaseAddr:$rs1),
+            (store_instr VR:$rs2, RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
 }
 
 class VPatBinarySDNode_VV<SDNode vop,
@@ -356,8 +362,11 @@ multiclass VPatNConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
 let Predicates = [HasStdExtV] in {
 
 // 7.4. Vector Unit-Stride Instructions
-defm "" : VPatUSLoadStoreSDNodes<GPR>;
-defm "" : VPatUSLoadStoreSDNodes<AddrFI>;
+foreach vti = AllVectors in
+  defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.SEW, vti.LMul,
+                                  vti.AVL, vti.RegClass>;
+foreach mti = AllMasks in
+  defm "" : VPatUSLoadStoreMaskSDNode<mti>;
 
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinarySDNode_VV_VX_VI<add, "PseudoVADD">;
@@ -442,8 +451,8 @@ defm "" : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH">;
 defm "" : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU">;
 
 // 12.11. Vector Integer Divide Instructions
-defm "" : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIVU">;
-defm "" : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIV">;
+defm "" : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIVU">;
+defm "" : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV">;
 defm "" : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
 defm "" : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
 

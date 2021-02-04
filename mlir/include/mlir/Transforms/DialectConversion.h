@@ -103,8 +103,8 @@ public:
   ///       conversion function to perform the conversion.
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<0>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<0>>
   void addConversion(FnT &&callback) {
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
@@ -124,8 +124,8 @@ public:
   ///
   /// This method registers a materialization that will be called when
   /// converting an illegal block argument type, to a legal type.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
@@ -133,16 +133,16 @@ public:
   /// This method registers a materialization that will be called when
   /// converting a legal type to an illegal source type. This is used when
   /// conversions to an illegal type must persist beyond the main conversion.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
   /// converting type from an illegal, or source, type to a legal type.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));

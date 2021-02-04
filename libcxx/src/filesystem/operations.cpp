@@ -455,10 +455,6 @@ perms posix_get_perms(const StatT& st) noexcept {
   return static_cast<perms>(st.st_mode) & perms::mask;
 }
 
-::mode_t posix_convert_perms(perms prms) {
-  return static_cast< ::mode_t>(prms & perms::mask);
-}
-
 file_status create_file_status(error_code& m_ec, path const& p,
                                const StatT& path_stat, error_code* ec) {
   if (ec)
@@ -530,7 +526,7 @@ bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
 }
 
 bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
-  if (::fchmod(fd.fd, st.st_mode) == -1) {
+  if (detail::fchmod(fd.fd, st.st_mode) == -1) {
     ec = capture_errno();
     return true;
   }
@@ -636,20 +632,20 @@ path __canonical(path const& orig_p, error_code* ec) {
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
   path p = __do_absolute(orig_p, &cwd, ec);
-#if defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112
-  std::unique_ptr<char, decltype(&::free)>
-    hold(::realpath(p.c_str(), nullptr), &::free);
+#if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
+  std::unique_ptr<path::value_type, decltype(&::free)>
+    hold(detail::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
     return err.report(capture_errno());
   return {hold.get()};
 #else
   #if defined(__MVS__) && !defined(PATH_MAX)
-    char buff[ _XOPEN_PATH_MAX + 1 ];
+    path::value_type buff[ _XOPEN_PATH_MAX + 1 ];
   #else
-    char buff[PATH_MAX + 1];
+    path::value_type buff[PATH_MAX + 1];
   #endif
-  char* ret;
-  if ((ret = ::realpath(p.c_str(), buff)) == nullptr)
+  path::value_type* ret;
+  if ((ret = detail::realpath(p.c_str(), buff)) == nullptr)
     return err.report(capture_errno());
   return {ret};
 #endif
@@ -1022,15 +1018,32 @@ void __create_symlink(path const& from, path const& to, error_code* ec) {
 path __current_path(error_code* ec) {
   ErrorHandler<path> err("current_path", ec);
 
+#if defined(_LIBCPP_WIN32API)
+  // Common extension outside of POSIX getcwd() spec, without needing to
+  // preallocate a buffer. Also supported by a number of other POSIX libcs.
+  int size = 0;
+  path::value_type* ptr = nullptr;
+  typedef decltype(&::free) Deleter;
+  Deleter deleter = &::free;
+#else
   auto size = ::pathconf(".", _PC_PATH_MAX);
   _LIBCPP_ASSERT(size >= 0, "pathconf returned a 0 as max size");
 
-  auto buff = unique_ptr<char[]>(new char[size + 1]);
-  char* ret;
-  if ((ret = ::getcwd(buff.get(), static_cast<size_t>(size))) == nullptr)
+  auto buff = unique_ptr<path::value_type[]>(new path::value_type[size + 1]);
+  path::value_type* ptr = buff.get();
+
+  // Preallocated buffer, don't free the buffer in the second unique_ptr
+  // below.
+  struct Deleter { void operator()(void*) const {} };
+  Deleter deleter;
+#endif
+
+  unique_ptr<path::value_type, Deleter> hold(detail::getcwd(ptr, size),
+                                             deleter);
+  if (hold.get() == nullptr)
     return err.report(capture_errno(), "call to getcwd failed");
 
-  return {buff.get()};
+  return {hold.get()};
 }
 
 void __current_path(const path& p, error_code* ec) {
@@ -1195,11 +1208,11 @@ void __permissions(const path& p, perms prms, perm_options opts,
     else if (remove_perms)
       prms = st.permissions() & ~prms;
   }
-  const auto real_perms = detail::posix_convert_perms(prms);
+  const auto real_perms = static_cast<detail::ModeT>(prms & perms::mask);
 
 #if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
   const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;
-  if (::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
+  if (detail::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
     return err.report(capture_errno());
   }
 #else
@@ -1214,21 +1227,25 @@ void __permissions(const path& p, perms prms, perm_options opts,
 path __read_symlink(const path& p, error_code* ec) {
   ErrorHandler<path> err("read_symlink", ec, &p);
 
-#ifdef PATH_MAX
+#if defined(PATH_MAX) || defined(MAX_SYMLINK_SIZE)
   struct NullDeleter { void operator()(void*) const {} };
+#ifdef MAX_SYMLINK_SIZE
+  const size_t size = MAX_SYMLINK_SIZE + 1;
+#else
   const size_t size = PATH_MAX + 1;
-  char stack_buff[size];
-  auto buff = std::unique_ptr<char[], NullDeleter>(stack_buff);
+#endif
+  path::value_type stack_buff[size];
+  auto buff = std::unique_ptr<path::value_type[], NullDeleter>(stack_buff);
 #else
   StatT sb;
   if (detail::lstat(p.c_str(), &sb) == -1) {
     return err.report(capture_errno());
   }
   const size_t size = sb.st_size + 1;
-  auto buff = unique_ptr<char[]>(new char[size]);
+  auto buff = unique_ptr<path::value_type[]>(new path::value_type[size]);
 #endif
-  ::ssize_t ret;
-  if ((ret = ::readlink(p.c_str(), buff.get(), size)) == -1)
+  detail::SSizeT ret;
+  if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
     return err.report(capture_errno());
   _LIBCPP_ASSERT(ret > 0, "TODO");
   if (static_cast<size_t>(ret) >= size)
@@ -1301,8 +1318,8 @@ void __resize_file(const path& p, uintmax_t size, error_code* ec) {
 space_info __space(const path& p, error_code* ec) {
   ErrorHandler<void> err("space", ec, &p);
   space_info si;
-  struct statvfs m_svfs = {};
-  if (::statvfs(p.c_str(), &m_svfs) == -1) {
+  detail::StatVFS m_svfs = {};
+  if (detail::statvfs(p.c_str(), &m_svfs) == -1) {
     err.report(capture_errno());
     si.capacity = si.free = si.available = static_cast<uintmax_t>(-1);
     return si;

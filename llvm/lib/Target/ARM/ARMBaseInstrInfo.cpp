@@ -5391,7 +5391,9 @@ bool ARMBaseInstrInfo::getInsertSubregLikeInputs(
 
   switch (MI.getOpcode()) {
   case ARM::VSETLNi32:
+  case ARM::MVE_VMOV_to_lane_32:
     // dX = VSETLNi32 dY, rZ, imm
+    // qX = MVE_VMOV_to_lane_32 qY, rZ, imm
     const MachineOperand &MOBaseReg = MI.getOperand(1);
     const MachineOperand &MOInsertedReg = MI.getOperand(2);
     if (MOInsertedReg.isUndef())
@@ -5402,7 +5404,7 @@ bool ARMBaseInstrInfo::getInsertSubregLikeInputs(
 
     InsertedReg.Reg = MOInsertedReg.getReg();
     InsertedReg.SubReg = MOInsertedReg.getSubReg();
-    InsertedReg.SubIdx = MOIndex.getImm() == 0 ? ARM::ssub_0 : ARM::ssub_1;
+    InsertedReg.SubIdx = ARM::ssub_0 + MOIndex.getImm();
     return true;
   }
   llvm_unreachable("Target dependent opcode missing");

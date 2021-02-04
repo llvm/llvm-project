@@ -206,7 +206,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this operation.",
-      "LogicalResult", "verifySymbolUses",
+      "::mlir::LogicalResult", "verifySymbolUses",
       (ins "::mlir::SymbolTableCollection &":$symbolTable)
     >,
   ];

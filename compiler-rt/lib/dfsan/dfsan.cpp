@@ -456,6 +456,17 @@ static void InitializeFlags() {
   if (common_flags()->help) parser.PrintFlagDescriptions();
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE
+void dfsan_clear_arg_tls(uptr offset, uptr size) {
+  internal_memset((void *)((uptr)__dfsan_arg_tls + offset), 0, size);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void dfsan_clear_thread_local_state() {
+  internal_memset(__dfsan_arg_tls, 0, sizeof(__dfsan_arg_tls));
+  internal_memset(__dfsan_retval_tls, 0, sizeof(__dfsan_retval_tls));
+}
+
 static void InitializePlatformEarly() {
   AvoidCVE_2016_2143();
 #ifdef DFSAN_RUNTIME_VMA

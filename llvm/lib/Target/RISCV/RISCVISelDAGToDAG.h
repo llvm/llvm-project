@@ -44,6 +44,7 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFI(SDValue Addr, SDValue &Base);
+  bool SelectRVVBaseAddr(SDValue Addr, SDValue &Base);
 
   bool isUnneededShiftMask(SDNode *N, unsigned Width) const;
 

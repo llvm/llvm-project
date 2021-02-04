@@ -61,6 +61,10 @@ tools = [
     'mlir-capi-ir-test',
     'mlir-capi-pass-test',
     'mlir-edsc-builder-api-test',
+    'mlir-cpu-runner',
+    'mlir-linalg-ods-gen',
+    'mlir-reduce',
+    'mlir-sdbm-api-test',
 ]
 
 # The following tools are optional

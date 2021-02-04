@@ -23,7 +23,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         if (auto dim64{GetInt64Arg(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_en_US,
+                                   "rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -78,7 +78,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (auto dim64{GetInt64Arg(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_en_US,
+                                   "rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -95,8 +95,11 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           takeBoundsFromShape = false;
           if (dim) {
-            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank) {
-              return Expr<T>{-1};
+            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank - 1) {
+              context.messages().Say("DIM=%jd dimension is out of range for "
+                                     "rank-%d assumed-size array"_err_en_US,
+                  rank, rank);
+              return MakeInvalidIntrinsic<T>(std::move(funcRef));
             } else if (auto ub{GetUpperBound(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
@@ -595,12 +598,11 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "storage_size") { // in bits
-    if (const auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-      if (auto type{expr->GetType()}) {
-        if (auto bytes{type->MeasureSizeInBytes(context, true)}) {
-          return Expr<T>{
-              Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
-        }
+    if (auto info{
+            characteristics::TypeAndShape::Characterize(args[0], context)}) {
+      if (auto bytes{info->MeasureElementSizeInBytes(context, true)}) {
+        return Expr<T>{
+            Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
       }
     }
   } else if (name == "ubound") {

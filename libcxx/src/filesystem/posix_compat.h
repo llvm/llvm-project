@@ -32,12 +32,43 @@
 # define NOMINMAX
 # include <windows.h>
 # include <io.h>
+# include <winioctl.h>
 #else
 # include <unistd.h>
 # include <sys/stat.h>
 # include <sys/statvfs.h>
 #endif
 #include <time.h>
+
+#if defined(_LIBCPP_WIN32API)
+// This struct isn't defined in the normal Windows SDK, but only in the
+// Windows Driver Kit.
+struct LIBCPP_REPARSE_DATA_BUFFER {
+  unsigned long  ReparseTag;
+  unsigned short ReparseDataLength;
+  unsigned short Reserved;
+  union {
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      unsigned long  Flags;
+      wchar_t        PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      wchar_t        PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      unsigned char DataBuffer[1];
+    } GenericReparseBuffer;
+  };
+};
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -277,6 +308,175 @@ template <class... Args> int open(const wchar_t *filename, Args... args) {
 }
 int close(int fd) { return _close(fd); }
 int chdir(const wchar_t *path) { return _wchdir(path); }
+
+struct StatVFS {
+  uint64_t f_frsize;
+  uint64_t f_blocks;
+  uint64_t f_bfree;
+  uint64_t f_bavail;
+};
+
+int statvfs(const wchar_t *p, StatVFS *buf) {
+  path dir = p;
+  while (true) {
+    error_code local_ec;
+    const file_status st = status(dir, local_ec);
+    if (!exists(st) || is_directory(st))
+      break;
+    path parent = dir.parent_path();
+    if (parent == dir) {
+      errno = ENOENT;
+      return -1;
+    }
+    dir = parent;
+  }
+  ULARGE_INTEGER free_bytes_available_to_caller, total_number_of_bytes,
+      total_number_of_free_bytes;
+  if (!GetDiskFreeSpaceExW(dir.c_str(), &free_bytes_available_to_caller,
+                           &total_number_of_bytes, &total_number_of_free_bytes))
+    return set_errno();
+  buf->f_frsize = 1;
+  buf->f_blocks = total_number_of_bytes.QuadPart;
+  buf->f_bfree = total_number_of_free_bytes.QuadPart;
+  buf->f_bavail = free_bytes_available_to_caller.QuadPart;
+  return 0;
+}
+
+wchar_t *getcwd(wchar_t *buff, size_t size) { return _wgetcwd(buff, size); }
+
+wchar_t *realpath(const wchar_t *path, wchar_t *resolved_name) {
+  // Only expected to be used with us allocating the buffer.
+  _LIBCPP_ASSERT(resolved_name == nullptr,
+                 "Windows realpath() assumes a null resolved_name");
+
+  WinHandle h(path, FILE_READ_ATTRIBUTES, 0);
+  if (!h) {
+    set_errno();
+    return nullptr;
+  }
+  size_t buff_size = MAX_PATH + 10;
+  std::unique_ptr<wchar_t, decltype(&::free)> buff(
+      static_cast<wchar_t *>(malloc(buff_size * sizeof(wchar_t))), &::free);
+  DWORD retval = GetFinalPathNameByHandleW(
+      h, buff.get(), buff_size, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  if (retval > buff_size) {
+    buff_size = retval;
+    buff.reset(static_cast<wchar_t *>(malloc(buff_size * sizeof(wchar_t))));
+    retval = GetFinalPathNameByHandleW(h, buff.get(), buff_size,
+                                       FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  }
+  if (!retval) {
+    set_errno();
+    return nullptr;
+  }
+  wchar_t *ptr = buff.get();
+  if (!wcsncmp(ptr, L"\\\\?\\", 4)) {
+    if (ptr[5] == ':') { // \\?\X: -> X:
+      memmove(&ptr[0], &ptr[4], (wcslen(&ptr[4]) + 1) * sizeof(wchar_t));
+    } else if (!wcsncmp(&ptr[4], L"UNC\\", 4)) { // \\?\UNC\server -> \\server
+      wcscpy(&ptr[0], L"\\\\");
+      memmove(&ptr[2], &ptr[8], (wcslen(&ptr[8]) + 1) * sizeof(wchar_t));
+    }
+  }
+  return buff.release();
+}
+
+#define AT_FDCWD -1
+#define AT_SYMLINK_NOFOLLOW 1
+using ModeT = int;
+
+int fchmod_handle(HANDLE h, int perms) {
+  FILE_BASIC_INFO basic;
+  if (!GetFileInformationByHandleEx(h, FileBasicInfo, &basic, sizeof(basic)))
+    return set_errno();
+  DWORD orig_attributes = basic.FileAttributes;
+  basic.FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+  if ((perms & 0222) == 0)
+    basic.FileAttributes |= FILE_ATTRIBUTE_READONLY;
+  if (basic.FileAttributes != orig_attributes &&
+      !SetFileInformationByHandle(h, FileBasicInfo, &basic, sizeof(basic)))
+    return set_errno();
+  return 0;
+}
+
+int fchmodat(int fd, const wchar_t *path, int perms, int flag) {
+  DWORD attributes = GetFileAttributesW(path);
+  if (attributes == INVALID_FILE_ATTRIBUTES)
+    return set_errno();
+  if (attributes & FILE_ATTRIBUTE_REPARSE_POINT &&
+      !(flag & AT_SYMLINK_NOFOLLOW)) {
+    // If the file is a symlink, and we are supposed to operate on the target
+    // of the symlink, we need to open a handle to it, without the
+    // FILE_FLAG_OPEN_REPARSE_POINT flag, to open the destination of the
+    // symlink, and operate on it via the handle.
+    detail::WinHandle h(path, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES, 0);
+    if (!h)
+      return set_errno();
+    return fchmod_handle(h, perms);
+  } else {
+    // For a non-symlink, or if operating on the symlink itself instead of
+    // its target, we can use SetFileAttributesW, saving a few calls.
+    DWORD orig_attributes = attributes;
+    attributes &= ~FILE_ATTRIBUTE_READONLY;
+    if ((perms & 0222) == 0)
+      attributes |= FILE_ATTRIBUTE_READONLY;
+    if (attributes != orig_attributes && !SetFileAttributesW(path, attributes))
+      return set_errno();
+  }
+  return 0;
+}
+
+int fchmod(int fd, int perms) {
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  return fchmod_handle(h, perms);
+}
+
+#define MAX_SYMLINK_SIZE MAXIMUM_REPARSE_DATA_BUFFER_SIZE
+using SSizeT = ::int64_t;
+
+SSizeT readlink(const wchar_t *path, wchar_t *ret_buf, size_t bufsize) {
+  uint8_t buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+  detail::WinHandle h(path, FILE_READ_ATTRIBUTES, FILE_FLAG_OPEN_REPARSE_POINT);
+  if (!h)
+    return set_errno();
+  DWORD out;
+  if (!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, nullptr, 0, buf, sizeof(buf),
+                       &out, 0))
+    return set_errno();
+  const auto *reparse = reinterpret_cast<LIBCPP_REPARSE_DATA_BUFFER *>(buf);
+  size_t path_buf_offset = offsetof(LIBCPP_REPARSE_DATA_BUFFER,
+                                    SymbolicLinkReparseBuffer.PathBuffer[0]);
+  if (out < path_buf_offset) {
+    errno = EINVAL;
+    return -1;
+  }
+  if (reparse->ReparseTag != IO_REPARSE_TAG_SYMLINK) {
+    errno = EINVAL;
+    return -1;
+  }
+  const auto &symlink = reparse->SymbolicLinkReparseBuffer;
+  unsigned short name_offset, name_length;
+  if (symlink.PrintNameLength == 0) {
+    name_offset = symlink.SubstituteNameOffset;
+    name_length = symlink.SubstituteNameLength;
+  } else {
+    name_offset = symlink.PrintNameOffset;
+    name_length = symlink.PrintNameLength;
+  }
+  // name_offset/length are expressed in bytes, not in wchar_t
+  if (path_buf_offset + name_offset + name_length > out) {
+    errno = EINVAL;
+    return -1;
+  }
+  if (name_length / sizeof(wchar_t) > bufsize) {
+    errno = ENOMEM;
+    return -1;
+  }
+  memcpy(ret_buf, &symlink.PathBuffer[name_offset / sizeof(wchar_t)],
+         name_length);
+  return name_length / sizeof(wchar_t);
+}
+
 #else
 int symlink_file(const char *oldname, const char *newname) {
   return ::symlink(oldname, newname);
@@ -286,18 +486,28 @@ int symlink_dir(const char *oldname, const char *newname) {
 }
 using ::chdir;
 using ::close;
+using ::fchmod;
+using ::fchmodat;
 using ::fstat;
 using ::ftruncate;
+using ::getcwd;
 using ::link;
 using ::lstat;
 using ::mkdir;
 using ::open;
+using ::readlink;
+using ::realpath;
 using ::remove;
 using ::rename;
 using ::stat;
+using ::statvfs;
 using ::truncate;
 
 #define O_BINARY 0
+
+using StatVFS = struct statvfs;
+using ModeT = ::mode_t;
+using SSizeT = ::ssize_t;
 
 #endif
 

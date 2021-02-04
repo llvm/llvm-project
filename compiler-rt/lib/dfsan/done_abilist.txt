@@ -214,6 +214,7 @@ fun:ctime_r=custom
 fun:inet_pton=custom
 fun:localtime_r=custom
 fun:memcpy=custom
+fun:memmove=custom
 fun:memset=custom
 fun:strcpy=custom
 fun:strdup=custom

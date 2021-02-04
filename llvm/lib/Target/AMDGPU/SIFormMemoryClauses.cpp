@@ -64,10 +64,11 @@ private:
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
-  bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
+  bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT,
+                     bool IsVMEMClause);
   void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
-                      GCNDownwardRPTracker &RPT);
+                      GCNDownwardRPTracker &RPT, bool IsVMEMClause);
 
   const GCNSubtarget *ST;
   const SIRegisterInfo *TRI;
@@ -243,21 +244,33 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI, const RegUse &Defs,
 // Function returns false if pressure would hit the limit if instruction is
 // bundled into a memory clause.
 bool SIFormMemoryClauses::checkPressure(const MachineInstr &MI,
-                                        GCNDownwardRPTracker &RPT) {
+                                        GCNDownwardRPTracker &RPT,
+                                        bool IsVMEMClause) {
+  unsigned OldOccupancy = RPT.getCurrentOccupancy(*ST);
+
   // NB: skip advanceBeforeNext() call. Since all defs will be marked
   // early-clobber they will all stay alive at least to the end of the
-  // clause. Therefor we should not decrease pressure even if load
-  // pointer becomes dead and could otherwise be reused for destination.
+  // clause. Therefore we should not decrease pressure even if load pointer
+  // becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
-  GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
-  if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum() <= MaxVGPRs &&
-      MaxPressure.getSGPRNum() <= MaxSGPRs) {
-    LastRecordedOccupancy = Occupancy;
-    return true;
+
+  unsigned NewOccupancy = RPT.getCurrentOccupancy(*ST);
+  if (NewOccupancy < OldOccupancy &&
+      NewOccupancy < MFI->getMinAllowedOccupancy())
+    return false;
+
+  // Scalar loads/clauses cannot def VGPRs, and vector loads/clauses cannot def
+  // SGPRs (ignoring artificial implicit operands).
+  if (IsVMEMClause) {
+    if (RPT.getCurrentNumVGPR() > MaxVGPRs)
+      return false;
+  } else {
+    if (RPT.getCurrentNumSGPR() > MaxSGPRs)
+      return false;
   }
-  return false;
+
+  LastRecordedOccupancy = NewOccupancy;
+  return true;
 }
 
 // Collect register defs and uses along with their lane masks and states.
@@ -289,13 +302,14 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
 // Check register def/use conflicts, occupancy limits and collect def/use maps.
 // Return true if instruction can be bundled with previous. It it cannot
 // def/use maps are not updated.
-bool SIFormMemoryClauses::processRegUses(const MachineInstr &MI,
-                                         RegUse &Defs, RegUse &Uses,
-                                         GCNDownwardRPTracker &RPT) {
+bool SIFormMemoryClauses::processRegUses(const MachineInstr &MI, RegUse &Defs,
+                                         RegUse &Uses,
+                                         GCNDownwardRPTracker &RPT,
+                                         bool IsVMEMClause) {
   if (!canBundle(MI, Defs, Uses))
     return false;
 
-  if (!checkPressure(MI, RPT))
+  if (!checkPressure(MI, RPT, IsVMEMClause))
     return false;
 
   collectRegUses(MI, Defs, Uses);
@@ -349,7 +363,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
       const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
-      if (!processRegUses(MI, Defs, Uses, RPT)) {
+      if (!processRegUses(MI, Defs, Uses, RPT, IsVMEM)) {
         RPT.reset(MI, &LiveRegsCopy);
         continue;
       }
@@ -367,7 +381,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
         // A load from pointer which was loaded inside the same bundle is an
         // impossible clause because we will need to write and read the same
         // register inside. In this case processRegUses will return false.
-        if (!processRegUses(*Next, Defs, Uses, RPT))
+        if (!processRegUses(*Next, Defs, Uses, RPT, IsVMEM))
           break;
 
         ++Length;

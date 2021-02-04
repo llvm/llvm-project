@@ -25,7 +25,7 @@
 // set of external functions provided by the profile runtime.
 
 // RUN: %clang_profgen -fuse-ld=lld -fcoverage-mapping -mllvm -counter-link-order -ffunction-sections -fdata-sections -Wl,--gc-sections -shared -o %t.nocode.so %s
-// RUN: llvm-nm -jgU %t.nocode.so | grep -vE "__start_.*|__stop_.*" > %t.nocode.syms
+// RUN: llvm-nm -jgU %t.nocode.so | grep -vE "__prof_orderfile_sect_data|__start_.*|__stop_.*" > %t.nocode.syms
 // RUN: llvm-nm -jgU %t | grep -vE "main|_start|_IO_stdin_used|__libc_.*" > %t.code.syms
 // RUN: diff %t.nocode.syms %t.code.syms
 
@@ -66,7 +66,7 @@ int main() { return 0; }
 // together.
 
 // PRF_NAMES: Hex dump of section '__llvm_prf_names':
-// PRF_NAMES-NEXT: {{.*}} 0800666f 6f016d61 696e {{.*$}}
+// PRF_NAMES-NEXT: {{.*}} 0800666f 6f016d61 696e{{.*$}}
 //                        | | f o  o # m a  i n
 //                        | |___________|
 //                        |             |

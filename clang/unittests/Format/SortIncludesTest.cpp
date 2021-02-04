@@ -269,7 +269,7 @@ TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
 }
 
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
-  FmtStyle.SortIncludes = false;
+  FmtStyle.SortIncludes = FormatStyle::SI_Never;
   EXPECT_EQ("#include \"a.h\"\n"
             "#include \"c.h\"\n"
             "#include \"b.h\"\n",
@@ -596,6 +596,49 @@ TEST_F(SortIncludesTest, MainHeaderIsSeparatedWhenRegroupping) {
                  "#include \"a.h\"\n"
                  "#include \"c.h\"\n",
                  "a.cc"));
+}
+
+TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
+  EXPECT_FALSE(FmtStyle.SortIncludes == FormatStyle::SI_CaseSensitive);
+
+  FmtStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
+
+  EXPECT_EQ("#include \"A/B.h\"\n"
+            "#include \"A/b.h\"\n"
+            "#include \"a/b.h\"\n"
+            "#include \"B/A.h\"\n"
+            "#include \"B/a.h\"\n",
+            sort("#include \"B/a.h\"\n"
+                 "#include \"B/A.h\"\n"
+                 "#include \"A/B.h\"\n"
+                 "#include \"a/b.h\"\n"
+                 "#include \"A/b.h\"\n",
+                 "a.h"));
+
+  Style.IncludeBlocks = clang::tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeCategories = {
+      {"^\"", 1, 0, false}, {"^<.*\\.h>$", 2, 0, false}, {"^<", 3, 0, false}};
+
+  StringRef UnsortedCode = "#include \"qt.h\"\n"
+                           "#include <algorithm>\n"
+                           "#include <qtwhatever.h>\n"
+                           "#include <Qtwhatever.h>\n"
+                           "#include <Algorithm>\n"
+                           "#include \"vlib.h\"\n"
+                           "#include \"Vlib.h\"\n"
+                           "#include \"AST.h\"\n";
+
+  EXPECT_EQ("#include \"AST.h\"\n"
+            "#include \"qt.h\"\n"
+            "#include \"Vlib.h\"\n"
+            "#include \"vlib.h\"\n"
+            "\n"
+            "#include <Qtwhatever.h>\n"
+            "#include <qtwhatever.h>\n"
+            "\n"
+            "#include <Algorithm>\n"
+            "#include <algorithm>\n",
+            sort(UnsortedCode));
 }
 
 TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {

@@ -865,7 +865,7 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass>:
 }
 
 class VPseudoBinaryMask<VReg RetClass,
-                        VReg Op1Class,
+                        RegisterClass Op1Class,
                         DAGOperand Op2Class,
                         string Constraint> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
@@ -911,7 +911,7 @@ class VPseudoBinaryCarryIn<VReg RetClass,
 }
 
 class VPseudoTernaryNoMask<VReg RetClass,
-                           VReg Op1Class,
+                           RegisterClass Op1Class,
                            DAGOperand Op2Class,
                            string Constraint> :
         Pseudo<(outs RetClass:$rd),
@@ -1218,6 +1218,14 @@ multiclass VPseudoUSLoad<bit isFF> {
   }
 }
 
+multiclass VPseudoLoadMask {
+  foreach mti = AllMasks in {
+    let VLMul = mti.LMul.value in {
+      def "_V_" # mti.BX : VPseudoUSLoadNoMask<VR>;
+    }
+  }
+}
+
 multiclass VPseudoSLoad {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
@@ -1256,6 +1264,14 @@ multiclass VPseudoUSStore {
         def "E" # eew # "_V_" # LInfo : VPseudoUSStoreNoMask<vreg>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg>;
       }
+    }
+  }
+}
+
+multiclass VPseudoStoreMask {
+  foreach mti = AllMasks in {
+    let VLMul = mti.LMul.value in {
+      def "_V_" # mti.BX : VPseudoUSStoreNoMask<VR>;
     }
   }
 }
@@ -1696,8 +1712,8 @@ multiclass VPseudoBinaryV_WV_WX_WI {
 }
 
 multiclass VPseudoTernary<VReg RetClass,
-                          VReg Op1Class,
-                          RegisterClass Op2Class,
+                          RegisterClass Op1Class,
+                          DAGOperand Op2Class,
                           LMULInfo MInfo,
                           string Constraint = ""> {
   let VLMul = MInfo.value in {
@@ -2147,8 +2163,8 @@ class VPatAMOWDMask<string intrinsic_name,
 
 multiclass VPatUSLoad<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       VReg reg_class>
@@ -2166,8 +2182,8 @@ multiclass VPatUSLoad<string intrinsic,
 }
 
 multiclass VPatUSLoadFF<string inst,
-                        LLVMType type,
-                        LLVMType mask_type,
+                        ValueType type,
+                        ValueType mask_type,
                         int sew,
                         LMULInfo vlmul,
                         VReg reg_class>
@@ -2184,8 +2200,8 @@ multiclass VPatUSLoadFF<string inst,
 
 multiclass VPatSLoad<string intrinsic,
                      string inst,
-                     LLVMType type,
-                     LLVMType mask_type,
+                     ValueType type,
+                     ValueType mask_type,
                      int sew,
                      LMULInfo vlmul,
                      VReg reg_class>
@@ -2204,9 +2220,9 @@ multiclass VPatSLoad<string intrinsic,
 
 multiclass VPatILoad<string intrinsic,
                      string inst,
-                     LLVMType type,
-                     LLVMType idx_type,
-                     LLVMType mask_type,
+                     ValueType type,
+                     ValueType idx_type,
+                     ValueType mask_type,
                      int sew,
                      LMULInfo vlmul,
                      LMULInfo idx_vlmul,
@@ -2229,8 +2245,8 @@ multiclass VPatILoad<string intrinsic,
 
 multiclass VPatUSStore<string intrinsic,
                        string inst,
-                       LLVMType type,
-                       LLVMType mask_type,
+                       ValueType type,
+                       ValueType mask_type,
                        int sew,
                        LMULInfo vlmul,
                        VReg reg_class>
@@ -2247,8 +2263,8 @@ multiclass VPatUSStore<string intrinsic,
 
 multiclass VPatSStore<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       VReg reg_class>
@@ -2265,9 +2281,9 @@ multiclass VPatSStore<string intrinsic,
 
 multiclass VPatIStore<string intrinsic,
                       string inst,
-                      LLVMType type,
-                      LLVMType idx_type,
-                      LLVMType mask_type,
+                      ValueType type,
+                      ValueType idx_type,
+                      ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       LMULInfo idx_vlmul,
@@ -3126,7 +3142,7 @@ def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>;
 // Pseudos.
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>;
-
+def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp:$vtypei), []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3140,6 +3156,9 @@ def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei), []>
 // Pseudos Unit-Stride Loads and Stores
 defm PseudoVL : VPseudoUSLoad</*isFF=*/false>;
 defm PseudoVS : VPseudoUSStore;
+
+defm PseudoVLE1 : VPseudoLoadMask;
+defm PseudoVSE1 : VPseudoStoreMask;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions
@@ -3430,12 +3449,12 @@ defm PseudoVFSQRT      : VPseudoUnaryV_V;
 //===----------------------------------------------------------------------===//
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 //===----------------------------------------------------------------------===//
-defm PseudoVFRSQRTE7   : VPseudoUnaryV_V;
+defm PseudoVFRSQRT7    : VPseudoUnaryV_V;
 
 //===----------------------------------------------------------------------===//
 // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
 //===----------------------------------------------------------------------===//
-defm PseudoVFRECE7     : VPseudoUnaryV_V;
+defm PseudoVFREC7      : VPseudoUnaryV_V;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
@@ -3710,6 +3729,15 @@ foreach vti = AllVectors in
   defm : VPatUSStore<"int_riscv_vse",
                      "PseudoVSE" # vti.SEW,
                      vti.Vector, vti.Mask, vti.SEW, vti.LMul, vti.RegClass>;
+}
+
+foreach vti = AllMasks in {
+  defvar PseudoVLE1 = !cast<Instruction>("PseudoVLE1_V_"#vti.BX);
+  def : Pat<(vti.Mask (int_riscv_vle1 GPR:$rs1, (XLenVT (VLOp GPR:$vl)))),
+            (PseudoVLE1 $rs1, GPR:$vl, vti.SEW)>;
+  defvar PseudoVSE1 = !cast<Instruction>("PseudoVSE1_V_"#vti.BX);
+  def : Pat<(int_riscv_vse1 (vti.Mask VR:$rs3), GPR:$rs1, (XLenVT (VLOp GPR:$vl))),
+            (PseudoVSE1 $rs3, $rs1, GPR:$vl, vti.SEW)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4103,12 +4131,12 @@ defm "" : VPatUnaryV_V<"int_riscv_vfsqrt", "PseudoVFSQRT", AllFloatVectors>;
 //===----------------------------------------------------------------------===//
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 //===----------------------------------------------------------------------===//
-defm "" : VPatUnaryV_V<"int_riscv_vfrsqrte7", "PseudoVFRSQRTE7", AllFloatVectors>;
+defm "" : VPatUnaryV_V<"int_riscv_vfrsqrt7", "PseudoVFRSQRT7", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
 //===----------------------------------------------------------------------===//
-defm "" : VPatUnaryV_V<"int_riscv_vfrece7", "PseudoVFRECE7", AllFloatVectors>;
+defm "" : VPatUnaryV_V<"int_riscv_vfrec7", "PseudoVFREC7", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions

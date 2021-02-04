@@ -29,6 +29,8 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <string>
+
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -137,8 +139,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
 
-  auto ADec = decompose(Op0);
-  auto BDec = decompose(Op1);
+  auto ADec = decompose(Op0->stripPointerCasts());
+  auto BDec = decompose(Op1->stripPointerCasts());
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -213,6 +215,19 @@ struct StackEntry {
       : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot) {}
 };
 } // namespace
+
+#ifndef NDEBUG
+static void dumpWithNames(ConstraintTy &C,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+  for (auto &KV : Value2Index) {
+    Names[KV.second - 1] = std::string("%") + KV.first->getName().str();
+  }
+  ConstraintSystem CS;
+  CS.addVariableRowFill(C.Coefficients);
+  CS.dump(Names);
+}
+#endif
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
@@ -380,7 +395,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     bool Added = false;
     for (auto &C : R) {
       auto Coeffs = C.Coefficients;
-
+      LLVM_DEBUG({
+        dbgs() << "  constraint: ";
+        dumpWithNames(C, Value2Index);
+      });
       Added |= CS.addVariableRowFill(Coeffs);
       // If R has been added to the system, queue it for removal once it goes
       // out-of-scope.

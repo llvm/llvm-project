@@ -201,7 +201,7 @@ class ProcessIOTestCase(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, self.breakpoint)
 
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
@@ -217,7 +217,7 @@ class ProcessIOTestCase(TestBase):
         # Let process continue so it will exit
         self.process.Continue()
         state = self.process.GetState()
-        self.assertTrue(state == lldb.eStateExited, PROCESS_IS_VALID)
+        self.assertEqual(state, lldb.eStateExited, PROCESS_IS_VALID)
 
     def check_process_output(self, output, error):
             # Since we launched the process without specifying stdin/out/err,
