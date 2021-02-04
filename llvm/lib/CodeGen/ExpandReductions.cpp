@@ -154,13 +154,12 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     }
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin: {
-      // FIXME: We only expand 'fast' reductions here because the underlying
-      //        code in createMinMaxOp() assumes that comparisons use 'fast'
-      //        semantics.
+      // We require "nnan" to use a shuffle reduction; "nsz" is implied by the
+      // semantics of the reduction.
       Value *Vec = II->getArgOperand(0);
       if (!isPowerOf2_32(
               cast<FixedVectorType>(Vec->getType())->getNumElements()) ||
-          !FMF.isFast())
+          !FMF.noNaNs())
         continue;
 
       Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
