@@ -8,7 +8,7 @@
 
 #include "IOStream.h"
 
-#if !LLVM_ON_UNIX
+#if defined(_WIN32) 
 #include <io.h>
 #else
 #include <netinet/in.h>
@@ -33,7 +33,7 @@ StreamDescriptor::~StreamDescriptor() {
     return;
 
   if (m_is_socket)
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
     ::closesocket(m_socket);
 #else
     ::close(m_socket);
@@ -108,7 +108,7 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
     }
     if (bytes_read < 0) {
       int reason = 0;
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
       if (descriptor.m_is_socket)
         reason = WSAGetLastError();
       else
