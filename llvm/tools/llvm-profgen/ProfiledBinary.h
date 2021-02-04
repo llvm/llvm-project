@@ -243,7 +243,7 @@ public:
   }
   void
   getInlineContextForProbe(const PseudoProbe *Probe,
-                           SmallVectorImpl<std::string> &InlineContextStack,
+                           SmallVector<std::string, 16> &InlineContextStack,
                            bool IncludeLeaf = false) const {
     return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
                                                  IncludeLeaf);

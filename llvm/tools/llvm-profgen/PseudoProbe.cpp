@@ -34,7 +34,7 @@ void PseudoProbeFuncDesc::print(raw_ostream &OS) {
   OS << "Hash: " << FuncHash << "\n";
 }
 
-void PseudoProbe::getInlineContext(SmallVectorImpl<std::string> &ContextStack,
+void PseudoProbe::getInlineContext(SmallVector<std::string, 16> &ContextStack,
                                    const GUIDProbeFunctionMap &GUID2FuncMAP,
                                    bool ShowName) const {
   uint32_t Begin = ContextStack.size();
@@ -320,7 +320,7 @@ PseudoProbeDecoder::getFuncDescForGUID(uint64_t GUID) const {
 }
 
 void PseudoProbeDecoder::getInlineContextForProbe(
-    const PseudoProbe *Probe, SmallVectorImpl<std::string> &InlineContextStack,
+    const PseudoProbe *Probe, SmallVector<std::string, 16> &InlineContextStack,
     bool IncludeLeaf) const {
   Probe->getInlineContext(InlineContextStack, GUID2FuncDescMap, true);
   if (!IncludeLeaf)
