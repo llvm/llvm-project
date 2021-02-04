@@ -132,9 +132,6 @@ struct InstrProfOptions {
   // Use BFI to guide register promotion
   bool UseBFIInPromotion = false;
 
-  // Use !associated metadata to enable linker GC
-  bool CounterLinkOrder = false;
-
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 
