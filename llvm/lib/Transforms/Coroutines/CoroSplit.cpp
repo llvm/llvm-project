@@ -715,15 +715,17 @@ void CoroCloner::replaceEntryBlock() {
   }
   }
 
-  // Any alloca that's still being used but not reachable from the new entry
-  // needs to be moved to the new entry.
+  // Any static alloca that's still being used but not reachable from the new
+  // entry needs to be moved to the new entry.
   Function *F = OldEntry->getParent();
   DominatorTree DT{*F};
   for (auto IT = inst_begin(F), End = inst_end(F); IT != End;) {
     Instruction &I = *IT++;
-    if (!isa<AllocaInst>(&I) || I.use_empty())
+    auto *Alloca = dyn_cast<AllocaInst>(&I);
+    if (!Alloca || I.use_empty())
       continue;
-    if (DT.isReachableFromEntry(I.getParent()))
+    if (DT.isReachableFromEntry(I.getParent()) ||
+        !isa<ConstantInt>(Alloca->getArraySize()))
       continue;
     I.moveBefore(*Entry, Entry->getFirstInsertionPt());
   }
