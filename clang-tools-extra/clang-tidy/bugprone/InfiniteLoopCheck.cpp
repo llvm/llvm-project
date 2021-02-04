@@ -21,9 +21,9 @@ namespace bugprone {
 
 static internal::Matcher<Stmt>
 loopEndingStmt(internal::Matcher<Stmt> Internal) {
-  return stmt(anyOf(breakStmt(Internal), returnStmt(Internal),
-                    gotoStmt(Internal), cxxThrowExpr(Internal),
-                    callExpr(Internal, callee(functionDecl(isNoReturn())))));
+  return stmt(anyOf(
+      mapAnyOf(breakStmt, returnStmt, gotoStmt, cxxThrowExpr).with(Internal),
+      callExpr(Internal, callee(functionDecl(isNoReturn())))));
 }
 
 /// Return whether `Var` was changed in `LoopStmt`.
@@ -122,8 +122,8 @@ void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasBody(hasDescendant(
           loopEndingStmt(forFunction(equalsBoundNode("func")))))));
 
-  Finder->addMatcher(stmt(anyOf(whileStmt(LoopCondition), doStmt(LoopCondition),
-                                forStmt(LoopCondition)))
+  Finder->addMatcher(mapAnyOf(whileStmt, doStmt, forStmt)
+                         .with(LoopCondition)
                          .bind("loop-stmt"),
                      this);
 }
