@@ -148,7 +148,7 @@ def NoSync : EnumAttr<"nosync">;
 /// Disable Indirect Branch Tracking.
 def NoCfCheck : EnumAttr<"nocf_check">;
 
-/// Function should be instrumented.
+/// Function should not be instrumented.
 def NoProfile : EnumAttr<"noprofile">;
 
 /// Function doesn't unwind stack.
