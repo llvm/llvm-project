@@ -148,12 +148,14 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
   // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : frontendOpts().inputs_) {
     if (act.BeginSourceFile(*this, fif)) {
-      // Switch between fixed and free form format based on the input file
-      // extension. Ideally we should have all Fortran options set before
-      // entering this loop (i.e. processing any input files). However, we
-      // can't decide between fixed and free form based on the file extension
-      // earlier than this.
-      invoc.fortranOpts().isFixedForm = fif.IsFixedForm();
+      if (invoc.frontendOpts().fortranForm_ == FortranForm::Unknown) {
+        // Switch between fixed and free form format based on the input file
+        // extension. Ideally we should have all Fortran options set before
+        // entering this loop (i.e. processing any input files). However, we
+        // can't decide between fixed and free form based on the file extension
+        // earlier than this.
+        invoc.fortranOpts().isFixedForm = fif.IsFixedForm();
+      }
       if (llvm::Error err = act.Execute()) {
         consumeError(std::move(err));
       }

@@ -23,6 +23,10 @@
 ! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
+! CHECK-NEXT: -ffixed-form           Process source files in fixed form
+! CHECK-NEXT: -ffixed-line-length=<value>
+! CHECK-NEXT: Use <value> as character line width in fixed mode
+! CHECK-NEXT: -ffree-form            Process source files in free form
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
