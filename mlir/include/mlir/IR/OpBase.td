@@ -1177,7 +1177,7 @@ class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
   // <return-type> <fn-name>(<qualified-enum-class-name>);
   // ```
   string symbolToStringFnName = "stringify" # name;
-  string symbolToStringFnRetType = "::llvm::StringLiteral";
+  string symbolToStringFnRetType = "::llvm::StringRef";
 
   // The name of the utility function that returns the max enum value used
   // within the enum class. It will have the following signature:
