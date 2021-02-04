@@ -2,12 +2,12 @@
 // RUN:   -fno-autolink -triple amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefix=DEV %s
 // RUN: %clang_cc1 -emit-llvm -o - -fms-extensions -x hip %s -triple \
-// RUN:    x86_64-pc-windows-msvc -aux-triple amdgcn | FileCheck -check-prefix=HOST %s
+// RUN:    x86_64-pc-windows-msvc | FileCheck -check-prefix=HOST %s
 // RUN: %clang_cc1 -emit-llvm -o - -fcuda-is-device -fms-extensions %s \
 // RUN:   -fno-autolink -triple amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefix=DEV %s
 // RUN: %clang_cc1 -emit-llvm -o - -fms-extensions %s -triple \
-// RUN:    x86_64-pc-windows-msvc -aux-triple amdgcn | FileCheck -check-prefix=HOST %s
+// RUN:    x86_64-pc-windows-msvc | FileCheck -check-prefix=HOST %s
 
 // DEV-NOT: llvm.linker.options
 // DEV-NOT: llvm.dependent-libraries

@@ -258,9 +258,3 @@ public:
 CXXABI *clang::CreateItaniumCXXABI(ASTContext &Ctx) {
   return new ItaniumCXXABI(Ctx);
 }
-
-std::unique_ptr<MangleNumberingContext>
-clang::createItaniumNumberingContext(MangleContext *Mangler) {
-  return std::make_unique<ItaniumNumberingContext>(
-      cast<ItaniumMangleContext>(Mangler));
-}

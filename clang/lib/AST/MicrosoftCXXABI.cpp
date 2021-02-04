@@ -16,7 +16,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
@@ -65,19 +64,6 @@ public:
   }
 };
 
-class MSHIPNumberingContext : public MicrosoftNumberingContext {
-  std::unique_ptr<MangleNumberingContext> DeviceCtx;
-
-public:
-  MSHIPNumberingContext(MangleContext *Mangler) {
-    DeviceCtx = createItaniumNumberingContext(Mangler);
-  }
-
-  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
-    return DeviceCtx->getManglingNumber(CallOperator);
-  }
-};
-
 class MicrosoftCXXABI : public CXXABI {
   ASTContext &Context;
   llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> RecordToCopyCtor;
@@ -87,19 +73,8 @@ class MicrosoftCXXABI : public CXXABI {
   llvm::SmallDenseMap<TagDecl *, TypedefNameDecl *>
       UnnamedTagDeclToTypedefNameDecl;
 
-  // MangleContext for device numbering context, which is based on Itanium C++
-  // ABI.
-  std::unique_ptr<MangleContext> Mangler;
-
 public:
-  MicrosoftCXXABI(ASTContext &Ctx) : Context(Ctx) {
-    if (Context.getLangOpts().CUDA) {
-      assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-             Context.getAuxTargetInfo()->getCXXABI().isItaniumFamily() &&
-             "Unexpected combination of C++ ABIs.");
-      Mangler.reset(Context.createMangleContext(Context.getAuxTargetInfo()));
-    }
-  }
+  MicrosoftCXXABI(ASTContext &Ctx) : Context(Ctx) { }
 
   MemberPointerInfo
   getMemberPointerInfo(const MemberPointerType *MPT) const override;
@@ -158,8 +133,6 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
-    if (Context.getLangOpts().CUDA)
-      return std::make_unique<MSHIPNumberingContext>(Mangler.get());
     return std::make_unique<MicrosoftNumberingContext>();
   }
 };
@@ -293,3 +266,4 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
 CXXABI *clang::CreateMicrosoftCXXABI(ASTContext &Ctx) {
   return new MicrosoftCXXABI(Ctx);
 }
+
