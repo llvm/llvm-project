@@ -123,17 +123,15 @@ public:
   matchAndRewrite(ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
-    auto shapeVal = arrCoor.shape();
-    auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
-    if (shapeOp) {
-      populateShape(shapeOpers, shapeOp);
-    } else if (auto shiftOp =
-                   dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp())) {
-      populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
-    } else {
-      return mlir::failure();
+    if (auto shapeVal = arrCoor.shape()) {
+      if (auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp()))
+        populateShape(shapeOpers, shapeOp);
+      else if (auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp()))
+        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+      else
+        return mlir::failure();
     }
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
     llvm::SmallVector<mlir::Value, 8> subcompOpers;

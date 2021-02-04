@@ -49,4 +49,9 @@ def AnyCoordinateLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
 
 def AnyCoordinateType : Type<AnyCoordinateLike.predicate, "coordinate type">;
 
+// Reference and Box types
+def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
+    fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
+    "any reference or box">;
+
 #endif

@@ -39,3 +39,12 @@ unsigned fir::cg::XEmboxOp::getOutRank() {
   assert(outRank >= 1);
   return outRank;
 }
+
+unsigned fir::cg::XArrayCoorOp::getRank() {
+  auto memrefTy = memref().getType();
+  if (memrefTy.isa<fir::BoxType>())
+    if (auto seqty =
+            fir::dyn_cast_ptrOrBoxEleTy(memrefTy).dyn_cast<fir::SequenceType>())
+      return seqty.getDimension();
+  return shape().size();
+}

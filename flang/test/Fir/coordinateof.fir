@@ -28,9 +28,15 @@ func @foo3(%box : !fir.box<!fir.array<?xi32>>, %i : i32) -> i32 {
   %ii = fir.convert %i : (i32) -> index
   // CHECK: %[[gep0:.*]] = getelementptr { i32*
   // CHECK: %[[boxptr:.*]] = load i32*, i32** %[[gep0]]
-  // CHECK: %[[gep1:.*]] = getelementptr i32, i32* %[[boxptr]], i64 %
+  // CHECK: %[[gep1:.*]] = getelementptr { i32*, i64, {{.*}} i32 7
+  // CHECK: %[[stride:.*]] = load i64, i64* %[[gep1]]
+  // CHECK: %[[dimoffset:.*]] = mul i64 %[[cvt]], %[[stride]]
+  // CHECK: %[[offset:.*]] = add i64 %[[dimoffset]], 0
+  // CHECK: %[[voidptr:.*]] = bitcast i32* %[[boxptr]] to i8*
+  // CHECK: %[[gep2:.*]] = getelementptr i8, i8* %[[voidptr]], i64 %[[offset]]
+  // CHECK: %[[i32ptr:.*]] = bitcast i8* %[[gep2]] to i32*
   %1 = fir.coordinate_of %box, %ii : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-  // CHECK: load i32, i32* %[[gep1]]
+  // CHECK: load i32, i32* %[[i32ptr]]
   %rv = fir.load %1 : !fir.ref<i32>
   return %rv : i32
 }

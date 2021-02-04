@@ -267,11 +267,13 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
                            ArrayMergeStoreOp st) {
   mlir::Value load;
   auto addr = st.memref();
+  auto stEleTy = fir::dyn_cast_ptrOrBoxEleTy(addr.getType());
   for (auto *op : reach)
     if (auto ld = mlir::dyn_cast<ArrayLoadOp>(op)) {
       auto ldTy = ld.memref().getType();
-      if (ldTy.isa<fir::PointerType>() &&
-          dyn_cast_ptrEleTy(st.memref().getType()) == dyn_cast_ptrEleTy(ldTy))
+      if (auto boxTy = ldTy.dyn_cast<fir::BoxType>())
+        ldTy = boxTy.getEleTy();
+      if (ldTy.isa<fir::PointerType>() && stEleTy == dyn_cast_ptrEleTy(ldTy))
         return true;
       if (ld.memref() == addr) {
         if (ld.getResult() != st.original())
@@ -418,22 +420,67 @@ static std::vector<mlir::Value>
 originateIndices(mlir::Location loc, mlir::PatternRewriter &rewriter,
                  mlir::Value shapeVal, mlir::ValueRange indices) {
   std::vector<mlir::Value> result;
-  if (auto *shapeOp = shapeVal.getDefiningOp()) {
-    if (auto shOp = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
-      auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
-      for (auto v : indices)
-        result.push_back(rewriter.create<mlir::AddIOp>(loc, one, v));
-      return result;
-    }
-    auto shOp = mlir::cast<fir::ShapeShiftOp>(shapeOp);
-    assert(indices.size() == shOp.getOrigins().size());
-    for (auto v : llvm::zip(indices, shOp.getOrigins()))
-      result.push_back(
-          rewriter.create<mlir::AddIOp>(loc, std::get<0>(v), std::get<1>(v)));
-    return result;
-  }
-  result.insert(result.begin(), indices.begin(), indices.end());
+  if (shapeVal)
+    if (auto *shapeOp = shapeVal.getDefiningOp())
+      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+        assert(indices.size() == shOp.getOrigins().size());
+        for (auto v : llvm::zip(indices, shOp.getOrigins()))
+          result.push_back(rewriter.create<mlir::AddIOp>(loc, std::get<0>(v),
+                                                         std::get<1>(v)));
+        return result;
+      }
+  assert(!shapeVal || mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()));
+  auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
+  for (auto v : indices)
+    result.push_back(rewriter.create<mlir::AddIOp>(loc, one, v));
   return result;
+}
+
+// Extract extents from the ShapeOp/ShapeShiftOp into the result vector.
+static void getExtents(llvm::SmallVectorImpl<mlir::Value> &result,
+                       mlir::Value shape) {
+  auto shapeOp = shape.getDefiningOp();
+  if (auto s = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
+    auto e = s.getExtents();
+    result.insert(result.end(), e.begin(), e.end());
+    return;
+  }
+  if (auto s = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+    auto e = s.getExtents();
+    result.insert(result.end(), e.begin(), e.end());
+    return;
+  }
+  llvm::report_fatal_error("not a shape op");
+}
+
+// Place the extents of the array loaded by an ArrayLoadOp into the result
+// vector and return a ShapeOp/ShapeShiftOp with the corresponding extents. If
+// the ArrayLoadOp is loading a fir.box, code will be generated to read the
+// extents from the fir.box, and a the retunred ShapeOp is built with the read
+// extents.
+// Otherwise, the extents will be extracted from the ShapeOp/ShapeShiftOp
+// argument of the ArrayLoadOp that is returned.
+static mlir::Value
+getOrReadExtentsAndShapeOp(mlir::Location loc, mlir::PatternRewriter &rewriter,
+                           fir::ArrayLoadOp loadOp,
+                           llvm::SmallVectorImpl<mlir::Value> &result) {
+  assert(result.empty());
+  if (auto boxTy = loadOp.memref().getType().dyn_cast<fir::BoxType>()) {
+    auto rank = fir::dyn_cast_ptrOrBoxEleTy(boxTy)
+                    .cast<fir::SequenceType>()
+                    .getDimension();
+    auto idxTy = rewriter.getIndexType();
+    for (decltype(rank) dim = 0; dim < rank; ++dim) {
+      auto dimVal = rewriter.create<mlir::ConstantIndexOp>(loc, dim);
+      auto dimInfo = rewriter.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                     loadOp.memref(), dimVal);
+      result.emplace_back(dimInfo.getResult(1));
+    }
+    auto shapeType = fir::ShapeType::get(rewriter.getContext(), rank);
+    return rewriter.create<fir::ShapeOp>(loc, shapeType, result);
+  }
+  getExtents(result, loadOp.shape());
+  return loadOp.shape();
 }
 
 namespace {
@@ -461,24 +508,24 @@ public:
       rewriter.setInsertionPoint(loadOp);
       // Copy in.
       llvm::SmallVector<mlir::Value, 8> extents;
-      getExtents(extents, load.shape().getDefiningOp());
+      auto shapeOp = getOrReadExtentsAndShapeOp(loc, rewriter, load, extents);
       auto allocmem = rewriter.create<AllocMemOp>(
-          loc, dyn_cast_ptrEleTy(load.memref().getType()), mlir::ValueRange{},
-          extents);
-      genArrayCopy(load.getLoc(), rewriter, allocmem, load.memref(),
-                   load.shape(), load.getType());
+          loc, dyn_cast_ptrOrBoxEleTy(load.memref().getType()),
+          mlir::ValueRange{}, extents);
+      genArrayCopy(load.getLoc(), rewriter, allocmem, load.memref(), shapeOp,
+                   load.getType());
       rewriter.setInsertionPoint(op);
       auto coor = rewriter.create<ArrayCoorOp>(
-          loc, getEleTy(load.getType()), allocmem, load.shape(), load.slice(),
-          originateIndices(loc, rewriter, load.shape(), update.indices()),
+          loc, getEleTy(load.getType()), allocmem, shapeOp, load.slice(),
+          originateIndices(loc, rewriter, shapeOp, update.indices()),
           load.lenParams());
       rewriter.create<fir::StoreOp>(loc, update.merge(), coor);
       auto *storeOp = useMap.lookup(loadOp);
       rewriter.setInsertionPoint(storeOp);
       // Copy out.
       auto store = mlir::cast<ArrayMergeStoreOp>(storeOp);
-      genArrayCopy(store.getLoc(), rewriter, store.memref(), allocmem,
-                   load.shape(), load.getType());
+      genArrayCopy(store.getLoc(), rewriter, store.memref(), allocmem, shapeOp,
+                   load.getType());
       rewriter.create<FreeMemOp>(loc, allocmem);
     } else {
       LLVM_DEBUG(llvm::outs() << "No, conflict wasn't found\n");
@@ -495,31 +542,15 @@ public:
     return mlir::success();
   }
 
-  static void getExtents(llvm::SmallVectorImpl<mlir::Value> &result,
-                         mlir::Operation *shapeOp) {
-    assert(result.empty());
-    if (auto s = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
-      auto e = s.getExtents();
-      result.insert(result.end(), e.begin(), e.end());
-      return;
-    }
-    if (auto s = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
-      auto e = s.getExtents();
-      result.insert(result.end(), e.begin(), e.end());
-      return;
-    }
-    llvm::report_fatal_error("not a shape op");
-  }
-
   void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
                     mlir::Value dst, mlir::Value src, mlir::Value shapeOp,
                     mlir::Type arrTy) const {
     auto insPt = rewriter.saveInsertionPoint();
-    llvm::SmallVector<mlir::Value, 8> shape;
-    getExtents(shape, shapeOp.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> indices;
+    llvm::SmallVector<mlir::Value, 8> extents;
+    getExtents(extents, shapeOp);
     // Build loop nest from column to row.
-    for (auto sh : llvm::reverse(shape)) {
+    for (auto sh : llvm::reverse(extents)) {
       auto idxTy = rewriter.getIndexType();
       auto ubi = rewriter.create<fir::ConvertOp>(loc, idxTy, sh);
       auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
