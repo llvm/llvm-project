@@ -186,8 +186,6 @@ struct LTOCodeGenerator {
 
   void setDisableVerify(bool Value) { DisableVerify = Value; }
 
-  void setUseNewPM(bool Value) { UseNewPM = Value; }
-
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
   LLVMContext &getContext() { return Context; }
@@ -248,7 +246,6 @@ private:
   bool Freestanding = false;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
   bool DisableVerify = false;
-  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
 };
 }
 #endif
