@@ -181,12 +181,9 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg to vector contraction patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgVectorizationPattern<MatmulOp>,
-                  LinalgVectorizationPattern<FillOp>,
-                  LinalgVectorizationPattern<CopyOp>,
-                  LinalgVectorizationPattern<GenericOp>>(
-      ctx, LinalgVectorizationOptions(),
-      LinalgTransformationFilter(Identifier::get("VECTORIZE", ctx)));
+  patterns.insert<LinalgVectorizationPattern>(
+      LinalgTransformationFilter(Identifier::get("VECTORIZE", ctx))
+          .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
 
   //===--------------------------------------------------------------------===//
   // Linalg generic permutation patterns.
@@ -251,13 +248,12 @@ static void fillL1TilingAndMatmulToVectorPatterns(
           LinalgTransformationFilter(Identifier::get("L1", ctx),
                                      Identifier::get("VEC", ctx))));
 
-  patternsVector.emplace_back(
-      std::make_unique<LinalgVectorizationPattern<MatmulOp>>(
-          ctx, LinalgVectorizationOptions(),
-          LinalgTransformationFilter(Identifier::get("VEC", ctx))));
-  patternsVector.back()
-      .insert<LinalgVectorizationPattern<FillOp>,
-              LinalgVectorizationPattern<CopyOp>>(ctx);
+  patternsVector.emplace_back(std::make_unique<LinalgVectorizationPattern>(
+      MatmulOp::getOperationName(), ctx, LinalgVectorizationOptions(),
+      LinalgTransformationFilter(Identifier::get("VEC", ctx))));
+  patternsVector.back().insert<LinalgVectorizationPattern>(
+      LinalgTransformationFilter().addFilter(
+          [](Operation *op) { return success(isa<FillOp, CopyOp>(op)); }));
 }
 
 //===----------------------------------------------------------------------===//
@@ -493,15 +489,9 @@ static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
 
 static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   OwningRewritePatternList patterns;
-  // TODO: remove all this in favor of a single LinalgOp.
-  patterns.insert<
-      LinalgVectorizationPattern<BatchMatmulOp>,
-      LinalgVectorizationPattern<MatmulOp>,
-      LinalgVectorizationPattern<MatmulI8I8I32Op>,
-      LinalgVectorizationPattern<MatvecOp>,
-      LinalgVectorizationPattern<VecmatOp>, LinalgVectorizationPattern<DotOp>,
-      LinalgVectorizationPattern<FillOp>, LinalgVectorizationPattern<CopyOp>,
-      LinalgVectorizationPattern<GenericOp>>(funcOp.getContext());
+  patterns.insert<LinalgVectorizationPattern>(
+      LinalgTransformationFilter()
+          .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
   applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 

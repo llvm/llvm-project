@@ -369,36 +369,6 @@ static LogicalResult vectorizeAsLinalgGeneric(
   return success();
 }
 
-/// Detect whether the LinalgOp `op` is a contraction.
-/// A Linalg contraction is defined in general terms:
-///   1. Has 2 input and 1 output shapes.
-///   2. Has at least one reduction dimension.
-///   3. Has only projected permutation indexing maps.
-///   4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
-///   (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
-///   operations that may change the type (e.g. for mixed-precision).
-/// As a consequence, when vectorization of such an op occurs, the only special
-/// behavior is that the (unique) MulOpType is vectorized into a
-/// `vector.contract`. All other ops are handled in a generic fashion.
-/// In the future, we may wish to allow more input arguments and elementwise and
-/// constant operations that do not involve the reduction dimension(s).
-static LogicalResult isContraction(Operation *op) {
-  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: isContraction: "; op->dump());
-  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
-
-  auto mapRange = linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>();
-  return success(
-      linalgOp.getNumInputs() == 2 && linalgOp.getNumOutputs() == 1 &&
-      linalgOp.getNumReductionLoops() > 0 &&
-      llvm::all_of(mapRange,
-                   [](AffineMap m) { return m.isProjectedPermutation(); }) &&
-      // TODO: more fields than add/mul.
-      (isAddMul<AddFOp, MulFOp>(linalgOp->getRegion(0).front()) ||
-       isAddMul<AddIOp, MulIOp>(linalgOp->getRegion(0).front())));
-}
-
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
 static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
@@ -435,68 +405,15 @@ static bool isElementwise(Operation *op) {
   return hasOnlyScalarElementwiseOp(genericOp.getRegion());
 }
 
-LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
-  auto linalgOp = cast<linalg::LinalgOp>(op);
-  // All types must be static shape to go to vector.
-  for (Value operand : linalgOp.getShapedOperands())
-    if (!operand.getType().cast<ShapedType>().hasStaticShape())
-      return failure();
-  for (Type outputTensorType : linalgOp.getOutputTensorTypes())
-    if (!outputTensorType.cast<ShapedType>().hasStaticShape())
-      return failure();
-
-  if (isa<linalg::FillOp, linalg::CopyOp>(op))
-    return success();
-  if (isElementwise(op))
-    return success();
-  return isContraction(op);
-}
-
-void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
-  assert(succeeded(vectorizeLinalgOpPrecondition(op)));
-
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
-  (void)dbgPref;
-  edsc::ScopedContext scope(builder, op->getLoc());
-  // In the case of 0-D memrefs, return null and special case to scalar load or
-  // store later.
-  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
-    // Vectorize fill as a vector.broadcast.
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
-    buildVectorWrite(builder, fillOp.value(), fillOp.output());
-    return;
-  }
-  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
-    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg.copy as vector.transfer_read + "
-                         "vector.transfer_write: "
-                      << *op);
-    Value vector = buildVectorRead(builder, copyOp.input());
-    buildVectorWrite(builder, vector, copyOp.output());
-    return;
-  }
-
-  auto linalgOp = cast<linalg::LinalgOp>(op);
+static void vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp) {
+  assert(isaContractionOpInterface(linalgOp) &&
+         "expected vectorizeContraction preconditions to be met");
   Location loc = linalgOp.getLoc();
-
-  if (isElementwise(op)) {
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg op as vector.transfer_read + " << *op);
-    auto status = vectorizeAsLinalgGeneric(builder, linalgOp);
-    (void)status;
-    assert(succeeded(status) &&
-           "Unexpected vectorization failed despite preconditions");
-    return;
-  }
-
-  assert(succeeded(isContraction(op)) && "Expected contraction");
-
   // Vectorize other ops as vector contraction.
   // TODO: interface.
-  LLVM_DEBUG(dbgs() << dbgPref
-                    << "Rewrite linalg op as vector.contract: " << *op);
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                    << "Rewrite linalg op as vector.contract: ";
+             linalgOp.dump());
   // Special function that describes how to vectorize the multiplication op in a
   // linalg contraction.
   CustomVectorizationHook vectorizeContraction =
@@ -520,6 +437,60 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
   (void)status;
   assert(succeeded(status) &&
          "Unexpected vectorization failed despite preconditions");
+}
+
+LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
+  auto linalgOp = cast<linalg::LinalgOp>(op);
+  // All types must be static shape to go to vector.
+  for (Value operand : linalgOp.getShapedOperands())
+    if (!operand.getType().cast<ShapedType>().hasStaticShape())
+      return failure();
+  for (Type outputTensorType : linalgOp.getOutputTensorTypes())
+    if (!outputTensorType.cast<ShapedType>().hasStaticShape())
+      return failure();
+
+  if (isa<linalg::FillOp, linalg::CopyOp>(op))
+    return success();
+  if (isElementwise(op))
+    return success();
+  return success(isaContractionOpInterface(linalgOp));
+}
+
+void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
+  assert(succeeded(vectorizeLinalgOpPrecondition(op)));
+
+  edsc::ScopedContext scope(builder, op->getLoc());
+  // In the case of 0-D memrefs, return null and special case to scalar load or
+  // store later.
+  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
+    // Vectorize fill as a vector.broadcast.
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
+    buildVectorWrite(builder, fillOp.value(), fillOp.output());
+    return;
+  }
+  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
+    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg.copy as vector.transfer_read + "
+                         "vector.transfer_write: "
+                      << *op);
+    Value vector = buildVectorRead(builder, copyOp.input());
+    buildVectorWrite(builder, vector, copyOp.output());
+    return;
+  }
+
+  if (isElementwise(op)) {
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg op as vector.transfer_read + " << *op);
+    auto status = vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
+    (void)status;
+    assert(succeeded(status) &&
+           "Unexpected vectorization failed despite preconditions");
+    return;
+  }
+
+  vectorizeContraction(builder, cast<LinalgOp>(op));
 }
 
 //----------------------------------------------------------------------------//
@@ -671,13 +642,11 @@ void mlir::linalg::populateConvVectorizationPatterns(
 /// different block.
 static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
                                     ValueRange values) {
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
-  (void)dbgPref;
   if (firstOp->getBlock() != secondOp->getBlock() ||
       !firstOp->isBeforeInBlock(secondOp)) {
-    LLVM_DEBUG(llvm::dbgs()
-               << dbgPref << "interleavedUses precondition failed, firstOp: "
-               << *firstOp << ", second op: " << *secondOp);
+    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                            << "interleavedUses precondition failed, firstOp: "
+                            << *firstOp << ", second op: " << *secondOp);
     return true;
   }
   for (auto v : values) {
@@ -690,7 +659,8 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
           (owner->isBeforeInBlock(firstOp) || secondOp->isBeforeInBlock(owner)))
         continue;
       LLVM_DEBUG(llvm::dbgs()
-                 << dbgPref << " found interleaved op " << *owner
+                 << "\n[" DEBUG_TYPE "]: "
+                 << " found interleaved op " << *owner
                  << ", firstOp: " << *firstOp << ", second op: " << *secondOp);
       return true;
     }
@@ -722,16 +692,15 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
       !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();
 
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: VTRForwarding: ";
-  (void)dbgPref;
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << viewOrAlloc);
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: " << viewOrAlloc);
 
   // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
   SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
   if (!subViewOp)
     return failure();
   Value subView = subViewOp.getResult();
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << "with subView " << subView);
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                          << "with subView " << subView);
 
   // Find the copy into `subView` without interleaved uses.
   CopyOp copyOp;
@@ -739,7 +708,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
       if (newCopyOp.getOutputBuffer(0) != subView)
         continue;
-      LLVM_DEBUG(llvm::dbgs() << dbgPref << "copy candidate " << *newCopyOp);
+      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                              << "copy candidate " << *newCopyOp);
       if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
         continue;
       copyOp = newCopyOp;
@@ -748,7 +718,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   }
   if (!copyOp)
     return failure();
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << "with copy " << *copyOp);
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                          << "with copy " << *copyOp);
 
   // Find the fill into `viewOrAlloc` without interleaved uses before the copy.
   FillOp maybeFillOp;
@@ -756,7 +727,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     if (auto newFillOp = dyn_cast<FillOp>(u.getOwner())) {
       if (newFillOp.getOutputBuffer(0) != viewOrAlloc)
         continue;
-      LLVM_DEBUG(llvm::dbgs() << dbgPref << "fill candidate " << *newFillOp);
+      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                              << "fill candidate " << *newFillOp);
       if (mayExistInterleavedUses(newFillOp, copyOp, {viewOrAlloc, subView}))
         continue;
       maybeFillOp = newFillOp;
@@ -767,7 +739,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   if (maybeFillOp && xferOp.padding() != maybeFillOp.value())
     return failure();
   if (maybeFillOp)
-    LLVM_DEBUG(llvm::dbgs() << dbgPref << "with maybeFillOp " << *maybeFillOp);
+    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                            << "with maybeFillOp " << *maybeFillOp);
 
   // `in` is the subview that linalg.copy reads. Replace it.
   Value in = copyOp.getInput(0);
