@@ -261,6 +261,10 @@ template <class ELFT> void MarkLive<ELFT>::run() {
         scanEhFrameSection(*eh, eh->template rels<ELFT>());
     }
 
+    if (sec->flags & SHF_GNU_RETAIN) {
+      enqueue(sec, 0);
+      continue;
+    }
     if (sec->flags & SHF_LINK_ORDER)
       continue;
 
