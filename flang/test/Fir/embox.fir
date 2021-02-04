@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // TODO: Is test correct?
 // CHECK-LABEL: define void @f(double* %0)

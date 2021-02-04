@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // tests on coordinate_of op
 

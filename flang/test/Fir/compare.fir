@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco --target=x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: fir-opt %s | tco --target=x86_64-unknown-linux-gnu | FileCheck %s
 
 // CHECK-LABEL: define i1 @cmp(x86_fp80 %0, x86_fp80 %1)
 func @cmp(%a : !fir.real<10>, %b : !fir.real<10>) -> i1 {

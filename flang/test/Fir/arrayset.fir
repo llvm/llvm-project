@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // CHECK-LABEL: define void @x([10 x float]* %0)
 func @x(%arr : !fir.ref<!fir.array<10xf32>>) {

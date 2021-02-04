@@ -1,6 +1,6 @@
 // Test CSE pass
 
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // CHECK-LABEL: @fun
 func @fun(%a : !fir.ref<i64>) -> i64 {
