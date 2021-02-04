@@ -170,16 +170,6 @@ static bool setRetAndArgsNoUndef(Function &F) {
   return setRetNoUndef(F) | setArgsNoUndef(F);
 }
 
-static bool setRetNonNull(Function &F) {
-  assert(F.getReturnType()->isPointerTy() &&
-         "nonnull applies only to pointers");
-  if (F.hasAttribute(AttributeList::ReturnIndex, Attribute::NonNull))
-    return false;
-  F.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-  ++NumNonNull;
-  return true;
-}
-
 static bool setReturnedArg(Function &F, unsigned ArgNo) {
   if (F.hasParamAttribute(ArgNo, Attribute::Returned))
     return false;
@@ -1004,21 +994,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
-    return Changed;
-  case LibFunc_Znwj: // new(unsigned int)
-  case LibFunc_Znwm: // new(unsigned long)
-  case LibFunc_Znaj: // new[](unsigned int)
-  case LibFunc_Znam: // new[](unsigned long)
-  case LibFunc_msvc_new_int: // new(unsigned int)
-  case LibFunc_msvc_new_longlong: // new(unsigned long long)
-  case LibFunc_msvc_new_array_int: // new[](unsigned int)
-  case LibFunc_msvc_new_array_longlong: // new[](unsigned long long)
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
-    // Operator new always returns a nonnull noalias pointer
-    Changed |= setRetNoUndef(F);
-    Changed |= setRetNonNull(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
     return Changed;
   // TODO: add LibFunc entries for:
   // case LibFunc_memset_pattern4:
