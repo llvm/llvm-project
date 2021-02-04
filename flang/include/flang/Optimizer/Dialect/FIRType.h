@@ -43,7 +43,7 @@ struct ComplexTypeStorage;
 struct DimsTypeStorage;
 struct FieldTypeStorage;
 struct HeapTypeStorage;
-struct IntTypeStorage;
+struct IntegerTypeStorage;
 struct LenTypeStorage;
 struct LogicalTypeStorage;
 struct PointerTypeStorage;
@@ -119,11 +119,11 @@ public:
 
 /// Model of a Fortran INTEGER intrinsic type, including the KIND type
 /// parameter.
-class IntType
-    : public mlir::Type::TypeBase<IntType, mlir::Type, detail::IntTypeStorage> {
+class IntegerType : public mlir::Type::TypeBase<fir::IntegerType, mlir::Type,
+                                                detail::IntegerTypeStorage> {
 public:
   using Base::Base;
-  static IntType get(mlir::MLIRContext *ctxt, KindTy kind);
+  static fir::IntegerType get(mlir::MLIRContext *ctxt, KindTy kind);
   KindTy getFKind() const;
 };
 
@@ -388,7 +388,7 @@ inline bool isa_real(mlir::Type t) {
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {
   return t.isa<mlir::IndexType>() || t.isa<mlir::IntegerType>() ||
-         t.isa<fir::IntType>();
+         t.isa<fir::IntegerType>();
 }
 
 /// Is `t` a FIR or MLIR Complex type?

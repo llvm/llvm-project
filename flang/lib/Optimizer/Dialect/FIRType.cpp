@@ -107,8 +107,8 @@ HeapType parseHeap(mlir::DialectAsmParser &parser, mlir::Location loc) {
 }
 
 // `int` `<` kind `>`
-IntType parseInteger(mlir::DialectAsmParser &parser) {
-  return parseKindSingleton<IntType>(parser);
+fir::IntegerType parseInteger(mlir::DialectAsmParser &parser) {
+  return parseKindSingleton<fir::IntegerType>(parser);
 }
 
 // `len`
@@ -181,7 +181,7 @@ SequenceType parseSequence(mlir::DialectAsmParser &parser, mlir::Location) {
 /// Is `ty` a standard or FIR integer type?
 static bool isaIntegerType(mlir::Type ty) {
   // TODO: why aren't we using isa_integer? investigatation required.
-  return ty.isa<mlir::IntegerType>() || ty.isa<fir::IntType>();
+  return ty.isa<mlir::IntegerType>() || ty.isa<fir::IntegerType>();
 }
 
 bool verifyRecordMemberType(mlir::Type ty) {
@@ -469,17 +469,17 @@ private:
 };
 
 /// `INTEGER` storage
-struct IntTypeStorage : public mlir::TypeStorage {
+struct IntegerTypeStorage : public mlir::TypeStorage {
   using KeyTy = KindTy;
 
   static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
 
   bool operator==(const KeyTy &key) const { return key == getFKind(); }
 
-  static IntTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                   KindTy kind) {
-    auto *storage = allocator.allocate<IntTypeStorage>();
-    return new (storage) IntTypeStorage{kind};
+  static IntegerTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                       KindTy kind) {
+    auto *storage = allocator.allocate<IntegerTypeStorage>();
+    return new (storage) IntegerTypeStorage{kind};
   }
 
   KindTy getFKind() const { return kind; }
@@ -488,8 +488,8 @@ protected:
   KindTy kind;
 
 private:
-  IntTypeStorage() = delete;
-  explicit IntTypeStorage(KindTy kind) : kind{kind} {}
+  IntegerTypeStorage() = delete;
+  explicit IntegerTypeStorage(KindTy kind) : kind{kind} {}
 };
 
 /// `COMPLEX` storage
@@ -901,11 +901,11 @@ int fir::LogicalType::getFKind() const { return getImpl()->getFKind(); }
 
 // INTEGER
 
-IntType fir::IntType::get(mlir::MLIRContext *ctxt, KindTy kind) {
+fir::IntegerType fir::IntegerType::get(mlir::MLIRContext *ctxt, KindTy kind) {
   return Base::get(ctxt, kind);
 }
 
-int fir::IntType::getFKind() const { return getImpl()->getFKind(); }
+int fir::IntegerType::getFKind() const { return getImpl()->getFKind(); }
 
 // COMPLEX
 
@@ -1290,7 +1290,7 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
-  if (auto type = ty.dyn_cast<fir::IntType>()) {
+  if (auto type = ty.dyn_cast<fir::IntegerType>()) {
     os << "int<" << type.getFKind() << '>';
     return;
   }
