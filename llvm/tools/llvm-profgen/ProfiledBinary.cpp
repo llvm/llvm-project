@@ -126,13 +126,13 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                     Context2.begin(), Context2.begin() + Context2.size() - 1);
 }
 
-std::string ProfiledBinary::getExpandedContextStr(
-    const SmallVectorImpl<uint64_t> &Stack) const {
+std::string
+ProfiledBinary::getExpandedContextStr(const std::list<uint64_t> &Stack) const {
   std::string ContextStr;
   SmallVector<std::string, 16> ContextVec;
   // Process from frame root to leaf
-  for (auto Address : Stack) {
-    uint64_t Offset = virtualAddrToOffset(Address);
+  for (auto Iter = Stack.rbegin(); Iter != Stack.rend(); Iter++) {
+    uint64_t Offset = virtualAddrToOffset(*Iter);
     const FrameLocationStack &ExpandedContext = getFrameLocationStack(Offset);
     for (const auto &Loc : ExpandedContext) {
       ContextVec.push_back(getCallSite(Loc));
