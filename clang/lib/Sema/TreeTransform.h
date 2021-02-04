@@ -12505,11 +12505,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                         E->getCaptureDefault());
   getDerived().transformedLocalDecl(OldClass, {Class});
 
-  Optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling;
+  Optional<std::tuple<unsigned, bool, Decl *>> Mangling;
   if (getDerived().ReplacingOriginal())
-    Mangling = std::make_tuple(OldClass->hasKnownLambdaInternalLinkage(),
-                               OldClass->getLambdaManglingNumber(),
-                               OldClass->getDeviceLambdaManglingNumber(),
+    Mangling = std::make_tuple(OldClass->getLambdaManglingNumber(),
+                               OldClass->hasKnownLambdaInternalLinkage(),
                                OldClass->getLambdaContextDecl());
 
   // Build the call operator.
