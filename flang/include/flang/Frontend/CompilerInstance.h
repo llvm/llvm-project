@@ -30,6 +30,8 @@ class CompilerInstance {
 
   std::shared_ptr<Fortran::parser::Parsing> parsing_;
 
+  std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext_;
+
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream_ = &llvm::errs();
 
@@ -100,6 +102,9 @@ public:
   /// }
   /// @name Semantic analysis
   /// {
+  Fortran::semantics::SemanticsContext &semanticsContext() const {
+    return *semanticsContext_;
+  }
 
   /// Replace the current stream for verbose output.
   void set_semaOutputStream(llvm::raw_ostream &Value);

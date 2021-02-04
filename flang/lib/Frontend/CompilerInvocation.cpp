@@ -221,6 +221,25 @@ static void parsePreprocessorArgs(
     opts.searchDirectoriesFromDashI.emplace_back(currentArg->getValue());
 }
 
+/// Parses all semantic related arguments and populates the variables
+/// options accordingly.
+static void parseSemaArgs(std::string &moduleDir, llvm::opt::ArgList &args,
+    clang::DiagnosticsEngine &diags) {
+
+  auto moduleDirList =
+      args.getAllArgValues(clang::driver::options::OPT_module_dir);
+  // User can only specify -J/-module-dir once
+  // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html
+  if (moduleDirList.size() > 1) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+            "Only one '-module-dir/-J' option allowed");
+    diags.Report(diagID);
+  }
+  if (moduleDirList.size() == 1)
+    moduleDir = moduleDirList[0];
+}
+
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
     llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags) {
@@ -250,6 +269,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   ParseFrontendArgs(res.frontendOpts(), args, diags);
   // Parse the preprocessor args
   parsePreprocessorArgs(res.preprocessorOpts(), args);
+  // Parse semantic args
+  parseSemaArgs(res.moduleDir(), args, diags);
 
   return success;
 }
@@ -314,6 +335,7 @@ void CompilerInvocation::setFortranOpts() {
   auto &fortranOptions = fortranOpts();
   const auto &frontendOptions = frontendOpts();
   const auto &preprocessorOptions = preprocessorOpts();
+  auto &moduleDirJ = moduleDir();
 
   if (frontendOptions.fortranForm_ != FortranForm::Unknown) {
     fortranOptions.isFixedForm =
@@ -327,4 +349,18 @@ void CompilerInvocation::setFortranOpts() {
       fortranOptions.searchDirectories.end(),
       preprocessorOptions.searchDirectoriesFromDashI.begin(),
       preprocessorOptions.searchDirectoriesFromDashI.end());
+
+  // Add the directory supplied through -J/-module-dir to the list of search
+  // directories
+  if (moduleDirJ.compare(".") != 0)
+    fortranOptions.searchDirectories.emplace_back(moduleDirJ);
+}
+
+void CompilerInvocation::setSemanticsOpts(
+    Fortran::semantics::SemanticsContext &semaCtxt) {
+  auto &fortranOptions = fortranOpts();
+  auto &moduleDirJ = moduleDir();
+  semaCtxt.set_moduleDirectory(moduleDirJ)
+      .set_searchDirectories(fortranOptions.searchDirectories);
+  return;
 }

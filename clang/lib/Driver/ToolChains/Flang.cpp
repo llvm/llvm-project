@@ -30,6 +30,10 @@ void Flang::AddPreprocessingOptions(const ArgList &Args,
   Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U, options::OPT_I});
 }
 
+void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+  Args.AddAllArgs(CmdArgs, options::OPT_module_dir);
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -86,6 +90,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     AddPreprocessingOptions(Args, CmdArgs);
 
   AddFortranDialectOptions(Args, CmdArgs);
+
+  // Add other compile options
+  AddOtherOptions(Args, CmdArgs);
 
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
