@@ -1429,6 +1429,9 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgcn:
     return CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return CheckRISCVBuiltinFunctionCall(TI, BuiltinID, TheCall);
   }
 }
 
@@ -3379,6 +3382,23 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Context))
     return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
            << ArgExpr->getType();
+
+  return false;
+}
+
+bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
+                                         unsigned BuiltinID,
+                                         CallExpr *TheCall) {
+  switch (BuiltinID) {
+  default:
+    break;
+#define BUILTIN(ID, TYPE, ATTRS) case RISCV::BI##ID:
+#include "clang/Basic/BuiltinsRISCV.def"
+    if (!TI.hasFeature("experimental-v"))
+      return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
+             << TheCall->getSourceRange();
+    break;
+  }
 
   return false;
 }
