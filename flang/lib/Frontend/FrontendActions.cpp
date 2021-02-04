@@ -16,8 +16,40 @@
 
 using namespace Fortran::frontend;
 
-void InputOutputTestAction::ExecuteAction() {
+bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
+  CompilerInstance &ci = this->instance();
 
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+
+  Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
+
+  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
+    // Switch between fixed and free form format based on the input file
+    // extension.
+    //
+    // Ideally we should have all Fortran options set before entering this
+    // method (i.e. before processing any specific input files). However, we
+    // can't decide between fixed and free form based on the file extension
+    // earlier than this.
+    parserOptions.isFixedForm = currentInput().IsFixedForm();
+  }
+
+  // Prescan. In case of failure, report and return.
+  ci.parsing().Prescan(currentInputPath, parserOptions);
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    const unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not scan %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+    return false;
+  }
+
+  return true;
+}
+
+void InputOutputTestAction::ExecuteAction() {
   // Get the name of the file from FrontendInputFile current.
   std::string path{GetCurrentFileOrBufferName()};
   std::string buf;
