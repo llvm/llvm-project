@@ -58,13 +58,56 @@ convertScalableVectorTypeToLLVM(ScalableVectorType svType,
   return sVectorType;
 }
 
+template <typename OpTy>
+class ForwardOperands : public OpConversionPattern<OpTy> {
+  using OpConversionPattern<OpTy>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(OpTy op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (ValueRange(operands).getTypes() == op->getOperands().getTypes())
+      return rewriter.notifyMatchFailure(op, "operand types already match");
+
+    rewriter.updateRootInPlace(op, [&]() { op->setOperands(operands); });
+    return success();
+  }
+};
+
+class ReturnOpTypeConversion : public OpConversionPattern<ReturnOp> {
+public:
+  using OpConversionPattern<ReturnOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ReturnOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    rewriter.updateRootInPlace(op, [&]() { op->setOperands(operands); });
+    return success();
+  }
+};
+
+static Optional<Value> addUnrealizedCast(OpBuilder &builder,
+                                         ScalableVectorType svType,
+                                         ValueRange inputs, Location loc) {
+  if (inputs.size() != 1 ||
+      !inputs[0].getType().isa<LLVM::LLVMScalableVectorType>())
+    return Value();
+  return builder.create<UnrealizedConversionCastOp>(loc, svType, inputs)
+      .getResult(0);
+}
+
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVEToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   converter.addConversion([&converter](ScalableVectorType svType) {
     return convertScalableVectorTypeToLLVM(svType, converter);
   });
+  converter.addSourceMaterialization(addUnrealizedCast);
+
   // clang-format off
+  patterns.insert<ForwardOperands<CallOp>,
+                  ForwardOperands<CallIndirectOp>,
+                  ForwardOperands<ReturnOp>>(converter,
+                                             &converter.getContext());
   patterns.insert<SdotOpLowering,
                   SmmlaOpLowering,
                   UdotOpLowering,

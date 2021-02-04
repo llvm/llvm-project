@@ -1274,10 +1274,40 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
     return op.emitOpError("invalid cast between index and non-integer type");
   }
 
+  if (type.isa<IntegerType>()) {
+    auto llvmIntegerType = llvmType.dyn_cast<IntegerType>();
+    if (!llvmIntegerType)
+      return op->emitOpError("invalid cast between integer and non-integer");
+    if (llvmIntegerType.getWidth() != type.getIntOrFloatBitWidth())
+      return op.emitOpError("invalid cast changing integer width");
+    return success();
+  }
+
   // Vectors are compatible if they are 1D non-scalable, and their element types
-  // are compatible.
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    return op.emitOpError("vector types should not be casted");
+  // are compatible. nD vectors are compatible with (n-1)D arrays containing 1D
+  // vector.
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    if (vectorType == llvmType && !isElement)
+      return op.emitOpError("vector types should not be casted");
+
+    if (vectorType.getRank() == 1) {
+      auto llvmVectorType = llvmType.dyn_cast<VectorType>();
+      if (!llvmVectorType || llvmVectorType.getRank() != 1)
+        return op.emitOpError("invalid cast for vector types");
+
+      return verifyCast(op, llvmVectorType.getElementType(),
+                        vectorType.getElementType(), /*isElement=*/true);
+    }
+
+    auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>();
+    if (!arrayType ||
+        arrayType.getNumElements() != vectorType.getShape().front())
+      return op.emitOpError("invalid cast for vector, expected array");
+    return verifyCast(op, arrayType.getElementType(),
+                      VectorType::get(vectorType.getShape().drop_front(),
+                                      vectorType.getElementType()),
+                      /*isElement=*/true);
+  }
 
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
     // Bare pointer convention: statically-shaped memref is compatible with an
