@@ -1564,9 +1564,11 @@ bool AMDGPURegisterBankInfo::applyMappingBFEIntrinsic(
 // Return a suitable opcode for extending the operands of Opc when widening.
 static unsigned getExtendOp(unsigned Opc) {
   switch (Opc) {
+  case TargetOpcode::G_ASHR:
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
     return TargetOpcode::G_SEXT;
+  case TargetOpcode::G_LSHR:
   case TargetOpcode::G_UMIN:
   case TargetOpcode::G_UMAX:
     return TargetOpcode::G_ZEXT;
