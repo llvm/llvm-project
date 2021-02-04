@@ -61,5 +61,5 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float ad
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign"}
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-insts" }
