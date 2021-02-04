@@ -30,6 +30,7 @@
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
@@ -49,6 +50,7 @@
 ! HELP-FC1-NEXT: -ffree-form            Process source files in free form
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information
