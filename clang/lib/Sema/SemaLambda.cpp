@@ -432,15 +432,16 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    Optional<std::tuple<unsigned, bool, Decl *>> Mangling) {
+    Optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
   if (Mangling) {
-    unsigned ManglingNumber;
     bool HasKnownInternalLinkage;
+    unsigned ManglingNumber, DeviceManglingNumber;
     Decl *ManglingContextDecl;
-    std::tie(ManglingNumber, HasKnownInternalLinkage, ManglingContextDecl) =
-        Mangling.getValue();
+    std::tie(HasKnownInternalLinkage, ManglingNumber, DeviceManglingNumber,
+             ManglingContextDecl) = Mangling.getValue();
     Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
                              HasKnownInternalLinkage);
+    Class->setDeviceLambdaManglingNumber(DeviceManglingNumber);
     return;
   }
 
@@ -476,6 +477,7 @@ void Sema::handleLambdaNumbering(
     unsigned ManglingNumber = MCtx->getManglingNumber(Method);
     Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
                              HasKnownInternalLinkage);
+    Class->setDeviceLambdaManglingNumber(MCtx->getDeviceManglingNumber(Method));
   }
 }
 

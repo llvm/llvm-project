@@ -184,6 +184,14 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   CharPtrTy = llvm::PointerType::getUnqual(Types.ConvertType(Ctx.CharTy));
   VoidPtrTy = cast<llvm::PointerType>(Types.ConvertType(Ctx.VoidPtrTy));
   VoidPtrPtrTy = VoidPtrTy->getPointerTo();
+  if (CGM.getContext().getAuxTargetInfo()) {
+    // If the host and device have different C++ ABIs, mark it as the device
+    // mangle context so that the mangling needs to retrieve the additonal
+    // device lambda mangling number instead of the regular host one.
+    DeviceMC->setDeviceMangleContext(
+        CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+        CGM.getContext().getAuxTargetInfo()->getCXXABI().isItaniumFamily());
+  }
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {
