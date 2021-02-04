@@ -45,9 +45,9 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
 
     The invariants of this interface are:
       1. `static_offsets`, `static_sizes` and `static_strides` have length
-          at most `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
+          exactly `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
       2. `offsets`, `sizes` and `strides` have each length at most
-         length `static_offsets` (resp. `static_sizes`, `static_strides`).
+         `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
       3. if an entry of `static_offsets` (resp. `static_sizes`,
          `static_strides`) is equal to a special sentinel value, namely
          `ShapedType::kDynamicStrideOrOffset` (resp. `ShapedType::kDynamicSize`,
