@@ -203,6 +203,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+
+  // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
+  if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
+    Diags.setSeverity(diag::remark_cc1_round_trip_generated,
+                      diag::Severity::Remark, {});
+
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
