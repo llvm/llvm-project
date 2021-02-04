@@ -246,8 +246,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: store_fi_s64_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: STRXui [[COPY]], %stack.0.ptr0, 0 :: (store 8)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK: STRXui [[COPY1]], %stack.0.ptr0, 0 :: (store 8)
     %0(p0) = COPY $x0
     %1(p0) = G_FRAME_INDEX %stack.0.ptr0
     G_STORE  %0, %1 :: (store 8)
@@ -613,9 +614,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: store_adrp_add_low
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64 = COPY $x0
+    ; CHECK: %copy:gpr64all = COPY $x0
     ; CHECK: %adrp:gpr64common = ADRP target-flags(aarch64-page) @x
-    ; CHECK: STRXui %copy, %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store 8 into @x)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
+    ; CHECK: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store 8 into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x

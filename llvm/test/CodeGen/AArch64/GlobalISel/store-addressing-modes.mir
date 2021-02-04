@@ -3,12 +3,14 @@
 
 --- |
   define void @strxrox(i64* %addr) { ret void }
+  define void @strxrox_p0(i64* %addr) { ret void }
   define void @strdrox(i64* %addr) { ret void }
   define void @strwrox(i64* %addr) { ret void }
   define void @strsrox(i64* %addr) { ret void }
   define void @strhrox(i64* %addr) { ret void }
   define void @strqrox(i64* %addr) { ret void }
   define void @shl(i64* %addr) { ret void }
+  define void @shl_p0(i64* %addr) { ret void }
 ...
 
 ---
@@ -31,6 +33,29 @@ body:             |
     %1:gpr(s64) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %0, %1
     %3:gpr(s64) = COPY $x2
+    G_STORE %3, %ptr :: (store 8 into %ir.addr)
+...
+---
+name:            strxrox_p0
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: strxrox_p0
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
+    ; CHECK: STRXroX [[COPY3]], [[COPY]], [[COPY1]], 0, 0 :: (store 8 into %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(s64) = COPY $x1
+    %ptr:gpr(p0) = G_PTR_ADD %0, %1
+    %3:gpr(p0) = COPY $x2
     G_STORE %3, %ptr :: (store 8 into %ir.addr)
 ...
 ---
@@ -165,4 +190,29 @@ body:             |
     %3:gpr(p0) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %3, %2
     %4:gpr(s64) = COPY $x2
+    G_STORE %4, %ptr :: (store 8 into %ir.addr)
+...
+---
+name:            shl_p0
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: shl_p0
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
+    ; CHECK: STRXroX [[COPY3]], [[COPY1]], [[COPY]], 0, 1 :: (store 8 into %ir.addr)
+    %0:gpr(s64) = COPY $x0
+    %1:gpr(s64) = G_CONSTANT i64 3
+    %2:gpr(s64) = G_SHL %0, %1(s64)
+    %3:gpr(p0) = COPY $x1
+    %ptr:gpr(p0) = G_PTR_ADD %3, %2
+    %4:gpr(p0) = COPY $x2
     G_STORE %4, %ptr :: (store 8 into %ir.addr)
