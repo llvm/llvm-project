@@ -28,12 +28,11 @@ void VirtualUnwinder::unwindCall(UnwindState &State) {
   // 2nd frame is in prolog/epilog. In the future, we will switch to
   // pro/epi tracker(Dwarf CFI) for the precise check.
   uint64_t Source = State.getCurrentLBRSource();
-  auto *ParentFrame = State.getParentFrame();
-  if (ParentFrame == State.getDummyRootPtr() ||
-      ParentFrame->Address != Source) {
-    State.switchToFrame(Source);
+  auto Iter = State.CallStack.begin();
+  if (State.CallStack.size() == 1 || *(++Iter) != Source) {
+    State.CallStack.front() = Source;
   } else {
-    State.popFrame();
+    State.CallStack.pop_front();
   }
   State.InstPtr.update(Source);
 }
@@ -42,29 +41,26 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
   InstructionPointer &IP = State.InstPtr;
   uint64_t Target = State.getCurrentLBRTarget();
   uint64_t End = IP.Address;
-  if (Binary->usePseudoProbes()) {
-    // We don't need to top frame probe since it should be extracted
-    // from the range.
+  if (State.getBinary()->usePseudoProbes()) {
     // The outcome of the virtual unwinding with pseudo probes is a
     // map from a context key to the address range being unwound.
     // This means basically linear unwinding is not needed for pseudo
     // probes. The range will be simply recorded here and will be
     // converted to a list of pseudo probes to report in ProfileGenerator.
-    State.getParentFrame()->recordRangeCount(Target, End, Repeat);
+    recordRangeCount(Target, End, State, Repeat);
   } else {
     // Unwind linear execution part
-    uint64_t LeafAddr = State.CurrentLeafFrame->Address;
     while (IP.Address >= Target) {
       uint64_t PrevIP = IP.Address;
       IP.backward();
       // Break into segments for implicit call/return due to inlining
-      bool SameInlinee = Binary->inlineContextEqual(PrevIP, IP.Address);
+      bool SameInlinee =
+          State.getBinary()->inlineContextEqual(PrevIP, IP.Address);
       if (!SameInlinee || PrevIP == Target) {
-        State.switchToFrame(LeafAddr);
-        State.CurrentLeafFrame->recordRangeCount(PrevIP, End, Repeat);
+        recordRangeCount(PrevIP, End, State, Repeat);
         End = IP.Address;
       }
-      LeafAddr = IP.Address;
+      State.CallStack.front() = IP.Address;
     }
   }
 }
@@ -72,9 +68,9 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
 void VirtualUnwinder::unwindReturn(UnwindState &State) {
   // Add extra frame as we unwind through the return
   const LBREntry &LBR = State.getCurrentLBR();
-  uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
-  State.switchToFrame(CallAddr);
-  State.pushFrame(LBR.Source);
+  uint64_t CallAddr = State.getBinary()->getCallAddrFromFrameAddr(LBR.Target);
+  State.CallStack.front() = CallAddr;
+  State.CallStack.push_front(LBR.Source);
   State.InstPtr.update(LBR.Source);
 }
 
@@ -82,100 +78,79 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
   // TODO: Tolerate tail call for now, as we may see tail call from libraries.
   // This is only for intra function branches, excluding tail calls.
   uint64_t Source = State.getCurrentLBRSource();
-  State.switchToFrame(Source);
+  State.CallStack.front() = Source;
   State.InstPtr.update(Source);
 }
 
-std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
+SampleCounter &
+VirtualUnwinder::getOrCreateCounter(const ProfiledBinary *Binary,
+                                    std::list<uint64_t> &CallStack) {
+  if (Binary->usePseudoProbes()) {
+    return getOrCreateCounterForProbe(Binary, CallStack);
+  }
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
-  KeyStr->Context = Binary->getExpandedContextStr(Stack);
+  KeyStr->Context = Binary->getExpandedContextStr(CallStack);
   KeyStr->genHashCode();
-  return KeyStr;
+  auto Ret =
+      CtxCounterMap->emplace(Hashable<ContextKey>(KeyStr), SampleCounter());
+  return Ret.first->second;
 }
 
-std::shared_ptr<ProbeBasedCtxKey> ProbeStack::getContextKey() {
+SampleCounter &
+VirtualUnwinder::getOrCreateCounterForProbe(const ProfiledBinary *Binary,
+                                            std::list<uint64_t> &CallStack) {
   std::shared_ptr<ProbeBasedCtxKey> ProbeBasedKey =
       std::make_shared<ProbeBasedCtxKey>();
-  for (auto CallProbe : Stack) {
-    ProbeBasedKey->Probes.emplace_back(CallProbe);
+  if (CallStack.size() > 1) {
+    // We don't need to top frame probe since it should be extracted
+    // from the range.
+    // The top of stack is an instruction from the function where
+    // the LBR address range physcially resides. Strip it since
+    // the function is not a part of the call context. We also
+    // don't need its inline context since the probes being unwound
+    // come with an inline context all the way back to the uninlined
+    // function in their prefix tree.
+    auto Iter = CallStack.rbegin();
+    auto EndT = std::prev(CallStack.rend());
+    for (; Iter != EndT; Iter++) {
+      uint64_t Address = *Iter;
+      const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(Address);
+      // We may not find a probe for a merged or external callsite.
+      // Callsite merging may cause the loss of original probe IDs.
+      // Cutting off the context from here since the inline will
+      // not know how to consume a context with unknown callsites.
+      if (!CallProbe)
+        break;
+      ProbeBasedKey->Probes.emplace_back(CallProbe);
+    }
   }
   CSProfileGenerator::compressRecursionContext<const PseudoProbe *>(
       ProbeBasedKey->Probes);
   ProbeBasedKey->genHashCode();
-  return ProbeBasedKey;
+  Hashable<ContextKey> ContextId(ProbeBasedKey);
+  auto Ret = CtxCounterMap->emplace(ContextId, SampleCounter());
+  return Ret.first->second;
 }
 
-template <typename T>
-void VirtualUnwinder::collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur,
-                                              T &Stack) {
-  if (Cur->RangeSamples.empty() && Cur->BranchSamples.empty())
-    return;
-
-  std::shared_ptr<ContextKey> Key = Stack.getContextKey();
-  auto Ret = CtxCounterMap->emplace(Hashable<ContextKey>(Key), SampleCounter());
-  SampleCounter &SCounter = Ret.first->second;
-  for (auto &Item : Cur->RangeSamples) {
-    uint64_t StartOffset = Binary->virtualAddrToOffset(std::get<0>(Item));
-    uint64_t EndOffset = Binary->virtualAddrToOffset(std::get<1>(Item));
-    SCounter.recordRangeCount(StartOffset, EndOffset, std::get<2>(Item));
-  }
-
-  for (auto &Item : Cur->BranchSamples) {
-    uint64_t SourceOffset = Binary->virtualAddrToOffset(std::get<0>(Item));
-    uint64_t TargetOffset = Binary->virtualAddrToOffset(std::get<1>(Item));
-    SCounter.recordBranchCount(SourceOffset, TargetOffset, std::get<2>(Item));
-  }
-}
-
-template <typename T>
-void VirtualUnwinder::collectSamplesFromFrameTrie(
-    UnwindState::ProfiledFrame *Cur, T &Stack) {
-  if (!Cur->isDummyRoot()) {
-    if (!Stack.pushFrame(Cur)) {
-      // Process truncated context
-      for (const auto &Item : Cur->Children) {
-        // Start a new traversal ignoring its bottom context
-        collectSamplesFromFrameTrie(Item.second.get());
-      }
-      return;
-    }
-  }
-
-  collectSamplesFromFrame(Cur, Stack);
-  // Process children frame
-  for (const auto &Item : Cur->Children) {
-    collectSamplesFromFrameTrie(Item.second.get(), Stack);
-  }
-  // Recover the call stack
-  Stack.popFrame();
-}
-
-void VirtualUnwinder::collectSamplesFromFrameTrie(
-    UnwindState::ProfiledFrame *Cur) {
-  if (Binary->usePseudoProbes()) {
-    ProbeStack Stack(Binary);
-    collectSamplesFromFrameTrie<ProbeStack>(Cur, Stack);
-  } else {
-    FrameStack Stack(Binary);
-    collectSamplesFromFrameTrie<FrameStack>(Cur, Stack);
-  }
+void VirtualUnwinder::recordRangeCount(uint64_t Start, uint64_t End,
+                                       UnwindState &State, uint64_t Repeat) {
+  uint64_t StartOffset = State.getBinary()->virtualAddrToOffset(Start);
+  uint64_t EndOffset = State.getBinary()->virtualAddrToOffset(End);
+  SampleCounter &SCounter =
+      getOrCreateCounter(State.getBinary(), State.CallStack);
+  SCounter.recordRangeCount(StartOffset, EndOffset, Repeat);
 }
 
 void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
                                         UnwindState &State, uint64_t Repeat) {
   if (Branch.IsArtificial)
     return;
-
-  if (Binary->usePseudoProbes()) {
-    // Same as recordRangeCount, We don't need to top frame probe since we will
-    // extract it from branch's source address
-    State.getParentFrame()->recordBranchCount(Branch.Source, Branch.Target,
-                                              Repeat);
-  } else {
-    State.CurrentLeafFrame->recordBranchCount(Branch.Source, Branch.Target,
-                                              Repeat);
-  }
+  uint64_t SourceOffset = State.getBinary()->virtualAddrToOffset(Branch.Source);
+  uint64_t TargetOffset = State.getBinary()->virtualAddrToOffset(Branch.Target);
+  SampleCounter &SCounter =
+      getOrCreateCounter(State.getBinary(), State.CallStack);
+  SCounter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
 }
 
 bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
@@ -224,8 +199,6 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
     // Record `branch` with calling context after unwinding.
     recordBranchCount(Branch, State, Repeat);
   }
-  // As samples are aggregated on trie, record them into counter map
-  collectSamplesFromFrameTrie(State.getDummyRootPtr());
 
   return true;
 }
@@ -352,8 +325,7 @@ void PerfReader::printUnwinderOutput() {
 void PerfReader::unwindSamples() {
   for (const auto &Item : AggregatedSamples) {
     const HybridSample *Sample = dyn_cast<HybridSample>(Item.first.getPtr());
-    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary],
-                             Sample->Binary);
+    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary]);
     Unwinder.unwind(Sample, Item.second);
   }
 
@@ -362,7 +334,7 @@ void PerfReader::unwindSamples() {
 }
 
 bool PerfReader::extractLBRStack(TraceStream &TraceIt,
-                                 SmallVectorImpl<LBREntry> &LBRStack,
+                                 SmallVector<LBREntry, 16> &LBRStack,
                                  ProfiledBinary *Binary) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
@@ -426,7 +398,7 @@ bool PerfReader::extractLBRStack(TraceStream &TraceIt,
 }
 
 bool PerfReader::extractCallstack(TraceStream &TraceIt,
-                                  SmallVectorImpl<uint64_t> &CallStack) {
+                                  std::list<uint64_t> &CallStack) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
   //	          400634
