@@ -488,5 +488,3 @@ module objc_redef_indirect {
   header "objc_redef_indirect.h"
   export *
 }
-
-module error { header "error.h" }
