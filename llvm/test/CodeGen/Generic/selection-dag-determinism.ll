@@ -19,18 +19,18 @@ entry:
 
 	if.end:
 	%tobool = icmp eq i32 0, 0
-	%a = select i1 %tobool, void (i32)* @f1, void (i32)* null, !dbg !8
-	%b = select i1 %tobool, void (i32)* @f2, void (i32)* null, !dbg !8
-	call void %a(i32 %x)
-	call void %b(i32 %x)
+	%a = select i1 %tobool, void (i32) addrspace(0)* @f1, void (i32)* null, !dbg !8
+	%b = select i1 %tobool, void (i32) addrspace(0)* @f2, void (i32)* null, !dbg !8
+	call addrspace(0) void %a(i32 %x)
+	call addrspace(0) void %b(i32 %x)
 	unreachable
 
 	cleanup:
 	ret void
 }
 
-declare void @f1(i32)
-declare void @f2(i32)
+declare void @f1(i32) addrspace(0)
+declare void @f2(i32) addrspace(0)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
