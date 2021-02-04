@@ -106,6 +106,7 @@ public:
     kw_def,
     FIRST_KEYWORD = kw_def,
     kw_ods_def,
+    kw_implements_interface,
     kw_attr_def,
     kw_floordiv,
     kw_ceildiv,
@@ -319,14 +320,16 @@ Token Lexer::lexIdentifier(const char *tokStart) {
 
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
-  Token::Kind kind = StringSwitch<Token::Kind>(str)
-                         .Case("attr", Token::Kind::kw_attr_def)
-                         .Case("def", Token::Kind::kw_def)
-                         .Case("ods_def", Token::Kind::kw_ods_def)
-                         .Case("floordiv", Token::Kind::kw_floordiv)
-                         .Case("ceildiv", Token::Kind::kw_ceildiv)
-                         .Case("mod", Token::Kind::kw_mod)
-                         .Default(Token::Kind::id);
+  Token::Kind kind =
+      StringSwitch<Token::Kind>(str)
+          .Case("attr", Token::Kind::kw_attr_def)
+          .Case("def", Token::Kind::kw_def)
+          .Case("ods_def", Token::Kind::kw_ods_def)
+          .Case("implements_interface", Token::Kind::kw_implements_interface)
+          .Case("floordiv", Token::Kind::kw_floordiv)
+          .Case("ceildiv", Token::Kind::kw_ceildiv)
+          .Case("mod", Token::Kind::kw_mod)
+          .Default(Token::Kind::id);
 
   return Token(kind, str);
 }
@@ -1111,7 +1114,8 @@ public:
 
   /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
   void printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                StringRef linalgOpName, ComprehensionParsingState &state);
+                StringRef linalgOpName, ArrayRef<StringRef> interfaces,
+                ComprehensionParsingState &state);
 
   /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
   void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
@@ -1635,29 +1639,54 @@ TCParser::parseOneComprehension(StringRef cppOpName, StringRef linalgOpName,
 ///     (tc-attr-def)?
 ///     `{` comprehension-list `}`
 ///
-///   ods-def ::= `ods_def` `<` bare-id `>` `:` tc-def
+///   implements-interface ::=
+///     `implements_interface` `<` bare-id (`,` bare-id)* `>` `:` tc-def
+///
+///   ods-def ::= `ods_def` `<` bare-id `>`
+///               (implements-interface)? `:`
+///               tc-def
 ///
 /// All the affine-expr in a `tensor-typedef` must be dimensionless (i.e.
 /// contain only expressions involving symbols and constants), but can
 /// otherwise contain arbitrary affine expressions.
 LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
-  // Parse def header (including C++ op name)
+  // Parse ods-def header (including C++ op name)
   if (failed(parser.parseToken(Token::Kind::kw_ods_def,
                                "expected 'ods_def' to define a TC ODS")) ||
       failed(parser.parseToken(Token::Kind::lt, "expected '<'")))
     return failure();
   StringRef cppOpName = parser.curToken.getSpelling();
   LLVM_DEBUG(llvm::dbgs() << "\n\nStart parsing ODS: " << cppOpName << "\n");
-
   if (failed(parser.parseToken(Token::Kind::id, "expected id")) ||
-      failed(parser.parseToken(Token::Kind::gt, "expected '>'")) ||
-      failed(parser.parseToken(Token::Kind::colon, "expected ':'")))
+      failed(parser.parseToken(Token::Kind::gt, "expected '>'")))
     return failure();
 
+  // Parse optional implements-interface header (including C++ op names)
+  SmallVector<StringRef> interfaces;
+  bool implementsInterface = succeeded(
+      parser.parseOptionalToken(Token::Kind::kw_implements_interface));
+  if (implementsInterface) {
+    auto parseInterfaceString = [&]() -> LogicalResult {
+      StringRef interfaceName = parser.curToken.getSpelling();
+      if (failed(parser.parseToken(Token::Kind::id, "expected id")))
+        return failure();
+      interfaces.push_back(interfaceName);
+      return success();
+    };
+    if (failed(parser.parseToken(Token::Kind::lt, "expected '<'")) ||
+        failed(parser.parseCommaSeparatedListUntil(
+            Token::Kind::gt, parseInterfaceString, /*allowEmptyList=*/false)))
+      return failure();
+  }
+
+  // Parse column.
+  if (failed(parser.parseToken(Token::Kind::colon, "expected ':'")))
+    return failure();
+
+  // Parse TC op name.
   if (failed(parser.parseToken(Token::Kind::kw_def,
                                "expected 'def' to define a TC")))
     return failure();
-
   StringRef tcName = parser.curToken.getSpelling();
   LLVM_DEBUG(llvm::dbgs() << "\n\nStart parsing TC: " << tcName << "\n");
 
@@ -1734,7 +1763,7 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
   }
   if (genODSDecl) {
     auto &state = perComprehensionStates.back();
-    printODS(os, cppOpName, tcName, state);
+    printODS(os, cppOpName, tcName, interfaces, state);
     os << "\n";
   }
   if (genODSImpl) {
@@ -1758,7 +1787,7 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
 
 /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
 void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                        StringRef linalgOpName,
+                        StringRef linalgOpName, ArrayRef<StringRef> interfaces,
                         ComprehensionParsingState &state) {
   SmallVector<std::string, 4> attributes;
   for (const auto &attr : registeredAttrs) {
@@ -1802,11 +1831,12 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   const char *header = R"FMT(  def {0} : LinalgStructuredBase_Op<"{1}", [
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
-      {2}
+    SingleBlockImplicitTerminator<"YieldOp">
+    /*extraInterfaces=*/{2}]> {
+      {3}
       let arguments = (ins
         Variadic<AnyShaped>:$inputs,
-        Variadic<AnyShaped>:$outputs{3}
+        Variadic<AnyShaped>:$outputs{4}
       );
       let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
@@ -1856,7 +1886,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
           $_state.addTypes(resultTensorTypes);
           (void)$_state.addRegion();
         }]>
-        {5}
+        {6}
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
       let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
@@ -1873,12 +1903,21 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         }
 
         // Generic methods.
-        static unsigned getNumRegionArgs() {{ return {4}; }
+        static unsigned getNumRegionArgs() {{ return {5}; }
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
       }];
   })FMT";
+
+  // Generate the list of extra implemented interfaces.
+  std::string interfaceNameList;
+  if (!interfaces.empty()) {
+    llvm::raw_string_ostream ss(interfaceNameList);
+    ss << ", "; // Leading comma to concat to existing list of interfaces.
+    llvm::interleaveComma(interfaces, ss);
+    ss.flush();
+  }
 
   // Generate documentation.
   std::string doc;
@@ -1934,8 +1973,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   }
 
   // Finally put everything together.
-  os << llvm::formatv(header, cppOpName, linalgOpName, doc, attrList,
-                      state.orderedTensorArgs.size(), attrBuilder);
+  os << llvm::formatv(header, cppOpName, linalgOpName, interfaceNameList, doc,
+                      attrList, state.orderedTensorArgs.size(), attrBuilder);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -2085,8 +2124,8 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
     // Note that we use `0` as the result affine map's number of symbols. All
     // symbols representing attribute usages should be folded away. But there
     // may exist additional symbols for tensor dimension upper bounds. Linalg
-    // does not handle such cases right now. This needs to be fixed once we need
-    // that.
+    // does not handle such cases right now. This needs to be fixed once we
+    // need that.
     const char *replaceFmt =
         "\n\tmap{0} = map{0}.replaceDimsAndSymbols({{}, {1}, {2}, 0);";
     mapsStringStream << llvm::formatv(replaceFmt, tensorUse.index(),

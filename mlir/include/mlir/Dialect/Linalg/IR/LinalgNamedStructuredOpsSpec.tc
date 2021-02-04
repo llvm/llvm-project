@@ -1,36 +1,43 @@
-ods_def<MatmulOp>:
+ods_def<MatmulOp>
+implements_interface<LinalgContractionOpInterface> :
 def matmul(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
   C(m, n) = std_addf<k>(std_mulf(A(m, k), B(k, n)));
 }
 
-ods_def<MatmulColumnMajorOp>:
+ods_def<MatmulColumnMajorOp>
+implements_interface<LinalgContractionOpInterface> :
 def matmul_column_major(A: f32(K, M), B: f32(N, K)) -> (C: f32(N, M)) {
   C(n, m) = std_addf<k>(std_mulf(A(k, m), B(n, k)));
 }
 
-ods_def<MatmulI8I8I32Op>:
+ods_def<MatmulI8I8I32Op>
+implements_interface<LinalgContractionOpInterface> :
 def matmul_i8_i8_i32(A: i8(M, K), B: i8(K, N)) -> (C: i32(M, N)) {
   // TODO: ideally something closer to
   //   C(m, n) += cast<i32>(A(m, k)) * cast<i32>(B(k, n))
   C(m, n) = std_addi<k>(std_sexti32(std_muli(A(m, k), B(k, n))));
 }
 
-ods_def<MatvecOp>:
+ods_def<MatvecOp>
+implements_interface<LinalgContractionOpInterface> :
 def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
   x(m) = std_addf<n>(std_mulf(A(m, n), y(n)));
 }
 
-ods_def<VecmatOp>:
+ods_def<VecmatOp>
+implements_interface<LinalgContractionOpInterface> :
 def vecmat(y: f32(M), A: f32(M, N)) -> (x: f32(N)) {
   x(n) = std_addf<m>(std_mulf(y(m), A(m, n)));
 }
 
-ods_def<DotOp>:
+ods_def<DotOp>
+implements_interface<LinalgContractionOpInterface> :
 def dot(A: f32(M), B: f32(M)) -> (C: f32()) {
   C() = std_addf<m>(std_mulf(A(m), B(m)));
 }
 
-ods_def<BatchMatmulOp>:
+ods_def<BatchMatmulOp>
+implements_interface<LinalgContractionOpInterface> :
 def batch_matmul(A: f32(Batch, M, K), B: f32(Batch, K, N)) -> (C: f32(Batch, M, N)) {
   C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(b, k, n)));
 }
