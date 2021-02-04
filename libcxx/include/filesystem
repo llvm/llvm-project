@@ -973,8 +973,8 @@ public:
     return *this;
   }
 
-  template <class = void>
-  _LIBCPP_INLINE_VISIBILITY path& operator=(string_type&& __s) noexcept {
+  _LIBCPP_INLINE_VISIBILITY
+  path& operator=(string_type&& __s) noexcept {
     __pn_ = _VSTD::move(__s);
     return *this;
   }

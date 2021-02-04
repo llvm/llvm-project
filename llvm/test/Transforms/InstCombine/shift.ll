@@ -1795,3 +1795,25 @@ define void @ashr_out_of_range_1(i177* %A) {
   store i177 %B28, i177* %G62, align 4
   ret void
 }
+
+define i8 @lshr_mask_demand(i8 %x) {
+; CHECK-LABEL: @lshr_mask_demand(
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 63, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[S]], -32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = lshr i8 63, %x ; 0b00111111
+  %r = and i8 %s, 224 ; 0b11100000
+  ret i8 %r
+}
+
+define i8 @shl_mask_demand(i8 %x) {
+; CHECK-LABEL: @shl_mask_demand(
+; CHECK-NEXT:    [[S:%.*]] = shl i8 12, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[S]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = shl i8 12, %x ; 0b00001100
+  %r = and i8 %s, 7  ; 0b00000111
+  ret i8 %r
+}

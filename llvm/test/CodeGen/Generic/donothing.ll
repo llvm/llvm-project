@@ -1,6 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
 
-declare i32 @__gxx_personality_v0(...)
+declare i32 @__gxx_personality_v0(...) addrspace(0)
 declare void @__cxa_call_unexpected(i8*)
 declare void @llvm.donothing() readnone
 
