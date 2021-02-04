@@ -340,9 +340,6 @@ extern char &GCNRegBankReassignID;
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
-FunctionPass *createAMDGPUPromotePointerKernArgsToGlobalPass();
-void initializeAMDGPUPromotePointerKernArgsToGlobalPass(PassRegistry &);
-
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
