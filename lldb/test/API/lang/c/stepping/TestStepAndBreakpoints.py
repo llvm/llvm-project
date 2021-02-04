@@ -115,14 +115,14 @@ class TestCStepping(TestBase):
         frame.EvaluateExpression("(int) printf (print_string)")
 
         frame = thread.GetFrameAtIndex(0)
-        self.assertTrue(
-            current_line == frame.GetLineEntry().GetLine(),
+        self.assertEqual(
+            current_line, frame.GetLineEntry().GetLine(),
             "The line stayed the same after expression.")
-        self.assertTrue(
-            current_file == frame.GetLineEntry().GetFileSpec(),
+        self.assertEqual(
+            current_file, frame.GetLineEntry().GetFileSpec(),
             "The file stayed the same after expression.")
-        self.assertTrue(
-            thread.GetStopReason() == lldb.eStopReasonBreakpoint,
+        self.assertEqual(
+            thread.GetStopReason(), lldb.eStopReasonBreakpoint,
             "We still say we stopped for a breakpoint.")
         self.assertTrue(thread.GetStopReasonDataAtIndex(0) == current_bp[
                         0] and thread.GetStopReasonDataAtIndex(1) == current_bp[1], "And it is the same breakpoint.")
@@ -132,8 +132,8 @@ class TestCStepping(TestBase):
         stop_id_after_expression = process.GetStopID()
         stop_id_after_including_expressions = process.GetStopID(True)
 
-        self.assertTrue(
-            stop_id_before_expression == stop_id_after_expression,
+        self.assertEqual(
+            stop_id_before_expression, stop_id_after_expression,
             "Expression calling doesn't change stop ID")
 
         self.assertTrue(
@@ -146,14 +146,14 @@ class TestCStepping(TestBase):
         frame.EvaluateExpression("((char *) 0)[0] = 'a'")
 
         frame = thread.GetFrameAtIndex(0)
-        self.assertTrue(
-            current_line == frame.GetLineEntry().GetLine(),
+        self.assertEqual(
+            current_line, frame.GetLineEntry().GetLine(),
             "The line stayed the same after expression.")
-        self.assertTrue(
-            current_file == frame.GetLineEntry().GetFileSpec(),
+        self.assertEqual(
+            current_file, frame.GetLineEntry().GetFileSpec(),
             "The file stayed the same after expression.")
-        self.assertTrue(
-            thread.GetStopReason() == lldb.eStopReasonBreakpoint,
+        self.assertEqual(
+            thread.GetStopReason(), lldb.eStopReasonBreakpoint,
             "We still say we stopped for a breakpoint.")
         self.assertTrue(thread.GetStopReasonDataAtIndex(0) == current_bp[
                         0] and thread.GetStopReasonDataAtIndex(1) == current_bp[1], "And it is the same breakpoint.")
@@ -202,8 +202,8 @@ class TestCStepping(TestBase):
 
         # See that we are still in b:
         func_name = thread.GetFrameAtIndex(0).GetFunctionName()
-        self.assertTrue(
-            func_name == "b",
+        self.assertEqual(
+            func_name, "b",
             "Should be in 'b', were in %s" %
             (func_name))
 

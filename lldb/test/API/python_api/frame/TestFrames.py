@@ -88,8 +88,8 @@ class FrameAPITestCase(TestBase):
                 # instruction as PC.
                 if self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
                     pc_value_int &= ~1
-                self.assertTrue(
-                    pc_value_int == frame.GetPC(),
+                self.assertEqual(
+                    pc_value_int, frame.GetPC(),
                     "PC gotten as a value should equal frame's GetPC")
                 sp_value = gpr_reg_set.GetChildMemberWithName("sp")
                 self.assertTrue(
@@ -102,8 +102,8 @@ class FrameAPITestCase(TestBase):
             process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)
 
         # Expect to find 'a' on the call stacks two times.

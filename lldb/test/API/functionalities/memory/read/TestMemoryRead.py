@@ -66,12 +66,11 @@ class MemoryReadTestCase(TestBase):
         for i in range(4):
             if i == 0:
                 # Verify that the printout for argc is correct.
-                self.assertTrue(
-                    argc == int(
-                        lines[i].split(':')[1].strip(' {}'), 0))
+                self.assertEqual(
+                    argc, int(lines[i].split(':')[1].strip(' {}'), 0))
             addr = int(lines[i].split(':')[0], 0)
             # Verify that the printout for addr is incremented correctly.
-            self.assertEquals(addr, (address + i * 4))
+            self.assertEqual(addr, (address + i * 4))
 
         # (lldb) memory read --format char[] --size 7 --count 1 `&my_string`
         # 0x7fff5fbff990: {abcdefg}
@@ -130,5 +129,5 @@ class MemoryReadTestCase(TestBase):
               objects_read.extend(l.split(':')[1].split())
           # Check that we got back 4 0x0000 etc bytes
           for o in objects_read:
-              self.assertTrue (len(o) == expected_object_length)
+              self.assertEqual(len(o), expected_object_length)
           self.assertEquals(len(objects_read), 4)

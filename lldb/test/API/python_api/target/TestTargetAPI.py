@@ -268,8 +268,8 @@ class TargetAPITestCase(TestBase):
                     value_list = m.FindGlobalVariables(
                         target, 'my_global_var_of_char_type', 3)
                     self.assertEqual(value_list.GetSize(), 1)
-                    self.assertTrue(
-                        value_list.GetValueAtIndex(0).GetValue() == "'X'")
+                    self.assertEqual(
+                        value_list.GetValueAtIndex(0).GetValue(), "'X'")
                     break
 
     def find_compile_units(self, exe):
@@ -283,8 +283,8 @@ class TargetAPITestCase(TestBase):
         list = target.FindCompileUnits(lldb.SBFileSpec(source_name, False))
         # Executable has been built just from one source file 'main.c',
         # so we may check only the first element of list.
-        self.assertTrue(
-            list[0].GetCompileUnit().GetFileSpec().GetFilename() == source_name)
+        self.assertEqual(
+            list[0].GetCompileUnit().GetFileSpec().GetFilename(), source_name)
 
     def find_functions(self, exe_name):
         """Exercise SBTaget.FindFunctions() API."""
@@ -302,8 +302,8 @@ class TargetAPITestCase(TestBase):
         self.assertEqual(list.GetSize(), 1)
 
         for sc in list:
-            self.assertTrue(
-                sc.GetModule().GetFileSpec().GetFilename() == exe_name)
+            self.assertEqual(
+                sc.GetModule().GetFileSpec().GetFilename(), exe_name)
             self.assertEqual(sc.GetSymbol().GetName(), 'c')
 
     def get_description(self):

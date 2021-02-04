@@ -99,8 +99,8 @@ class ExecTestCase(TestBase):
 
             threads = lldbutil.get_stopped_threads(
                 process, lldb.eStopReasonExec)
-            self.assertTrue(
-                len(threads) == 1,
+            self.assertEqual(
+                len(threads), 1,
                 "We got a thread stopped for exec.")
 
             # Run and we should stop at breakpoint in main after exec
@@ -169,8 +169,8 @@ class ExecTestCase(TestBase):
 
         threads = lldbutil.get_stopped_threads(
             process, lldb.eStopReasonExec)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "We got a thread stopped for exec.")
 
         # Run and we should stop at breakpoint in main after exec
