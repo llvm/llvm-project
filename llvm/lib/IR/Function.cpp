@@ -31,6 +31,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -1578,9 +1579,10 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
 /// hasAddressTaken - returns true if there are any uses of this function
 /// other than direct calls or invokes to it. Optionally ignores callback
-/// uses.
+/// uses and assume like pointer annotation calls.
 bool Function::hasAddressTaken(const User **PutOffender,
-                               bool IgnoreCallbackUses) const {
+                               bool IgnoreCallbackUses,
+                               bool IgnoreAssumeLikeCalls) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1594,6 +1596,17 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
+      if (IgnoreAssumeLikeCalls) {
+        if (const auto *FI = dyn_cast<Instruction>(FU)) {
+          if (FI->isCast() && !FI->user_empty() &&
+              llvm::all_of(FU->users(), [](const User *U) {
+                if (const auto *I = dyn_cast<IntrinsicInst>(U))
+                  return I->isAssumeLikeIntrinsic();
+                return false;
+              }))
+            continue;
+        }
+      }
       if (PutOffender)
         *PutOffender = FU;
       return true;
