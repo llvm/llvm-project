@@ -1,4 +1,4 @@
-! RUN: not %f18 -falternative-parameter-statement -fdebug-dump-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang -falternative-parameter-statement -fsyntax-only %s 2>&1 | FileCheck %s
 
 ! Error tests for "old style" PARAMETER statements
 subroutine subr(x1,x2,x3,x4,x5)
