@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // CHECK: @var_x = external global i32
 fir.global @var_x : !fir.int<4> {}

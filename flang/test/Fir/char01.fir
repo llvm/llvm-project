@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // CHECK-LABEL: @test
 func @test(%arg0 : !fir.ref<!fir.char<1>>, %arg1 : !fir.ref<!fir.char<1,?>>, %arg2 : i32) {

@@ -1,4 +1,4 @@
-// RUN: tco -emit-fir %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco | FileCheck %s
 
 // CHECK-LABEL: define i32* @f1()
 func @f1() -> !fir.ref<i32> {
