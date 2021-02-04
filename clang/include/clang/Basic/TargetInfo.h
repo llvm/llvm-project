@@ -218,6 +218,8 @@ protected:
 
   unsigned HasAArch64SVETypes : 1;
 
+  unsigned HasRISCVVTypes : 1;
+
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
   unsigned ARMCDECoprocMask : 8;
@@ -858,6 +860,10 @@ public:
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
   bool hasAArch64SVETypes() const { return HasAArch64SVETypes; }
+
+  /// Returns whether or not the RISC-V V built-in types are
+  /// available on this target.
+  bool hasRISCVVTypes() const { return HasRISCVVTypes; }
 
   /// Returns whether or not the AMDGPU unsafe floating point atomics are
   /// allowed.
