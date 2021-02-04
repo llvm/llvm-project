@@ -67,7 +67,7 @@ void ProfileGenerator::findDisjointRanges(RangeSample &DisjointRanges,
   /*
   Regions may overlap with each other. Using the boundary info, find all
   disjoint ranges and their sample count. BoundaryPoint contains the count
-  mutiple samples begin/end at this points.
+  multiple samples begin/end at this points.
 
   |<--100-->|           Sample1
   |<------200------>|   Sample2
@@ -264,9 +264,12 @@ static FrameLocation getCallerContext(StringRef CalleeContext,
   StringRef CallerContext = CalleeContext.rsplit(" @ ").first;
   CallerNameWithContext = CallerContext.rsplit(':').first;
   auto ContextSplit = CallerContext.rsplit(" @ ");
+  StringRef CallerFrameStr = ContextSplit.second.size() == 0
+                                 ? ContextSplit.first
+                                 : ContextSplit.second;
   FrameLocation LeafFrameLoc = {"", {0, 0}};
   StringRef Funcname;
-  SampleContext::decodeContextString(ContextSplit.second, Funcname,
+  SampleContext::decodeContextString(CallerFrameStr, Funcname,
                                      LeafFrameLoc.second);
   LeafFrameLoc.first = Funcname.str();
   return LeafFrameLoc;
@@ -314,6 +317,197 @@ void CSProfileGenerator::populateInferredFunctionSamples() {
                                  EstimatedCallCount);
     CallerProfile.addTotalSamples(EstimatedCallCount);
   }
+}
+
+// Helper function to extract context prefix
+// PrefixContextId is the context id string except for the leaf probe's
+// context, the final ContextId will be:
+// ContextId =  PrefixContextId + LeafContextId;
+// Remind that the string in ContextStrStack is in callee-caller order
+// So process the string vector reversely
+static std::string
+extractPrefixContextId(const SmallVector<const PseudoProbe *, 16> &Probes,
+                       ProfiledBinary *Binary) {
+  SmallVector<std::string, 16> ContextStrStack;
+  for (const auto *P : Probes) {
+    Binary->getInlineContextForProbe(P, ContextStrStack, true);
+  }
+  std::ostringstream OContextStr;
+  for (auto &CxtStr : ContextStrStack) {
+    if (OContextStr.str().size())
+      OContextStr << " @ ";
+    OContextStr << CxtStr;
+  }
+  return OContextStr.str();
+}
+
+void PseudoProbeCSProfileGenerator::generateProfile() {
+  // Enable CS and pseudo probe functionalities in SampleProf
+  FunctionSamples::ProfileIsCS = true;
+  FunctionSamples::ProfileIsProbeBased = true;
+  for (const auto &BI : BinarySampleCounters) {
+    ProfiledBinary *Binary = BI.first;
+    for (const auto &CI : BI.second) {
+      const ProbeBasedCtxKey *CtxKey =
+          dyn_cast<ProbeBasedCtxKey>(CI.first.getPtr());
+      std::string PrefixContextId =
+          extractPrefixContextId(CtxKey->Probes, Binary);
+      // Fill in function body samples from probes, also infer caller's samples
+      // from callee's probe
+      populateBodySamplesWithProbes(CI.second.RangeCounter, PrefixContextId,
+                                    Binary);
+      // Fill in boundary samples for a call probe
+      populateBoundarySamplesWithProbes(CI.second.BranchCounter,
+                                        PrefixContextId, Binary);
+    }
+  }
+}
+
+void PseudoProbeCSProfileGenerator::extractProbesFromRange(
+    const RangeSample &RangeCounter, ProbeCounterMap &ProbeCounter,
+    ProfiledBinary *Binary) {
+  RangeSample Ranges;
+  findDisjointRanges(Ranges, RangeCounter);
+  for (const auto &Range : Ranges) {
+    uint64_t RangeBegin = Binary->offsetToVirtualAddr(Range.first.first);
+    uint64_t RangeEnd = Binary->offsetToVirtualAddr(Range.first.second);
+    uint64_t Count = Range.second;
+    // Disjoint ranges have introduce zero-filled gap that
+    // doesn't belong to current context, filter them out.
+    if (Count == 0)
+      continue;
+
+    InstructionPointer IP(Binary, RangeBegin, true);
+
+    // Disjoint ranges may have range in the middle of two instr,
+    // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
+    // can be Addr1+1 to Addr2-1. We should ignore such range.
+    if (IP.Address > RangeEnd)
+      continue;
+
+    while (IP.Address <= RangeEnd) {
+      const AddressProbesMap &Address2ProbesMap =
+          Binary->getAddress2ProbesMap();
+      auto It = Address2ProbesMap.find(IP.Address);
+      if (It != Address2ProbesMap.end()) {
+        for (const auto &Probe : It->second) {
+          if (!Probe.isBlock())
+            continue;
+          ProbeCounter[&Probe] += Count;
+        }
+      }
+
+      IP.advance();
+    }
+  }
+}
+
+void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
+    const RangeSample &RangeCounter, StringRef PrefixContextId,
+    ProfiledBinary *Binary) {
+  ProbeCounterMap ProbeCounter;
+  // Extract the top frame probes by looking up each address among the range in
+  // the Address2ProbeMap
+  extractProbesFromRange(RangeCounter, ProbeCounter, Binary);
+  for (auto PI : ProbeCounter) {
+    const PseudoProbe *Probe = PI.first;
+    uint64_t Count = PI.second;
+    FunctionSamples &FunctionProfile =
+        getFunctionProfileForLeafProbe(PrefixContextId, Probe, Binary);
+
+    FunctionProfile.addBodySamples(Probe->Index, 0, Count);
+    FunctionProfile.addTotalSamples(Count);
+    if (Probe->isEntry()) {
+      FunctionProfile.addHeadSamples(Count);
+      // Look up for the caller's function profile
+      const auto *InlinerDesc = Binary->getInlinerDescForProbe(Probe);
+      if (InlinerDesc != nullptr) {
+        // Since the context id will be compressed, we have to use callee's
+        // context id to infer caller's context id to ensure they share the
+        // same context prefix.
+        StringRef CalleeContextId =
+            FunctionProfile.getContext().getNameWithContext(true);
+        StringRef CallerContextId;
+        FrameLocation &&CallerLeafFrameLoc =
+            getCallerContext(CalleeContextId, CallerContextId);
+        uint64_t CallerIndex = CallerLeafFrameLoc.second.LineOffset;
+        assert(CallerIndex &&
+               "Inferred caller's location index shouldn't be zero!");
+        FunctionSamples &CallerProfile =
+            getFunctionProfileForContext(CallerContextId);
+        CallerProfile.setFunctionHash(InlinerDesc->FuncHash);
+        CallerProfile.addBodySamples(CallerIndex, 0, Count);
+        CallerProfile.addTotalSamples(Count);
+        CallerProfile.addCalledTargetSamples(CallerIndex, 0,
+                                             FunctionProfile.getName(), Count);
+      }
+    }
+  }
+}
+
+void PseudoProbeCSProfileGenerator::populateBoundarySamplesWithProbes(
+    const BranchSample &BranchCounter, StringRef PrefixContextId,
+    ProfiledBinary *Binary) {
+  for (auto BI : BranchCounter) {
+    uint64_t SourceOffset = BI.first.first;
+    uint64_t TargetOffset = BI.first.second;
+    uint64_t Count = BI.second;
+    uint64_t SourceAddress = Binary->offsetToVirtualAddr(SourceOffset);
+    const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(SourceAddress);
+    if (CallProbe == nullptr)
+      continue;
+    FunctionSamples &FunctionProfile =
+        getFunctionProfileForLeafProbe(PrefixContextId, CallProbe, Binary);
+    FunctionProfile.addBodySamples(CallProbe->Index, 0, Count);
+    FunctionProfile.addTotalSamples(Count);
+    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
+        Binary->getFuncFromStartOffset(TargetOffset));
+    if (CalleeName.size() == 0)
+      continue;
+    FunctionProfile.addCalledTargetSamples(CallProbe->Index, 0, CalleeName,
+                                           Count);
+  }
+}
+
+FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
+    StringRef PrefixContextId, SmallVector<std::string, 16> &LeafInlinedContext,
+    const PseudoProbeFuncDesc *LeafFuncDesc) {
+  assert(LeafInlinedContext.size() &&
+         "Profile context must have the leaf frame");
+  std::ostringstream OContextStr;
+  OContextStr << PrefixContextId.str();
+
+  for (uint32_t I = 0; I < LeafInlinedContext.size() - 1; I++) {
+    if (OContextStr.str().size())
+      OContextStr << " @ ";
+    OContextStr << LeafInlinedContext[I];
+  }
+  // For leaf inlined context with the top frame, we should strip off the top
+  // frame's probe id, like:
+  // Inlined stack: [foo:1, bar:2], the ContextId will be "foo:1 @ bar"
+  if (OContextStr.str().size())
+    OContextStr << " @ ";
+  StringRef LeafLoc = LeafInlinedContext.back();
+  OContextStr << LeafLoc.split(":").first.str();
+
+  FunctionSamples &FunctionProile =
+      getFunctionProfileForContext(OContextStr.str());
+  FunctionProile.setFunctionHash(LeafFuncDesc->FuncHash);
+  return FunctionProile;
+}
+
+FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
+    StringRef PrefixContextId, const PseudoProbe *LeafProbe,
+    ProfiledBinary *Binary) {
+  SmallVector<std::string, 16> LeafInlinedContext;
+  Binary->getInlineContextForProbe(LeafProbe, LeafInlinedContext);
+  // Note that the context from probe doesn't include leaf frame,
+  // hence we need to retrieve and append the leaf frame.
+  const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->GUID);
+  LeafInlinedContext.emplace_back(FuncDesc->FuncName + ":" +
+                                  Twine(LeafProbe->Index).str());
+  return getFunctionProfileForLeafProbe(PrefixContextId, LeafInlinedContext,
+                                        FuncDesc);
 }
 
 } // end namespace sampleprof

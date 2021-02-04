@@ -567,11 +567,7 @@ void PerfReader::checkAndSetPerfType(
   }
 
   if (HasHybridPerf) {
-    // Set up ProfileIsCS to enable context-sensitive functionalities
-    // in SampleProf
-    FunctionSamples::ProfileIsCS = true;
     PerfType = PERF_LBR_STACK;
-
   } else {
     // TODO: Support other type of perf script
     PerfType = PERF_INVILID;

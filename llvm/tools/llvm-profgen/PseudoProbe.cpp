@@ -41,7 +41,7 @@ void PseudoProbe::getInlineContext(SmallVector<std::string, 16> &ContextStack,
   PseudoProbeInlineTree *Cur = InlineTree;
   // It will add the string of each node's inline site during iteration.
   // Note that it won't include the probe's belonging function(leaf location)
-  while (!Cur->hasInlineSite()) {
+  while (Cur->hasInlineSite()) {
     std::string ContextStr;
     if (ShowName) {
       StringRef FuncName =
@@ -312,22 +312,32 @@ PseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   return CallProbe;
 }
 
+const PseudoProbeFuncDesc *
+PseudoProbeDecoder::getFuncDescForGUID(uint64_t GUID) const {
+  auto It = GUID2FuncDescMap.find(GUID);
+  assert(It != GUID2FuncDescMap.end() && "Function descriptor doesn't exist");
+  return &It->second;
+}
+
 void PseudoProbeDecoder::getInlineContextForProbe(
     const PseudoProbe *Probe, SmallVector<std::string, 16> &InlineContextStack,
     bool IncludeLeaf) const {
-  if (IncludeLeaf) {
-    // Note that the context from probe doesn't include leaf frame,
-    // hence we need to retrieve and prepend leaf if requested.
-    auto It = GUID2FuncDescMap.find(Probe->GUID);
-    assert(It != GUID2FuncDescMap.end() &&
-           "Should have function descriptor for a valid GUID");
-    StringRef FuncName = It->second.FuncName;
-    // InlineContextStack is in callee-caller order, so push leaf in the front
-    InlineContextStack.emplace_back(FuncName.str() + ":" +
-                                    Twine(Probe->Index).str());
-  }
-
   Probe->getInlineContext(InlineContextStack, GUID2FuncDescMap, true);
+  if (!IncludeLeaf)
+    return;
+  // Note that the context from probe doesn't include leaf frame,
+  // hence we need to retrieve and prepend leaf if requested.
+  const auto *FuncDesc = getFuncDescForGUID(Probe->GUID);
+  InlineContextStack.emplace_back(FuncDesc->FuncName + ":" +
+                                  Twine(Probe->Index).str());
+}
+
+const PseudoProbeFuncDesc *
+PseudoProbeDecoder::getInlinerDescForProbe(const PseudoProbe *Probe) const {
+  PseudoProbeInlineTree *InlinerNode = Probe->InlineTree;
+  if (!InlinerNode->hasInlineSite())
+    return nullptr;
+  return getFuncDescForGUID(std::get<0>(InlinerNode->ISite));
 }
 
 } // end namespace sampleprof
