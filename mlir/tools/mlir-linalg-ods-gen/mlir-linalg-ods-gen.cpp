@@ -1863,12 +1863,14 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let hasFolder = 1;
       let hasCanonicalizer = 1;
 
-      let extraClassDeclaration = [{{
+      let extraClassDeclaration = structuredOpsBaseDecls # [{{
         // Auto-generated.
         ArrayAttr iterator_types();
         ArrayAttr indexing_maps();
         static void regionBuilder(Block &block);
-        static std::function<void(Block &)> getRegionBuilder() {{ return regionBuilder; }
+        static std::function<void(Block &)> getRegionBuilder() {{
+          return regionBuilder;
+        }
 
         // Generic methods.
         static unsigned getNumRegionArgs() {{ return {4}; }
