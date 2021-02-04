@@ -1335,34 +1335,36 @@ void Vectorize::runOnFunction() {
 ///   * There must be a single root loop (nesting level 0).
 ///   * Each loop at a given nesting level must be nested in a loop from a
 ///     previous nesting level.
-static void
+static LogicalResult
 verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
-  assert(!loops.empty() && "Expected at least one loop");
-  assert(loops[0].size() == 1 && "Expected only one root loop");
+  // Expected at least one loop.
+  if (loops.empty())
+    return failure();
+
+  // Expected only one root loop.
+  if (loops[0].size() != 1)
+    return failure();
 
   // Traverse loops outer-to-inner to check some invariants.
   for (int i = 1, end = loops.size(); i < end; ++i) {
     for (AffineForOp loop : loops[i]) {
       //  Check that each loop at this level is nested in one of the loops from
       //  the previous level.
-      bool parentFound = false;
-      for (AffineForOp maybeParent : loops[i - 1]) {
-        if (maybeParent->isProperAncestor(loop)) {
-          parentFound = true;
-          break;
-        }
-      }
-      assert(parentFound && "Child loop not nested in any parent loop");
+      if (none_of(loops[i - 1], [&](AffineForOp maybeParent) {
+            return maybeParent->isProperAncestor(loop);
+          }))
+        return failure();
 
       //  Check that each loop at this level is not nested in another loop from
       //  this level.
-#ifndef NDEBUG
-      for (AffineForOp sibling : loops[i])
-        assert(!sibling->isProperAncestor(loop) &&
-               "Loops at the same level are nested");
-#endif
+      for (AffineForOp sibling : loops[i]) {
+        if (sibling->isProperAncestor(loop))
+          return failure();
+      }
     }
   }
+
+  return success();
 }
 
 namespace mlir {
@@ -1420,7 +1422,8 @@ vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
                         const VectorizationStrategy &strategy) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
-  verifyLoopNesting(loops);
+  if (failed(verifyLoopNesting(loops)))
+    return failure();
   return vectorizeLoopNest(loops, strategy);
 }
 
