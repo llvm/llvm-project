@@ -214,11 +214,20 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 
 ; GCN-LABEL: {{^}}spill_only_csr_sgpr:
 ; GCN: s_waitcnt
+; GCN-NEXT: s_or_saveexec_b64
+; MUBUF-NEXT: buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; FLATSCR-NEXT: scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
+; GCN-NEXT: s_mov_b64 exec,
 ; GCN-NEXT: v_writelane_b32 v0, s42, 0
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ; clobber s42
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: v_readlane_b32 s42, v0, 0
+; GCN-NEXT: s_or_saveexec_b64
+; MUBUF-NEXT: buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; FLATSCR-NEXT: scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
+; GCN-NEXT: s_mov_b64 exec,
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @spill_only_csr_sgpr() {
   call void asm sideeffect "; clobber s42", "~{s42}"()
