@@ -109,10 +109,6 @@ void PrintPreprocessedAction::ExecuteAction() {
 void ParseSyntaxOnlyAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
 
-  // TODO: These should be specifiable by users. For now just use the defaults.
-  common::LanguageFeatureControl features;
-  Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
-
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
@@ -132,10 +128,8 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
-  Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, features, ci.allCookedSources()};
   Fortran::semantics::Semantics semantics{
-      semanticsContext, parseTree, ci.parsing().cooked().AsCharBlock()};
+      ci.semanticsContext(), parseTree, ci.parsing().cooked().AsCharBlock()};
 
   // Run semantic checks
   semantics.Perform();
