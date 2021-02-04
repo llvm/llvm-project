@@ -45,11 +45,11 @@ class AvoidsFdLeakTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             "Process should have exited.")
-        self.assertTrue(
-            process.GetExitStatus() == 0,
+        self.assertEqual(
+            process.GetExitStatus(), 0,
             "Process returned non-zero status. Were incorrect file descriptors passed?")
 
     # The check for descriptor leakage needs to be implemented differently
@@ -69,8 +69,8 @@ class AvoidsFdLeakTestCase(TestBase):
         process1 = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process1, PROCESS_IS_VALID)
-        self.assertTrue(
-            process1.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process1.GetState(), lldb.eStateStopped,
             "Process should have been stopped.")
 
         target2 = self.dbg.CreateTarget(exe)
@@ -78,9 +78,9 @@ class AvoidsFdLeakTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process2, PROCESS_IS_VALID)
 
-        self.assertTrue(
-            process2.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process2.GetState(), lldb.eStateExited,
             "Process should have exited.")
-        self.assertTrue(
-            process2.GetExitStatus() == 0,
+        self.assertEqual(
+            process2.GetExitStatus(), 0,
             "Process returned non-zero status. Were incorrect file descriptors passed?")

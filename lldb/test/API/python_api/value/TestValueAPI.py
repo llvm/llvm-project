@@ -176,11 +176,11 @@ class ValueAPITestCase(TestBase):
         ]:
             self.assertTrue(v)
 
-        self.assertTrue(
-            frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088,
+        self.assertEqual(
+            frame0.FindVariable('uinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned uinthex == 3768803088')
-        self.assertTrue(
-            frame0.FindVariable('sinthex').GetValueAsUnsigned() == 3768803088,
+        self.assertEqual(
+            frame0.FindVariable('sinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned sinthex == 3768803088')
 
         self.assertTrue(
