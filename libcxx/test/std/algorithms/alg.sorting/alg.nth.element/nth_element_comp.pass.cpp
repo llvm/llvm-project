@@ -9,64 +9,82 @@
 // <algorithm>
 
 // template<RandomAccessIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
-//   requires ShuffleIterator<Iter> && CopyConstructible<Compare>
-//   constexpr void  // constexpr in C++20
+//   requires ShuffleIterator<Iter>
+//         && CopyConstructible<Compare>
+//   void
 //   nth_element(Iter first, Iter nth, Iter last, Compare comp);
 
 #include <algorithm>
-#include <cassert>
 #include <functional>
+#include <vector>
+#include <random>
+#include <cassert>
+#include <cstddef>
+#include <memory>
 
 #include "test_macros.h"
-#include "test_iterators.h"
-#include "MoveOnly.h"
 
-template<class T, class Iter>
-TEST_CONSTEXPR_CXX20 bool test()
+struct indirect_less
 {
-    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
-    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
-    for (int n = 0; n < 15; ++n) {
-        for (int m = 0; m < n; ++m) {
-            std::nth_element(Iter(work), Iter(work+m), Iter(work+n), std::greater<T>());
-            assert(std::is_permutation(work, work+n, orig));
-            // No element to m's left is less than m.
-            for (int i = 0; i < m; ++i) {
-                assert(!(work[i] < work[m]));
-            }
-            // No element to m's right is greater than m.
-            for (int i = m; i < n; ++i) {
-                assert(!(work[i] > work[m]));
-            }
-            std::copy(orig, orig+15, work);
-        }
-    }
+    template <class P>
+    bool operator()(const P& x, const P& y)
+        {return *x < *y;}
+};
 
-    {
-        T input[] = {3,1,4,1,5,9,2};
-        std::nth_element(Iter(input), Iter(input+4), Iter(input+7), std::greater<T>());
-        assert(input[4] == 2);
-        assert(input[5] + input[6] == 1 + 1);
-    }
-    return true;
+std::mt19937 randomness;
+
+void
+test_one(int N, int M)
+{
+    assert(N != 0);
+    assert(M < N);
+    int* array = new int[N];
+    for (int i = 0; i < N; ++i)
+        array[i] = i;
+    std::shuffle(array, array+N, randomness);
+    std::nth_element(array, array+M, array+N, std::greater<int>());
+    assert(array[M] == N-M-1);
+    std::nth_element(array, array+N, array+N, std::greater<int>()); // begin, end, end
+    delete [] array;
+}
+
+void
+test(int N)
+{
+    test_one(N, 0);
+    test_one(N, 1);
+    test_one(N, 2);
+    test_one(N, 3);
+    test_one(N, N/2-1);
+    test_one(N, N/2);
+    test_one(N, N/2+1);
+    test_one(N, N-3);
+    test_one(N, N-2);
+    test_one(N, N-1);
 }
 
 int main(int, char**)
 {
-    test<int, random_access_iterator<int*> >();
-    test<int, int*>();
+    int d = 0;
+    std::nth_element(&d, &d, &d);
+    assert(d == 0);
+    test(256);
+    test(257);
+    test(499);
+    test(500);
+    test(997);
+    test(1000);
+    test(1009);
 
 #if TEST_STD_VER >= 11
-    test<MoveOnly, random_access_iterator<MoveOnly*>>();
-    test<MoveOnly, MoveOnly*>();
+    {
+    std::vector<std::unique_ptr<int> > v(1000);
+    for (int i = 0; static_cast<std::size_t>(i) < v.size(); ++i)
+        v[i].reset(new int(i));
+    std::nth_element(v.begin(), v.begin() + v.size()/2, v.end(), indirect_less());
+    assert(static_cast<std::size_t>(*v[v.size()/2]) == v.size()/2);
+    }
 #endif
 
-#if TEST_STD_VER >= 20
-    static_assert(test<int, random_access_iterator<int*>>());
-    static_assert(test<int, int*>());
-    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
-    static_assert(test<MoveOnly, MoveOnly*>());
-#endif
-
-    return 0;
+  return 0;
 }
