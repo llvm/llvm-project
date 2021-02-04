@@ -2180,7 +2180,7 @@ void OpEmitter::genTraits() {
 
 void OpEmitter::genOpNameGetter() {
   auto *method = opClass.addMethodAndPrune(
-      "::llvm::StringRef", "getOperationName", OpMethod::MP_Static);
+      "::llvm::StringLiteral", "getOperationName", OpMethod::MP_Static);
   method->body() << "  return \"" << op.getOperationName() << "\";\n";
 }
 
