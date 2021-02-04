@@ -155,6 +155,27 @@ void test_strcmp() {
 #endif
 }
 
+void test_strcat() {
+  char src[] = "world";
+  char dst[] = "hello \0    ";
+  char *p = dst;
+  dfsan_set_label(k_label, &p, sizeof(p));
+  dfsan_set_label(i_label, src, sizeof(src));
+  dfsan_set_label(j_label, dst, sizeof(dst));
+  char *ret = strcat(p, src);
+  ASSERT_LABEL(ret, k_label);
+  assert(ret == dst);
+  assert(strcmp(src, dst + 6) == 0);
+  for (int i = 0; i < 6; ++i) {
+    ASSERT_LABEL(dst[i], j_label);
+  }
+  for (int i = 6; i < strlen(dst); ++i) {
+    ASSERT_LABEL(dst[i], i_label);
+    assert(dfsan_get_label(dst[i]) == dfsan_get_label(src[i - 6]));
+  }
+  ASSERT_LABEL(dst[11], j_label);
+}
+
 void test_strlen() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -847,10 +868,37 @@ void test_sigaction() {
   struct sigaction oldact;
   assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
   assert(oldact.sa_sigaction == SignalAction);
+  assert(oldact.sa_flags & SA_SIGINFO);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  newact_with_sighandler.sa_handler = SIG_IGN;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SignalHandler);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+
+  newact_with_sighandler.sa_handler = SIG_DFL;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SIG_IGN);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
 
   // Restore sigaction to the orginal setting, check the last one is SignalHandler
   assert(0 == sigaction(SIGUSR1, &origin_act, &oldact));
-  assert(oldact.sa_handler == SignalHandler);
+  assert(oldact.sa_handler == SIG_DFL);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+}
+
+void test_signal() {
+  // Set signal to be SignalHandler, save the previous one into
+  // old_signal_handler.
+  sighandler_t old_signal_handler = signal(SIGHUP, SignalHandler);
+  ASSERT_ZERO_LABEL(old_signal_handler);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  assert(SignalHandler == signal(SIGHUP, SIG_DFL));
+  assert(SIG_DFL == signal(SIGHUP, SIG_IGN));
+
+  // Restore signal to old_signal_handler.
+  assert(SIG_IGN == signal(SIGHUP, old_signal_handler));
 }
 
 void test_sigaltstack() {
@@ -1323,6 +1371,7 @@ int main(void) {
   test_sched_getaffinity();
   test_select();
   test_sigaction();
+  test_signal();
   test_sigaltstack();
   test_sigemptyset();
   test_snprintf();
@@ -1332,6 +1381,7 @@ int main(void) {
   test_strcasecmp();
   test_strchr();
   test_strcmp();
+  test_strcat();
   test_strcpy();
   test_strdup();
   test_strlen();

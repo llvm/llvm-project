@@ -1889,6 +1889,30 @@ TEST(FindReferences, IncludeOverrides) {
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
+TEST(FindReferences, RefsToBaseMethod) {
+  llvm::StringRef Test =
+      R"cpp(
+        class BaseBase {
+        public:
+          virtual void [[func]]();
+        };
+        class Base : public BaseBase {
+        public:
+          void [[func]]() override;
+        };
+        class Derived : public Base {
+        public:
+          void $decl[[fu^nc]]() override;
+        };
+        void test(BaseBase* BB, Base* B, Derived* D) {
+          // refs to overridden methods in complete type hierarchy are reported.
+          BB->[[func]]();
+          B->[[func]]();
+          D->[[func]]();
+        })cpp";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
 TEST(FindReferences, MainFileReferencesOnly) {
   llvm::StringRef Test =
       R"cpp(

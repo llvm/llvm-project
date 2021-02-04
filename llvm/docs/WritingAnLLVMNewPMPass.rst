@@ -48,20 +48,11 @@ Setting up the build
 First, configure and build LLVM as described in :doc:`GettingStarted`.
 
 Next, we will reuse an existing directory (creating a new directory involves
-modifying more ``CMakeLists.txt``s than we want). For
-this example, we'll use ``llvm/lib/Transforms/HelloNew/HelloWorld.cpp``,
-which has already been created. If you'd like to create your own pass, add a
-new source file into ``llvm/lib/Transforms/HelloNew/CMakeLists.txt`` under
-``HelloWorld.cpp``:
-
-.. code-block:: cmake
-
-  add_llvm_component_library(LLVMHelloWorld
-    HelloWorld.cpp
-
-    DEPENDS
-    intrinsics_gen
-    )
+messing around with more CMake files than we want). For this example, we'll use
+``llvm/lib/Transforms/Utils/HelloWorld.cpp``, which has already been created.
+If you'd like to create your own pass, add a new source file into
+``llvm/lib/Transforms/Utils/CMakeLists.txt`` (assuming you want your pass in
+the ``Transforms/Utils`` directory.
 
 Now that we have the build set up for a new pass, we need to write the code
 for the pass itself.
@@ -74,7 +65,7 @@ Basic code required
 Now that the build is setup for a new pass, we just have to write it.
 
 First we need to define the pass in a header file. We'll create
-``llvm/include/llvm/Transforms/HelloNew/HelloWorld.h``. The file should
+``llvm/include/llvm/Transforms/Utils/HelloWorld.h``. The file should
 contain the following boilerplate:
 
 .. code-block:: c++
@@ -102,12 +93,12 @@ sets up some more boilerplate so that we don't have to write it ourselves.
 Our class is in the ``llvm`` namespace so that we don't pollute the global
 namespace.
 
-Next we'll create ``llvm/lib/Transforms/HelloNew/HelloWorld.cpp``, starting
+Next we'll create ``llvm/lib/Transforms/Utils/HelloWorld.cpp``, starting
 with
 
 .. code-block:: c++
 
-  #include "llvm/Transforms/HelloNew/HelloWorld.h"
+  #include "llvm/Transforms/Utils/HelloWorld.h"
 
 ... to include the header file we just created.
 
@@ -135,7 +126,7 @@ tree) are still valid after this pass since we didn't modify any functions.
 
 That's it for the pass itself. Now in order to "register" the pass, we need
 to add it to a couple places. Add the following to
-``llvm\lib\Passes\PassRegistry.def`` in the ``FUNCTION_PASS`` section
+``llvm/lib/Passes/PassRegistry.def`` in the ``FUNCTION_PASS`` section
 
 .. code-block:: c++
 
@@ -143,14 +134,14 @@ to add it to a couple places. Add the following to
 
 ... which adds the pass under the name "helloworld".
 
-``llvm\lib\Passes\PassRegistry.def`` is #include'd into
-``llvm\lib\Passes\PassBuilder.cpp`` multiple times for various reasons. Since
+``llvm/lib/Passes/PassRegistry.def`` is #include'd into
+``llvm/lib/Passes/PassBuilder.cpp`` multiple times for various reasons. Since
 it constructs our pass, we need to also add the proper #include in
-``llvm\lib\Passes\PassBuilder.cpp``:
+``llvm/lib/Passes/PassBuilder.cpp``:
 
 .. code-block:: c++
 
-  #include "llvm/Transforms/HelloNew/HelloWorld.h"
+  #include "llvm/Transforms/Utils/HelloWorld.h"
 
 This should be all the code necessary for our pass, now it's time to compile
 and run it.
@@ -186,12 +177,12 @@ Testing a pass
 --------------
 
 Testing our pass is important to prevent future regressions. We'll add a lit
-test at ``llvm/test/Transforms/HelloNew/helloworld.ll``. See
+test at ``llvm/test/Transforms/Utils/helloworld.ll``. See
 :doc:`TestingGuide` for more information on testing.
 
 .. code-block:: llvm
 
-  $ cat llvm/test/Transforms/HelloNew/helloworld.ll
+  $ cat llvm/test/Transforms/Utils/helloworld.ll
   ; RUN: opt -disable-output -passes=helloworld %s 2>&1 | FileCheck %s
 
   ; CHECK: {{^}}foo{{$}}

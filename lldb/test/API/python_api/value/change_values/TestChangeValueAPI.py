@@ -82,8 +82,8 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(result, "Setting val returned True.")
         actual_value = val_value.GetValueAsSigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value from val")
-        self.assertTrue(
-            actual_value == 12345,
+        self.assertEqual(
+            actual_value, 12345,
             "Got the right changed value from val")
 
         # Now check that we can set a structure element:
@@ -163,8 +163,8 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(result, "Setting sp returned true.")
         actual_value = sp_value.GetValueAsUnsigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value for sp")
-        self.assertTrue(
-            actual_value == 1,
+        self.assertEqual(
+            actual_value, 1,
             "Got the right changed value for sp.")
 
         # Boundary condition test the SBValue.CreateValueFromExpression() API.

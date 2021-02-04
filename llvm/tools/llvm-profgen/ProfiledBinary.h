@@ -243,10 +243,19 @@ public:
   }
   void
   getInlineContextForProbe(const PseudoProbe *Probe,
-                           SmallVector<std::string, 16> &InlineContextStack,
-                           bool IncludeLeaf) const {
+                           SmallVectorImpl<std::string> &InlineContextStack,
+                           bool IncludeLeaf = false) const {
     return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
                                                  IncludeLeaf);
+  }
+  const AddressProbesMap &getAddress2ProbesMap() const {
+    return ProbeDecoder.getAddress2ProbesMap();
+  }
+  const PseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
+    return ProbeDecoder.getFuncDescForGUID(GUID);
+  }
+  const PseudoProbeFuncDesc *getInlinerDescForProbe(const PseudoProbe *Probe) {
+    return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
 };
 

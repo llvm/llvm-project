@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-pre-fir-tree -fparse-only -fopenmp %s | FileCheck %s
+! RUN: %f18 -fdebug-pre-fir-tree -fsyntax-only -fopenmp %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures OpenMP related constructs
 

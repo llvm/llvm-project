@@ -148,6 +148,7 @@ extern "C" void mgpuMemcpy(void *dst, void *src, uint64_t sizeBytes,
 // Allows to register byte array with the ROCM runtime. Helpful until we have
 // transfer functions implemented.
 extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
+  ScopedContext scopedContext;
   HIP_REPORT_IF_ERROR(hipHostRegister(ptr, sizeBytes, /*flags=*/0));
 }
 

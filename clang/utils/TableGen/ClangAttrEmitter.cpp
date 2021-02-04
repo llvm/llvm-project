@@ -773,10 +773,8 @@ namespace {
 
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
-      OS << "  bool isFirst = true;\n"
-         << "  for (const auto &Val : " << RangeName << "()) {\n"
-         << "    if (isFirst) isFirst = false;\n"
-         << "    else OS << \", \";\n";
+      OS << "  for (const auto &Val : " << RangeName << "()) {\n"
+         << "    DelimitAttributeArgument(OS, IsFirstArgument);\n";
       writeValueImpl(OS);
       OS << "  }\n";
       OS << "  OS << \"";
@@ -1428,10 +1426,12 @@ writePrettyPrintFunction(const Record &R,
     return;
   }
 
-  OS << "  switch (getAttributeSpellingListIndex()) {\n"
-        "  default:\n"
-        "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
-        "    break;\n";
+  OS << "  bool IsFirstArgument = true; (void)IsFirstArgument;\n"
+     << "  unsigned TrailingOmittedArgs = 0; (void)TrailingOmittedArgs;\n"
+     << "  switch (getAttributeSpellingListIndex()) {\n"
+     << "  default:\n"
+     << "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
+     << "    break;\n";
 
   for (unsigned I = 0; I < Spellings.size(); ++ I) {
     llvm::SmallString<16> Prefix;
@@ -1476,12 +1476,10 @@ writePrettyPrintFunction(const Record &R,
 
     Spelling += Name;
 
-    OS <<
-      "  case " << I << " : {\n"
-      "    OS << \"" << Prefix << Spelling;
+    OS << "  case " << I << " : {\n"
+       << "    OS << \"" << Prefix << Spelling << "\";\n";
 
     if (Variety == "Pragma") {
-      OS << "\";\n";
       OS << "    printPrettyPragma(OS, Policy);\n";
       OS << "    OS << \"\\n\";";
       OS << "    break;\n";
@@ -1490,19 +1488,18 @@ writePrettyPrintFunction(const Record &R,
     }
 
     if (Spelling == "availability") {
-      OS << "(";
+      OS << "    OS << \"(";
       writeAvailabilityValue(OS);
-      OS << ")";
+      OS << ")\";\n";
     } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
-      OS << "(";
+      OS << "    OS << \"(";
       writeDeprecatedAttrValue(OS, Variety);
-      OS << ")";
+      OS << ")\";\n";
     } else {
       // To avoid printing parentheses around an empty argument list or
       // printing spurious commas at the end of an argument list, we need to
       // determine where the last provided non-fake argument is.
       unsigned NonFakeArgs = 0;
-      unsigned TrailingOptArgs = 0;
       bool FoundNonOptArg = false;
       for (const auto &arg : llvm::reverse(Args)) {
         if (arg->isFake())
@@ -1516,61 +1513,33 @@ writePrettyPrintFunction(const Record &R,
           FoundNonOptArg = true;
           continue;
         }
-        if (!TrailingOptArgs++)
-          OS << "\";\n"
-             << "    unsigned TrailingOmittedArgs = 0;\n";
         OS << "    if (" << arg->getIsOmitted() << ")\n"
            << "      ++TrailingOmittedArgs;\n";
       }
-      if (TrailingOptArgs)
-        OS << "    OS << \"";
-      if (TrailingOptArgs < NonFakeArgs)
-        OS << "(";
-      else if (TrailingOptArgs)
-        OS << "\";\n"
-           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
-           << "       OS << \"(\";\n"
-           << "    OS << \"";
       unsigned ArgIndex = 0;
       for (const auto &arg : Args) {
         if (arg->isFake())
           continue;
-        if (ArgIndex) {
-          if (ArgIndex >= NonFakeArgs - TrailingOptArgs)
-            OS << "\";\n"
-               << "    if (" << ArgIndex << " < " << NonFakeArgs
-               << " - TrailingOmittedArgs)\n"
-               << "      OS << \", \";\n"
-               << "    OS << \"";
-          else
-            OS << ", ";
-        }
         std::string IsOmitted = arg->getIsOmitted();
         if (arg->isOptional() && IsOmitted != "false")
-          OS << "\";\n"
-             << "    if (!(" << IsOmitted << ")) {\n"
-             << "      OS << \"";
+          OS << "    if (!(" << IsOmitted << ")) {\n";
+        // Variadic arguments print their own leading comma.
+        if (!arg->isVariadic())
+          OS << "    DelimitAttributeArgument(OS, IsFirstArgument);\n";
+        OS << "    OS << \"";
         arg->writeValue(OS);
+        OS << "\";\n";
         if (arg->isOptional() && IsOmitted != "false")
-          OS << "\";\n"
-             << "    }\n"
-             << "    OS << \"";
+          OS << "    }\n";
         ++ArgIndex;
       }
-      if (TrailingOptArgs < NonFakeArgs)
-        OS << ")";
-      else if (TrailingOptArgs)
-        OS << "\";\n"
-           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
-           << "       OS << \")\";\n"
-           << "    OS << \"";
+      if (ArgIndex != 0)
+        OS << "    if (!IsFirstArgument)\n"
+           << "      OS << \")\";\n";
     }
-
-    OS << Suffix + "\";\n";
-
-    OS <<
-      "    break;\n"
-      "  }\n";
+    OS << "    OS << \"" << Suffix << "\";\n"
+       << "    break;\n"
+       << "  }\n";
   }
 
   // End of the switch statement.
@@ -2278,6 +2247,18 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
   ParsedAttrMap AttrMap = getParsedAttrList(Records);
+
+  // Helper to print the starting character of an attribute argument. If there
+  // hasn't been an argument yet, it prints an opening parenthese; otherwise it
+  // prints a comma.
+  OS << "static inline void DelimitAttributeArgument("
+     << "raw_ostream& OS, bool& IsFirst) {\n"
+     << "  if (IsFirst) {\n"
+     << "    IsFirst = false;\n"
+     << "    OS << \"(\";\n"
+     << "  } else\n"
+     << "    OS << \", \";\n"
+     << "}\n";
 
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;

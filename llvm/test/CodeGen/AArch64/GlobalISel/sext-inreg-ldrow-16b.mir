@@ -59,8 +59,9 @@ body:             |
 
     ; CHECK-LABEL: name: check_sext_not_lost
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: STRXui [[COPY]], %stack.0.ptr.addr, 0 :: (store 8 into %ir.ptr.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK: STRXui [[COPY1]], %stack.0.ptr.addr, 0 :: (store 8 into %ir.ptr.addr)
     ; CHECK: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0.ptr.addr, 0 :: (dereferenceable load 8 from %ir.ptr.addr)
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @x
     ; CHECK: [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @x :: (dereferenceable load 4 from @x)

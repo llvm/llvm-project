@@ -48,9 +48,9 @@ class SignalsAPITestCase(TestBase):
         unix_signals.SetShouldNotify(sigint, False)
 
         process.Continue()
-        self.assertTrue(
-            process.state == lldb.eStateExited,
+        self.assertEqual(
+            process.state, lldb.eStateExited,
             "The process should have exited")
-        self.assertTrue(
-            process.GetExitStatus() == 0,
+        self.assertEqual(
+            process.GetExitStatus(), 0,
             "The process should have returned 0")

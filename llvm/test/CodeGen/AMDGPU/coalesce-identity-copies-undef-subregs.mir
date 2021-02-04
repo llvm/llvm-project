@@ -250,57 +250,150 @@ body:             |
 
 ...
 
-# FIXME: This testcase is broken
 # The coalescing of the %0 = %2 COPY in %bb.2 needs to prune the dead
 # phi range across %bb.1 after it is erased.
-# ---
-# name: prune_subrange_phi_value_0
-# tracksRegLiveness: true
-# body:             |
-#   bb.0:
-#     liveins: $vgpr0
+---
+name: prune_subrange_phi_value_0
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prune_subrange_phi_value_0
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $vgpr0
+  ; CHECK:   undef %2.sub1:vreg_64 = COPY $vgpr0
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; CHECK:   S_BRANCH %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   S_BRANCH %bb.1
+  bb.0:
+    liveins: $vgpr0
 
-#     undef %0.sub1:vreg_64 = COPY killed $vgpr0
+    undef %0.sub1:vreg_64 = COPY killed $vgpr0
 
-#   bb.1:
-#     successors: %bb.2, %bb.1
+  bb.1:
+    successors: %bb.2, %bb.1
 
-#     %1:vreg_64 = COPY killed %0
-#     %0:vreg_64 = COPY %1
-#     S_CBRANCH_EXECNZ %bb.1, implicit $exec
-#     S_BRANCH %bb.2
+    %1:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %1
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
 
-#   bb.2:
-#     undef %2.sub1:vreg_64 = COPY %0.sub1
-#     %0:vreg_64 = COPY killed %2
-#     S_BRANCH %bb.1
+  bb.2:
+    undef %2.sub1:vreg_64 = COPY %0.sub1
+    %0:vreg_64 = COPY killed %2
+    S_BRANCH %bb.1
 
-# ...
+...
+
+---
+name: prune_subrange_phi_value_0_0
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prune_subrange_phi_value_0_0
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $vgpr0
+  ; CHECK:   undef %0.sub1:vreg_64 = COPY $vgpr0
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; CHECK:   S_BRANCH %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   S_BRANCH %bb.1
+  bb.0:
+    liveins: $vgpr0
+
+    undef %0.sub1:vreg_64 = COPY killed $vgpr0
+
+  bb.1:
+    successors: %bb.2, %bb.1
+
+    %1:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %1
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    undef %0.sub1:vreg_64 = COPY %0.sub1
+    S_BRANCH %bb.1
+
+...
+
+---
+name: prune_subrange_phi_value_0_1
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prune_subrange_phi_value_0_1
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $vgpr0
+  ; CHECK:   undef %0.sub1:vreg_64 = COPY $vgpr0
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; CHECK:   S_BRANCH %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   S_BRANCH %bb.1
+  bb.0:
+    liveins: $vgpr0
+
+    undef %0.sub1:vreg_64 = COPY killed $vgpr0
+
+  bb.1:
+    successors: %bb.2, %bb.1
+
+    %1:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %1
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_BRANCH %bb.1
+
+...
 
 # Variant of testcase that asserts since there wasn't already an
 # incoming segment at the erased copy, and no valid end point.
-# ---
-# name:            prune_subrange_phi_value_1
-# tracksRegLiveness: true
-# body:             |
-#   bb.0:
-#     liveins: $vgpr0
+---
+name:            prune_subrange_phi_value_1
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prune_subrange_phi_value_1
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $vgpr0
+  ; CHECK:   undef %0.sub1:vreg_64 = COPY $vgpr0
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; CHECK:   S_BRANCH %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 %0.sub1, implicit $mode, implicit $exec
+  ; CHECK:   S_BRANCH %bb.1
+  bb.0:
+    liveins: $vgpr0
 
-#     undef %0.sub1:vreg_64 = COPY killed $vgpr0
+    undef %0.sub1:vreg_64 = COPY killed $vgpr0
 
-#   bb.1:
-#     successors: %bb.2, %bb.1
+  bb.1:
+    successors: %bb.2, %bb.1
 
-#     %0:vreg_64 = COPY killed %0
-#     S_CBRANCH_EXECNZ %bb.1, implicit $exec
-#     S_BRANCH %bb.2
+    %0:vreg_64 = COPY killed %0
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
 
-#   bb.2:
-#     undef %1.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
-#     %0:vreg_64 = COPY killed %1
-#     S_BRANCH %bb.1
+  bb.2:
+    undef %1.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
+    %0:vreg_64 = COPY killed %1
+    S_BRANCH %bb.1
 
-# ...
+...
 
 ---
 name:            prune_subrange_phi_value_2

@@ -15,7 +15,6 @@ add_llvm_component_library(LLVMPasses
   Analysis
   Core
   Coroutines
-  HelloNew
   IPO
   InstCombine
   ObjCARC

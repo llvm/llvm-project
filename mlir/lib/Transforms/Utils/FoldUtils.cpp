@@ -221,6 +221,8 @@ LogicalResult OperationFolder::tryToFold(
 
     // Check if the result was an SSA value.
     if (auto repl = foldResults[i].dyn_cast<Value>()) {
+      if (repl.getType() != op->getResult(i).getType())
+        return failure();
       results.emplace_back(repl);
       continue;
     }

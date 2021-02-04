@@ -43,7 +43,7 @@ const struct {
     {"at90s2323", "tiny-stack", "avr2", 0x800060},
     {"at90s2333", "tiny-stack", "avr2", 0x800060},
     {"at90s2343", "tiny-stack", "avr2", 0x800060},
-    {"at90s4433", "tiny-stack", "avr2, 0x800060"},
+    {"at90s4433", "tiny-stack", "avr2", 0x800060},
     {"attiny22", "tiny-stack", "avr2", 0x800060},
     {"attiny26", "tiny-stack", "avr2", 0x800060},
     {"at90s4414", "", "avr2", 0x800060},

@@ -10,8 +10,20 @@ int bar(const __global unsigned int &i); // expected-note{{passing argument to p
 // can't detect this case and therefore fails.
 int bar(const unsigned int &i);
 
+typedef short short2 __attribute__((ext_vector_type(2)));
+class C {
+public:
+  void gen(const short2 &);
+  void glob(__global const short2 &); //expected-note{{passing argument to parameter here}}
+  void nested_list(const short2 (&)[2]);
+};
+
 void foo() {
   bar(1); // expected-error{{binding reference of type 'const __global unsigned int' to value of type 'int' changes address space}}
+  C c;
+  c.gen({1, 2});
+  c.glob({1, 2}); //expected-error{{binding reference of type 'const __global short2' (vector of 2 'short' values) to value of type 'void' changes address space}}
+  c.nested_list({{1, 2}, {3, 4}});
 }
 
 // Test addr space conversion with nested pointers

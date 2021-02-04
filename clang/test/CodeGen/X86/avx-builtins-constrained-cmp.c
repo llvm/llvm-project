@@ -1,4 +1,9 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -ffp-exception-behavior=maytrap -o - -Wall -Werror | FileCheck %s
+
+// Test that the constrained intrinsics are picking up the exception
+// metadata from the AST instead of the global default from the command line.
+
+#pragma float_control(except, on)
 
 
 #include <immintrin.h>

@@ -15,8 +15,14 @@
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ParentMapContext.h"
+#include "clang/AST/Stmt.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
@@ -318,13 +324,101 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   return Results;
 }
 
+// Detect name conflict with othter DeclStmts in the same enclosing scope.
+const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
+                                                   const NamedDecl &RenamedDecl,
+                                                   StringRef NewName) {
+  // Store Parents list outside of GetSingleParent, so that returned pointer is
+  // not invalidated.
+  DynTypedNodeList Storage(DynTypedNode::create(RenamedDecl));
+  auto GetSingleParent = [&](const DynTypedNode &Node) -> const DynTypedNode * {
+    Storage = Ctx.getParents(Node);
+    return (Storage.size() == 1) ? Storage.begin() : nullptr;
+  };
+
+  // We need to get to the enclosing scope: NamedDecl's parent is typically
+  // DeclStmt, so enclosing scope would be the second order parent.
+  const auto *Parent = GetSingleParent(DynTypedNode::create(RenamedDecl));
+  if (!Parent || !Parent->get<DeclStmt>())
+    return nullptr;
+  Parent = GetSingleParent(*Parent);
+
+  // The following helpers check corresponding AST nodes for variable
+  // declarations with the name collision.
+  auto CheckDeclStmt = [&](const DeclStmt *DS,
+                           StringRef Name) -> const NamedDecl * {
+    if (!DS)
+      return nullptr;
+    for (const auto &Child : DS->getDeclGroup())
+      if (const auto *ND = dyn_cast<NamedDecl>(Child))
+        if (ND != &RenamedDecl && ND->getName() == Name)
+          return ND;
+    return nullptr;
+  };
+  auto CheckCompoundStmt = [&](const Stmt *S,
+                               StringRef Name) -> const NamedDecl * {
+    if (const auto *CS = dyn_cast_or_null<CompoundStmt>(S))
+      for (const auto *Node : CS->children())
+        if (const auto *Result = CheckDeclStmt(dyn_cast<DeclStmt>(Node), Name))
+          return Result;
+    return nullptr;
+  };
+  auto CheckConditionVariable = [&](const auto *Scope,
+                                    StringRef Name) -> const NamedDecl * {
+    if (!Scope)
+      return nullptr;
+    return CheckDeclStmt(Scope->getConditionVariableDeclStmt(), Name);
+  };
+
+  // CompoundStmt is the most common enclosing scope for function-local symbols
+  // In the simplest case we just iterate through sibling DeclStmts and check
+  // for collisions.
+  if (const auto *EnclosingCS = Parent->get<CompoundStmt>()) {
+    if (const auto *Result = CheckCompoundStmt(EnclosingCS, NewName))
+      return Result;
+    const auto *ScopeParent = GetSingleParent(*Parent);
+    // CompoundStmt may be found within if/while/for. In these cases, rename can
+    // collide with the init-statement variable decalaration, they should be
+    // checked.
+    if (const auto *Result =
+            CheckConditionVariable(ScopeParent->get<IfStmt>(), NewName))
+      return Result;
+    if (const auto *Result =
+            CheckConditionVariable(ScopeParent->get<WhileStmt>(), NewName))
+      return Result;
+    if (const auto *For = ScopeParent->get<ForStmt>())
+      if (const auto *Result = CheckDeclStmt(
+              dyn_cast_or_null<DeclStmt>(For->getInit()), NewName))
+        return Result;
+    // Also check if there is a name collision with function arguments.
+    if (const auto *Function = ScopeParent->get<FunctionDecl>())
+      for (const auto *Parameter : Function->parameters())
+        if (Parameter->getName() == NewName)
+          return Parameter;
+    return nullptr;
+  }
+
+  // When renaming a variable within init-statement within if/while/for
+  // condition, also check the CompoundStmt in the body.
+  if (const auto *EnclosingIf = Parent->get<IfStmt>()) {
+    if (const auto *Result = CheckCompoundStmt(EnclosingIf->getElse(), NewName))
+      return Result;
+    return CheckCompoundStmt(EnclosingIf->getThen(), NewName);
+  }
+  if (const auto *EnclosingWhile = Parent->get<WhileStmt>())
+    return CheckCompoundStmt(EnclosingWhile->getBody(), NewName);
+  if (const auto *EnclosingFor = Parent->get<ForStmt>())
+    return CheckCompoundStmt(EnclosingFor->getBody(), NewName);
+
+  return nullptr;
+}
+
 // Lookup the declarations (if any) with the given Name in the context of
 // RenameDecl.
-const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
-                                       const NamedDecl &RenamedDecl,
-                                       llvm::StringRef Name) {
-  trace::Span Tracer("LookupSiblingWithName");
-  const auto &II = Ctx.Idents.get(Name);
+const NamedDecl *lookupSiblingsWithinContext(ASTContext &Ctx,
+                                             const NamedDecl &RenamedDecl,
+                                             llvm::StringRef NewName) {
+  const auto &II = Ctx.Idents.get(NewName);
   DeclarationName LookupName(&II);
   DeclContextLookupResult LookupResult;
   const auto *DC = RenamedDecl.getDeclContext();
@@ -354,6 +448,16 @@ const NamedDecl *lookupSiblingWithName(const ASTContext &Ctx,
     if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
       return D;
   return nullptr;
+}
+
+const NamedDecl *lookupSiblingWithName(ASTContext &Ctx,
+                                       const NamedDecl &RenamedDecl,
+                                       llvm::StringRef NewName) {
+  trace::Span Tracer("LookupSiblingWithName");
+  if (const auto *Result =
+          lookupSiblingsWithinContext(Ctx, RenamedDecl, NewName))
+    return Result;
+  return lookupSiblingWithinEnclosingScope(Ctx, RenamedDecl, NewName);
 }
 
 struct InvalidName {

@@ -250,12 +250,12 @@ struct VPCallback {
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(ElementCount VF, unsigned UF, Loop *OrigLoop, LoopInfo *LI,
+  VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilder<> &Builder,
                    VectorizerValueMap &ValueMap, InnerLoopVectorizer *ILV,
                    VPCallback &Callback)
-      : VF(VF), UF(UF), Instance(), OrigLoop(OrigLoop), LI(LI), DT(DT),
-        Builder(Builder), ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
+      : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
+        ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -283,13 +283,7 @@ struct VPTransformState {
   /// method will delegate the call to ILV in such cases in order to provide
   /// callers a consistent API.
   /// \see set.
-  Value *get(VPValue *Def, unsigned Part) {
-    // If Values have been set for this Def return the one relevant for \p Part.
-    if (Data.PerPartOutput.count(Def))
-      return Data.PerPartOutput[Def][Part];
-    // Def is managed by ILV: bring the Values from ValueMap.
-    return Callback.getOrCreateVectorValues(VPValue2Value[Def], Part);
-  }
+  Value *get(VPValue *Def, unsigned Part);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(VPValue *Def, const VPIteration &Instance);
@@ -318,6 +312,7 @@ struct VPTransformState {
     Data.PerPartOutput[Def][Part] = V;
   }
   void set(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
+  void set(VPValue *Def, Value *IRDef, Value *V, const VPIteration &Instance);
 
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
     auto Iter = Data.PerPartScalars.insert({Def, {}});
@@ -354,9 +349,6 @@ struct VPTransformState {
 
     CFGState() = default;
   } CFG;
-
-  /// Hold a pointer to the original loop.
-  Loop *OrigLoop;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;
@@ -949,17 +941,18 @@ public:
 /// producing their vector and scalar values.
 class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPUser {
   PHINode *IV;
-  TruncInst *Trunc;
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, Instruction *Cast,
                                 TruncInst *Trunc = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC), VPUser({Start}), IV(IV),
-        Trunc(Trunc) {
+      : VPRecipeBase(VPWidenIntOrFpInductionSC), VPUser({Start}), IV(IV) {
     if (Trunc)
       new VPValue(Trunc, this);
     else
       new VPValue(IV, this);
+
+    if (Cast)
+      new VPValue(Cast, this);
   }
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
@@ -978,6 +971,22 @@ public:
 
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
+
+  /// Returns the cast VPValue, if one is attached, or nullptr otherwise.
+  VPValue *getCastValue() {
+    if (getNumDefinedValues() != 2)
+      return nullptr;
+    return getVPValue(1);
+  }
+
+  /// Returns the first defined value as TruncInst, if it is one or nullptr
+  /// otherwise.
+  TruncInst *getTruncInst() {
+    return dyn_cast_or_null<TruncInst>(getVPValue(0)->getUnderlyingValue());
+  }
+  const TruncInst *getTruncInst() const {
+    return dyn_cast_or_null<TruncInst>(getVPValue(0)->getUnderlyingValue());
+  }
 };
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.

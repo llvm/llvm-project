@@ -525,6 +525,10 @@ intptr_t mlirBlockGetNumArguments(MlirBlock block) {
   return static_cast<intptr_t>(unwrap(block)->getNumArguments());
 }
 
+MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type) {
+  return wrap(unwrap(block)->addArgument(unwrap(type)));
+}
+
 MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
   return wrap(unwrap(block)->getArgument(static_cast<unsigned>(pos)));
 }

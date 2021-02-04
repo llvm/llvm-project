@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -Wzero-as-null-pointer-constant
 
 // Keep this test before any declarations of operator<=>.
 namespace PR44786 {
@@ -39,4 +39,22 @@ namespace PR47893 {
   template<typename T> auto f(T a, T b) -> decltype(a < b) = delete;
   int &f(...);
   int &r = f(A(), A());
+}
+
+namespace PR44325 {
+  struct cmp_cat {};
+  bool operator<(cmp_cat, void*);
+  bool operator>(cmp_cat, int cmp_cat::*);
+
+  struct X {};
+  cmp_cat operator<=>(X, X);
+
+  bool b1 = X() < X(); // no warning
+  bool b2 = X() > X(); // no warning
+
+  // FIXME: It's not clear whether warning here is useful, but we can't really
+  // tell that this is a comparison category in general. This is probably OK,
+  // as comparisons against zero are only really intended for use in the
+  // implicit rewrite rules, not for explicit use by programs.
+  bool c = cmp_cat() < 0; // expected-warning {{zero as null pointer constant}}
 }

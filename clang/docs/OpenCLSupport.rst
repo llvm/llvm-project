@@ -253,7 +253,7 @@ if full functionality is required.
 
     .. code-block:: console
  
-      $ clang -Xclang -finclude-default-header test.cl
+      $ clang -Xclang -fdeclare-opencl-builtins test.cl
 
 Note that this is a frontend-only flag and therefore it requires the use of
 flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.

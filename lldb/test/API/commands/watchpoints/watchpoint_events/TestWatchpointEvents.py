@@ -96,8 +96,8 @@ class TestWatchpointEvents (TestBase):
             lldb.SBWatchpoint.EventIsWatchpointEvent(event),
             "Event is a watchpoint event.")
         found_type = lldb.SBWatchpoint.GetWatchpointEventTypeFromEvent(event)
-        self.assertTrue(
-            found_type == event_type,
+        self.assertEqual(
+            found_type, event_type,
             "Event is not correct type, expected: %d, found: %d" %
             (event_type,
              found_type))

@@ -29,10 +29,8 @@ void AvoidGotoCheck::registerMatchers(MatchFinder *Finder) {
 
   // Check if the 'goto' is used for control flow other than jumping
   // out of a nested loop.
-  auto Loop = stmt(anyOf(forStmt(), cxxForRangeStmt(), whileStmt(), doStmt()));
-  auto NestedLoop =
-      stmt(anyOf(forStmt(hasAncestor(Loop)), cxxForRangeStmt(hasAncestor(Loop)),
-                 whileStmt(hasAncestor(Loop)), doStmt(hasAncestor(Loop))));
+  auto Loop = mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt);
+  auto NestedLoop = Loop.with(hasAncestor(Loop));
 
   Finder->addMatcher(gotoStmt(anyOf(unless(hasAncestor(NestedLoop)),
                                     unless(isForwardJumping())))

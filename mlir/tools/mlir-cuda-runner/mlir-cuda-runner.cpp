@@ -14,10 +14,12 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+#include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -101,6 +103,7 @@ OwnedBlob compilePtxToCubin(const std::string ptx, Location loc,
 
   // This will also destroy the cubin data.
   RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState), "cuLinkDestroy");
+  RETURN_ON_CUDA_ERROR(cuCtxDestroy(context), "cuCtxDestroy");
 
   return result;
 }
@@ -117,7 +120,14 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       translateModuleToNVVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
       "sm_35", "+ptx60", gpuBinaryAnnotation));
+  auto &funcPm = pm.nest<FuncOp>();
+  funcPm.addPass(createGpuAsyncRegionPass());
+  funcPm.addPass(createAsyncRefCountingPass());
   pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
+  pm.addPass(createAsyncToAsyncRuntimePass());
+  pm.addPass(createConvertAsyncToLLVMPass());
+  mlir::LowerToLLVMOptions lower_to_llvm_opts;
+  pm.addPass(mlir::createLowerToLLVMPass(lower_to_llvm_opts));
 
   return pm.run(m);
 }

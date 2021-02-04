@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols -fparse-only %s | FileCheck %s
+!RUN: %f18 -fdebug-dump-symbols -fsyntax-only %s | FileCheck %s
 
 ! Size and alignment of intrinsic types
 subroutine s1

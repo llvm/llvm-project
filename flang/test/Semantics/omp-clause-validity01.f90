@@ -172,6 +172,7 @@ use omp_lib
       exit
       exit outer
       !ERROR: EXIT to construct 'outofparallel' outside of PARALLEL construct is not allowed
+      !ERROR: EXIT to construct 'outofparallel' outside of DO construct is not allowed
       exit outofparallel
     end do inner
   end do outer

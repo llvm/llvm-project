@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/exp_utils.h"
 #include "exp_utils.h"
-
 #include "math_utils.h"
 
 namespace __llvm_libc {

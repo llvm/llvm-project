@@ -1,7 +1,6 @@
 // Test the FIR types
 
 // RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
-// UNSUPPORTED: !fir
 
 // Fortran Intrinsic types
 // CHECK-LABEL: func private @it1() -> !fir.int<4>

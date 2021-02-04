@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include "ProfileGenerator.h"
 
 static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::ReallyHidden,
                                     cl::init(false), cl::ZeroOrMore,
@@ -124,6 +125,8 @@ VirtualUnwinder::getOrCreateCounterForProbe(const ProfiledBinary *Binary,
       ProbeBasedKey->Probes.emplace_back(CallProbe);
     }
   }
+  CSProfileGenerator::compressRecursionContext<const PseudoProbe *>(
+      ProbeBasedKey->Probes);
   ProbeBasedKey->genHashCode();
   Hashable<ContextKey> ContextId(ProbeBasedKey);
   auto Ret = CtxCounterMap->emplace(ContextId, SampleCounter());
@@ -567,11 +570,7 @@ void PerfReader::checkAndSetPerfType(
   }
 
   if (HasHybridPerf) {
-    // Set up ProfileIsCS to enable context-sensitive functionalities
-    // in SampleProf
-    FunctionSamples::ProfileIsCS = true;
     PerfType = PERF_LBR_STACK;
-
   } else {
     // TODO: Support other type of perf script
     PerfType = PERF_INVILID;

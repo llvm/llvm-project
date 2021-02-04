@@ -505,6 +505,11 @@ mlirBlockInsertOwnedOperationBefore(MlirBlock block, MlirOperation reference,
 /// Returns the number of arguments of the block.
 MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumArguments(MlirBlock block);
 
+/// Appends an argument of the specified type to the block. Returns the newly
+/// added argument.
+MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
+                                                  MlirType type);
+
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,
                                                   intptr_t pos);
