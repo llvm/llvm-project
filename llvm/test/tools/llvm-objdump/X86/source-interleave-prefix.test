@@ -24,15 +24,6 @@
 ; RUN: llvm-objdump --prefix myprefix --source %t-correct-prefix.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%/p
 
-;; Test malformed input.
-
-; RUN: sed -e "s,SRC_COMPDIR,,g" -e "s,filename: \"source-interleave-x86_64.c\",filename: \"\",g" \
-; RUN:   %p/Inputs/source-interleave.ll > %t-malformed.ll
-; RUN: llc -o %t-malformed.o -filetype=obj -mtriple=x86_64-pc-linux %t-malformed.ll
-; RUN: llvm-objdump --prefix myprefix --source %t-malformed.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-MALFORMED -DFILE=%t-malformed.o
-; CHECK-MALFORMED: warning: '[[FILE]]': failed to parse debug information for [[FILE]]
-
 ;; Using only a prefix separator is the same as not using the `--prefix` option.
 
 ; RUN: llvm-objdump --prefix / --source %t-missing-prefix.o 2>&1 | \
