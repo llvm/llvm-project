@@ -79,22 +79,37 @@ int main(int, char**)
     test_pointers<17, int, random_access_iterator<int**> >();
 
 #if TEST_STD_VER >= 20
+    test<7, int, contiguous_iterator<int*>>();
+    test<257, int, contiguous_iterator<int*>>();
+    test<7, MoveOnly, contiguous_iterator<MoveOnly*>>();
+    test<257, MoveOnly, contiguous_iterator<MoveOnly*>>();
+    test_pointers<17, char, contiguous_iterator<char**>>();
+    test_pointers<17, const char, contiguous_iterator<const char**>>();
+    test_pointers<17, int, contiguous_iterator<int**>>();
+
     static_assert(test<7, int, int*>());
     static_assert(test<7, int, random_access_iterator<int*>>());
+    static_assert(test<7, int, contiguous_iterator<int*>>());
     static_assert(test<257, int, int*>());
     static_assert(test<257, int, random_access_iterator<int*>>());
+    static_assert(test<257, int, contiguous_iterator<int*>>());
 
     static_assert(test<7, MoveOnly, MoveOnly*>());
     static_assert(test<7, MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<7, MoveOnly, contiguous_iterator<MoveOnly*>>());
     static_assert(test<257, MoveOnly, MoveOnly*>());
     static_assert(test<257, MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<257, MoveOnly, contiguous_iterator<MoveOnly*>>());
 
     static_assert(test_pointers<17, char, char**>());
     static_assert(test_pointers<17, char, random_access_iterator<char**>>());
+    static_assert(test_pointers<17, char, contiguous_iterator<char**>>());
     static_assert(test_pointers<17, const char, const char**>());
     static_assert(test_pointers<17, const char, random_access_iterator<const char**>>());
+    static_assert(test_pointers<17, const char, contiguous_iterator<const char**>>());
     static_assert(test_pointers<17, int, int**>());
     static_assert(test_pointers<17, int, random_access_iterator<int**>>());
+    static_assert(test_pointers<17, int, contiguous_iterator<int**>>());
 #endif
 
     return 0;
