@@ -377,7 +377,38 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+.. 3ff220de9009 [analyzer][StdLibraryFunctionsChecker] Add POSIX networking functions
+.. ...And a million other patches.
+- Improve the analyzer's understanding of several POSIX functions.
+
+.. https://reviews.llvm.org/D86533#2238207
+- Greatly improved the analyzer’s constraint solver by better understanding
+  when constraints are imposed on multiple symbolic values that are known to be
+  equal or known to be non-equal. It will now also efficiently reject impossible
+  if-branches between known comparison expressions. (Incorrectly stated as a
+  11.0.0 feature in the previous release notes)
+
+.. 820e8d8656ec [Analyzer][WebKit] UncountedLambdaCaptureChecker
+- New checker: :ref:`webkit.UncountedLambdaCapturesChecker<webkit-UncountedLambdaCapturesChecker>`
+  is a WebKit coding convention checker that flags raw pointers to
+  reference-counted objects captured by lambdas and suggests using intrusive
+  reference-counting smart pointers instead.
+
+.. 8a64689e264c [Analyzer][WebKit] UncountedLocalVarsChecker
+- New checker: :ref:`alpha.webkit.UncountedLocalVarsChecker<alpha-webkit-UncountedLocalVarsChecker>`
+  is a WebKit coding convention checker that intends to make sure that any
+  uncounted local variable is backed by a ref-counted object with lifetime that
+  is strictly larger than the scope of the uncounted local variable.
+
+.. i914f6c4ff8a4 [StaticAnalyzer] Support struct annotations in FuchsiaHandleChecker
+- ``fuchia.HandleChecker`` now recognizes handles in structs; All the handles
+  referenced by the structure (direct value or ptr) would be treated as
+  containing the release/use/acquire annotations directly.
+
+.. 8deaec122ec6 [analyzer] Update Fuchsia checker to catch releasing unowned handles.
+- Fuchsia checkers can detect the release of an unowned handle.
+
+- Numerous fixes and improvements to bug report generation.
 
 .. _release-notes-ubsan:
 

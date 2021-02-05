@@ -2538,6 +2538,8 @@ We also define a set of safe transformations which if passed a safe value as an 
 - casts
 - unary operators like ``&`` or ``*``
 
+.. _alpha-webkit-UncountedLocalVarsChecker:
+
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
