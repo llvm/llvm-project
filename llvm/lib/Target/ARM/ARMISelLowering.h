@@ -396,7 +396,7 @@ class VectorType;
     /// unaligned memory accesses of the specified type. Returns whether it
     /// is "fast" by reference in the second argument.
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
-                                        unsigned Align,
+                                        Align Alignment,
                                         MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
