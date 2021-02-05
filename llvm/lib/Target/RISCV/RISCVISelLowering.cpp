@@ -1480,23 +1480,32 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 }
 
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
-// extract the first element: (extractelt (slidedown vec, idx), 0). This is
-// done to maintain partity with the legalization of RV32 vXi64 legalization.
+// extract the first element: (extractelt (slidedown vec, idx), 0). For integer
+// types this is done using VMV_X_S to allow us to glean information about the
+// sign bits of the result.
 SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Idx = Op.getOperand(1);
-  if (isNullConstant(Idx))
-    return Op;
-
   SDValue Vec = Op.getOperand(0);
   EVT EltVT = Op.getValueType();
   EVT VecVT = Vec.getValueType();
-  SDValue Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN, DL, VecVT,
-                                  DAG.getUNDEF(VecVT), Vec, Idx);
+  MVT XLenVT = Subtarget.getXLenVT();
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Slidedown,
-                     DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+  // If the index is 0, the vector is already in the right position.
+  if (!isNullConstant(Idx)) {
+    Vec = DAG.getNode(RISCVISD::VSLIDEDOWN, DL, VecVT, DAG.getUNDEF(VecVT), Vec,
+                      Idx);
+  }
+
+  if (!EltVT.isInteger()) {
+    // Floating-point extracts are handled in TableGen.
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                       DAG.getConstant(0, DL, XLenVT));
+  }
+
+  SDValue Elt0 = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Vec);
+  return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt0);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,

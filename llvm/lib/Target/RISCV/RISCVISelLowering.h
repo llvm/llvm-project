@@ -89,9 +89,8 @@ enum NodeType : unsigned {
   GORCI,
   GORCIW,
   // Vector Extension
-  // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT
-  // sign extended from the vector element size. NOTE: The result size will
-  // never be less than the vector element size.
+  // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
+  // extended from the vector element size.
   VMV_X_S,
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
