@@ -228,7 +228,7 @@ static bool isTypedefTypeMatching(const TypedefType *const Typedef,
 /// Get the unqualified, dereferenced type of an argument.
 ///
 /// \param CE call expression
-/// \param idx argument index
+/// \param Idx argument index
 ///
 /// \returns type of the argument
 static const Type *argumentType(const CallExpr *const CE, const size_t Idx) {
