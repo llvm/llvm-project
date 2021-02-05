@@ -20,6 +20,7 @@ jobs:
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
       ABI_LIBS: ${{ steps.vars.outputs.ABI_LIBS }}
       BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
+      BASELINE_VERSION_MINOR: ${{ steps.vars.outputs.BASELINE_VERSION_MINOR }}
       LLVM_VERSION_MAJOR: ${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
       LLVM_VERSION_MINOR: ${{ steps.version.outputs.LLVM_VERSION_MINOR }}
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
@@ -36,15 +37,34 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
+          minor_version=0
+          remote_repo='https://github.com/llvm/llvm-project'
           if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
-            echo ::set-output name=BASELINE_VERSION_MAJOR::$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
+            major_version=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
+            baseline_ref="$major_version.0.0"
+
+            # If there is a minor release, we want to use that as the base line.
+            minor_ref=`git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true`
+            if [ -n "$minor_ref" ]; then
+               baseline_ref=$minor_ref
+            else
+              # Check if we have a release candidate
+              rc_ref=`git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9]-rc* | tail -n1 | grep -o 'llvmorg-.\+' || true`
+              if [ -n "$rc_ref" ]; then
+                baseline_ref=$rc_ref
+              fi
+            fi
+            echo ::set-output name=BASELINE_VERSION_MAJOR::$major_version
+            echo ::set-output name=BASELINE_REF::$baseline_ref
             echo ::set-output name=ABI_HEADERS::clang-c
             echo ::set-output name=ABI_LIBS::libclang.so
           else
             echo ::set-output name=BASELINE_VERSION_MAJOR::${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
+            echo ::set-output name=BASELINE_REF::${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0
             echo ::set-output name=ABI_HEADERS::.
             echo ::set-output name=ABI_LIBS::libclang.so libclang-cpp.so
           fi
+
 
   abi-dump:
     needs: abi-dump-setup
@@ -57,7 +77,7 @@ jobs:
         include:
           - name: build-baseline
             llvm_version_major: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}
-            ref: llvmorg-${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}.0.0
+            ref: ${{ needs.abi-dump-setup.outputs.BASELINE_REF }}
             repo: llvm/llvm-project
           - name: build-latest
             llvm_version_major: ${{ needs.abi-dump-setup.outputs.LLVM_VERSION_MAJOR }}
