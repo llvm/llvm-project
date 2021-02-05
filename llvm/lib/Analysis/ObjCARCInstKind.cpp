@@ -140,6 +140,7 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
     return ARCInstKind::User;
   case Intrinsic::objc_sync_exit:
     return ARCInstKind::User;
+  case Intrinsic::objc_clang_arc_noop_use:
   case Intrinsic::objc_arc_annotation_topdown_bbstart:
   case Intrinsic::objc_arc_annotation_topdown_bbend:
   case Intrinsic::objc_arc_annotation_bottomup_bbstart:
