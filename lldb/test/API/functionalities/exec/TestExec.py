@@ -69,12 +69,12 @@ class ExecTestCase(TestBase):
             self.addTearDownHook(cleanup)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(
         process, breakpoint1)
-        self.assertTrue(len(threads) == 1)
+        self.assertEqual(len(threads), 1)
 
         # We had a deadlock tearing down the TypeSystemMap on exec, but only if some
         # expression had been evaluated.  So make sure we do that here so the teardown
@@ -86,16 +86,16 @@ class ExecTestCase(TestBase):
             value.IsValid(),
             "Expression evaluated successfully")
         int_value = value.GetValueAsSigned()
-        self.assertTrue(int_value == 3, "Expression got the right result.")
+        self.assertEqual(int_value, 3, "Expression got the right result.")
 
         # Run and we should stop due to exec
         process.Continue()
 
         if not skip_exec:
-            self.assertFalse(process.GetState() == lldb.eStateExited,
-                             "Process should not have exited!")
-            self.assertTrue(process.GetState() == lldb.eStateStopped,
-                            "Process should be stopped at __dyld_start")
+            self.assertNotEqual(process.GetState(), lldb.eStateExited,
+                                "Process should not have exited!")
+            self.assertEqual(process.GetState(), lldb.eStateStopped,
+                             "Process should be stopped at __dyld_start")
 
             threads = lldbutil.get_stopped_threads(
                 process, lldb.eStopReasonExec)
@@ -113,5 +113,5 @@ class ExecTestCase(TestBase):
                 print(t)
                 if t.GetStopReason() != lldb.eStopReasonBreakpoint:
                     self.runCmd("bt")
-        self.assertTrue(len(threads) == 1,
+        self.assertEqual(len(threads), 1,
                         "Stopped at breakpoint in exec'ed process.")
