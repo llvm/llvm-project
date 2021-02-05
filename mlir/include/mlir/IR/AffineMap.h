@@ -90,7 +90,7 @@ public:
 
   MLIRContext *getContext() const;
 
-  explicit operator bool() { return map != nullptr; }
+  explicit operator bool() const { return map != nullptr; }
   bool operator==(AffineMap other) const { return other.map == map; }
   bool operator!=(AffineMap other) const { return !(other.map == map); }
 
@@ -220,31 +220,31 @@ public:
   ///   map2: `(d0)[s0] -> (d0 + s0, d0 - s0)`
   ///   map1.compose(map2):
   ///     `(d0)[s0, s1, s2] -> (d0 + s1 + s2 + 1, d0 - s0 - s2 - 1)`
-  AffineMap compose(AffineMap map);
+  AffineMap compose(AffineMap map) const;
 
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
-  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values);
+  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map.
-  bool isProjectedPermutation();
+  bool isProjectedPermutation() const;
 
   /// Returns true if the AffineMap represents a symbol-less permutation map.
-  bool isPermutation();
+  bool isPermutation() const;
 
   /// Returns the map consisting of the `resultPos` subset.
-  AffineMap getSubMap(ArrayRef<unsigned> resultPos);
+  AffineMap getSubMap(ArrayRef<unsigned> resultPos) const;
 
   /// Returns the map consisting of the most major `numResults` results.
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
-  AffineMap getMajorSubMap(unsigned numResults);
+  AffineMap getMajorSubMap(unsigned numResults) const;
 
   /// Returns the map consisting of the most minor `numResults` results.
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
-  AffineMap getMinorSubMap(unsigned numResults);
+  AffineMap getMinorSubMap(unsigned numResults) const;
 
   friend ::llvm::hash_code hash_value(AffineMap arg);
 
