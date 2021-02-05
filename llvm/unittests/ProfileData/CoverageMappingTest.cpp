@@ -835,8 +835,7 @@ TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
 
   std::vector<InstantiationGroup> InstantiationGroups =
       LoadedCoverage->getInstantiationGroups("expanded");
-  for (const auto &Group : InstantiationGroups)
-    ASSERT_EQ(Group.size(), 1U);
+  ASSERT_TRUE(InstantiationGroups.empty());
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
