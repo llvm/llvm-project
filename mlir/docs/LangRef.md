@@ -283,7 +283,7 @@ Syntax:
 operation         ::= op-result-list? (generic-operation | custom-operation)
                       trailing-location?
 generic-operation ::= string-literal `(` value-use-list? `)`  successor-list?
-                      (`(` region-list `)`)? attribute-dict? `:` function-type
+                      (`(` region-list `)`)? dictionary-attribute? `:` function-type
 custom-operation  ::= bare-id custom-operation-format
 op-result-list    ::= op-result (`,` op-result)* `=`
 op-result         ::= value-id (`:` integer-literal)
@@ -345,7 +345,7 @@ Example:
 ### Module
 
 ```
-module ::= `module` symbol-ref-id? (`attributes` attribute-dict)? region
+module ::= `module` symbol-ref-id? (`attributes` dictionary-attribute)? region
 ```
 
 An MLIR Module represents a top-level container operation. It contains a single
@@ -373,17 +373,18 @@ function-signature ::= symbol-ref-id `(` argument-list `)`
                        (`->` function-result-list)?
 
 argument-list ::= (named-argument (`,` named-argument)*) | /*empty*/
-argument-list ::= (type attribute-dict? (`,` type attribute-dict?)*) | /*empty*/
-named-argument ::= value-id `:` type attribute-dict?
+argument-list ::= (type dictionary-attribute? (`,` type dictionary-attribute?)*)
+                | /*empty*/
+named-argument ::= value-id `:` type dictionary-attribute?
 
 function-result-list ::= function-result-list-parens
                        | non-function-type
 function-result-list-parens ::= `(` `)`
                               | `(` function-result-list-no-parens `)`
 function-result-list-no-parens ::= function-result (`,` function-result)*
-function-result ::= type attribute-dict?
+function-result ::= type dictionary-attribute?
 
-function-attributes ::= `attributes` attribute-dict
+function-attributes ::= `attributes` dictionary-attribute
 function-body ::= region
 ```
 
@@ -1307,8 +1308,6 @@ shape `(0, 42)` and zero shapes are not allowed.
 Syntax:
 
 ```
-attribute-dict ::= `{` `}`
-                 | `{` attribute-entry (`,` attribute-entry)* `}`
 attribute-entry ::= dialect-attribute-entry | dependent-attribute-entry
 dialect-attribute-entry ::= dialect-namespace `.` bare-id `=` attribute-value
 dependent-attribute-entry ::= dependent-attribute-name `=` attribute-value
@@ -1317,8 +1316,8 @@ dependent-attribute-name ::= ((letter|[_]) (letter|digit|[_$])*)
 ```
 
 Attributes are the mechanism for specifying constant data on operations in
-places where a variable is never allowed - e.g. the index of a
-[`dim` operation](Dialects/Standard.md#stddim-dimop), or the stride of a
+places where a variable is never allowed - e.g. the comparison predicate of a
+[`cmpi` operation](Dialects/Standard.md#stdcmpi-cmpiop), or the stride of a
 convolution. They consist of a name and a concrete attribute value. The set of
 expected attributes, their structure, and their interpretation are all
 contextually dependent on what they are attached to.
@@ -1341,7 +1340,7 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 ### Attribute Value Aliases
 
 ```
-attribute-alias ::= '#' alias-name '=' attribute-value
+attribute-alias-def ::= '#' alias-name '=' attribute-value
 attribute-alias ::= '#' alias-name
 ```
 

@@ -437,11 +437,12 @@ bool PerfReader::extractCallstack(TraceStream &TraceIt,
   ProfiledBinary *Binary = nullptr;
   while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().startswith(" 0x")) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
-    // We might get an empty line at the beginning or comments, skip it
     uint64_t FrameAddr = 0;
     if (FrameStr.getAsInteger(16, FrameAddr)) {
+      // We might parse a non-perf sample line like empty line and comments,
+      // skip it
       TraceIt.advance();
-      break;
+      return false;
     }
     TraceIt.advance();
     if (!Binary) {
@@ -468,9 +469,9 @@ bool PerfReader::extractCallstack(TraceStream &TraceIt,
     CallStack.emplace_back(FrameAddr);
   }
 
-  if (CallStack.empty())
-    return false;
   // Skip other unrelated line, find the next valid LBR line
+  // Note that even for empty call stack, we should skip the address at the
+  // bottom, otherwise the following pass may generate a truncated callstack
   while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().startswith(" 0x")) {
     TraceIt.advance();
   }
@@ -482,7 +483,8 @@ bool PerfReader::extractCallstack(TraceStream &TraceIt,
   // of such case - when sample landed in prolog/epilog, somehow stack
   // walking will be broken in an unexpected way that higher frames will be
   // missing.
-  return !Binary->addressInPrologEpilog(CallStack.front());
+  return !CallStack.empty() &&
+         !Binary->addressInPrologEpilog(CallStack.front());
 }
 
 void PerfReader::parseHybridSample(TraceStream &TraceIt) {

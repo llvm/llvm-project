@@ -137,7 +137,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::FloorOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::FloorFOp>(loc, resultTypes, args);
 
-  rewriter.notifyMatchFailure(
+  (void)rewriter.notifyMatchFailure(
       op, "unhandled op for linalg body calculation for elementwise op");
   return nullptr;
 }

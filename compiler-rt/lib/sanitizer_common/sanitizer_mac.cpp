@@ -62,6 +62,7 @@ extern "C" {
 #include <mach/mach_time.h>
 #include <mach/vm_statistics.h>
 #include <malloc/malloc.h>
+#include <os/log.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
@@ -770,7 +771,11 @@ static BlockingMutex syslog_lock(LINKER_INITIALIZED);
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
   syslog_lock.CheckLocked();
-  asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
+  if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
+    os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
+  } else {
+    asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
+  }
 #endif
 }
 

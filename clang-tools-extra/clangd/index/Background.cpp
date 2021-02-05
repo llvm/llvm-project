@@ -97,6 +97,7 @@ BackgroundIndex::BackgroundIndex(
     BackgroundIndexStorage::Factory IndexStorageFactory, Options Opts)
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       ContextProvider(std::move(Opts.ContextProvider)),
+      IndexedSymbols(IndexContents::All),
       Rebuilder(this, &IndexedSymbols, Opts.ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       Queue(std::move(Opts.OnProgress)),

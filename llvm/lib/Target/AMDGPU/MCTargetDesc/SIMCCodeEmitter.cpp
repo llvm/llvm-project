@@ -219,7 +219,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     Imm = C->getValue();
   } else {
 
-    assert(!MO.isFPImm());
+    assert(!MO.isDFPImm());
 
     if (!MO.isImm())
       return ~0;

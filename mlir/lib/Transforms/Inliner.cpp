@@ -755,7 +755,7 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
   if (!defaultPipelineStr.empty()) {
     std::string defaultPipelineCopy = defaultPipelineStr;
     defaultPipeline = [=](OpPassManager &pm) {
-      parsePassPipeline(defaultPipelineCopy, pm);
+      (void)parsePassPipeline(defaultPipelineCopy, pm);
     };
   } else if (defaultPipelineStr.getNumOccurrences()) {
     defaultPipeline = nullptr;

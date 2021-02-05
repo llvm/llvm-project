@@ -128,6 +128,9 @@ public:
     // Type depends on a runtime value (variable-length array).
     VariablyModified = 32,
 
+    // Dependence that is propagated syntactically, regardless of semantics.
+    Syntactic = UnexpandedPack | Instantiation | Error,
+
     LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/VariablyModified)
   };
 
@@ -164,6 +167,13 @@ public:
              translate(D, TNDependence::Instantiation, Instantiation) |
              translate(D, TNDependence::Dependent, Dependent) |
              translate(D, TNDependence::Error, Error)) {}
+
+  /// Extract only the syntactic portions of this type's dependence.
+  Dependence syntactic() {
+    Dependence Result = *this;
+    Result.V &= Syntactic;
+    return Result;
+  }
 
   TypeDependence type() const {
     return translate(V, UnexpandedPack, TypeDependence::UnexpandedPack) |
@@ -254,6 +264,10 @@ inline TypeDependence toTypeDependence(TemplateNameDependence D) {
 }
 inline TypeDependence toTypeDependence(TemplateArgumentDependence D) {
   return Dependence(D).type();
+}
+
+inline TypeDependence toSyntacticDependence(TypeDependence D) {
+  return Dependence(D).syntactic().type();
 }
 
 inline NestedNameSpecifierDependence

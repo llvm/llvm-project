@@ -337,9 +337,10 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
   };
 
   // We need to get to the enclosing scope: NamedDecl's parent is typically
-  // DeclStmt, so enclosing scope would be the second order parent.
+  // DeclStmt (or FunctionProtoTypeLoc in case of function arguments), so
+  // enclosing scope would be the second order parent.
   const auto *Parent = GetSingleParent(DynTypedNode::create(RenamedDecl));
-  if (!Parent || !Parent->get<DeclStmt>())
+  if (!Parent || !(Parent->get<DeclStmt>() || Parent->get<TypeLoc>()))
     return nullptr;
   Parent = GetSingleParent(*Parent);
 
@@ -407,8 +408,21 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
   }
   if (const auto *EnclosingWhile = Parent->get<WhileStmt>())
     return CheckCompoundStmt(EnclosingWhile->getBody(), NewName);
-  if (const auto *EnclosingFor = Parent->get<ForStmt>())
+  if (const auto *EnclosingFor = Parent->get<ForStmt>()) {
+    // Check for conflicts with other declarations within initialization
+    // statement.
+    if (const auto *Result = CheckDeclStmt(
+            dyn_cast_or_null<DeclStmt>(EnclosingFor->getInit()), NewName))
+      return Result;
     return CheckCompoundStmt(EnclosingFor->getBody(), NewName);
+  }
+  if (const auto *EnclosingFunction = Parent->get<FunctionDecl>()) {
+    // Check for conflicts with other arguments.
+    for (const auto *Parameter : EnclosingFunction->parameters())
+      if (Parameter != &RenamedDecl && Parameter->getName() == NewName)
+        return Parameter;
+    return CheckCompoundStmt(EnclosingFunction->getBody(), NewName);
+  }
 
   return nullptr;
 }

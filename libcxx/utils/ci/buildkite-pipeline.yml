@@ -15,6 +15,19 @@
 #
 
 steps:
+  - label: "Format"
+    command: "libcxx/utils/ci/run-buildbot check-format"
+    artifact_paths:
+      - "**/clang-format.patch"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    soft_fail:
+        - exit_status: 1
+
   - label: "C++03"
     command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:

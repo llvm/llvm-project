@@ -231,12 +231,49 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first and second source vector.
-  // Input: (vector_in, vector_in, vl)
-  class RISCVBinaryAAAMask
+  // Input: (vector_in, int_vector_in, vl)
+  class RISCVRGatherVVNoMask
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                    [LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first and second source vector.
+  // Input: (vector_in, vector_in, int_vector_in, vl)
+  class RISCVRGatherVVMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
+  // Input: (vector_in, int16_vector_in, vl)
+  class RISCVRGatherEI16VVNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first and second source vector.
+  // Input: (vector_in, vector_in, int16_vector_in, vl)
+  class RISCVRGatherEI16VVMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first source vector, and the
+  // second operand is XLen.
+  // Input: (vector_in, xlen_in, vl)
+  class RISCVGatherVXNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyint_ty, LLVMMatchType<1>],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+  }
+  // For destination vector type is the same as first source vector (with mask).
+  // Second operand is XLen.
+  // Input: (maskedoff, vector_in, xlen_in, mask, vl)
+  class RISCVGatherVXMask
+       : Intrinsic<[llvm_anyvector_ty],
+                   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
+                   [IntrNoMem]>, RISCVVIntrinsic {
+  }
   // For destination vector type is the same as first source vector.
   // Input: (vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryAAXNoMask
@@ -688,6 +725,18 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVBinaryAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMask;
   }
+  multiclass RISCVRGatherVV {
+    def "int_riscv_" # NAME : RISCVRGatherVVNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVRGatherVVMask;
+  }
+  multiclass RISCVRGatherVX {
+    def "int_riscv_" # NAME : RISCVGatherVXNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVGatherVXMask;
+  }
+  multiclass RISCVRGatherEI16VV {
+    def "int_riscv_" # NAME : RISCVRGatherEI16VVNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVRGatherEI16VVMask;
+  }
   // ABX means the destination type(A) is different from the first source
   // type(B). X means any type for the second source operand.
   multiclass RISCVBinaryABX {
@@ -965,10 +1014,11 @@ let TargetPrefix = "riscv" in {
   defm vfslide1up : RISCVBinaryAAX;
   defm vfslide1down : RISCVBinaryAAX;
 
-  defm vrgather : RISCVBinaryAAX;
-  defm vrgatherei16 : RISCVBinaryAAX;
+  defm vrgather_vv : RISCVRGatherVV;
+  defm vrgather_vx : RISCVRGatherVX;
+  defm vrgatherei16_vv : RISCVRGatherEI16VV;
 
-  def "int_riscv_vcompress" : RISCVBinaryAAAMask;
+  def "int_riscv_vcompress" : RISCVUnaryAAMask;
 
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;

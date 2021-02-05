@@ -155,7 +155,7 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
       if (recurseInner) {
         // We'll recurse and do the copies at an inner level for 'forInst'.
         // Recurse onto the body of this loop.
-        runOnBlock(forOp.getBody(), copyNests);
+        (void)runOnBlock(forOp.getBody(), copyNests);
       } else {
         // We have enough capacity, i.e., copies will be computed for the
         // portion of the block until 'it', and for 'it', which is 'forOp'. Note
@@ -207,7 +207,7 @@ void AffineDataCopyGeneration::runOnFunction() {
   copyNests.clear();
 
   for (auto &block : f)
-    runOnBlock(&block, copyNests);
+    (void)runOnBlock(&block, copyNests);
 
   // Promote any single iteration loops in the copy nests and collect
   // load/stores to simplify.
@@ -217,7 +217,7 @@ void AffineDataCopyGeneration::runOnFunction() {
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
-        promoteIfSingleIteration(forOp);
+        (void)promoteIfSingleIteration(forOp);
       else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });
@@ -230,5 +230,5 @@ void AffineDataCopyGeneration::runOnFunction() {
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternList frozenPatterns(std::move(patterns));
   for (Operation *op : copyOps)
-    applyOpPatternsAndFold(op, frozenPatterns);
+    (void)applyOpPatternsAndFold(op, frozenPatterns);
 }
