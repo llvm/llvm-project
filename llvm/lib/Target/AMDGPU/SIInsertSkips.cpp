@@ -154,7 +154,8 @@ static void generateEndPgm(MachineBasicBlock &MBB,
   if (IsPS) {
     const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
     BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-        .addImm(ST.hasNullExportTarget() ? AMDGPU::Exp::ET_NULL : 0 /* mrt0 */)
+        .addImm(ST.hasNullExportTarget() ? AMDGPU::Exp::ET_NULL
+                                         : AMDGPU::Exp::ET_MRT0)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
