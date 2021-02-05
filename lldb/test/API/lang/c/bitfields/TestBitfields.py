@@ -206,11 +206,11 @@ class BitfieldsTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         bits = frame.FindVariable("bits")
         self.DebugSBValue(bits)
-        self.assertTrue(
-            bits.GetTypeName() == 'Bits',
+        self.assertEqual(
+            bits.GetTypeName(), 'Bits',
             "bits.GetTypeName() == 'Bits'")
-        self.assertTrue(
-            bits.GetNumChildren() == 10,
+        self.assertEqual(
+            bits.GetNumChildren(), 10,
             "bits.GetNumChildren() == 10")
         test_compiler = self.getCompiler()
         self.assertEqual(bits.GetByteSize(), 32, "bits.GetByteSize() == 32")
