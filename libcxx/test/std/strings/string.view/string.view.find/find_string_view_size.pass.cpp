@@ -20,6 +20,7 @@ template <class S>
 void
 test(const S& s, const S& str, typename S::size_type pos, typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.find(str, pos));
     assert(s.find(str, pos) == x);
     if (x != S::npos)
         assert(pos <= x && x + str.size() <= s.size());
@@ -29,6 +30,7 @@ template <class S>
 void
 test(const S& s, const S& str, typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.find(str));
     assert(s.find(str) == x);
     if (x != S::npos)
         assert(0 <= x && x + str.size() <= s.size());
