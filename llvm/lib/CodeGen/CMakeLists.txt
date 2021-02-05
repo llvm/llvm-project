@@ -147,7 +147,6 @@ add_llvm_component_library(LLVMCodeGen
   RegisterUsageInfo.cpp
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp
-  ReplaceWithVeclib.cpp
   ResetMachineFunctionPass.cpp
   SafeStack.cpp
   SafeStackLayout.cpp

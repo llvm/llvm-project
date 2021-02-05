@@ -574,7 +574,6 @@ int main(int argc, char **argv) {
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
   initializeTypePromotionPass(Registry);
-  initializeReplaceWithVeclibLegacyPass(Registry);
 
 #ifdef BUILD_EXAMPLES
   initializeExampleIRTransforms(Registry);
