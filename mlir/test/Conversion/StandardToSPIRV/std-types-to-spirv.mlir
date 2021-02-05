@@ -203,17 +203,18 @@ func @float_vector(
   %arg1: vector<3xf64>
 ) { return }
 
+// CHECK-LABEL: spv.func @one_element_vector
+// CHECK-SAME: %{{.+}}: i32
+func @one_element_vector(%arg0: vector<1xi32>) { return }
+
 } // end module
 
 // -----
 
-// Check that 1- or > 4-element vectors are not supported.
+// Check that > 4-element vectors are not supported.
 module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
-
-// CHECK-NOT: spv.func @one_element_vector
-func @one_element_vector(%arg0: vector<1xi32>) { return }
 
 // CHECK-NOT: spv.func @large_vector
 func @large_vector(%arg0: vector<1024xi32>) { return }
