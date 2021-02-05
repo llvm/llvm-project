@@ -1,4 +1,5 @@
 // REQUIRES: shell
+// REQUIRES: x86-target-arch
 // RUN: rm -rf %t.bin
 // RUN: mkdir %t.bin
 // RUN: cp $(which llvm-symbolizer) %t.bin
