@@ -13,6 +13,7 @@ and when it is undefined.
 
 from __future__ import print_function
 
+import math
 import re
 import gdb
 
@@ -141,7 +142,7 @@ class StdTuplePrinter(object):
 
         def __next__(self):
             # child_iter raises StopIteration when appropriate.
-            field_name = self.child_iter.next()
+            field_name = next(self.child_iter)
             child = self.val["__base_"][field_name]["__value_"]
             self.count += 1
             return ("[%d]" % self.count, child)
@@ -425,6 +426,7 @@ class StdBitsetPrinter(object):
         self.val = val
         self.n_words = int(self.val["__n_words"])
         self.bits_per_word = int(self.val["__bits_per_word"])
+        self.bit_count = self.val.type.template_argument(0)
         if self.n_words == 1:
             self.values = [int(self.val["__first_"])]
         else:
@@ -435,21 +437,12 @@ class StdBitsetPrinter(object):
         typename = _prettify_typename(self.val.type)
         return "%s" % typename
 
-    def _byte_it(self, value):
-        index = -1
-        while value:
-            index += 1
-            will_yield = value % 2
-            value /= 2
-            if will_yield:
-                yield index
-
     def _list_it(self):
-        for word_index in range(self.n_words):
-            current = self.values[word_index]
-            if current:
-                for n in self._byte_it(current):
-                    yield ("[%d]" % (word_index * self.bits_per_word + n), 1)
+        for bit in range(self.bit_count):
+            word = math.floor(bit / self.bits_per_word)
+            word_bit = bit % self.bits_per_word
+            if self.values[word] & (1 << word_bit):
+                yield ("[%d]" % bit, 1)
 
     def __iter__(self):
         return self._list_it()
