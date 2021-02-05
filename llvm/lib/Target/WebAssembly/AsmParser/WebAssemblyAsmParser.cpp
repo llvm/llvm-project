@@ -203,7 +203,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   // guarantee that correct order.
   enum ParserState {
     FileStart,
-    Label,
     FunctionStart,
     FunctionLocals,
     Instructions,
@@ -223,9 +222,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   };
   std::vector<NestingType> NestingStack;
 
-  // We track this to see if a .functype following a label is the same,
-  // as this is how we recognize the start of a function.
-  MCSymbol *LastLabel = nullptr;
   MCSymbol *LastFunctionLabel = nullptr;
 
 public:
@@ -687,11 +683,6 @@ public:
     return false;
   }
 
-  void onLabelParsed(MCSymbol *Symbol) override {
-    LastLabel = Symbol;
-    CurrentState = Label;
-  }
-
   bool parseSignature(wasm::WasmSignature *Signature) {
     if (expect(AsmToken::LParen, "("))
       return true;
@@ -808,12 +799,12 @@ public:
       if (SymName.empty())
         return true;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      if (CurrentState == Label && WasmSym == LastLabel) {
+      if (WasmSym->isDefined()) {
         // This .functype indicates a start of a function.
         if (ensureEmptyNestingStack())
           return true;
         CurrentState = FunctionStart;
-        LastFunctionLabel = LastLabel;
+        LastFunctionLabel = WasmSym;
         push(Function);
       }
       auto Signature = std::make_unique<wasm::WasmSignature>();
@@ -881,7 +872,7 @@ public:
 
     if (DirectiveID.getString() == ".local") {
       if (CurrentState != FunctionStart)
-        return error(".local directive should follow the start of a function",
+        return error(".local directive should follow the start of a function: ",
                      Lexer.getTok());
       SmallVector<wasm::ValType, 4> Locals;
       if (parseRegTypeList(Locals))
