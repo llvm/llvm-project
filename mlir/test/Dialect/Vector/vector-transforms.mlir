@@ -601,3 +601,73 @@ func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
       : vector<4x4xf32>, tensor<4x4xf32>
   return %r : tensor<4x4xf32>
 }
+
+// CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
+func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
+  // CHECK:     %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
+  // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [4], sizes = [1], strides = [1]} : vector<8x8xf16> to vector<1x8xf16>
+  %0 = vector.extract_strided_slice %arg0 {offsets = [0, 4], sizes = [1, 1], strides = [1, 1]} : vector<1x8x8xf16> to vector<1x1x8xf16>
+  // CHECK:     %[[RET:.+]] = vector.shape_cast %[[EXTRACT]] : vector<1x8xf16> to vector<1x1x8xf16>
+  // CHECK: return %[[RET]]
+  return %0: vector<1x1x8xf16>
+}
+
+// CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims
+func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %arg1: vector<1x8x8xf16>) -> vector<1x8x8xf16> {
+  // CHECK:    %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8xf16> to vector<8xf16>
+  // CHECK:    %[[DST:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
+  // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[SRC]], %[[DST]] {offsets = [0, 0], strides = [1]} : vector<8xf16> into vector<8x8xf16>
+  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x8xf16> into vector<1x8x8xf16>
+  // CHECK:    %[[RET:.+]] = vector.shape_cast %[[INSERT]] : vector<8x8xf16> to vector<1x8x8xf16>
+  // CHECK: return %[[RET]]
+  return %0: vector<1x8x8xf16>
+}
+
+// CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element
+func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
+  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
+  // CHECK: vector.shape_cast %{{.+}} : vector<1x1x1xf16> to vector<1xf16>
+  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x1xf16> into vector<1x1x1xf16>
+  return %0: vector<1x1x1xf16>
+}
+
+// CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims
+func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> vector<1x4xf16> {
+  // CHECK: %[[C0:.+]] = constant 0 : index
+  %c0 = constant 0 : index
+  // CHECK: %[[F0:.+]] = constant 0.000000e+00 : f16
+  %f0 = constant 0. : f16
+  // CHECK: %[[READ:.+]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[F0]] {masked = [false]} : memref<1x4x8x16xf16>, vector<4xf16>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<4xf16> to vector<1x4xf16>
+  %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0 {masked = [false, false]} : memref<1x4x8x16xf16>, vector<1x4xf16>
+  // CHECK: return %[[CAST]]
+  return %0: vector<1x4xf16>
+}
+
+// CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims_one_element
+func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>) -> vector<1x1xf16> {
+  %c0 = constant 0 : index
+  %f0 = constant 0. : f16
+  // CHECK: vector.shape_cast %{{.+}} : vector<1xf16> to vector<1x1xf16>
+  %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0 {masked = [false, false]} : memref<1x1x1x1xf16>, vector<1x1xf16>
+  return %0: vector<1x1xf16>
+}
+
+// CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims
+func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>) {
+  // CHECK: %[[C0:.+]] = constant 0 : index
+  %c0 = constant 0 : index
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xf16> to vector<4xf16>
+  // CHECK: vector.transfer_write %[[CAST]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {masked = [false]} : vector<4xf16>, memref<1x4x8x16xf16>
+
+  vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {masked = [false, false]} : vector<1x4xf16>, memref<1x4x8x16xf16>
+  return
+}
+
+// CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims_one_element
+func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
+  %c0 = constant 0 : index
+  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
+  vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {masked = [false, false]} : vector<1x1xf16>, memref<1x1x1x1xf16>
+  return
+}
