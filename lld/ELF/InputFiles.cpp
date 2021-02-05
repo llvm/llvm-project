@@ -592,8 +592,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
         if (sec.sh_link != 0)
           this->addrsigSec = &sec;
         else if (config->icf == ICFLevel::Safe)
-          warn(toString(this) + ": --icf=safe is incompatible with object "
-                                "files created using objcopy or ld -r");
+          warn(toString(this) +
+               ": --icf=safe conservatively ignores "
+               "SHT_LLVM_ADDRSIG [index " +
+               Twine(i) +
+               "] with sh_link=0 "
+               "(likely created using objcopy or ld -r)");
       }
       this->sections[i] = &InputSection::discarded;
       continue;

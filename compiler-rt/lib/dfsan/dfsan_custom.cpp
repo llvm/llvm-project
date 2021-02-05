@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "dfsan/dfsan.h"
+#include "dfsan/dfsan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_linux.h"
@@ -446,18 +447,33 @@ __dfsw_dlopen(const char *filename, int flag, dfsan_label filename_label,
   return handle;
 }
 
-struct pthread_create_info {
-  void *(*start_routine_trampoline)(void *, void *, dfsan_label, dfsan_label *);
-  void *start_routine;
-  void *arg;
-};
+static void *DFsanThreadStartFunc(void *arg) {
+  DFsanThread *t = (DFsanThread *)arg;
+  SetCurrentThread(t);
+  return t->ThreadStart();
+}
 
-static void *pthread_create_cb(void *p) {
-  pthread_create_info pci(*(pthread_create_info *)p);
-  free(p);
-  dfsan_label ret_label;
-  return pci.start_routine_trampoline(pci.start_routine, pci.arg, 0,
-                                      &ret_label);
+static int dfsan_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                                void *start_routine_trampoline,
+                                void *start_routine, void *arg,
+                                dfsan_label *ret_label) {
+  pthread_attr_t myattr;
+  if (!attr) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+
+  // Ensure that the thread stack is large enough to hold all TLS data.
+  AdjustStackSize((void *)(const_cast<pthread_attr_t *>(attr)));
+
+  DFsanThread *t = DFsanThread::Create(start_routine_trampoline,
+                                       (thread_callback_t)start_routine, arg);
+  int res = pthread_create(thread, attr, DFsanThreadStartFunc, t);
+
+  if (attr == &myattr)
+    pthread_attr_destroy(&myattr);
+  *ret_label = 0;
+  return res;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
@@ -467,16 +483,8 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
     void *start_routine, void *arg, dfsan_label thread_label,
     dfsan_label attr_label, dfsan_label start_routine_label,
     dfsan_label arg_label, dfsan_label *ret_label) {
-  pthread_create_info *pci =
-      (pthread_create_info *)malloc(sizeof(pthread_create_info));
-  pci->start_routine_trampoline = start_routine_trampoline;
-  pci->start_routine = start_routine;
-  pci->arg = arg;
-  int rv = pthread_create(thread, attr, pthread_create_cb, (void *)pci);
-  if (rv != 0)
-    free(pci);
-  *ret_label = 0;
-  return rv;
+  return dfsan_pthread_create(thread, attr, (void *)start_routine_trampoline,
+                              start_routine, arg, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
@@ -864,6 +872,18 @@ int __dfsw_sigemptyset(sigset_t *set, dfsan_label set_label,
   return ret;
 }
 
+class SignalHandlerScope {
+ public:
+  SignalHandlerScope() {
+    if (DFsanThread *t = GetCurrentThread())
+      t->EnterSignalHandler();
+  }
+  ~SignalHandlerScope() {
+    if (DFsanThread *t = GetCurrentThread())
+      t->LeaveSignalHandler();
+  }
+};
+
 // Clear DFSan runtime TLS state at the end of a scope.
 //
 // Implementation must be async-signal-safe and use small data size, because
@@ -891,7 +911,8 @@ const int kMaxSignals = 1024;
 static atomic_uintptr_t sigactions[kMaxSignals];
 
 static void SignalHandler(int signo) {
-  ScopedClearThreadLocalState stlsb;
+  SignalHandlerScope signal_handler_scope;
+  ScopedClearThreadLocalState scoped_clear_tls;
 
   // Clear shadows for all inputs provided by system. This is why DFSan
   // instrumentation generates a trampoline function to each function pointer,
@@ -906,7 +927,8 @@ static void SignalHandler(int signo) {
 }
 
 static void SignalAction(int signo, siginfo_t *si, void *uc) {
-  ScopedClearThreadLocalState stlsb;
+  SignalHandlerScope signal_handler_scope;
+  ScopedClearThreadLocalState scoped_clear_tls;
 
   // Clear shadows for all inputs provided by system. Similar to SignalHandler.
   dfsan_clear_arg_tls(0, 3 * sizeof(dfsan_label));
