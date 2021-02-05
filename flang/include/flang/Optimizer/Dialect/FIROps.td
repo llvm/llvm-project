@@ -1081,7 +1081,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
       // Ok. If there is no dims and no layout map, then emboxing a scalar.
       // TODO: Should the type be enforced? It already must agree.
     } else if (dims().size() == 1) {
-      auto d = *dims().begin();
+      //auto d = *dims().begin();
     } else {
       return emitOpError("embox can only have one !fir.dim argument");
     }
