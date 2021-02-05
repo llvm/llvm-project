@@ -776,16 +776,16 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI, AATy &AA,
     if (B != FirstBB) {
       assert(B != &FirstBB->getParent()->getEntryBlock() &&
           "Should not hit the entry block because SI must be dominated by LI");
-      for (auto PredI = pred_begin(B), PE = pred_end(B); PredI != PE; ++PredI) {
+      for (BasicBlock *Pred : predecessors(B)) {
         PHITransAddr PredAddr = Addr;
         if (PredAddr.NeedsPHITranslationFromBlock(B)) {
           if (!PredAddr.IsPotentiallyPHITranslatable())
             return false;
-          if (PredAddr.PHITranslateValue(B, *PredI, DT, false))
+          if (PredAddr.PHITranslateValue(B, Pred, DT, false))
             return false;
         }
         Value *TranslatedPtr = PredAddr.getAddr();
-        auto Inserted = Visited.insert(std::make_pair(*PredI, TranslatedPtr));
+        auto Inserted = Visited.insert(std::make_pair(Pred, TranslatedPtr));
         if (!Inserted.second) {
           // We already visited this block before. If it was with a different
           // address - bail out!
@@ -794,7 +794,7 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI, AATy &AA,
           // ... otherwise just skip it.
           continue;
         }
-        WorkList.push_back(std::make_pair(*PredI, PredAddr));
+        WorkList.push_back(std::make_pair(Pred, PredAddr));
       }
     }
   }
@@ -805,8 +805,7 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI, AATy &AA,
 /// them to F.
 static void findUnconditionalPreds(SmallVectorImpl<BasicBlock *> &Blocks,
                                    BasicBlock *BB, DominatorTree *DT) {
-  for (pred_iterator I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
-    BasicBlock *Pred = *I;
+  for (BasicBlock *Pred : predecessors(BB)) {
     if (Pred == BB) continue;
     Instruction *PredTI = Pred->getTerminator();
     if (PredTI->getNumSuccessors() != 1)
