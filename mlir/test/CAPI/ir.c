@@ -707,21 +707,24 @@ static int printBuiltinTypes(MlirContext ctx) {
   // CHECK: tensor<*xf32>
 
   // MemRef type.
+  MlirAttribute memSpace2 = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 64), 2);
   MlirType memRef = mlirMemRefTypeContiguousGet(
-      f32, sizeof(shape) / sizeof(int64_t), shape, 2);
+      f32, sizeof(shape) / sizeof(int64_t), shape, memSpace2);
   if (!mlirTypeIsAMemRef(memRef) ||
       mlirMemRefTypeGetNumAffineMaps(memRef) != 0 ||
-      mlirMemRefTypeGetMemorySpace(memRef) != 2)
+      !mlirAttributeEqual(mlirMemRefTypeGetMemorySpace(memRef), memSpace2))
     return 18;
   mlirTypeDump(memRef);
   fprintf(stderr, "\n");
   // CHECK: memref<2x3xf32, 2>
 
   // Unranked MemRef type.
-  MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, 4);
+  MlirAttribute memSpace4 = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 64), 4);
+  MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, memSpace4);
   if (!mlirTypeIsAUnrankedMemRef(unrankedMemRef) ||
       mlirTypeIsAMemRef(unrankedMemRef) ||
-      mlirUnrankedMemrefGetMemorySpace(unrankedMemRef) != 4)
+      !mlirAttributeEqual(mlirUnrankedMemrefGetMemorySpace(unrankedMemRef),
+                          memSpace4))
     return 19;
   mlirTypeDump(unrankedMemRef);
   fprintf(stderr, "\n");
