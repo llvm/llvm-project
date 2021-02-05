@@ -46,7 +46,7 @@ class ValueAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -79,14 +79,14 @@ class ValueAPITestCase(TestBase):
         list = target.FindGlobalVariables('weekdays', 1)
         weekdays = list.GetValueAtIndex(0)
         self.assertTrue(weekdays, VALID_VARIABLE)
-        self.assertTrue(weekdays.GetNumChildren() == 5, VALID_VARIABLE)
+        self.assertEqual(weekdays.GetNumChildren(), 5, VALID_VARIABLE)
         self.DebugSBValue(weekdays)
 
         # Get global variable 'g_table'.
         list = target.FindGlobalVariables('g_table', 1)
         g_table = list.GetValueAtIndex(0)
         self.assertTrue(g_table, VALID_VARIABLE)
-        self.assertTrue(g_table.GetNumChildren() == 2, VALID_VARIABLE)
+        self.assertEqual(g_table.GetNumChildren(), 2, VALID_VARIABLE)
         self.DebugSBValue(g_table)
 
         fmt = lldbutil.BasicFormatter()
@@ -126,9 +126,9 @@ class ValueAPITestCase(TestBase):
         # Verify the SBValue::GetByteSize() API is working correctly.
         arch = self.getArchitecture()
         if arch == 'i386':
-            self.assertTrue(value.GetByteSize() == 4)
+            self.assertEqual(value.GetByteSize(), 4)
         elif arch == 'x86_64':
-            self.assertTrue(value.GetByteSize() == 8)
+            self.assertEqual(value.GetByteSize(), 8)
 
         # Get child at index 5 => 'Friday'.
         child = value.GetChildAtIndex(5, lldb.eNoDynamicValues, True)
@@ -176,11 +176,11 @@ class ValueAPITestCase(TestBase):
         ]:
             self.assertTrue(v)
 
-        self.assertTrue(
-            frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088,
+        self.assertEqual(
+            frame0.FindVariable('uinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned uinthex == 3768803088')
-        self.assertTrue(
-            frame0.FindVariable('sinthex').GetValueAsUnsigned() == 3768803088,
+        self.assertEqual(
+            frame0.FindVariable('sinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned sinthex == 3768803088')
 
         self.assertTrue(

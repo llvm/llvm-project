@@ -50,7 +50,7 @@ public:
                         const SelectionDAG &DAG) const override;
 
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AS, unsigned Align,
+      EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 

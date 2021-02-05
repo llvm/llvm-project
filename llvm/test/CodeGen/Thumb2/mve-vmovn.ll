@@ -393,45 +393,29 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov.u16 r0, q1[1]
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[0]
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[2]
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[4]
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[6]
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vmovx.f16 s9, s5
+; CHECK-NEXT:    vins.f16 s9, s1
+; CHECK-NEXT:    vmovx.f16 s8, s4
+; CHECK-NEXT:    vins.f16 s8, s0
+; CHECK-NEXT:    vmovx.f16 s10, s6
+; CHECK-NEXT:    vins.f16 s10, s2
+; CHECK-NEXT:    vmovx.f16 s11, s7
+; CHECK-NEXT:    vins.f16 s11, s3
+; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b2:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 q2, q1
-; CHECKBE-NEXT:    vrev64.16 q3, q0
-; CHECKBE-NEXT:    vmov.u16 r0, q2[1]
-; CHECKBE-NEXT:    vmov.16 q1[0], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[0]
-; CHECKBE-NEXT:    vmov.16 q1[1], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q2[3]
-; CHECKBE-NEXT:    vmov.16 q1[2], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[2]
-; CHECKBE-NEXT:    vmov.16 q1[3], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q2[5]
-; CHECKBE-NEXT:    vmov.16 q1[4], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[4]
-; CHECKBE-NEXT:    vmov.16 q1[5], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q2[7]
-; CHECKBE-NEXT:    vmov.16 q1[6], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[6]
-; CHECKBE-NEXT:    vmov.16 q1[7], r0
+; CHECKBE-NEXT:    vrev64.16 q2, q0
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    vmovx.f16 s5, s1
+; CHECKBE-NEXT:    vins.f16 s5, s9
+; CHECKBE-NEXT:    vmovx.f16 s4, s0
+; CHECKBE-NEXT:    vins.f16 s4, s8
+; CHECKBE-NEXT:    vmovx.f16 s6, s2
+; CHECKBE-NEXT:    vins.f16 s6, s10
+; CHECKBE-NEXT:    vmovx.f16 s7, s3
+; CHECKBE-NEXT:    vins.f16 s7, s11
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -442,46 +426,30 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
 ; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[3]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[5]
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[7]
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vmovx.f16 s1, s9
+; CHECK-NEXT:    vins.f16 s1, s5
+; CHECK-NEXT:    vmovx.f16 s0, s8
+; CHECK-NEXT:    vins.f16 s0, s4
+; CHECK-NEXT:    vmovx.f16 s2, s10
+; CHECK-NEXT:    vins.f16 s2, s6
+; CHECK-NEXT:    vmovx.f16 s3, s11
+; CHECK-NEXT:    vins.f16 s3, s7
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b3:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vrev64.16 q3, q0
+; CHECKBE-NEXT:    vrev64.16 q2, q1
+; CHECKBE-NEXT:    vmovx.f16 s5, s13
+; CHECKBE-NEXT:    vins.f16 s5, s9
+; CHECKBE-NEXT:    vmovx.f16 s4, s12
+; CHECKBE-NEXT:    vins.f16 s4, s8
+; CHECKBE-NEXT:    vmovx.f16 s6, s14
+; CHECKBE-NEXT:    vins.f16 s6, s10
+; CHECKBE-NEXT:    vmovx.f16 s7, s15
+; CHECKBE-NEXT:    vins.f16 s7, s11
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
-; CHECKBE-NEXT:    vmov.u16 r0, q3[1]
-; CHECKBE-NEXT:    vmov.16 q2[0], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q0[0]
-; CHECKBE-NEXT:    vmov.16 q2[1], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[3]
-; CHECKBE-NEXT:    vmov.16 q2[2], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q0[2]
-; CHECKBE-NEXT:    vmov.16 q2[3], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[5]
-; CHECKBE-NEXT:    vmov.16 q2[4], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q0[4]
-; CHECKBE-NEXT:    vmov.16 q2[5], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q3[7]
-; CHECKBE-NEXT:    vmov.16 q2[6], r0
-; CHECKBE-NEXT:    vmov.u16 r0, q0[6]
-; CHECKBE-NEXT:    vmov.16 q2[7], r0
-; CHECKBE-NEXT:    vrev64.16 q0, q2
 ; CHECKBE-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 1, i32 8, i32 3, i32 10, i32 5, i32 12, i32 7, i32 14>

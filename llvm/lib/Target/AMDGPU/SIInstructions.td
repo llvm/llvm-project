@@ -1939,6 +1939,8 @@ class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, S
   (i1 (Inst 0, (kone_type KOne), $src0_modifiers, $src0, DSTCLAMP.NONE))
 >;
 
+def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
+def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_ONE, i32, f32, fp_to_uint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_NEG_ONE, i32, f32, fp_to_sint>;
 def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_ONE, i64, f64, fp_to_uint>;
@@ -2758,18 +2760,6 @@ def G_AMDGPU_CVT_F32_UBYTE#N : AMDGPUGenericInstruction {
   let InOperandList = (ins type0:$src0);
   let hasSideEffects = 0;
 }
-}
-
-def G_AMDGPU_CVT_PK_I16_I32 : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src0, type0:$src1);
-  let hasSideEffects = 0;
-}
-
-def G_AMDGPU_MED3 : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
 }
 
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector

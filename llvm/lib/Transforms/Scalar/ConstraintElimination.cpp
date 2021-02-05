@@ -29,6 +29,8 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <string>
+
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -137,8 +139,8 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
     return {};
 
-  auto ADec = decompose(Op0);
-  auto BDec = decompose(Op1);
+  auto ADec = decompose(Op0->stripPointerCasts());
+  auto BDec = decompose(Op1->stripPointerCasts());
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -214,6 +216,19 @@ struct StackEntry {
 };
 } // namespace
 
+#ifndef NDEBUG
+static void dumpWithNames(ConstraintTy &C,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  SmallVector<std::string> Names(Value2Index.size(), "");
+  for (auto &KV : Value2Index) {
+    Names[KV.second - 1] = std::string("%") + KV.first->getName().str();
+  }
+  ConstraintSystem CS;
+  CS.addVariableRowFill(C.Coefficients);
+  CS.dump(Names);
+}
+#endif
+
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
@@ -232,6 +247,15 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (!Br || !Br->isConditional())
       continue;
 
+    // Returns true if we can add a known condition from BB to its successor
+    // block Succ. Each predecessor of Succ can either be BB or be dominated by
+    // Succ (e.g. the case when adding a condition from a pre-header to a loop
+    // header).
+    auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
+      return all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
+        return Pred == &BB || DT.dominates(Succ, Pred);
+      });
+    };
     // If the condition is an OR of 2 compares and the false successor only has
     // the current block as predecessor, queue both negated conditions for the
     // false successor.
@@ -239,7 +263,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
         match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
       BasicBlock *FalseSuccessor = Br->getSuccessor(1);
-      if (FalseSuccessor->getSinglePredecessor()) {
+      if (CanAdd(FalseSuccessor)) {
         WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op0),
                               true);
         WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<CmpInst>(Op1),
@@ -254,7 +278,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
         match(Op0, m_Cmp()) && match(Op1, m_Cmp())) {
       BasicBlock *TrueSuccessor = Br->getSuccessor(0);
-      if (TrueSuccessor->getSinglePredecessor()) {
+      if (CanAdd(TrueSuccessor)) {
         WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op0),
                               false);
         WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<CmpInst>(Op1),
@@ -266,9 +290,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     auto *CmpI = dyn_cast<CmpInst>(Br->getCondition());
     if (!CmpI)
       continue;
-    if (Br->getSuccessor(0)->getSinglePredecessor())
+    if (CanAdd(Br->getSuccessor(0)))
       WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
-    if (Br->getSuccessor(1)->getSinglePredecessor())
+    if (CanAdd(Br->getSuccessor(1)))
       WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
   }
 
@@ -380,7 +404,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     bool Added = false;
     for (auto &C : R) {
       auto Coeffs = C.Coefficients;
-
+      LLVM_DEBUG({
+        dbgs() << "  constraint: ";
+        dumpWithNames(C, Value2Index);
+      });
       Added |= CS.addVariableRowFill(Coeffs);
       // If R has been added to the system, queue it for removal once it goes
       // out-of-scope.

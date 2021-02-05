@@ -1,7 +1,6 @@
 // Test the FIR operations
 
 // RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
-// UNSUPPORTED: !fir
 
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
 // CHECK: func private @box1() -> !fir.boxchar<2>
@@ -98,12 +97,10 @@ func @instructions() {
   %23 = fir.extract_value %22, %21 : (!fir.type<derived{f:f32}>, !fir.field) -> f32
 
 // CHECK: [[VAL_26:%.*]] = constant 1 : i32
-// CHECK: [[VAL_27:%.*]] = fir.gendims [[VAL_26]], [[VAL_21]], [[VAL_26]] : (i32, i32, i32) -> !fir.dims<1>
 // CHECK: [[VAL_28:%.*]] = constant 1.0
 // CHECK: [[VAL_29:%.*]] = fir.insert_value [[VAL_24]], [[VAL_28]], [[VAL_23]] : (!fir.type<derived{f:f32}>, f32, !fir.field) -> !fir.type<derived{f:f32}>
 // CHECK: [[VAL_30:%.*]] = fir.len_param_index f, !fir.type<derived3{f:f32}>
   %c1 = constant 1 : i32
-  %24 = fir.gendims %c1, %19, %c1 : (i32, i32, i32) -> !fir.dims<1>
   %cf1 = constant 1.0 : f32
   %25 = fir.insert_value %22, %cf1, %21 : (!fir.type<derived{f:f32}>, f32, !fir.field) -> !fir.type<derived{f:f32}>
   %26 = fir.len_param_index f, !fir.type<derived3{f:f32}>
@@ -143,7 +140,7 @@ func @boxing_match() {
 // CHECK: [[VAL_40:%.*]] = fir.alloca !fir.char<1>
 // CHECK: [[VAL_41:%.*]] = fir.alloca tuple<i32, f64>
 // CHECK: [[VAL_42:%.*]] = fir.embox [[VAL_38]] : (!fir.ref<i32>) -> !fir.box<i32>
-// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.dims<0>)
+// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.array<3x?xindex>)
 // CHECK: [[VAL_44:%.*]] = constant 8 : i32
 // CHECK: [[VAL_45:%.*]] = fir.undefined !fir.char<1>
 // CHECK: [[VAL_46:%.*]] = fir.emboxchar [[VAL_40]], [[VAL_44]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -169,7 +166,7 @@ func @boxing_match() {
   %d3 = fir.alloca !fir.char<1>
   %e6 = fir.alloca tuple<i32,f64>
   %1 = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
-  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.dims<0>)
+  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.array<3x?xindex>)
   %c8 = constant 8 : i32
   %3 = fir.undefined !fir.char<1>
   %4 = fir.emboxchar %d3, %c8 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>

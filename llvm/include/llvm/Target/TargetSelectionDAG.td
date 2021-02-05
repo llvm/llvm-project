@@ -914,8 +914,8 @@ def vtFP       : PatLeaf<(vt),  [{ return N->getVT().isFloatingPoint(); }]>;
 // bitcasts and check for either opcode, except when used as a pattern root.
 // When used as a pattern root, only fixed-length build_vector and scalable
 // splat_vector are supported.
-def immAllOnesV; // ISD::isConstantSplatVectorAllOnes
-def immAllZerosV; // ISD::isConstantSplatVectorAllZeros
+def immAllOnesV  : SDPatternOperator; // ISD::isConstantSplatVectorAllOnes
+def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;

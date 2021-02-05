@@ -76,4 +76,4 @@ class Disassemble_VST1_64(TestBase):
             print("Raw bytes:    ", [hex(x) for x in raw_bytes])
             print("Disassembled%s" % str(inst))
 
-        self.assertTrue(inst.GetMnemonic(target) == "vst1.64")
+        self.assertEqual(inst.GetMnemonic(target), "vst1.64")

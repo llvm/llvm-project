@@ -23,16 +23,16 @@ class OutputSection;
 class Symbol;
 
 struct Reloc {
-  uint8_t type;
-  bool pcrel;
-  uint8_t length;
+  uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
+  bool pcrel = false;
+  uint8_t length = 0;
   // The offset from the start of the subsection that this relocation belongs
   // to.
-  uint32_t offset;
+  uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
-  uint64_t addend;
-  llvm::PointerUnion<Symbol *, InputSection *> referent;
+  uint64_t addend = 0;
+  llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 };
 
 class InputSection {

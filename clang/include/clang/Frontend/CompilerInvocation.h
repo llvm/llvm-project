@@ -260,6 +260,18 @@ private:
                                const llvm::Triple &T,
                                const std::string &OutputFile,
                                const LangOptions &LangOptsRef);
+
+  /// Parse command line options that map to HeaderSearchOptions.
+  static void ParseHeaderSearchArgs(CompilerInvocation &Res,
+                                    HeaderSearchOptions &Opts,
+                                    llvm::opt::ArgList &Args,
+                                    DiagnosticsEngine &Diags,
+                                    const std::string &WorkingDir);
+
+  /// Generate command line options from HeaderSearchOptions.
+  static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
+                                       SmallVectorImpl<const char *> &Args,
+                                       CompilerInvocation::StringAllocator SA);
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

@@ -24,8 +24,10 @@ CompilerInstance::CompilerInstance()
     : invocation_(new CompilerInvocation()),
       allSources_(new Fortran::parser::AllSources()),
       allCookedSources_(new Fortran::parser::AllCookedSources(*allSources_)),
-      parsing_(new Fortran::parser::Parsing(*allCookedSources_)) {
-
+      parsing_(new Fortran::parser::Parsing(*allCookedSources_)),
+      semanticsContext_(new Fortran::semantics::SemanticsContext(
+          *(new Fortran::common::IntrinsicTypeDefaultKinds()),
+          *(new common::LanguageFeatureControl()), *allCookedSources_)) {
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
   allSources_->set_encoding(Fortran::parser::Encoding::UTF_8);
@@ -144,16 +146,12 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
   invoc.SetDefaultFortranOpts();
   // Update the fortran options based on user-based input.
   invoc.setFortranOpts();
+  // Set semantic options
+  invoc.setSemanticsOpts(this->semanticsContext());
 
   // Run the frontend action `act` for every input file.
   for (const FrontendInputFile &fif : frontendOpts().inputs_) {
     if (act.BeginSourceFile(*this, fif)) {
-      // Switch between fixed and free form format based on the input file
-      // extension. Ideally we should have all Fortran options set before
-      // entering this loop (i.e. processing any input files). However, we
-      // can't decide between fixed and free form based on the file extension
-      // earlier than this.
-      invoc.fortranOpts().isFixedForm = fif.IsFixedForm();
       if (llvm::Error err = act.Execute()) {
         consumeError(std::move(err));
       }

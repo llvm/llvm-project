@@ -221,7 +221,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
     rewriter.startRootUpdate(op);
     op.indexing_mapsAttr(newIndexingMapAttr);
     op.iterator_typesAttr(ArrayAttr::get(newIteratorTypes, context));
-    replaceBlockArgForUnitDimLoops(op, unitDims, rewriter);
+    (void)replaceBlockArgForUnitDimLoops(op, unitDims, rewriter);
     rewriter.finalizeRootUpdate(op);
     return success();
   }
@@ -513,7 +513,7 @@ struct LinalgFoldUnitExtentDimsPass
                       FoldUnitDimLoops<IndexedGenericOp>>(context);
     else
       populateLinalgFoldUnitExtentDimsPatterns(context, patterns);
-    applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
   }
 };
 } // namespace

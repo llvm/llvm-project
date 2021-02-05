@@ -118,6 +118,17 @@ void test_memcpy() {
   ASSERT_LABEL(str2[3], i_label);
 }
 
+void test_memmove() {
+  char str[] = "str1xx";
+  dfsan_set_label(i_label, &str[3], 1);
+
+  ASSERT_ZERO_LABEL(memmove(str + 2, str, 4));
+  assert(0 == memcmp(str + 2, "str1", 4));
+  for (int i = 0; i <= 4; ++i)
+    ASSERT_ZERO_LABEL(str[i]);
+  ASSERT_LABEL(str[5], i_label);
+}
+
 void test_memset() {
   char buf[8];
   int j = 'a';
@@ -142,6 +153,27 @@ void test_strcmp() {
 #else
   ASSERT_LABEL(rv, i_j_label);
 #endif
+}
+
+void test_strcat() {
+  char src[] = "world";
+  char dst[] = "hello \0    ";
+  char *p = dst;
+  dfsan_set_label(k_label, &p, sizeof(p));
+  dfsan_set_label(i_label, src, sizeof(src));
+  dfsan_set_label(j_label, dst, sizeof(dst));
+  char *ret = strcat(p, src);
+  ASSERT_LABEL(ret, k_label);
+  assert(ret == dst);
+  assert(strcmp(src, dst + 6) == 0);
+  for (int i = 0; i < 6; ++i) {
+    ASSERT_LABEL(dst[i], j_label);
+  }
+  for (int i = 6; i < strlen(dst); ++i) {
+    ASSERT_LABEL(dst[i], i_label);
+    assert(dfsan_get_label(dst[i]) == dfsan_get_label(src[i - 6]));
+  }
+  ASSERT_LABEL(dst[11], j_label);
 }
 
 void test_strlen() {
@@ -812,12 +844,61 @@ void test_sigemptyset() {
   ASSERT_READ_ZERO_LABEL(&set, sizeof(set));
 }
 
+static void SignalHandler(int signo) {}
+
+static void SignalAction(int signo, siginfo_t *si, void *uc) {}
+
 void test_sigaction() {
-  struct sigaction oldact;
-  dfsan_set_label(j_label, &oldact, 1);
-  int ret = sigaction(SIGUSR1, NULL, &oldact);
+  struct sigaction newact_with_sigaction = {};
+  newact_with_sigaction.sa_flags = SA_SIGINFO;
+  newact_with_sigaction.sa_sigaction = SignalAction;
+
+  // Set sigaction to be SignalAction, save the last one into origin_act
+  struct sigaction origin_act;
+  dfsan_set_label(j_label, &origin_act, 1);
+  int ret = sigaction(SIGUSR1, &newact_with_sigaction, &origin_act);
   assert(ret == 0);
-  ASSERT_READ_ZERO_LABEL(&oldact, sizeof(oldact));
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_READ_ZERO_LABEL(&origin_act, sizeof(origin_act));
+
+  struct sigaction newact_with_sighandler = {};
+  newact_with_sighandler.sa_handler = SignalHandler;
+
+  // Set sigaction to be SignalHandler, check the last one is SignalAction
+  struct sigaction oldact;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_sigaction == SignalAction);
+  assert(oldact.sa_flags & SA_SIGINFO);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  newact_with_sighandler.sa_handler = SIG_IGN;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SignalHandler);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+
+  newact_with_sighandler.sa_handler = SIG_DFL;
+  assert(0 == sigaction(SIGUSR1, &newact_with_sighandler, &oldact));
+  assert(oldact.sa_handler == SIG_IGN);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+
+  // Restore sigaction to the orginal setting, check the last one is SignalHandler
+  assert(0 == sigaction(SIGUSR1, &origin_act, &oldact));
+  assert(oldact.sa_handler == SIG_DFL);
+  assert((oldact.sa_flags & SA_SIGINFO) == 0);
+}
+
+void test_signal() {
+  // Set signal to be SignalHandler, save the previous one into
+  // old_signal_handler.
+  sighandler_t old_signal_handler = signal(SIGHUP, SignalHandler);
+  ASSERT_ZERO_LABEL(old_signal_handler);
+
+  // Set SIG_IGN or SIG_DFL, and check the previous one is expected.
+  assert(SignalHandler == signal(SIGHUP, SIG_DFL));
+  assert(SIG_DFL == signal(SIGHUP, SIG_IGN));
+
+  // Restore signal to old_signal_handler.
+  assert(SIG_IGN == signal(SIGHUP, old_signal_handler));
 }
 
 void test_sigaltstack() {
@@ -1277,6 +1358,7 @@ int main(void) {
   test_memchr();
   test_memcmp();
   test_memcpy();
+  test_memmove();
   test_memset();
   test_nanosleep();
   test_poll();
@@ -1289,6 +1371,7 @@ int main(void) {
   test_sched_getaffinity();
   test_select();
   test_sigaction();
+  test_signal();
   test_sigaltstack();
   test_sigemptyset();
   test_snprintf();
@@ -1298,6 +1381,7 @@ int main(void) {
   test_strcasecmp();
   test_strchr();
   test_strcmp();
+  test_strcat();
   test_strcpy();
   test_strdup();
   test_strlen();

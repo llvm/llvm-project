@@ -402,6 +402,29 @@ public:
 
 } // namespace
 
+static void prepareSymbolRelocation(lld::macho::Symbol *sym,
+                                    const InputSection *isec, const Reloc &r) {
+  const TargetInfo::RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
+
+  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
+    prepareBranchTarget(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT | RelocAttrBits::LOAD)) {
+    if (needsBinding(sym))
+      in.got->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
+    in.got->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::LOAD)) {
+    if (needsBinding(sym))
+      in.tlvPointers->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    // References from thread-local variable sections are treated as offsets
+    // relative to the start of the referent section, and therefore have no
+    // need of rebase opcodes.
+    if (!(isThreadLocalVariables(isec->flags) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+  }
+}
+
 void Writer::scanRelocations() {
   for (InputSection *isec : inputSections) {
     // We do not wish to add rebase opcodes for __LD,__compact_unwind, because
@@ -411,11 +434,13 @@ void Writer::scanRelocations() {
       continue;
 
     for (Reloc &r : isec->relocs) {
-      if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
-        if (isa<Undefined>(s))
-          treatUndefinedSymbol(toString(*s), toString(isec->file));
-        else
-          target->prepareSymbolRelocation(s, isec, r);
+      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
+        continue;
+      if (auto *sym = r.referent.dyn_cast<lld::macho::Symbol *>()) {
+        if (auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined);
+        else if (target->validateSymbolRelocation(sym, isec, r))
+          prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
         if (!r.pcrel)
@@ -431,7 +456,8 @@ void Writer::scanSymbols() {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      dysym->file->refState = std::max(dysym->file->refState, dysym->refState);
+      dysym->getFile()->refState =
+          std::max(dysym->getFile()->refState, dysym->refState);
     }
   }
 }
@@ -614,7 +640,7 @@ static void sortSegmentsAndSections() {
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
     seg->sortOutputSections(compareByOrder<OutputSection *>(sectionOrder));
-    for (auto *osec : seg->getSections()) {
+    for (OutputSection *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
       if (!osec->isHidden())
@@ -693,7 +719,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
   fileOff = alignTo(fileOff, PageSize);
   seg->fileOff = fileOff;
 
-  for (auto *osec : seg->getSections()) {
+  for (OutputSection *osec : seg->getSections()) {
     if (!osec->isNeeded())
       continue;
     addr = alignTo(addr, osec->align);

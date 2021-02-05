@@ -1271,7 +1271,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
       }
     }
 
-    if (flags->proxy == TASK_PROXY &&
+    if ((flags->proxy == TASK_PROXY || flags->detachable == TASK_DETACHABLE) &&
         task_team->tt.tt_found_proxy_tasks == FALSE)
       TCW_4(task_team->tt.tt_found_proxy_tasks, TRUE);
     if (flags->hidden_helper &&

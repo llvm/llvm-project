@@ -82,7 +82,7 @@ define <2 x i32> @and_lshr_and_vec_v2(<2 x i32> %arg) {
 
 define <3 x i32> @and_lshr_and_vec_undef(<3 x i32> %arg) {
 ; CHECK-LABEL: @and_lshr_and_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i32> [[ARG:%.*]], <i32 3, i32 poison, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i32> [[ARG:%.*]], <i32 3, i32 undef, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <3 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <3 x i1> [[TMP2]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[TMP4]]
@@ -91,7 +91,6 @@ define <3 x i32> @and_lshr_and_vec_undef(<3 x i32> %arg) {
   %tmp1 = icmp eq <3 x i32> %tmp, <i32 0, i32 undef, i32 0>
   %tmp2 = lshr <3 x i32> %arg, <i32 1, i32 undef, i32 1>
   %tmp3 = and <3 x i32> %tmp2, <i32 1, i32 undef, i32 1>
-  ; The second element of %tmp4 is poison because it is (undef ? poison : undef).
   %tmp4 = select <3 x i1> %tmp1, <3 x i32> %tmp3, <3 x i32> <i32 1, i32 undef, i32 1>
   ret <3 x i32> %tmp4
 }
@@ -223,7 +222,7 @@ define <2 x i32> @f_var0_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define <3 x i32> @f_var0_vec_undef(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var0_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], <i32 2, i32 poison, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], <i32 2, i32 undef, i32 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[TMP1]], [[ARG:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <3 x i1> [[TMP3]] to <3 x i32>
@@ -233,7 +232,6 @@ define <3 x i32> @f_var0_vec_undef(<3 x i32> %arg, <3 x i32> %arg1) {
   %tmp2 = icmp eq <3 x i32> %tmp, <i32 0, i32 undef, i32 0>
   %tmp3 = lshr <3 x i32> %arg, <i32 1, i32 undef, i32 1>
   %tmp4 = and <3 x i32> %tmp3, <i32 1, i32 undef, i32 1>
-  ; The second element of %tmp5 is poison because it is (undef ? poison : undef).
   %tmp5 = select <3 x i1> %tmp2, <3 x i32> %tmp4, <3 x i32> <i32 1, i32 undef, i32 1>
   ret <3 x i32> %tmp5
 }

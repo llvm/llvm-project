@@ -5684,9 +5684,9 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   LanguageType language = sc.GetLanguage();
   if (language == eLanguageTypeUnknown)
     return;
-  auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(language);
-  if (auto err = type_system_or_err.takeError()) {
-    llvm::consumeError(std::move(err));
+  LanguageSet plugins =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (!plugins[language]) {
     PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
                  sc.module_sp.get(),
                  "This version of LLDB has no plugin for the %s language. "

@@ -123,8 +123,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
     }
   } else {
     bool isFirstPred = true;
-    for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-      BasicBlock *PredBB = *PI;
+    for (BasicBlock *PredBB : predecessors(BB)) {
       Value *PredVal = GetValueAtEndOfBlock(PredBB);
       PredValues.push_back(std::make_pair(PredBB, PredVal));
 

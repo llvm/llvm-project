@@ -188,11 +188,6 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
   StatementMatcher IteratorComparisonMatcher = expr(
       ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ConditionVarName)))));
 
-  auto OverloadedNEQMatcher = ignoringImplicit(
-      cxxOperatorCallExpr(hasOverloadedOperatorName("!="), argumentCountIs(2),
-                          hasArgument(0, IteratorComparisonMatcher),
-                          hasArgument(1, IteratorBoundMatcher)));
-
   // This matcher tests that a declaration is a CXXRecordDecl that has an
   // overloaded operator*(). If the operator*() returns by value instead of by
   // reference then the return type is tagged with DerefByValueResultName.
@@ -216,14 +211,9 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
                                         containsDeclaration(0, InitDeclMatcher),
                                         containsDeclaration(1, EndDeclMatcher)),
                                declStmt(hasSingleDecl(InitDeclMatcher)))),
-             hasCondition(
-                 anyOf(binaryOperator(hasOperatorName("!="),
-                                      hasLHS(IteratorComparisonMatcher),
-                                      hasRHS(IteratorBoundMatcher)),
-                       binaryOperator(hasOperatorName("!="),
-                                      hasLHS(IteratorBoundMatcher),
-                                      hasRHS(IteratorComparisonMatcher)),
-                       OverloadedNEQMatcher)),
+             hasCondition(ignoringImplicit(binaryOperation(
+                 hasOperatorName("!="), hasOperands(IteratorComparisonMatcher,
+                                                    IteratorBoundMatcher)))),
              hasIncrement(anyOf(
                  unaryOperator(hasOperatorName("++"),
                                hasUnaryOperand(declRefExpr(

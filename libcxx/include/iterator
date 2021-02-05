@@ -421,6 +421,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <cstddef>
 #include <initializer_list>
 #include <__memory/base.h>
+#include <__memory/pointer_traits.h>
 #include <version>
 
 #include <__debug>
@@ -439,9 +440,7 @@ struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag       : public input_iterator_t
 struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
 #if _LIBCPP_STD_VER > 17
-// TODO(EricWF)  contiguous_iterator_tag is provided as an extension prior to
-//  C++20 to allow optimizations for users providing wrapped iterator types.
-struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag: public random_access_iterator_tag { };
+struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag    : public random_access_iterator_tag {};
 #endif
 
 template <class _Iter>
@@ -517,6 +516,17 @@ public:
     static const bool value = sizeof(__test<_Tp>(nullptr)) == 1;
 };
 
+template <class _Tp>
+struct __has_iterator_concept
+{
+private:
+    struct __two {char __lx; char __lxx;};
+    template <class _Up> static __two __test(...);
+    template <class _Up> static char __test(typename _Up::iterator_concept* = nullptr);
+public:
+    static const bool value = sizeof(__test<_Tp>(nullptr)) == 1;
+};
+
 template <class _Iter, bool> struct __iterator_traits_impl {};
 
 template <class _Iter>
@@ -568,11 +578,19 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
 
 template <class _Tp, class _Up, bool = __has_iterator_category<iterator_traits<_Tp> >::value>
 struct __has_iterator_category_convertible_to
-    : public integral_constant<bool, is_convertible<typename iterator_traits<_Tp>::iterator_category, _Up>::value>
+    : _BoolConstant<is_convertible<typename iterator_traits<_Tp>::iterator_category, _Up>::value>
 {};
 
 template <class _Tp, class _Up>
-struct __has_iterator_category_convertible_to<_Tp, _Up, false> : public false_type {};
+struct __has_iterator_category_convertible_to<_Tp, _Up, false> : false_type {};
+
+template <class _Tp, class _Up, bool = __has_iterator_concept<_Tp>::value>
+struct __has_iterator_concept_convertible_to
+    : _BoolConstant<is_convertible<typename _Tp::iterator_concept, _Up>::value>
+{};
+
+template <class _Tp, class _Up>
+struct __has_iterator_concept_convertible_to<_Tp, _Up, false> : false_type {};
 
 template <class _Tp>
 struct __is_cpp17_input_iterator : public __has_iterator_category_convertible_to<_Tp, input_iterator_tag> {};
@@ -586,13 +604,25 @@ struct __is_cpp17_bidirectional_iterator : public __has_iterator_category_conver
 template <class _Tp>
 struct __is_cpp17_random_access_iterator : public __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag> {};
 
+// __is_cpp17_contiguous_iterator determines if an iterator is contiguous,
+// either because it advertises itself as such (in C++20) or because it
+// is a pointer type or a known trivial wrapper around a pointer type,
+// such as __wrap_iter<T*>.
+//
 #if _LIBCPP_STD_VER > 17
 template <class _Tp>
-struct __is_cpp17_contiguous_iterator : public __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag> {};
+struct __is_cpp17_contiguous_iterator : _Or<
+    __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag>,
+    __has_iterator_concept_convertible_to<_Tp, contiguous_iterator_tag>
+> {};
 #else
 template <class _Tp>
-struct __is_cpp17_contiguous_iterator : public false_type {};
+struct __is_cpp17_contiguous_iterator : false_type {};
 #endif
+
+// Any native pointer which is an iterator is also a contiguous iterator.
+template <class _Up>
+struct __is_cpp17_contiguous_iterator<_Up*> : true_type {};
 
 
 template <class _Tp>
@@ -759,6 +789,14 @@ public:
     typedef typename iterator_traits<_Iter>::difference_type difference_type;
     typedef typename iterator_traits<_Iter>::reference       reference;
     typedef typename iterator_traits<_Iter>::pointer         pointer;
+    typedef _If<__is_cpp17_random_access_iterator<_Iter>::value,
+        random_access_iterator_tag,
+        typename iterator_traits<_Iter>::iterator_category>  iterator_category;
+#if _LIBCPP_STD_VER > 17
+    typedef _If<__is_cpp17_random_access_iterator<_Iter>::value,
+        random_access_iterator_tag,
+        bidirectional_iterator_tag>                          iterator_concept;
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator() : __t(), current() {}
@@ -1206,10 +1244,16 @@ private:
     _Iter __i;
 public:
     typedef _Iter                                            iterator_type;
-    typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
     typedef typename iterator_traits<iterator_type>::value_type value_type;
     typedef typename iterator_traits<iterator_type>::difference_type difference_type;
     typedef iterator_type pointer;
+    typedef _If<__is_cpp17_random_access_iterator<_Iter>::value,
+        random_access_iterator_tag,
+        typename iterator_traits<_Iter>::iterator_category>  iterator_category;
+#if _LIBCPP_STD_VER > 17
+    typedef input_iterator_tag                               iterator_concept;
+#endif
+
 #ifndef _LIBCPP_CXX03_LANG
     typedef typename iterator_traits<iterator_type>::reference __reference;
     typedef typename conditional<
@@ -1393,40 +1437,21 @@ template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_
 template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move(_Ip, _Ip, _Op);
 template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move_backward(_B1, _B1, _B2);
 
-#if _LIBCPP_DEBUG_LEVEL < 2
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    _Tp*
->::type
-__unwrap_iter(__wrap_iter<_Tp*>);
-
-#else
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    __wrap_iter<_Tp*>
->::type
-__unwrap_iter(__wrap_iter<_Tp*> __i);
-
-#endif
-
 template <class _Iter>
 class __wrap_iter
 {
 public:
     typedef _Iter                                                      iterator_type;
-    typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
     typedef typename iterator_traits<iterator_type>::value_type        value_type;
     typedef typename iterator_traits<iterator_type>::difference_type   difference_type;
     typedef typename iterator_traits<iterator_type>::pointer           pointer;
     typedef typename iterator_traits<iterator_type>::reference         reference;
+    typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
+#if _LIBCPP_STD_VER > 17
+    typedef _If<__is_cpp17_contiguous_iterator<_Iter>::value,
+                contiguous_iterator_tag, iterator_category>            iterator_concept;
+#endif
+
 private:
     iterator_type __i;
 public:
@@ -1603,27 +1628,19 @@ private:
     template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 copy_backward(_B1, _B1, _B2);
     template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op move(_Ip, _Ip, _Op);
     template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 move_backward(_B1, _B1, _B2);
-
-#if _LIBCPP_DEBUG_LEVEL < 2
-    template <class _Tp>
-    _LIBCPP_CONSTEXPR friend
-    typename enable_if
-    <
-        is_trivially_copy_assignable<_Tp>::value,
-        _Tp*
-    >::type
-    __unwrap_iter(__wrap_iter<_Tp*>);
-#else
-  template <class _Tp>
-  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR friend
-  typename enable_if
-  <
-      is_trivially_copy_assignable<_Tp>::value,
-      __wrap_iter<_Tp*>
-  >::type
-  __unwrap_iter(__wrap_iter<_Tp*> __i);
-#endif
 };
+
+#if _LIBCPP_STD_VER <= 17
+template <class _It>
+struct __is_cpp17_contiguous_iterator<__wrap_iter<_It> > : __is_cpp17_contiguous_iterator<_It> {};
+#endif
+
+template <class _Iter>
+_LIBCPP_CONSTEXPR
+_EnableIf<__is_cpp17_contiguous_iterator<_Iter>::value, decltype(_VSTD::__to_address(declval<_Iter>()))>
+__to_address(__wrap_iter<_Iter> __w) _NOEXCEPT {
+    return _VSTD::__to_address(__w.base());
+}
 
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG

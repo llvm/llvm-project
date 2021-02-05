@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ; TODO-GFX11: This should generate "exp mrt0" instead of "exp null":
 ; TODO-GFX11: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 

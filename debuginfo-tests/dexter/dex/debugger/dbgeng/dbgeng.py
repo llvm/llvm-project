@@ -103,8 +103,11 @@ class DbgEng(DebuggerBase):
         self.step_info = res
 
     def go(self):
-        # We never go -- we always single step.
-        pass
+        # FIXME: running freely doesn't seem to reliably stop when back in a
+        # relevant source file -- this is likely to be a problem when setting
+        # breakpoints. Until that's fixed, single step instead of running
+        # freely. This isn't very efficient, but at least makes progress.
+        self.step()
 
     def _get_step_info(self, watches, step_index):
         frames = self.step_info

@@ -1111,8 +1111,7 @@ bool DIExpression::isValid() const {
       // entry values of a simple register location. One reason for this is that
       // we currently can't calculate the size of the resulting DWARF block for
       // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1 &&
-             getNumElements() == 2;
+      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
@@ -1279,9 +1278,10 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
 
   if (EntryValue) {
     Ops.push_back(dwarf::DW_OP_LLVM_entry_value);
-    // Add size info needed for entry value expression.
-    // Add plus one for target register operand.
-    Ops.push_back(Expr->getNumElements() + 1);
+    // Use a block size of 1 for the target register operand.  The
+    // DWARF backend currently cannot emit entry values with a block
+    // size > 1.
+    Ops.push_back(1);
   }
 
   // If there are no ops to prepend, do not even add the DW_OP_stack_value.

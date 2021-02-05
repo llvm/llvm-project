@@ -445,13 +445,14 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
   auto *context = elementType.getContext();
 
   if (!BaseMemRefType::isValidElementType(elementType))
-    return emitOptionalError(location, "invalid memref element type"),
+    return (void)emitOptionalError(location, "invalid memref element type"),
            MemRefType();
 
   for (int64_t s : shape) {
     // Negative sizes are not allowed except for `-1` that means dynamic size.
     if (s < -1)
-      return emitOptionalError(location, "invalid memref size"), MemRefType();
+      return (void)emitOptionalError(location, "invalid memref size"),
+             MemRefType();
   }
 
   // Check that the structure of the composition is valid, i.e. that each
@@ -754,6 +755,12 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
     return t;
   }
 
+  // 0-D corner case for empty shape that still have an affine map. Example:
+  // `memref<f32, affine_map<()[s0] -> (s0)>>`. This is a 1 element memref whose
+  // offset needs to remain, just return t.
+  if (t.getShape().empty())
+    return t;
+
   // If the canonical strided layout for the sizes of `t` is equal to the
   // simplified layout of `t` we can just return an empty layout. Otherwise,
   // just simplify the existing layout.
@@ -770,6 +777,9 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 ArrayRef<AffineExpr> exprs,
                                                 MLIRContext *context) {
+  assert(!sizes.empty() && !exprs.empty() &&
+         "expected non-empty sizes and exprs");
+
   // Size 0 corner case is useful for canonicalizations.
   if (llvm::is_contained(sizes, 0))
     return getAffineConstantExpr(0, context);

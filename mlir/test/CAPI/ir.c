@@ -128,7 +128,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   mlirBlockAppendOwnedOperation(funcBody, dim);
 
   MlirRegion loopBodyRegion = mlirRegionCreate();
-  MlirBlock loopBody = mlirBlockCreate(/*nArgs=*/1, &indexType);
+  MlirBlock loopBody = mlirBlockCreate(0, NULL);
+  mlirBlockAddArgument(loopBody, indexType);
   mlirRegionAppendOwnedBlock(loopBodyRegion, loopBody);
 
   MlirAttribute indexOneLiteral =

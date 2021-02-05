@@ -3111,9 +3111,10 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
       }
     } else {
       updatedOperands = llvm::to_vector<4>(operands);
-      copyUnrankedDescriptors(rewriter, loc, *getTypeConverter(),
-                              op.getOperands().getTypes(), updatedOperands,
-                              /*toDynamic=*/true);
+      (void)copyUnrankedDescriptors(rewriter, loc, *getTypeConverter(),
+                                    op.getOperands().getTypes(),
+                                    updatedOperands,
+                                    /*toDynamic=*/true);
     }
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.

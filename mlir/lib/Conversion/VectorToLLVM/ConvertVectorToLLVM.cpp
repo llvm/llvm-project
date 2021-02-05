@@ -102,6 +102,27 @@ static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
   return res;
 }
 
+static Value createCastToIndexLike(ConversionPatternRewriter &rewriter,
+                                   Location loc, Type targetType, Value value) {
+  if (targetType == value.getType())
+    return value;
+
+  bool targetIsIndex = targetType.isIndex();
+  bool valueIsIndex = value.getType().isIndex();
+  if (targetIsIndex ^ valueIsIndex)
+    return rewriter.create<IndexCastOp>(loc, targetType, value);
+
+  auto targetIntegerType = targetType.dyn_cast<IntegerType>();
+  auto valueIntegerType = value.getType().dyn_cast<IntegerType>();
+  assert(targetIntegerType && valueIntegerType &&
+         "unexpected cast between types other than integers and index");
+  assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
+
+  if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
+    return rewriter.create<SignExtendIOp>(loc, targetIntegerType, value);
+  return rewriter.create<TruncateIOp>(loc, targetIntegerType, value);
+}
+
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
@@ -131,12 +152,12 @@ static Value buildVectorComparison(ConversionPatternRewriter &rewriter,
   }
   // Add in an offset if requested.
   if (off) {
-    Value o = rewriter.create<IndexCastOp>(loc, idxType, *off);
+    Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
     Value ov = rewriter.create<SplatOp>(loc, indices.getType(), o);
     indices = rewriter.create<AddIOp>(loc, ov, indices);
   }
   // Construct the vector comparison.
-  Value bound = rewriter.create<IndexCastOp>(loc, idxType, b);
+  Value bound = createCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
   return rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, indices, bounds);
 }
@@ -216,10 +237,8 @@ replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
                             LLVMTypeConverter &typeConverter, Location loc,
                             TransferReadOp xferOp, ArrayRef<Value> operands,
                             Value dataPtr, Value mask) {
-  auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
   VectorType fillType = xferOp.getVectorType();
   Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
-  fill = rewriter.create<LLVM::DialectCastOp>(loc, toLLVMTy(fillType), fill);
 
   Type vecTy = typeConverter.convertType(xferOp.getVectorType());
   if (!vecTy)
@@ -279,6 +298,26 @@ static TransferWriteOpAdaptor getTransferOpAdapter(TransferWriteOp xferOp,
 }
 
 namespace {
+
+/// Conversion pattern for a vector.bitcast.
+class VectorBitCastOpConversion
+    : public ConvertOpToLLVMPattern<vector::BitCastOp> {
+public:
+  using ConvertOpToLLVMPattern<vector::BitCastOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp bitCastOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only 1-D vectors can be lowered to LLVM.
+    VectorType resultTy = bitCastOp.getType();
+    if (resultTy.getRank() != 1)
+      return failure();
+    Type newResultTy = typeConverter->convertType(resultTy);
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(bitCastOp, newResultTy,
+                                                 operands[0]);
+    return success();
+  }
+};
 
 /// Conversion pattern for a vector.matrix_multiply.
 /// This is lowered directly to the proper llvm.intr.matrix.multiply.
@@ -1492,7 +1531,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                   VectorTransferConversion<TransferWriteOp>>(
       converter, enableIndexOptimizations);
   patterns
-      .insert<VectorShuffleOpConversion,
+      .insert<VectorBitCastOpConversion,
+              VectorShuffleOpConversion,
               VectorExtractElementOpConversion,
               VectorExtractOpConversion,
               VectorFMAOp1DConversion,

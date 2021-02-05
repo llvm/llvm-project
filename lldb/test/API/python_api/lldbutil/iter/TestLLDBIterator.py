@@ -50,13 +50,13 @@ class LLDBIteratorTestCase(TestBase):
         for m in target.module_iter():
             mine.append(m)
 
-        self.assertTrue(len(yours) == len(mine))
+        self.assertEqual(len(yours), len(mine))
         for i in range(len(yours)):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(
-                yours[i] == mine[i],
+            self.assertEqual(
+                yours[i], mine[i],
                 "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
 
     @add_test_categories(['pyapi'])
@@ -73,7 +73,7 @@ class LLDBIteratorTestCase(TestBase):
         breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line2)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        self.assertTrue(target.GetNumBreakpoints() == 2)
+        self.assertEqual(target.GetNumBreakpoints(), 2)
 
         from lldbsuite.test.lldbutil import get_description
         yours = []
@@ -83,12 +83,12 @@ class LLDBIteratorTestCase(TestBase):
         for b in target.breakpoint_iter():
             mine.append(b)
 
-        self.assertTrue(len(yours) == len(mine))
+        self.assertEqual(len(yours), len(mine))
         for i in range(len(yours)):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(yours[i] == mine[i],
+            self.assertEqual(yours[i], mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
     @add_test_categories(['pyapi'])
@@ -119,7 +119,7 @@ class LLDBIteratorTestCase(TestBase):
             if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
                 stopped_due_to_breakpoint = True
             for frame in thread:
-                self.assertTrue(frame.GetThread().GetThreadID() == ID)
+                self.assertEqual(frame.GetThread().GetThreadID(), ID)
                 if self.TraceOn():
                     print(frame)
 

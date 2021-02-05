@@ -40,10 +40,9 @@ struct BoxCharTypeStorage;
 struct BoxProcTypeStorage;
 struct CharacterTypeStorage;
 struct ComplexTypeStorage;
-struct DimsTypeStorage;
 struct FieldTypeStorage;
 struct HeapTypeStorage;
-struct IntTypeStorage;
+struct IntegerTypeStorage;
 struct LenTypeStorage;
 struct LogicalTypeStorage;
 struct PointerTypeStorage;
@@ -119,11 +118,11 @@ public:
 
 /// Model of a Fortran INTEGER intrinsic type, including the KIND type
 /// parameter.
-class IntType
-    : public mlir::Type::TypeBase<IntType, mlir::Type, detail::IntTypeStorage> {
+class IntegerType : public mlir::Type::TypeBase<fir::IntegerType, mlir::Type,
+                                                detail::IntegerTypeStorage> {
 public:
   using Base::Base;
-  static IntType get(mlir::MLIRContext *ctxt, KindTy kind);
+  static fir::IntegerType get(mlir::MLIRContext *ctxt, KindTy kind);
   KindTy getFKind() const;
 };
 
@@ -189,20 +188,6 @@ public:
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
                                                           mlir::Type eleTy);
-};
-
-/// The type of a runtime vector that describes triples of array dimension
-/// information. A triple consists of a lower bound, upper bound, and
-/// stride. Each dimension of an array entity may have an associated triple that
-/// maps how elements of the array are accessed.
-class DimsType : public mlir::Type::TypeBase<DimsType, mlir::Type,
-                                             detail::DimsTypeStorage> {
-public:
-  using Base::Base;
-  static DimsType get(mlir::MLIRContext *ctx, unsigned rank);
-
-  /// returns -1 if the rank is unknown
-  unsigned getRank() const;
 };
 
 /// The type of a field name. Implementations may defer the layout of a Fortran
@@ -388,7 +373,7 @@ inline bool isa_real(mlir::Type t) {
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {
   return t.isa<mlir::IndexType>() || t.isa<mlir::IntegerType>() ||
-         t.isa<fir::IntType>();
+         t.isa<fir::IntegerType>();
 }
 
 /// Is `t` a FIR or MLIR Complex type?

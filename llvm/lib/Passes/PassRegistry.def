@@ -119,6 +119,7 @@ MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, f
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
+MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 #undef MODULE_PASS
 
 #ifndef CGSCC_ANALYSIS

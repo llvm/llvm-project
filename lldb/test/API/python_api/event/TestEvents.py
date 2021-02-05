@@ -62,8 +62,8 @@ class EventAPITestCase(TestBase):
                                 False,     # Stop at entry
                                 error)     # error
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         # Create an empty event object.
@@ -315,5 +315,5 @@ class EventAPITestCase(TestBase):
         my_thread.join()
 
         # The final judgement. :-)
-        self.assertTrue(self.state == 'stopped',
+        self.assertEqual(self.state, 'stopped',
                         "Both expected state changed events received")

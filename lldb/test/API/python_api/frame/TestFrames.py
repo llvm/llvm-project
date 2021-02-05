@@ -38,7 +38,7 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         # Keeps track of the number of times 'a' is called where it is within a
@@ -88,25 +88,26 @@ class FrameAPITestCase(TestBase):
                 # instruction as PC.
                 if self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
                     pc_value_int &= ~1
-                self.assertTrue(
-                    pc_value_int == frame.GetPC(),
+                self.assertEqual(
+                    pc_value_int, frame.GetPC(),
                     "PC gotten as a value should equal frame's GetPC")
                 sp_value = gpr_reg_set.GetChildMemberWithName("sp")
                 self.assertTrue(
                     sp_value, "We should have a valid Stack Pointer.")
-                self.assertTrue(int(sp_value.GetValue(), 0) == frame.GetSP(
-                ), "SP gotten as a value should equal frame's GetSP")
+                self.assertEqual(
+                    int(sp_value.GetValue(), 0), frame.GetSP(),
+                    "SP gotten as a value should equal frame's GetSP")
 
             print("---", file=session)
             process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)
 
         # Expect to find 'a' on the call stacks two times.
-        self.assertTrue(callsOfA == 2,
+        self.assertEqual(callsOfA, 2,
                         "Expect to find 'a' on the call stacks two times")
         # By design, the 'a' call frame has the following arg vals:
         #     o a((int)val=1, (char)ch='A')
@@ -141,7 +142,7 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(
@@ -183,7 +184,7 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(

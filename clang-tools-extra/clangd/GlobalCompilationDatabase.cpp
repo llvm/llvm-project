@@ -34,6 +34,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <mutex>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -553,7 +554,10 @@ public:
   }
 
   ~BroadcastThread() {
-    ShouldStop.store(true, std::memory_order_release);
+    {
+      std::lock_guard<std::mutex> Lock(Mu);
+      ShouldStop.store(true, std::memory_order_release);
+    }
     CV.notify_all();
     Thread.join();
   }

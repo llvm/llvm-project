@@ -124,11 +124,9 @@ bool llvm::EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
 
   // Collect all dead blocks.
   std::vector<BasicBlock*> DeadBlocks;
-  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I)
-    if (!Reachable.count(&*I)) {
-      BasicBlock *BB = &*I;
-      DeadBlocks.push_back(BB);
-    }
+  for (BasicBlock &BB : F)
+    if (!Reachable.count(&BB))
+      DeadBlocks.push_back(&BB);
 
   // Delete the dead blocks.
   DeleteDeadBlocks(DeadBlocks, DTU, KeepOneInputPHIs);

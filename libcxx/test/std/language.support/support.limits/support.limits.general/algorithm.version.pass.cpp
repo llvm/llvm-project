@@ -148,17 +148,11 @@
 #   error "__cpp_lib_clamp should have the value 201603L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_algorithms
-#     error "__cpp_lib_constexpr_algorithms should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_algorithms != 201806L
-#     error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_algorithms
-#     error "__cpp_lib_constexpr_algorithms should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_algorithms
+#   error "__cpp_lib_constexpr_algorithms should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_algorithms != 201806L
+#   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -217,17 +211,11 @@
 #   error "__cpp_lib_clamp should have the value 201603L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_algorithms
-#     error "__cpp_lib_constexpr_algorithms should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_algorithms != 201806L
-#     error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_algorithms
-#     error "__cpp_lib_constexpr_algorithms should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_algorithms
+#   error "__cpp_lib_constexpr_algorithms should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_algorithms != 201806L
+#   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

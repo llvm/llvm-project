@@ -351,11 +351,11 @@ template <class ForwardIterator, class Compare>
     is_sorted_until(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void               // constexpr in C++20
     sort(RandomAccessIterator first, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void               // constexpr in C++20
     sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp);
 
 template <class RandomAccessIterator>
@@ -385,11 +385,11 @@ template <class InputIterator, class RandomAccessIterator, class Compare>
                       RandomAccessIterator result_first, RandomAccessIterator result_last, Compare comp);
 
 template <class RandomAccessIterator>
-    constexpr void                    // constexpr in C++20
+    void
     nth_element(RandomAccessIterator first, RandomAccessIterator nth, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    constexpr void                    // constexpr in C++20
+    void
     nth_element(RandomAccessIterator first, RandomAccessIterator nth, RandomAccessIterator last, Compare comp);
 
 template <class ForwardIterator, class T>
@@ -1639,68 +1639,42 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
                            __value_, __equal_to<__v, _Tp>());
 }
 
-// copy
-template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-_Iter
-__unwrap_iter(_Iter __i)
-{
-    return __i;
-}
+// __unwrap_iter
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    _Tp*
->::type
-__unwrap_iter(move_iterator<_Tp*> __i)
-{
-    return __i.base();
-}
+// The job of __unwrap_iter is to lower iterators-that-are-tantamount-to-pointers
+// (such as vector<T>::iterator) into pointers, to reduce the number of template
+// instantiations and to enable pointer-based optimizations e.g. in std::copy.
+// In debug mode, we don't do this.
+
+template <class _Iter, bool = __is_cpp17_contiguous_iterator<_Iter>::value>
+struct __unwrap_iter_impl {
+    static _LIBCPP_CONSTEXPR _Iter
+    __apply(_Iter __i) _NOEXCEPT {
+        return __i;
+    }
+};
 
 #if _LIBCPP_DEBUG_LEVEL < 2
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    _Tp*
->::type
-__unwrap_iter(__wrap_iter<_Tp*> __i)
-{
-    return __i.base();
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    const _Tp*
->::type
-__unwrap_iter(__wrap_iter<const _Tp*> __i)
-{
-    return __i.base();
-}
-
-#else
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    __wrap_iter<_Tp*>
->::type
-__unwrap_iter(__wrap_iter<_Tp*> __i)
-{
-    return __i;
-}
+template <class _Iter>
+struct __unwrap_iter_impl<_Iter, true> {
+    static _LIBCPP_CONSTEXPR decltype(_VSTD::__to_address(declval<_Iter>()))
+    __apply(_Iter __i) _NOEXCEPT {
+        return _VSTD::__to_address(__i);
+    }
+};
 
 #endif  // _LIBCPP_DEBUG_LEVEL < 2
+
+template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+decltype(_Impl::__apply(_VSTD::declval<_Iter>()))
+__unwrap_iter(_Iter __i) _NOEXCEPT
+{
+    return _Impl::__apply(__i);
+}
+
+// copy
 
 template <class _InputIterator, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -1894,7 +1868,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
-    is_trivially_copy_assignable<_Up>::value,
+    is_trivially_move_assignable<_Up>::value,
     _Up*
 >::type
 __move(_Tp* __first, _Tp* __last, _Up* __result)
@@ -1942,7 +1916,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
-    is_trivially_copy_assignable<_Up>::value,
+    is_trivially_move_assignable<_Up>::value,
     _Up*
 >::type
 __move_backward(_Tp* __first, _Tp* __last, _Up* __result)
@@ -3833,7 +3807,7 @@ is_sorted(_ForwardIterator __first, _ForwardIterator __last)
 // stable, 2-3 compares, 0-2 swaps
 
 template <class _Compare, class _ForwardIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 unsigned
+unsigned
 __sort3(_ForwardIterator __x, _ForwardIterator __y, _ForwardIterator __z, _Compare __c)
 {
     unsigned __r = 0;
@@ -3927,7 +3901,7 @@ __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
 
 // Assumes size > 0
 template <class _Compare, class _BidirectionalIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 void
+void
 __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
     _BidirectionalIterator __lm1 = __last;
@@ -4073,7 +4047,6 @@ template <class _Compare, class _RandomAccessIterator>
 void
 __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    // _Compare is known to be a reference type
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
     const difference_type __limit = is_trivially_copy_constructible<value_type>::value &&
@@ -4262,47 +4235,13 @@ __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __c
     }
 }
 
-// This forwarder keeps the top call and the recursive calls using the same instantiation, forcing a reference _Compare
-template <class _RandomAccessIterator, class _Compare>
+template <class _Compare, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
+__sort(_Tp** __first, _Tp** __last, __less<_Tp*>&)
 {
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    _VSTD::__sort<_Comp_ref>(__first, __last, _Comp_ref(__comp));
-}
-
-template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-sort(_RandomAccessIterator __first, _RandomAccessIterator __last)
-{
-    _VSTD::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-sort(_Tp** __first, _Tp** __last)
-{
-    _VSTD::sort((uintptr_t*)__first, (uintptr_t*)__last, __less<uintptr_t>());
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-sort(__wrap_iter<_Tp*> __first, __wrap_iter<_Tp*> __last)
-{
-    _VSTD::sort(__first.base(), __last.base());
-}
-
-template <class _Tp, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-sort(__wrap_iter<_Tp*> __first, __wrap_iter<_Tp*> __last, _Compare __comp)
-{
-    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
-    _VSTD::sort<_Tp*, _Comp_ref>(__first.base(), __last.base(), __comp);
+    __less<uintptr_t> __comp;
+    _VSTD::__sort<__less<uintptr_t>&, uintptr_t*>((uintptr_t*)__first, (uintptr_t*)__last, __comp);
 }
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&))
@@ -5279,70 +5218,8 @@ partial_sort_copy(_InputIterator __first, _InputIterator __last,
 
 // nth_element
 
-template<class _Compare, class _RandomAccessIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 bool
-__nth_element_find_guard(_RandomAccessIterator& __i, _RandomAccessIterator& __j,
-                         _RandomAccessIterator& __m, _Compare __comp)
-{
-    // manually guard downward moving __j against __i
-    while (--__j != __i)
-    {
-        if (__comp(*__j, *__m))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-template<class _Compare, class _RandomAccessIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 bool
-__nth_element_partloop(_RandomAccessIterator __first, _RandomAccessIterator __last,
-                       _RandomAccessIterator& __i, _RandomAccessIterator& __j,
-                       unsigned& __n_swaps, _Compare __comp)
-{
-    // *__first == *__m, *__m <= all other elements
-    // Partition instead into [__first, __i) == *__first and *__first < [__i, __last)
-    ++__i;  // __first + 1
-    __j = __last;
-    if (!__comp(*__first, *--__j))  // we need a guard if *__first == *(__last-1)
-    {
-        while (true)
-        {
-            if (__i == __j)
-                return true;  // [__first, __last) all equivalent elements
-            if (__comp(*__first, *__i))
-            {
-                swap(*__i, *__j);
-                ++__n_swaps;
-                ++__i;
-                break;
-            }
-            ++__i;
-        }
-    }
-    // [__first, __i) == *__first and *__first < [__j, __last) and __j == __last - 1
-    if (__i == __j)
-        return true;
-    while (true)
-    {
-        while (!__comp(*__first, *__i))
-            ++__i;
-        while (__comp(*__first, *--__j))
-            ;
-        if (__i >= __j)
-            break;
-        swap(*__i, *__j);
-        ++__n_swaps;
-        ++__i;
-    }
-    // [__first, __i) == *__first and *__first < [__i, __last)
-    // The first part is sorted.
-    return false;
-}
-
 template <class _Compare, class _RandomAccessIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 void
+void
 __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
     // _Compare is known to be a reference type
@@ -5350,7 +5227,7 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
     const difference_type __limit = 7;
     while (true)
     {
-        // __restart: -- this is the target of a "continue" below
+    __restart:
         if (__nth == __last)
             return;
         difference_type __len = __last - __first;
@@ -5390,19 +5267,61 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
         if (!__comp(*__i, *__m))  // if *__first == *__m
         {
             // *__first == *__m, *__first doesn't go in first part
-            if (_VSTD::__nth_element_find_guard<_Compare>(__i, __j, __m, __comp)) {
-                swap(*__i, *__j);
-                ++__n_swaps;
-                // found guard for downward moving __j, now use unguarded partition
-            } else if (_VSTD::__nth_element_partloop<_Compare>(__first, __last, __i, __j, __n_swaps, __comp)) {
-                return;
-            } else if (__nth < __i) {
-                return;
-            } else {
-                // __nth_element the second part
-                // _VSTD::__nth_element<_Compare>(__i, __nth, __last, __comp);
-                __first = __i;
-                continue;  // i.e., goto __restart
+            // manually guard downward moving __j against __i
+            while (true)
+            {
+                if (__i == --__j)
+                {
+                    // *__first == *__m, *__m <= all other elements
+                    // Partition instead into [__first, __i) == *__first and *__first < [__i, __last)
+                    ++__i;  // __first + 1
+                    __j = __last;
+                    if (!__comp(*__first, *--__j))  // we need a guard if *__first == *(__last-1)
+                    {
+                        while (true)
+                        {
+                            if (__i == __j)
+                                return;  // [__first, __last) all equivalent elements
+                            if (__comp(*__first, *__i))
+                            {
+                                swap(*__i, *__j);
+                                ++__n_swaps;
+                                ++__i;
+                                break;
+                            }
+                            ++__i;
+                        }
+                    }
+                    // [__first, __i) == *__first and *__first < [__j, __last) and __j == __last - 1
+                    if (__i == __j)
+                        return;
+                    while (true)
+                    {
+                        while (!__comp(*__first, *__i))
+                            ++__i;
+                        while (__comp(*__first, *--__j))
+                            ;
+                        if (__i >= __j)
+                            break;
+                        swap(*__i, *__j);
+                        ++__n_swaps;
+                        ++__i;
+                    }
+                    // [__first, __i) == *__first and *__first < [__i, __last)
+                    // The first part is sorted,
+                    if (__nth < __i)
+                        return;
+                    // __nth_element the second part
+                    // _VSTD::__nth_element<_Compare>(__i, __nth, __last, __comp);
+                    __first = __i;
+                    goto __restart;
+                }
+                if (__comp(*__j, *__m))
+                {
+                    swap(*__i, *__j);
+                    ++__n_swaps;
+                    break;  // found guard for downward moving __j, now use unguarded partition
+                }
             }
         }
         ++__i;
@@ -5446,16 +5365,15 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
             {
                 // Check for [__first, __i) already sorted
                 __j = __m = __first;
-                while (true)
+                while (++__j != __i)
                 {
-                    if (++__j == __i)
-                        // [__first, __i) sorted
-                        return;
                     if (__comp(*__j, *__m))
                         // not yet sorted, so sort
-                        break;
+                        goto not_sorted;
                     __m = __j;
                 }
+                // [__first, __i) sorted
+                return;
             }
             else
             {
@@ -5463,16 +5381,16 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
                 __j = __m = __i;
                 while (++__j != __last)
                 {
-                    if (++__j == __last)
-                        // [__i, __last) sorted
-                        return;
                     if (__comp(*__j, *__m))
                         // not yet sorted, so sort
-                        break;
+                        goto not_sorted;
                     __m = __j;
                 }
+                // [__i, __last) sorted
+                return;
             }
         }
+not_sorted:
         // __nth_element on range containing __nth
         if (__nth < __i)
         {
@@ -5488,7 +5406,7 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5497,11 +5415,34 @@ nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomA
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last)
 {
     _VSTD::nth_element(__first, __nth, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+}
+
+// sort
+
+template <class _RandomAccessIterator, class _Compare>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+void
+sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
+{
+    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
+    if (__libcpp_is_constant_evaluated()) {
+        _VSTD::__partial_sort<_Comp_ref>(__first, __last, __last, _Comp_ref(__comp));
+    } else {
+        _VSTD::__sort<_Comp_ref>(_VSTD::__unwrap_iter(__first), _VSTD::__unwrap_iter(__last), _Comp_ref(__comp));
+    }
+}
+
+template <class _RandomAccessIterator>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+void
+sort(_RandomAccessIterator __first, _RandomAccessIterator __last)
+{
+    _VSTD::sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
 // includes

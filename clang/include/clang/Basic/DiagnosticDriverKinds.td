@@ -210,9 +210,6 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
   "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
   InGroup<ClangClPch>;
 
-def err_drv_dllexport_inlines_and_fallback : Error<
-  "option '/Zc:dllexportInlines-' is ABI-changing and not compatible with '/fallback'">;
-
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<"invalid value '%1' in '%0','%2'">;
@@ -392,9 +389,6 @@ def err_test_module_file_extension_format : Error<
   "-ftest-module-file-extension argument '%0' is not of the required form "
   "'blockname:major:minor:hashed:user info'">;
 
-def warn_drv_invoking_fallback : Warning<"falling back to %0">,
-  InGroup<Fallback>;
-
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
 def note_use_dashdash : Note<"Use '--' to treat subsequent arguments as filenames">;
@@ -536,4 +530,11 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
+
+def note_cc1_round_trip_original : Note<"Original arguments in %0 round-trip: %1">;
+def note_cc1_round_trip_generated : Note<"Generated arguments #%1 in %0 round-trip: %2">;
+def remark_cc1_round_trip_generated : Remark<"Generated arguments #%1 in %0 round-trip: %2">, InGroup<RoundTripCC1Args>;
+def err_cc1_round_trip_fail_then_ok : Error<"Original arguments parse failed, then succeeded in %0 round-trip">;
+def err_cc1_round_trip_ok_then_fail : Error<"Generated arguments parse failed in %0 round-trip">;
+def err_cc1_round_trip_mismatch : Error<"Generated arguments do not match in %0 round-trip">;
 }

@@ -103,8 +103,8 @@ public:
   ///       conversion function to perform the conversion.
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<0>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<0>>
   void addConversion(FnT &&callback) {
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
@@ -124,8 +124,8 @@ public:
   ///
   /// This method registers a materialization that will be called when
   /// converting an illegal block argument type, to a legal type.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
@@ -133,16 +133,16 @@ public:
   /// This method registers a materialization that will be called when
   /// converting a legal type to an illegal source type. This is used when
   /// conversions to an illegal type must persist beyond the main conversion.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
   /// converting type from an illegal, or source, type to a legal type.
-  template <typename FnT,
-            typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
+  template <typename FnT, typename T = typename llvm::function_traits<
+                              std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
         wrapMaterialization<T>(std::forward<FnT>(callback)));
@@ -829,11 +829,11 @@ private:
 /// legalizable to the given `target` are placed within that set. (Note that if
 /// there is an op explicitly marked as illegal, the conversion terminates and
 /// the `unconvertedOps` set will not necessarily be complete.)
-LLVM_NODISCARD LogicalResult
+LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
                        const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
-LLVM_NODISCARD LogicalResult
+LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
                        const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
@@ -842,12 +842,11 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// operations. This method returns failure if the conversion of any operation
 /// fails, or if there are unreachable blocks in any of the regions nested
 /// within 'ops'.
-LLVM_NODISCARD LogicalResult
-applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                    const FrozenRewritePatternList &patterns);
-LLVM_NODISCARD LogicalResult
-applyFullConversion(Operation *op, ConversionTarget &target,
-                    const FrozenRewritePatternList &patterns);
+LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
+                                  ConversionTarget &target,
+                                  const FrozenRewritePatternList &patterns);
+LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
+                                  const FrozenRewritePatternList &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -857,14 +856,13 @@ applyFullConversion(Operation *op, ConversionTarget &target,
 /// operations on success and only pre-existing operations are added to the set.
 /// This method only returns failure if there are unreachable blocks in any of
 /// the regions nested within 'ops'.
-LLVM_NODISCARD LogicalResult
-applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                        const FrozenRewritePatternList &patterns,
-                        DenseSet<Operation *> &convertedOps);
-LLVM_NODISCARD LogicalResult
-applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                        const FrozenRewritePatternList &patterns,
-                        DenseSet<Operation *> &convertedOps);
+LogicalResult applyAnalysisConversion(ArrayRef<Operation *> ops,
+                                      ConversionTarget &target,
+                                      const FrozenRewritePatternList &patterns,
+                                      DenseSet<Operation *> &convertedOps);
+LogicalResult applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                                      const FrozenRewritePatternList &patterns,
+                                      DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

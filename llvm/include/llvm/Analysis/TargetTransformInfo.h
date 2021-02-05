@@ -118,44 +118,32 @@ class IntrinsicCostAttributes {
   SmallVector<Type *, 4> ParamTys;
   SmallVector<const Value *, 4> Arguments;
   FastMathFlags FMF;
-  ElementCount VF = ElementCount::getFixed(1);
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
 
 public:
-  IntrinsicCostAttributes(const IntrinsicInst &I);
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, const CallBase &CI,
+      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max());
 
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
-                          ElementCount Factor);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
-                          ElementCount Factor, unsigned ScalarCost);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags,
-                          unsigned ScalarCost);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys, FastMathFlags Flags,
-                          unsigned ScalarCost,
-                          const IntrinsicInst *I);
-
-  IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                          ArrayRef<Type *> Tys);
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
+      FastMathFlags Flags = FastMathFlags(), const IntrinsicInst *I = nullptr,
+      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<const Value *> Args);
 
+  IntrinsicCostAttributes(
+      Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
+      ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
+      const IntrinsicInst *I = nullptr,
+      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
+
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
   Type *getReturnType() const { return RetTy; }
-  ElementCount getVectorFactor() const { return VF; }
   FastMathFlags getFlags() const { return FMF; }
   unsigned getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
@@ -798,7 +786,7 @@ public:
   /// Determine if the target supports unaligned memory accesses.
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace = 0,
-                                      unsigned Alignment = 1,
+                                      Align Alignment = Align(1),
                                       bool *Fast = nullptr) const;
 
   /// Return hardware support for population count.
@@ -1499,7 +1487,7 @@ public:
   virtual bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
                                               unsigned BitWidth,
                                               unsigned AddressSpace,
-                                              unsigned Alignment,
+                                              Align Alignment,
                                               bool *Fast) = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
@@ -1896,7 +1884,7 @@ public:
     return Impl.isFPVectorizationPotentiallyUnsafe();
   }
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
-                                      unsigned AddressSpace, unsigned Alignment,
+                                      unsigned AddressSpace, Align Alignment,
                                       bool *Fast) override {
     return Impl.allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
                                                Alignment, Fast);

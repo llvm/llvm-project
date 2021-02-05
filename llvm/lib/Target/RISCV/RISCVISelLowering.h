@@ -89,9 +89,8 @@ enum NodeType : unsigned {
   GORCI,
   GORCIW,
   // Vector Extension
-  // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT
-  // sign extended from the vector element size. NOTE: The result size will
-  // never be less than the vector element size.
+  // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
+  // extended from the vector element size.
   VMV_X_S,
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
@@ -114,6 +113,24 @@ enum NodeType : unsigned {
   // float to single-width float, rounding towards odd). Takes a double-width
   // float vector and produces a single-width float vector.
   VFNCVT_ROD,
+  // These nodes match the semantics of the corresponding RVV vector reduction
+  // instructions. They produce a vector result which is the reduction
+  // performed over the first vector operand plus the first element of the
+  // second vector operand. The first operand is an unconstrained vector type,
+  // and the result and second operand's types are expected to be the
+  // corresponding full-width LMUL=1 type for the first operand:
+  //   nxv8i8 = vecreduce_add nxv32i8, nxv8i8
+  //   nxv2i32 = vecreduce_add nxv8i32, nxv2i32
+  // The different in types does introduce extra vsetvli instructions but
+  // similarly it reduces the number of registers consumed per reduction.
+  VECREDUCE_ADD,
+  VECREDUCE_UMAX,
+  VECREDUCE_SMAX,
+  VECREDUCE_UMIN,
+  VECREDUCE_SMIN,
+  VECREDUCE_AND,
+  VECREDUCE_OR,
+  VECREDUCE_XOR,
 };
 } // namespace RISCVISD
 
@@ -315,6 +332,7 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

@@ -204,8 +204,9 @@ void test() {
 IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
-|-IntegerLiteralExpression
-| `-'1' LiteralToken
+|-ExpressionStatement Condition
+| `-IntegerLiteralExpression Expression
+|   `-'1' LiteralToken
 |-')'
 `-CompoundStatement ThenStatement
   |-'{' OpenParen
@@ -215,8 +216,9 @@ IfStatement Statement
 IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
-|-IntegerLiteralExpression
-| `-'1' LiteralToken
+|-ExpressionStatement Condition
+| `-IntegerLiteralExpression Expression
+|   `-'1' LiteralToken
 |-')'
 |-CompoundStatement ThenStatement
 | |-'{' OpenParen
@@ -225,12 +227,68 @@ IfStatement Statement
 `-IfStatement ElseStatement
   |-'if' IntroducerKeyword
   |-'('
-  |-IntegerLiteralExpression
-  | `-'0' LiteralToken
+  |-ExpressionStatement Condition
+  | `-IntegerLiteralExpression Expression
+  |   `-'0' LiteralToken
   |-')'
   `-CompoundStatement ThenStatement
     |-'{' OpenParen
     `-'}' CloseParen
+)txt"}));
+}
+
+TEST_P(BuildSyntaxTreeTest, IfDecl) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+void test() {
+  [[if (int a = 5) {}]]
+  [[if (int a; a == 5) {}]]
+}
+)cpp",
+      {R"txt(
+IfStatement Statement
+|-'if' IntroducerKeyword
+|-'('
+|-DeclarationStatement Condition
+| `-SimpleDeclaration
+|   |-'int'
+|   `-DeclaratorList Declarators
+|     `-SimpleDeclarator ListElement
+|       |-'a'
+|       |-'='
+|       `-IntegerLiteralExpression
+|         `-'5' LiteralToken
+|-')'
+`-CompoundStatement ThenStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
+      )txt",
+       R"txt(
+IfStatement Statement
+|-'if' IntroducerKeyword
+|-'('
+|-DeclarationStatement
+| |-SimpleDeclaration
+| | |-'int'
+| | `-DeclaratorList Declarators
+| |   `-SimpleDeclarator ListElement
+| |     `-'a'
+| `-';'
+|-ExpressionStatement Condition
+| `-BinaryOperatorExpression Expression
+|   |-IdExpression LeftHandSide
+|   | `-UnqualifiedId UnqualifiedId
+|   |   `-'a'
+|   |-'==' OperatorToken
+|   `-IntegerLiteralExpression RightHandSide
+|     `-'5' LiteralToken
+|-')'
+`-CompoundStatement ThenStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -420,8 +478,9 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword
     | |-'('
-    | |-IntegerLiteralExpression
-    | | `-'1' LiteralToken
+    | |-ExpressionStatement Condition
+    | | `-IntegerLiteralExpression Expression
+    | |   `-'1' LiteralToken
     | |-')'
     | |-ExpressionStatement ThenStatement
     | | |-CallExpression Expression
@@ -3992,12 +4051,13 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword unmodifiable
     | |-'(' unmodifiable
-    | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression LeftHandSide unmodifiable
-    | | | `-'1' LiteralToken unmodifiable
-    | | |-'+' OperatorToken unmodifiable
-    | | `-IntegerLiteralExpression RightHandSide unmodifiable
-    | |   `-'1' LiteralToken unmodifiable
+    | |-ExpressionStatement Condition unmodifiable
+    | | `-BinaryOperatorExpression Expression unmodifiable
+    | |   |-IntegerLiteralExpression LeftHandSide unmodifiable
+    | |   | `-'1' LiteralToken unmodifiable
+    | |   |-'+' OperatorToken unmodifiable
+    | |   `-IntegerLiteralExpression RightHandSide unmodifiable
+    | |     `-'1' LiteralToken unmodifiable
     | |-')' unmodifiable
     | |-CompoundStatement ThenStatement unmodifiable
     | | |-'{' OpenParen unmodifiable
@@ -4076,12 +4136,13 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword unmodifiable
     | |-'(' unmodifiable
-    | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression LeftHandSide
-    | | | `-'1' LiteralToken
-    | | |-'&&' OperatorToken unmodifiable
-    | | `-IntegerLiteralExpression RightHandSide
-    | |   `-'0' LiteralToken
+    | |-ExpressionStatement Condition unmodifiable
+    | | `-BinaryOperatorExpression Expression unmodifiable
+    | |   |-IntegerLiteralExpression LeftHandSide
+    | |   | `-'1' LiteralToken
+    | |   |-'&&' OperatorToken unmodifiable
+    | |   `-IntegerLiteralExpression RightHandSide
+    | |     `-'0' LiteralToken
     | |-')' unmodifiable
     | |-CompoundStatement ThenStatement unmodifiable
     | | |-'{' OpenParen unmodifiable

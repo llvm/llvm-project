@@ -34,7 +34,7 @@ def fir_CharacterType : Type<CPred<"$_self.isa<fir::CharacterType>()">,
     "FIR character type">;
 def fir_ComplexType : Type<CPred<"$_self.isa<fir::ComplexType>()">,
     "FIR complex type">;
-def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntType>()">,
+def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
     "FIR integer type">;
 def fir_LogicalType : Type<CPred<"$_self.isa<fir::LogicalType>()">,
     "FIR logical type">;
@@ -98,9 +98,8 @@ def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     "any reference or box">;
 
 // A vector of Fortran triple notation describing a multidimensional array
-def fir_DimsType : Type<CPred<"$_self.isa<fir::DimsType>()">, "dim type">;
 def AnyEmboxLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
-    Index.predicate, fir_IntegerType.predicate, fir_DimsType.predicate]>,
+    Index.predicate, fir_IntegerType.predicate]>,
     "any legal embox argument type">;
 def AnyEmboxArg : Type<AnyEmboxLike.predicate, "embox argument type">;
 
@@ -709,7 +708,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
   let verifier = [{
     if (!(getSelector().getType().isa<mlir::IntegerType>() ||
           getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntType>()))
+          getSelector().getType().isa<fir::IntegerType>()))
       return emitOpError("must be an integer");
     auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
@@ -835,7 +834,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
   let verifier = [{
     if (!(getSelector().getType().isa<mlir::IntegerType>() ||
           getSelector().getType().isa<mlir::IndexType>() ||
-          getSelector().getType().isa<fir::IntType>() ||
+          getSelector().getType().isa<fir::IntegerType>() ||
           getSelector().getType().isa<fir::LogicalType>() ||
           getSelector().getType().isa<fir::CharacterType>()))
       return emitOpError("must be an integer, character, or logical");
@@ -1077,17 +1076,12 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
       } else {
         return emitOpError("LEN parameters require !fir.type type");
       }
-      for (auto lp : getLenParams())
-        if (lp.getType().isa<fir::DimsType>())
-          return emitOpError("LEN parameters must be integral type");
     }
     if (dims().size() == 0) {
       // Ok. If there is no dims and no layout map, then emboxing a scalar.
       // TODO: Should the type be enforced? It already must agree.
     } else if (dims().size() == 1) {
-      auto d = *dims().begin();
-      if (!d.getType().isa<fir::DimsType>())
-        return emitOpError("dimension argument must have !fir.dims type");
+      //auto d = *dims().begin();
     } else {
       return emitOpError("embox can only have one !fir.dim argument");
     }
@@ -1263,7 +1257,7 @@ def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
     AnyIntegerLike,     // rank of data
     fir_TypeDescType,   // abstract type descriptor
     AnyIntegerLike,     // attribute flags (bitfields)
-    fir_DimsType        // dimension information (if any)
+    fir_SequenceType    // dimension information (if any)
   );
 }
 
@@ -1722,42 +1716,6 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   }];
 }
 
-def fir_GenDimsOp : fir_OneResultOp<"gendims", [NoSideEffect]> {
-
-  let summary = "generate a value of type `!fir.dims`";
-
-  let description = [{
-    The arguments are an ordered list of integral type values that is a
-    multiple of 3 in length.  Each such triple is defined as: the lower
-    index, the extent, and the stride for that dimension. The dimension
-    information is given in the same row-to-column order as Fortran. This
-    abstract dimension value must describe a reified object, so all dimension
-    information must be specified.  The extent must be nonnegative and the
-    stride must not be zero.
-
-    ```mlir
-      %d = fir.gendims %lo, %ext, %str : (index, index, index) -> !fir.dims<1>
-    ```
-  }];
-
-  let arguments = (ins Variadic<AnyIntegerType>:$triples);
-
-  let results = (outs fir_DimsType);
-
-  let assemblyFormat = [{
-    operands attr-dict `:` functional-type(operands, results)
-  }];
-
-  let verifier = [{
-    auto size = triples().size();
-    if (size < 1 || size > 16 * 3)
-      return emitOpError("incorrect number of args");
-    if (size % 3 != 0)
-      return emitOpError("requires a multiple of 3 args");
-    return mlir::success();
-  }];
-}
-
 def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoSideEffect]> {
   let summary = "insert a new sub-value into a copy of an existing aggregate";
 
@@ -1852,7 +1810,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 
 def fir_ResultOp : fir_Op<"result",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WhereOp", "LoopOp", "IterWhileOp"]>]> {
+     ParentOneOf<["WhereOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -1883,7 +1841,7 @@ class region_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def fir_LoopOp : region_Op<"do_loop",
+def fir_DoLoopOp : region_Op<"do_loop",
     [DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "generalized loop operation";
   let description = [{
@@ -2020,7 +1978,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
   let summary = "DO loop with early exit condition";
   let description = [{
     This construct is useful for lowering implied-DO loops. It is very similar
-    to `fir::LoopOp` with the addition that it requires a single loop-carried
+    to `fir::DoLoopOp` with the addition that it requires a single loop-carried
     bool value that signals an early exit condition to the operation. A `true`
     disposition means the next loop iteration should proceed. A `false`
     indicates that the `fir.iterate_while` operation should terminate and
@@ -2564,7 +2522,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
 def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<TypeAttr>()">,
     Or<[CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::CharacterType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::ComplexType>()">,
-        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntType>()">,
+        CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::IntegerType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::LogicalType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RealType>()">,
         CPred<"$_self.cast<TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,

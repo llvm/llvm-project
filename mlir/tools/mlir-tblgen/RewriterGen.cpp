@@ -260,7 +260,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
 
   raw_indented_ostream::DelimitedScope scope(os);
 
-  os << "if(!" << opName << ") return failure();\n";
+  os << "if(!" << opName << ") return ::mlir::failure();\n";
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     std::string argName = formatv("arg{0}_{1}", depth, i);
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
@@ -286,7 +286,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       fmt, &fmtCtx.addSubst("_loc", locToUse), opName, capture[0], capture[1],
       capture[2], capture[3], capture[4], capture[5], capture[6], capture[7]));
 
-  os << "if (failed(" << nativeCodeCall << ")) return failure();\n";
+  os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     auto name = tree.getArgName(i);
@@ -336,7 +336,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
   if (depth != 0) {
     // Skip if there is no defining operation (e.g., arguments to function).
-    os << formatv("if (!{0}) return failure();\n", castedName);
+    os << formatv("if (!{0}) return ::mlir::failure();\n", castedName);
   }
   if (tree.getNumArgs() != op.getNumArgs()) {
     PrintFatalError(loc, formatv("op '{0}' argument number mismatch: {1} in "

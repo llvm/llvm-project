@@ -15,6 +15,19 @@
 #
 
 steps:
+  - label: "Format"
+    command: "libcxx/utils/ci/run-buildbot check-format"
+    artifact_paths:
+      - "**/clang-format.patch"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    soft_fail:
+        - exit_status: 1
+
   - label: "C++03"
     command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
@@ -214,7 +227,7 @@ steps:
       - "**/test-results.xml"
       - "**/*.abilist"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -270,7 +283,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -281,7 +294,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -293,7 +306,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -304,7 +317,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

@@ -1,0 +1,19 @@
+add_entrypoint_object(
+  ceil
+  SRCS
+    ceil.cpp
+  HDRS
+    ../ceil.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ceilf
+  SRCS
+    ceilf.cpp
+  HDRS
+    ../ceilf.h
+  COMPILE_OPTIONS
+    -O2
+)

@@ -189,7 +189,7 @@ void TosaTestQuantUtilAPI::runOnFunction() {
 
   patterns.insert<ConvertTosaNegateOp>(ctx);
   patterns.insert<ConvertTosaConv2DOp>(ctx);
-  applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 } // anonymous namespace
