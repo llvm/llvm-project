@@ -35,6 +35,15 @@ void populateVectorToVectorCanonicalizationPatterns(
 void populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
 
+/// Collect a set of leading one dimension removal patterns.
+///
+/// These patterns insert vector.shape_cast to remove leading one dimensions
+/// to expose more canonical forms of read/write/insert/extract operations.
+/// With them, there are more chances that we can cancel out extract-insert
+/// pairs or forward write-read pairs.
+void populateCastAwayVectorLeadingOneDimPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context);
+
 /// Collect a set of vector slices transformation patterns:
 ///    ExtractSlicesOpLowering, InsertSlicesOpLowering
 /// Useful for clients that want to express all vector "slices"

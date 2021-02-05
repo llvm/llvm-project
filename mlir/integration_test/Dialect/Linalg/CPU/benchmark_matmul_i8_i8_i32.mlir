@@ -1,8 +1,8 @@
 // RUN: export M=24 && export K=64 && export N=192 && export ITERS=10 && \
 // RUN: cat %s | sed 's@${M}@'"$M"'@g'| sed 's@${K}@'"$K"'@g' | sed 's@${N}@'"$N"'@g'| sed 's@${ITERS}@'"$ITERS"'@g'| \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.matmul_i8_i8_i32 register-tile-sizes=12,32,16 vectorize" | \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.fill register-tile-sizes=4,32 vectorize" | \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.copy register-tile-sizes=4,32 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.matmul_i8_i8_i32 register-tile-sizes=12,32,16 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.fill register-tile-sizes=4,32 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul anchor-op=linalg.copy register-tile-sizes=4,32 vectorize" | \
 // RUN: mlir-opt -canonicalize -convert-vector-to-scf -lower-affine -convert-linalg-to-loops | \
 
 // RUN: mlir-opt -canonicalize -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm -mlir-disable-threading | \
@@ -17,9 +17,9 @@
 !elem_type_a = type i8
 !elem_type_b = type i8
 !elem_type_c = type i32
-!row_major_A = type memref<24x64x!elem_type_a>
-!row_major_B = type memref<64x192x!elem_type_b>
-!row_major_C = type memref<24x192x!elem_type_c>
+!row_major_A = type memref<${M}x${K}x!elem_type_a>
+!row_major_B = type memref<${K}x${N}x!elem_type_b>
+!row_major_C = type memref<${M}x${N}x!elem_type_c>
 
 func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
 // TODO: activate manually for now.
@@ -32,9 +32,9 @@ func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
 
 func @print_perf(%iters: index, %total_time: f64) {
   %c2 = constant 2 : index
-  %cM = constant 24 : index
-  %cN = constant 192 : index
-  %cK = constant 64 : index
+  %cM = constant ${M} : index
+  %cN = constant ${N} : index
+  %cK = constant ${K} : index
 
   %mn = muli %cM, %cN : index
   %mnk = muli %mn, %cK : index

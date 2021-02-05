@@ -556,6 +556,20 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
   return %0, %2 : vector<4x8xf32>, vector<2xi32>
 }
 
+// CHECK-LABEL: func @bitcast_f16_to_f32
+//              bit pattern: 0x00000000
+//       CHECK: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
+//              bit pattern: 0x40004000
+//       CHECK: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//       CHECK: return %[[CST0]], %[[CST1]]
+func @bitcast_f16_to_f32() -> (vector<4xf32>, vector<4xf32>) {
+  %cst0 = constant dense<0.0> : vector<8xf16> // bit pattern: 0x0000
+  %cst1 = constant dense<2.0> : vector<8xf16> // bit pattern: 0x4000
+  %cast0 = vector.bitcast %cst0: vector<8xf16> to vector<4xf32>
+  %cast1 = vector.bitcast %cst1: vector<8xf16> to vector<4xf32>
+  return %cast0, %cast1: vector<4xf32>, vector<4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: broadcast_folding1

@@ -334,7 +334,7 @@ AffineMap AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map,
   return AffineMap::get(numResultDims, numResultSyms, newResults, getContext());
 }
 
-AffineMap AffineMap::compose(AffineMap map) {
+AffineMap AffineMap::compose(AffineMap map) const {
   assert(getNumDims() == map.getNumResults() && "Number of results mismatch");
   // Prepare `map` by concatenating the symbols and rewriting its exprs.
   unsigned numDims = map.getNumDims();
@@ -358,7 +358,7 @@ AffineMap AffineMap::compose(AffineMap map) {
   return AffineMap::get(numDims, numSymbols, exprs, map.getContext());
 }
 
-SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) {
+SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) const {
   assert(getNumSymbols() == 0 && "Expected symbol-less map");
   SmallVector<AffineExpr, 4> exprs;
   exprs.reserve(values.size());
@@ -373,7 +373,7 @@ SmallVector<int64_t, 4> AffineMap::compose(ArrayRef<int64_t> values) {
   return res;
 }
 
-bool AffineMap::isProjectedPermutation() {
+bool AffineMap::isProjectedPermutation() const {
   if (getNumSymbols() > 0)
     return false;
   SmallVector<bool, 8> seen(getNumInputs(), false);
@@ -389,13 +389,13 @@ bool AffineMap::isProjectedPermutation() {
   return true;
 }
 
-bool AffineMap::isPermutation() {
+bool AffineMap::isPermutation() const {
   if (getNumDims() != getNumResults())
     return false;
   return isProjectedPermutation();
 }
 
-AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) {
+AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) const {
   SmallVector<AffineExpr, 4> exprs;
   exprs.reserve(resultPos.size());
   for (auto idx : resultPos)
@@ -403,7 +403,7 @@ AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) {
   return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
 }
 
-AffineMap AffineMap::getMajorSubMap(unsigned numResults) {
+AffineMap AffineMap::getMajorSubMap(unsigned numResults) const {
   if (numResults == 0)
     return AffineMap();
   if (numResults > getNumResults())
@@ -411,7 +411,7 @@ AffineMap AffineMap::getMajorSubMap(unsigned numResults) {
   return getSubMap(llvm::to_vector<4>(llvm::seq<unsigned>(0, numResults)));
 }
 
-AffineMap AffineMap::getMinorSubMap(unsigned numResults) {
+AffineMap AffineMap::getMinorSubMap(unsigned numResults) const {
   if (numResults == 0)
     return AffineMap();
   if (numResults > getNumResults())

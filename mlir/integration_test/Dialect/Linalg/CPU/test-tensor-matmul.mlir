@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -linalg-bufferize -std-bufferize -tensor-constant-bufferize \
-// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize  -convert-linalg-to-loops \
-// RUN: -convert-linalg-to-llvm -convert-std-to-llvm | \
+// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize  -convert-linalg-to-loops -convert-scf-to-std \
+// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -8,8 +8,8 @@
 // RUN: mlir-opt %s  -linalg-tile="linalg-tile-sizes=1,2,3" -linalg-bufferize \
 // RUN: -scf-bufferize -std-bufferize -tensor-constant-bufferize -tensor-bufferize \
 // RUN: -func-bufferize \
-// RUN: -finalizing-bufferize -convert-linalg-to-loops -convert-scf-to-std \
-// RUN: -convert-linalg-to-llvm | \
+// RUN: -finalizing-bufferize -convert-linalg-to-loops -convert-scf-to-std -convert-scf-to-std \
+// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s

@@ -248,8 +248,7 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
 ///   TODO: Reuse opportunities for RAR dependencies.
 ///   4. Register CustomVectorizationHook for YieldOp to capture the results.
 ///   5. Iteratively call vectorizeOneOp on the region operations.
-///   6. RAUW the linalg op by the results captured vectorizing the YieldOp.
-static LogicalResult vectorizeAsLinalgGeneric(
+static Optional<VectorizedLinalgOp> vectorizeAsLinalgGeneric(
     OpBuilder &builder, LinalgOp linalgOp,
     ArrayRef<CustomVectorizationHook> customVectorizationHooks = {}) {
   // 1. Certain Linalg ops do not have a region but only a region builder.
@@ -306,7 +305,7 @@ static LogicalResult vectorizeAsLinalgGeneric(
     VectorizationResult result = vectorizeOneOp(builder, &op, bvm, hooks);
     if (result.status == VectorizationStatus::Failure) {
       LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: failed to vectorize: " << op);
-      return failure();
+      return llvm::None;
     }
     if (result.status == VectorizationStatus::NewOp) {
       LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vector op: "
@@ -315,10 +314,7 @@ static LogicalResult vectorizeAsLinalgGeneric(
     }
   }
 
-  // 6. RAUW the linalg op by the results captured vectorizing the YieldOp.
-  if (!results.empty())
-    linalgOp->replaceAllUsesWith(results);
-  return success();
+  return VectorizedLinalgOp{{results}};
 }
 
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
@@ -357,7 +353,8 @@ static bool isElementwise(Operation *op) {
   return hasOnlyScalarElementwiseOp(genericOp.getRegion());
 }
 
-static void vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp) {
+static Optional<VectorizedLinalgOp> vectorizeContraction(OpBuilder &builder,
+                                                         LinalgOp linalgOp) {
   assert(isaContractionOpInterface(linalgOp) &&
          "expected vectorizeContraction preconditions to be met");
   Location loc = linalgOp.getLoc();
@@ -384,11 +381,7 @@ static void vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp) {
         linalgOp.indexing_maps(), linalgOp.iterator_types());
     return VectorizationResult{VectorizationStatus::NewOp, contract};
   };
-  auto status =
-      vectorizeAsLinalgGeneric(builder, linalgOp, {vectorizeContraction});
-  (void)status;
-  assert(succeeded(status) &&
-         "Unexpected vectorization failed despite preconditions");
+  return vectorizeAsLinalgGeneric(builder, linalgOp, {vectorizeContraction});
 }
 
 LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
@@ -408,8 +401,10 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   return success(isaContractionOpInterface(linalgOp));
 }
 
-void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
-  assert(succeeded(vectorizeLinalgOpPrecondition(op)));
+Optional<VectorizedLinalgOp> mlir::linalg::vectorizeLinalgOp(OpBuilder &builder,
+                                                             Operation *op) {
+  if (failed(vectorizeLinalgOpPrecondition(op)))
+    return llvm::None;
 
   edsc::ScopedContext scope(builder, op->getLoc());
   // In the case of 0-D memrefs, return null and special case to scalar load or
@@ -418,8 +413,10 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
     // Vectorize fill as a vector.broadcast.
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
                       << "Rewrite linalg.fill as vector.broadcast: " << *op);
-    buildVectorWrite(builder, fillOp.value(), fillOp.output());
-    return;
+    VectorizedLinalgOp res;
+    if (Value v = buildVectorWrite(builder, fillOp.value(), fillOp.output()))
+      res.tensorResults.push_back(v);
+    return res;
   }
   if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
     // Vectorize copy as a vector.transfer_read+vector.transfer_write.
@@ -428,21 +425,26 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
                          "vector.transfer_write: "
                       << *op);
     Value vector = buildVectorRead(builder, copyOp.input());
-    buildVectorWrite(builder, vector, copyOp.output());
-    return;
+    VectorizedLinalgOp res;
+    if (Value v = buildVectorWrite(builder, vector, copyOp.output()))
+      res.tensorResults.push_back(v);
+    return res;
   }
-
   if (isElementwise(op)) {
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                      << "Rewrite linalg op as vector.transfer_read + " << *op);
-    auto status = vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
-    (void)status;
-    assert(succeeded(status) &&
-           "Unexpected vectorization failed despite preconditions");
-    return;
+                      << "Vectorize linalg op as a generic: " << *op);
+    return vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
   }
 
-  vectorizeContraction(builder, cast<LinalgOp>(op));
+  // TODO: as soon as Copy and FillOp. get a region builder, replace all the
+  // above by:
+  // if (isa<FillOp, CopyOp>(op) || isElementwise(op)) {
+  //   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+  //                     << "Vectorize linalg op as a generic: " << *op);
+  //   return vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
+  // }
+
+  return vectorizeContraction(builder, cast<LinalgOp>(op));
 }
 
 //----------------------------------------------------------------------------//
