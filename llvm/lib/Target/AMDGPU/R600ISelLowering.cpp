@@ -1655,7 +1655,7 @@ bool R600TargetLowering::allowsMisalignedMemoryAccesses(
   if (IsFast)
     *IsFast = true;
 
-  return VT.bitsGT(MVT::i32) && Alignment.value() % 4 == 0;
+  return VT.bitsGT(MVT::i32) && Alignment >= Align(4);
 }
 
 static SDValue CompactSwizzlableVector(
