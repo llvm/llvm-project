@@ -411,7 +411,16 @@ define float @findMax(<8 x float>* byval(<8 x float>) align 16 %0) {
 ; CHECK-LABEL: @findMax(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = load <8 x float>, <8 x float>* [[TMP0:%.*]], align 16, [[TBAA0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[V]])
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[V]], <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf nsz ogt <8 x float> [[V]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf nsz <8 x i1> [[RDX_MINMAX_CMP]], <8 x float> [[V]], <8 x float> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF8:%.*]] = shufflevector <8 x float> [[RDX_MINMAX_SELECT]], <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP9:%.*]] = fcmp nnan ninf nsz ogt <8 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF8]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT10:%.*]] = select nnan ninf nsz <8 x i1> [[RDX_MINMAX_CMP9]], <8 x float> [[RDX_MINMAX_SELECT]], <8 x float> [[RDX_SHUF8]]
+; CHECK-NEXT:    [[RDX_SHUF11:%.*]] = shufflevector <8 x float> [[RDX_MINMAX_SELECT10]], <8 x float> poison, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP12:%.*]] = fcmp nnan ninf nsz ogt <8 x float> [[RDX_MINMAX_SELECT10]], [[RDX_SHUF11]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT13:%.*]] = select nnan ninf nsz <8 x i1> [[RDX_MINMAX_CMP12]], <8 x float> [[RDX_MINMAX_SELECT10]], <8 x float> [[RDX_SHUF11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[RDX_MINMAX_SELECT13]], i32 0
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:

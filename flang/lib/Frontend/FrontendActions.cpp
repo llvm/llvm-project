@@ -50,31 +50,36 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
 }
 
 void InputOutputTestAction::ExecuteAction() {
-  // Get the name of the file from FrontendInputFile current.
-  std::string path{GetCurrentFileOrBufferName()};
+  CompilerInstance &ci = instance();
+
+  // Create a stream for errors
   std::string buf;
   llvm::raw_string_ostream error_stream{buf};
-  bool binaryMode = true;
 
-  // Set/store input file info into CompilerInstance.
-  CompilerInstance &ci = instance();
+  // Read the input file
   Fortran::parser::AllSources &allSources{ci.allSources()};
+  std::string path{GetCurrentFileOrBufferName()};
   const Fortran::parser::SourceFile *sf;
-  sf = allSources.Open(path, error_stream, std::optional<std::string>{"."s});
+  if (path == "-")
+    sf = allSources.ReadStandardInput(error_stream);
+  else
+    sf = allSources.Open(path, error_stream, std::optional<std::string>{"."s});
   llvm::ArrayRef<char> fileContent = sf->content();
 
-  // Output file descriptor to receive the content of input file.
+  // Output file descriptor to receive the contents of the input file.
   std::unique_ptr<llvm::raw_ostream> os;
 
-  // Do not write on the output file if using outputStream_.
-  if (ci.IsOutputStreamNull()) {
+  // Copy the contents from the input file to the output file
+  if (!ci.IsOutputStreamNull()) {
+    // An output stream (outputStream_) was set earlier
+    ci.WriteOutputStream(fileContent.data());
+  } else {
+    // No pre-set output stream - create an output file
     os = ci.CreateDefaultOutputFile(
-        binaryMode, GetCurrentFileOrBufferName(), "txt");
+        /*binary=*/true, GetCurrentFileOrBufferName(), "txt");
     if (!os)
       return;
     (*os) << fileContent.data();
-  } else {
-    ci.WriteOutputStream(fileContent.data());
   }
 }
 

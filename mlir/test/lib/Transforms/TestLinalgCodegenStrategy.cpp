@@ -132,7 +132,7 @@ void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
           LinalgPromotionOptions()
               .setAlignment(16)
               .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .vectorizeIf<LinalgOp>(vectorize, anchorOpName)
+      .vectorizeIf(vectorize, anchorOpName)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)

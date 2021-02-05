@@ -1,7 +1,7 @@
 ; Test plugin options for opt-remarks.
 ; RUN: llvm-as %s -o %t.o
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext -shared \
-; RUN:	  -plugin-opt=save-temps \
+; RUN:	  -plugin-opt=save-temps -plugin-opt=legacy-pass-manager \
 ; RUN:    -plugin-opt=opt-remarks-passes=inline \
 ; RUN:    -plugin-opt=opt-remarks-format=yaml \
 ; RUN:    -plugin-opt=opt-remarks-filename=%t.yaml %t.o -o %t2.o 2>&1

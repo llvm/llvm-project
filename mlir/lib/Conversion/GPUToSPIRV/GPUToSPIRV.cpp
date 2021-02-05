@@ -208,7 +208,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
     return nullptr;
   rewriter.eraseOp(funcOp);
 
-  spirv::setABIAttrs(newFuncOp, entryPointInfo, argABIInfo);
+  if (failed(spirv::setABIAttrs(newFuncOp, entryPointInfo, argABIInfo)))
+    return nullptr;
   return newFuncOp;
 }
 

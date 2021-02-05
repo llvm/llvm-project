@@ -109,15 +109,15 @@ void MemIndex::relations(
   }
 }
 
-llvm::unique_function<bool(llvm::StringRef) const>
+llvm::unique_function<IndexContents(llvm::StringRef) const>
 MemIndex::indexedFiles() const {
   return [this](llvm::StringRef FileURI) {
     auto Path = URI::resolve(FileURI);
     if (!Path) {
       llvm::consumeError(Path.takeError());
-      return false;
+      return IndexContents::None;
     }
-    return Files.contains(*Path);
+    return Files.contains(*Path) ? IdxContents : IndexContents::None;
   };
 }
 

@@ -19,6 +19,139 @@ using namespace mlir::linalg;
 /// Include the definitions of the copy operation interface.
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// ContractionOpInterface implementation
+//===----------------------------------------------------------------------===//
+
+/// Return true if the use-def chain from `v` to `from` consists of 0 or more
+/// unary single-operand operations.
+// TODO: relax to multi-operands with constants, which are technically unary ops
+// as needed (e.g. add5).
+static bool isChainOfUnaryOpsFrom(Value v, Value from) {
+  while (true) {
+    if (v == from)
+      return true;
+    Operation *op = v.getDefiningOp();
+    if (!op || op->getNumOperands() != 1)
+      return false;
+    v = op->getOperand(0);
+  };
+}
+
+/// Return the unique instance of OpType in `block` if it is indeed unique.
+/// Return null if none or more than 1 instances exist.
+template <typename OpType>
+static OpType getSingleOpOfType(Block &block) {
+  OpType res = nullptr;
+  block.walk([&](OpType op) {
+    if (res) {
+      res = nullptr;
+      return WalkResult::interrupt();
+    }
+    res = op;
+    return WalkResult::advance();
+  });
+  return res;
+}
+
+/// Detect whether res is any permutation of `u5(u1(c) + u2(u3(a) * u4(b)))`
+/// on the field (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent
+/// unary operations that may change the type.
+template <typename AddOpType, typename MulOpType>
+static bool isAddMul(Block &block) {
+  if (block.getNumArguments() != 3)
+    return false;
+  Operation *yieldOp = block.getTerminator();
+  if (yieldOp->getNumOperands() != 1)
+    return false;
+
+  AddOpType addOp = getSingleOpOfType<AddOpType>(block);
+  MulOpType mulOp = getSingleOpOfType<MulOpType>(block);
+  if (!addOp || !mulOp)
+    return false;
+
+  Value argA = block.getArgument(0), argB = block.getArgument(1);
+  Value a = mulOp->getOperand(0), b = mulOp->getOperand(1);
+  Value mul = mulOp->getResult(0);
+  Value argC = block.getArgument(2);
+  Value c1 = addOp->getOperand(0), c2 = addOp->getOperand(1);
+  Value add = addOp->getResult(0);
+  Value res = yieldOp->getOperand(0);
+  // Result traces back to add.
+  auto un = isChainOfUnaryOpsFrom;
+  bool success = un(res, add);
+  // One of the operands of add traces back to argC, the other to the mul.
+  success |= (un(c1, argC) && un(c2, mul)) || ((un(c1, mul)) && un(c2, argC));
+  // One of the operands of mul traces back to argA, the other to argB.
+  success |= (un(a, argA) && un(b, argB)) || ((un(a, argB)) && un(b, argA));
+  return success;
+}
+
+enum MatchContractionResult {
+  Success = 0,
+  NotLinalgOp,
+  WrongNumOperands,
+  NoReduction,
+  NotProjectedPermutations,
+  NotAddMul
+};
+static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return MatchContractionResult::NotLinalgOp;
+  if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
+    return MatchContractionResult::WrongNumOperands;
+  auto mapRange = linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>();
+  if (linalgOp.getNumReductionLoops() == 0)
+    return MatchContractionResult::NoReduction;
+  if (llvm::any_of(mapRange,
+                   [](AffineMap m) { return !m.isProjectedPermutation(); }))
+    return MatchContractionResult::NotProjectedPermutations;
+  // TODO: more fields than add/mul.
+  if (!isAddMul<AddFOp, MulFOp>(linalgOp->getRegion(0).front()) &&
+      !isAddMul<AddIOp, MulIOp>(linalgOp->getRegion(0).front()))
+    return MatchContractionResult::NotAddMul;
+  return MatchContractionResult::Success;
+}
+
+bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
+  Operation *op = linalgOp.getOperation();
+  return isa<ContractionOpInterface>(op) ||
+         (isContractionInterfaceImpl(op) == MatchContractionResult::Success);
+}
+
+/// Verify that a LinalgOp `op` is a contraction.
+/// A Linalg contraction is defined in general terms:
+///   1. Has 2 input and 1 output shapes.
+///   2. Has at least one reduction dimension.
+///   3. Has only projected permutation indexing maps.
+///   4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
+///   (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
+///   operations that may change the type (e.g. for mixed-precision).
+/// As a consequence, when vectorization of such an op occurs, the only special
+/// behavior is that the (unique) MulOpType is vectorized into a
+/// `vector.contract`. All other ops are handled in a generic fashion.
+/// In the future, we may wish to allow more input arguments and elementwise and
+/// constant operations that do not involve the reduction dimension(s).
+LogicalResult mlir::linalg::detail::verifyContractionInterface(Operation *op) {
+  auto res = isContractionInterfaceImpl(op);
+  if (res == MatchContractionResult::NotLinalgOp)
+    return op->emitError("expected a LinalgOp");
+  if (res == MatchContractionResult::WrongNumOperands)
+    return op->emitError("expected op with 2 inputs and 1 outputs");
+  if (res == MatchContractionResult::NoReduction)
+    return op->emitError("expected at least a reduction loop");
+  if (res == MatchContractionResult::NotProjectedPermutations)
+    return op->emitError("expected all indexings to be projected permutations");
+  if (res == MatchContractionResult::NotAddMul)
+    return op->emitError("(add, mul) operations not found");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// StructuredOpInterface implementation
+//===----------------------------------------------------------------------===//
+
 /// Fully compose map with operands and canonicalize the result.
 /// Return the `createOrFold`'ed AffineApply op.
 static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,

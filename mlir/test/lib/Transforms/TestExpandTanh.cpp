@@ -26,7 +26,7 @@ struct TestExpandTanhPass
 void TestExpandTanhPass::runOnFunction() {
   OwningRewritePatternList patterns;
   populateExpandTanhPattern(patterns, &getContext());
-  applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

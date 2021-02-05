@@ -677,9 +677,8 @@ void StructurizeCFG::killTerminator(BasicBlock *BB) {
   if (!Term)
     return;
 
-  for (succ_iterator SI = succ_begin(BB), SE = succ_end(BB);
-       SI != SE; ++SI)
-    delPhiValues(BB, *SI);
+  for (BasicBlock *Succ : successors(BB))
+    delPhiValues(BB, Succ);
 
   if (DA)
     DA->removeValue(Term);

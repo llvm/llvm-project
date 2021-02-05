@@ -84,7 +84,7 @@ struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
     // Verify named pattern is generated with expected name.
     patterns.insert<FoldingPattern, TestNamedPatternRule>(&getContext());
 
-    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 } // end anonymous namespace
@@ -1033,8 +1033,8 @@ struct TestSelectiveReplacementPatternDriver
     mlir::OwningRewritePatternList patterns;
     MLIRContext *context = &getContext();
     patterns.insert<TestSelectiveOpReplacementPattern>(context);
-    applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                 std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
+                                       std::move(patterns));
   }
 };
 } // namespace

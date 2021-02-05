@@ -15,8 +15,28 @@
 
 include "mlir/IR/OpBase.td"
 
-// The linalg 'LinalgStructuredInterface' provides access to the 'LinalgOp'
-// interface.
+// The 'LinalgContractionOpInterface' provides access to the
+// 'ContractionOpInterface'.
+def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
+  let description = [{
+   A Linalg contraction is defined in general terms:
+     1. Has 2 input and 1 output shapes.
+     2. Has at least one reduction dimension.
+     3. Has only projected permutation indexing maps.
+     4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
+     (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
+     operations that may change the type (e.g. for mixed-precision).
+   As a consequence, when vectorization of such an op occurs, the only special
+   behavior is that the (unique) MulOpType is vectorized into a
+   `vector.contract`. All other ops are handled in a generic fashion.
+   In the future, we may wish to allow more input arguments and elementwise and
+   constant operations that do not involve the reduction dimension(s).
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let verify = [{ return detail::verifyContractionInterface($_op); }];
+}
+
+// The 'LinalgStructuredInterface' provides access to the 'LinalgOp' interface.
 def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
   let cppNamespace = "::mlir::linalg";
   let methods = [

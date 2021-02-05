@@ -22,12 +22,20 @@
 
 namespace mlir {
 namespace linalg {
+class LinalgOp;
 
 /// Returns the values obtained by applying `map` to the list of values.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values);
 
+/// Checks whether `linalgOp` conforms to ContractionOpInterface.
+// TODO: embed within `isa<ContractionOpInterface>` if possible / natural.
+bool isaContractionOpInterface(LinalgOp linalgOp);
+
 namespace detail {
+
+/// Verify that `op` conforms to ContractionOpInterface.
+LogicalResult verifyContractionInterface(Operation *op);
 
 /// Verify that `op` conforms to the invariants of StructuredOpInterface
 LogicalResult verifyStructuredOpInterface(Operation *op);

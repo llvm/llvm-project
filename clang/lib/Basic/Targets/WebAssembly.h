@@ -138,6 +138,8 @@ private:
   bool hasExtIntType() const override { return true; }
 
   bool hasProtectedVisibility() const override { return false; }
+
+  void adjust(LangOptions &Opts) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

@@ -49,8 +49,9 @@ bool MergedIndex::fuzzyFind(
     More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
       // We expect the definition to see the canonical declaration, so it seems
       // to be enough to check only the definition if it exists.
-      if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
-                                           : S.CanonicalDeclaration.FileURI))
+      if ((DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                            : S.CanonicalDeclaration.FileURI) &
+           IndexContents::Symbols) != IndexContents::None)
         return;
       auto DynS = Dyn.find(S.ID);
       ++StaticCount;
@@ -84,8 +85,9 @@ void MergedIndex::lookup(
     Static->lookup(Req, [&](const Symbol &S) {
       // We expect the definition to see the canonical declaration, so it seems
       // to be enough to check only the definition if it exists.
-      if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
-                                           : S.CanonicalDeclaration.FileURI))
+      if ((DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                            : S.CanonicalDeclaration.FileURI) &
+           IndexContents::Symbols) != IndexContents::None)
         return;
       const Symbol *Sym = B.find(S.ID);
       RemainingIDs.erase(S.ID);
@@ -121,7 +123,8 @@ bool MergedIndex::refs(const RefsRequest &Req,
   // We return less than Req.Limit if static index returns more refs for dirty
   // files.
   bool StaticHadMore = Static->refs(Req, [&](const Ref &O) {
-    if (DynamicContainsFile(O.Location.FileURI))
+    if ((DynamicContainsFile(O.Location.FileURI) & IndexContents::References) !=
+        IndexContents::None)
       return; // ignore refs that have been seen from dynamic index.
     if (Remaining == 0) {
       More = true;
@@ -133,11 +136,11 @@ bool MergedIndex::refs(const RefsRequest &Req,
   return More || StaticHadMore;
 }
 
-llvm::unique_function<bool(llvm::StringRef) const>
+llvm::unique_function<IndexContents(llvm::StringRef) const>
 MergedIndex::indexedFiles() const {
   return [DynamicContainsFile{Dynamic->indexedFiles()},
           StaticContainsFile{Static->indexedFiles()}](llvm::StringRef FileURI) {
-    return DynamicContainsFile(FileURI) || StaticContainsFile(FileURI);
+    return DynamicContainsFile(FileURI) | StaticContainsFile(FileURI);
   };
 }
 

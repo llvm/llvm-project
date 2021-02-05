@@ -86,6 +86,20 @@ def _match_decorator_property(expected, actual):
     else:
         return expected == actual
 
+
+def _compiler_supports(compiler, flag):
+    """Test whether the compiler supports the given flag."""
+    if platform.system() == 'Darwin':
+        compiler = "xcrun " + compiler
+    f = tempfile.NamedTemporaryFile()
+    try:
+        cmd = "echo 'int main() {}' | %s %s -x c -o %s -" % (compiler, flag, f.name)
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
 def expectedFailure(func):
     return unittest2.expectedFailure(func)
 
@@ -729,12 +743,7 @@ def skipUnlessThreadSanitizer(func):
         # rdar://28659145 - TSAN tests don't look like they're supported on i386
         if self.getArchitecture() == 'i386' and platform.system() == 'Darwin':
             return "TSAN tests not compatible with i386 targets"
-        f = tempfile.NamedTemporaryFile()
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
-            return None  # The compiler cannot compile at all, let's *not* skip the test
-        cmd = "echo 'int main() {}' | %s -fsanitize=thread -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(compiler_path, '-fsanitize=thread'):
             return "Compiler cannot compile with -fsanitize=thread"
         return None
     return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
@@ -755,8 +764,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
         outputf = tempfile.NamedTemporaryFile()
 
         # Try to compile with ubsan turned on.
-        cmd = '%s -fsanitize=undefined %s -o %s' % (self.getCompiler(), inputf.name, outputf.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(self.getCompiler(), '-fsanitize=undefined'):
             return "Compiler cannot compile with -fsanitize=undefined"
 
         # Check that we actually see ubsan instrumentation in the binary.
@@ -804,16 +812,9 @@ def skipUnlessAddressSanitizer(func):
         if is_running_under_asan():
             return "Address sanitizer tests are disabled when runing under ASAN"
 
-        compiler_path = self.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
         if lldbplatformutil.getPlatform() == 'windows':
             return "ASAN tests not compatible with 'windows'"
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
-            return None  # The compiler cannot compile at all, let's *not* skip the test
-        cmd = "echo 'int main() {}' | %s -fsanitize=address -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(self.getCompiler(), '-fsanitize=address'):
             return "Compiler cannot compile with -fsanitize=address"
         return None
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)

@@ -947,8 +947,8 @@ protected:
   std::unordered_map<std::string, std::vector<StringRef>> LineCache;
   // Keep track of missing sources.
   StringSet<> MissingSources;
-  // Only emit 'no debug info' warning once.
-  bool WarnedNoDebugInfo;
+  // Only emit 'invalid debug info' warning once.
+  bool WarnedInvalidDebugInfo = false;
 
 private:
   bool cacheSource(const DILineInfo& LineInfoFile);
@@ -962,8 +962,7 @@ private:
 
 public:
   SourcePrinter() = default;
-  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch)
-      : Obj(Obj), WarnedNoDebugInfo(false) {
+  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
     symbolize::LLVMSymbolizer::Options SymbolizerOpts;
     SymbolizerOpts.PrintFunctions =
         DILineInfoSpecifier::FunctionNameKind::LinkageName;
@@ -1018,22 +1017,17 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
     return;
 
   DILineInfo LineInfo = DILineInfo();
-  auto ExpectedLineInfo = Symbolizer->symbolizeCode(*Obj, Address);
+  Expected<DILineInfo> ExpectedLineInfo =
+      Symbolizer->symbolizeCode(*Obj, Address);
   std::string ErrorMessage;
-  if (!ExpectedLineInfo)
-    ErrorMessage = toString(ExpectedLineInfo.takeError());
-  else
+  if (ExpectedLineInfo) {
     LineInfo = *ExpectedLineInfo;
-
-  if (LineInfo.FileName == DILineInfo::BadString) {
-    if (!WarnedNoDebugInfo) {
-      std::string Warning =
-          "failed to parse debug information for " + ObjectFilename.str();
-      if (!ErrorMessage.empty())
-        Warning += ": " + ErrorMessage;
-      reportWarning(Warning, ObjectFilename);
-      WarnedNoDebugInfo = true;
-    }
+  } else if (!WarnedInvalidDebugInfo) {
+    WarnedInvalidDebugInfo = true;
+    // TODO Untested.
+    reportWarning("failed to parse debug information: " +
+                      toString(ExpectedLineInfo.takeError()),
+                  ObjectFilename);
   }
 
   if (!Prefix.empty() && sys::path::is_absolute_gnu(LineInfo.FileName)) {
