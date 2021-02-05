@@ -358,6 +358,25 @@ TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   return recordTypeIndexForDINode(Scope, TI);
 }
 
+static StringRef removeTemplateArgs(StringRef Name) {
+  // Remove template args from the display name. Assume that the template args
+  // are the last thing in the name.
+  if (Name.empty() || Name.back() != '>')
+    return Name;
+
+  int OpenBrackets = 0;
+  for (size_t i = Name.size() - 1; i >= 0; --i) {
+    if (Name[i] == '>')
+      ++OpenBrackets;
+    else if (Name[i] == '<') {
+      --OpenBrackets;
+      if (OpenBrackets == 0)
+        return Name.substr(0, i);
+    }
+  }
+  return Name;
+}
+
 TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   assert(SP);
 
@@ -367,8 +386,9 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
     return I->second;
 
   // The display name includes function template arguments. Drop them to match
-  // MSVC.
-  StringRef DisplayName = SP->getName().split('<').first;
+  // MSVC. We need to have the template arguments in the DISubprogram name
+  // because they are used in other symbol records, such as S_GPROC32_IDs.
+  StringRef DisplayName = removeTemplateArgs(SP->getName());
 
   const DIScope *Scope = SP->getScope();
   TypeIndex TI;
