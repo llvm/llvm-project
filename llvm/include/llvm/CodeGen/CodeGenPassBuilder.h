@@ -380,7 +380,6 @@ protected:
   /// representation to the MI representation.
   /// Adds IR based lowering and target specific optimization passes and finally
   /// the core instruction selection passes.
-  /// \returns true if an error occurred, false otherwise.
   void addISelPasses(AddIRPass &) const;
 
   /// Add the actual instruction selection passes. This does not include
