@@ -999,6 +999,20 @@ public:
   }
 
   void doBeforeLabelEmit(MCSymbol *Symbol) override {
+    // Code below only applies to labels in text sections.
+    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+    if (!CWS || !CWS->getKind().isText())
+      return;
+
+    auto WasmSym = cast<MCSymbolWasm>(Symbol);
+    // Unlike other targets, we don't allow data in text sections (labels
+    // declared with .type @object).
+    if (WasmSym->getType() == wasm::WASM_SYMBOL_TYPE_DATA) {
+      Parser.Error(Parser.getTok().getLoc(),
+                   "Wasm doesn\'t support data symbols in text sections");
+      return;
+    }
+
     // Start a new section for the next function automatically, since our
     // object writer expects each function to have its own section. This way
     // The user can't forget this "convention".
@@ -1006,14 +1020,10 @@ public:
     if (SymName.startswith(".L"))
       return; // Local Symbol.
 
-    // Only create a new text section if we're already in one.
     // TODO: If the user explicitly creates a new function section, we ignore
     // its name when we create this one. It would be nice to honor their
     // choice, while still ensuring that we create one if they forget.
     // (that requires coordination with WasmAsmParser::parseSectionDirective)
-    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-    if (!CWS || !CWS->getKind().isText())
-      return;
     auto SecName = ".text." + SymName;
 
     auto *Group = CWS->getGroup();
@@ -1022,7 +1032,7 @@ public:
     // for importing comdat functions. But there's no way to specify that in
     // assembly currently.
     if (Group)
-      cast<MCSymbolWasm>(Symbol)->setComdat(true);
+      WasmSym->setComdat(true);
     auto *WS =
         getContext().getWasmSection(SecName, SectionKind::getText(), Group,
                                     MCContext::GenericSectionID, nullptr);
