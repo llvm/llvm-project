@@ -82,8 +82,13 @@ static cl::opt<bool> EnableNewPassManager(
 // pass management.
 static cl::opt<std::string> PassPipeline(
     "passes",
-    cl::desc("A textual description of the pass pipeline for optimizing"),
-    cl::Hidden);
+    cl::desc(
+        "A textual description of the pass pipeline. To have analysis passes "
+        "available before a certain pass, add 'require<foo-analysis>'."));
+
+static cl::opt<bool> PrintPasses("print-passes",
+                                 cl::desc("Print available passes that can be "
+                                          "specified in -passes=foo and exit"));
 
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
@@ -587,6 +592,14 @@ int main(int argc, char **argv) {
   if (AnalyzeOnly && NoOutput) {
     errs() << argv[0] << ": analyze mode conflicts with no-output mode.\n";
     return 1;
+  }
+
+  // FIXME: once the legacy PM code is deleted, move runPassPipeline() here and
+  // construct the PassBuilder before parsing IR so we can reuse the same
+  // PassBuilder for print passes.
+  if (PrintPasses) {
+    printPasses(outs());
+    return 0;
   }
 
   TimeTracerRAII TimeTracer(argv[0]);
