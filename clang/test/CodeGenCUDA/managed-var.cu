@@ -2,47 +2,62 @@
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=DEV %s
+// RUN:   -check-prefixes=COMMON,DEV %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=DEV %s
+// RUN:   -check-prefixes=COMMON,DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=HOST,NORDC %s
+// RUN:   -check-prefixes=COMMON,HOST,NORDC %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=HOST,RDC %s
+// RUN:   -check-prefixes=COMMON,HOST,RDC %s
 
 #include "Inputs/cuda.h"
-
-// DEV-DAG: @x = external addrspace(1) externally_initialized global i32
-// NORDC-DAG: @x = internal global i32 1
-// RDC-DAG: @x = dso_local global i32 1
-// NORDC-DAG: @x.managed = internal global i32* null
-// RDC-DAG: @x.managed = dso_local global i32* null
-// HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
 
 struct vec {
   float x,y,z;
 };
 
+// DEV-DAG: @x.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
+// DEV-DAG: @x = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// NORDC-DAG: @x.managed = internal global i32 1
+// RDC-DAG: @x.managed = dso_local global i32 1
+// NORDC-DAG: @x = internal externally_initialized global i32* null
+// RDC-DAG: @x = dso_local externally_initialized global i32* null
+// HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
 __managed__ int x = 1;
+
+// DEV-DAG: @v.managed = dso_local addrspace(1) externally_initialized global [100 x %struct.vec] zeroinitializer, align 4
+// DEV-DAG: @v = dso_local addrspace(1) externally_initialized global [100 x %struct.vec] addrspace(1)* null
 __managed__ vec v[100];
+
+// DEV-DAG: @v2.managed = dso_local addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> <{ %struct.vec { float 1.000000e+00, float 1.000000e+00, float 1.000000e+00 }, [99 x %struct.vec] zeroinitializer }>, align 4
+// DEV-DAG: @v2 = dso_local addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> addrspace(1)* null
 __managed__ vec v2[100] = {{1, 1, 1}};
 
-// DEV-DAG: @ex = external addrspace(1) global i32
-// HOST-DAG: @ex = external global i32
+// DEV-DAG: @ex.managed = external addrspace(1) global i32, align 4
+// DEV-DAG: @ex = external addrspace(1) externally_initialized global i32 addrspace(1)*
+// HOST-DAG: @ex.managed = external global i32
+// HOST-DAG: @ex = external externally_initialized global i32*
 extern __managed__ int ex;
 
-// DEV-DAG: @_ZL2sx = external addrspace(1) externally_initialized global i32
-// HOST-DAG: @_ZL2sx = internal global i32 1
-// HOST-DAG: @_ZL2sx.managed = internal global i32* null
+// DEV-DAG: @_ZL2sx.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
+// DEV-DAG: @_ZL2sx = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// HOST-DAG: @_ZL2sx.managed = internal global i32 1
+// HOST-DAG: @_ZL2sx = internal externally_initialized global i32* null
 static __managed__ int sx = 1;
 
-// HOST-NOT: @ex.managed
+// DEV-DAG: @llvm.compiler.used
+// DEV-SAME-DAG: @x.managed
+// DEV-SAME-DAG: @x
+// DEV-SAME-DAG: @v.managed
+// DEV-SAME-DAG: @v
+// DEV-SAME-DAG: @_ZL2sx.managed
+// DEV-SAME-DAG: @_ZL2sx
 
 // Force ex and sx mitted in device compilation.
 __global__ void foo(int *z) {
@@ -55,42 +70,53 @@ int foo2() {
   return ex + sx;
 }
 
-// HOST-LABEL: define {{.*}}@_Z4loadv()
-// HOST:  %ld.managed = load i32*, i32** @x.managed, align 4
+// COMMON-LABEL: define {{.*}}@_Z4loadv()
+// DEV:  %ld.managed = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @x, align 4
+// DEV:  %0 = addrspacecast i32 addrspace(1)* %ld.managed to i32*
+// DEV:  %1 = load i32, i32* %0, align 4
+// DEV:  ret i32 %1
+// HOST:  %ld.managed = load i32*, i32** @x, align 4
 // HOST:  %0 = load i32, i32* %ld.managed, align 4
 // HOST:  ret i32 %0
-int load() {
+__device__ __host__ int load() {
   return x;
 }
 
-// HOST-LABEL: define {{.*}}@_Z5storev()
-// HOST:  %ld.managed = load i32*, i32** @x.managed, align 4
+// COMMON-LABEL: define {{.*}}@_Z5storev()
+// DEV:  %ld.managed = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @x, align 4
+// DEV:  %0 = addrspacecast i32 addrspace(1)* %ld.managed to i32*
+// DEV:  store i32 2, i32* %0, align 4
+// HOST:  %ld.managed = load i32*, i32** @x, align 4
 // HOST:  store i32 2, i32* %ld.managed, align 4
-void store() {
+__device__ __host__ void store() {
   x = 2;
 }
 
-// HOST-LABEL: define {{.*}}@_Z10addr_takenv()
-// HOST:  %ld.managed = load i32*, i32** @x.managed, align 4
+// COMMON-LABEL: define {{.*}}@_Z10addr_takenv()
+// DEV:  %0 = addrspacecast i32 addrspace(1)* %ld.managed to i32*
+// DEV:  store i32* %0, i32** %p.ascast, align 8
+// DEV:  %1 = load i32*, i32** %p.ascast, align 8
+// DEV:  store i32 3, i32* %1, align 4
+// HOST:  %ld.managed = load i32*, i32** @x, align 4
 // HOST:  store i32* %ld.managed, i32** %p, align 8
 // HOST:  %0 = load i32*, i32** %p, align 8
 // HOST:  store i32 3, i32* %0, align 4
-void addr_taken() {
+__device__ __host__ void addr_taken() {
   int *p = &x;
   *p = 3;
 }
 
 // HOST-LABEL: define {{.*}}@_Z5load2v()
-// HOST: %ld.managed = load [100 x %struct.vec]*, [100 x %struct.vec]** @v.managed, align 16
+// HOST: %ld.managed = load [100 x %struct.vec]*, [100 x %struct.vec]** @v, align 16
 // HOST:  %0 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %ld.managed, i64 0, i64 1, i32 0
 // HOST:  %1 = load float, float* %0, align 4
 // HOST:  ret float %1
-float load2() {
+__device__ __host__ float load2() {
   return v[1].x;
 }
 
 // HOST-LABEL: define {{.*}}@_Z5load3v()
-// HOST:  %ld.managed = load <{ %struct.vec, [99 x %struct.vec] }>*, <{ %struct.vec, [99 x %struct.vec] }>** @v2.managed, align 16
+// HOST:  %ld.managed = load <{ %struct.vec, [99 x %struct.vec] }>*, <{ %struct.vec, [99 x %struct.vec] }>** @v2, align 16
 // HOST:  %0 = bitcast <{ %struct.vec, [99 x %struct.vec] }>* %ld.managed to [100 x %struct.vec]*
 // HOST:  %1 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %0, i64 0, i64 1, i32 1
 // HOST:  %2 = load float, float* %1, align 4
@@ -100,10 +126,10 @@ float load3() {
 }
 
 // HOST-LABEL: define {{.*}}@_Z11addr_taken2v()
-// HOST:  %ld.managed = load [100 x %struct.vec]*, [100 x %struct.vec]** @v.managed, align 16
+// HOST:  %ld.managed = load [100 x %struct.vec]*, [100 x %struct.vec]** @v, align 16
 // HOST:  %0 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %ld.managed, i64 0, i64 1, i32 0
 // HOST:  %1 = ptrtoint float* %0 to i64
-// HOST:  %ld.managed1 = load <{ %struct.vec, [99 x %struct.vec] }>*, <{ %struct.vec, [99 x %struct.vec] }>** @v2.managed, align 16
+// HOST:  %ld.managed1 = load <{ %struct.vec, [99 x %struct.vec] }>*, <{ %struct.vec, [99 x %struct.vec] }>** @v2, align 16
 // HOST:  %2 = bitcast <{ %struct.vec, [99 x %struct.vec] }>* %ld.managed1 to [100 x %struct.vec]*
 // HOST:  %3 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %2, i64 0, i64 1, i32 1
 // HOST:  %4 = ptrtoint float* %3 to i64
@@ -115,7 +141,19 @@ float addr_taken2() {
   return (float)reinterpret_cast<long>(&(v2[1].y)-&(v[1].x));
 }
 
-// HOST-DAG: __hipRegisterManagedVar({{.*}}@x.managed {{.*}}@x {{.*}}@[[DEVNAMEX]]{{.*}}, i64 4, i32 4)
-// HOST-DAG: __hipRegisterManagedVar({{.*}}@_ZL2sx.managed {{.*}}@_ZL2sx
-// HOST-NOT: __hipRegisterManagedVar({{.*}}@ex.managed {{.*}}@ex
+// COMMON-LABEL: define {{.*}}@_Z5load4v()
+// DEV:  %ld.managed = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @ex, align 4
+// DEV:  %0 = addrspacecast i32 addrspace(1)* %ld.managed to i32*
+// DEV:  %1 = load i32, i32* %0, align 4
+// DEV:  ret i32 %1
+// HOST:  %ld.managed = load i32*, i32** @ex, align 4
+// HOST:  %0 = load i32, i32* %ld.managed, align 4
+// HOST:  ret i32 %0
+__device__ __host__ int load4() {
+  return ex;
+}
+
+// HOST-DAG: __hipRegisterManagedVar({{.*}}@x {{.*}}@x.managed {{.*}}@[[DEVNAMEX]]{{.*}}, i64 4, i32 4)
+// HOST-DAG: __hipRegisterManagedVar({{.*}}@_ZL2sx {{.*}}@_ZL2sx.managed
+// HOST-NOT: __hipRegisterManagedVar({{.*}}@ex {{.*}}@ex.managed
 // HOST-DAG: declare void @__hipRegisterManagedVar(i8**, i8*, i8*, i8*, i64, i32)
