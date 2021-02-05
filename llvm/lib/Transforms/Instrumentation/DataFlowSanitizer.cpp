@@ -539,6 +539,14 @@ private:
 
   /// Returns the shadow value of an argument A.
   Value *getShadowForTLSArgument(Argument *A);
+
+  /// The fast path of loading shadow in legacy mode.
+  Value *loadLegacyShadowFast(Value *ShadowAddr, uint64_t Size,
+                              Align ShadowAlign, Instruction *Pos);
+
+  /// The fast path of loading shadow in fast-16-label mode.
+  Value *loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
+                              Align ShadowAlign, Instruction *Pos);
 };
 
 class DFSanVisitor : public InstVisitor<DFSanVisitor> {
@@ -1519,6 +1527,99 @@ Value *DFSanVisitor::visitOperandShadowInst(Instruction &I) {
   return CombinedShadow;
 }
 
+Value *DFSanFunction::loadFast16ShadowFast(Value *ShadowAddr, uint64_t Size,
+                                           Align ShadowAlign,
+                                           Instruction *Pos) {
+  // First OR all the WideShadows, then OR individual shadows within the
+  // combined WideShadow. This is fewer instructions than ORing shadows
+  // individually.
+  IRBuilder<> IRB(Pos);
+  Value *WideAddr =
+      IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
+  Value *CombinedWideShadow =
+      IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+  for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
+       Ofs += 64 / DFS.ShadowWidthBits) {
+    WideAddr = IRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
+                             ConstantInt::get(DFS.IntptrTy, 1));
+    Value *NextWideShadow =
+        IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+    CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
+  }
+  for (unsigned Width = 32; Width >= DFS.ShadowWidthBits; Width >>= 1) {
+    Value *ShrShadow = IRB.CreateLShr(CombinedWideShadow, Width);
+    CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, ShrShadow);
+  }
+  return IRB.CreateTrunc(CombinedWideShadow, DFS.PrimitiveShadowTy);
+}
+
+Value *DFSanFunction::loadLegacyShadowFast(Value *ShadowAddr, uint64_t Size,
+                                           Align ShadowAlign,
+                                           Instruction *Pos) {
+  // Fast path for the common case where each byte has identical shadow: load
+  // shadow 64 bits at a time, fall out to a __dfsan_union_load call if any
+  // shadow is non-equal.
+  BasicBlock *FallbackBB = BasicBlock::Create(*DFS.Ctx, "", F);
+  IRBuilder<> FallbackIRB(FallbackBB);
+  CallInst *FallbackCall = FallbackIRB.CreateCall(
+      DFS.DFSanUnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
+  FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+
+  // Compare each of the shadows stored in the loaded 64 bits to each other,
+  // by computing (WideShadow rotl ShadowWidthBits) == WideShadow.
+  IRBuilder<> IRB(Pos);
+  Value *WideAddr =
+      IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
+  Value *WideShadow =
+      IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+  Value *TruncShadow = IRB.CreateTrunc(WideShadow, DFS.PrimitiveShadowTy);
+  Value *ShlShadow = IRB.CreateShl(WideShadow, DFS.ShadowWidthBits);
+  Value *ShrShadow = IRB.CreateLShr(WideShadow, 64 - DFS.ShadowWidthBits);
+  Value *RotShadow = IRB.CreateOr(ShlShadow, ShrShadow);
+  Value *ShadowsEq = IRB.CreateICmpEQ(WideShadow, RotShadow);
+
+  BasicBlock *Head = Pos->getParent();
+  BasicBlock *Tail = Head->splitBasicBlock(Pos->getIterator());
+
+  if (DomTreeNode *OldNode = DT.getNode(Head)) {
+    std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
+
+    DomTreeNode *NewNode = DT.addNewBlock(Tail, Head);
+    for (auto *Child : Children)
+      DT.changeImmediateDominator(Child, NewNode);
+  }
+
+  // In the following code LastBr will refer to the previous basic block's
+  // conditional branch instruction, whose true successor is fixed up to point
+  // to the next block during the loop below or to the tail after the final
+  // iteration.
+  BranchInst *LastBr = BranchInst::Create(FallbackBB, FallbackBB, ShadowsEq);
+  ReplaceInstWithInst(Head->getTerminator(), LastBr);
+  DT.addNewBlock(FallbackBB, Head);
+
+  for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
+       Ofs += 64 / DFS.ShadowWidthBits) {
+    BasicBlock *NextBB = BasicBlock::Create(*DFS.Ctx, "", F);
+    DT.addNewBlock(NextBB, LastBr->getParent());
+    IRBuilder<> NextIRB(NextBB);
+    WideAddr = NextIRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
+                                 ConstantInt::get(DFS.IntptrTy, 1));
+    Value *NextWideShadow =
+        NextIRB.CreateAlignedLoad(NextIRB.getInt64Ty(), WideAddr, ShadowAlign);
+    ShadowsEq = NextIRB.CreateICmpEQ(WideShadow, NextWideShadow);
+    LastBr->setSuccessor(0, NextBB);
+    LastBr = NextIRB.CreateCondBr(ShadowsEq, FallbackBB, FallbackBB);
+  }
+
+  LastBr->setSuccessor(0, Tail);
+  FallbackIRB.CreateBr(Tail);
+  PHINode *Shadow =
+      PHINode::Create(DFS.PrimitiveShadowTy, 2, "", &Tail->front());
+  Shadow->addIncoming(FallbackCall, FallbackBB);
+  Shadow->addIncoming(TruncShadow, LastBr->getParent());
+  return Shadow;
+}
+
 // Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
 // Addr has alignment Align, and take the union of each of those shadows. The
 // returned shadow always has primitive type.
@@ -1568,94 +1669,11 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   }
   }
 
-  if (ClFast16Labels && Size % (64 / DFS.ShadowWidthBits) == 0) {
-    // First OR all the WideShadows, then OR individual shadows within the
-    // combined WideShadow.  This is fewer instructions than ORing shadows
-    // individually.
-    IRBuilder<> IRB(Pos);
-    Value *WideAddr =
-        IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
-    Value *CombinedWideShadow =
-        IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
-    for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
-         Ofs += 64 / DFS.ShadowWidthBits) {
-      WideAddr = IRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
-                               ConstantInt::get(DFS.IntptrTy, 1));
-      Value *NextWideShadow =
-          IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
-      CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
-    }
-    for (unsigned Width = 32; Width >= DFS.ShadowWidthBits; Width >>= 1) {
-      Value *ShrShadow = IRB.CreateLShr(CombinedWideShadow, Width);
-      CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, ShrShadow);
-    }
-    return IRB.CreateTrunc(CombinedWideShadow, DFS.PrimitiveShadowTy);
-  }
-  if (!AvoidNewBlocks && Size % (64 / DFS.ShadowWidthBits) == 0) {
-    // Fast path for the common case where each byte has identical shadow: load
-    // shadow 64 bits at a time, fall out to a __dfsan_union_load call if any
-    // shadow is non-equal.
-    BasicBlock *FallbackBB = BasicBlock::Create(*DFS.Ctx, "", F);
-    IRBuilder<> FallbackIRB(FallbackBB);
-    CallInst *FallbackCall = FallbackIRB.CreateCall(
-        DFS.DFSanUnionLoadFn,
-        {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
-    FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+  if (ClFast16Labels && Size % (64 / DFS.ShadowWidthBits) == 0)
+    return loadFast16ShadowFast(ShadowAddr, Size, ShadowAlign, Pos);
 
-    // Compare each of the shadows stored in the loaded 64 bits to each other,
-    // by computing (WideShadow rotl ShadowWidthBits) == WideShadow.
-    IRBuilder<> IRB(Pos);
-    Value *WideAddr =
-        IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
-    Value *WideShadow =
-        IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
-    Value *TruncShadow = IRB.CreateTrunc(WideShadow, DFS.PrimitiveShadowTy);
-    Value *ShlShadow = IRB.CreateShl(WideShadow, DFS.ShadowWidthBits);
-    Value *ShrShadow = IRB.CreateLShr(WideShadow, 64 - DFS.ShadowWidthBits);
-    Value *RotShadow = IRB.CreateOr(ShlShadow, ShrShadow);
-    Value *ShadowsEq = IRB.CreateICmpEQ(WideShadow, RotShadow);
-
-    BasicBlock *Head = Pos->getParent();
-    BasicBlock *Tail = Head->splitBasicBlock(Pos->getIterator());
-
-    if (DomTreeNode *OldNode = DT.getNode(Head)) {
-      std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
-
-      DomTreeNode *NewNode = DT.addNewBlock(Tail, Head);
-      for (auto Child : Children)
-        DT.changeImmediateDominator(Child, NewNode);
-    }
-
-    // In the following code LastBr will refer to the previous basic block's
-    // conditional branch instruction, whose true successor is fixed up to point
-    // to the next block during the loop below or to the tail after the final
-    // iteration.
-    BranchInst *LastBr = BranchInst::Create(FallbackBB, FallbackBB, ShadowsEq);
-    ReplaceInstWithInst(Head->getTerminator(), LastBr);
-    DT.addNewBlock(FallbackBB, Head);
-
-    for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
-         Ofs += 64 / DFS.ShadowWidthBits) {
-      BasicBlock *NextBB = BasicBlock::Create(*DFS.Ctx, "", F);
-      DT.addNewBlock(NextBB, LastBr->getParent());
-      IRBuilder<> NextIRB(NextBB);
-      WideAddr = NextIRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
-                                   ConstantInt::get(DFS.IntptrTy, 1));
-      Value *NextWideShadow = NextIRB.CreateAlignedLoad(NextIRB.getInt64Ty(),
-                                                        WideAddr, ShadowAlign);
-      ShadowsEq = NextIRB.CreateICmpEQ(WideShadow, NextWideShadow);
-      LastBr->setSuccessor(0, NextBB);
-      LastBr = NextIRB.CreateCondBr(ShadowsEq, FallbackBB, FallbackBB);
-    }
-
-    LastBr->setSuccessor(0, Tail);
-    FallbackIRB.CreateBr(Tail);
-    PHINode *Shadow =
-        PHINode::Create(DFS.PrimitiveShadowTy, 2, "", &Tail->front());
-    Shadow->addIncoming(FallbackCall, FallbackBB);
-    Shadow->addIncoming(TruncShadow, LastBr->getParent());
-    return Shadow;
-  }
+  if (!AvoidNewBlocks && Size % (64 / DFS.ShadowWidthBits) == 0)
+    return loadLegacyShadowFast(ShadowAddr, Size, ShadowAlign, Pos);
 
   IRBuilder<> IRB(Pos);
   FunctionCallee &UnionLoadFn =
