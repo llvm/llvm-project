@@ -4169,8 +4169,12 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   bool NeedsGlobalDtor =
       D->needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
+  bool IsHIPManagedVarOnDevice =
+      getLangOpts().CUDAIsDevice && D->hasAttr<HIPManagedAttr>();
+
   const VarDecl *InitDecl;
-  const Expr *InitExpr = D->getAnyInitializer(InitDecl);
+  const Expr *InitExpr =
+      IsHIPManagedVarOnDevice ? nullptr : D->getAnyInitializer(InitDecl);
 
   Optional<ConstantEmitter> emitter;
 
@@ -4190,8 +4194,6 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
        D->getType()->isCUDADeviceBuiltinTextureType() ||
        D->hasAttr<HIPManagedAttr>());
-  // HIP pinned shadow of initialized host-side global variables are also
-  // left undefined.
   if (getLangOpts().CUDA &&
       (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar))
     Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
@@ -4302,7 +4304,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     }
   }
 
-  GV->setInitializer(Init);
+  // HIP managed variables need to be emitted as declarations in device
+  // compilation.
+  if (!IsHIPManagedVarOnDevice)
+    GV->setInitializer(Init);
   if (emitter)
     emitter->finalize(GV);
 

@@ -664,9 +664,14 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
 }
 
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
-  assert(LocationKind == Implicit || LocationKind == Unknown);
-  LocationKind = Implicit;
   emitOp(dwarf::DW_OP_WASM_location);
-  emitUnsigned(Index);
+  emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);
   emitUnsigned(Offset);
+  if (Index == 4 /*TI_LOCAL_INDIRECT*/) {
+    assert(LocationKind == Unknown);
+    LocationKind = Memory;
+  } else {
+    assert(LocationKind == Implicit || LocationKind == Unknown);
+    LocationKind = Implicit;
+  }
 }

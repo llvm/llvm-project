@@ -59,7 +59,11 @@ void WebAssemblyDebugValueManager::clone(MachineInstr *Insert,
 
 void WebAssemblyDebugValueManager::replaceWithLocal(unsigned LocalId) {
   for (auto *DBI : DbgValues) {
-    MachineOperand &Op = DBI->getDebugOperand(0);
-    Op.ChangeToTargetIndex(llvm::WebAssembly::TI_LOCAL, LocalId);
+    MachineOperand &Op0 = DBI->getDebugOperand(0);
+    MachineOperand &Op1 = DBI->getOperand(1);
+    bool Indirect = Op1.isImm() && Op1.getImm() == 0;
+    Op0.ChangeToTargetIndex(Indirect ? llvm::WebAssembly::TI_LOCAL_INDIRECT
+                                     : llvm::WebAssembly::TI_LOCAL,
+                            LocalId);
   }
 }
