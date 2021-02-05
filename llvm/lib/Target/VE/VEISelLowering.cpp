@@ -837,7 +837,7 @@ bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 /// alignment error (trap) on the target machine.
 bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                       unsigned AddrSpace,
-                                                      unsigned Align,
+                                                      Align A,
                                                       MachineMemOperand::Flags,
                                                       bool *Fast) const {
   if (Fast) {
