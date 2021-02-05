@@ -365,7 +365,7 @@ static StringRef removeTemplateArgs(StringRef Name) {
     return Name;
 
   int OpenBrackets = 0;
-  for (size_t i = Name.size() - 1; i >= 0; --i) {
+  for (int i = Name.size() - 1; i >= 0; --i) {
     if (Name[i] == '>')
       ++OpenBrackets;
     else if (Name[i] == '<') {
