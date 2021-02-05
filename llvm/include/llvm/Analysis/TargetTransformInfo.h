@@ -798,7 +798,7 @@ public:
   /// Determine if the target supports unaligned memory accesses.
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace = 0,
-                                      unsigned Alignment = 1,
+                                      Align Alignment = Align(1),
                                       bool *Fast = nullptr) const;
 
   /// Return hardware support for population count.
@@ -1499,7 +1499,7 @@ public:
   virtual bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
                                               unsigned BitWidth,
                                               unsigned AddressSpace,
-                                              unsigned Alignment,
+                                              Align Alignment,
                                               bool *Fast) = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
@@ -1896,7 +1896,7 @@ public:
     return Impl.isFPVectorizationPotentiallyUnsafe();
   }
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
-                                      unsigned AddressSpace, unsigned Alignment,
+                                      unsigned AddressSpace, Align Alignment,
                                       bool *Fast) override {
     return Impl.allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
                                                Alignment, Fast);
