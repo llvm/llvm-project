@@ -405,6 +405,16 @@ void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
   ExpectedLoc = Tok;
 }
 
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig);
+
+void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
+                                                      QualType BaseType,
+                                                      const Designation &D) {
+  ComputeType = nullptr;
+  Type = getDesignatedType(BaseType, D);
+  ExpectedLoc = Tok;
+}
+
 void PreferredTypeBuilder::enterFunctionArgument(
     SourceLocation Tok, llvm::function_ref<QualType()> ComputeType) {
   this->ComputeType = ComputeType;
@@ -4784,8 +4794,16 @@ static void AddRecordMembersCompletionResults(
 // in case of specializations. Since we might not have a decl for the
 // instantiation/specialization yet, e.g. dependent code.
 static RecordDecl *getAsRecordDecl(const QualType BaseType) {
-  if (auto *RD = BaseType->getAsRecordDecl())
+  if (auto *RD = BaseType->getAsRecordDecl()) {
+    if (const auto *CTSD =
+            llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+      // Template might not be instantiated yet, fall back to primary template
+      // in such cases.
+      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
+        RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    }
     return RD;
+  }
 
   if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
     if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
@@ -5754,25 +5772,39 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
   return QualType();
 }
 
-void Sema::CodeCompleteDesignator(const QualType BaseType,
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
+  for (unsigned I = 0; I < Desig.getNumDesignators(); ++I) {
+    if (BaseType.isNull())
+      break;
+    QualType NextType;
+    const auto &D = Desig.getDesignator(I);
+    if (D.isArrayDesignator() || D.isArrayRangeDesignator()) {
+      if (BaseType->isArrayType())
+        NextType = BaseType->getAsArrayTypeUnsafe()->getElementType();
+    } else {
+      assert(D.isFieldDesignator());
+      auto *RD = getAsRecordDecl(BaseType);
+      if (RD && RD->isCompleteDefinition()) {
+        for (const auto &Member : RD->lookup(D.getField()))
+          if (const FieldDecl *FD = llvm::dyn_cast<FieldDecl>(Member)) {
+            NextType = FD->getType();
+            break;
+          }
+      }
+    }
+    BaseType = NextType;
+  }
+  return BaseType;
+}
+
+void Sema::CodeCompleteDesignator(QualType BaseType,
                                   llvm::ArrayRef<Expr *> InitExprs,
                                   const Designation &D) {
+  BaseType = getDesignatedType(BaseType, D);
   if (BaseType.isNull())
     return;
-  // FIXME: Handle nested designations, e.g. : .x.^
-  if (!D.empty())
-    return;
-
   const auto *RD = getAsRecordDecl(BaseType);
-  if (!RD)
-    return;
-  if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    // Template might not be instantiated yet, fall back to primary template in
-    // such cases.
-    if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
-      RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-  }
-  if (RD->fields().empty())
+  if (!RD || RD->fields().empty())
     return;
 
   CodeCompletionContext CCC(CodeCompletionContext::CCC_DotMemberAccess,

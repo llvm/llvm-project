@@ -1049,10 +1049,23 @@ const char *SignalContext::Describe() const {
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
-  // FIXME: Actually implement this function.
-  CHECK_GT(buf_len, 0);
-  buf[0] = 0;
-  return 0;
+  if (buf_len == 0)
+    return 0;
+
+  // Get the UTF-16 path and convert to UTF-8.
+  wchar_t binname_utf16[kMaxPathLength];
+  int binname_utf16_len =
+      GetModuleFileNameW(NULL, binname_utf16, ARRAY_SIZE(binname_utf16));
+  if (binname_utf16_len == 0) {
+    buf[0] = '\0';
+    return 0;
+  }
+  int binary_name_len = ::WideCharToMultiByte(
+      CP_UTF8, 0, binname_utf16, binname_utf16_len, buf, buf_len, NULL, NULL);
+  if ((unsigned)binary_name_len == buf_len)
+    --binary_name_len;
+  buf[binary_name_len] = '\0';
+  return binary_name_len;
 }
 
 uptr ReadLongProcessName(/*out*/char *buf, uptr buf_len) {

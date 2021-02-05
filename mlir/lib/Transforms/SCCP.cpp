@@ -358,7 +358,7 @@ void SCCPSolver::rewrite(MLIRContext *context,
     // Replace any block arguments with constants.
     builder.setInsertionPointToStart(block);
     for (BlockArgument arg : block->getArguments())
-      replaceWithConstant(builder, folder, arg);
+      (void)replaceWithConstant(builder, folder, arg);
 
     for (Operation &op : llvm::make_early_inc_range(*block)) {
       builder.setInsertionPoint(&op);

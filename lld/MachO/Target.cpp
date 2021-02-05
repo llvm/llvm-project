@@ -14,7 +14,6 @@
 #include "lld/Common/ErrorHandler.h"
 
 using namespace llvm;
-using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 

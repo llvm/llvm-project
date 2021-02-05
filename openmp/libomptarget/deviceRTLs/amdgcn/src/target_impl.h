@@ -20,7 +20,6 @@
 #include "amdgcn_interface.h"
 #include "amdgcn_intrinsics.h"
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -93,11 +92,6 @@ enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
 
-// DEVICE versions of part of libc
-INLINE void __assert_fail(const char *, const char *, unsigned int,
-                          const char *) {
-  __builtin_trap();
-}
 EXTERN int printf(const char *, ...);
 
 #endif

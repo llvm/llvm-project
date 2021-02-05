@@ -440,8 +440,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   // Now look inside blocks to check for BCE comparisons.
   std::vector<BCECmpBlock> Comparisons;
   BaseIdentifier BaseId;
-  for (size_t BlockIdx = 0; BlockIdx < Blocks.size(); ++BlockIdx) {
-    BasicBlock *const Block = Blocks[BlockIdx];
+  for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
     BCECmpBlock Comparison = visitCmpBlock(Phi.getIncomingValueForBlock(Block),
                                            Block, Phi.getParent(), BaseId);

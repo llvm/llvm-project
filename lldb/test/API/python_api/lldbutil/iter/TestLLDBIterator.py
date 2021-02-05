@@ -55,8 +55,8 @@ class LLDBIteratorTestCase(TestBase):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(
-                yours[i] == mine[i],
+            self.assertEqual(
+                yours[i], mine[i],
                 "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
 
     @add_test_categories(['pyapi'])

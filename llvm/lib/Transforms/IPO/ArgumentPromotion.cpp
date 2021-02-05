@@ -446,9 +446,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                "GEPs without uses should be cleaned up already");
         IndicesVector Operands;
         Operands.reserve(GEP->getNumIndices());
-        for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-             II != IE; ++II)
-          Operands.push_back(cast<ConstantInt>(*II)->getSExtValue());
+        for (const Use &Idx : GEP->indices())
+          Operands.push_back(cast<ConstantInt>(Idx)->getSExtValue());
 
         // GEPs with a single 0 index can be merged with direct loads
         if (Operands.size() == 1 && Operands.front() == 0)
@@ -634,9 +633,8 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         if (V == Arg) {
           // This load actually loads (part of) Arg? Check the indices then.
           Indices.reserve(GEP->getNumIndices());
-          for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-               II != IE; ++II)
-            if (ConstantInt *CI = dyn_cast<ConstantInt>(*II))
+          for (Use &Idx : GEP->indices())
+            if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx))
               Indices.push_back(CI->getSExtValue());
             else
               // We found a non-constant GEP index for this argument? Bail out
@@ -689,9 +687,8 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         return false;
 
       // Ensure that all of the indices are constants.
-      for (User::op_iterator i = GEP->idx_begin(), e = GEP->idx_end(); i != e;
-           ++i)
-        if (ConstantInt *C = dyn_cast<ConstantInt>(*i))
+      for (Use &Idx : GEP->indices())
+        if (ConstantInt *C = dyn_cast<ConstantInt>(Idx))
           Operands.push_back(C->getSExtValue());
         else
           return false; // Not a constant operand GEP!

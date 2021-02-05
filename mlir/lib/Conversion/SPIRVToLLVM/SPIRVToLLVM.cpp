@@ -888,9 +888,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     if (!op.memory_access().hasValue()) {
-      replaceWithLoadOrStore(op, rewriter, this->typeConverter, /*alignment=*/0,
-                             /*isVolatile=*/false, /*isNonTemporal=*/false);
-      return success();
+      return replaceWithLoadOrStore(
+          op, rewriter, this->typeConverter, /*alignment=*/0,
+          /*isVolatile=*/false, /*isNonTemporal=*/false);
     }
     auto memoryAccess = op.memory_access().getValue();
     switch (memoryAccess) {
@@ -902,9 +902,8 @@ public:
           memoryAccess == spirv::MemoryAccess::Aligned ? *op.alignment() : 0;
       bool isNonTemporal = memoryAccess == spirv::MemoryAccess::Nontemporal;
       bool isVolatile = memoryAccess == spirv::MemoryAccess::Volatile;
-      replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment,
-                             isVolatile, isNonTemporal);
-      return success();
+      return replaceWithLoadOrStore(op, rewriter, this->typeConverter,
+                                    alignment, isVolatile, isNonTemporal);
     }
     default:
       // There is no support of other memory access attributes.

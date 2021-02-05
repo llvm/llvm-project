@@ -258,11 +258,11 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
-              const auto *derived{detailsIf<DerivedTypeDetails>()};
+              const auto *derived{this->detailsIf<DerivedTypeDetails>()};
               return derived && derived->isForwardReferenced();
             },
             [&](const UseDetails &x) {
-              const auto *use{detailsIf<UseDetails>()};
+              const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
             [](const auto &) { return false; },

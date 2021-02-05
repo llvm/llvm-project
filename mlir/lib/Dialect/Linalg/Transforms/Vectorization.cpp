@@ -38,6 +38,22 @@ using llvm::dbgs;
 
 #define DEBUG_TYPE "linalg-vectorization"
 
+/// Return the unique instance of OpType in `block` if it is indeed unique.
+/// Return null if none or more than 1 instances exist.
+template <typename OpType>
+static OpType getSingleOpOfType(Block &block) {
+  OpType res;
+  block.walk([&](OpType op) {
+    if (res) {
+      res = nullptr;
+      return WalkResult::interrupt();
+    }
+    res = op;
+    return WalkResult::advance();
+  });
+  return res;
+}
+
 /// Helper data structure to represent the result of vectorization.
 /// In certain specific cases, like terminators, we do not want to propagate/
 enum VectorizationStatus {
@@ -146,7 +162,7 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
       results.push_back(result);
   }
   return VectorizationResult{VectorizationStatus::NoReplace, nullptr};
-};
+}
 
 /// Generic vectorization for a single operation `op`, given already vectorized
 /// operands carried by `bvm`. Vectorization occurs as follows:
@@ -305,57 +321,6 @@ static LogicalResult vectorizeAsLinalgGeneric(
   return success();
 }
 
-/// Detect whether `r` exactly computes a floating-point or integer
-/// multiply-accumulate.
-static bool hasMultiplyAddBody(Region &r) {
-  if (!llvm::hasSingleElement(r))
-    return false;
-  if (!llvm::hasNItems(r.front().begin(), r.front().end(), 3))
-    return false;
-
-  using mlir::matchers::m_Val;
-  auto a = m_Val(r.getArgument(0));
-  auto b = m_Val(r.getArgument(1));
-  auto c = m_Val(r.getArgument(2));
-  // TODO: Update this detection once we have  matcher support for specifying
-  // that any permutation of operands matches.
-  auto pattern1 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(a, b), c));
-  auto pattern2 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(a, b)));
-  auto pattern3 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(b, a), c));
-  auto pattern4 = m_Op<linalg::YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(b, a)));
-  auto pattern5 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(a, b), c));
-  auto pattern6 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(a, b)));
-  auto pattern7 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(b, a), c));
-  auto pattern8 = m_Op<linalg::YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(b, a)));
-  return pattern1.match(&r.front().back()) ||
-         pattern2.match(&r.front().back()) ||
-         pattern3.match(&r.front().back()) ||
-         pattern4.match(&r.front().back()) ||
-         pattern5.match(&r.front().back()) ||
-         pattern6.match(&r.front().back()) ||
-         pattern7.match(&r.front().back()) || pattern8.match(&r.front().back());
-}
-
-/// Detect whether the LinalgOp `op` is a contraction.
-// TODO: Should be Tablegen'd from a single source that generates the op itself.
-static LogicalResult isContraction(Operation *op) {
-  // TODO: interface for named ops.
-  if (isa<linalg::BatchMatmulOp, linalg::MatmulOp, linalg::MatmulColumnMajorOp,
-          linalg::MatvecOp, linalg::VecmatOp, linalg::DotOp>(op))
-    return success();
-
-  auto genericOp = dyn_cast<linalg::GenericOp>(op);
-  if (!genericOp)
-    return failure();
-
-  auto mapRange = genericOp.indexing_maps().getAsValueRange<AffineMapAttr>();
-  return success(
-      genericOp.getNumInputs() == 2 && genericOp.getNumOutputs() == 1 &&
-      llvm::all_of(mapRange,
-                   [](AffineMap m) { return m.isProjectedPermutation(); }) &&
-      hasMultiplyAddBody(genericOp.region()));
-}
-
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
 static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
@@ -382,7 +347,7 @@ static bool isElementwise(Operation *op) {
     if (!genericOp.getOutputIndexingMap(i).isIdentity())
       return false;
   }
-  // Currently limit the input indexing map to minor identity as other
+  // Currently bound the input indexing map to minor identity as other
   // permutations might require adding transpose ops to convert the vector read
   // to the right shape.
   for (unsigned i = 0, e = genericOp.getNumInputs(); i < e; i++) {
@@ -392,68 +357,15 @@ static bool isElementwise(Operation *op) {
   return hasOnlyScalarElementwiseOp(genericOp.getRegion());
 }
 
-LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
-  auto linalgOp = cast<linalg::LinalgOp>(op);
-  // All types must be static shape to go to vector.
-  for (Value operand : linalgOp.getShapedOperands())
-    if (!operand.getType().cast<ShapedType>().hasStaticShape())
-      return failure();
-  for (Type outputTensorType : linalgOp.getOutputTensorTypes())
-    if (!outputTensorType.cast<ShapedType>().hasStaticShape())
-      return failure();
-
-  if (isa<linalg::FillOp, linalg::CopyOp>(op))
-    return success();
-  if (isElementwise(op))
-    return success();
-  return isContraction(op);
-}
-
-void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
-  assert(succeeded(vectorizeLinalgOpPrecondition(op)));
-
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
-  (void)dbgPref;
-  edsc::ScopedContext scope(builder, op->getLoc());
-  // In the case of 0-D memrefs, return null and special case to scalar load or
-  // store later.
-  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
-    // Vectorize fill as a vector.broadcast.
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
-    buildVectorWrite(builder, fillOp.value(), fillOp.output());
-    return;
-  }
-  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
-    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg.copy as vector.transfer_read + "
-                         "vector.transfer_write: "
-                      << *op);
-    Value vector = buildVectorRead(builder, copyOp.input());
-    buildVectorWrite(builder, vector, copyOp.output());
-    return;
-  }
-
-  auto linalgOp = cast<linalg::LinalgOp>(op);
+static void vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp) {
+  assert(isaContractionOpInterface(linalgOp) &&
+         "expected vectorizeContraction preconditions to be met");
   Location loc = linalgOp.getLoc();
-
-  if (isElementwise(op)) {
-    LLVM_DEBUG(dbgs() << dbgPref
-                      << "Rewrite linalg op as vector.transfer_read + " << *op);
-    auto status = vectorizeAsLinalgGeneric(builder, linalgOp);
-    (void)status;
-    assert(succeeded(status) &&
-           "Unexpected vectorization failed despite preconditions");
-    return;
-  }
-
-  assert(succeeded(isContraction(op)) && "Expected contraction");
-
   // Vectorize other ops as vector contraction.
   // TODO: interface.
-  LLVM_DEBUG(dbgs() << dbgPref
-                    << "Rewrite linalg op as vector.contract: " << *op);
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                    << "Rewrite linalg op as vector.contract: ";
+             linalgOp.dump());
   // Special function that describes how to vectorize the multiplication op in a
   // linalg contraction.
   CustomVectorizationHook vectorizeContraction =
@@ -479,177 +391,64 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
          "Unexpected vectorization failed despite preconditions");
 }
 
-/// Check whether there is any interleaved use of any `values` between `firstOp`
-/// and `secondOp`. Conservatively return `true` if any op or value is in a
-/// different block.
-static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
-                                    ValueRange values) {
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: ";
-  (void)dbgPref;
-  if (firstOp->getBlock() != secondOp->getBlock() ||
-      !firstOp->isBeforeInBlock(secondOp)) {
-    LLVM_DEBUG(llvm::dbgs()
-               << dbgPref << "interleavedUses precondition failed, firstOp: "
-               << *firstOp << ", second op: " << *secondOp);
-    return true;
-  }
-  for (auto v : values) {
-    for (auto &u : v.getUses()) {
-      Operation *owner = u.getOwner();
-      if (owner == firstOp || owner == secondOp)
-        continue;
-      // TODO: this is too conservative, use dominance info in the future.
-      if (owner->getBlock() == firstOp->getBlock() &&
-          (owner->isBeforeInBlock(firstOp) || secondOp->isBeforeInBlock(owner)))
-        continue;
-      LLVM_DEBUG(llvm::dbgs()
-                 << dbgPref << " found interleaved op " << *owner
-                 << ", firstOp: " << *firstOp << ", second op: " << *secondOp);
-      return true;
-    }
-  }
-  return false;
+LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
+  auto linalgOp = cast<linalg::LinalgOp>(op);
+  // All types must be static shape to go to vector.
+  for (Value operand : linalgOp.getShapedOperands())
+    if (!operand.getType().cast<ShapedType>().hasStaticShape())
+      return failure();
+  for (Type outputTensorType : linalgOp.getOutputTensorTypes())
+    if (!outputTensorType.cast<ShapedType>().hasStaticShape())
+      return failure();
+
+  if (isa<linalg::FillOp, linalg::CopyOp>(op))
+    return success();
+  if (isElementwise(op))
+    return success();
+  return success(isaContractionOpInterface(linalgOp));
 }
 
-/// Return the unique subview use of `v` if it is indeed unique, null otherwise.
-static SubViewOp getSubViewUseIfUnique(Value v) {
-  SubViewOp subViewOp;
-  for (auto &u : v.getUses()) {
-    if (auto newSubViewOp = dyn_cast<SubViewOp>(u.getOwner())) {
-      if (subViewOp)
-        return SubViewOp();
-      subViewOp = newSubViewOp;
-    }
+void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
+  assert(succeeded(vectorizeLinalgOpPrecondition(op)));
+
+  edsc::ScopedContext scope(builder, op->getLoc());
+  // In the case of 0-D memrefs, return null and special case to scalar load or
+  // store later.
+  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
+    // Vectorize fill as a vector.broadcast.
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
+    buildVectorWrite(builder, fillOp.value(), fillOp.output());
+    return;
   }
-  return subViewOp;
+  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
+    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg.copy as vector.transfer_read + "
+                         "vector.transfer_write: "
+                      << *op);
+    Value vector = buildVectorRead(builder, copyOp.input());
+    buildVectorWrite(builder, vector, copyOp.output());
+    return;
+  }
+
+  if (isElementwise(op)) {
+    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                      << "Rewrite linalg op as vector.transfer_read + " << *op);
+    auto status = vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
+    (void)status;
+    assert(succeeded(status) &&
+           "Unexpected vectorization failed despite preconditions");
+    return;
+  }
+
+  vectorizeContraction(builder, cast<LinalgOp>(op));
 }
 
-/// TODO: use interfaces, side-effects and aliasing analysis as appropriate,
-/// when available.
-LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
-    vector::TransferReadOp xferOp, PatternRewriter &rewriter) const {
-
-  // Transfer into `view`.
-  Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<AllocOp>())
-    return failure();
-
-  StringRef dbgPref = "\n[" DEBUG_TYPE "]: VTRForwarding: ";
-  (void)dbgPref;
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << viewOrAlloc);
-
-  // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
-  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
-  if (!subViewOp)
-    return failure();
-  Value subView = subViewOp.getResult();
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << "with subView " << subView);
-
-  // Find the copy into `subView` without interleaved uses.
-  CopyOp copyOp;
-  for (auto &u : subView.getUses()) {
-    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
-      if (newCopyOp.getOutputBuffer(0) != subView)
-        continue;
-      LLVM_DEBUG(llvm::dbgs() << dbgPref << "copy candidate " << *newCopyOp);
-      if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
-        continue;
-      copyOp = newCopyOp;
-      break;
-    }
-  }
-  if (!copyOp)
-    return failure();
-  LLVM_DEBUG(llvm::dbgs() << dbgPref << "with copy " << *copyOp);
-
-  // Find the fill into `viewOrAlloc` without interleaved uses before the copy.
-  FillOp maybeFillOp;
-  for (auto &u : viewOrAlloc.getUses()) {
-    if (auto newFillOp = dyn_cast<FillOp>(u.getOwner())) {
-      if (newFillOp.getOutputBuffer(0) != viewOrAlloc)
-        continue;
-      LLVM_DEBUG(llvm::dbgs() << dbgPref << "fill candidate " << *newFillOp);
-      if (mayExistInterleavedUses(newFillOp, copyOp, {viewOrAlloc, subView}))
-        continue;
-      maybeFillOp = newFillOp;
-      break;
-    }
-  }
-  // Ensure padding matches.
-  if (maybeFillOp && xferOp.padding() != maybeFillOp.value())
-    return failure();
-  if (maybeFillOp)
-    LLVM_DEBUG(llvm::dbgs() << dbgPref << "with maybeFillOp " << *maybeFillOp);
-
-  // `in` is the subview that linalg.copy reads. Replace it.
-  Value in = copyOp.getInput(0);
-
-  // linalg.copy + linalg.fill can be used to create a padded local buffer.
-  // The `masked` attribute is only valid on this padded buffer.
-  // When forwarding to vector.transfer_read, the attribute must be reset
-  // conservatively.
-  Value res = rewriter.create<vector::TransferReadOp>(
-      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.indices(),
-      xferOp.permutation_map(), xferOp.padding(), ArrayAttr());
-
-  if (maybeFillOp)
-    rewriter.eraseOp(maybeFillOp);
-  rewriter.eraseOp(copyOp);
-  rewriter.replaceOp(xferOp, res);
-
-  return success();
-}
-
-/// TODO: use interfaces, side-effects and aliasing analysis as appropriate,
-/// when available.
-LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
-    vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
-  // Transfer into `viewOrAlloc`.
-  Value viewOrAlloc = xferOp.source();
-  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
-      !viewOrAlloc.getDefiningOp<AllocOp>())
-    return failure();
-
-  // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
-  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
-  if (!subViewOp)
-    return failure();
-  Value subView = subViewOp.getResult();
-
-  // Find the copy from `subView` without interleaved uses.
-  CopyOp copyOp;
-  for (auto &u : subViewOp.getResult().getUses()) {
-    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
-      if (newCopyOp.getInput(0) != subView)
-        continue;
-      if (mayExistInterleavedUses(xferOp, newCopyOp, {viewOrAlloc, subView}))
-        continue;
-      copyOp = newCopyOp;
-      break;
-    }
-  }
-  if (!copyOp)
-    return failure();
-
-  // `out` is the subview copied into that we replace.
-  Value out = copyOp.getOutputBuffer(0);
-
-  // Forward vector.transfer into copy.
-  // linalg.copy + linalg.fill can be used to create a padded local buffer.
-  // The `masked` attribute is only valid on this padded buffer.
-  // When forwarding to vector.transfer_write, the attribute must be reset
-  // conservatively.
-  rewriter.create<vector::TransferWriteOp>(
-      xferOp.getLoc(), xferOp.vector(), out, xferOp.indices(),
-      xferOp.permutation_map(), ArrayAttr());
-
-  rewriter.eraseOp(copyOp);
-  rewriter.eraseOp(xferOp);
-
-  return success();
-}
-
+//----------------------------------------------------------------------------//
+// Misc. conv vectorization patterns.
+//----------------------------------------------------------------------------//
+// TODO: cleanup all this.
 template <class ConvOp, int N>
 LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     ConvOp op, PatternRewriter &rewriter) const {
@@ -784,4 +583,181 @@ void mlir::linalg::populateConvVectorizationPatterns(
   patterns.push_back(std::move(tiling));
   patterns.push_back(std::move(promotion));
   patterns.push_back(std::move(vectorization));
+}
+
+//----------------------------------------------------------------------------//
+// Forwarding patterns
+//----------------------------------------------------------------------------//
+
+/// Check whether there is any interleaved use of any `values` between `firstOp`
+/// and `secondOp`. Conservatively return `true` if any op or value is in a
+/// different block.
+static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
+                                    ValueRange values) {
+  if (firstOp->getBlock() != secondOp->getBlock() ||
+      !firstOp->isBeforeInBlock(secondOp)) {
+    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                            << "interleavedUses precondition failed, firstOp: "
+                            << *firstOp << ", second op: " << *secondOp);
+    return true;
+  }
+  for (auto v : values) {
+    for (auto &u : v.getUses()) {
+      Operation *owner = u.getOwner();
+      if (owner == firstOp || owner == secondOp)
+        continue;
+      // TODO: this is too conservative, use dominance info in the future.
+      if (owner->getBlock() == firstOp->getBlock() &&
+          (owner->isBeforeInBlock(firstOp) || secondOp->isBeforeInBlock(owner)))
+        continue;
+      LLVM_DEBUG(llvm::dbgs()
+                 << "\n[" DEBUG_TYPE "]: "
+                 << " found interleaved op " << *owner
+                 << ", firstOp: " << *firstOp << ", second op: " << *secondOp);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Return the unique subview use of `v` if it is indeed unique, null otherwise.
+static SubViewOp getSubViewUseIfUnique(Value v) {
+  SubViewOp subViewOp;
+  for (auto &u : v.getUses()) {
+    if (auto newSubViewOp = dyn_cast<SubViewOp>(u.getOwner())) {
+      if (subViewOp)
+        return SubViewOp();
+      subViewOp = newSubViewOp;
+    }
+  }
+  return subViewOp;
+}
+
+/// TODO: use interfaces, side-effects and aliasing analysis as appropriate,
+/// when available.
+LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
+    vector::TransferReadOp xferOp, PatternRewriter &rewriter) const {
+
+  // Transfer into `view`.
+  Value viewOrAlloc = xferOp.source();
+  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<AllocOp>())
+    return failure();
+
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: " << viewOrAlloc);
+
+  // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
+  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
+  if (!subViewOp)
+    return failure();
+  Value subView = subViewOp.getResult();
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                          << "with subView " << subView);
+
+  // Find the copy into `subView` without interleaved uses.
+  CopyOp copyOp;
+  for (auto &u : subView.getUses()) {
+    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
+      if (newCopyOp.getOutputBuffer(0) != subView)
+        continue;
+      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                              << "copy candidate " << *newCopyOp);
+      if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
+        continue;
+      copyOp = newCopyOp;
+      break;
+    }
+  }
+  if (!copyOp)
+    return failure();
+  LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                          << "with copy " << *copyOp);
+
+  // Find the fill into `viewOrAlloc` without interleaved uses before the copy.
+  FillOp maybeFillOp;
+  for (auto &u : viewOrAlloc.getUses()) {
+    if (auto newFillOp = dyn_cast<FillOp>(u.getOwner())) {
+      if (newFillOp.getOutputBuffer(0) != viewOrAlloc)
+        continue;
+      LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                              << "fill candidate " << *newFillOp);
+      if (mayExistInterleavedUses(newFillOp, copyOp, {viewOrAlloc, subView}))
+        continue;
+      maybeFillOp = newFillOp;
+      break;
+    }
+  }
+  // Ensure padding matches.
+  if (maybeFillOp && xferOp.padding() != maybeFillOp.value())
+    return failure();
+  if (maybeFillOp)
+    LLVM_DEBUG(llvm::dbgs() << "\n[" DEBUG_TYPE "]: "
+                            << "with maybeFillOp " << *maybeFillOp);
+
+  // `in` is the subview that linalg.copy reads. Replace it.
+  Value in = copyOp.getInput(0);
+
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_read, the attribute must be reset
+  // conservatively.
+  Value res = rewriter.create<vector::TransferReadOp>(
+      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.indices(),
+      xferOp.permutation_map(), xferOp.padding(), ArrayAttr());
+
+  if (maybeFillOp)
+    rewriter.eraseOp(maybeFillOp);
+  rewriter.eraseOp(copyOp);
+  rewriter.replaceOp(xferOp, res);
+
+  return success();
+}
+
+/// TODO: use interfaces, side-effects and aliasing analysis as appropriate,
+/// when available.
+LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
+    vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
+  // Transfer into `viewOrAlloc`.
+  Value viewOrAlloc = xferOp.source();
+  if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
+      !viewOrAlloc.getDefiningOp<AllocOp>())
+    return failure();
+
+  // Ensure there is exactly one subview of `viewOrAlloc` defining `subView`.
+  SubViewOp subViewOp = getSubViewUseIfUnique(viewOrAlloc);
+  if (!subViewOp)
+    return failure();
+  Value subView = subViewOp.getResult();
+
+  // Find the copy from `subView` without interleaved uses.
+  CopyOp copyOp;
+  for (auto &u : subViewOp.getResult().getUses()) {
+    if (auto newCopyOp = dyn_cast<CopyOp>(u.getOwner())) {
+      if (newCopyOp.getInput(0) != subView)
+        continue;
+      if (mayExistInterleavedUses(xferOp, newCopyOp, {viewOrAlloc, subView}))
+        continue;
+      copyOp = newCopyOp;
+      break;
+    }
+  }
+  if (!copyOp)
+    return failure();
+
+  // `out` is the subview copied into that we replace.
+  Value out = copyOp.getOutputBuffer(0);
+
+  // Forward vector.transfer into copy.
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_write, the attribute must be reset
+  // conservatively.
+  rewriter.create<vector::TransferWriteOp>(
+      xferOp.getLoc(), xferOp.vector(), out, xferOp.indices(),
+      xferOp.permutation_map(), ArrayAttr());
+
+  rewriter.eraseOp(copyOp);
+  rewriter.eraseOp(xferOp);
+
+  return success();
 }

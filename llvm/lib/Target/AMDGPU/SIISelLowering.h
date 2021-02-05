@@ -286,7 +286,7 @@ public:
   }
 
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AS, unsigned Alignment,
+      EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 

@@ -192,7 +192,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   bool erased;
   FrozenRewritePatternList frozenPatterns(std::move(patterns));
-  applyOpPatternsAndFold(ifOp, frozenPatterns, &erased);
+  (void)applyOpPatternsAndFold(ifOp, frozenPatterns, &erased);
   if (erased) {
     if (folded)
       *folded = true;
@@ -220,7 +220,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
 
   // Canonicalize to remove dead else blocks (happens whenever an 'if' moves up
   // a sequence of affine.fors that are all perfectly nested).
-  applyPatternsAndFoldGreedily(
+  (void)applyPatternsAndFoldGreedily(
       hoistedIfOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
       frozenPatterns);
 

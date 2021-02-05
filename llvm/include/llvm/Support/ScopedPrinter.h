@@ -56,9 +56,9 @@ struct HexNumber {
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
-const std::string to_hexString(uint64_t Value, bool UpperCase = true);
+std::string to_hexString(uint64_t Value, bool UpperCase = true);
 
-template <class T> const std::string to_string(const T &Value) {
+template <class T> std::string to_string(const T &Value) {
   std::string number;
   llvm::raw_string_ostream stream(number);
   stream << Value;

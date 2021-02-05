@@ -1010,13 +1010,90 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "conflict", !HeaderFile, nullptr, "Conflict"},
 
-      {R"cpp(// FIXME: detecting local variables is not supported yet.
+      {R"cpp(
         void func() {
-          int Conflict;
-          int [[V^ar]];
+          bool Whatever;
+          int V^ar;
+          char Conflict;
         }
       )cpp",
-       nullptr, !HeaderFile, nullptr, "Conflict"},
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int Conflict = 42) {
+            int V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int Conflict = 42) {
+          } else {
+            bool V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int V^ar = 42) {
+          } else {
+            bool Conflict;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          while (int V^ar = 10) {
+            bool Conflict = true;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          for (int Something = 9000, Anything = 14, Conflict = 42; Anything > 9;
+               ++Something) {
+            int V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          for (int V^ar = 14, Conflict = 42;;) {
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int Conflict) {
+          bool V^ar;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int V^ar) {
+          bool Conflict;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int V^ar, int Conflict) {
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(// Trying to rename into the same name, SameName == SameName.
         void func() {
@@ -1213,7 +1290,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   std::string BarPath = testPath("bar.cc");
   // Build the index, the index has "Foo" references from foo.cc and "Bar"
   // references from bar.cc.
-  FileSymbols FSymbols;
+  FileSymbols FSymbols(IndexContents::All);
   FSymbols.update(FooPath, nullptr, buildRefSlab(FooCode, "Foo", FooPath),
                   nullptr, false);
   FSymbols.update(BarPath, nullptr, buildRefSlab(BarCode, "Bar", BarPath),
@@ -1290,9 +1367,9 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>
                        Callback) const override {}
 
-    llvm::unique_function<bool(llvm::StringRef) const>
+    llvm::unique_function<IndexContents(llvm::StringRef) const>
     indexedFiles() const override {
-      return [](llvm::StringRef) { return false; };
+      return [](llvm::StringRef) { return IndexContents::None; };
     }
 
     size_t estimateMemoryUsage() const override { return 0; }
@@ -1344,9 +1421,9 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>)
         const override {}
 
-    llvm::unique_function<bool(llvm::StringRef) const>
+    llvm::unique_function<IndexContents(llvm::StringRef) const>
     indexedFiles() const override {
-      return [](llvm::StringRef) { return false; };
+      return [](llvm::StringRef) { return IndexContents::None; };
     }
 
     size_t estimateMemoryUsage() const override { return 0; }

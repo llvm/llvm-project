@@ -26,4 +26,4 @@ lpad27:                                           ; preds = %"10", %"9"
 
 declare void @_ZNK14gIndexOdometer9NoIndicesEv()
 
-declare i32 @__gxx_personality_v0(i32, i64, i8*, i8*)
+declare i32 @__gxx_personality_v0(i32, i64, i8*, i8*) addrspace(0)

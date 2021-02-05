@@ -7,16 +7,12 @@
 
 name:            merge_sgpr_spill_into_copy_from_exec_lo
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_lo
     ; CHECK: liveins: $vgpr0
-    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def $exec_lo
     ; CHECK: $sgpr0 = S_MOV_B32 $exec_lo
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
@@ -36,16 +32,12 @@ body:             |
 
 name:            merge_sgpr_spill_into_copy_from_exec_hi
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_hi
     ; CHECK: liveins: $vgpr0
-    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def $exec_hi
     ; CHECK: $sgpr0 = S_MOV_B32 $exec_hi
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
@@ -65,11 +57,12 @@ body:             |
 
 name:            merge_sgpr_spill_into_copy_from_exec
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec
     ; CHECK: liveins: $vgpr0
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def $exec
     ; CHECK: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
@@ -95,16 +88,12 @@ body:             |
 
 name:            reload_sgpr_spill_into_copy_to_exec_lo
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_lo
     ; CHECK: liveins: $vgpr0
-    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_lo
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
     ; CHECK: $sgpr0 = V_READLANE_B32 $vgpr0, 0
@@ -122,16 +111,12 @@ body:             |
 
 name:            reload_sgpr_spill_into_copy_to_exec_hi
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_hi
     ; CHECK: liveins: $vgpr0
-    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr0_lo16
-    ; CHECK: frame-setup CFI_INSTRUCTION undefined $sgpr1_lo16
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_hi
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
     ; CHECK: $sgpr0 = V_READLANE_B32 $vgpr0, 0
@@ -149,11 +134,12 @@ body:             |
 
 name:            reload_sgpr_spill_into_copy_to_exec
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec
     ; CHECK: liveins: $vgpr0
-    ; CHECK: S_WAITCNT 0
     ; CHECK: S_NOP 0, implicit-def renamable $sgpr0_sgpr1, implicit-def dead renamable $sgpr2_sgpr3, implicit-def $exec
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
     ; CHECK: $vgpr0 = V_WRITELANE_B32 killed $sgpr1, 1, $vgpr0, implicit $sgpr0_sgpr1

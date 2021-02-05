@@ -69,6 +69,6 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
         process.Continue()
 
         next_stop_state = process.GetState()
-        self.assertTrue(
-            next_stop_state == lldb.eStateExited,
+        self.assertEqual(
+            next_stop_state, lldb.eStateExited,
             "We should have not hit the breakpoint again.")

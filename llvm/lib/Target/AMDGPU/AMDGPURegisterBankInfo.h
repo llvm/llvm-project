@@ -84,8 +84,6 @@ public:
   bool applyMappingBFEIntrinsic(const OperandsMapper &OpdMapper,
                                 bool Signed) const;
 
-  void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
-
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
 

@@ -310,9 +310,7 @@ void UseAfterMoveFinder::getReinits(
                // Assignment. In addition to the overloaded assignment operator,
                // test for built-in assignment as well, since template functions
                // may be instantiated to use std::move() on built-in types.
-               binaryOperator(hasOperatorName("="), hasLHS(DeclRefMatcher)),
-               cxxOperatorCallExpr(hasOverloadedOperatorName("="),
-                                   hasArgument(0, DeclRefMatcher)),
+               binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
                // Declaration. We treat this as a type of reinitialization too,
                // so we don't need to treat it separately.
                declStmt(hasDescendant(equalsNode(MovedVariable))),

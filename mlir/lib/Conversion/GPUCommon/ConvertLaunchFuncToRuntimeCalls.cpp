@@ -16,6 +16,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 
 #include "../PassDetail.h"
+#include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -293,10 +294,13 @@ private:
 void GpuToLLVMConversionPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
   OwningRewritePatternList patterns;
+  LLVMConversionTarget target(getContext());
+
   populateStdToLLVMConversionPatterns(converter, patterns);
+  populateAsyncStructuralTypeConversionsAndLegality(&getContext(), converter,
+                                                    patterns, target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
 
-  LLVMConversionTarget target(getContext());
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();

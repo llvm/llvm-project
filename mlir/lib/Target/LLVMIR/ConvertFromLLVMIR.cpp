@@ -689,8 +689,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       ops.push_back(processValue(op.get()));
 
     SmallVector<Value, 4> normalArgs, unwindArgs;
-    processBranchArgs(ii, ii->getNormalDest(), normalArgs);
-    processBranchArgs(ii, ii->getUnwindDest(), unwindArgs);
+    (void)processBranchArgs(ii, ii->getNormalDest(), normalArgs);
+    (void)processBranchArgs(ii, ii->getUnwindDest(), unwindArgs);
 
     Operation *op;
     if (llvm::Function *callee = ii->getCalledFunction()) {

@@ -62,8 +62,8 @@ class EventAPITestCase(TestBase):
                                 False,     # Stop at entry
                                 error)     # error
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         # Create an empty event object.

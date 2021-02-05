@@ -110,6 +110,12 @@ struct TestLinalgCodegenStrategy
           "\tlinalg.copy: anchor on linalg.copy\n"
           "\tlinalg.fill: anchor on linalg.fill\n"),
       llvm::cl::init("")};
+  Option<std::string> anchorFuncOpName{
+      *this, "anchor-func",
+      llvm::cl::desc(
+          "Which single func op is the anchor for the codegen strategy to "
+          "latch on."),
+      llvm::cl::init("")};
 };
 
 template <>
@@ -132,7 +138,7 @@ void TestLinalgCodegenStrategy::runStrategy<LinalgOp>(
           LinalgPromotionOptions()
               .setAlignment(16)
               .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .vectorizeIf<LinalgOp>(vectorize, anchorOpName)
+      .vectorizeIf(vectorize, anchorOpName)
       .setVectorTransformsOptions(
           vector::VectorTransformsOptions()
               .setVectorTransformsOptions(vectorContractLowering)
@@ -174,6 +180,9 @@ void TestLinalgCodegenStrategy::runStrategy(
 
 /// Apply transformations specified as patterns.
 void TestLinalgCodegenStrategy::runOnFunction() {
+  if (!anchorFuncOpName.empty() && anchorFuncOpName != getFunction().getName())
+    return;
+
   LinalgTilingOptions tilingOptions;
   if (!tileSizes.empty())
     tilingOptions = tilingOptions.setTileSizes(tileSizes);

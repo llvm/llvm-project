@@ -36,8 +36,8 @@ public:
   enum CostState { Valid, Invalid };
 
 private:
-  CostType Value;
-  CostState State;
+  CostType Value = 0;
+  CostState State = Valid;
 
   void propagateState(const InstructionCost &RHS) {
     if (RHS.State == Invalid)
@@ -45,6 +45,7 @@ private:
   }
 
 public:
+  // A default constructed InstructionCost is a valid zero cost
   InstructionCost() = default;
 
   InstructionCost(CostState) = delete;
@@ -146,30 +147,31 @@ public:
     return Copy;
   }
 
+  /// For the comparison operators we have chosen to use lexicographical
+  /// ordering where valid costs are always considered to be less than invalid
+  /// costs. This avoids having to add asserts to the comparison operators that
+  /// the states are valid and users can test for validity of the cost
+  /// explicitly.
+  bool operator<(const InstructionCost &RHS) const {
+    if (State != RHS.State)
+      return State < RHS.State;
+    return Value < RHS.Value;
+  }
+
+  // Implement in terms of operator< to ensure that the two comparisons stay in
+  // sync
   bool operator==(const InstructionCost &RHS) const {
-    return State == RHS.State && Value == RHS.Value;
+    return !(*this < RHS) && !(RHS < *this);
   }
 
   bool operator!=(const InstructionCost &RHS) const { return !(*this == RHS); }
 
   bool operator==(const CostType RHS) const {
-    return State == Valid && Value == RHS;
+    InstructionCost RHS2(RHS);
+    return *this == RHS2;
   }
 
   bool operator!=(const CostType RHS) const { return !(*this == RHS); }
-
-  /// For the comparison operators we have chosen to use total ordering with
-  /// the following rules:
-  ///  1. If either of the states != Valid then a lexicographical order is
-  ///     applied based upon the state.
-  ///  2. If both states are valid then order based upon value.
-  /// This avoids having to add asserts the comparison operators that the states
-  /// are valid and users can test for validity of the cost explicitly.
-  bool operator<(const InstructionCost &RHS) const {
-    if (State != Valid || RHS.State != Valid)
-      return State < RHS.State;
-    return Value < RHS.Value;
-  }
 
   bool operator>(const InstructionCost &RHS) const { return RHS < *this; }
 

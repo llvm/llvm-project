@@ -61,10 +61,17 @@ bool FrontendAction::BeginSourceFile(
   assert(!realInput.IsEmpty() && "Unexpected empty filename!");
   set_currentInput(realInput);
   set_instance(&ci);
+
   if (!ci.HasAllSources()) {
     BeginSourceFileCleanUp(*this, ci);
     return false;
   }
+
+  if (!BeginSourceFileAction(ci)) {
+    BeginSourceFileCleanUp(*this, ci);
+    return false;
+  }
+
   return true;
 }
 
@@ -73,25 +80,6 @@ bool FrontendAction::ShouldEraseOutputFiles() {
 }
 
 llvm::Error FrontendAction::Execute() {
-  CompilerInstance &ci = this->instance();
-
-  std::string currentInputPath{GetCurrentFileOrBufferName()};
-
-  Fortran::parser::Options parserOptions =
-      this->instance().invocation().fortranOpts();
-
-  // Prescan. In case of failure, report and return.
-  ci.parsing().Prescan(currentInputPath, parserOptions);
-
-  if (ci.parsing().messages().AnyFatalError()) {
-    const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not scan %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
-    return llvm::Error::success();
-  }
-
   ExecuteAction();
 
   return llvm::Error::success();

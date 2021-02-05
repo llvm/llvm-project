@@ -84,7 +84,7 @@ struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
     // Verify named pattern is generated with expected name.
     patterns.insert<FoldingPattern, TestNamedPatternRule>(&getContext());
 
-    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 } // end anonymous namespace
@@ -801,6 +801,17 @@ struct TestTypeConsumerForward
   }
 };
 
+struct TestTypeConversionAnotherProducer
+    : public OpRewritePattern<TestAnotherTypeProducerOp> {
+  using OpRewritePattern<TestAnotherTypeProducerOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TestAnotherTypeProducerOp op,
+                                PatternRewriter &rewriter) const final {
+    rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, op.getType());
+    return success();
+  }
+};
+
 struct TestTypeConversionDriver
     : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -865,6 +876,7 @@ struct TestTypeConversionDriver
     OwningRewritePatternList patterns;
     patterns.insert<TestTypeConsumerForward, TestTypeConversionProducer,
                     TestSignatureConversionUndo>(converter, &getContext());
+    patterns.insert<TestTypeConversionAnotherProducer>(&getContext());
     mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
                                               converter);
 
@@ -1021,8 +1033,8 @@ struct TestSelectiveReplacementPatternDriver
     mlir::OwningRewritePatternList patterns;
     MLIRContext *context = &getContext();
     patterns.insert<TestSelectiveOpReplacementPattern>(context);
-    applyPatternsAndFoldGreedily(getOperation()->getRegions(),
-                                 std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
+                                       std::move(patterns));
   }
 };
 } // namespace

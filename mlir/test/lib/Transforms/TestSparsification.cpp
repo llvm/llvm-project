@@ -100,7 +100,7 @@ struct TestSparsification
     // Apply rewriting.
     linalg::populateSparsificationPatterns(ctx, patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
-    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 

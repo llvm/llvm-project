@@ -15,7 +15,7 @@
 #define LINALG_STRUCTURED_OPS
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
-include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterface.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -25,13 +25,22 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat(props, [
-       LinalgStructuredInterface])> {}
+       LinalgStructuredInterface])> {
+  code structuredOpsBaseDecls = [{
+    // Return the number of induction variables in the basic block. This should
+    // always be 0 for index-free linalg ops. For IndexedGeneric, this must be
+    // equal to numLoops.
+    unsigned getNumPayloadInductionVariables() {
+      return isa<IndexedGenericOp>(this->getOperation()) ? getNumLoops() : 0;
+    }
+  }];
+}
 
 class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
   : LinalgStructuredBase_Op<mnemonic,
        !listconcat(props, [
          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>])> {
-  code libraryCallName = [{
+  code structuredOpsDecls = structuredOpsBaseDecls # [{
     std::string getLibraryCallName() {
       return generateLibraryCallName(getOperation());
     }
@@ -110,7 +119,7 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
         $_builder, $_state, input, output, AffineMapAttr(), AffineMapAttr());
     }]>];
 
-  let extraClassDeclaration = libraryCallName # [{
+  let extraClassDeclaration = structuredOpsDecls # [{
     ValueRange inputs() { return getOperands().take_front(); }
     ValueRange outputs() { return getOperands().take_back(); }
 
@@ -155,7 +164,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   let arguments = (ins AnyShaped:$output,
                    AnyTypeOf<[AnyFloat, AnySignlessInteger, AnyVector]>:$value);
   let results = (outs Optional<AnyRankedTensor>:$result);
-  let extraClassDeclaration = libraryCallName # [{
+  let extraClassDeclaration = structuredOpsDecls # [{
     ValueRange inputs() { return {}; }
     ValueRange outputs() { return getOperands().take_front(); }
 
@@ -232,7 +241,7 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
     for both low and high in each of the dimensions, if not specified.
   }];
 
-  code commonUtils = libraryCallName # [{
+  code commonUtils = structuredOpsDecls # [{
     int64_t getStride(unsigned i) {
       assert(i < getNumWindowLoops());
       if (!strides().hasValue()) return 1;
@@ -497,7 +506,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
                        OptionalAttr<ArrayAttr>:$sparse);
   let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
   let regions = (region AnyRegion:$region);
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
     SmallVector<StringRef, 8> linalgTraitAttrNames() {
       return SmallVector<StringRef, 8>{
         getDocAttrName(),

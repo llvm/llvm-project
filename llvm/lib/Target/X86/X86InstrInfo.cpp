@@ -3794,7 +3794,8 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
-  assert(MF.getFrameInfo().getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
          "Stack slot too small for store");
   if (RC->getID() == X86::TILERegClassID) {
     unsigned Opc = X86::TILESTORED;
@@ -3812,7 +3813,7 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
     bool isAligned =
         (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
-        RI.canRealignStack(MF);
+        (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
     unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
         .addReg(SrcReg, getKillRegState(isKill));
@@ -3838,10 +3839,11 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     MO.setIsKill(true);
   } else {
     const MachineFunction &MF = *MBB.getParent();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
     unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
     bool isAligned =
         (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
-        RI.canRealignStack(MF);
+        (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
     unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
                       FrameIdx);

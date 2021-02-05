@@ -288,8 +288,15 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
     return;
   }
 
-  // Add llvm-symbolizer in case the binary has dwarf.
+  // Add llvm-symbolizer.
   const char *user_path = common_flags()->external_symbolizer_path;
+
+  if (user_path && internal_strchr(user_path, '%')) {
+    char *new_path = (char *)InternalAlloc(kMaxPathLength);
+    SubstituteForFlagValue(user_path, new_path, kMaxPathLength);
+    user_path = new_path;
+  }
+
   const char *path =
       user_path ? user_path : FindPathToBinary("llvm-symbolizer.exe");
   if (path) {

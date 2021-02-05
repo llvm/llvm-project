@@ -7,10 +7,17 @@ define fastcc void @tail_callee() #2 {
 ; CHECK-LABEL: tail_callee:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v0, exec_lo, 2
 ; CHECK-NEXT:    v_writelane_b32 v0, exec_hi, 3
+; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
@@ -20,10 +27,16 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-LABEL: callee_no_fp:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v1, exec_lo, 2
 ; CHECK-NEXT:    v_writelane_b32 v1, exec_hi, 3
+; CHECK-NEXT:    v_writelane_b32 v1, s33, 4
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_add_u32 s32, s32, 0x400
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, tail_callee@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, tail_callee@gotpcrel32@hi+12

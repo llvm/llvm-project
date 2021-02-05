@@ -95,9 +95,12 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   // Low bits for the number of waves, assumed zero before this call.
   // High bits to count the number of times the barrier has been passed.
 
-  assert(num_waves != 0);
-  assert(num_waves * WARPSIZE == num_threads);
-  assert(num_waves < 0xffffu);
+  if (num_waves != 0)
+    __builtin_trap();
+  if (num_waves * WARPSIZE != num_threads)
+    __builtin_trap();
+  if (num_waves >= 0xffffu)
+    __builtin_trap();
 
   // Increment the low 16 bits once, using the lowest active thread.
   uint64_t lowestActiveThread = __kmpc_impl_ffs(__kmpc_impl_activemask()) - 1;

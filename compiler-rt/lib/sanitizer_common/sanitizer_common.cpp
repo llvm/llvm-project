@@ -274,6 +274,14 @@ uptr ReadBinaryNameCached(/*out*/char *buf, uptr buf_len) {
   return name_len;
 }
 
+uptr ReadBinaryDir(/*out*/ char *buf, uptr buf_len) {
+  ReadBinaryNameCached(buf, buf_len);
+  const char *exec_name_pos = StripModuleName(buf);
+  uptr name_len = exec_name_pos - buf;
+  buf[name_len] = '\0';
+  return name_len;
+}
+
 #if !SANITIZER_GO
 void PrintCmdline() {
   char **argv = GetArgv();

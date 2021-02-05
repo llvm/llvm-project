@@ -3020,9 +3020,9 @@ static SubViewVerificationResult isRankReducedType(Type originalType,
   int64_t originalOffset, candidateReducedOffset;
   SmallVector<int64_t, 4> originalStrides, candidateReducedStrides, keepStrides;
   SmallVector<bool, 4> keepMask = optionalMask.getValue();
-  getStridesAndOffset(original, originalStrides, originalOffset);
-  getStridesAndOffset(candidateReduced, candidateReducedStrides,
-                      candidateReducedOffset);
+  (void)getStridesAndOffset(original, originalStrides, originalOffset);
+  (void)getStridesAndOffset(candidateReduced, candidateReducedStrides,
+                            candidateReducedOffset);
 
   // Filter strides based on the mask and check that they are the same
   // as candidateReduced ones.

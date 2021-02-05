@@ -9,14 +9,20 @@
 //
 // Performs general IR level optimizations on SVE intrinsics.
 //
-// The main goal of this pass is to remove unnecessary reinterpret
-// intrinsics (llvm.aarch64.sve.convert.[to|from].svbool), e.g:
+// This pass performs the following optimizations:
 //
-//   %1 = @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %a)
-//   %2 = @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+// - removes unnecessary reinterpret intrinsics
+//   (llvm.aarch64.sve.convert.[to|from].svbool), e.g:
+//     %1 = @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %a)
+//     %2 = @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
 //
-// This pass also looks for ptest intrinsics & phi instructions where the
-// operands are being needlessly converted to and from svbool_t.
+// - removes unnecessary ptrue intrinsics (llvm.aarch64.sve.ptrue), e.g:
+//     %1 = @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+//     %2 = @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+//     ; (%1 can be replaced with a reinterpret of %2)
+//
+// - optimizes ptest intrinsics and phi instructions where the operands are
+//   being needlessly converted to and from svbool_t.
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,8 +62,17 @@ struct SVEIntrinsicOpts : public ModulePass {
 private:
   static IntrinsicInst *isReinterpretToSVBool(Value *V);
 
-  static bool optimizeIntrinsic(Instruction *I);
+  bool coalescePTrueIntrinsicCalls(BasicBlock &BB,
+                                   SmallSetVector<IntrinsicInst *, 4> &PTrues);
+  bool optimizePTrueIntrinsicCalls(SmallSetVector<Function *, 4> &Functions);
 
+  /// Operates at the instruction-scope. I.e., optimizations are applied local
+  /// to individual instructions.
+  static bool optimizeIntrinsic(Instruction *I);
+  bool optimizeIntrinsicCalls(SmallSetVector<Function *, 4> &Functions);
+
+  /// Operates at the function-scope. I.e., optimizations are applied local to
+  /// the functions themselves.
   bool optimizeFunctions(SmallSetVector<Function *, 4> &Functions);
 
   static bool optimizeConvertFromSVBool(IntrinsicInst *I);
@@ -93,6 +108,188 @@ IntrinsicInst *SVEIntrinsicOpts::isReinterpretToSVBool(Value *V) {
     return nullptr;
 
   return I;
+}
+
+/// Checks if a ptrue intrinsic call is promoted. The act of promoting a
+/// ptrue will introduce zeroing. For example:
+///
+///     %1 = <vscale x 4 x i1> call @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+///     %2 = <vscale x 16 x i1> call @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
+///     %3 = <vscale x 8 x i1> call @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %2)
+///
+/// %1 is promoted, because it is converted:
+///
+///     <vscale x 4 x i1> => <vscale x 16 x i1> => <vscale x 8 x i1>
+///
+/// via a sequence of the SVE reinterpret intrinsics convert.{to,from}.svbool.
+bool isPTruePromoted(IntrinsicInst *PTrue) {
+  // Find all users of this intrinsic that are calls to convert-to-svbool
+  // reinterpret intrinsics.
+  SmallVector<IntrinsicInst *, 4> ConvertToUses;
+  for (User *User : PTrue->users()) {
+    if (match(User, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>())) {
+      ConvertToUses.push_back(cast<IntrinsicInst>(User));
+    }
+  }
+
+  // If no such calls were found, this is ptrue is not promoted.
+  if (ConvertToUses.empty())
+    return false;
+
+  // Otherwise, try to find users of the convert-to-svbool intrinsics that are
+  // calls to the convert-from-svbool intrinsic, and would result in some lanes
+  // being zeroed.
+  const auto *PTrueVTy = cast<ScalableVectorType>(PTrue->getType());
+  for (IntrinsicInst *ConvertToUse : ConvertToUses) {
+    for (User *User : ConvertToUse->users()) {
+      auto *IntrUser = dyn_cast<IntrinsicInst>(User);
+      if (IntrUser && IntrUser->getIntrinsicID() ==
+                          Intrinsic::aarch64_sve_convert_from_svbool) {
+        const auto *IntrUserVTy = cast<ScalableVectorType>(IntrUser->getType());
+
+        // Would some lanes become zeroed by the conversion?
+        if (IntrUserVTy->getElementCount().getKnownMinValue() >
+            PTrueVTy->getElementCount().getKnownMinValue())
+          // This is a promoted ptrue.
+          return true;
+      }
+    }
+  }
+
+  // If no matching calls were found, this is not a promoted ptrue.
+  return false;
+}
+
+/// Attempts to coalesce ptrues in a basic block.
+bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
+    BasicBlock &BB, SmallSetVector<IntrinsicInst *, 4> &PTrues) {
+  if (PTrues.size() <= 1)
+    return false;
+
+  // Find the ptrue with the most lanes.
+  auto *MostEncompassingPTrue = *std::max_element(
+      PTrues.begin(), PTrues.end(), [](auto *PTrue1, auto *PTrue2) {
+        auto *PTrue1VTy = cast<ScalableVectorType>(PTrue1->getType());
+        auto *PTrue2VTy = cast<ScalableVectorType>(PTrue2->getType());
+        return PTrue1VTy->getElementCount().getKnownMinValue() <
+               PTrue2VTy->getElementCount().getKnownMinValue();
+      });
+
+  // Remove the most encompassing ptrue, as well as any promoted ptrues, leaving
+  // behind only the ptrues to be coalesced.
+  PTrues.remove(MostEncompassingPTrue);
+  PTrues.remove_if([](auto *PTrue) { return isPTruePromoted(PTrue); });
+
+  // Hoist MostEncompassingPTrue to the start of the basic block. It is always
+  // safe to do this, since ptrue intrinsic calls are guaranteed to have no
+  // predecessors.
+  MostEncompassingPTrue->moveBefore(BB, BB.getFirstInsertionPt());
+
+  LLVMContext &Ctx = BB.getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(&BB, ++MostEncompassingPTrue->getIterator());
+
+  auto *MostEncompassingPTrueVTy =
+      cast<VectorType>(MostEncompassingPTrue->getType());
+  auto *ConvertToSVBool = Builder.CreateIntrinsic(
+      Intrinsic::aarch64_sve_convert_to_svbool, {MostEncompassingPTrueVTy},
+      {MostEncompassingPTrue});
+
+  for (auto *PTrue : PTrues) {
+    auto *PTrueVTy = cast<VectorType>(PTrue->getType());
+
+    Builder.SetInsertPoint(&BB, ++ConvertToSVBool->getIterator());
+    auto *ConvertFromSVBool =
+        Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
+                                {PTrueVTy}, {ConvertToSVBool});
+    PTrue->replaceAllUsesWith(ConvertFromSVBool);
+    PTrue->eraseFromParent();
+  }
+
+  return true;
+}
+
+/// The goal of this function is to remove redundant calls to the SVE ptrue
+/// intrinsic in each basic block within the given functions.
+///
+/// SVE ptrues have two representations in LLVM IR:
+/// - a logical representation -- an arbitrary-width scalable vector of i1s,
+///   i.e. <vscale x N x i1>.
+/// - a physical representation (svbool, <vscale x 16 x i1>) -- a 16-element
+///   scalable vector of i1s, i.e. <vscale x 16 x i1>.
+///
+/// The SVE ptrue intrinsic is used to create a logical representation of an SVE
+/// predicate. Suppose that we have two SVE ptrue intrinsic calls: P1 and P2. If
+/// P1 creates a logical SVE predicate that is at least as wide as the logical
+/// SVE predicate created by P2, then all of the bits that are true in the
+/// physical representation of P2 are necessarily also true in the physical
+/// representation of P1. P1 'encompasses' P2, therefore, the intrinsic call to
+/// P2 is redundant and can be replaced by an SVE reinterpret of P1 via
+/// convert.{to,from}.svbool.
+///
+/// Currently, this pass only coalesces calls to SVE ptrue intrinsics
+/// if they match the following conditions:
+///
+/// - the call to the intrinsic uses either the SV_ALL or SV_POW2 patterns.
+///   SV_ALL indicates that all bits of the predicate vector are to be set to
+///   true. SV_POW2 indicates that all bits of the predicate vector up to the
+///   largest power-of-two are to be set to true.
+/// - the result of the call to the intrinsic is not promoted to a wider
+///   predicate. In this case, keeping the extra ptrue leads to better codegen
+///   -- coalescing here would create an irreducible chain of SVE reinterprets
+///   via convert.{to,from}.svbool.
+///
+/// EXAMPLE:
+///
+///     %1 = <vscale x 8 x i1> ptrue(i32 SV_ALL)
+///     ; Logical:  <1, 1, 1, 1, 1, 1, 1, 1>
+///     ; Physical: <1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0>
+///     ...
+///
+///     %2 = <vscale x 4 x i1> ptrue(i32 SV_ALL)
+///     ; Logical:  <1, 1, 1, 1>
+///     ; Physical: <1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0>
+///     ...
+///
+/// Here, %2 can be replaced by an SVE reinterpret of %1, giving, for instance:
+///
+///     %1 = <vscale x 8 x i1> ptrue(i32 i31)
+///     %2 = <vscale x 16 x i1> convert.to.svbool(<vscale x 8 x i1> %1)
+///     %3 = <vscale x 4 x i1> convert.from.svbool(<vscale x 16 x i1> %2)
+///
+bool SVEIntrinsicOpts::optimizePTrueIntrinsicCalls(
+    SmallSetVector<Function *, 4> &Functions) {
+  bool Changed = false;
+
+  for (auto *F : Functions) {
+    for (auto &BB : *F) {
+      SmallSetVector<IntrinsicInst *, 4> SVAllPTrues;
+      SmallSetVector<IntrinsicInst *, 4> SVPow2PTrues;
+
+      // For each basic block, collect the used ptrues and try to coalesce them.
+      for (Instruction &I : BB) {
+        if (I.use_empty())
+          continue;
+
+        auto *IntrI = dyn_cast<IntrinsicInst>(&I);
+        if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
+          continue;
+
+        const auto PTruePattern =
+            cast<ConstantInt>(IntrI->getOperand(0))->getZExtValue();
+
+        if (PTruePattern == AArch64SVEPredPattern::all)
+          SVAllPTrues.insert(IntrI);
+        if (PTruePattern == AArch64SVEPredPattern::pow2)
+          SVPow2PTrues.insert(IntrI);
+      }
+
+      Changed |= coalescePTrueIntrinsicCalls(BB, SVAllPTrues);
+      Changed |= coalescePTrueIntrinsicCalls(BB, SVPow2PTrues);
+    }
+  }
+
+  return Changed;
 }
 
 /// The function will remove redundant reinterprets casting in the presence
@@ -243,7 +440,7 @@ bool SVEIntrinsicOpts::optimizeIntrinsic(Instruction *I) {
   return true;
 }
 
-bool SVEIntrinsicOpts::optimizeFunctions(
+bool SVEIntrinsicOpts::optimizeIntrinsicCalls(
     SmallSetVector<Function *, 4> &Functions) {
   bool Changed = false;
   for (auto *F : Functions) {
@@ -257,6 +454,16 @@ bool SVEIntrinsicOpts::optimizeFunctions(
       for (Instruction &I : make_early_inc_range(*BB))
         Changed |= optimizeIntrinsic(&I);
   }
+  return Changed;
+}
+
+bool SVEIntrinsicOpts::optimizeFunctions(
+    SmallSetVector<Function *, 4> &Functions) {
+  bool Changed = false;
+
+  Changed |= optimizePTrueIntrinsicCalls(Functions);
+  Changed |= optimizeIntrinsicCalls(Functions);
+
   return Changed;
 }
 
@@ -276,6 +483,7 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
     case Intrinsic::aarch64_sve_ptest_any:
     case Intrinsic::aarch64_sve_ptest_first:
     case Intrinsic::aarch64_sve_ptest_last:
+    case Intrinsic::aarch64_sve_ptrue:
       for (User *U : F.users())
         Functions.insert(cast<Instruction>(U)->getFunction());
       break;

@@ -16,8 +16,8 @@ void foo() {
   // CHECK-CC1-NOT: foo
   // CHECK-CC1-NOT: t
 
-  // FIXME: Handle nested designators
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:11:20 %s -o - | count 0
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:11:20 %s -o - | FileCheck -check-prefix=CHECK-NESTED %s
+  // CHECK-NESTED: COMPLETION: t : [#int#]t
 
   Base B = {.t = 2};
   auto z = [](Base B) {};
@@ -29,6 +29,14 @@ void foo() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:25:11 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC2 %s
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:26:13 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC2 %s
   // CHECK-CC2: COMPLETION: t : [#int#]t
+
+  Foo G1{.b = {.t = 0}};
+  Foo G2{.b{.t = 0}};
+  Foo G3{b: {.t = 0}};
+  // RUN: %clang_cc1 -code-completion-at=%s:33:17 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // RUN: %clang_cc1 -code-completion-at=%s:34:14 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // RUN: %clang_cc1 -code-completion-at=%s:35:15 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // CHECK-NESTED-2: COMPLETION: t : [#int#]t
 }
 
 // Handle templates
@@ -41,10 +49,10 @@ struct Test<int> {
 };
 void bar() {
   Test<char> T{.x = 2};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:43:17 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:51:17 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
   // CHECK-CC3: COMPLETION: x : [#T#]x
   Test<int> X{.x = 2};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:46:16 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC4 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:54:16 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC4 %s
   // CHECK-CC4: COMPLETION: x : [#int#]x
   // CHECK-CC4-NEXT: COMPLETION: y : [#char#]y
 }
@@ -52,5 +60,5 @@ void bar() {
 template <typename T>
 void aux() {
   Test<T> X{.x = T(2)};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:54:14 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:62:14 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
 }

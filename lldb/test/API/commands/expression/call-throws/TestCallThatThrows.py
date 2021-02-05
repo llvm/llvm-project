@@ -30,8 +30,8 @@ class ExprCommandWithThrowTestCase(TestBase):
     def check_after_call(self):
         # Check that we are back where we were before:
         frame = self.thread.GetFrameAtIndex(0)
-        self.assertTrue(
-            self.orig_frame_pc == frame.GetPC(),
+        self.assertEqual(
+            self.orig_frame_pc, frame.GetPC(),
             "Restored the zeroth frame correctly")
 
     def call_function(self):
