@@ -16,6 +16,9 @@
 #include <unwind.h>
 #include <tuple>
 
+#if defined(_LIBCXXABI_ARM_EHABI)
+int main() {}
+#else
 static int bits = 0;
 
 struct C {
@@ -75,3 +78,4 @@ int main() {
   test();
   return bits != 15;
 }
+#endif
