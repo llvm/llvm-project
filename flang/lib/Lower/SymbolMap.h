@@ -67,10 +67,18 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   // Generalized derived type variable
   using Derived = fir::BoxValue;
 
+  // Pointer or allocatable variable
   using PointerOrAllocatable = fir::MutableBoxValue;
 
+  // Non pointer/allocatable variable that must be tracked with
+  // a fir.box (either because it is not contiguous, or assumed rank, or assumed
+  // type, or polymorphic, or because the fir.box is describing an optional
+  // value and cannot be read into one of the other category when lowering the
+  // symbol).
+  using IrBox = fir::IrBoxValue;
+
   using VT = std::variant<Intrinsic, FullDim, Char, CharFullDim, Derived,
-                          PointerOrAllocatable, None>;
+                          PointerOrAllocatable, IrBox, None>;
 
   //===--------------------------------------------------------------------===//
   // Constructors
@@ -111,18 +119,16 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                  [](const auto &x) { return x.getAddr(); });
   }
 
-  /// Get the LEN type parameter of a CHARACTER boxed value.
-  llvm::Optional<mlir::Value> getCharLen() const {
-    using T = llvm::Optional<mlir::Value>;
-    return match([](const Char &x) { return T{x.getLen()}; },
-                 [](const CharFullDim &x) { return T{x.getLen()}; },
-                 [](const auto &) { return T{}; });
-  }
-
   /// Does the boxed value have an intrinsic type?
   bool isIntrinsic() const {
     return match([](const Intrinsic &) { return true; },
                  [](const Char &) { return true; },
+                 [](const PointerOrAllocatable &x) {
+                   return !x.isDerived() && !x.isUnlimitedPolymorphic();
+                 },
+                 [](const IrBox &x) {
+                   return !x.isDerived() && !x.isUnlimitedPolymorphic();
+                 },
                  [](const auto &x) { return false; });
   }
 
@@ -132,6 +138,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
                  [](const Char &) { return false; },
                  [](const None &) { return false; },
                  [](const PointerOrAllocatable &x) { return x.hasRank(); },
+                 [](const IrBox &x) { return x.hasRank(); },
                  [](const auto &x) { return x.getExtents().size() > 0; });
   }
 
@@ -143,6 +150,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
         [](const Derived &arr) {
           return (arr.getExtents().size() > 0) && arr.getLBounds().empty();
         },
+        [](const IrBox &arr) { return arr.getLBounds().empty(); },
         [](const auto &) { return false; });
   }
 
@@ -159,13 +167,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
     return match([&](const FullDim &box) { return box.getLBounds()[dim]; },
                  [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
                  [&](const Derived &box) { return box.getLBounds()[dim]; },
-                 [](const auto &) { return mlir::Value{}; });
-  }
-
-  mlir::Value getExtent(unsigned dim) const {
-    return match([&](const FullDim &box) { return box.getExtents()[dim]; },
-                 [&](const CharFullDim &box) { return box.getExtents()[dim]; },
-                 [&](const Derived &box) { return box.getExtents()[dim]; },
+                 [&](const IrBox &box) { return box.getLBounds()[dim]; },
                  [](const auto &) { return mlir::Value{}; });
   }
 
@@ -270,6 +272,16 @@ public:
   void addAllocatableOrPointer(semantics::SymbolRef sym,
                                fir::MutableBoxValue box, bool force = false) {
     makeSym(sym, box, force);
+  }
+
+  void addIrBoxSymbol(semantics::SymbolRef sym, mlir::Value irBox,
+                      llvm::ArrayRef<mlir::Value> lbounds,
+                      llvm::ArrayRef<mlir::Value> explicitParams,
+                      llvm::ArrayRef<mlir::Value> explicitExtents,
+                      bool force = false) {
+    makeSym(sym,
+            SymbolBox::IrBox(irBox, lbounds, explicitParams, explicitExtents),
+            force);
   }
 
   /// Find `symbol` and return its value if it appears in the current mappings.

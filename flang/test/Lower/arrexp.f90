@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
-! CHECK-LINE: func @_QPtest1
+! CHECK-LABEL: func @_QPtest1
 subroutine test1(a,b,c,n)
   integer :: n
   real, intent(out) :: a(n)
@@ -17,7 +17,7 @@ subroutine test1(a,b,c,n)
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
 end subroutine test1
 
-! CHECK-LINE: func @_QPtest1b
+! CHECK-LABEL: func @_QPtest1b
 subroutine test1b(a,b,c,d,n)
   integer :: n
   real, intent(out) :: a(n)
@@ -37,14 +37,14 @@ subroutine test1b(a,b,c,d,n)
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
 end subroutine test1b
 
-! CHECK-LINE: func @_QPtest2
+! CHECK-LABEL: func @_QPtest2
 subroutine test2(a,b,c)
   real, intent(out) :: a(:)
   real, intent(in) :: b(:), c(:)
 !  a = b + c
 end subroutine test2
 
-! CHECK-LINE: func @_QPtest3
+! CHECK-LABEL: func @_QPtest3
 subroutine test3(a,b,c,n)
   integer :: n
   real, intent(out) :: a(n)
@@ -61,15 +61,14 @@ subroutine test3(a,b,c,n)
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
 end subroutine test3
 
-! CHECK-LINE: func @_QPtest4
+! CHECK-LABEL: func @_QPtest4
 subroutine test4(a,b,c)
 ! TODO: this declaration fails in CallInterface lowering
 !  real, allocatable, intent(out) :: a(:)
   real :: a(100) ! FIXME: fake it for now
   real, intent(in) :: b(:), c
-  ! CHECK: %[[Ba:.*]] = fir.box_addr %arg1
   ! CHECK-DAG: %[[A:.*]] = fir.array_load %arg0(%
-  ! CHECK-DAG: %[[B:.*]] = fir.array_load %[[Ba]](%
+  ! CHECK-DAG: %[[B:.*]] = fir.array_load %arg1
   ! CHECK: fir.do_loop
   ! CHECK: fir.array_fetch %[[B]], %
   ! CHECK: fir.array_update
@@ -77,7 +76,7 @@ subroutine test4(a,b,c)
   ! CHECK: fir.array_merge_store %[[A]], %{{.*}} to %arg0
 end subroutine test4
 
-! CHECK-LINE: func @_QPtest5
+! CHECK-LABEL: func @_QPtest5
 subroutine test5(a,b,c)
 ! TODO: this declaration fails in CallInterface lowering
 !  real, allocatable, intent(out) :: a(:)
@@ -93,7 +92,7 @@ subroutine test5(a,b,c)
   ! CHECK: fir.array_merge_store %[[A]], %{{.*}} to %arg0
 end subroutine test5
 
-! CHECK-LINE: func @_QPtest6
+! CHECK-LABEL: func @_QPtest6
 subroutine test6(a,b,c,n,m)
   integer :: n, m
   real, intent(out) :: a(n)
@@ -103,7 +102,7 @@ end subroutine test6
 
 ! This is NOT a conflict. `a` appears on both the lhs and rhs here, but there
 ! are no loop-carried dependences and no copy is needed.
-! CHECK-LINE: func @_QPtest7
+! CHECK-LABEL: func @_QPtest7
 subroutine test7(a,b,n)
   integer :: n
   real, intent(inout) :: a(n)
@@ -120,7 +119,7 @@ subroutine test7(a,b,n)
   ! CHECK: fir.array_merge_store %[[Aout]], %[[T]] to %arg0
 end subroutine test7
 
-! CHECK-LINE: func @_QPtest8
+! CHECK-LABEL: func @_QPtest8
 subroutine test8(a,b)
   integer :: a(100), b(100)
   ! CHECK-DAG: %[[A:.*]] = fir.array_load %arg0(%
@@ -135,7 +134,7 @@ end subroutine test8
 ! This FORALL construct does present a potential loop-carried dependence if
 ! implemented naively (and incorrectly). The final value of a(3) must be the
 ! value of a(2) before alistair begins execution added to b(2).
-! CHECK-LINE: func @_QPtest9
+! CHECK-LABEL: func @_QPtest9
 subroutine test9(a,b,n)
   integer :: n
   real, intent(inout) :: a(n)
@@ -146,7 +145,7 @@ subroutine test9(a,b,n)
   END FORALL alistair
 end subroutine test9
 
-! CHECK-LINE: func @_QPtest10
+! CHECK-LABEL: func @_QPtest10
 subroutine test10(a,b,c,d)
   interface
      function foo(a) result(res)
@@ -164,7 +163,7 @@ subroutine test10(a,b,c,d)
 !  a = b + foo(c + foo(d + bar(a)))
 end subroutine test10
 
-! CHECK-LINE: func @_QPtest11
+! CHECK-LABEL: func @_QPtest11
 subroutine test11(a,b,c,d)
   real, external :: bar
   real :: a(100), b(100), c(100), d(100)
@@ -194,7 +193,7 @@ subroutine test11(a,b,c,d)
   a = b + bar(c + d)
 end subroutine test11
 
-! CHECK-LINE: func @_QPtest12
+! CHECK-LABEL: func @_QPtest12
 subroutine test12(a,b,c,d,n,m)
   integer :: n, m
   ! CHECK: %[[n:.*]] = fir.load %arg4
@@ -221,7 +220,7 @@ subroutine test12(a,b,c,d,n,m)
   ! CHECK: fir.freemem %[[tmp]] : !fir.heap<!fir.array<?xf32>>
 end subroutine test12
 
-! CHECK-LINE: func @_QPtest12
+! CHECK-LABEL: func @_QPtest13
 subroutine test13(a,b,c,d,n,m,i)
   real :: a(n), b(m)
   complex :: c(n), d(m)
