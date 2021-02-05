@@ -2400,6 +2400,113 @@ private:
   // Lower Variables specification expressions and attributes
   //===--------------------------------------------------------------===//
 
+  /// Helper to decide if a dummy argument must be tracked in an IrBox.
+  static bool lowerToIrBox(const Fortran::semantics::Symbol &sym,
+                           mlir::Value dummyArg) {
+    // Only dummy arguments coming as fir.box can be tracked in an IrBox.
+    if (!dummyArg || !dummyArg.getType().isa<fir::BoxType>())
+      return false;
+    // Non contiguous arrays must be tracked in an IrBox.
+    if (sym.Rank() > 0 &&
+        !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS))
+      return true;
+    // Assumed rank and optional fir.box cannot yet be read while lowering the
+    // specifications.
+    if (Fortran::semantics::IsAssumedRankArray(sym) ||
+        Fortran::semantics::IsOptional(sym))
+      return true;
+    // Polymorphic entity should be tracked through a fir.box that has the
+    // dynamic type info.
+    if (const auto *type = sym.GetType())
+      if (type->IsPolymorphic())
+        return true;
+    return false;
+  }
+
+  /// Compute extent from lower and upper bound.
+  mlir::Value computeExtent(mlir::Location loc, mlir::Value lb,
+                            mlir::Value ub) {
+    auto idxTy = builder->getIndexType();
+    // Let the folder deal with the common `ub - <const> + 1` case.
+    auto diff = builder->create<mlir::SubIOp>(loc, idxTy, ub, lb);
+    auto one = builder->createIntegerConstant(loc, idxTy, 1);
+    return builder->create<mlir::AddIOp>(loc, idxTy, diff, one);
+  }
+
+  /// Lower explicit lower bounds into \p result. Does nothing if this is not an
+  /// array, or if the lower bounds are deferred, or all implicit or one.
+  void lowerExplicitLowerBounds(mlir::Location loc,
+                                const Fortran::lower::BoxAnalyzer &box,
+                                llvm::SmallVectorImpl<mlir::Value> &result,
+                                Fortran::lower::StatementContext &stmtCtx) {
+    if (!box.isArray() || box.lboundIsAllOnes())
+      return;
+    auto idxTy = builder->getIndexType();
+    if (box.isStaticArray()) {
+      for (auto lb : box.staticLBound())
+        result.emplace_back(builder->createIntegerConstant(loc, idxTy, lb));
+      return;
+    }
+    for (const auto *spec : box.dynamicBound()) {
+      if (auto low = spec->lbound().GetExplicit()) {
+        auto expr = Fortran::semantics::SomeExpr{*low};
+        auto lb = builder->createConvert(loc, idxTy,
+                                         createFIRExpr(loc, &expr, stmtCtx));
+        result.emplace_back(lb);
+      } else if (!spec->lbound().isDeferred()) {
+        // Implicit lower bound is 1 (Fortan 2018 section 8.5.8.3 point 3.)
+        result.emplace_back(builder->createIntegerConstant(loc, idxTy, 1));
+      }
+    }
+    assert(result.empty() || result.size() == box.dynamicBound().size());
+  }
+  /// Lower explicit extents into \p result if this is an explicit-shape or
+  /// assumed-size array. Does nothing if this is not an explicit-shape or
+  /// assumed-size array.
+  void lowerExplicitExtents(mlir::Location loc,
+                            const Fortran::lower::BoxAnalyzer &box,
+                            llvm::ArrayRef<mlir::Value> lowerBounds,
+                            llvm::SmallVectorImpl<mlir::Value> &result,
+                            Fortran::lower::StatementContext &stmtCtx) {
+    if (!box.isArray())
+      return;
+    auto idxTy = builder->getIndexType();
+    if (box.isStaticArray()) {
+      for (auto extent : box.staticShape())
+        result.emplace_back(builder->createIntegerConstant(loc, idxTy, extent));
+      return;
+    }
+    for (const auto &spec : llvm::enumerate(box.dynamicBound())) {
+      if (auto up = spec.value()->ubound().GetExplicit()) {
+        auto expr = Fortran::semantics::SomeExpr{*up};
+        auto ub = builder->createConvert(loc, idxTy,
+                                         createFIRExpr(loc, &expr, stmtCtx));
+        if (lowerBounds.empty())
+          result.emplace_back(ub);
+        else
+          result.emplace_back(
+              computeExtent(loc, lowerBounds[spec.index()], ub));
+      } else if (spec.value()->ubound().isAssumed()) {
+        result.emplace_back(mlir::Value{});
+      }
+    }
+    assert(result.empty() || result.size() == box.dynamicBound().size());
+  }
+  /// Lower explicit character length if any. Return empty mlir::Value if no
+  /// explicit length.
+  mlir::Value lowerExplicitCharLen(mlir::Location loc,
+                                   const Fortran::lower::BoxAnalyzer &box,
+                                   Fortran::lower::StatementContext &stmtCtx) {
+    if (!box.isChar())
+      return mlir::Value{};
+    auto lenTy = builder->getCharacterLengthType();
+    if (auto len = box.getCharLenConst())
+      return builder->createIntegerConstant(loc, lenTy, *len);
+    if (auto lenExpr = box.getCharLenExpr())
+      return createFIRExpr(loc, &*lenExpr, stmtCtx);
+    return mlir::Value{};
+  }
+
   /// Lower specification expressions and attributes of variable \p var and
   /// add it to the symbol map.
   /// For global and aliases, the address must be pre-computed and provided
@@ -2435,32 +2542,46 @@ private:
       if (!boxAlloc)
         boxAlloc = createNewLocal(loc, var, preAlloc);
       // Lower non deferred parameters.
-      llvm::SmallVector<mlir::Value, 1> nonDeferredLenParams;
-      auto lenTy = builder->getCharacterLengthType();
+      llvm::SmallVector<mlir::Value, 2> nonDeferredLenParams;
       if (sba.isChar()) {
-        if (auto len = sba.getCharLenConst())
-          nonDeferredLenParams.push_back(
-              builder->createIntegerConstant(loc, lenTy, *len));
-        else if (auto lenExpr = sba.getCharLenExpr())
-          nonDeferredLenParams.push_back(
-              createFIRExpr(loc, &*lenExpr, stmtCtx));
-        // TODO: assumed length allocatable. Need to read the
-        // input descriptor.
+        if (auto len = lowerExplicitCharLen(loc, sba, stmtCtx))
+          nonDeferredLenParams.push_back(len);
+        else if (Fortran::semantics::IsAssumedLengthCharacter(sym))
+          TODO(loc, "assumed length character allocatable");
+      } else if (const auto *declTy = sym.GetType()) {
+        if (const auto *derived = declTy->AsDerived())
+          if (Fortran::semantics::CountLenParameters(*derived) != 0)
+            TODO(loc,
+                 "derived type allocatable or pointer with length parameters");
       }
-      // TODO: non deferred derived type length parameters
       auto box = Fortran::lower::createMutableBox(*this, loc, var, boxAlloc,
                                                   nonDeferredLenParams);
       localSymbols.addAllocatableOrPointer(var.getSymbol(), box, replace);
       return;
     }
 
-    // compute extent from lower and upper bound.
-    auto computeExtent = [&](mlir::Value lb, mlir::Value ub) -> mlir::Value {
-      // let the folder deal with the common `ub - <const> + 1` case
-      auto diff = builder->create<mlir::SubIOp>(loc, idxTy, ub, lb);
-      auto one = builder->createIntegerConstant(loc, idxTy, 1);
-      return builder->create<mlir::AddIOp>(loc, idxTy, diff, one);
-    };
+    if (isDummy) {
+      auto dummyArg = lookupSymbol(sym).getAddr();
+      if (lowerToIrBox(sym, dummyArg)) {
+        llvm::SmallVector<mlir::Value, 4> lbounds;
+        llvm::SmallVector<mlir::Value, 4> extents;
+        llvm::SmallVector<mlir::Value, 2> explicitParams;
+        // Lower lower bounds, explicit type parameters and explicit
+        // extents if any.
+        if (sba.isChar())
+          if (auto len = lowerExplicitCharLen(loc, sba, stmtCtx))
+            explicitParams.push_back(len);
+        // TODO: derived type length parameters.
+        lowerExplicitLowerBounds(loc, sba, lbounds, stmtCtx);
+        lowerExplicitExtents(loc, sba, lbounds, extents, stmtCtx);
+        localSymbols.addIrBoxSymbol(sym, dummyArg, lbounds, explicitParams,
+                                    extents, replace);
+        return;
+      }
+    }
+
+    // For symbols reaching this point, all properties are constant and can be
+    // read/computed already into ssa values.
 
     // The origin must be \vec{1}.
     auto populateShape = [&](auto &shapes, const auto &bounds,
@@ -2508,7 +2629,7 @@ private:
                 loc, idxTy, createFIRExpr(loc, &expr, stmtCtx));
             lbounds.emplace_back(lb);
           } else {
-            // Implict lower bound is 1 (Fortan 2018 section 8.5.8.3 point 3.)
+            // Implicit lower bound is 1 (Fortan 2018 section 8.5.8.3 point 3.)
             lbounds.emplace_back(builder->createIntegerConstant(loc, idxTy, 1));
           }
         } else {
@@ -2525,7 +2646,7 @@ private:
             ub = builder->createConvert(loc, idxTy,
                                         createFIRExpr(loc, &expr, stmtCtx));
             lbounds.emplace_back(lb);
-            extents.emplace_back(computeExtent(lb, ub));
+            extents.emplace_back(computeExtent(loc, lb, ub));
           } else {
             // An assumed size array. The extent is not computed.
             assert(spec->ubound().isAssumed() && "expected assumed size");

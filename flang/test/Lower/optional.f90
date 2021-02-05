@@ -75,9 +75,8 @@ end subroutine
 ! CHECK-SAME: (%[[arg0:.*]]: !fir.box<!fir.array<?xf32>> {fir.optional})
 subroutine assumed_shape(x)
   implicit none
-  ! CHECK: %[[boxaddr:.*]] = fir.box_addr %[[arg0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
   real, optional :: x(:)
-  ! CHECK: fir.is_present %[[boxaddr]] : (!fir.ref<!fir.array<?xf32>>) -> i1
+  ! CHECK: fir.is_present %[[arg0]] : (!fir.box<!fir.array<?xf32>>) -> i1
   print *, present(x)
 end subroutine
 ! CHECK: func @_QMoptPcall_assumed_shape()

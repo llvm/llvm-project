@@ -168,6 +168,35 @@ componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
   return component;
 }
 
+/// Given the address of an array element and the ExtendedValue describing the
+/// array, returns the ExtendedValue describing the array element. The purpose
+/// is to propagate the length parameters of the array to the element.
+static fir::ExtendedValue
+arrayElementToExtendedValue(Fortran::lower::FirOpBuilder &builder,
+                            mlir::Location loc, const fir::ExtendedValue &array,
+                            mlir::Value element) {
+  return array.match(
+      [&](const fir::CharBoxValue &cb) -> fir::ExtendedValue {
+        return cb.clone(element);
+      },
+      [&](const fir::CharArrayBoxValue &bv) -> fir::ExtendedValue {
+        return bv.cloneElement(element);
+      },
+      [&](const fir::BoxValue &bv) -> fir::ExtendedValue {
+        return bv.cloneElement(element);
+      },
+      [&](const fir::IrBoxValue &box) -> fir::ExtendedValue {
+        if (box.isCharacter()) {
+          auto len = Fortran::lower::readCharLen(builder, loc, box);
+          return fir::CharBoxValue{element, len};
+        }
+        if (box.isDerived())
+          TODO(loc, "get length parameters from IrBox");
+        return element;
+      },
+      [&](const auto &) -> fir::ExtendedValue { return element; });
+}
+
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -406,13 +435,24 @@ public:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
-    auto symBox = symMap.lookupSymbol(desc.base().GetLastSymbol());
-    assert(symBox && "no SymbolBox associated to Symbol");
+    auto exv = desc.base().IsSymbol() ? gen(desc.base().GetLastSymbol())
+                                      : gen(desc.base().GetComponent());
+    auto idxTy = builder.getIndexType();
+    auto loc = getLoc();
     switch (desc.field()) {
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
-      return symBox.getCharLen().getValue();
-    default:
-      TODO(getLoc(), "descriptor inquiry other than length");
+      return Fortran::lower::readCharLen(builder, loc, exv);
+    case Fortran::evaluate::DescriptorInquiry::Field::LowerBound:
+      return Fortran::lower::readLowerBound(
+          builder, loc, exv, desc.dimension(),
+          builder.createIntegerConstant(loc, idxTy, 1));
+    case Fortran::evaluate::DescriptorInquiry::Field::Extent:
+      return Fortran::lower::readExtent(builder, loc, exv, desc.dimension());
+    case Fortran::evaluate::DescriptorInquiry::Field::Rank:
+      TODO(loc, "rank inquiry on assumed rank");
+    case Fortran::evaluate::DescriptorInquiry::Field::Stride:
+      // So far the front-end does not generate this inquiry.
+      TODO(loc, "Stride inquiry");
     }
     llvm_unreachable("unknown descriptor inquiry");
   }
@@ -1066,12 +1106,7 @@ public:
     auto ty = genSubType(base.getType(), args.size());
     ty = builder.getRefType(ty);
     auto addr = builder.create<fir::CoordinateOp>(getLoc(), ty, base, args);
-    // TODO: use arrayElementToExtendedValue from PR 602 once merged.
-    return component.match(
-        [&](const fir::CharArrayBoxValue &x) -> fir::ExtendedValue {
-          return fir::CharBoxValue{addr, x.getLen()};
-        },
-        [&](const auto &) -> fir::ExtendedValue { return addr; });
+    return arrayElementToExtendedValue(builder, getLoc(), component, addr);
   }
 
   static bool isSlice(const Fortran::evaluate::ArrayRef &aref) {
@@ -1149,9 +1184,15 @@ public:
             -> fir::ExtendedValue {
           TODO(loc, "array ref of derived type with length parameters");
         },
+        [&](const Fortran::lower::SymbolBox::IrBox &arr) -> fir::ExtendedValue {
+          // CoordinateOp for IrBoxValue is not generated here. The dimensions
+          // must be kept in the fir.coordinate_op so that potential fir.box
+          // strides can be applied by codegen.
+          fir::emitFatalError(
+              loc, "internal: IrBoxValue in dim-collapsed fir.coordinate_of");
+        },
         [&](const auto &) -> fir::ExtendedValue {
-          mlir::emitError(loc, "internal: array lowering failed");
-          return {};
+          fir::emitFatalError(loc, "internal: array lowering failed");
         });
   }
 
@@ -1159,48 +1200,45 @@ public:
                                     const Fortran::evaluate::ArrayRef &aref) {
     auto loc = getLoc();
     auto addr = fir::getBase(exv);
-    auto arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
+    auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(addr.getType());
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     auto refTy = builder.getRefType(eleTy);
     auto idxTy = builder.getIndexType();
-    auto genWithShape = [&](const auto &arr) -> mlir::Value {
-      auto shape = builder.consShape(loc, arr);
-      llvm::SmallVector<mlir::Value, 8> arrayCoorArgs;
-      for (const auto &sub : aref.subscript()) {
-        auto subVal = genComponent(sub);
-        if (auto *ev = std::get_if<fir::ExtendedValue>(&subVal)) {
-          if (auto *sval = ev->getUnboxed()) {
-            auto val = builder.createConvert(loc, idxTy, *sval);
-            arrayCoorArgs.push_back(val);
-          } else {
-            fir::emitFatalError(loc,
-                                "vector subscript should be handled in genarr");
-          }
+    llvm::SmallVector<mlir::Value, 8> arrayCoorArgs;
+    // The ArrayRef is expected to be scalar here, arrays are handled in array
+    // expression lowering. So no vector subscript or triplet is expected here.
+    for (const auto &sub : aref.subscript()) {
+      auto subVal = genComponent(sub);
+      if (auto *ev = std::get_if<fir::ExtendedValue>(&subVal)) {
+        if (auto *sval = ev->getUnboxed()) {
+          auto val = builder.createConvert(loc, idxTy, *sval);
+          arrayCoorArgs.push_back(val);
         } else {
-          // RangedBoxValue
-          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
+          fir::emitFatalError(loc, "vector subscript in scalar expression");
         }
+      } else {
+        fir::emitFatalError(loc, "triplet subscript in scalar expression");
       }
-      return builder.create<fir::ArrayCoorOp>(
-          loc, refTy, addr, shape, mlir::Value{}, arrayCoorArgs, ValueRange());
-    };
-    return exv.match(
-        [&](const fir::ArrayBoxValue &arr) {
-          // FIXME: this check can be removed when slicing is implemented
-          if (isSlice(aref))
-            fir::emitFatalError(
-                loc, "slicing should be handled in array expresion context");
-          return genWithShape(arr);
+    }
+    auto shape = builder.createShape(loc, exv);
+    llvm::SmallVector<mlir::Value, 2> lengthParams;
+    exv.match(
+        [&](const fir::CharArrayBoxValue &arr) {
+          lengthParams.emplace_back(arr.getLen());
         },
-        [&](const fir::CharArrayBoxValue &arr) -> mlir::Value {
-          TODO(loc, "arraycoor of character array");
+        [&](const fir::BoxValue &arr) {
+          auto lengths = arr.getLenTypeParams();
+          lengthParams.append(lengths.begin(), lengths.end());
         },
-        [&](const fir::BoxValue &arr) -> mlir::Value {
-          TODO(loc, "arraycoor of derived type array with length parameters");
+        [&](const fir::IrBoxValue &arr) {
+          auto lengths = arr.getExplicitParameters();
+          lengthParams.append(lengths.begin(), lengths.end());
         },
-        [&](const auto &) -> mlir::Value {
-          fir::emitFatalError(loc, "arraycoor on non array extended value");
-        });
+        [](const auto &) {});
+    auto elementAddr = builder.create<fir::ArrayCoorOp>(
+        loc, refTy, addr, shape, /*slice=*/mlir::Value{}, arrayCoorArgs,
+        lengthParams);
+    return arrayElementToExtendedValue(builder, loc, exv, elementAddr);
   }
 
   // Return the coordinate of the array reference
@@ -1216,11 +1254,11 @@ public:
             return genAllocatableOrPointerUnbox(x);
           },
           [](const auto &x) -> Fortran::lower::SymbolBox { return x; });
-      if (!si.hasConstantShape())
+      auto isIrBox = si.getAddr().getType().isa<fir::BoxType>();
+      if (!si.hasConstantShape() && !isIrBox)
         return gen(si, aref);
       auto box = gen(symbol);
       auto base = fir::getBase(box);
-      assert(base && "boxed type not handled");
       unsigned i = 0;
       llvm::SmallVector<mlir::Value, 8> args;
       auto loc = getLoc();
@@ -1240,15 +1278,13 @@ public:
           fir::emitFatalError(loc, "triplet slice should be handled in genarr");
         }
       }
-      auto ty = genSubType(base.getType(), args.size());
-      ty = builder.getRefType(ty);
+
+      auto seqTy =
+          fir::dyn_cast_ptrOrBoxEleTy(base.getType()).cast<fir::SequenceType>();
+      assert(args.size() == seqTy.getDimension());
+      auto ty = builder.getRefType(seqTy.getEleTy());
       auto addr = builder.create<fir::CoordinateOp>(loc, ty, base, args);
-      // FIXME: return may not be a scalar.
-      return box.match(
-          [&](const fir::CharArrayBoxValue &x) -> fir::ExtendedValue {
-            return fir::CharBoxValue{addr, x.getLen()};
-          },
-          [&](const auto &) -> fir::ExtendedValue { return addr; });
+      return arrayElementToExtendedValue(builder, loc, box, addr);
     }
     return genArrayRefComponent(aref);
   }
@@ -1731,7 +1767,7 @@ public:
       auto valBase = fir::getBase(exv);
       // Functions are always referent.
       if (valBase.getType().template isa<mlir::FunctionType>() ||
-          fir::isa_ref_type(valBase.getType()))
+          fir::conformsWithPassByRef(valBase.getType()))
         return exv;
 
       // Since `a` is not itself a valid referent, determine its value and
@@ -2210,24 +2246,6 @@ public:
     return nullptr;
   }
 
-  static mlir::Value getLBoundOrDefault(mlir::Location loc,
-                                        const fir::ExtendedValue &exv,
-                                        mlir::Value one, unsigned dim) {
-    auto getLBound = [&](const fir::AbstractArrayBox &v) -> mlir::Value {
-      auto &lbounds = v.getLBounds();
-      if (lbounds.empty())
-        return one;
-      return lbounds[dim];
-    };
-    return exv.match(
-        [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
-        [&](const fir::CharArrayBoxValue &v) { return getLBound(v); },
-        [&](const fir::BoxValue &v) { return getLBound(v); },
-        [&](auto) -> mlir::Value {
-          fir::emitFatalError(loc, "expected array");
-        });
-  }
-
   /// Array reference with subscripts. Since this has rank > 0, this is a form
   /// of an array section (slice).
   ///
@@ -2279,7 +2297,8 @@ public:
                       arrLd.getType().cast<fir::SequenceType>().getEleTy();
                   auto currentPC = pc;
                   auto dim = sub.index();
-                  auto lb = getLBoundOrDefault(loc, exv, one, dim);
+                  auto lb = Fortran::lower::readLowerBound(builder, loc, exv,
+                                                           dim, one);
                   pc = [=](IterSpace iters) {
                     IterationSpace newIters = currentPC(iters);
                     auto iter = newIters.iterVec()[dim];
@@ -2341,7 +2360,8 @@ public:
                   // Cast `e` to index type.
                   auto iv = builder.createConvert(loc, idxTy, v);
                   auto dim = sub.index();
-                  auto lb = getLBoundOrDefault(loc, exv, one, dim);
+                  auto lb = Fortran::lower::readLowerBound(builder, loc, exv,
+                                                           dim, one);
                   // Normalize `e` by subtracting the declared lbound.
                   mlir::Value ivAdj =
                       builder.create<mlir::SubIOp>(loc, idxTy, iv, lb);
@@ -2367,7 +2387,7 @@ public:
     auto loc = getLoc();
     auto extMemref = asScalarRef(sym);
     auto memref = fir::getBase(extMemref);
-    auto arrTy = fir::dyn_cast_ptrEleTy(memref.getType());
+    auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(memref.getType());
     assert(arrTy.isa<fir::SequenceType>());
     auto shape = builder.createShape(loc, extMemref);
     mlir::Value slice;
@@ -2411,6 +2431,8 @@ public:
     }
     if (useEmbox) {
       auto boxTy = fir::BoxType::get(reduceRank(arrTy, slice));
+      if (memref.getType().isa<fir::BoxType>())
+        TODO(loc, "use fir.rebox for array section of fir.box");
       mlir::Value embox = builder.create<fir::EmboxOp>(
           loc, boxTy, memref, shape, slice, /*lenParams=*/llvm::None);
       return [=](IterSpace) -> ExtValue { return embox; };
@@ -2421,23 +2443,10 @@ public:
       return [=](IterSpace) -> ExtValue { return arrLd; };
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     return [=](IterSpace iters) -> ExtValue {
-      return emboxElement(extMemref, builder.create<fir::ArrayFetchOp>(
-                                         loc, eleTy, arrLd, iters.iterVec()));
+      auto arrFetch =
+          builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd, iters.iterVec());
+      return arrayElementToExtendedValue(builder, loc, extMemref, arrFetch);
     };
-  }
-
-  static ExtValue emboxElement(const ExtValue &memref, mlir::Value arrFetch) {
-    return memref.match(
-        [&](const fir::CharBoxValue &cb) -> ExtValue {
-          return cb.clone(arrFetch);
-        },
-        [&](const fir::CharArrayBoxValue &bv) -> ExtValue {
-          return bv.cloneElement(arrFetch);
-        },
-        [&](const fir::BoxValue &bv) -> ExtValue {
-          return bv.cloneElement(arrFetch);
-        },
-        [&](const auto &) -> ExtValue { return arrFetch; });
   }
 
   /// Reduce the rank of a array to be boxed based on the slice's operands.

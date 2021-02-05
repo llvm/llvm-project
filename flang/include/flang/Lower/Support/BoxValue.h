@@ -29,6 +29,7 @@ class CharArrayBoxValue;
 class BoxValue;
 class ProcBoxValue;
 class MutableBoxValue;
+class IrBoxValue;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArrayBoxValue &);
@@ -36,6 +37,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharArrayBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const MutableBoxValue &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const IrBoxValue &);
 
 //===----------------------------------------------------------------------===//
 //
@@ -151,7 +153,7 @@ public:
   }
 
   CharBoxValue cloneElement(mlir::Value newBase) const {
-     return {newBase, len};
+    return {newBase, len};
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
@@ -202,21 +204,120 @@ public:
   }
 
   BoxValue cloneElement(mlir::Value newBase) const {
-     return {newBase, len, params, {}, {}};
+    return {newBase, len, params, {}, {}};
   }
 
   mlir::Value getLen() const { return len; }
 
-  const llvm::SmallVectorImpl<mlir::Value> &getLenTypeParams() const {
-    return params;
-  }
+  llvm::ArrayRef<mlir::Value> getLenTypeParams() const { return params; }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
 protected:
-  mlir::Value len; // box is CHARACTER
+  mlir::Value len;                          // box is CHARACTER
   llvm::SmallVector<mlir::Value, 2> params; // LENs, box is derived type
+};
+
+/// Base class for values associated to a fir.box or fir.ref<fir.box>.
+class AbstractIrBox : public AbstractBox {
+public:
+  AbstractIrBox(mlir::Value addr) : AbstractBox{addr} {}
+  /// Get the fir.box<type> part of the address type.
+  fir::BoxType getBoxTy() const {
+    auto type = getAddr().getType();
+    if (auto pointedTy = fir::dyn_cast_ptrEleTy(type))
+      type = pointedTy;
+    return type.cast<fir::BoxType>();
+  }
+  /// Return the part of the address type after memory and box types. That is
+  /// the element type, maybe wrapped in a fir.array type.
+  mlir::Type getBaseTy() const {
+    return fir::dyn_cast_ptrOrBoxEleTy(getBoxTy());
+  }
+  /// Get the scalar type related to the described entity
+  mlir::Type getEleTy() const {
+    auto type = getBaseTy();
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>())
+      return seqTy.getEleTy();
+    return type;
+  }
+
+  /// Is the entity an array or an assumed rank ?
+  bool hasRank() const { return getBaseTy().isa<fir::SequenceType>(); }
+  /// Is this an assumed rank ?
+  bool hasAssumedRank() const {
+    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
+    return seqTy && seqTy.hasUnknownShape();
+  }
+  /// Returns the rank of the entity. Beware that zero will be returned for
+  /// both scalars and assumed rank.
+  unsigned rank() const {
+    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
+    if (seqTy)
+      return seqTy.getDimension();
+    return 0;
+  }
+  /// Is this a character entity ?
+  bool isCharacter() const { return getEleTy().isa<fir::CharacterType>(); };
+  /// Is this a derived type entity ?
+  bool isDerived() const { return getEleTy().isa<fir::RecordType>(); };
+  /// Is this a CLASS(*)/TYPE(*) ?
+  bool isUnlimitedPolymorphic() const {
+    return getEleTy().isa<mlir::NoneType>();
+  }
+};
+
+/// An entity described by a fir.box value that cannot be read into
+/// another BoxValue category, either because the fir.box may be an
+/// absent optional and we need to wait until the user is referencing it
+/// to read it, or because it contains important information that cannot
+/// be exposed in FIR (e.g. non contiguous byte stride).
+/// It may also store explicit bounds or length parameters that were specified
+/// for the entity.
+class IrBoxValue : public AbstractIrBox {
+public:
+  IrBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> lbounds,
+             llvm::ArrayRef<mlir::Value> explicitParams,
+             llvm::ArrayRef<mlir::Value> explicitExtents = {})
+      : AbstractIrBox{addr}, lbounds{lbounds.begin(), lbounds.end()},
+        explicitParams{explicitParams.begin(), explicitParams.end()},
+        explicitExtents{explicitExtents.begin(), explicitExtents.end()} {
+    assert(verify());
+  }
+  // TODO: check contiguous attribute of addr
+  bool isContiguous() const { return false; }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const IrBoxValue &);
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
+
+  llvm::ArrayRef<mlir::Value> getLBounds() const { return lbounds; }
+  llvm::ArrayRef<mlir::Value> getExplicitExtents() const {
+    return explicitExtents;
+  }
+  llvm::ArrayRef<mlir::Value> getExplicitParameters() const {
+    return explicitParams;
+  }
+
+protected:
+  // Verify constructor invariants.
+  bool verify() const;
+  // Always field when the IrBoxValue has lower bounds other than one.
+  llvm::SmallVector<mlir::Value, 4> lbounds;
+
+  // Only field when the IrBoxValue has explicit length parameters.
+  // Otherwise, the length parameters are in the fir.box.
+  llvm::SmallVector<mlir::Value, 2> explicitParams;
+
+  // Only field with the explicit length parameters
+  // Otherwise, the extents are in the fir.box.
+  llvm::SmallVector<mlir::Value, 4> explicitExtents;
+  // Note about explicitExtents: In general, explicit-shape will not come as
+  // descriptors, so this field will be empty in most cases. The exception are
+  // derived types with length parameters and polymorphic dummy argument arrays.
+  // It may be possible for the explicit extents to conflict with
+  // the shape information that is in the box according to 15.5.2.11
+  // sequence association rules.
 };
 
 /// Used for triple notation (array slices)
@@ -246,7 +347,7 @@ public:
 /// a box. This is intended to be used for entities whose base address, shape
 /// and type are not constant in the entity lifetime (e.g Allocatables and
 /// Pointers).
-class MutableBoxValue : public AbstractBox {
+class MutableBoxValue : public AbstractIrBox {
 public:
   /// Create MutableBoxValue given the address \p addr of the box and the non
   /// deferred length parameters \p lenParameters. The non deferred length
@@ -254,8 +355,8 @@ public:
   /// reflected in the address type.
   MutableBoxValue(mlir::Value addr, mlir::ValueRange lenParameters,
                   MutableProperties mutableProperties)
-      : AbstractBox(addr), lenParams{lenParameters.begin(),
-                                     lenParameters.end()},
+      : AbstractIrBox(addr), lenParams{lenParameters.begin(),
+                                       lenParameters.end()},
         mutableProperties{mutableProperties} {
     // Currently only accepts fir.(ref/ptr/heap)<fir.box<type>> mlir::Value for
     // the address. This may change if we accept
@@ -263,25 +364,6 @@ public:
     assert(verify() &&
            "MutableBoxValue requires mem ref to fir.box<fir.[heap|ptr]<type>>");
   }
-
-  /// Get the fir.box<type> part of the address type.
-  fir::BoxType getBoxTy() const {
-    auto type = getAddr().getType();
-    return fir::dyn_cast_ptrEleTy(type).cast<fir::BoxType>();
-  }
-  /// Return the part of the address type after memory and box types. That is
-  /// the element type, maybe wrapped in a fir.array type.
-  mlir::Type getBaseTy() const {
-    return fir::dyn_cast_ptrEleTy(getBoxTy().getEleTy());
-  }
-  /// Get the scalar type related to the described entity
-  mlir::Type getEleTy() const {
-    auto type = getBaseTy();
-    if (auto seqTy = type.dyn_cast<fir::SequenceType>())
-      return seqTy.getEleTy();
-    return type;
-  }
-
   /// Is this a Fortran pointer ?
   bool isPointer() const {
     return getBoxTy().getEleTy().isa<fir::PointerType>();
@@ -290,25 +372,6 @@ public:
   bool isAllocatable() const {
     return getBoxTy().getEleTy().isa<fir::HeapType>();
   }
-  /// Is the entity an array or an assumed rank ?
-  bool hasRank() const { return getBaseTy().isa<fir::SequenceType>(); }
-  /// Is this an assumed rank ?
-  bool hasAssumedRank() const {
-    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
-    return seqTy && seqTy.hasUnknownShape();
-  }
-  /// Returns the rank of the entity. Beware that zero will be returned for
-  /// both scalars and assumed rank.
-  unsigned rank() const {
-    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
-    if (seqTy)
-      return seqTy.getDimension();
-    return 0;
-  }
-  /// Is this a character entity ?
-  bool isCharacter() const { return getEleTy().isa<fir::CharacterType>(); };
-  /// Is this a derived type entity ?
-  bool isDerived() const { return getEleTy().isa<fir::RecordType>(); };
   /// Does this entity has any non deferred length parameters ?
   bool hasNonDeferredLenParams() const { return !lenParams.empty(); }
   /// Return the non deferred length parameters.
@@ -353,8 +416,9 @@ bool isArray(const ExtendedValue &exv);
 /// indices if it is an array entity.
 class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
-  using VT = std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue,
-                          CharArrayBoxValue, BoxValue, ProcBoxValue>;
+  using VT =
+      std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
+                   BoxValue, ProcBoxValue, IrBoxValue>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   ExtendedValue(const ExtendedValue &) = default;
@@ -389,6 +453,13 @@ public:
 
   constexpr const UnboxedValue *getUnboxed() const {
     return getBoxOf<UnboxedValue>();
+  }
+
+  unsigned rank() const {
+    return match([](const fir::UnboxedValue &box) -> unsigned { return 0; },
+                 [](const fir::CharBoxValue &box) -> unsigned { return 0; },
+                 [](const fir::ProcBoxValue &box) -> unsigned { return 0; },
+                 [](const auto &box) -> unsigned { return box.rank(); });
   }
 
   /// LLVM style debugging of extended values

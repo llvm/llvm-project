@@ -241,6 +241,14 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
       [&](const fir::ArrayBoxValue &box) { return consShape(loc, box); },
       [&](const fir::CharArrayBoxValue &box) { return consShape(loc, box); },
       [&](const fir::BoxValue &box) { return consShape(loc, box); },
+      [&](const fir::IrBoxValue &box) -> mlir::Value {
+        if (!box.getLBounds().empty()) {
+          auto shiftType =
+              fir::ShiftType::get(getContext(), box.getLBounds().size());
+          return create<fir::ShiftOp>(loc, shiftType, box.getLBounds());
+        }
+        return mlir::Value{};
+      },
       [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
 }
 
@@ -249,20 +257,21 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
     mlir::ValueRange path) {
   if (triples.empty()) {
     // If there is no slicing by triple notation, then take the whole array.
-    auto fullShape = [&](const fir::AbstractArrayBox &arr) -> mlir::Value {
+    auto fullShape = [&](const llvm::ArrayRef<mlir::Value> lbounds,
+                         llvm::ArrayRef<mlir::Value> extents) -> mlir::Value {
       llvm::SmallVector<mlir::Value, 8> trips;
       auto idxTy = getIndexType();
       auto one = createIntegerConstant(loc, idxTy, 1);
-      auto sliceTy = fir::SliceType::get(getContext(), arr.rank());
-      if (arr.lboundsAllOne()) {
-        for (auto v : arr.getExtents()) {
+      auto sliceTy = fir::SliceType::get(getContext(), extents.size());
+      if (lbounds.empty()) {
+        for (auto v : extents) {
           trips.push_back(one);
           trips.push_back(v);
           trips.push_back(one);
         }
         return create<fir::SliceOp>(loc, sliceTy, trips, path);
       }
-      for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+      for (auto [lbnd, ext] : llvm::zip(lbounds, extents)) {
         auto lb = createConvert(loc, idxTy, lbnd);
         trips.push_back(lb);
         trips.push_back(ext);
@@ -271,20 +280,25 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
       return create<fir::SliceOp>(loc, sliceTy, trips, path);
     };
     return exv.match(
-        [&](const fir::ArrayBoxValue &box) { return fullShape(box); },
-        [&](const fir::CharArrayBoxValue &box) { return fullShape(box); },
-        [&](const fir::BoxValue &box) { return fullShape(box); },
+        [&](const fir::ArrayBoxValue &box) {
+          return fullShape(box.getLBounds(), box.getExtents());
+        },
+        [&](const fir::CharArrayBoxValue &box) {
+          return fullShape(box.getLBounds(), box.getExtents());
+        },
+        [&](const fir::BoxValue &box) {
+          return fullShape(box.getLBounds(), box.getExtents());
+        },
+        [&](const fir::IrBoxValue &box) {
+          llvm::SmallVector<mlir::Value, 4> extents;
+          Fortran::lower::readExtents(*this, loc, box, extents);
+          return fullShape(box.getLBounds(), extents);
+        },
         [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
   }
-  auto sf = [&](const fir::AbstractArrayBox &arr) -> mlir::Value {
-    auto sliceTy = fir::SliceType::get(getContext(), arr.rank());
-    return create<fir::SliceOp>(loc, sliceTy, triples, path);
-  };
-  return exv.match(
-      [&](const fir::ArrayBoxValue &box) { return sf(box); },
-      [&](const fir::CharArrayBoxValue &box) { return sf(box); },
-      [&](const fir::BoxValue &box) { return sf(box); },
-      [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
+  auto rank = exv.rank();
+  auto sliceTy = fir::SliceType::get(getContext(), rank);
+  return create<fir::SliceOp>(loc, sliceTy, triples, path);
 }
 
 mlir::Value
@@ -328,4 +342,105 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
       [&](const auto &) -> mlir::Value {
         return create<fir::EmboxOp>(loc, boxTy, itemAddr);
       });
+}
+
+//===--------------------------------------------------------------------===//
+// ExtendedValue inquiry helper implementation
+//===--------------------------------------------------------------------===//
+
+mlir::Value Fortran::lower::readCharLen(Fortran::lower::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        const fir::ExtendedValue &box) {
+  return box.match(
+      [&](const fir::CharBoxValue &x) -> mlir::Value { return x.getLen(); },
+      [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
+        return x.getLen();
+      },
+      [&](const fir::IrBoxValue &x) -> mlir::Value {
+        assert(x.isCharacter());
+        if (!x.getExplicitParameters().empty())
+          return x.getExplicitParameters()[0];
+        return Fortran::lower::CharacterExprHelper{builder, loc}
+            .readLengthFromBox(x.getAddr());
+      },
+      [&](const auto &) -> mlir::Value {
+        fir::emitFatalError(
+            loc, "Character length inquiry on a non-character entity");
+      });
+}
+
+mlir::Value Fortran::lower::readExtent(Fortran::lower::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       const fir::ExtendedValue &box,
+                                       unsigned dim) {
+  assert(box.rank() > dim);
+  return box.match(
+      [&](const fir::ArrayBoxValue &x) -> mlir::Value {
+        return x.getExtents()[dim];
+      },
+      [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
+        return x.getExtents()[dim];
+      },
+      [&](const fir::BoxValue &x) -> mlir::Value {
+        return x.getExtents()[dim];
+      },
+      [&](const fir::IrBoxValue &x) -> mlir::Value {
+        if (!x.getExplicitExtents().empty())
+          return x.getExplicitExtents()[dim];
+        auto idxTy = builder.getIndexType();
+        auto dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+        return builder
+            .create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, x.getAddr(),
+                                    dimVal)
+            .getResult(1);
+      },
+      [&](const auto &) -> mlir::Value {
+        fir::emitFatalError(loc, "extent inquiry on scalar");
+      });
+}
+
+mlir::Value Fortran::lower::readLowerBound(Fortran::lower::FirOpBuilder &,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &box,
+                                           unsigned dim,
+                                           mlir::Value defaultValue) {
+  assert(box.rank() > dim);
+  auto lb = box.match(
+      [&](const fir::ArrayBoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::CharArrayBoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::BoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::IrBoxValue &x) -> mlir::Value {
+        return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const auto &) -> mlir::Value {
+        fir::emitFatalError(loc, "lower bound inquiry on scalar");
+      });
+  if (lb)
+    return lb;
+  return defaultValue;
+}
+
+void Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
+                                 mlir::Location loc, const fir::IrBoxValue &box,
+                                 llvm::SmallVectorImpl<mlir::Value> &result) {
+  assert(result.empty());
+  auto explicitExtents = box.getExplicitExtents();
+  if (!explicitExtents.empty()) {
+    result.append(explicitExtents.begin(), explicitExtents.end());
+    return;
+  }
+  auto rank = box.rank();
+  auto idxTy = builder.getIndexType();
+  for (decltype(rank) dim = 0; dim < rank; ++dim) {
+    auto dimVal = builder.createIntegerConstant(loc, idxTy, dim);
+    auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                  box.getAddr(), dimVal);
+    result.emplace_back(dimInfo.getResult(1));
+  }
 }

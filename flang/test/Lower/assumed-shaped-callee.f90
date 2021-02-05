@@ -2,9 +2,15 @@
 
 ! Test assumed shape dummy argument on callee side
 
-! CHECK-LABEL: func @_QPtest_assumed_shape_1(%arg0: !fir.box<!fir.array<?xi32>>) 
+! TODO: These tests rely on looking at how a new fir.box is made for an assumed shape
+! to see if lowering lowered and mapped the assumed shape symbol properties.
+! However, the argument fir.box of the assumed shape could also be used instead
+! of making a new fir.box and this would break all these tests. In fact, for non
+! contiguous arrays, this is the case. Find a better way to tests symbol lowering/mapping.
+
+! CHECK-LABEL: func @_QPtest_assumed_shape_1(%arg0: !fir.box<!fir.array<?xi32>> {fir.contiguous}) 
 subroutine test_assumed_shape_1(x)
-  integer :: x(:)
+  integer, contiguous :: x(:)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
   ! CHECK: %[[c0:.*]] = constant 0 : index
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -20,9 +26,9 @@ subroutine test_assumed_shape_1(x)
 end subroutine
 
 ! lower bounds all ones
-! CHECK-LABEL:  func @_QPtest_assumed_shape_2(%arg0: !fir.box<!fir.array<?x?xf32>>)
+! CHECK-LABEL:  func @_QPtest_assumed_shape_2(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.contiguous})
 subroutine test_assumed_shape_2(x)
-  real :: x(1:, 1:)
+  real, contiguous :: x(1:, 1:)
   ! CHECK: fir.box_addr
   ! CHECK: %[[dims1:.*]]:3 = fir.box_dims
   ! CHECK: %[[dims2:.*]]:3 = fir.box_dims
@@ -32,9 +38,9 @@ subroutine test_assumed_shape_2(x)
 end subroutine
 
 ! explicit lower bounds different from 1
-! CHECK-LABEL: func @_QPtest_assumed_shape_3(%arg0: !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK-LABEL: func @_QPtest_assumed_shape_3(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.contiguous})
 subroutine test_assumed_shape_3(x)
-  integer :: x(2:, 3:, 42:)
+  integer, contiguous :: x(2:, 3:, 42:)
   ! CHECK: fir.box_addr
   ! CHECK: fir.box_dim
   ! CHECK: %[[c2_i64:.*]] = constant 2 : i64
@@ -51,9 +57,9 @@ subroutine test_assumed_shape_3(x)
 end subroutine
 
 ! Constant length
-! func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,10>>>)
+! func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,10>>> {fir.contiguous})
 subroutine test_assumed_shape_char(c)
-  character(10) :: c(:)
+  character(10), contiguous :: c(:)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, index) -> (index, index, index)
@@ -65,9 +71,9 @@ subroutine test_assumed_shape_char(c)
 end subroutine
 
 ! Assumed length
-! CHECK-LABEL: func @_QPtest_assumed_shape_char_2(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>)
+! CHECK-LABEL: func @_QPtest_assumed_shape_char_2(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.contiguous})
 subroutine test_assumed_shape_char_2(c)
-  character(*) :: c(:)
+  character(*), contiguous :: c(:)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: %[[len:.*]] = fir.box_elesize %arg0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 
@@ -81,9 +87,9 @@ end subroutine
 
 
 ! lower bounds all 1.
-! CHECK: func @_QPtest_assumed_shape_char_3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! CHECK: func @_QPtest_assumed_shape_char_3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.contiguous})
 subroutine test_assumed_shape_char_3(c)
-  character(*) :: c(1:, 1:)
+  character(*), contiguous :: c(1:, 1:)
   ! CHECK: fir.box_addr
   ! CHECK: fir.box_elesize
   ! CHECK: %[[dims1:.*]]:3 = fir.box_dims

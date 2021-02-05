@@ -28,6 +28,7 @@
 namespace fir {
 class AbstractArrayBox;
 class ExtendedValue;
+class IrBoxValue;
 } // namespace fir
 
 namespace Fortran::lower {
@@ -253,6 +254,33 @@ public:
 private:
   const fir::KindMapping &kindMap;
 };
+
+//===--------------------------------------------------------------------===//
+// ExtendedValue inquiry helpers
+//===--------------------------------------------------------------------===//
+
+/// Read or get character length from an ExtendedValue containing a character
+/// entity. If the length value is contained in the ExtendedValue, this will
+/// not generate any code, otherwise this will generate a read of the fir.box
+/// describing the entity.
+mlir::Value readCharLen(FirOpBuilder &, mlir::Location,
+                        const fir::ExtendedValue &);
+
+/// Read or get the extent in dimension \p dim of the array described by an
+/// ExtendedValue.
+mlir::Value readExtent(FirOpBuilder &, mlir::Location,
+                       const fir::ExtendedValue &, unsigned dim);
+
+/// Read or get the lower bound in dimension \p dim of the array described by
+/// an ExtendedValue. If the lower bound is left default in the ExtendedValue,
+/// the defaultValue will be returned.
+mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
+                           const fir::ExtendedValue &, unsigned dim,
+                           mlir::Value defaultValue);
+
+/// Read extents from an IrBoxValue into \p result.
+void readExtents(FirOpBuilder &, mlir::Location, const fir::IrBoxValue &,
+                 llvm::SmallVectorImpl<mlir::Value> &result);
 
 } // namespace Fortran::lower
 
