@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef OPTIMIZER_DIALECT_FIRTYPE_H
 #define OPTIMIZER_DIALECT_FIRTYPE_H
@@ -67,7 +71,9 @@ bool isa_fir_or_std_type(mlir::Type t);
 /// Is `t` a FIR dialect type that implies a memory (de)reference?
 bool isa_ref_type(mlir::Type t);
 
-/// Is `t` a type that is always trivially pass-by-reference?
+/// Is `t` a type that is always trivially pass-by-reference? Specifically, this
+/// is testing if `t` is a ReferenceType or any box type. Compare this to
+/// conformsWithPassByRef(), which includes pointers and allocatables.
 bool isa_passbyref_type(mlir::Type t);
 
 /// Is `t` a boxed type?
