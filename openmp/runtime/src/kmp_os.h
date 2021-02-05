@@ -1077,6 +1077,16 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
       expected, desired, std::memory_order_release, std::memory_order_relaxed);
 }
 
+// Symbol lookup on Linux/Windows
+#if KMP_OS_WINDOWS
+extern void *__kmp_lookup_symbol(const char *name);
+#define KMP_DLSYM(name) __kmp_lookup_symbol(name)
+#define KMP_DLSYM_NEXT(name) nullptr
+#else
+#define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
+#define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
+#endif
+
 #endif /* KMP_OS_H */
 // Safe C API
 #include "kmp_safe_c_api.h"
