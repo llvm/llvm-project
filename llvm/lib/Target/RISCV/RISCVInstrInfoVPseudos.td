@@ -2933,9 +2933,9 @@ multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
 multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
                                     list<VTypeInfo> vtilist, Operand ImmType = simm5>
 {
-  defm "" : VPatBinaryV_VV_INT<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VX_INT<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
+  defm "" : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>;
+  defm "" : VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>;
+  defm "" : VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
 }
 
 multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat = 0> {
