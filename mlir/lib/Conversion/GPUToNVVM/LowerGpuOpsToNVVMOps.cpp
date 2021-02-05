@@ -128,7 +128,7 @@ struct LowerGpuOpsToNVVMOpsPass
     // which need to be lowered further, which is not supported by a single
     // conversion pass.
     populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsAndFoldGreedily(m, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);

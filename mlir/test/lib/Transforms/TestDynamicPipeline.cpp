@@ -27,7 +27,7 @@ public:
   void getDependentDialects(DialectRegistry &registry) const override {
     OpPassManager pm(ModuleOp::getOperationName(),
                      OpPassManager::Nesting::Implicit);
-    parsePassPipeline(pipeline, pm, llvm::errs());
+    (void)parsePassPipeline(pipeline, pm, llvm::errs());
     pm.getDependentDialects(registry);
   }
 
@@ -58,7 +58,7 @@ public:
     if (!pm) {
       pm = std::make_unique<OpPassManager>(currentOp->getName().getIdentifier(),
                                            OpPassManager::Nesting::Implicit);
-      parsePassPipeline(pipeline, *pm, llvm::errs());
+      (void)parsePassPipeline(pipeline, *pm, llvm::errs());
     }
 
     // Check that running on the parent operation always immediately fails.

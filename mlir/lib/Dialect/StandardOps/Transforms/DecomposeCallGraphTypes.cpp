@@ -69,7 +69,8 @@ struct DecomposeCallGraphTypesForFuncArgs
     TypeConverter::SignatureConversion conversion(functionType.getNumInputs());
     for (auto argType : llvm::enumerate(functionType.getInputs())) {
       SmallVector<Type, 2> decomposedTypes;
-      getTypeConverter()->convertType(argType.value(), decomposedTypes);
+      if (failed(typeConverter->convertType(argType.value(), decomposedTypes)))
+        return failure();
       if (!decomposedTypes.empty())
         conversion.addInputs(argType.index(), decomposedTypes);
     }
@@ -81,7 +82,9 @@ struct DecomposeCallGraphTypesForFuncArgs
 
     // Update the signature of the function.
     SmallVector<Type, 2> newResultTypes;
-    getTypeConverter()->convertTypes(functionType.getResults(), newResultTypes);
+    if (failed(typeConverter->convertTypes(functionType.getResults(),
+                                           newResultTypes)))
+      return failure();
     rewriter.updateRootInPlace(op, [&] {
       op.setType(rewriter.getFunctionType(conversion.getConvertedTypes(),
                                           newResultTypes));
@@ -146,7 +149,8 @@ struct DecomposeCallGraphTypesForCallOp
     SmallVector<SmallVector<unsigned, 2>, 4> expandedResultIndices;
     for (Type resultType : op.getResultTypes()) {
       unsigned oldSize = newResultTypes.size();
-      getTypeConverter()->convertType(resultType, newResultTypes);
+      if (failed(typeConverter->convertType(resultType, newResultTypes)))
+        return failure();
       auto &resultMapping = expandedResultIndices.emplace_back();
       for (unsigned i = oldSize, e = newResultTypes.size(); i < e; i++)
         resultMapping.push_back(i);

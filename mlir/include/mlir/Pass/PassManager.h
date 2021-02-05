@@ -178,7 +178,6 @@ public:
   /// Run the passes within this manager on the provided operation. The
   /// specified operation must have the same name as the one provided the pass
   /// manager on construction.
-  LLVM_NODISCARD
   LogicalResult run(Operation *op);
 
   /// Return an instance of the context.

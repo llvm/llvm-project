@@ -295,7 +295,7 @@ public:
     // Finally, modify the kernel function in SPIR-V modules to avoid symbolic
     // conflicts.
     for (auto spvModule : module.getOps<spirv::ModuleOp>())
-      encodeKernelName(spvModule);
+      (void)encodeKernelName(spvModule);
   }
 };
 } // namespace

@@ -27,7 +27,7 @@ public:
 void TestGLSLCanonicalizationPass::runOnOperation() {
   OwningRewritePatternList patterns;
   spirv::populateSPIRVGLSLCanonicalizationPatterns(patterns, &getContext());
-  applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

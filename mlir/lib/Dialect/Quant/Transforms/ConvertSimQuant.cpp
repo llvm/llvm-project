@@ -129,7 +129,7 @@ void ConvertSimulatedQuantPass::runOnFunction() {
   auto ctx = func.getContext();
   patterns.insert<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
       ctx, &hadFailure);
-  applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   if (hadFailure)
     signalPassFailure();
 }

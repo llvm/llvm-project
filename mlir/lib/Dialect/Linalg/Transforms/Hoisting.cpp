@@ -73,7 +73,7 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
 
       // Move AllocOp before the loop.
       if (isa<AllocOp, AllocaOp>(op))
-        loop.moveOutOfLoop({op});
+        (void)loop.moveOutOfLoop({op});
       else // Move DeallocOp outside of the loop.
         op->moveAfter(loop);
       changed = true;

@@ -234,9 +234,9 @@ void mlir::promoteSingleIterationLoops(FuncOp f) {
   // Gathers all innermost loops through a post order pruned walk.
   f.walk([](Operation *op) {
     if (auto forOp = dyn_cast<AffineForOp>(op))
-      promoteIfSingleIteration(forOp);
+      (void)promoteIfSingleIteration(forOp);
     else if (auto forOp = dyn_cast<scf::ForOp>(op))
-      promoteIfSingleIteration(forOp);
+      (void)promoteIfSingleIteration(forOp);
   });
 }
 
@@ -392,7 +392,7 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
         OwningRewritePatternList patterns;
         AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
         bool erased;
-        applyOpPatternsAndFold(res, std::move(patterns), &erased);
+        (void)applyOpPatternsAndFold(res, std::move(patterns), &erased);
 
         if (!erased && !prologue)
           prologue = res;
@@ -423,9 +423,9 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
   forOp.erase();
 
   if (unrollPrologueEpilogue && prologue)
-    loopUnrollFull(prologue);
+    (void)loopUnrollFull(prologue);
   if (unrollPrologueEpilogue && !epilogue && epilogue != prologue)
-    loopUnrollFull(epilogue);
+    (void)loopUnrollFull(epilogue);
 
   return success();
 }
@@ -585,7 +585,7 @@ LogicalResult checkIfHyperRectangular(MutableArrayRef<AffineForOp> input,
                                       unsigned width) {
   FlatAffineConstraints cst;
   SmallVector<Operation *, 8> ops(input.begin(), input.end());
-  getIndexSet(ops, &cst);
+  (void)getIndexSet(ops, &cst);
   if (!cst.isHyperRectangular(0, width)) {
     rootAffineForOp.emitError("tiled code generation unimplemented for the "
                               "non-hyperrectangular case");
@@ -1135,7 +1135,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
            "can always be determined");
     cleanupForOp.setLowerBound(cleanupOperands, cleanupMap);
     // Promote the loop body up if this has turned into a single iteration loop.
-    promoteIfSingleIteration(cleanupForOp);
+    (void)promoteIfSingleIteration(cleanupForOp);
 
     // Adjust upper bound of the original loop; this is the same as the lower
     // bound of the cleanup loop.
@@ -1156,7 +1156,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
                        /*iterArgs=*/{}, /*yieldedValues=*/{});
 
   // Promote the loop body up if this has turned into a single iteration loop.
-  promoteIfSingleIteration(forOp);
+  (void)promoteIfSingleIteration(forOp);
   return success();
 }
 
@@ -1248,7 +1248,7 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
       std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
       epilogueForOp->replaceUsesOfWith(std::get<2>(e), std::get<0>(e));
     }
-    promoteIfSingleIteration(epilogueForOp);
+    (void)promoteIfSingleIteration(epilogueForOp);
   }
 
   // Create unrolled loop.
@@ -1268,7 +1268,7 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
       },
       iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  promoteIfSingleIteration(forOp);
+  (void)promoteIfSingleIteration(forOp);
   return success();
 }
 
@@ -1358,7 +1358,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
     cleanupAffineForOp.setLowerBound(cleanupOperands, cleanupMap);
 
     // Promote the cleanup loop if it has turned into a single iteration loop.
-    promoteIfSingleIteration(cleanupAffineForOp);
+    (void)promoteIfSingleIteration(cleanupAffineForOp);
 
     // Adjust the upper bound of the original loop - it will be the same as the
     // cleanup loop's lower bound. Its lower bound remains unchanged.
@@ -1396,7 +1396,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   }
 
   // Promote the loop body up if this has turned into a single iteration loop.
-  promoteIfSingleIteration(forOp);
+  (void)promoteIfSingleIteration(forOp);
   return success();
 }
 
@@ -1897,7 +1897,7 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   // TODO: for now we just ignore the result of band isolation.
   // In the future, mapping decisions may be impacted by the ability to
   // isolate perfectly nested bands.
-  tryIsolateBands(tileLoops);
+  (void)tryIsolateBands(tileLoops);
 
   return tileLoops;
 }
@@ -2583,12 +2583,12 @@ static LogicalResult generateCopy(
     prevOfBegin = std::prev(begin);
 
   // *Only* those uses within the range [begin, end) of 'block' are replaced.
-  replaceAllMemRefUsesWith(memref, fastMemRef,
-                           /*extraIndices=*/{}, indexRemap,
-                           /*extraOperands=*/regionSymbols,
-                           /*symbolOperands=*/{},
-                           /*domInstFilter=*/&*begin,
-                           /*postDomInstFilter=*/&*postDomFilter);
+  (void)replaceAllMemRefUsesWith(memref, fastMemRef,
+                                 /*extraIndices=*/{}, indexRemap,
+                                 /*extraOperands=*/regionSymbols,
+                                 /*symbolOperands=*/{},
+                                 /*domInstFilter=*/&*begin,
+                                 /*postDomInstFilter=*/&*postDomFilter);
 
   *nBegin = isBeginAtStartOfBlock ? block->begin() : std::next(prevOfBegin);
 
@@ -2941,7 +2941,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
   ops.reserve(loops.size());
   for (AffineForOp forOp : loops)
     ops.push_back(forOp);
-  getIndexSet(ops, &cst);
+  (void)getIndexSet(ops, &cst);
 
   // Remove constraints that are independent of these loop IVs.
   cst.removeIndependentConstraints(/*pos=*/0, /*num=*/loops.size());
@@ -3026,7 +3026,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
       return failure();
     }
     SmallVector<Operation *, 1> loopOp{loop.getOperation()};
-    getIndexSet(loopOp, &cst);
+    (void)getIndexSet(loopOp, &cst);
     // We will mark everything other than this loop IV as symbol for getting a
     // pair of <lb, ub> with a constant difference.
     cst.setDimSymbolSeparation(cst.getNumDimAndSymbolIds() - 1);

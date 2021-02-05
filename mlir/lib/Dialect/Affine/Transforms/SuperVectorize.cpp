@@ -779,7 +779,7 @@ static LogicalResult vectorizeRootOrTerminal(Value iv,
     auto permutationMap =
         makePermutationMap(opInst, indices, state->strategy->loopToVectorDim);
     if (!permutationMap)
-      return LogicalResult::Failure;
+      return failure();
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
     LLVM_DEBUG(permutationMap.print(dbgs()));
     auto transfer = b.create<vector::TransferReadOp>(
@@ -1292,7 +1292,7 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
                                 &strategy);
       // TODO: if pattern does not apply, report it; alter the
       // cost/benefit.
-      vectorizeRootMatch(m, strategy);
+      (void)vectorizeRootMatch(m, strategy);
       // TODO: some diagnostics if failure to vectorize occurs.
     }
   }
