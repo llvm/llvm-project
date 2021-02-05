@@ -4217,9 +4217,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       if (!IsA16) {
         // Add uncompressed address
         for (unsigned I = Intr->CoordStart; I < Intr->VAddrEnd; I++) {
-          int AddrReg = MI.getOperand(ArgOffset + I).getReg();
+          Register AddrReg = MI.getOperand(ArgOffset + I).getReg();
           assert(B.getMRI()->getType(AddrReg) == LLT::scalar(32));
-          PackedRegs.push_back(AddrReg);
+          PackedRegs.push_back(B.buildBitcast(V2S16, AddrReg).getReg(0));
         }
       }
 
@@ -4229,6 +4229,14 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
         PackedRegs.size() <= AMDGPU::getMIMGNSALimit(ST);
 
       if (!UseNSA && PackedRegs.size() > 1) {
+        // Round up to 8 elements for v5-v7
+        // FIXME: Missing intermediate sized register classes and instructions.
+        if (PackedRegs.size() > 4 && !isPowerOf2_32(PackedRegs.size())) {
+          unsigned RoundedSize = NextPowerOf2(PackedRegs.size());
+          auto Undef = B.buildUndef(V2S16);
+          PackedRegs.append(RoundedSize - PackedRegs.size(), Undef.getReg(0));
+        }
+
         LLT PackedAddrTy = LLT::vector(2 * PackedRegs.size(), 16);
         auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
         PackedRegs[0] = Concat.getReg(0);
