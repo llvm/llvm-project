@@ -127,21 +127,6 @@ public:
     return Res;
   }
 
-  /// Return the VGPR pressure at the current point
-  unsigned getCurrentNumVGPR() const {
-    return CurPressure.getVGPRNum();
-  }
-
-  /// Return the SGPR pressure at the current point
-  unsigned getCurrentNumSGPR() const {
-    return CurPressure.getSGPRNum();
-  }
-
-  /// Return the occupancy at the current point
-  unsigned getCurrentOccupancy(const GCNSubtarget &ST) const {
-    return CurPressure.getOccupancy(ST);
-  }
-
   decltype(LiveRegs) moveLiveRegs() {
     return std::move(LiveRegs);
   }

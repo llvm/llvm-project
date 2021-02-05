@@ -1225,6 +1225,127 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
   DeleteDeadBlocks(BBVec);
 }
 
+CanonicalLoopInfo *
+OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+                               InsertPointTy ComputeIP) {
+  assert(Loops.size() >= 1 && "At least one loop required");
+  size_t NumLoops = Loops.size();
+
+  // Nothing to do if there is already just one loop.
+  if (NumLoops == 1)
+    return Loops.front();
+
+  CanonicalLoopInfo *Outermost = Loops.front();
+  CanonicalLoopInfo *Innermost = Loops.back();
+  BasicBlock *OrigPreheader = Outermost->getPreheader();
+  BasicBlock *OrigAfter = Outermost->getAfter();
+  Function *F = OrigPreheader->getParent();
+
+  // Setup the IRBuilder for inserting the trip count computation.
+  Builder.SetCurrentDebugLocation(DL);
+  if (ComputeIP.isSet())
+    Builder.restoreIP(ComputeIP);
+  else
+    Builder.restoreIP(Outermost->getPreheaderIP());
+
+  // Derive the collapsed' loop trip count.
+  // TODO: Find common/largest indvar type.
+  Value *CollapsedTripCount = nullptr;
+  for (CanonicalLoopInfo *L : Loops) {
+    Value *OrigTripCount = L->getTripCount();
+    if (!CollapsedTripCount) {
+      CollapsedTripCount = OrigTripCount;
+      continue;
+    }
+
+    // TODO: Enable UndefinedSanitizer to diagnose an overflow here.
+    CollapsedTripCount = Builder.CreateMul(CollapsedTripCount, OrigTripCount,
+                                           {}, /*HasNUW=*/true);
+  }
+
+  // Create the collapsed loop control flow.
+  CanonicalLoopInfo *Result =
+      createLoopSkeleton(DL, CollapsedTripCount, F,
+                         OrigPreheader->getNextNode(), OrigAfter, "collapsed");
+
+  // Build the collapsed loop body code.
+  // Start with deriving the input loop induction variables from the collapsed
+  // one, using a divmod scheme. To preserve the original loops' order, the
+  // innermost loop use the least significant bits.
+  Builder.restoreIP(Result->getBodyIP());
+
+  Value *Leftover = Result->getIndVar();
+  SmallVector<Value *> NewIndVars;
+  NewIndVars.set_size(NumLoops);
+  for (int i = NumLoops - 1; i >= 1; --i) {
+    Value *OrigTripCount = Loops[i]->getTripCount();
+
+    Value *NewIndVar = Builder.CreateURem(Leftover, OrigTripCount);
+    NewIndVars[i] = NewIndVar;
+
+    Leftover = Builder.CreateUDiv(Leftover, OrigTripCount);
+  }
+  // Outermost loop gets all the remaining bits.
+  NewIndVars[0] = Leftover;
+
+  // Construct the loop body control flow.
+  // We progressively construct the branch structure following in direction of
+  // the control flow, from the leading in-between code, the loop nest body, the
+  // trailing in-between code, and rejoining the collapsed loop's latch.
+  // ContinueBlock and ContinuePred keep track of the source(s) of next edge. If
+  // the ContinueBlock is set, continue with that block. If ContinuePred, use
+  // its predecessors as sources.
+  BasicBlock *ContinueBlock = Result->getBody();
+  BasicBlock *ContinuePred = nullptr;
+  auto ContinueWith = [&ContinueBlock, &ContinuePred, DL](BasicBlock *Dest,
+                                                          BasicBlock *NextSrc) {
+    if (ContinueBlock)
+      redirectTo(ContinueBlock, Dest, DL);
+    else
+      redirectAllPredecessorsTo(ContinuePred, Dest, DL);
+
+    ContinueBlock = nullptr;
+    ContinuePred = NextSrc;
+  };
+
+  // The code before the nested loop of each level.
+  // Because we are sinking it into the nest, it will be executed more often
+  // that the original loop. More sophisticated schemes could keep track of what
+  // the in-between code is and instantiate it only once per thread.
+  for (size_t i = 0; i < NumLoops - 1; ++i)
+    ContinueWith(Loops[i]->getBody(), Loops[i + 1]->getHeader());
+
+  // Connect the loop nest body.
+  ContinueWith(Innermost->getBody(), Innermost->getLatch());
+
+  // The code after the nested loop at each level.
+  for (size_t i = NumLoops - 1; i > 0; --i)
+    ContinueWith(Loops[i]->getAfter(), Loops[i - 1]->getLatch());
+
+  // Connect the finished loop to the collapsed loop latch.
+  ContinueWith(Result->getLatch(), nullptr);
+
+  // Replace the input loops with the new collapsed loop.
+  redirectTo(Outermost->getPreheader(), Result->getPreheader(), DL);
+  redirectTo(Result->getAfter(), Outermost->getAfter(), DL);
+
+  // Replace the input loop indvars with the derived ones.
+  for (size_t i = 0; i < NumLoops; ++i)
+    Loops[i]->getIndVar()->replaceAllUsesWith(NewIndVars[i]);
+
+  // Remove unused parts of the input loops.
+  SmallVector<BasicBlock *, 12> OldControlBBs;
+  OldControlBBs.reserve(6 * Loops.size());
+  for (CanonicalLoopInfo *Loop : Loops)
+    Loop->collectControlBlocks(OldControlBBs);
+  removeUnusedBlocksFromParent(OldControlBBs);
+
+#ifndef NDEBUG
+  Result->assertOK();
+#endif
+  return Result;
+}
+
 std::vector<CanonicalLoopInfo *>
 OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
                            ArrayRef<Value *> TileSizes) {

@@ -628,6 +628,10 @@ OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+OpFoldResult TestPassthroughFold::fold(ArrayRef<Attribute> operands) {
+  return getOperand();
+}
+
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,

@@ -786,14 +786,25 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     else {
       // Ideally we would check for these flags in
       // CollectArgsForIntegratedAssembler but we can't change the ArchName at
-      // that point. There is no assembler equivalent of -mno-thumb, -marm, or
-      // -mno-arm.
+      // that point.
+      llvm::StringRef WaMArch, WaMCPU;
       for (const auto *A :
            Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
         for (StringRef Value : A->getValues()) {
+          // There is no assembler equivalent of -mno-thumb, -marm, or -mno-arm.
           if (Value == "-mthumb")
             IsThumb = true;
+          else if (Value.startswith("-march="))
+            WaMArch = Value.substr(7);
+          else if (Value.startswith("-mcpu="))
+            WaMCPU = Value.substr(6);
         }
+      }
+
+      if (WaMCPU.size() || WaMArch.size()) {
+        // The way this works means that we prefer -Wa,-mcpu's architecture
+        // over -Wa,-march. Which matches the compiler behaviour.
+        Suffix = tools::arm::getLLVMArchSuffixForARM(WaMCPU, WaMArch, Triple);
       }
     }
     // Assembly files should start in ARM mode, unless arch is M-profile, or

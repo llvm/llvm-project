@@ -2,7 +2,7 @@
 # Compile a source file and compare generated .mod files against expected.
 
 set -e
-F18_OPTIONS="-fdebug-resolve-names -fparse-only"
+F18_OPTIONS="-fdebug-resolve-names -fsyntax-only"
 srcdir=$(dirname $0)
 source $srcdir/common.sh
 

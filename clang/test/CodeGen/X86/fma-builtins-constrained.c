@@ -1,8 +1,15 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -ffp-exception-behavior=strict -O2 -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,COMMONIR,CONSTRAINED
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -ffp-exception-behavior=maytrap -DSTRICT=1 -O2 -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,COMMONIR,CONSTRAINED
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -S -o - | FileCheck %s --check-prefixes=COMMON,CHECK-ASM
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -ffp-exception-behavior=strict -S -o - | FileCheck %s --check-prefixes=COMMON,CHECK-ASM
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +fma -O2 -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - | FileCheck %s --check-prefixes=COMMON,CHECK-ASM
+
+#ifdef STRICT
+// Test that the constrained intrinsics are picking up the exception
+// metadata from the AST instead of the global default from the command line.
+
+#pragma float_control(except, on)
+#endif
 
 #include <immintrin.h>
 

@@ -42,9 +42,6 @@ public:
 
   template <typename T> bool Pre(const parser::Statement<T> &statement) {
     currentStatementSourcePosition_ = statement.source;
-    if (statement.label.has_value()) {
-      labels_.insert(*statement.label);
-    }
     return true;
   }
 
@@ -55,8 +52,11 @@ public:
     }
   }
   void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
-
-  std::set<parser::Label> labels() { return labels_; }
+  void Post(const parser::CycleStmt &cycleStmt) {
+    if (const auto &cycleName{cycleStmt.v}) {
+      CheckConstructNameBranching("CYCLE", cycleName.value());
+    }
+  }
 
 private:
   parser::MessageFormattedText GetEnclosingMsg() const {
@@ -107,7 +107,6 @@ private:
   parser::CharBlock sourcePosition_;
   std::string upperCaseDirName_;
   D currentDirective_;
-  std::set<parser::Label> labels_;
 };
 
 // Generic structure checker for directives/clauses language such as OpenMP
@@ -236,8 +235,7 @@ protected:
     }
   }
   // Check illegal branching out of `Parser::Block` for `Parser::Name` based
-  // nodes (examples `Parser::ExitStmt`) along with `Parser::Label`
-  // based nodes (example `Parser::GotoStmt`).
+  // nodes (example `Parser::ExitStmt`)
   void CheckNoBranching(const parser::Block &block, D directive,
       const parser::CharBlock &directiveSource);
 
@@ -283,11 +281,6 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
   NoBranchingEnforce<D> noBranchingEnforce{
       context_, directiveSource, directive, ContextDirectiveAsFortran()};
   parser::Walk(block, noBranchingEnforce);
-
-  auto construct{parser::ToUpperCaseLetters(getDirectiveName(directive).str())};
-  LabelEnforce directiveLabelEnforce{context_, noBranchingEnforce.labels(),
-      directiveSource, construct.c_str()};
-  parser::Walk(block, directiveLabelEnforce);
 }
 
 // Check that only clauses included in the given set are present after the given

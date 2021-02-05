@@ -1,10 +1,17 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=strict -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -fms-compatibility -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=strict -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -fms-compatibility -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -S -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=strict -S -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx512f -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - -Wall -Werror | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
+
+#ifdef STRICT
+// Test that the constrained intrinsics are picking up the exception
+// metadata from the AST instead of the global default from the command line.
+
+#pragma float_control(except, on)
+#endif
 
 #include <immintrin.h>
 

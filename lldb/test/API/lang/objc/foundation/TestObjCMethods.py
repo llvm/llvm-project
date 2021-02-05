@@ -270,8 +270,8 @@ class FoundationTestCase(TestBase):
 
         my_str_value = int(my_str_var.GetValue(), 0)
 
-        self.assertTrue(
-            str_value == my_str_value,
+        self.assertEqual(
+            str_value, my_str_value,
             "Got the correct value for my->str")
 
     def test_expression_lookups_objc(self):

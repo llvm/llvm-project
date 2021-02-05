@@ -698,9 +698,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
   bool HasProfileSummary = (M.getProfileSummary(/* IsCS */ false) != nullptr);
-  for (auto It = M.begin(), End = M.end(); It != End; ++It) {
-    Function &F = *It;
-
+  for (Function &F : M) {
     // Do not touch declarations.
     if (F.isDeclaration())
       continue;

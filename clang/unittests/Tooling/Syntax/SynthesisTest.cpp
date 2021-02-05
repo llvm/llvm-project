@@ -238,12 +238,13 @@ TranslationUnit Detached synthesized
     |-IfStatement Statement synthesized
     | |-'if' IntroducerKeyword synthesized
     | |-'(' synthesized
-    | |-BinaryOperatorExpression synthesized
-    | | |-IntegerLiteralExpression LeftHandSide synthesized
-    | | | `-'1' LiteralToken synthesized
-    | | |-'+' OperatorToken synthesized
-    | | `-IntegerLiteralExpression RightHandSide synthesized
-    | |   `-'1' LiteralToken synthesized
+    | |-ExpressionStatement Condition synthesized
+    | | `-BinaryOperatorExpression Expression synthesized
+    | |   |-IntegerLiteralExpression LeftHandSide synthesized
+    | |   | `-'1' LiteralToken synthesized
+    | |   |-'+' OperatorToken synthesized
+    | |   `-IntegerLiteralExpression RightHandSide synthesized
+    | |     `-'1' LiteralToken synthesized
     | |-')' synthesized
     | |-CompoundStatement ThenStatement synthesized
     | | |-'{' OpenParen synthesized

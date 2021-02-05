@@ -154,4 +154,33 @@ out:                                              ; preds = %loop
   ret float %t6
 }
 
+; This would assert on FMF propagation.
+
+define void @not_a_min_max() {
+; CHECK-LABEL: @not_a_min_max(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[F9_S0_V0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[T14:%.*]] = icmp eq i32 [[F9_S0_V0]], 5
+; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 0x36A0000000000000, float 0.000000e+00
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[F9_S0_V0]], 1
+; CHECK-NEXT:    br i1 false, label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %f9.s0.v0 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %t14 = icmp eq i32 %f9.s0.v0, 5
+  %t15 = select reassoc nnan ninf nsz contract afn i1 %t14, float 0x36A0000000000000, float 0.0
+  %add = add nuw nsw i32 %f9.s0.v0, 1
+  br i1 false, label %end, label %loop
+
+end:
+  ret void
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }

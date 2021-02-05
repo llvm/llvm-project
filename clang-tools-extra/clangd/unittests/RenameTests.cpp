@@ -1010,13 +1010,69 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "conflict", !HeaderFile, nullptr, "Conflict"},
 
-      {R"cpp(// FIXME: detecting local variables is not supported yet.
+      {R"cpp(
         void func() {
-          int Conflict;
-          int [[V^ar]];
+          bool Whatever;
+          int V^ar;
+          char Conflict;
         }
       )cpp",
-       nullptr, !HeaderFile, nullptr, "Conflict"},
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int Conflict = 42) {
+            int V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int Conflict = 42) {
+          } else {
+            bool V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          if (int V^ar = 42) {
+          } else {
+            bool Conflict;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          while (int V^ar = 10) {
+            bool Conflict = true;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func() {
+          for (int Something = 9000, Anything = 14, Conflict = 42; Anything > 9;
+               ++Something) {
+            int V^ar;
+          }
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(
+        void func(int Conflict) {
+          bool V^ar;
+        }
+      )cpp",
+       "conflict", !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(// Trying to rename into the same name, SameName == SameName.
         void func() {

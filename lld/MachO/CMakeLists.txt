@@ -27,6 +27,7 @@ add_lld_library(lldMachO2
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitReader
   Core
   DebugInfoDWARF
   LTO

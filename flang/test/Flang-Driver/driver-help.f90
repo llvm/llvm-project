@@ -23,9 +23,14 @@
 ! HELP-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -E                     Only run the preprocessor
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
+! HELP-NEXT: -ffixed-form           Process source files in fixed form
+! HELP-NEXT: -ffixed-line-length=<value>
+! HELP-NEXT: Use <value> as character line width in fixed mode
+! HELP-NEXT: -ffree-form            Process source files in free form
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
@@ -39,8 +44,13 @@
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-obj Emit native object files
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
+! HELP-FC1-NEXT: -ffixed-form           Process source files in fixed form
+! HELP-FC1-NEXT: -ffixed-line-length=<value>
+! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
+! HELP-FC1-NEXT: -ffree-form            Process source files in free form
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information

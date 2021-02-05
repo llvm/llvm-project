@@ -73,8 +73,8 @@ class ListenToModuleLoadedEvents (TestBase):
             "It is a breakpoint event.")
         self.assertTrue(lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(
             event) == lldb.eBreakpointEventTypeAdded, "It is a breakpoint added event.")
-        self.assertTrue(
-            bkpt == lldb.SBBreakpoint.GetBreakpointFromEvent(event),
+        self.assertEqual(
+            bkpt, lldb.SBBreakpoint.GetBreakpointFromEvent(event),
             "It is our breakpoint.")
 
         # Now make sure if we stop listening for events we don't get them:
@@ -118,8 +118,8 @@ class ListenToModuleLoadedEvents (TestBase):
             "It is a breakpoint event.")
         self.assertTrue(lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(
             event) == lldb.eBreakpointEventTypeAdded, "It is a breakpoint added event.")
-        self.assertTrue(
-            bkpt == lldb.SBBreakpoint.GetBreakpointFromEvent(event),
+        self.assertEqual(
+            bkpt, lldb.SBBreakpoint.GetBreakpointFromEvent(event),
             "It is our breakpoint.")
 
         # Now make sure if we stop listening for events we don't get them:

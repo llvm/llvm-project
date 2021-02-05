@@ -2504,6 +2504,18 @@ below. If multiple flags are present, the last one is used.
    **-fno-standalone-debug** option can be used to get to turn on the
    vtable-based optimization described above.
 
+.. option:: -fuse-ctor-homing
+
+   This optimization is similar to the optimizations that are enabled as part
+   of -fno-standalone-debug. Here, Clang only emits type info for a
+   non-trivial, non-aggregate C++ class in the modules that contain a
+   definition of one of its constructors. This relies on the additional
+   assumption that all classes that are not trivially constructible have a
+   non-trivial constructor that is used somewhere.
+
+   This flag is not enabled by default, and needs to be used with -cc1 or
+   -Xclang.
+
 .. option:: -g
 
   Generate complete debug info.
@@ -2889,8 +2901,10 @@ Note that if compiled to bitcode for generic targets such as SPIR,
 portable IR is produced that can be used with various vendor
 tools as well as open source tools such as `SPIRV-LLVM Translator
 <https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_
-to produce SPIR-V binary.
-
+to produce SPIR-V binary. More details are provided in `the offline
+compilation from OpenCL kernel sources into SPIR-V using open source
+tools
+<https://www.khronos.org/blog/offline-compilation-of-opencl-kernels-into-spir-v-using-open-source-tooling>`_.
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded
@@ -3489,7 +3503,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /execution-charset:<value>
                               Runtime encoding, supports only UTF-8
       /E                      Preprocess to stdout
-      /fallback               Fall back to cl.exe if clang-cl fails to compile
       /FA                     Output assembly code file during compilation
       /Fa<file or directory>  Output assembly code to this file during compilation (with /FA)
       /Fe<file or directory>  Set output executable file or directory (ends in / or \)
@@ -3834,18 +3847,6 @@ different instance of that variable than in the DLL:
 This could lead to very subtle bugs. Using ``-fvisibility-inlines-hidden`` can
 lead to the same issue. To avoid it in this case, make `S::foo()` or
 `internal()` non-inline, or mark them `dllimport/dllexport` explicitly.
-
-The /fallback Option
-^^^^^^^^^^^^^^^^^^^^
-
-When clang-cl is run with the ``/fallback`` option, it will first try to
-compile files itself. For any file that it fails to compile, it will fall back
-and try to compile the file by invoking cl.exe.
-
-This option is intended to be used as a temporary means to build projects where
-clang-cl cannot successfully compile all the files. clang-cl may fail to compile
-a file either because it cannot generate code for some C++ feature, or because
-it cannot parse some Microsoft language extension.
 
 Finding Clang runtime libraries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

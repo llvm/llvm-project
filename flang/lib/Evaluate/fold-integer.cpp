@@ -7,8 +7,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "flang/Evaluate/check-expression.h"
 
 namespace Fortran::evaluate {
+
+// Class to retrieve the constant lower bound of an expression which is an
+// array that devolves to a type of Constant<T>
+class GetConstantArrayLboundHelper {
+public:
+  GetConstantArrayLboundHelper(ConstantSubscript dim) : dim_{dim} {}
+
+  template <typename T> ConstantSubscript GetLbound(const T &) {
+    // The method is needed for template expansion, but we should never get
+    // here in practice.
+    CHECK(false);
+    return 0;
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Constant<T> &x) {
+    // Return the lower bound
+    return x.lbounds()[dim_];
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Parentheses<T> &x) {
+    // Strip off the parentheses
+    return GetLbound(x.left());
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Expr<T> &x) {
+    // recurse through Expr<T>'a until we hit a constant
+    return std::visit([&](const auto &inner) { return GetLbound(inner); },
+        //      [&](const auto &) { return 0; },
+        x.u);
+  }
+
+private:
+  ConstantSubscript dim_;
+};
 
 template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
@@ -50,6 +85,9 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         } else {
           lowerBoundsAreOne = symbol.Rank() == 0; // LBOUND(array%component)
         }
+      }
+      if (IsActuallyConstant(*array)) {
+        return Expr<T>{GetConstantArrayLboundHelper{*dim}.GetLbound(*array)};
       }
       if (lowerBoundsAreOne) {
         if (dim) {

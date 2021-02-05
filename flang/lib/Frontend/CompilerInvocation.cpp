@@ -162,6 +162,40 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
 
     opts.inputs_.emplace_back(std::move(inputs[i]), ik);
   }
+
+  // Set fortranForm_ based on options -ffree-form and -ffixed-form.
+  if (const auto *arg = args.getLastArg(clang::driver::options::OPT_ffixed_form,
+          clang::driver::options::OPT_ffree_form)) {
+    opts.fortranForm_ =
+        arg->getOption().matches(clang::driver::options::OPT_ffixed_form)
+        ? FortranForm::FixedForm
+        : FortranForm::FreeForm;
+  }
+
+  // Set fixedFormColumns_ based on -ffixed-line-length=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::driver::options::OPT_ffixed_line_length_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    std::int64_t columns = -1;
+    if (argValue == "none") {
+      columns = 0;
+    } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
+      columns = -1;
+    }
+    if (columns < 0) {
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getOption().getName() << arg->getValue()
+          << "value must be 'none' or a non-negative integer";
+    } else if (columns == 0) {
+      opts.fixedFormColumns_ = 1000000;
+    } else if (columns < 7) {
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getOption().getName() << arg->getValue()
+          << "value must be at least seven";
+    } else {
+      opts.fixedFormColumns_ = columns;
+    }
+  }
   return dashX;
 }
 
@@ -185,6 +219,25 @@ static void parsePreprocessorArgs(
   // Add the ordered list of -I's.
   for (const auto *currentArg : args.filtered(clang::driver::options::OPT_I))
     opts.searchDirectoriesFromDashI.emplace_back(currentArg->getValue());
+}
+
+/// Parses all semantic related arguments and populates the variables
+/// options accordingly.
+static void parseSemaArgs(std::string &moduleDir, llvm::opt::ArgList &args,
+    clang::DiagnosticsEngine &diags) {
+
+  auto moduleDirList =
+      args.getAllArgValues(clang::driver::options::OPT_module_dir);
+  // User can only specify -J/-module-dir once
+  // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html
+  if (moduleDirList.size() > 1) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+            "Only one '-module-dir/-J' option allowed");
+    diags.Report(diagID);
+  }
+  if (moduleDirList.size() == 1)
+    moduleDir = moduleDirList[0];
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
@@ -216,6 +269,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   ParseFrontendArgs(res.frontendOpts(), args, diags);
   // Parse the preprocessor args
   parsePreprocessorArgs(res.preprocessorOpts(), args);
+  // Parse semantic args
+  parseSemaArgs(res.moduleDir(), args, diags);
 
   return success;
 }
@@ -278,7 +333,15 @@ void CompilerInvocation::SetDefaultFortranOpts() {
 
 void CompilerInvocation::setFortranOpts() {
   auto &fortranOptions = fortranOpts();
+  const auto &frontendOptions = frontendOpts();
   const auto &preprocessorOptions = preprocessorOpts();
+  auto &moduleDirJ = moduleDir();
+
+  if (frontendOptions.fortranForm_ != FortranForm::Unknown) {
+    fortranOptions.isFixedForm =
+        frontendOptions.fortranForm_ == FortranForm::FixedForm;
+  }
+  fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns_;
 
   collectMacroDefinitions(preprocessorOptions, fortranOptions);
 
@@ -286,4 +349,18 @@ void CompilerInvocation::setFortranOpts() {
       fortranOptions.searchDirectories.end(),
       preprocessorOptions.searchDirectoriesFromDashI.begin(),
       preprocessorOptions.searchDirectoriesFromDashI.end());
+
+  // Add the directory supplied through -J/-module-dir to the list of search
+  // directories
+  if (moduleDirJ.compare(".") != 0)
+    fortranOptions.searchDirectories.emplace_back(moduleDirJ);
+}
+
+void CompilerInvocation::setSemanticsOpts(
+    Fortran::semantics::SemanticsContext &semaCtxt) {
+  auto &fortranOptions = fortranOpts();
+  auto &moduleDirJ = moduleDir();
+  semaCtxt.set_moduleDirectory(moduleDirJ)
+      .set_searchDirectories(fortranOptions.searchDirectories);
+  return;
 }

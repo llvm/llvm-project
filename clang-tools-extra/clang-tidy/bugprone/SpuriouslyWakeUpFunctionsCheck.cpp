@@ -59,34 +59,20 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   if (getLangOpts().CPlusPlus) {
     // Check for `CON54-CPP`
     Finder->addMatcher(
-        ifStmt(
-            allOf(HasWaitDescendantCpp,
-                  unless(anyOf(hasDescendant(ifStmt(HasWaitDescendantCpp)),
-                               hasDescendant(whileStmt(HasWaitDescendantCpp)),
-                               hasDescendant(forStmt(HasWaitDescendantCpp)),
-                               hasDescendant(doStmt(HasWaitDescendantCpp)))))
-
-                ),
+        ifStmt(HasWaitDescendantCpp,
+               unless(hasDescendant(mapAnyOf(ifStmt, whileStmt, forStmt, doStmt)
+                                        .with(HasWaitDescendantCpp)))),
         this);
   } else {
     // Check for `CON36-C`
     Finder->addMatcher(
-        ifStmt(
-            allOf(HasWaitDescendantC,
-                  unless(anyOf(hasDescendant(ifStmt(HasWaitDescendantC)),
-                               hasDescendant(whileStmt(HasWaitDescendantC)),
-                               hasDescendant(forStmt(HasWaitDescendantC)),
-                               hasDescendant(doStmt(HasWaitDescendantC)),
-                               hasParent(whileStmt()),
-                               hasParent(compoundStmt(hasParent(whileStmt()))),
-                               hasParent(forStmt()),
-                               hasParent(compoundStmt(hasParent(forStmt()))),
-                               hasParent(doStmt()),
-                               hasParent(compoundStmt(hasParent(doStmt())))))
-
-                      ))
-
-            ,
+        ifStmt(HasWaitDescendantC,
+               unless(anyOf(
+                   hasDescendant(mapAnyOf(ifStmt, whileStmt, forStmt, doStmt)
+                                     .with(HasWaitDescendantC)),
+                   hasParent(mapAnyOf(whileStmt, forStmt, doStmt)),
+                   hasParent(compoundStmt(
+                       hasParent(mapAnyOf(whileStmt, forStmt, doStmt))))))),
         this);
   }
 }

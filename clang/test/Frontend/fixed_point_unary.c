@@ -90,7 +90,7 @@ void inc_usa() {
 // SIGNED-LABEL: @inc_uf(
 // SIGNED-NEXT:  entry:
 // SIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @uf, align 2
-// SIGNED-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], poison
+// SIGNED-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], undef
 // SIGNED-NEXT:    store i16 [[TMP1]], i16* @uf, align 2
 // SIGNED-NEXT:    ret void
 //
@@ -271,7 +271,7 @@ void dec_usa() {
 // SIGNED-LABEL: @dec_uf(
 // SIGNED-NEXT:  entry:
 // SIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @uf, align 2
-// SIGNED-NEXT:    [[TMP1:%.*]] = sub i16 [[TMP0]], poison
+// SIGNED-NEXT:    [[TMP1:%.*]] = sub i16 [[TMP0]], undef
 // SIGNED-NEXT:    store i16 [[TMP1]], i16* @uf, align 2
 // SIGNED-NEXT:    ret void
 //

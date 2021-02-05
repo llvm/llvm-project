@@ -12,8 +12,6 @@
 // contain those values. All uses of those values are replaced with appropriate
 // GEP + load from the coroutine frame. At the point of the definition we spill
 // the value into the coroutine frame.
-//
-// TODO: pack values tightly using liveness info.
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"

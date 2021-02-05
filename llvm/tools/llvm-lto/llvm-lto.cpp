@@ -222,11 +222,6 @@ static cl::opt<bool> PrintMachOCPUOnly(
     "print-macho-cpu-only", cl::init(false),
     cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"));
 
-static cl::opt<bool>
-    UseNewPM("use-new-pm",
-             cl::desc("Run LTO passes using the new pass manager"),
-             cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
-
 namespace {
 
 struct ModuleInfo {
@@ -1019,8 +1014,6 @@ int main(int argc, char **argv) {
   CodeGen.setOptLevel(OptLevel - '0');
   CodeGen.setAttrs(codegen::getMAttrs());
 
-  CodeGen.setUseNewPM(UseNewPM);
-
   if (auto FT = codegen::getExplicitFileType())
     CodeGen.setFileType(FT.getValue());
 
@@ -1048,24 +1041,25 @@ int main(int argc, char **argv) {
         error("writing merged module failed.");
     }
 
-    auto AddStream =
-        [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+    std::list<ToolOutputFile> OSs;
+    std::vector<raw_pwrite_stream *> OSPtrs;
+    for (unsigned I = 0; I != Parallelism; ++I) {
       std::string PartFilename = OutputFilename;
       if (Parallelism != 1)
-        PartFilename += "." + utostr(Task);
-
+        PartFilename += "." + utostr(I);
       std::error_code EC;
-      auto S =
-          std::make_unique<raw_fd_ostream>(PartFilename, EC, sys::fs::OF_None);
+      OSs.emplace_back(PartFilename, EC, sys::fs::OF_None);
       if (EC)
         error("error opening the file '" + PartFilename + "': " + EC.message());
-      return std::make_unique<lto::NativeObjectStream>(std::move(S));
-    };
+      OSPtrs.push_back(&OSs.back().os());
+    }
 
-    if (!CodeGen.compileOptimized(AddStream, Parallelism))
+    if (!CodeGen.compileOptimized(OSPtrs))
       // Diagnostic messages should have been printed by the handler.
       error("error compiling the code");
 
+    for (ToolOutputFile &OS : OSs)
+      OS.keep();
   } else {
     if (Parallelism != 1)
       error("-j must be specified together with -o");

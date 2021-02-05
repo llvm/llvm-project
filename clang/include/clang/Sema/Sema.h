@@ -12310,7 +12310,7 @@ private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE=nullptr,
                         bool AllowOnePastEnd=true, bool IndexNegated=false);
-  void CheckArrayAccess(const Expr *E);
+  void CheckArrayAccess(const Expr *E, int AllowOnePastEnd = 0);
   // Used to grab the relevant information from a FormatAttr and a
   // FunctionDeclaration.
   struct FormatStringInfo {

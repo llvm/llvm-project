@@ -15,7 +15,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     # Number of stderr lines to read from the simctl output.
     READ_LINES = 10
 
-    def check_simulator_ostype(self, sdk, platform_name):
+    def check_simulator_ostype(self, sdk, platform_name, arch=platform.machine()):
         cmd = ['xcrun', 'simctl', 'list', '-j', 'devices']
         self.trace(' '.join(cmd))
         sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
@@ -48,8 +48,16 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(deviceUDID)
         exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
-        self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
-                                'ARCH': platform.machine() })
+        vers = lldbutil.get_xcode_sdk_version(sdk)
+        triple = '-'.join([arch, 'apple', platform_name + vers, 'simulator'])
+        version_min = '-m{}-simulator-version-min={}'.format(platform_name, vers)
+        self.build(
+            dictionary={
+                'EXE': exe_name,
+                'SDKROOT': sdkroot.strip(),
+                'ARCH': arch,
+                'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),
+            })
         exe_path = self.getBuildArtifact(exe_name)
         cmd = [
             'xcrun', 'simctl', 'spawn', '-s', deviceUDID, exe_path,
@@ -132,4 +140,5 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfRemote
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform_name='watchos')
+                                    platform_name='watchos',
+                                    arch='i386')

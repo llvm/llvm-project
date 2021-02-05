@@ -387,7 +387,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   if (!checkResult) {
     // No I/O call result checks - the loop is a fir.do_loop op.
     auto loopOp =
-        builder.create<fir::LoopOp>(loc, lowerValue, upperValue, stepValue);
+        builder.create<fir::DoLoopOp>(loc, lowerValue, upperValue, stepValue);
     builder.setInsertionPointToStart(loopOp.getBody());
     auto lcv = builder.createConvert(loc, converter.genType(loopSym),
                                      loopOp.getInductionVar());

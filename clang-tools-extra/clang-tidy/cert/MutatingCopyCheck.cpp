@@ -30,12 +30,8 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
             MemberExprOrSourceObject);
 
   const auto IsSourceMutatingAssignment = traverse(
-      TK_AsIs,
-      expr(anyOf(binaryOperator(isAssignmentOperator(), hasLHS(IsPartOfSource))
-                     .bind(MutatingOperatorName),
-                 cxxOperatorCallExpr(isAssignmentOperator(),
-                                     hasArgument(0, IsPartOfSource))
-                     .bind(MutatingOperatorName))));
+      TK_AsIs, binaryOperation(hasOperatorName("="), hasLHS(IsPartOfSource))
+                   .bind(MutatingOperatorName));
 
   const auto MemberExprOrSelf = anyOf(memberExpr(), cxxThisExpr());
 
@@ -43,9 +39,7 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasDescendant(expr(unless(MemberExprOrSelf)))), MemberExprOrSelf);
 
   const auto IsSelfMutatingAssignment =
-      expr(anyOf(binaryOperator(isAssignmentOperator(), hasLHS(IsPartOfSelf)),
-                 cxxOperatorCallExpr(isAssignmentOperator(),
-                                     hasArgument(0, IsPartOfSelf))));
+      binaryOperation(isAssignmentOperator(), hasLHS(IsPartOfSelf));
 
   const auto IsSelfMutatingMemberFunction =
       functionDecl(hasBody(hasDescendant(IsSelfMutatingAssignment)));

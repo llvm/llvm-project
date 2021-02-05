@@ -66,10 +66,7 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
       substTemplateTypeParmType(hasReplacementType(ConstReferenceOrValue))));
   auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
       DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValueOrReplaced)));
-  Matches = match(findAll(callExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  Matches =
-      match(findAll(cxxConstructExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
+  Matches = match(findAll(invocation(UsedAsConstRefOrValueArg)), Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   // References and pointers to const assignments.
   Matches =

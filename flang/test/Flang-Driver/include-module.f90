@@ -7,12 +7,26 @@
 !--------------------------
 ! RUN: not %flang-new -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED
 ! RUN: not %flang-new -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED
+! RUN: not %flang-new -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED
+! RUN: not %flang-new -fsyntax-only -module-dir %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fsyntax-only -J %S/Inputs/module-dir -J %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
+! RUN: not %flang-new -fsyntax-only -J %S/Inputs/module-dir -module-dir %S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
+! RUN: not %flang-new -fsyntax-only -module-dir %S/Inputs/module-dir -J%S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang-new -fc1)
 !-----------------------------------------
 ! RUN: not %flang-new -fc1 -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED
 ! RUN: not %flang-new -fc1 -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fc1 -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED
+! RUN: not %flang-new -fc1 -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fc1 -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED
+! RUN: not %flang-new -fc1 -fsyntax-only -module-dir %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: not %flang-new -fc1 -fsyntax-only -J %S/Inputs/module-dir -J %S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
+! RUN: not %flang-new -fc1 -fsyntax-only -J %S/Inputs/module-dir -module-dir %S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
+! RUN: not %flang-new -fc1 -fsyntax-only -module-dir %S/Inputs/module-dir -J%S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
 
 !-----------------------------------------
 ! EXPECTED OUTPUT FOR MISSING MODULE FILE
@@ -21,6 +35,11 @@
 ! SINGLEINCLUDE-NOT:Error reading module file for module 'basictestmoduletwo'
 ! SINGLEINCLUDE-NOT:error: Derived type 't1' not found
 ! SINGLEINCLUDE:error: Derived type 't2' not found
+
+!-----------------------------------------
+! EXPECTED OUTPUT FOR MISSING MODULE FILE
+!-----------------------------------------
+! DOUBLEINCLUDE:error: Only one '-module-dir/-J' option allowed
 
 !---------------------------------------
 ! EXPECTED OUTPUT FOR ALL MODULES FOUND

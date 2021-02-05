@@ -130,36 +130,42 @@ int main(int, char**)
     static_assert(( std::__is_cpp17_forward_iterator      <char *>::value), "" );
     static_assert(( std::__is_cpp17_bidirectional_iterator<char *>::value), "" );
     static_assert(( std::__is_cpp17_random_access_iterator<char *>::value), "" );
+    static_assert(( std::__is_cpp17_contiguous_iterator   <char *>::value), "" );
     static_assert((!std::__is_exactly_cpp17_input_iterator<char *>::value), "" );
 
     static_assert(( std::__is_cpp17_input_iterator        <input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_forward_iterator      <input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_bidirectional_iterator<input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_random_access_iterator<input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_cpp17_contiguous_iterator   <input_iterator<char *> >::value), "" );
     static_assert(( std::__is_exactly_cpp17_input_iterator<input_iterator<char *> >::value), "" );
 
     static_assert(( std::__is_cpp17_input_iterator        <forward_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_forward_iterator      <forward_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_bidirectional_iterator<forward_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_random_access_iterator<forward_iterator<char *> >::value), "" );
+    static_assert((!std::__is_cpp17_contiguous_iterator   <forward_iterator<char *> >::value), "" );
     static_assert((!std::__is_exactly_cpp17_input_iterator<forward_iterator<char *> >::value), "" );
 
     static_assert(( std::__is_cpp17_input_iterator        <bidirectional_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_forward_iterator      <bidirectional_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_bidirectional_iterator<bidirectional_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_random_access_iterator<bidirectional_iterator<char *> >::value), "" );
+    static_assert((!std::__is_cpp17_contiguous_iterator   <bidirectional_iterator<char *> >::value), "" );
     static_assert((!std::__is_exactly_cpp17_input_iterator<bidirectional_iterator<char *> >::value), "" );
 
     static_assert(( std::__is_cpp17_input_iterator        <random_access_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_forward_iterator      <random_access_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_bidirectional_iterator<random_access_iterator<char *> >::value), "" );
     static_assert(( std::__is_cpp17_random_access_iterator<random_access_iterator<char *> >::value), "" );
+    static_assert((!std::__is_cpp17_contiguous_iterator   <random_access_iterator<char *> >::value), "" );
     static_assert((!std::__is_exactly_cpp17_input_iterator<random_access_iterator<char *> >::value), "" );
 
     static_assert(( std::__is_cpp17_input_iterator        <my_input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_forward_iterator      <my_input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_bidirectional_iterator<my_input_iterator<char *> >::value), "" );
     static_assert((!std::__is_cpp17_random_access_iterator<my_input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_cpp17_contiguous_iterator   <my_input_iterator<char *> >::value), "" );
     static_assert(( std::__is_exactly_cpp17_input_iterator<my_input_iterator<char *> >::value), "" );
 
 //

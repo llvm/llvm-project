@@ -183,15 +183,10 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
     auto LHS = memberExpr(hasObjectExpression(cxxThisExpr()),
                           member(fieldDecl(equalsNode(Field))));
     auto RHS = accessToFieldInVar(Field, Param);
-    if (match(
-            traverse(TK_AsIs,
-                     compoundStmt(has(ignoringParenImpCasts(stmt(anyOf(
-                         binaryOperator(hasOperatorName("="), hasLHS(LHS),
-                                        hasRHS(RHS)),
-                         cxxOperatorCallExpr(
-                             hasOverloadedOperatorName("="), argumentCountIs(2),
-                             hasArgument(0, LHS), hasArgument(1, RHS)))))))),
-            *Compound, *Context)
+    if (match(traverse(TK_AsIs,
+                       compoundStmt(has(ignoringParenImpCasts(binaryOperation(
+                           hasOperatorName("="), hasLHS(LHS), hasRHS(RHS)))))),
+              *Compound, *Context)
             .empty())
       return false;
   }
