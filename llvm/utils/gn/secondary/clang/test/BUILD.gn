@@ -57,7 +57,7 @@ write_lit_config("lit_site_cfg") {
     # builds exist, to make sure it's a toolchain var.
     "CMAKE_CXX_COMPILER=c++",
     "ENABLE_BACKTRACES=1",
-    "LLVM_ENABLE_NEW_PASS_MANAGER=0",
+    "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_USE_SANITIZER=",
