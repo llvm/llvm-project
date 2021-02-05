@@ -71,6 +71,7 @@ enum class DuplicateHandling {
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
+  FileSymbols(IndexContents IdxContents);
   /// Updates all slabs associated with the \p Key.
   /// If either is nullptr, corresponding data for \p Key will be removed.
   /// If CountReferences is true, \p Refs will be used for counting references
@@ -91,6 +92,8 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
+  IndexContents IdxContents;
+
   struct RefSlabAndCountReferences {
     std::shared_ptr<RefSlab> Slab;
     bool CountReferences = false;
