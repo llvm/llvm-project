@@ -40,6 +40,8 @@ def fir_LogicalType : Type<CPred<"$_self.isa<fir::LogicalType>()">,
     "FIR logical type">;
 def fir_RealType : Type<CPred<"$_self.isa<fir::RealType>()">,
     "FIR real type">;
+def fir_VectorType : Type<CPred<"$_self.isa<fir::VectorType>()">,
+    "FIR vector type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
 def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
@@ -61,7 +63,7 @@ def fir_SequenceType : Type<CPred<"$_self.isa<fir::SequenceType>()">,
 // Composable types
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     fir_SequenceType.predicate, fir_ComplexType.predicate,
-    IsTupleTypePred]>, "any composite">;
+    fir_VectorType.predicate, IsTupleTypePred]>, "any composite">;
 
 // Reference to an entity type
 def fir_ReferenceType : Type<CPred<"$_self.isa<fir::ReferenceType>()">,
