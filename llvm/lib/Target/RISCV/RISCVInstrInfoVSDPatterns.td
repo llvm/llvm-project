@@ -585,9 +585,14 @@ foreach fvti = AllFloatVectors in {
                  fvti.AVL, fvti.SEW)>;
 }
 
-// 14.10. Vector Floating-Point Sign-Injection Instructions
-// Handle fneg with VFSGNJN using the same input for both operands.
 foreach vti = AllFloatVectors in {
+  // 14.8. Vector Floating-Point Square-Root Instruction
+  def : Pat<(fsqrt (vti.Vector vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
+
+  // 14.10. Vector Floating-Point Sign-Injection Instructions
+  // Handle fneg with VFSGNJN using the same input for both operands.
   def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
