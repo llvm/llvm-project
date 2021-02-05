@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstddef>
@@ -33,30 +34,33 @@ class raw_ostream;
 /// This is a simple discriminated union.
 class MCOperand {
   enum MachineOperandType : unsigned char {
-    kInvalid,     ///< Uninitialized.
-    kRegister,    ///< Register operand.
-    kImmediate,   ///< Immediate operand.
-    kFPImmediate, ///< Floating-point immediate operand.
-    kExpr,        ///< Relocatable immediate operand.
-    kInst         ///< Sub-instruction operand.
+    kInvalid,      ///< Uninitialized.
+    kRegister,     ///< Register operand.
+    kImmediate,    ///< Immediate operand.
+    kSFPImmediate, ///< Single-floating-point immediate operand.
+    kDFPImmediate, ///< Double-Floating-point immediate operand.
+    kExpr,         ///< Relocatable immediate operand.
+    kInst          ///< Sub-instruction operand.
   };
   MachineOperandType Kind = kInvalid;
 
   union {
     unsigned RegVal;
     int64_t ImmVal;
-    double FPImmVal;
+    uint32_t SFPImmVal;
+    uint64_t FPImmVal;
     const MCExpr *ExprVal;
     const MCInst *InstVal;
   };
 
 public:
-  MCOperand() : FPImmVal(0.0) {}
+  MCOperand() : FPImmVal(0) {}
 
   bool isValid() const { return Kind != kInvalid; }
   bool isReg() const { return Kind == kRegister; }
   bool isImm() const { return Kind == kImmediate; }
-  bool isFPImm() const { return Kind == kFPImmediate; }
+  bool isSFPImm() const { return Kind == kSFPImmediate; }
+  bool isDFPImm() const { return Kind == kDFPImmediate; }
   bool isExpr() const { return Kind == kExpr; }
   bool isInst() const { return Kind == kInst; }
 
@@ -82,13 +86,23 @@ public:
     ImmVal = Val;
   }
 
-  double getFPImm() const {
-    assert(isFPImm() && "This is not an FP immediate");
+  uint32_t getSFPImm() const {
+    assert(isSFPImm() && "This is not an SFP immediate");
+    return SFPImmVal;
+  }
+
+  void setSFPImm(uint32_t Val) {
+    assert(isSFPImm() && "This is not an SFP immediate");
+    SFPImmVal = Val;
+  }
+
+  uint64_t getDFPImm() const {
+    assert(isDFPImm() && "This is not an FP immediate");
     return FPImmVal;
   }
 
-  void setFPImm(double Val) {
-    assert(isFPImm() && "This is not an FP immediate");
+  void setDFPImm(uint64_t Val) {
+    assert(isDFPImm() && "This is not an FP immediate");
     FPImmVal = Val;
   }
 
@@ -126,9 +140,16 @@ public:
     return Op;
   }
 
-  static MCOperand createFPImm(double Val) {
+  static MCOperand createSFPImm(uint32_t Val) {
     MCOperand Op;
-    Op.Kind = kFPImmediate;
+    Op.Kind = kSFPImmediate;
+    Op.SFPImmVal = Val;
+    return Op;
+  }
+
+  static MCOperand createDFPImm(uint64_t Val) {
+    MCOperand Op;
+    Op.Kind = kDFPImmediate;
     Op.FPImmVal = Val;
     return Op;
   }
