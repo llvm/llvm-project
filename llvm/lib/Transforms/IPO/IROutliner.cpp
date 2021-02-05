@@ -435,8 +435,6 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
 /// analyzing.
 /// \param [in] CurrentInputs - The set of inputs found by the
 /// CodeExtractor.
-/// \param [out] EndInputNumbers - The global value numbers for the extracted
-/// arguments.
 /// \param [in] OutputMappings - The mapping of values that have been replaced
 /// by a new output value.
 /// \param [out] EndInputNumbers - The global value numbers for the extracted
