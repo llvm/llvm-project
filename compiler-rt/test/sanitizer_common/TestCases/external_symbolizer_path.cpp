@@ -14,6 +14,9 @@
 // RUN: %env_tool_opts=external_symbolizer_path=%d/external_symbolizer_path.cpp.tmp.bin/llvm-symbolizer \
 // RUN:   %run %t 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
 
+// Mobile device will not have symbolizer in provided path.
+// UNSUPPORTED: ios, android
+
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 
