@@ -1479,6 +1479,12 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WEBASSEMBLY-WASI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown -x c++ \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown -x c++ -pthread -target-feature +atomics \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX-ATOMICS %s
 //
 // WEBASSEMBLY32:#define _ILP32 1
 // WEBASSEMBLY32-NOT:#define _LP64
@@ -1847,6 +1853,10 @@
 // WEBASSEMBLY64-NEXT:#define __wasm64 1
 // WEBASSEMBLY64-NEXT:#define __wasm64__ 1
 // WEBASSEMBLY-NEXT:#define __wasm__ 1
+// WEBASSEMBLY-CXX-NOT:_REENTRANT
+// WEBASSEMBLY-CXX-NOT:__STDCPP_THREADS__
+// WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
+// WEBASSEMBLY-CXX-ATOMICS:#define __STDCPP_THREADS__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple i686-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X32 %s
 // CYGWIN-X32: #define __USER_LABEL_PREFIX__ _
