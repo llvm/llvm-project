@@ -451,6 +451,17 @@ struct DeallocTgtPtrInfo {
       : HstPtrBegin(HstPtr), DataSize(Size), ForceDelete(ForceDelete),
         HasCloseModifier(HasCloseModifier) {}
 };
+
+/// Synchronize device
+static int syncDevice(DeviceTy &Device, __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && AsyncInfo->Queue && "Invalid AsyncInfo");
+  if (Device.synchronize(AsyncInfo) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to synchronize device.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
 } // namespace
 
 /// Internal function to undo the mapping and retrieve the data from the device.
@@ -631,11 +642,9 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
   // AsyncInfo->Queue will not be nullptr, so again, we don't need to
   // synchronize.
   if (AsyncInfo && AsyncInfo->Queue) {
-    Ret = Device.synchronize(AsyncInfo);
-    if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to synchronize device.\n");
+    Ret = syncDevice(Device, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
-    }
   }
 
   // Deallocate target pointer
@@ -1307,6 +1316,11 @@ int target(ident_t *loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
       REPORT("Failed to process data after launching the kernel.\n");
       return OFFLOAD_FAIL;
     }
+  } else if (AsyncInfo.Queue) {
+    // If ArgNum is zero, but AsyncInfo.Queue is valid, then the kernel doesn't
+    // hava any argument, and the device supports async operations, so we need a
+    // sync at this point.
+    return syncDevice(Device, &AsyncInfo);
   }
 
   return OFFLOAD_SUCCESS;
