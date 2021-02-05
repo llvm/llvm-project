@@ -1085,7 +1085,7 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
   Fortran::lower::CharacterExprHelper helper{builder, loc};
   auto dataAndLen = helper.createUnboxChar(arg);
   auto charType = fir::CharacterType::get(
-      builder.getContext(), helper.getCharacterKind(arg.getType()));
+      builder.getContext(), helper.getCharacterKind(arg.getType()), 1);
   auto refType = builder.getRefType(charType);
   auto charAddr = builder.createConvert(loc, refType, dataAndLen.first);
   auto charVal = builder.create<fir::LoadOp>(loc, charType, charAddr);
