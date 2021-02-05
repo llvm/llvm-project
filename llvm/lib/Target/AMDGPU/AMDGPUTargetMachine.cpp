@@ -176,6 +176,13 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
+// Enable GFX11+ s_delay_alu insertion
+static cl::opt<bool> EnableInsertDelayAlu(
+  "amdgpu-insert-delay-alu",
+  cl::desc("Enable s_delay_alu insertion"),
+  cl::init(true),
+  cl::Hidden);
+
 // Option is used in lit tests to prevent deadcoding of patterns inspected.
 static cl::opt<bool>
 EnableDCEInRA("amdgpu-dce-in-ra",
@@ -1205,7 +1212,7 @@ void GCNPassConfig::addPreEmitPass() {
   // cases.
   addPass(&PostRAHazardRecognizerID);
 
-  if (getOptLevel() > CodeGenOpt::None)
+  if (EnableInsertDelayAlu && getOptLevel() > CodeGenOpt::None)
     addPass(&SIInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
