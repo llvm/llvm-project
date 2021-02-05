@@ -10,17 +10,19 @@
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=HOST %s
+// RUN:   -check-prefixes=HOST,NORDC %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=HOST %s
+// RUN:   -check-prefixes=HOST,RDC %s
 
 #include "Inputs/cuda.h"
 
-// DEV-DAG: @x = {{.*}}addrspace(1) externally_initialized global i32 undef
-// HOST-DAG: @x = internal global i32 1
-// HOST-DAG: @x.managed = internal global i32* null
+// DEV-DAG: @x = external addrspace(1) externally_initialized global i32
+// NORDC-DAG: @x = internal global i32 1
+// RDC-DAG: @x = dso_local global i32 1
+// NORDC-DAG: @x.managed = internal global i32* null
+// RDC-DAG: @x.managed = dso_local global i32* null
 // HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
 
 struct vec {
@@ -31,9 +33,26 @@ __managed__ int x = 1;
 __managed__ vec v[100];
 __managed__ vec v2[100] = {{1, 1, 1}};
 
+// DEV-DAG: @ex = external addrspace(1) global i32
+// HOST-DAG: @ex = external global i32
+extern __managed__ int ex;
+
+// DEV-DAG: @_ZL2sx = external addrspace(1) externally_initialized global i32
+// HOST-DAG: @_ZL2sx = internal global i32 1
+// HOST-DAG: @_ZL2sx.managed = internal global i32* null
+static __managed__ int sx = 1;
+
+// HOST-NOT: @ex.managed
+
+// Force ex and sx mitted in device compilation.
 __global__ void foo(int *z) {
-  *z = x;
+  *z = x + ex + sx;
   v[1].x = 2;
+}
+
+// Force ex and sx emitted in host compilatioin.
+int foo2() {
+  return ex + sx;
 }
 
 // HOST-LABEL: define {{.*}}@_Z4loadv()
@@ -97,4 +116,6 @@ float addr_taken2() {
 }
 
 // HOST-DAG: __hipRegisterManagedVar({{.*}}@x.managed {{.*}}@x {{.*}}@[[DEVNAMEX]]{{.*}}, i64 4, i32 4)
+// HOST-DAG: __hipRegisterManagedVar({{.*}}@_ZL2sx.managed {{.*}}@_ZL2sx
+// HOST-NOT: __hipRegisterManagedVar({{.*}}@ex.managed {{.*}}@ex
 // HOST-DAG: declare void @__hipRegisterManagedVar(i8**, i8*, i8*, i8*, i64, i32)
