@@ -6931,11 +6931,10 @@ class VectorPromoteHelper {
 
     StoreInst *ST = cast<StoreInst>(CombineInst);
     unsigned AS = ST->getPointerAddressSpace();
-    Align Alignment = ST->getAlign();
     // Check if this store is supported.
     if (!TLI.allowsMisalignedMemoryAccesses(
             TLI.getValueType(DL, ST->getValueOperand()->getType()), AS,
-            Alignment)) {
+            ST->getAlign())) {
       // If this is not supported, there is no way we can combine
       // the extract with the store.
       return false;
