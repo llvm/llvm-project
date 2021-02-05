@@ -872,7 +872,7 @@ void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
     storage->setType(NoneType::get(ctx));
 }
 
-BoolAttr BoolAttr::get(bool value, MLIRContext *context) {
+BoolAttr BoolAttr::get(MLIRContext *context, bool value) {
   return value ? context->getImpl().trueAttr : context->getImpl().falseAttr;
 }
 

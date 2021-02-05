@@ -148,7 +148,7 @@ Attribute Parser::parseAttribute(Type type) {
       return Attribute();
 
     return type ? StringAttr::get(val, type)
-                : StringAttr::get(val, getContext());
+                : StringAttr::get(getContext(), val);
   }
 
   // Parse a symbol reference attribute.
@@ -176,7 +176,7 @@ Attribute Parser::parseAttribute(Type type) {
 
       std::string nameStr = getToken().getSymbolReference();
       consumeToken(Token::at_identifier);
-      nestedRefs.push_back(SymbolRefAttr::get(nameStr, getContext()));
+      nestedRefs.push_back(SymbolRefAttr::get(getContext(), nameStr));
     }
 
     return builder.getSymbolRefAttr(nameStr, nestedRefs);

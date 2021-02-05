@@ -35,7 +35,7 @@ AffineMap AffineMapAttr::getValue() const { return getImpl()->value; }
 // ArrayAttr
 //===----------------------------------------------------------------------===//
 
-ArrayAttr ArrayAttr::get(ArrayRef<Attribute> value, MLIRContext *context) {
+ArrayAttr ArrayAttr::get(MLIRContext *context, ArrayRef<Attribute> value) {
   return Base::get(context, value);
 }
 
@@ -134,8 +134,8 @@ DictionaryAttr::findDuplicate(SmallVectorImpl<NamedAttribute> &array,
   return findDuplicateElement(array);
 }
 
-DictionaryAttr DictionaryAttr::get(ArrayRef<NamedAttribute> value,
-                                   MLIRContext *context) {
+DictionaryAttr DictionaryAttr::get(MLIRContext *context,
+                                   ArrayRef<NamedAttribute> value) {
   if (value.empty())
     return DictionaryAttr::getEmpty(context);
   assert(llvm::all_of(value,
@@ -267,13 +267,12 @@ LogicalResult FloatAttr::verifyConstructionInvariants(Location loc, Type type,
 // SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
-FlatSymbolRefAttr SymbolRefAttr::get(StringRef value, MLIRContext *ctx) {
+FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
   return Base::get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
 }
 
-SymbolRefAttr SymbolRefAttr::get(StringRef value,
-                                 ArrayRef<FlatSymbolRefAttr> nestedReferences,
-                                 MLIRContext *ctx) {
+SymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value,
+                                 ArrayRef<FlatSymbolRefAttr> nestedReferences) {
   return Base::get(ctx, value, nestedReferences);
 }
 
@@ -294,7 +293,7 @@ ArrayRef<FlatSymbolRefAttr> SymbolRefAttr::getNestedReferences() const {
 
 IntegerAttr IntegerAttr::get(Type type, const APInt &value) {
   if (type.isSignlessInteger(1))
-    return BoolAttr::get(value.getBoolValue(), type.getContext());
+    return BoolAttr::get(type.getContext(), value.getBoolValue());
   return Base::get(type.getContext(), type, value);
 }
 
@@ -377,8 +376,8 @@ IntegerSet IntegerSetAttr::getValue() const { return getImpl()->value; }
 // OpaqueAttr
 //===----------------------------------------------------------------------===//
 
-OpaqueAttr OpaqueAttr::get(Identifier dialect, StringRef attrData, Type type,
-                           MLIRContext *context) {
+OpaqueAttr OpaqueAttr::get(MLIRContext *context, Identifier dialect,
+                           StringRef attrData, Type type) {
   return Base::get(context, dialect, attrData, type);
 }
 
@@ -409,7 +408,7 @@ LogicalResult OpaqueAttr::verifyConstructionInvariants(Location loc,
 // StringAttr
 //===----------------------------------------------------------------------===//
 
-StringAttr StringAttr::get(StringRef bytes, MLIRContext *context) {
+StringAttr StringAttr::get(MLIRContext *context, StringRef bytes) {
   return get(bytes, NoneType::get(context));
 }
 
