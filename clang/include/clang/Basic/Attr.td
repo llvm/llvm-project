@@ -1660,6 +1660,13 @@ def NoDebug : InheritableAttr {
   let Documentation = [NoDebugDocs];
 }
 
+def DebugTypeInfoAsNeeded : InheritableAttr {
+  let Spellings = [Clang<"debug_type_info_as_needed">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def NoDuplicate : InheritableAttr {
   let Spellings = [Clang<"noduplicate">];
   let Subjects = SubjectList<[Function]>;
