@@ -61,6 +61,7 @@ public:
   bool isImm() const { return Kind == kImmediate; }
   bool isSFPImm() const { return Kind == kSFPImmediate; }
   bool isDFPImm() const { return Kind == kDFPImmediate; }
+  bool isFPImm() const { return Kind == kDFPImmediate; }
   bool isExpr() const { return Kind == kExpr; }
   bool isInst() const { return Kind == kInst; }
 
