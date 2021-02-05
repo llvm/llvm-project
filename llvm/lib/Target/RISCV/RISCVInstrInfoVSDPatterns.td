@@ -52,7 +52,7 @@ def SDTRVVVecReduce : SDTypeProfile<1, 2, [
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR"] in
   def rvv_vecreduce_#kind : SDNode<"RISCVISD::VECREDUCE_"#kind, SDTRVVVecReduce>;
 
-multiclass VPatUSLoadStoreSDNode<LLVMType type,
+multiclass VPatUSLoadStoreSDNode<ValueType type,
                                  int sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
