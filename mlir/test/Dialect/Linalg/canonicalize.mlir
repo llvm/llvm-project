@@ -680,3 +680,31 @@ func @fold_init_tensor_with_subtensor
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //      CHECK:   %[[T0:.+]] = linalg.init_tensor [5, %[[ARG1]], 20]
 //      CHECK:   return %[[T0]]
+
+// -----
+
+#accesses = [
+  affine_map<(i, j) -> (i, j)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel"]
+}
+
+// CHECK-LABEL: func @dead_linalg_tensor
+//   CHECK-NOT:   linalg.fill
+//   CHECK-NOT:   linalg.matmul
+//   CHECK-NOT:   linalg.generic
+//       CHECK:   return
+func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>) {
+  %c0_i32 = constant 0 : i32
+  %0 = linalg.fill(%arg0, %c0_i32) : tensor<7x7xi32>, i32 -> tensor<7x7xi32>
+  %1 = linalg.matmul ins(%arg1, %arg1: tensor<7x7xf32>, tensor<7x7xf32>)
+                     outs(%arg1: tensor<7x7xf32>) -> tensor<7x7xf32>
+  %2 = linalg.generic #trait outs(%arg0 : tensor<7x7xi32>) {
+  ^bb(%3: i32) :
+    linalg.yield %3 : i32
+  } -> tensor<7x7xi32>
+  return
+}
