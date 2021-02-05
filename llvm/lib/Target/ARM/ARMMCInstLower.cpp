@@ -110,7 +110,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     APFloat Val = MO.getFPImm()->getValueAPF();
     bool ignored;
     Val.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
-    MCOp = MCOperand::createFPImm(Val.convertToDouble());
+    MCOp = MCOperand::createDFPImm(Val.convertToDouble());
     break;
   }
   case MachineOperand::MO_RegisterMask:
