@@ -199,7 +199,7 @@ public:
   /// \name Scalar TTI Implementations
   /// @{
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
-                                      unsigned AddressSpace, unsigned Alignment,
+                                      unsigned AddressSpace, Align Alignment,
                                       bool *Fast) const {
     EVT E = EVT::getIntegerVT(Context, BitWidth);
     return getTLI()->allowsMisalignedMemoryAccesses(

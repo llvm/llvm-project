@@ -553,7 +553,7 @@ bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
 bool TargetTransformInfo::allowsMisalignedMemoryAccesses(LLVMContext &Context,
                                                          unsigned BitWidth,
                                                          unsigned AddressSpace,
-                                                         unsigned Alignment,
+                                                         Align Alignment,
                                                          bool *Fast) const {
   return TTIImpl->allowsMisalignedMemoryAccesses(Context, BitWidth,
                                                  AddressSpace, Alignment, Fast);

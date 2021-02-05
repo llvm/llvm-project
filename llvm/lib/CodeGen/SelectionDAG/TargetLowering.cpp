@@ -194,9 +194,8 @@ bool TargetLowering::findOptimalMemOpLowering(
     // equal to DstAlign (or zero).
     VT = MVT::i64;
     if (Op.isFixedDstAlign())
-      while (
-          Op.getDstAlign() < (VT.getSizeInBits() / 8) &&
-          !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign().value()))
+      while (Op.getDstAlign() < (VT.getSizeInBits() / 8) &&
+             !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign()))
         VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
     assert(VT.isInteger());
 
@@ -250,7 +249,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       bool Fast;
       if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
-              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign().value() : 1,
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;

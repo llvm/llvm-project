@@ -3442,8 +3442,8 @@ bool HexagonTargetLowering::allowsMemoryAccess(
 }
 
 bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AddrSpace, unsigned Alignment,
-      MachineMemOperand::Flags Flags, bool *Fast) const {
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    bool *Fast) const {
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMisalignedMemoryAccesses(SVT, Flags, Fast);

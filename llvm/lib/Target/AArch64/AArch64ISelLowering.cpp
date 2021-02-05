@@ -1656,7 +1656,7 @@ MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
 }
 
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     bool *Fast) const {
   if (Subtarget->requiresStrictAlign())
     return false;
@@ -1670,7 +1670,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
             // Code that uses clang vector extensions can mark that it
             // wants unaligned accesses to be treated as fast by
             // underspecifying alignment to be 1 or 2.
-            Align <= 2 ||
+            Alignment <= 2 ||
 
             // Disregard v2i64. Memcpy lowering produces those and splitting
             // them regresses performance on micro-benchmarks and olden/bh.
@@ -4144,7 +4144,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     unsigned AS = StoreNode->getAddressSpace();
     Align Alignment = StoreNode->getAlign();
     if (Alignment < MemVT.getStoreSize() &&
-        !allowsMisalignedMemoryAccesses(MemVT, AS, Alignment.value(),
+        !allowsMisalignedMemoryAccesses(MemVT, AS, Alignment,
                                         StoreNode->getMemOperand()->getFlags(),
                                         nullptr)) {
       return scalarizeVectorStore(StoreNode, DAG);
@@ -11395,8 +11395,8 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
     if (Op.isAligned(AlignCheck))
       return true;
     bool Fast;
-    return allowsMisalignedMemoryAccesses(VT, 0, 1, MachineMemOperand::MONone,
-                                          &Fast) &&
+    return allowsMisalignedMemoryAccesses(VT, 0, Align(1),
+                                          MachineMemOperand::MONone, &Fast) &&
            Fast;
   };
 
@@ -11426,8 +11426,8 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
     if (Op.isAligned(AlignCheck))
       return true;
     bool Fast;
-    return allowsMisalignedMemoryAccesses(VT, 0, 1, MachineMemOperand::MONone,
-                                          &Fast) &&
+    return allowsMisalignedMemoryAccesses(VT, 0, Align(1),
+                                          MachineMemOperand::MONone, &Fast) &&
            Fast;
   };
 

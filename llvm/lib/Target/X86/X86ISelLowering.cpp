@@ -2340,7 +2340,7 @@ bool X86TargetLowering::isSafeMemOpType(MVT VT) const {
 }
 
 bool X86TargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, unsigned Align, MachineMemOperand::Flags Flags,
+    EVT VT, unsigned, Align Alignment, MachineMemOperand::Flags Flags,
     bool *Fast) const {
   if (Fast) {
     switch (VT.getSizeInBits()) {
@@ -2364,7 +2364,7 @@ bool X86TargetLowering::allowsMisalignedMemoryAccesses(
     // well use a regular unaligned vector load.
     // We don't have any NT loads pre-SSE41.
     if (!!(Flags & MachineMemOperand::MOLoad))
-      return (Align < 16 || !Subtarget.hasSSE41());
+      return (Alignment < 16 || !Subtarget.hasSSE41());
     return false;
   }
   // Misaligned accesses of any size are always allowed.
