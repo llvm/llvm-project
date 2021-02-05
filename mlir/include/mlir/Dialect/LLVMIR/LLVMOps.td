@@ -177,7 +177,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let arguments = (ins ICmpPredicate:$predicate,
                    LLVM_ScalarOrVectorOf<LLVM_AnyInteger>:$lhs,
                    LLVM_ScalarOrVectorOf<LLVM_AnyInteger>:$rhs);
-  let results = (outs LLVM_ScalarOrVectorOf<LLVM_i1>:$res);
+  let results = (outs LLVM_ScalarOrVectorOf<I1>:$res);
   let llvmBuilder = [{
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
@@ -227,7 +227,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$lhs,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
                    DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
-  let results = (outs LLVM_ScalarOrVectorOf<LLVM_i1>:$res);
+  let results = (outs LLVM_ScalarOrVectorOf<I1>:$res);
   let llvmBuilder = [{
     $res = builder.CreateFCmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
@@ -572,7 +572,7 @@ def LLVM_SelectOp
           [NoSideEffect, AllTypesMatch<["trueValue", "falseValue", "res"]>]>,
       LLVM_Builder<
           "$res = builder.CreateSelect($condition, $trueValue, $falseValue);"> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_i1>:$condition,
+  let arguments = (ins LLVM_ScalarOrVectorOf<I1>:$condition,
                    LLVM_Type:$trueValue, LLVM_Type:$falseValue);
   let results = (outs LLVM_Type:$res);
   let builders = [
@@ -603,7 +603,7 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
      NoSideEffect]> {
-  let arguments = (ins LLVM_i1:$condition,
+  let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
                    OptionalAttr<ElementsAttr>:$branch_weights);
@@ -676,7 +676,7 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
 def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
      NoSideEffect]> {
-  let arguments = (ins LLVM_i32:$value,
+  let arguments = (ins I32:$value,
                    Variadic<AnyType>:$defaultOperands,
                    Variadic<AnyType>:$caseOperands,
                    OptionalAttr<ElementsAttr>:$case_values,
@@ -1231,7 +1231,7 @@ def LLVM_UMulWithOverflowOp
 //
 
 def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
-  let arguments = (ins LLVM_i32:$align,
+  let arguments = (ins I32:$align,
                        LLVM_i8Ptr:$promise,
                        LLVM_i8Ptr:$coroaddr,
                        LLVM_i8Ptr:$fnaddrs);
@@ -1256,13 +1256,13 @@ def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
 
 def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
   let arguments = (ins LLVM_TokenType:$save,
-                       LLVM_i1:$final);
+                       I1:$final);
   let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
 }
 
 def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_i8Ptr:$handle,
-                       LLVM_i1:$unwind);
+                       I1:$unwind);
   let assemblyFormat = "$handle `,` $unwind attr-dict `:` type($res)";
 }
 
@@ -1532,7 +1532,7 @@ def LLVM_AtomicCmpXchgResultType : Type<And<[
               LLVM_AtomicCmpXchgType.predicate>,
   SubstLeaves<"$_self",
               "$_self.cast<::mlir::LLVM::LLVMStructType>().getBody()[1]",
-              LLVM_i1.predicate>]>,
+              I1.predicate>]>,
  "an LLVM struct type with any integer or pointer followed by a single-bit "
  "integer">;
 
