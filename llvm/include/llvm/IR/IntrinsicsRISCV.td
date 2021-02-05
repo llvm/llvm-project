@@ -243,6 +243,20 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
+  // Input: (vector_in, int16_vector_in, vl)
+  class RISCVRGatherEI16VVNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first and second source vector.
+  // Input: (vector_in, vector_in, int16_vector_in, vl)
+  class RISCVRGatherEI16VVMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i16_ty>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first source vector, and the
   // second operand is XLen.
   // Input: (vector_in, xlen_in, vl)
@@ -719,6 +733,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVGatherVXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVGatherVXMask;
   }
+  multiclass RISCVRGatherEI16VV {
+    def "int_riscv_" # NAME : RISCVRGatherEI16VVNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVRGatherEI16VVMask;
+  }
   // ABX means the destination type(A) is different from the first source
   // type(B). X means any type for the second source operand.
   multiclass RISCVBinaryABX {
@@ -998,7 +1016,7 @@ let TargetPrefix = "riscv" in {
 
   defm vrgather_vv : RISCVRGatherVV;
   defm vrgather_vx : RISCVRGatherVX;
-  defm vrgatherei16 : RISCVBinaryAAX;
+  defm vrgatherei16_vv : RISCVRGatherEI16VV;
 
   def "int_riscv_vcompress" : RISCVUnaryAAMask;
 
