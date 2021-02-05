@@ -29,6 +29,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -272,21 +273,13 @@ def parseOptionsAndInitTestdirs():
     elif platform_system == 'Darwin':
         configuration.dsymutil = seven.get_command_output(
             'xcrun -find -toolchain default dsymutil')
-
-
-    # The lldb-dotest script produced by the CMake build passes in a path to a
-    # working FileCheck and yaml2obj binary. So does one specific Xcode
-    # project target. However, when invoking dotest.py directly, a valid
-    # --filecheck and --yaml2obj option needs to be given.
-    if args.filecheck:
-        configuration.filecheck = os.path.abspath(args.filecheck)
-
-    if args.yaml2obj:
-        configuration.yaml2obj = os.path.abspath(args.yaml2obj)
+    if args.llvm_tools_dir:
+        configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
+        configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning('No valid FileCheck executable; some tests may fail...')
-        logging.warning('(Double-check the --filecheck argument to dotest.py)')
+        logging.warning('(Double-check the --llvm-tools-dir argument to dotest.py)')
 
     if args.channels:
         lldbtest_config.channels = args.channels
