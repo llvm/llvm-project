@@ -15,7 +15,7 @@
 
 #include <stdarg.h>
 
-// AARCH64-C: define {{.*}} @f(i32 %n, %struct.__va_list* %list)
+// AARCH64-C: define {{.*}} @f(i32 %n, %"struct.std::__va_list"* %list)
 // AARCH64-CXX: define {{.*}} @_Z1fiSt9__va_list(i32 %n, %"struct.std::__va_list"* %list)
 // X86_64-C: define {{.*}} @f(i32 %n, %struct.__va_list_tag* %list)
 // X86_64-CXX: define {{.*}} @_Z1fiP13__va_list_tag(i32 %n, %struct.__va_list_tag* %list)
