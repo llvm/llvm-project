@@ -123,6 +123,8 @@ public:
 
   void ModulesDidLoad(const ModuleList &module_list) override;
 
+  bool IsSwiftRuntimeInitialized();
+  
   /// Mangling support.
   /// \{
   /// Use these passthrough functions rather than calling into Swift directly,
