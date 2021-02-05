@@ -318,9 +318,6 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr9", true)
                         .Case("pwr8", true)
                         .Default(false);
-  Features["float128"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("pwr9", true)
-                        .Default(false);
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
