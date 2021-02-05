@@ -445,13 +445,14 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
   auto *context = elementType.getContext();
 
   if (!BaseMemRefType::isValidElementType(elementType))
-    return emitOptionalError(location, "invalid memref element type"),
+    return (void)emitOptionalError(location, "invalid memref element type"),
            MemRefType();
 
   for (int64_t s : shape) {
     // Negative sizes are not allowed except for `-1` that means dynamic size.
     if (s < -1)
-      return emitOptionalError(location, "invalid memref size"), MemRefType();
+      return (void)emitOptionalError(location, "invalid memref size"),
+             MemRefType();
   }
 
   // Check that the structure of the composition is valid, i.e. that each

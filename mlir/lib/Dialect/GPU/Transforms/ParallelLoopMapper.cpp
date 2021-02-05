@@ -135,7 +135,7 @@ static void mapParallelOp(ParallelOp parallelOp,
         getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
         b.getDimIdentityMap()));
   }
-  setMappingAttr(parallelOp, attrs);
+  (void)setMappingAttr(parallelOp, attrs);
   ++mappingLevel;
   // Parallel loop operations are immediately nested, so do not use
   // walk but just iterate over the operations.

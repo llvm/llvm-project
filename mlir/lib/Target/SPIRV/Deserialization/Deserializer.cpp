@@ -1421,7 +1421,7 @@ LogicalResult spirv::Deserializer::processBranch(ArrayRef<uint32_t> operands) {
   // the same OpLine information.
   opBuilder.create<spirv::BranchOp>(loc, target);
 
-  clearDebugLine();
+  (void)clearDebugLine();
   return success();
 }
 
@@ -1455,7 +1455,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
 
-  clearDebugLine();
+  (void)clearDebugLine();
   return success();
 }
 

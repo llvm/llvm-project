@@ -829,11 +829,11 @@ private:
 /// legalizable to the given `target` are placed within that set. (Note that if
 /// there is an op explicitly marked as illegal, the conversion terminates and
 /// the `unconvertedOps` set will not necessarily be complete.)
-LLVM_NODISCARD LogicalResult
+LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
                        const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
-LLVM_NODISCARD LogicalResult
+LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
                        const FrozenRewritePatternList &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
@@ -842,12 +842,11 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// operations. This method returns failure if the conversion of any operation
 /// fails, or if there are unreachable blocks in any of the regions nested
 /// within 'ops'.
-LLVM_NODISCARD LogicalResult
-applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                    const FrozenRewritePatternList &patterns);
-LLVM_NODISCARD LogicalResult
-applyFullConversion(Operation *op, ConversionTarget &target,
-                    const FrozenRewritePatternList &patterns);
+LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
+                                  ConversionTarget &target,
+                                  const FrozenRewritePatternList &patterns);
+LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
+                                  const FrozenRewritePatternList &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -857,14 +856,13 @@ applyFullConversion(Operation *op, ConversionTarget &target,
 /// operations on success and only pre-existing operations are added to the set.
 /// This method only returns failure if there are unreachable blocks in any of
 /// the regions nested within 'ops'.
-LLVM_NODISCARD LogicalResult
-applyAnalysisConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                        const FrozenRewritePatternList &patterns,
-                        DenseSet<Operation *> &convertedOps);
-LLVM_NODISCARD LogicalResult
-applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                        const FrozenRewritePatternList &patterns,
-                        DenseSet<Operation *> &convertedOps);
+LogicalResult applyAnalysisConversion(ArrayRef<Operation *> ops,
+                                      ConversionTarget &target,
+                                      const FrozenRewritePatternList &patterns,
+                                      DenseSet<Operation *> &convertedOps);
+LogicalResult applyAnalysisConversion(Operation *op, ConversionTarget &target,
+                                      const FrozenRewritePatternList &patterns,
+                                      DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_DIALECTCONVERSION_H_

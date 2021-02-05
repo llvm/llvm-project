@@ -286,7 +286,7 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
     valueMap[valueID] = op->getResult(0);
 
   if (op->hasTrait<OpTrait::IsTerminator>())
-    clearDebugLine();
+    (void)clearDebugLine();
 
   return success();
 }

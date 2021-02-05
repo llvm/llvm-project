@@ -41,7 +41,7 @@ public:
   ParseResult(const Diagnostic &) : LogicalResult(failure()) {}
 
   /// Failure is true in a boolean context.
-  explicit operator bool() const { return failed(*this); }
+  explicit operator bool() const { return failed(); }
 };
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion

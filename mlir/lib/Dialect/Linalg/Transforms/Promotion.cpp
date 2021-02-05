@@ -340,7 +340,7 @@ promoteSubViews(OpBuilder &b, LinalgOp op,
 
   // 4. Dealloc all local buffers.
   for (const auto &pi : *promotedBuffersAndViews)
-    options.deallocationFn(b, pi.second.fullLocalView);
+    (void)options.deallocationFn(b, pi.second.fullLocalView);
   return op;
 }
 

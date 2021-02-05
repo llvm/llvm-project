@@ -62,7 +62,7 @@ struct LowerGpuOpsToROCDLOpsPass
     OwningRewritePatternList patterns, llvmPatterns;
 
     populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsAndFoldGreedily(m, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     populateVectorToROCDLConversionPatterns(converter, llvmPatterns);

@@ -114,7 +114,7 @@ struct TestLinalgFusionTransforms
     LinalgDependenceGraph dependenceGraph =
         LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
     fillFusionPatterns<LoopType>(context, dependenceGraph, fusionPatterns);
-    applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
+    (void)applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
   }
 };
 } // namespace
@@ -186,7 +186,7 @@ struct TestLinalgGreedyFusion
     patterns.insert<AffineMinSCFCanonicalizationPattern>(context);
     FrozenRewritePatternList frozenPatterns(std::move(patterns));
     while (succeeded(fuseLinalgOpsGreedily(getFunction()))) {
-      applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);
+      (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);
       PassManager pm(context);
       pm.addPass(createLoopInvariantCodeMotionPass());
       pm.addPass(createCanonicalizerPass());

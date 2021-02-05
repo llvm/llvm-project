@@ -115,8 +115,8 @@ static LogicalResult processBuffer(raw_ostream &os,
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
   // and whether they match our expectations.
-  performActions(os, verifyDiagnostics, verifyPasses, sourceMgr, &context,
-                 passPipeline);
+  (void)performActions(os, verifyDiagnostics, verifyPasses, sourceMgr, &context,
+                       passPipeline);
 
   // Verify the diagnostic handler to make sure that each of the diagnostics
   // matched.

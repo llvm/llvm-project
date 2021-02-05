@@ -65,8 +65,8 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
     hoistRedundantVectorTransfers(cast<FuncOp>(op));
     return success();
   };
-  linalg::applyStagedPatterns(func, stage1Patterns, std::move(stage2Patterns),
-                              stage3Transforms);
+  (void)linalg::applyStagedPatterns(
+      func, stage1Patterns, std::move(stage2Patterns), stage3Transforms);
 
   //===--------------------------------------------------------------------===//
   // Post staged patterns transforms
@@ -76,7 +76,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   OwningRewritePatternList patterns;
   patterns.insert<vector::VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 
   // Programmatic controlled lowering of vector.contract only.
   OwningRewritePatternList vectorContractLoweringPatterns;
@@ -84,13 +84,14 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
       .insert<ContractionOpToOuterProductOpLowering,
               ContractionOpToMatmulOpLowering, ContractionOpLowering>(
           vectorTransformsOptions, context);
-  applyPatternsAndFoldGreedily(func, std::move(vectorContractLoweringPatterns));
+  (void)applyPatternsAndFoldGreedily(func,
+                                     std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
   OwningRewritePatternList vectorToLoopsPatterns;
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
                                         vectorToSCFOptions);
-  applyPatternsAndFoldGreedily(func, std::move(vectorToLoopsPatterns));
+  (void)applyPatternsAndFoldGreedily(func, std::move(vectorToLoopsPatterns));
 
   // Ensure we drop the marker in the end.
   func.walk([](LinalgOp op) {
