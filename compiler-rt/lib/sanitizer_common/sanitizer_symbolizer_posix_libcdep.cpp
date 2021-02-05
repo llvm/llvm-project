@@ -400,6 +400,13 @@ const char *Symbolizer::PlatformDemangle(const char *name) {
 
 static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   const char *path = common_flags()->external_symbolizer_path;
+
+  if (path && internal_strchr(path, '%')) {
+    char *new_path = (char *)InternalAlloc(kMaxPathLength);
+    SubstituteForFlagValue(path, new_path, kMaxPathLength);
+    path = new_path;
+  }
+
   const char *binary_name = path ? StripModuleName(path) : "";
   if (path && path[0] == '\0') {
     VReport(2, "External symbolizer is explicitly disabled.\n");
