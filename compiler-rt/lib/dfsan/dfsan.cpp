@@ -20,6 +20,7 @@
 
 #include "dfsan/dfsan.h"
 
+#include "dfsan/dfsan_thread.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -422,7 +423,12 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  void *context,
                                                  bool request_fast,
                                                  u32 max_depth) {
-  Unwind(max_depth, pc, bp, context, 0, 0, false);
+  using namespace __dfsan;
+  DFsanThread *t = GetCurrentThread();
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
+    return Unwind(max_depth, pc, bp, context, 0, 0, false);
+  }
+  Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
@@ -529,6 +535,12 @@ static void dfsan_init(int argc, char **argv, char **envp) {
   // or it is killed by the runtime.
   Atexit(dfsan_fini);
   AddDieCallback(dfsan_fini);
+
+  // Set up threads
+  DFsanTSDInit(DFsanTSDDtor);
+  DFsanThread *main_thread = DFsanThread::Create(nullptr, nullptr, nullptr);
+  SetCurrentThread(main_thread);
+  main_thread->ThreadStart();
 
   __dfsan_label_info[kInitializingLabel].desc = "<init label>";
 }
