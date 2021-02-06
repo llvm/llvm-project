@@ -8,8 +8,8 @@
 /// \file
 /// Common declarations for yaml2obj
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H
-#define LLVM_TOOLS_YAML2OBJ_YAML2OBJ_H
+#ifndef LLVM_OBJECTYAML_YAML2OBJ_H
+#define LLVM_OBJECTYAML_YAML2OBJ_H
 
 #include "llvm/ADT/STLExtras.h"
 #include <memory>

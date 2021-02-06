@@ -10,8 +10,8 @@
 // code.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CODEGEN_MACHINE_SIZEOPTS_H
-#define LLVM_CODEGEN_MACHINE_SIZEOPTS_H
+#ifndef LLVM_CODEGEN_MACHINESIZEOPTS_H
+#define LLVM_CODEGEN_MACHINESIZEOPTS_H
 
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
@@ -43,4 +43,4 @@ bool shouldOptimizeForSize(const MachineBasicBlock *MBB,
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_MACHINE_SIZEOPTS_H
+#endif // LLVM_CODEGEN_MACHINESIZEOPTS_H

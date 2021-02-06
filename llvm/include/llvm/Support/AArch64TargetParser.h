@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
-#define LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
+#ifndef LLVM_SUPPORT_AARCH64TARGETPARSER_H
+#define LLVM_SUPPORT_AARCH64TARGETPARSER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

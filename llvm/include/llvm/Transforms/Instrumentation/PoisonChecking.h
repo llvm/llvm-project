@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_POISON_CHECKING_H
-#define LLVM_TRANSFORMS_INSTRUMENTATION_POISON_CHECKING_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_POISONCHECKING_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_POISONCHECKING_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -21,5 +20,4 @@ struct PoisonCheckingPass : public PassInfoMixin<PoisonCheckingPass> {
 
 }
 
-
-#endif  // LLVM_TRANSFORMS_INSTRUMENTATION_POISON_CHECKING_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_POISONCHECKING_H

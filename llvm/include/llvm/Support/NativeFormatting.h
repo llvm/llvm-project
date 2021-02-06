@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_NATIVE_FORMATTING_H
-#define LLVM_SUPPORT_NATIVE_FORMATTING_H
+#ifndef LLVM_SUPPORT_NATIVEFORMATTING_H
+#define LLVM_SUPPORT_NATIVEFORMATTING_H
 
 #include "llvm/ADT/Optional.h"
 #include <cstdint>

@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#ifndef LLVM_TRANSFORMS_SCALAR_SCALARIZE_MASKED_MEMINTRIN_H
-#define LLVM_TRANSFORMS_SCALAR_SCALARIZE_MASKED_MEMINTRIN_H
+#ifndef LLVM_TRANSFORMS_SCALAR_SCALARIZEMASKEDMEMINTRIN_H
+#define LLVM_TRANSFORMS_SCALAR_SCALARIZEMASKEDMEMINTRIN_H
 
 #include "llvm/IR/PassManager.h"
 

@@ -10,8 +10,8 @@
 // easier human consumption.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_INCLUDE_LLVM_XRAY_BLOCKPRINTER_H_
-#define LLVM_INCLUDE_LLVM_XRAY_BLOCKPRINTER_H_
+#ifndef LLVM_XRAY_BLOCKPRINTER_H
+#define LLVM_XRAY_BLOCKPRINTER_H
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/FDRRecords.h"
@@ -58,4 +58,4 @@ public:
 } // namespace xray
 } // namespace llvm
 
-#endif // LLVM_INCLUDE_LLVM_XRAY_BLOCKPRINTER_H_
+#endif // LLVM_XRAY_BLOCKPRINTER_H

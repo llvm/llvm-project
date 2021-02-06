@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
-#define LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
+#ifndef LLVM_TEXTAPI_MACHO_INTERFACEFILE_H
+#define LLVM_TEXTAPI_MACHO_INTERFACEFILE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
@@ -430,4 +430,4 @@ private:
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
+#endif // LLVM_TEXTAPI_MACHO_INTERFACEFILE_H

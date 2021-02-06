@@ -12,8 +12,8 @@
 // better decisions.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H
+#define LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Pass.h"
@@ -73,4 +73,4 @@ private:
 };
 } // End llvm namespace
 
-#endif //LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H

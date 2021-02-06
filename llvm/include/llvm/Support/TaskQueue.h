@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_TASK_QUEUE_H
-#define LLVM_SUPPORT_TASK_QUEUE_H
+#ifndef LLVM_SUPPORT_TASKQUEUE_H
+#define LLVM_SUPPORT_TASKQUEUE_H
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ThreadPool.h"
@@ -135,4 +135,4 @@ private:
 };
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_TASK_QUEUE_H
+#endif // LLVM_SUPPORT_TASKQUEUE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
-#define LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGINFOENTRY_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGINFOENTRY_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -59,4 +59,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGINFOENTRY_H

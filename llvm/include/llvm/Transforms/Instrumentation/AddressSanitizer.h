@@ -11,8 +11,8 @@
 // AddressSanitizer pass to use the new PassManager infrastructure.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZERPASS_H
-#define LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZERPASS_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZER_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZER_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"

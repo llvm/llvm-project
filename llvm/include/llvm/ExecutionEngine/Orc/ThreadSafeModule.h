@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULEWRAPPER_H
-#define LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULEWRAPPER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULE_H
+#define LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULE_H
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -169,4 +169,4 @@ cloneToNewContext(const ThreadSafeModule &TSMW,
 } // End namespace orc
 } // End namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULEWRAPPER_H
+#endif // LLVM_EXECUTIONENGINE_ORC_THREADSAFEMODULE_H
