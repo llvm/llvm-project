@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_IR_IRBUILDER_H
-#define LLVM_OPENMP_IR_IRBUILDER_H
+#ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
+#define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -922,4 +922,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_IR_IRBUILDER_H
+#endif // LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H

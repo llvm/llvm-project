@@ -64,4 +64,4 @@ template <> struct DenseMapInfo<gsym::FileEntry> {
 };
 
 } // namespace llvm
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_FILEENTRY_H
+#endif // LLVM_DEBUGINFO_GSYM_FILEENTRY_H

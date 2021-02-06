@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
-#define LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
+#ifndef LLVM_ANALYSIS_PROFILESUMMARYINFO_H
+#define LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"

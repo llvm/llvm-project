@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZEMACHINEIRPASS_H
-#define LLVM_CODEGEN_GLOBALISEL_LEGALIZEMACHINEIRPASS_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
+#define LLVM_CODEGEN_GLOBALISEL_LEGALIZER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

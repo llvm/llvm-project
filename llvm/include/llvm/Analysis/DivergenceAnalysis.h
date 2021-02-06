@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_DIVERGENCEANALYSIS_H
+#define LLVM_ANALYSIS_DIVERGENCEANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/SyncDependenceAnalysis.h"
@@ -188,4 +188,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_DIVERGENCEANALYSIS_H

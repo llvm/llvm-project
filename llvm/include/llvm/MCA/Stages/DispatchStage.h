@@ -15,8 +15,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_DISPATCH_STAGE_H
-#define LLVM_MCA_DISPATCH_STAGE_H
+#ifndef LLVM_MCA_STAGES_DISPATCHSTAGE_H
+#define LLVM_MCA_STAGES_DISPATCHSTAGE_H
 
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -84,4 +84,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_DISPATCH_STAGE_H
+#endif // LLVM_MCA_STAGES_DISPATCHSTAGE_H

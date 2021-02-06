@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_HARDWAREUNIT_H
-#define LLVM_MCA_HARDWAREUNIT_H
+#ifndef LLVM_MCA_HARDWAREUNITS_HARDWAREUNIT_H
+#define LLVM_MCA_HARDWAREUNITS_HARDWAREUNIT_H
 
 namespace llvm {
 namespace mca {
@@ -29,4 +29,4 @@ public:
 
 } // namespace mca
 } // namespace llvm
-#endif // LLVM_MCA_HARDWAREUNIT_H
+#endif // LLVM_MCA_HARDWAREUNITS_HARDWAREUNIT_H

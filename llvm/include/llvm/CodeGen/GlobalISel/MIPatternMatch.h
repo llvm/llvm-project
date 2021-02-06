@@ -9,8 +9,8 @@
 /// Contains matchers for matching SSA Machine Instructions.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_GMIR_PATTERNMATCH_H
-#define LLVM_GMIR_PATTERNMATCH_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
+#define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

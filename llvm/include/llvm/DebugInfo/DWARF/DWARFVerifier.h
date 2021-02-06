@@ -333,4 +333,4 @@ static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H

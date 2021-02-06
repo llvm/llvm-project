@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
-#define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
+#ifndef LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
+#define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
 
 #include "llvm/MC/MCObjectFileInfo.h"
 #include <cstdint>
@@ -278,4 +278,4 @@ protected:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
+#endif // LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H

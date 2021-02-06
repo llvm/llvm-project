@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#ifndef LLVM_CODEGEN_DIE_H
+#define LLVM_CODEGEN_DIE_H
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -989,4 +989,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#endif // LLVM_CODEGEN_DIE_H

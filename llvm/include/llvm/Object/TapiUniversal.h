@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_TAPI_UNIVERSAL_H
-#define LLVM_OBJECT_TAPI_UNIVERSAL_H
+#ifndef LLVM_OBJECT_TAPIUNIVERSAL_H
+#define LLVM_OBJECT_TAPIUNIVERSAL_H
 
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/TapiFile.h"
@@ -118,4 +118,4 @@ private:
 } // end namespace object.
 } // end namespace llvm.
 
-#endif // LLVM_OBJECT_TAPI_UNIVERSAL_H
+#endif // LLVM_OBJECT_TAPIUNIVERSAL_H

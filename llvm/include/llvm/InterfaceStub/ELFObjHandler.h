@@ -10,8 +10,8 @@
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
-#define LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
+#ifndef LLVM_INTERFACESTUB_ELFOBJHANDLER_H
+#define LLVM_INTERFACESTUB_ELFOBJHANDLER_H
 
 #include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -44,4 +44,4 @@ Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
 } // end namespace elfabi
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
+#endif // LLVM_INTERFACESTUB_ELFOBJHANDLER_H

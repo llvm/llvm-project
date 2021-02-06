@@ -9,8 +9,8 @@
 /// This file provides the interface for the GCOV style profiler  pass.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_GCOVPROFILER_H
-#define LLVM_TRANSFORMS_GCOVPROFILER_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Instrumentation.h"
