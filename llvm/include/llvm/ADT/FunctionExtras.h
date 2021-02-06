@@ -29,8 +29,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_FUNCTION_EXTRAS_H
-#define LLVM_ADT_FUNCTION_EXTRAS_H
+#ifndef LLVM_ADT_FUNCTIONEXTRAS_H
+#define LLVM_ADT_FUNCTIONEXTRAS_H
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -411,4 +411,4 @@ auto functionObjectToCCallbackRef(FuncTy &F) {
 }
 } // end namespace llvm
 
-#endif // LLVM_ADT_FUNCTION_H
+#endif // LLVM_ADT_FUNCTIONEXTRAS_H

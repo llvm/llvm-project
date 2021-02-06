@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H
-#define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -67,4 +67,4 @@ template <> struct VarStreamArrayExtractor<pdb::DbiModuleDescriptor> {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTOR_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTOR_H

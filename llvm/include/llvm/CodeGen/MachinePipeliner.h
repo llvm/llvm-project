@@ -37,8 +37,8 @@
 // 3) Attempt to schedule the nodes in the specified order using the MII.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
-#define LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
+#ifndef LLVM_CODEGEN_MACHINEPIPELINER_H
+#define LLVM_CODEGEN_MACHINEPIPELINER_H
 
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -595,4 +595,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
+#endif // LLVM_CODEGEN_MACHINEPIPELINER_H

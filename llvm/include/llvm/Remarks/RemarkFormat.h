@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_FORMAT_H
-#define LLVM_REMARKS_REMARK_FORMAT_H
+#ifndef LLVM_REMARKS_REMARKFORMAT_H
+#define LLVM_REMARKS_REMARKFORMAT_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -33,4 +33,4 @@ Expected<Format> magicToFormat(StringRef Magic);
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_FORMAT_H */
+#endif // LLVM_REMARKS_REMARKFORMAT_H

@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_REGISTER_FILE_H
-#define LLVM_MCA_REGISTER_FILE_H
+#ifndef LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H
+#define LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -235,4 +235,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_REGISTER_FILE_H
+#endif // LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H

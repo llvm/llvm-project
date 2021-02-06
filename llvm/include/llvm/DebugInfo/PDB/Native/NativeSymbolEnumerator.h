@@ -47,4 +47,4 @@ protected:
 } // namespace pdb
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVESYMBOLENUMERATOR_H

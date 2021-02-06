@@ -25,8 +25,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_INCLUDE_LLVM_OBJECT_RESFILE_H
-#define LLVM_INCLUDE_LLVM_OBJECT_RESFILE_H
+#ifndef LLVM_OBJECT_WINDOWSRESOURCE_H
+#define LLVM_OBJECT_WINDOWSRESOURCE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"

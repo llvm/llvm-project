@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_RESOURCE_MANAGER_H
-#define LLVM_MCA_RESOURCE_MANAGER_H
+#ifndef LLVM_MCA_HARDWAREUNITS_RESOURCEMANAGER_H
+#define LLVM_MCA_HARDWAREUNITS_RESOURCEMANAGER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -444,4 +444,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_RESOURCE_MANAGER_H
+#endif // LLVM_MCA_HARDWAREUNITS_RESOURCEMANAGER_H

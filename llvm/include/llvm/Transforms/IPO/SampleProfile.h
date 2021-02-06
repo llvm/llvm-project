@@ -40,4 +40,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_SAMPLEPROFILE_H
+#endif // LLVM_TRANSFORMS_IPO_SAMPLEPROFILE_H

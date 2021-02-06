@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
-#define LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
+#ifndef LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H
+#define LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -26,5 +26,4 @@ public:
 };
 
 }
-#endif // LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
-
+#endif // LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H

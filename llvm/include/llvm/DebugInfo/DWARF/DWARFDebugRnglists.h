@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
-#define LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -67,4 +67,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
