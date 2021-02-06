@@ -599,7 +599,10 @@ std::vector<ArgKind> Registry::getAcceptedCompletionTypes(
 
   // Starting with the above seed of acceptable top-level matcher types, compute
   // the acceptable type set for the argument indicated by each context element.
-  std::set<ArgKind> TypeSet(std::begin(InitialTypes), std::end(InitialTypes));
+  std::set<ArgKind> TypeSet;
+  for (auto IT : InitialTypes) {
+    TypeSet.insert(ArgKind::MakeMatcherArg(IT));
+  }
   for (const auto &CtxEntry : Context) {
     MatcherCtor Ctor = CtxEntry.first;
     unsigned ArgNumber = CtxEntry.second;
