@@ -396,8 +396,7 @@ void LegacyDivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
     OS << Arg << "\n";
   }
   // Iterate instructions using instructions() to ensure a deterministic order.
-  for (auto BI = F->begin(), BE = F->end(); BI != BE; ++BI) {
-    auto &BB = *BI;
+  for (const BasicBlock &BB : *F) {
     OS << "\n           " << BB.getName() << ":\n";
     for (auto &I : BB.instructionsWithoutDebug()) {
       OS << (isDivergent(&I) ? "DIVERGENT:     " : "               ");
