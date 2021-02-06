@@ -39,6 +39,7 @@ StackDepotHandle StackDepotPut_WithHandle(StackTrace stack);
 // Retrieves a stored stack trace by the id.
 StackTrace StackDepotGet(u32 id);
 
+void StackDepotFree();
 void StackDepotLockAll();
 void StackDepotUnlockAll();
 void StackDepotPrintAll();
