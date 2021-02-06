@@ -21900,7 +21900,8 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
 
   // And if it is bigger, shrink it first.
   if (Sign.getSimpleValueType().bitsGT(VT))
-    Sign = DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(1, dl));
+    Sign =
+        DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(0, dl));
 
   // At this point the operands and the result should have the same
   // type, and that won't be f80 since that is not custom lowered.
