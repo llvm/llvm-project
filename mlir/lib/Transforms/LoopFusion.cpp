@@ -768,6 +768,17 @@ bool MemRefDependenceGraph::init(FuncOp f) {
       // could be used by loop nest nodes.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
+    } else if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+      // Create graph node for top-level op, which could have a memory write
+      // side effect.
+      SmallVector<MemoryEffects::EffectInstance, 1> effects;
+      effectInterface.getEffects(effects);
+      if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &it) {
+            return isa<MemoryEffects::Write>(it.getEffect());
+          })) {
+        Node node(nextNodeId++, &op);
+        nodes.insert({node.id, node});
+      }
     }
   }
 
