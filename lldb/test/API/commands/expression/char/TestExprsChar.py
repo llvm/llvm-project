@@ -22,7 +22,6 @@ class ExprCharTestCase(TestBase):
 
     @expectedFailureAll(
         archs=[
-            "arm",
             "aarch64",
             "powerpc64le",
             "s390x"],

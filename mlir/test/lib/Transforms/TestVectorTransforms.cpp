@@ -45,6 +45,7 @@ struct TestVectorToVectorConversion
     }
     populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
     populateVectorToVectorTransformationPatterns(patterns, ctx);
+    populateBubbleVectorBitCastOpPatterns(patterns, ctx);
     populateCastAwayVectorLeadingOneDimPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
