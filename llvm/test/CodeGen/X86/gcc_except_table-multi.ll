@@ -1,10 +1,10 @@
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections | FileCheck %s --check-prefixes=CHECK,SEP
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.35 | FileCheck %s --check-prefixes=CHECK,SEP_BFD
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -binutils-version=2.36 | FileCheck %s --check-prefixes=CHECK,SEP
 
-;; Don't use `,unique` if GNU as<2.35.
-; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false -no-integrated-as | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE_GAS
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
 
 @_ZTIi = external constant i8*
 
@@ -16,10 +16,10 @@ define i32 @group() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_pe
 ; CHECK-LABEL:       group:
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
+; SEP_BFD-NEXT:      .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
+; SEP-NEXT:          .section .gcc_except_table.group,"aGo",@progbits,group,comdat,group{{$}}
+; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"aG",@progbits,group,comdat{{$}}
 ; NOUNIQUE-NEXT:     .section .gcc_except_table,"aG",@progbits,group,comdat{{$}}
-; SEP-NEXT:          .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
-; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"aG",@progbits,group,comdat,unique,2
-; SEP_NOUNIQUE_GAS-NEXT: .section .gcc_except_table,"aG",@progbits,group,comdat{{$}}
 entry:
   invoke void @ext() to label %try.cont unwind label %lpad
 lpad:
@@ -38,10 +38,10 @@ define i32 @foo() uwtable personality i8* bitcast (i32 (...)* @__gxx_personality
 ; CHECK-LABEL:       foo:
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table,"a",@progbits{{$}}
+; SEP_BFD-NEXT:      .section .gcc_except_table.foo,"a",@progbits{{$}}
+; SEP-NEXT:          .section .gcc_except_table.foo,"ao",@progbits,foo{{$}}
+; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"a",@progbits{{$}}
 ; NOUNIQUE-NEXT:     .section .gcc_except_table,"a",@progbits{{$}}
-; SEP-NEXT:          .section .gcc_except_table.foo,"a",@progbits{{$}}
-; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"a",@progbits,unique,4
-; SEP_NOUNIQUE_GAS-NEXT: .section .gcc_except_table,"a",@progbits{{$}}
 entry:
   invoke void @ext() to label %try.cont unwind label %lpad
 lpad:
