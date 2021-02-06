@@ -24,7 +24,7 @@ define void @rv_marker_ptrauth_blraa(i8* ()** %arg0, i64 %arg1) {
 ;
 entry:
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 0, i64 %arg1) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 0, i64 %arg1), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -40,7 +40,7 @@ define void @rv_marker_ptrauth_blraa_disc_imm16(i8* ()** %arg0) {
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 1, i64 45431) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 1, i64 45431), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -59,7 +59,7 @@ define void @rv_marker_ptrauth_blraa_multiarg(i8* (i64, i64, i64)** %arg0, i64 %
 ;
 entry:
   %tmp0 = load i8* (i64, i64, i64)*, i8* (i64, i64, i64)** %arg0
-  %call1 = call "rv_marker" i8* %tmp0(i64 %c, i64 %b, i64 %a) [ "ptrauth"(i32 0, i64 %arg1) ]
+  %call1 = call i8* %tmp0(i64 %c, i64 %b, i64 %a) [ "ptrauth"(i32 0, i64 %arg1), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -74,7 +74,7 @@ define void @rv_marker_ptrauth_blrab(i8* ()** %arg0, i64 %arg1) {
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 1, i64 %arg1) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 1, i64 %arg1), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -90,7 +90,7 @@ define void @rv_marker_ptrauth_blrab_disc_imm16(i8* ()** %arg0) {
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 1, i64 256) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 1, i64 256), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -105,7 +105,7 @@ define void @rv_marker_ptrauth_blraaz(i8* ()** %arg0) {
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 0, i64 0) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 0, i64 0), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -120,7 +120,7 @@ define void @rv_marker_ptrauth_blrabz(i8* ()** %arg0) {
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* ()*, i8* ()** %arg0
-  %call1 = call "rv_marker" i8* %tmp0() [ "ptrauth"(i32 1, i64 0) ]
+  %call1 = call i8* %tmp0() [ "ptrauth"(i32 1, i64 0), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void
@@ -139,7 +139,7 @@ define void @rv_marker_ptrauth_blrabz_multiarg(i8* (i64, i64, i64)** %arg0, i64 
 ; GISEL-NOT:     mov x29, x29
 ;
   %tmp0 = load i8* (i64, i64, i64)*, i8* (i64, i64, i64)** %arg0
-  %call1 = call "rv_marker" i8* %tmp0(i64 %c, i64 %b, i64 %a) [ "ptrauth"(i32 1, i64 0) ]
+  %call1 = call i8* %tmp0(i64 %c, i64 %b, i64 %a) [ "ptrauth"(i32 1, i64 0), "clang.arc.rv"(i64 0) ]
   tail call void @foo2(i8* %call1)
   tail call void @llvm.objc.release(i8* %call1)
   ret void

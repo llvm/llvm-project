@@ -2774,12 +2774,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan({LLVMContext::OB_deopt,
-                                        LLVMContext::OB_gc_transition,
-                                        LLVMContext::OB_gc_live,
-                                        LLVMContext::OB_funclet,
-                                        LLVMContext::OB_cfguardtarget,
-                                        LLVMContext::OB_ptrauth}) &&
+  assert(!I.hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
+              LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
+              LLVMContext::OB_clang_arc_rv}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
   const Value *Callee(I.getCalledOperand());
@@ -7858,7 +7857,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // CFGuardTarget bundles are lowered in LowerCallTo.
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated}) &&
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+              LLVMContext::OB_clang_arc_rv}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
