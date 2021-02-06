@@ -45,7 +45,7 @@ public:
   enum : unsigned { ExprResultIdx = std::numeric_limits<unsigned>::max() };
 
   struct ResultElem {
-    WeakTrackingVH Assume;
+    WeakVH Assume;
 
     /// contains either ExprResultIdx or the index of the operand bundle
     /// containing the knowledge.
