@@ -280,7 +280,7 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
   // a significant amount of code here which can't be optimised out that it's
   // not profitable (as these instructions would get executed for each
   // iteration of the inner loop).
-  unsigned RepeatedInstrCost = 0;
+  InstructionCost RepeatedInstrCost = 0;
   for (auto *B : FI.OuterLoop->getBlocks()) {
     if (FI.InnerLoop->contains(B))
       continue;
@@ -310,7 +310,8 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
       if (match(&I, m_c_Mul(m_Specific(FI.OuterInductionPHI),
                             m_Specific(FI.InnerLimit))))
         continue;
-      int Cost = TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+      InstructionCost Cost =
+          TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
       RepeatedInstrCost += Cost;
     }
