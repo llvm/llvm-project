@@ -44,6 +44,14 @@ void populateVectorToVectorTransformationPatterns(
 void populateCastAwayVectorLeadingOneDimPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
 
+/// Collect a set of patterns that bubble up/down bitcast ops.
+///
+/// These patterns move vector.bitcast ops to be before insert ops or after
+/// extract ops where suitable. With them, bitcast will happen on smaller
+/// vectors and there are more chances to share extract/insert ops.
+void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns,
+                                           MLIRContext *context);
+
 /// Collect a set of vector slices transformation patterns:
 ///    ExtractSlicesOpLowering, InsertSlicesOpLowering
 /// Useful for clients that want to express all vector "slices"
