@@ -2674,6 +2674,35 @@ func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
 
 // -----
 
+// CHECK-LABEL: func @should_not_fuse_since_top_level_non_affine_mem_write_users
+func @should_not_fuse_since_top_level_non_affine_mem_write_users(
+    %in0 : memref<32xf32>, %in1 : memref<32xf32>) {
+  %c0 = constant 0 : index
+  %cst_0 = constant 0.000000e+00 : f32
+
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = addf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  store %cst_0, %in0[%c0] : memref<32xf32>
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = addf %lhs, %rhs: f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  return
+}
+
+// CHECK:  affine.for
+// CHECK:    addf
+// CHECK:  affine.for
+// CHECK:    addf
+
+// -----
+
 // MAXIMAL-LABEL: func @fuse_minor_affine_map
 func @fuse_minor_affine_map(%in: memref<128xf32>, %out: memref<20x512xf32>) {
   %tmp = alloc() : memref<128xf32>
