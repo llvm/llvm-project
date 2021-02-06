@@ -60076,6 +60076,43 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBTarget_IsLoaded(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
+  lldb::SBModule *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject *swig_obj[2] ;
+  bool result;
+  
+  if (!SWIG_Python_UnpackTuple(args, "SBTarget_IsLoaded", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_IsLoaded" "', argument " "1"" of type '" "lldb::SBTarget const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_lldb__SBModule,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_IsLoaded" "', argument " "2"" of type '" "lldb::SBModule const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_IsLoaded" "', argument " "2"" of type '" "lldb::SBModule const &""'"); 
+  }
+  arg2 = reinterpret_cast< lldb::SBModule * >(argp2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBTarget const *)arg1)->IsLoaded((lldb::SBModule const &)*arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBTarget_GetLaunchInfo(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
@@ -84040,6 +84077,16 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBTarget_FindSymbols", _wrap_SBTarget_FindSymbols, METH_VARARGS, "SBTarget_FindSymbols(SBTarget self, char const * name, lldb::SymbolType type=eSymbolTypeAny) -> SBSymbolContextList"},
 	 { "SBTarget_GetDescription", _wrap_SBTarget_GetDescription, METH_VARARGS, "SBTarget_GetDescription(SBTarget self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
 	 { "SBTarget_GetStackRedZoneSize", _wrap_SBTarget_GetStackRedZoneSize, METH_O, "SBTarget_GetStackRedZoneSize(SBTarget self) -> lldb::addr_t"},
+	 { "SBTarget_IsLoaded", _wrap_SBTarget_IsLoaded, METH_VARARGS, "\n"
+		"SBTarget_IsLoaded(SBTarget self, SBModule module) -> bool\n"
+		"\n"
+		"    Returns true if the module has been loaded in this `SBTarget`.\n"
+		"    A module can be loaded either by the dynamic loader or by being manually\n"
+		"    added to the target (see `SBTarget.AddModule` and the `target module add` command).\n"
+		"\n"
+		"    :rtype: bool\n"
+		"\n"
+		""},
 	 { "SBTarget_GetLaunchInfo", _wrap_SBTarget_GetLaunchInfo, METH_O, "SBTarget_GetLaunchInfo(SBTarget self) -> SBLaunchInfo"},
 	 { "SBTarget_SetLaunchInfo", _wrap_SBTarget_SetLaunchInfo, METH_VARARGS, "SBTarget_SetLaunchInfo(SBTarget self, SBLaunchInfo launch_info)"},
 	 { "SBTarget_SetCollectingStats", _wrap_SBTarget_SetCollectingStats, METH_VARARGS, "SBTarget_SetCollectingStats(SBTarget self, bool v)"},

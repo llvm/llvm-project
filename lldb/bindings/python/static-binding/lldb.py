@@ -10844,6 +10844,19 @@ class SBTarget(object):
         r"""GetStackRedZoneSize(SBTarget self) -> lldb::addr_t"""
         return _lldb.SBTarget_GetStackRedZoneSize(self)
 
+    def IsLoaded(self, module):
+        r"""
+        IsLoaded(SBTarget self, SBModule module) -> bool
+
+            Returns true if the module has been loaded in this `SBTarget`.
+            A module can be loaded either by the dynamic loader or by being manually
+            added to the target (see `SBTarget.AddModule` and the `target module add` command).
+
+            :rtype: bool
+
+        """
+        return _lldb.SBTarget_IsLoaded(self, module)
+
     def GetLaunchInfo(self):
         r"""GetLaunchInfo(SBTarget self) -> SBLaunchInfo"""
         return _lldb.SBTarget_GetLaunchInfo(self)
