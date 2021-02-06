@@ -94,6 +94,7 @@ public:
     OB_preallocated = 4,  // "preallocated"
     OB_gc_live = 5,       // "gc-live"
     OB_ptrauth = 6,       // "ptrauth"
+    OB_clang_arc_rv = 7,  // "clang.arc.rv"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
