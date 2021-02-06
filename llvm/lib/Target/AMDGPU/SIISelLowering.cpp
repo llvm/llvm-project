@@ -8283,8 +8283,8 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
 
 // Returns immediate value for setting the F32 denorm mode when using the
 // S_DENORM_MODE instruction.
-static const SDValue getSPDenormModeValue(int SPDenormMode, SelectionDAG &DAG,
-                                          const SDLoc &SL, const GCNSubtarget *ST) {
+static SDValue getSPDenormModeValue(int SPDenormMode, SelectionDAG &DAG,
+                                    const SDLoc &SL, const GCNSubtarget *ST) {
   assert(ST->hasDenormModeInst() && "Requires S_DENORM_MODE");
   int DPDenormModeDefault = hasFP64FP16Denormals(DAG.getMachineFunction())
                                 ? FP_DENORM_FLUSH_NONE
