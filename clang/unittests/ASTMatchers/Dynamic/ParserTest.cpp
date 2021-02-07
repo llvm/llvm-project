@@ -541,6 +541,29 @@ TEST(ParserTest, CompletionRegistry) {
   ASSERT_EQ(1u, Comps.size());
   EXPECT_EQ("bind(\"", Comps[0].TypedText);
   EXPECT_EQ("bind", Comps[0].MatcherDecl);
+
+  Code = "mapAny";
+  Comps = Parser::completeExpression(Code, 6);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("Of(", Comps[0].TypedText);
+  EXPECT_EQ("Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...> "
+            "mapAnyOf(NestedNameSpecifierLoc|QualType|TypeLoc|"
+            "NestedNameSpecifier|Decl|Stmt|Type...)",
+            Comps[0].MatcherDecl);
+
+  Code = "mapAnyOf(ifStmt).";
+  Comps = Parser::completeExpression(Code, 17);
+  ASSERT_EQ(2u, Comps.size());
+  EXPECT_EQ("bind(\"", Comps[0].TypedText);
+  EXPECT_EQ("bind", Comps[0].MatcherDecl);
+  EXPECT_EQ("with(", Comps[1].TypedText);
+  EXPECT_EQ("with", Comps[1].MatcherDecl);
+
+  Code = "mapAnyOf(ifS";
+  Comps = Parser::completeExpression(Code, 12);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("tmt", Comps[0].TypedText);
+  EXPECT_EQ("ifStmt", Comps[0].MatcherDecl);
 }
 
 TEST(ParserTest, CompletionNamedValues) {

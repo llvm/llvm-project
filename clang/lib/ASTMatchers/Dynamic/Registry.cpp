@@ -656,20 +656,40 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
     bool IsPolymorphic = Matcher.isPolymorphic();
     std::vector<std::vector<ArgKind>> ArgsKinds(NumArgs);
     unsigned MaxSpecificity = 0;
+    bool NodeArgs = false;
     for (const ArgKind& Kind : AcceptedTypes) {
-      if (Kind.getArgKind() != Kind.AK_Matcher)
+      if (Kind.getArgKind() != Kind.AK_Matcher &&
+          Kind.getArgKind() != Kind.AK_Node) {
         continue;
-      unsigned Specificity;
-      ASTNodeKind LeastDerivedKind;
-      if (Matcher.isConvertibleTo(Kind.getMatcherKind(), &Specificity,
-                                  &LeastDerivedKind)) {
-        if (MaxSpecificity < Specificity)
-          MaxSpecificity = Specificity;
-        RetKinds.insert(LeastDerivedKind);
-        for (unsigned Arg = 0; Arg != NumArgs; ++Arg)
-          Matcher.getArgKinds(Kind.getMatcherKind(), Arg, ArgsKinds[Arg]);
-        if (IsPolymorphic)
-          break;
+      }
+
+      if (Kind.getArgKind() == Kind.AK_Node) {
+        NodeArgs = true;
+        unsigned Specificity;
+        ASTNodeKind LeastDerivedKind;
+        if (Matcher.isConvertibleTo(Kind.getNodeKind(), &Specificity,
+                                    &LeastDerivedKind)) {
+          if (MaxSpecificity < Specificity)
+            MaxSpecificity = Specificity;
+          RetKinds.insert(LeastDerivedKind);
+          for (unsigned Arg = 0; Arg != NumArgs; ++Arg)
+            Matcher.getArgKinds(Kind.getNodeKind(), Arg, ArgsKinds[Arg]);
+          if (IsPolymorphic)
+            break;
+        }
+      } else {
+        unsigned Specificity;
+        ASTNodeKind LeastDerivedKind;
+        if (Matcher.isConvertibleTo(Kind.getMatcherKind(), &Specificity,
+                                    &LeastDerivedKind)) {
+          if (MaxSpecificity < Specificity)
+            MaxSpecificity = Specificity;
+          RetKinds.insert(LeastDerivedKind);
+          for (unsigned Arg = 0; Arg != NumArgs; ++Arg)
+            Matcher.getArgKinds(Kind.getMatcherKind(), Arg, ArgsKinds[Arg]);
+          if (IsPolymorphic)
+            break;
+        }
       }
     }
 
@@ -677,42 +697,49 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
       std::string Decl;
       llvm::raw_string_ostream OS(Decl);
 
-      if (IsPolymorphic) {
-        OS << "Matcher<T> " << Name << "(Matcher<T>";
-      } else {
-        OS << "Matcher<" << RetKinds << "> " << Name << "(";
-        for (const std::vector<ArgKind> &Arg : ArgsKinds) {
-          if (&Arg != &ArgsKinds[0])
-            OS << ", ";
+      std::string TypedText = std::string(Name);
 
-          bool FirstArgKind = true;
-          std::set<ASTNodeKind> MatcherKinds;
-          // Two steps. First all non-matchers, then matchers only.
-          for (const ArgKind &AK : Arg) {
-            if (AK.getArgKind() == ArgKind::AK_Matcher) {
-              MatcherKinds.insert(AK.getMatcherKind());
-            } else {
+      if (NodeArgs) {
+        OS << Name;
+      } else {
+
+        if (IsPolymorphic) {
+          OS << "Matcher<T> " << Name << "(Matcher<T>";
+        } else {
+          OS << "Matcher<" << RetKinds << "> " << Name << "(";
+          for (const std::vector<ArgKind> &Arg : ArgsKinds) {
+            if (&Arg != &ArgsKinds[0])
+              OS << ", ";
+
+            bool FirstArgKind = true;
+            std::set<ASTNodeKind> MatcherKinds;
+            // Two steps. First all non-matchers, then matchers only.
+            for (const ArgKind &AK : Arg) {
+              if (AK.getArgKind() == ArgKind::AK_Matcher) {
+                MatcherKinds.insert(AK.getMatcherKind());
+              } else {
+                if (!FirstArgKind)
+                  OS << "|";
+                FirstArgKind = false;
+                OS << AK.asString();
+              }
+            }
+            if (!MatcherKinds.empty()) {
               if (!FirstArgKind) OS << "|";
-              FirstArgKind = false;
-              OS << AK.asString();
+              OS << "Matcher<" << MatcherKinds << ">";
             }
           }
-          if (!MatcherKinds.empty()) {
-            if (!FirstArgKind) OS << "|";
-            OS << "Matcher<" << MatcherKinds << ">";
-          }
         }
-      }
-      if (Matcher.isVariadic())
-        OS << "...";
-      OS << ")";
+        if (Matcher.isVariadic())
+          OS << "...";
+        OS << ")";
 
-      std::string TypedText = std::string(Name);
-      TypedText += "(";
-      if (ArgsKinds.empty())
-        TypedText += ")";
-      else if (ArgsKinds[0][0].getArgKind() == ArgKind::AK_String)
-        TypedText += "\"";
+        TypedText += "(";
+        if (ArgsKinds.empty())
+          TypedText += ")";
+        else if (ArgsKinds[0][0].getArgKind() == ArgKind::AK_String)
+          TypedText += "\"";
+      }
 
       Completions.emplace_back(TypedText, OS.str(), MaxSpecificity);
     }
