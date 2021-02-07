@@ -562,6 +562,10 @@ RegistryMaps::~RegistryMaps() = default;
 
 static llvm::ManagedStatic<RegistryMaps> RegistryData;
 
+ASTNodeKind Registry::nodeMatcherType(MatcherCtor Ctor) {
+  return Ctor->nodeMatcherType();
+}
+
 // static
 llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
   auto it = RegistryData->constructors().find(MatcherName);
