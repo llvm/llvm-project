@@ -216,6 +216,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
     Block,
     Loop,
     Try,
+    CatchAll,
     If,
     Else,
     Undefined,
@@ -273,7 +274,9 @@ public:
     case Loop:
       return {"loop", "end_loop"};
     case Try:
-      return {"try", "end_try"};
+      return {"try", "end_try/delegate"};
+    case CatchAll:
+      return {"catch_all", "end_try"};
     case If:
       return {"if", "end_if"};
     case Else:
@@ -533,10 +536,17 @@ public:
       if (pop(Name, Try))
         return true;
       push(Try);
+    } else if (Name == "catch_all") {
+      if (pop(Name, Try))
+        return true;
+      push(CatchAll);
     } else if (Name == "end_if") {
       if (pop(Name, If, Else))
         return true;
     } else if (Name == "end_try") {
+      if (pop(Name, Try, CatchAll))
+        return true;
+    } else if (Name == "delegate") {
       if (pop(Name, Try))
         return true;
     } else if (Name == "end_loop") {
