@@ -2364,20 +2364,19 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   }
 
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/false))
+  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
 
   // Parse the optional module-partition.
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
   if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
-    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
-    if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/false))
+    if (!getLangOpts().CPlusPlusModules)
+      Diag(ColonLoc, diag::err_unsupported_module_partition)
+          << SourceRange(ColonLoc, Partition.back().second);
+    // Recover by ignoring the partition name.
+    else if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/ false))
       return nullptr;
-
-    // FIXME: Support module partition declarations.
-    Diag(ColonLoc, diag::err_unsupported_module_partition)
-      << SourceRange(ColonLoc, Partition.back().second);
-    // Recover by parsing as a non-partition.
   }
 
   // We don't support any module attributes yet; just parse them and diagnose.
@@ -2387,18 +2386,19 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, ImportState);
+  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
+                                 ImportState);
 }
 
 /// Parse a module import declaration. This is essentially the same for
-/// Objective-C and the C++ Modules TS, except for the leading '@' (in ObjC)
-/// and the trailing optional attributes (in C++).
+/// Objective-C and C++20 except for the leading '@' (in ObjC) and the
+/// trailing optional attributes (in C++).
 ///
 /// [ObjC]  @import declaration:
 ///           '@' 'import' module-name ';'
 /// [ModTS] module-import-declaration:
 ///           'import' module-name attribute-specifier-seq[opt] ';'
-/// [C++2a] module-import-declaration:
+/// [C++20] module-import-declaration:
 ///           'export'[opt] 'import' module-name
 ///                   attribute-specifier-seq[opt] ';'
 ///           'export'[opt] 'import' module-partition
@@ -2418,9 +2418,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
   SourceLocation ImportLoc = ConsumeToken();
 
+  // For C++20 modules, we can have "name" or ":Partition name" as valid input.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
   Module *HeaderUnit = nullptr;
-
   if (Tok.is(tok::header_name)) {
     // This is a header import that the preprocessor decided we should skip
     // because it was malformed in some way. Parse and ignore it; it's already
@@ -2430,17 +2431,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     // This is a header import that the preprocessor mapped to a module import.
     HeaderUnit = reinterpret_cast<Module *>(Tok.getAnnotationValue());
     ConsumeAnnotationToken();
-  } else if (getLangOpts().CPlusPlusModules && Tok.is(tok::colon)) {
+  } else if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+    if (!getLangOpts().CPlusPlusModules)
+      Diag(ColonLoc, diag::err_unsupported_module_partition)
+          << SourceRange(ColonLoc, Partition.back().second);
+    // Recover by leaving partition empty.
+    else if (ParseModuleName(ColonLoc, Partition, /*IsImport*/ true))
       return nullptr;
-
-    // FIXME: Support module partition import.
-    Diag(ColonLoc, diag::err_unsupported_module_partition)
-      << SourceRange(ColonLoc, Path.back().second);
-    return nullptr;
   } else {
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+    if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
       return nullptr;
   }
 
@@ -2457,21 +2457,24 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 
   // Diagnose mis-imports.
   bool SeenError = true;
+  bool HasPart = !Partition.empty();
   switch (ImportState) {
   case Sema::ModuleImportState::ImportAllowed:
     SeenError = false;
     break;
   case Sema::ModuleImportState::FirstDecl:
   case Sema::ModuleImportState::NotACXX20Module:
-    // TODO: These cases will be an error when partitions are implemented.
-    SeenError = false;
+    // We can only import a partition within a module purview.
+    if (HasPart)
+      Diag(ImportLoc, diag::err_partition_import_outside_module);
+    else
+      SeenError = false;
     break;
   case Sema::ModuleImportState::GlobalFragment:
     // We can only have pre-processor directives in the global module
     // fragment.  We can, however have a header unit import here.
     if (!HeaderUnit)
-      // We do not have partition support yet, so first arg is 0.
-      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << 0 << 0;
+      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << HasPart << 0;
     else
       SeenError = false;
     break;
@@ -2482,8 +2485,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   case Sema::ModuleImportState::PrivateFragment:
-    // We do not have partition support yet, so first arg is 0.
-    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << 0 << 1;
+    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << HasPart << 1;
     break;
   }
   if (SeenError) {
@@ -2495,8 +2497,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   if (HeaderUnit)
     Import =
         Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, HeaderUnit);
-  else if (!Path.empty())
-    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path);
+  else if (!Path.empty() || !Partition.empty())
+    Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path,
+                                       Partition);
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;

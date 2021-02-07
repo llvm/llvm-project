@@ -4467,6 +4467,16 @@ public:
 ///   @import std.vector;
 /// \endcode
 ///
+/// A C++20 module import declaration imports the named module or partition.
+/// Periods are permitted in C++20 module names, but have no semantic meaning.
+/// For example:
+/// \code
+///   import NamedModule;
+///   import :SomePartition; // Must be a partition of the current module.
+///   import Names.Like.this; // Allowed.
+///   import :and.Also.Partition.names;
+/// \endcode
+///
 /// Import declarations can also be implicitly generated from
 /// \#include/\#import directives.
 class ImportDecl final : public Decl,

@@ -2210,6 +2210,7 @@ private:
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
     bool ModuleInterface = false;
+    bool IsPartition = false;
     bool ImplicitGlobalModuleFragment = false;
     VisibleModuleSet OuterVisibleModules;
   };
@@ -2962,7 +2963,7 @@ public:
   /// of a module interface or implementation.
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
-                                 ModuleIdPath Path,
+                                 ModuleIdPath Path, ModuleIdPath Partition,
                                  ModuleImportState &ImportState);
 
   /// The parser has processed a global-module-fragment declaration that begins
@@ -2983,10 +2984,12 @@ public:
   ///        could be the location of an '@', 'export', or 'import'.
   /// \param ExportLoc The location of the 'export' keyword, if any.
   /// \param ImportLoc The location of the 'import' keyword.
-  /// \param Path The module access path.
+  /// \param Path The module toplevel name as an access path.
+  /// \param Partition The module partition name as an access path.
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
-                               SourceLocation ImportLoc, ModuleIdPath Path);
+                               SourceLocation ImportLoc, ModuleIdPath Path,
+                               ModuleIdPath Partition = {});
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
                                SourceLocation ImportLoc, Module *M,
