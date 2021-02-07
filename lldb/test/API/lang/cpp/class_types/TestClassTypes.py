@@ -220,5 +220,5 @@ class ClassTypesTestCase(TestBase):
         frame = thread.frames[0]
         self.assertTrue(frame.IsValid(), "Got a valid frame.")
 
-        self.assertTrue("C::C" in frame.name,
-                        "Constructor name includes class name.")
+        self.assertIn("C::C", frame.name,
+                      "Constructor name includes class name.")

@@ -73,7 +73,7 @@ class ObjCCheckerTestCase(TestBase):
 
         # Make sure the error is helpful:
         err_string = expr_error.GetCString()
-        self.assertTrue("selector" in err_string)
+        self.assertIn("selector", err_string)
 
         #
         # Check that we correctly insert the checker for an

@@ -19,10 +19,10 @@ class TestVSCode_console(lldbvscode_testcase.VSCodeTestCaseBase):
     def check_lldb_command(self, lldb_command, contains_string, assert_msg):
         response = self.vscode.request_evaluate('`%s' % (lldb_command))
         output = response['body']['result']
-        self.assertTrue(contains_string in output,
-                        ("""Verify %s by checking the command output:\n"""
-                         """'''\n%s'''\nfor the string: "%s" """ % (
-                         assert_msg, output, contains_string)))
+        self.assertIn(contains_string, output,
+                      ("""Verify %s by checking the command output:\n"""
+                       """'''\n%s'''\nfor the string: "%s" """ % (
+                       assert_msg, output, contains_string)))
 
     @skipIfWindows
     @skipIfRemote
