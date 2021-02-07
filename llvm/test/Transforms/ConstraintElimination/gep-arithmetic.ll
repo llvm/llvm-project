@@ -151,7 +151,7 @@ define i4 @ptr_N_signed_positive_explicit_check_constant_step_no_inbonds(i8* %sr
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr i8, i8* [[SRC]], i16 1
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 false, false
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
