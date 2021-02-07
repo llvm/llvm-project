@@ -228,6 +228,119 @@ void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
     MIRBuilder.buildExtract(DstRegs[i], SrcReg, Offsets[i]);
 }
 
+/// Pack values \p SrcRegs to cover the vector type result \p DstRegs.
+static MachineInstrBuilder
+mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
+                            ArrayRef<Register> SrcRegs) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT LLTy = MRI.getType(DstRegs[0]);
+  LLT PartLLT = MRI.getType(SrcRegs[0]);
+
+  // Deal with v3s16 split into v2s16
+  LLT LCMTy = getLCMType(LLTy, PartLLT);
+  if (LCMTy == LLTy) {
+    // Common case where no padding is needed.
+    assert(DstRegs.size() == 1);
+    return B.buildConcatVectors(DstRegs[0], SrcRegs);
+  }
+
+  const int NumWide = LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
+  Register Undef = B.buildUndef(PartLLT).getReg(0);
+
+  // Build vector of undefs.
+  SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
+
+  // Replace the first sources with the real registers.
+  std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
+
+  auto Widened = B.buildConcatVectors(LCMTy, WidenedSrcs);
+  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
+
+  SmallVector<Register, 8> PadDstRegs(NumDst);
+  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+
+  // Create the excess dead defs for the unmerge.
+  for (int I = DstRegs.size(); I != NumDst; ++I)
+    PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
+
+  return B.buildUnmerge(PadDstRegs, Widened);
+}
+
+/// Create a sequence of instructions to combine pieces split into register
+/// typed values to the original IR value. \p OrigRegs contains the destination
+/// value registers of type \p LLTy, and \p Regs contains the legalized pieces
+/// with type \p PartLLT.
+static void buildCopyToParts(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
+                             ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+
+  if (!LLTy.isVector() && !PartLLT.isVector()) {
+    assert(OrigRegs.size() == 1);
+    LLT OrigTy = MRI.getType(OrigRegs[0]);
+
+    unsigned SrcSize = PartLLT.getSizeInBits() * Regs.size();
+    if (SrcSize == OrigTy.getSizeInBits())
+      B.buildMerge(OrigRegs[0], Regs);
+    else {
+      auto Widened = B.buildMerge(LLT::scalar(SrcSize), Regs);
+      B.buildTrunc(OrigRegs[0], Widened);
+    }
+
+    return;
+  }
+
+  if (LLTy.isVector() && PartLLT.isVector()) {
+    assert(OrigRegs.size() == 1);
+    assert(LLTy.getElementType() == PartLLT.getElementType());
+    mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
+    return;
+  }
+
+  assert(LLTy.isVector() && !PartLLT.isVector());
+
+  LLT DstEltTy = LLTy.getElementType();
+
+  // Pointer information was discarded. We'll need to coerce some register types
+  // to avoid violating type constraints.
+  LLT RealDstEltTy = MRI.getType(OrigRegs[0]).getElementType();
+
+  assert(DstEltTy.getSizeInBits() == RealDstEltTy.getSizeInBits());
+
+  if (DstEltTy == PartLLT) {
+    // Vector was trivially scalarized.
+
+    if (RealDstEltTy.isPointer()) {
+      for (Register Reg : Regs)
+        MRI.setType(Reg, RealDstEltTy);
+    }
+
+    B.buildBuildVector(OrigRegs[0], Regs);
+  } else if (DstEltTy.getSizeInBits() > PartLLT.getSizeInBits()) {
+    // Deal with vector with 64-bit elements decomposed to 32-bit
+    // registers. Need to create intermediate 64-bit elements.
+    SmallVector<Register, 8> EltMerges;
+    int PartsPerElt = DstEltTy.getSizeInBits() / PartLLT.getSizeInBits();
+
+    assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
+
+    for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
+      auto Merge = B.buildMerge(RealDstEltTy, Regs.take_front(PartsPerElt));
+      // Fix the type in case this is really a vector of pointers.
+      MRI.setType(Merge.getReg(0), RealDstEltTy);
+      EltMerges.push_back(Merge.getReg(0));
+      Regs = Regs.drop_front(PartsPerElt);
+    }
+
+    B.buildBuildVector(OrigRegs[0], EltMerges);
+  } else {
+    // Vector was split, and elements promoted to a wider type.
+    // FIXME: Should handle floating point promotions.
+    LLT BVType = LLT::vector(LLTy.getNumElements(), PartLLT);
+    auto BV = B.buildBuildVector(BVType, Regs);
+    B.buildTrunc(OrigRegs[0], BV);
+  }
+}
+
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      SmallVectorImpl<ArgInfo> &Args,
                                      ValueHandler &Handler,
@@ -278,9 +391,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     }
 
     assert(NumParts > 1);
-    // For now only handle exact splits.
-    if (NewVT.getSizeInBits() * NumParts != CurVT.getSizeInBits())
-      return false;
 
     // For incoming arguments (physregs to vregs), we could have values in
     // physregs (or memlocs) which we want to extract and copy to vregs.
@@ -379,6 +489,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     EVT OrigVT = EVT::getEVT(Args[i].Ty);
     EVT VAVT = VA.getValVT();
     const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
+    const LLT VATy(VAVT.getSimpleVT());
 
     // Expected to be multiple regs for a single incoming arg.
     // There should be Regs.size() ArgLocs per argument.
@@ -427,7 +538,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       }
 
       // This ArgLoc covers multiple pieces, so we need to split it.
-      const LLT VATy(VAVT.getSimpleVT());
       Register NewReg =
         MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
       Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
@@ -451,12 +561,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // Now that all pieces have been handled, re-pack any arguments into any
     // wider, original registers.
     if (Handler.isIncomingArgumentHandler()) {
-      if (VAVT.getFixedSizeInBits() < OrigVT.getFixedSizeInBits()) {
-        assert(NumArgRegs >= 2);
+      // Merge the split registers into the expected larger result vregs of
+      // the original call.
 
-        // Merge the split registers into the expected larger result vreg
-        // of the original call.
-        MIRBuilder.buildMerge(Args[i].OrigRegs[0], Args[i].Regs);
+      if (OrigTy != VATy && !Args[i].OrigRegs.empty()) {
+        buildCopyToParts(MIRBuilder, Args[i].OrigRegs, Args[i].Regs, OrigTy,
+                         VATy);
       }
     }
 

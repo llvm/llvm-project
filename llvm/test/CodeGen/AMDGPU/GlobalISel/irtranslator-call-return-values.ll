@@ -131,8 +131,8 @@ define amdgpu_gfx void @test_gfx_call_external_i32_func_i32_imm(i32 addrspace(1)
   ; GCN:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; GCN:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; GCN:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_i32_func_i32
@@ -838,9 +838,9 @@ define amdgpu_kernel void @test_call_external_i48_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_i48_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
   ; GCN:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[TRUNC]](s48), [[DEF]](p1) :: (volatile store 6 into `i48 addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call i48 @external_i48_func_void()
@@ -896,9 +896,9 @@ define amdgpu_kernel void @test_call_external_i48_zeroext_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_i48_zeroext_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
   ; GCN:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s48)
   ; GCN:   G_STORE [[ZEXT]](s64), [[DEF]](p1) :: (volatile store 8 into `i64 addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
@@ -956,9 +956,9 @@ define amdgpu_kernel void @test_call_external_i48_signext_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_i48_signext_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
   ; GCN:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s48)
   ; GCN:   G_STORE [[SEXT]](s64), [[DEF]](p1) :: (volatile store 8 into `i64 addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
@@ -1016,8 +1016,8 @@ define amdgpu_kernel void @test_call_external_i64_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_i64_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[MV]](s64), [[DEF]](p1) :: (volatile store 8 into `i64 addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call i64 @external_i64_func_void()
@@ -1073,8 +1073,8 @@ define amdgpu_kernel void @test_call_external_p1_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_p1_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[MV]](p1), [[DEF]](p1) :: (volatile store 8 into `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call i8 addrspace(1)* @external_p1_func_void()
@@ -1132,10 +1132,10 @@ define amdgpu_kernel void @test_call_external_v2p1_func_void() #0 {
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
   ; GCN:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY23]](s32), [[COPY24]](s32)
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[MV]](p1), [[MV1]](p1)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (volatile store 16 into `<2 x i8 addrspace(1)*> addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <2 x i8 addrspace(1)*> @external_v2p1_func_void()
@@ -1246,8 +1246,8 @@ define amdgpu_kernel void @test_call_external_v2p3_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v2p3_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(p3) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY21]](p3), [[COPY22]](p3)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p3) :: (volatile store 8 into `<2 x i8 addrspace(3)*> addrspace(3)* undef`, addrspace 3)
   ; GCN:   S_ENDPGM 0
   %val = call <2 x i8 addrspace(3)*> @external_v2p3_func_void()
@@ -1414,8 +1414,8 @@ define amdgpu_kernel void @test_call_external_f64_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_f64_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[MV]](s64), [[DEF]](p1) :: (volatile store 8 into `double addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call double @external_f64_func_void()
@@ -1473,10 +1473,10 @@ define amdgpu_kernel void @test_call_external_v2f64_func_void() #0 {
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY21]](s32), [[COPY22]](s32)
   ; GCN:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY23]](s32), [[COPY24]](s32)
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<2 x s64>), [[DEF]](p1) :: (volatile store 16 into `<2 x double> addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <2 x double> @external_v2f64_func_void()
@@ -1532,8 +1532,8 @@ define amdgpu_kernel void @test_call_external_v2i32_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v2i32_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (volatile store 8 into `<2 x i32> addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <2 x i32> @external_v2i32_func_void()
@@ -1590,8 +1590,8 @@ define amdgpu_kernel void @test_call_external_v3i32_func_void() #0 {
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<3 x s32>), [[DEF]](p1) :: (volatile store 12 into `<3 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <3 x i32> @external_v3i32_func_void()
@@ -1649,8 +1649,8 @@ define amdgpu_kernel void @test_call_external_v4i32_func_void() #0 {
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<4 x s32>), [[DEF]](p1) :: (volatile store 16 into `<4 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <4 x i32> @external_v4i32_func_void()
@@ -1709,8 +1709,8 @@ define amdgpu_kernel void @test_call_external_v5i32_func_void() #0 {
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; GCN:   [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<5 x s32>), [[DEF]](p1) :: (volatile store 20 into `<5 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <5 x i32> @external_v5i32_func_void()
@@ -1772,8 +1772,8 @@ define amdgpu_kernel void @test_call_external_v8i32_func_void() #0 {
   ; GCN:   [[COPY26:%[0-9]+]]:_(s32) = COPY $vgpr5
   ; GCN:   [[COPY27:%[0-9]+]]:_(s32) = COPY $vgpr6
   ; GCN:   [[COPY28:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<8 x s32>), [[DEF]](p1) :: (volatile store 32 into `<8 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <8 x i32> @external_v8i32_func_void()
@@ -1843,8 +1843,8 @@ define amdgpu_kernel void @test_call_external_v16i32_func_void() #0 {
   ; GCN:   [[COPY34:%[0-9]+]]:_(s32) = COPY $vgpr13
   ; GCN:   [[COPY35:%[0-9]+]]:_(s32) = COPY $vgpr14
   ; GCN:   [[COPY36:%[0-9]+]]:_(s32) = COPY $vgpr15
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32), [[COPY32]](s32), [[COPY33]](s32), [[COPY34]](s32), [[COPY35]](s32), [[COPY36]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<16 x s32>), [[DEF]](p1) :: (volatile store 64 into `<16 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <16 x i32> @external_v16i32_func_void()
@@ -1930,8 +1930,8 @@ define amdgpu_kernel void @test_call_external_v32i32_func_void() #0 {
   ; GCN:   [[COPY50:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY51:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[COPY52:%[0-9]+]]:_(s32) = COPY $vgpr31
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32), [[COPY32]](s32), [[COPY33]](s32), [[COPY34]](s32), [[COPY35]](s32), [[COPY36]](s32), [[COPY37]](s32), [[COPY38]](s32), [[COPY39]](s32), [[COPY40]](s32), [[COPY41]](s32), [[COPY42]](s32), [[COPY43]](s32), [[COPY44]](s32), [[COPY45]](s32), [[COPY46]](s32), [[COPY47]](s32), [[COPY48]](s32), [[COPY49]](s32), [[COPY50]](s32), [[COPY51]](s32), [[COPY52]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store 128 into `<32 x i32> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <32 x i32> @external_v32i32_func_void()
@@ -2042,10 +2042,10 @@ define amdgpu_kernel void @test_call_external_v3i16_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v3i16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
   ; GCN:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[DEF1]](<2 x s16>)
   ; GCN:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[UV]](<3 x s16>), [[DEF]](p1) :: (volatile store 6 into `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <3 x i16> @external_v3i16_func_void()
@@ -2101,8 +2101,8 @@ define amdgpu_kernel void @test_call_external_v4i16_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v4i16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[CONCAT_VECTORS]](<4 x s16>), [[DEF]](p1) :: (volatile store 8 into `<4 x i16> addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <4 x i16> @external_v4i16_func_void()
@@ -2213,10 +2213,10 @@ define amdgpu_kernel void @test_call_external_v3f16_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v3f16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
   ; GCN:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[DEF1]](<2 x s16>)
   ; GCN:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[UV]](<3 x s16>), [[DEF]](p1) :: (volatile store 6 into `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <3 x half> @external_v3f16_func_void()
@@ -2272,8 +2272,8 @@ define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
   ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_v4f16_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; GCN:   [[COPY21:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[CONCAT_VECTORS]](<4 x s16>), [[DEF]](p1) :: (volatile store 8 into `<4 x half> addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <4 x half> @external_v4f16_func_void()
@@ -2330,8 +2330,8 @@ define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
   ; GCN:   [[COPY21:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<3 x s32>), [[DEF]](p1) :: (volatile store 12 into `<3 x float> addrspace(1)* undef`, align 16, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <3 x float> @external_v3f32_func_void()
@@ -2390,8 +2390,8 @@ define amdgpu_kernel void @test_call_external_v5f32_func_void() #0 {
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; GCN:   [[COPY25:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[BUILD_VECTOR]](<5 x s32>), [[DEF]](p1) :: (volatile store 20 into `<5 x float> addrspace(1)* undef`, align 32, addrspace 1)
   ; GCN:   S_ENDPGM 0
   %val = call <5 x float> @external_v5f32_func_void()
@@ -2450,8 +2450,8 @@ define amdgpu_kernel void @test_call_external_i32_i64_func_void() #0 {
   ; GCN:   [[COPY22:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY23:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY24:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY23]](s32), [[COPY24]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[COPY22]](s32), [[DEF]](p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; GCN:   G_STORE [[MV]](s64), [[COPY10]](p1) :: (volatile store 8 into `i64 addrspace(1)* undef`, addrspace 1)
   ; GCN:   S_ENDPGM 0
@@ -2478,8 +2478,8 @@ define amdgpu_gfx void @test_gfx_call_external_i32_i64_func_void() #0 {
   ; GCN:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GCN:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GCN:   G_STORE [[COPY3]](s32), [[DEF]](p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; GCN:   G_STORE [[MV]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* undef`, addrspace 1)
   ; GCN:   [[COPY6:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]

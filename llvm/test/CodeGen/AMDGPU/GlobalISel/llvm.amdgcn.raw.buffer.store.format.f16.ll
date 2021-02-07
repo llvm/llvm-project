@@ -10,10 +10,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_f16
@@ -23,10 +23,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   BUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -41,9 +41,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_409
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_OFFSET_exact [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource" + 4095, align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_4095__sgpr_soffset_f16
@@ -53,9 +53,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_409
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   BUFFER_STORE_FORMAT_D16_X_OFFSET_exact [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource" + 4095, align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 4095, i32 %soffset, i32 0)
@@ -70,10 +70,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY7]], [[COPY4]], implicit $exec
@@ -87,10 +87,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -105,11 +105,11 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY8]], [[COPY4]], implicit $exec
@@ -125,12 +125,12 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -147,11 +147,11 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; UNPACKED:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
   ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY8]], [[COPY4]], implicit $exec
@@ -190,12 +190,12 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; PACKED:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; PACKED:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
@@ -232,9 +232,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; UNPACKED:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
@@ -249,9 +249,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
@@ -267,9 +267,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; UNPACKED:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
@@ -284,9 +284,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
@@ -302,10 +302,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY7]], [[COPY4]], implicit $exec
@@ -319,10 +319,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 16, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource" + 16, align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 16
@@ -338,10 +338,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY7]], [[COPY4]], implicit $exec
@@ -355,10 +355,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource" + 4095, align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 4095
@@ -374,10 +374,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; UNPACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; UNPACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; UNPACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   %11:vgpr_32, dead %24:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY5]], [[COPY7]], 0, implicit $exec
@@ -394,10 +394,10 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; PACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; PACKED:   %11:vgpr_32, dead %15:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY5]], [[COPY7]], 0, implicit $exec
@@ -419,11 +419,11 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; UNPACKED:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; UNPACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
   ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; UNPACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; UNPACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; UNPACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED:   %13:vgpr_32, dead %49:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
@@ -465,12 +465,12 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; PACKED:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; PACKED:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; PACKED:   %13:vgpr_32, dead %33:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY6]], [[COPY8]], 0, implicit $exec
