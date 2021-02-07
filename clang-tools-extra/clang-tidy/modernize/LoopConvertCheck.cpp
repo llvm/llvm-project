@@ -712,10 +712,11 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   if (isa<CXXThisExpr>(ContainerExpr)) {
     ContainerString = "this";
   } else {
-    // For CXXOperatorCallExpr (e.g. vector_ptr->size()), its first argument is
-    // the class object (vector_ptr) we are targeting.
+    // For CXXOperatorCallExpr such as vector_ptr->size() we want the class
+    // object vector_ptr, but for vector[2] we need the whole expression.
     if (const auto* E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
-      ContainerExpr = E->getArg(0);
+      if (E->getOperator() != OO_Subscript)
+        ContainerExpr = E->getArg(0);
     ContainerString =
         getStringFromRange(Context->getSourceManager(), Context->getLangOpts(),
                            ContainerExpr->getSourceRange());
