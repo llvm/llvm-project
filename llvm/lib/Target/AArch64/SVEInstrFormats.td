@@ -4294,7 +4294,7 @@ class sve_int_cmp<bit cmp_1, bits<2> sz8_64, bits<3> opc, string asm,
 }
 
 multiclass SVE_SETCC_Pat<CondCode cc, CondCode invcc, ValueType predvt,
-                         ValueType intvt, sve_int_cmp cmp> {
+                         ValueType intvt, Instruction cmp> {
   def : Pat<(predvt (AArch64setcc_z predvt:$Op1, intvt:$Op2, intvt:$Op3, cc)),
             (cmp $Op1, $Op2, $Op3)>;
   def : Pat<(predvt (AArch64setcc_z predvt:$Op1, intvt:$Op2, intvt:$Op3, invcc)),
@@ -6705,8 +6705,8 @@ class sve_mem_32b_prfm_sv<bits<2> msz, bit xs, string asm,
 multiclass sve_mem_32b_prfm_sv_scaled<bits<2> msz, string asm,
                                       RegisterOperand sxtw_opnd,
                                       RegisterOperand uxtw_opnd,
-                                      PatFrag op_sxtw,
-                                      PatFrag op_uxtw> {
+                                      SDPatternOperator op_sxtw,
+                                      SDPatternOperator op_uxtw> {
   def _UXTW_SCALED : sve_mem_32b_prfm_sv<msz, 0, asm, uxtw_opnd>;
   def _SXTW_SCALED : sve_mem_32b_prfm_sv<msz, 1, asm, sxtw_opnd>;
 
@@ -7059,8 +7059,8 @@ class sve_mem_64b_prfm_sv<bits<2> msz, bit xs, bit lsl, string asm,
 multiclass sve_mem_64b_prfm_sv_ext_scaled<bits<2> msz, string asm,
                                           RegisterOperand sxtw_opnd,
                                           RegisterOperand uxtw_opnd,
-                                          PatFrag op_sxtw,
-                                          PatFrag op_uxtw> {
+                                          SDPatternOperator op_sxtw,
+                                          SDPatternOperator op_uxtw> {
   def _UXTW_SCALED : sve_mem_64b_prfm_sv<msz, 0, 0, asm, uxtw_opnd>;
   def _SXTW_SCALED : sve_mem_64b_prfm_sv<msz, 1, 0, asm, sxtw_opnd>;
 
@@ -7073,7 +7073,7 @@ multiclass sve_mem_64b_prfm_sv_ext_scaled<bits<2> msz, string asm,
 }
 
 multiclass sve_mem_64b_prfm_sv_lsl_scaled<bits<2> msz, string asm,
-                                          RegisterOperand zprext, PatFrag frag> {
+                                          RegisterOperand zprext, SDPatternOperator frag> {
   def NAME : sve_mem_64b_prfm_sv<msz, 1, 1, asm, zprext>;
 
   def : Pat<(frag (nxv2i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv2i64 zprext:$Zm), (i32 sve_prfop:$prfop)),
