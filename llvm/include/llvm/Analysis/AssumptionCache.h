@@ -18,7 +18,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -44,6 +46,22 @@ public:
   /// llvm.assume.
   enum : unsigned { ExprResultIdx = std::numeric_limits<unsigned>::max() };
 
+  /// Callback handle to ensure we do not have dangling pointers to llvm.assume
+  /// calls in our cache.
+  class AssumeHandle final : public CallbackVH {
+    AssumptionCache *AC;
+
+    /// Make sure llvm.assume calls that are deleted are removed from the cache.
+    void deleted() override;
+
+  public:
+    AssumeHandle(Value *V, AssumptionCache *AC = nullptr)
+        : CallbackVH(V), AC(AC) {}
+
+    operator Value *() const { return getValPtr(); }
+    CallInst *getAssumeCI() const { return cast<CallInst>(getValPtr()); }
+  };
+
   struct ResultElem {
     WeakVH Assume;
 
@@ -59,9 +77,9 @@ private:
   /// We track this to lazily populate our assumptions.
   Function &F;
 
-  /// Vector of weak value handles to calls of the \@llvm.assume
-  /// intrinsic.
-  SmallVector<ResultElem, 4> AssumeHandles;
+  /// Set of value handles for calls of the \@llvm.assume intrinsic.
+  using AssumeHandleSet = DenseSet<AssumeHandle, DenseMapInfo<Value *>>;
+  AssumeHandleSet AssumeHandles;
 
   class AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
@@ -137,13 +155,7 @@ public:
 
   /// Access the list of assumption handles currently tracked for this
   /// function.
-  ///
-  /// Note that these produce weak handles that may be null. The caller must
-  /// handle that case.
-  /// FIXME: We should replace this with pointee_iterator<filter_iterator<...>>
-  /// when we can write that to filter out the null values. Then caller code
-  /// will become simpler.
-  MutableArrayRef<ResultElem> assumptions() {
+  AssumeHandleSet &assumptions() {
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
