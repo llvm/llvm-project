@@ -35,6 +35,7 @@ class ArgKind {
  public:
   enum Kind {
     AK_Matcher,
+    AK_Node,
     AK_Boolean,
     AK_Double,
     AK_Unsigned,
@@ -48,9 +49,17 @@ class ArgKind {
     return ArgKind{AK_Matcher, MatcherKind};
   }
 
+  static ArgKind MakeNodeArg(ASTNodeKind MatcherKind) {
+    return ArgKind{AK_Node, MatcherKind};
+  }
+
   Kind getArgKind() const { return K; }
   ASTNodeKind getMatcherKind() const {
     assert(K == AK_Matcher);
+    return NodeKind;
+  }
+  ASTNodeKind getNodeKind() const {
+    assert(K == AK_Node);
     return NodeKind;
   }
 
@@ -63,7 +72,8 @@ class ArgKind {
   bool isConvertibleTo(ArgKind To, unsigned *Specificity) const;
 
   bool operator<(const ArgKind &Other) const {
-    if (K == AK_Matcher && Other.K == AK_Matcher)
+    if ((K == AK_Matcher && Other.K == AK_Matcher) ||
+        (K == AK_Node && Other.K == AK_Node))
       return NodeKind < Other.NodeKind;
     return K < Other.K;
   }

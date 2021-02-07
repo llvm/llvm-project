@@ -23,6 +23,8 @@ std::string ArgKind::asString() const {
   switch (getArgKind()) {
   case AK_Matcher:
     return (Twine("Matcher<") + NodeKind.asStringRef() + ">").str();
+  case AK_Node:
+    return NodeKind.asStringRef().str();
   case AK_Boolean:
     return "boolean";
   case AK_Double:
@@ -38,7 +40,7 @@ std::string ArgKind::asString() const {
 bool ArgKind::isConvertibleTo(ArgKind To, unsigned *Specificity) const {
   if (K != To.K)
     return false;
-  if (K != AK_Matcher) {
+  if (K != AK_Matcher && K != AK_Node) {
     if (Specificity)
       *Specificity = 1;
     return true;
@@ -442,6 +444,11 @@ bool VariantValue::isConvertibleTo(ArgKind Kind, unsigned *Specificity) const {
       return false;
     *Specificity = 1;
     return true;
+
+  case ArgKind::AK_Node:
+    if (!isNodeKind())
+      return false;
+    return getMatcher().isConvertibleTo(Kind.getNodeKind(), Specificity);
 
   case ArgKind::AK_Matcher:
     if (!isMatcher())
