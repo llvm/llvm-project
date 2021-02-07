@@ -242,12 +242,13 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUValueHandler {
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
-  void assignValueToAddress(const CallLowering::ArgInfo &Arg, Register Addr,
+  void assignValueToAddress(const CallLowering::ArgInfo &Arg,
+                            unsigned ValRegIndex, Register Addr,
                             uint64_t MemSize, MachinePointerInfo &MPO,
                             CCValAssign &VA) override {
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
-                           ? extendRegister(Arg.Regs[0], VA)
-                           : Arg.Regs[0];
+                           ? extendRegister(Arg.Regs[ValRegIndex], VA)
+                           : Arg.Regs[ValRegIndex];
 
     // If we extended the value type we might need to adjust the MMO's
     // Size. This happens if ComputeValueVTs widened a small type value to a
