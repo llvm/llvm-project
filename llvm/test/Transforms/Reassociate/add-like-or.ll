@@ -6,7 +6,7 @@ define i32 @shl_add(i8 %x) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV]], 8
 ; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw nsw i32 [[CONV]], 16
-; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[SHL]], [[SHL2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHL]], [[SHL2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %conv = zext i8 %x to i32
