@@ -548,20 +548,10 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
 //==============================================================================
 // failed parsing operand.
 
-image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
-// CHECK-NEXT:{{^}}                                              ^
-
 v_ceil_f16 v0, abs(neg(1))
 // CHECK: error: failed parsing operand.
 // CHECK-NEXT:{{^}}v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}                   ^
-
-image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
-// CHECK-NEXT:{{^}}                                                  ^
 
 //==============================================================================
 // first register index should not exceed second index
@@ -668,6 +658,24 @@ s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK: error: invalid counter name x
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
+// invalid dim value
+
+image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
+// CHECK-NEXT:{{^}}                                            ^
+
+image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK-NEXT:{{^}}                                                  ^
+
+image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
+// CHECK-NEXT:{{^}}                                            ^
 
 //==============================================================================
 // invalid dst_sel value
