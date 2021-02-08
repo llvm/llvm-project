@@ -1714,10 +1714,11 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
   default:
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_FADD:
-    return {RISCVISD::VECREDUCE_FADD, Op.getOperand(0),
-            DAG.getConstantFP(0.0, DL, EltVT)};
+    return std::make_tuple(RISCVISD::VECREDUCE_FADD, Op.getOperand(0),
+                           DAG.getConstantFP(0.0, DL, EltVT));
   case ISD::VECREDUCE_SEQ_FADD:
-    return {RISCVISD::VECREDUCE_SEQ_FADD, Op.getOperand(1), Op.getOperand(0)};
+    return std::make_tuple(RISCVISD::VECREDUCE_SEQ_FADD, Op.getOperand(1),
+                           Op.getOperand(0));
   }
 }
 
