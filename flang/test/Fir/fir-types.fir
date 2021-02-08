@@ -8,11 +8,15 @@
 // CHECK-LABEL: func private @it3() -> !fir.complex<8>
 // CHECK-LABEL: func private @it4() -> !fir.logical<1>
 // CHECK-LABEL: func private @it5() -> !fir.char<1>
+// CHECK-LABEL: func private @it6() -> !fir.char<2,10>
+// CHECK-LABEL: func private @it7() -> !fir.char<4,?>
 func private @it1() -> !fir.int<4>
 func private @it2() -> !fir.real<8>
 func private @it3() -> !fir.complex<8>
 func private @it4() -> !fir.logical<1>
 func private @it5() -> !fir.char<1>
+func private @it6() -> !fir.char<2,10>
+func private @it7() -> !fir.char<4,?>
 
 // Fortran Derived types (records)
 // CHECK-LABEL: func private @dvd1() -> !fir.type<derived1>
