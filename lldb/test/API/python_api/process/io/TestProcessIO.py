@@ -32,7 +32,6 @@ class ProcessIOTestCase(TestBase):
         self.lines = ["Line 1", "Line 2", "Line 3"]
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     @skipIfDarwinEmbedded # I/O redirection like this is not supported on remote iOS devices yet <rdar://problem/54581135>
     def test_stdin_by_api(self):
@@ -45,7 +44,6 @@ class ProcessIOTestCase(TestBase):
         self.check_process_output(output, output)
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdin_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDIN without specifying STDOUT or STDERR."""
@@ -58,7 +56,6 @@ class ProcessIOTestCase(TestBase):
         self.check_process_output(output, output)
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_redirection(self):
@@ -73,7 +70,6 @@ class ProcessIOTestCase(TestBase):
         self.check_process_output(output, error)
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stderr_redirection(self):
@@ -88,7 +84,6 @@ class ProcessIOTestCase(TestBase):
         self.check_process_output(output, error)
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_stderr_redirection(self):

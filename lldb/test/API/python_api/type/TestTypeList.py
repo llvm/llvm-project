@@ -25,7 +25,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = 'main.cpp'
         self.line = line_number(self.source, '// Break at this line')
 
-    @add_test_categories(['pyapi'])
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {'EXE': self.exe_name}

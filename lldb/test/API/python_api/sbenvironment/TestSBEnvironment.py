@@ -30,7 +30,6 @@ class SBEnvironmentAPICase(TestBase):
 
 
 
-    @add_test_categories(['pyapi'])
     @skipIfRemote # Remote environment not supported.
     def test_platform_environment(self):
         env = self.dbg.GetSelectedPlatform().GetEnvironment()
@@ -38,7 +37,6 @@ class SBEnvironmentAPICase(TestBase):
         self.assertNotEqual(env.Get("PATH"), None)
 
 
-    @add_test_categories(['pyapi'])
     def test_launch_info(self):
         target = self.dbg.CreateTarget("")
         launch_info = target.GetLaunchInfo()
@@ -67,7 +65,6 @@ class SBEnvironmentAPICase(TestBase):
         self.assertEqualEntries(launch_info.GetEnvironment(), ["BAR=foo", "X=y"])
 
 
-    @add_test_categories(['pyapi'])
     @skipIfRemote # Remote environment not supported.
     def test_target_environment(self):
         env = self.dbg.GetSelectedTarget().GetEnvironment()
@@ -85,7 +82,6 @@ class SBEnvironmentAPICase(TestBase):
         env.PutEntry("PATH=#" + path)
         self.assertEqual(target.GetEnvironment().Get("PATH"), path)
 
-    @add_test_categories(['pyapi'])
     def test_creating_and_modifying_environment(self):
         env = lldb.SBEnvironment()
 
