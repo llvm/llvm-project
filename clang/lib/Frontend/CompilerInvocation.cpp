@@ -760,9 +760,121 @@ static void getAllNoBuiltinFuncValues(ArgList &Args,
   Funcs.insert(Funcs.end(), Values.begin(), Values.end());
 }
 
-static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &Diags) {
+static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
+                                 SmallVectorImpl<const char *> &Args,
+                                 CompilerInvocation::StringAllocator SA) {
+  const AnalyzerOptions *AnalyzerOpts = &Opts;
+
+#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef ANALYZER_OPTION_WITH_MARSHALLING
+
+  if (Opts.AnalysisStoreOpt != RegionStoreModel) {
+    switch (Opts.AnalysisStoreOpt) {
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)                           \
+  case NAME##Model:                                                            \
+    GenerateArg(Args, OPT_analyzer_store, CMDFLAG, SA);                        \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis store.");
+    }
+  }
+
+  if (Opts.AnalysisConstraintsOpt != RangeConstraintsModel) {
+    switch (Opts.AnalysisConstraintsOpt) {
+#define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)                     \
+  case NAME##Model:                                                            \
+    GenerateArg(Args, OPT_analyzer_constraints, CMDFLAG, SA);                  \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis constraint.");
+    }
+  }
+
+  if (Opts.AnalysisDiagOpt != PD_HTML) {
+    switch (Opts.AnalysisDiagOpt) {
+#define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATFN)                     \
+  case PD_##NAME:                                                              \
+    GenerateArg(Args, OPT_analyzer_output, CMDFLAG, SA);                       \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis diagnostic client.");
+    }
+  }
+
+  if (Opts.AnalysisPurgeOpt != PurgeStmt) {
+    switch (Opts.AnalysisPurgeOpt) {
+#define ANALYSIS_PURGE(NAME, CMDFLAG, DESC)                                    \
+  case NAME:                                                                   \
+    GenerateArg(Args, OPT_analyzer_purge, CMDFLAG, SA);                        \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis purge mode.");
+    }
+  }
+
+  if (Opts.InliningMode != NoRedundancy) {
+    switch (Opts.InliningMode) {
+#define ANALYSIS_INLINING_MODE(NAME, CMDFLAG, DESC)                            \
+  case NAME:                                                                   \
+    GenerateArg(Args, OPT_analyzer_inlining_mode, CMDFLAG, SA);                \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis inlining mode.");
+    }
+  }
+
+  for (const auto &CP : Opts.CheckersAndPackages) {
+    OptSpecifier Opt =
+        CP.second ? OPT_analyzer_checker : OPT_analyzer_disable_checker;
+    GenerateArg(Args, Opt, CP.first, SA);
+  }
+
+  AnalyzerOptions ConfigOpts;
+  parseAnalyzerConfigs(ConfigOpts, nullptr);
+
+  for (const auto &C : Opts.Config) {
+    // Don't generate anything that came from parseAnalyzerConfigs. It would be
+    // redundant and may not be valid on the command line.
+    auto Entry = ConfigOpts.Config.find(C.getKey());
+    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == C.getValue())
+      continue;
+
+    GenerateArg(Args, OPT_analyzer_config, C.getKey() + "=" + C.getValue(), SA);
+  }
+
+  // Nothing to generate for FullCompilerInvocation.
+}
+
+static bool ParseAnalyzerArgsImpl(AnalyzerOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags) {
+  AnalyzerOptions *AnalyzerOpts = &Opts;
   bool Success = true;
+
+#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef ANALYZER_OPTION_WITH_MARSHALLING
+
   if (Arg *A = Args.getLastArg(OPT_analyzer_store)) {
     StringRef Name = A->getValue();
     AnalysisStores Value = llvm::StringSwitch<AnalysisStores>(Name)
@@ -886,8 +998,10 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
       // TODO: Check checker options too, possibly in CheckerRegistry.
       // Leave unknown non-checker configs unclaimed.
       if (!key.contains(":") && Opts.isUnknownAnalyzerConfig(key)) {
-        if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
+        if (Opts.ShouldEmitErrorsOnInvalidConfigValue) {
           Diags.Report(diag::err_analyzer_config_unknown) << key;
+          Success = false;
+        }
         continue;
       }
 
@@ -910,6 +1024,24 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
+}
+
+static bool ParseAnalyzerArgs(CompilerInvocation &Res, AnalyzerOptions &Opts,
+                              ArgList &Args, DiagnosticsEngine &Diags) {
+  auto DummyOpts = IntrusiveRefCntPtr<AnalyzerOptions>(new AnalyzerOptions());
+
+  return RoundTrip(
+      [](CompilerInvocation &Res, ArgList &Args, DiagnosticsEngine &Diags) {
+        return ParseAnalyzerArgsImpl(*Res.getAnalyzerOpts(), Args, Diags);
+      },
+      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &Args,
+         CompilerInvocation::StringAllocator SA) {
+        GenerateAnalyzerArgs(*Res.getAnalyzerOpts(), Args, SA);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        Res.getAnalyzerOpts().swap(DummyOpts);
+      },
+      Res, Args, Diags, "AnalyzerOptions");
 }
 
 static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
@@ -3123,7 +3255,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
 
   Success &= Res.parseSimpleArgs(Args, Diags);
 
-  Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
   if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
       Res.getDependencyOutputOpts().Targets.empty()) {
@@ -3351,6 +3483,7 @@ void CompilerInvocation::generateCC1CommandLine(
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 
+  GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA);
 }
