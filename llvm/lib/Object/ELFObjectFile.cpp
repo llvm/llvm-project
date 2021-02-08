@@ -581,6 +581,7 @@ ELFObjectFileBase::getPltAddresses() const {
       JumpSlotReloc = ELF::R_X86_64_JUMP_SLOT;
       break;
     case Triple::aarch64:
+    case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
     default:
