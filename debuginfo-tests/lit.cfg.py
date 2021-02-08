@@ -102,14 +102,14 @@ if lldb_path is not None:
 # for running a test.
 dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
-dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
+dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
 if lldb_path is not None:
   dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
 tools.append(ToolSubst('%dexter', dexter_test_cmd))
 
 # For testing other bits of dexter that aren't under the "test" subcommand,
 # have a %dexter_base substitution.
-dexter_base_cmd = '"{}" "{}"'.format(config.python3_executable, dexter_path)
+dexter_base_cmd = '"{}" "{}"'.format(sys.executable, dexter_path)
 tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
 
 # Set up commands for DexTer regression tests.
@@ -129,8 +129,8 @@ else:
 # Typical command would take the form:
 # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
 dexter_regression_test_command = ' '.join(
-  # "python3", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
-  ['"{}"'.format(config.python3_executable),
+  # "python", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
+  ['"{}"'.format(sys.executable),
   '"{}"'.format(dexter_path),
   'test',
   '--fail-lt 1.0 -w',
