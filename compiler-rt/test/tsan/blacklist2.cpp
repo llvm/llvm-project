@@ -3,7 +3,7 @@
 // RUN: echo "fun:*Blacklisted_Thread2*" > %t.blacklist
 // RUN: echo "fun:*CallTouchGlobal*" >> %t.blacklist
 
-// RUN: %clangxx_tsan -O1 %s -fsanitize-blacklist=%t.blacklist -o %t
+// RUN: %clangxx_tsan %s -fsanitize-blacklist=%t.blacklist -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
