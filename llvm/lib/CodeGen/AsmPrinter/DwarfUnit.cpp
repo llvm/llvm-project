@@ -551,9 +551,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   if (auto *SP = dyn_cast<DISubprogram>(Context)) {
     assert(SP->isDefinition());
     // When generating type units, each unit gets its own subprogram.
-    // FIXME: constructSubprogramDefinitionDIE may produce .debug_gnu_pubnames
-    // with 0 DIE Offset entries with split dwarf.
-    if (DD->generateTypeUnits() || DD->useSplitDwarf())
+    if (DD->generateTypeUnits())
       return getOrCreateSubprogramDIE(SP);
 
     // Subprogram definitions should be created in the Unit that they specify,
