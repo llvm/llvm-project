@@ -1718,8 +1718,9 @@ class OpTrait;
 // NativeOpTrait corresponds to the MLIR C++ OpTrait mechanism. The
 // purpose to wrap around C++ symbol string with this class is to make
 // traits specified for ops in TableGen less alien and more integrated.
-class NativeOpTrait<string prop> : OpTrait {
-  string trait = "::mlir::OpTrait::" # prop;
+class NativeOpTrait<string name> : OpTrait {
+  string trait = name;
+  string cppNamespace = "::mlir::OpTrait";
 }
 
 // ParamNativeOpTrait corresponds to the template-parameterized traits in the
@@ -1852,6 +1853,7 @@ class CArg<string ty, string value = ""> {
 class OpInterfaceTrait<string name, code verifyBody = [{}]>
           : NativeOpTrait<""> {
   let trait = name # "::Trait";
+  let cppNamespace = "";
 
   // Specify the body of the verification function. `$_op` will be replaced with
   // the operation being verified.
