@@ -3617,11 +3617,11 @@ void CompilerInvocation::generateCC1CommandLine(
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 
-  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts,
-                           FrontendOpts, CodeGenOpts);
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA);
+  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts,
+                           FrontendOpts, CodeGenOpts);
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
