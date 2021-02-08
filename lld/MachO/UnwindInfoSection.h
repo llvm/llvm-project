@@ -66,6 +66,9 @@ private:
   // Indices of personality functions within the GOT.
   std::vector<uint32_t> personalities;
   std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
+  // Map of function offset (from the image base) to an index within the LSDA
+  // array.
+  llvm::DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
   std::vector<CompactUnwindEntry64> cuVector;
   std::vector<CompactUnwindEntry64 *> cuPtrVector;
   std::vector<SecondLevelPage> secondLevelPages;
