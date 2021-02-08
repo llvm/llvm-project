@@ -9451,13 +9451,20 @@ static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   // the bottom bits of the predicate.
   // Equally, VLDR for an v16i1 will actually load 32bits (so will be incorrect
   // for BE).
+  // Speaking of BE, apparently the rest of llvm will assume a reverse order to
+  // a natural VMSR(load), so needs to be reversed.
 
   SDLoc dl(Op);
   SDValue Load = DAG.getExtLoad(
       ISD::EXTLOAD, dl, MVT::i32, LD->getChain(), LD->getBasePtr(),
       EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
       LD->getMemOperand());
-  SDValue Pred = DAG.getNode(ARMISD::PREDICATE_CAST, dl, MVT::v16i1, Load);
+  SDValue Val = Load;
+  if (DAG.getDataLayout().isBigEndian())
+    Val = DAG.getNode(ISD::SRL, dl, MVT::i32,
+                      DAG.getNode(ISD::BITREVERSE, dl, MVT::i32, Load),
+                      DAG.getConstant(32 - MemVT.getSizeInBits(), dl, MVT::i32));
+  SDValue Pred = DAG.getNode(ARMISD::PREDICATE_CAST, dl, MVT::v16i1, Val);
   if (MemVT != MVT::v16i1)
     Pred = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MemVT, Pred,
                        DAG.getConstant(0, dl, MVT::i32));
@@ -9498,14 +9505,22 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
   SDValue Build = ST->getValue();
   if (MemVT != MVT::v16i1) {
     SmallVector<SDValue, 16> Ops;
-    for (unsigned I = 0; I < MemVT.getVectorNumElements(); I++)
+    for (unsigned I = 0; I < MemVT.getVectorNumElements(); I++) {
+      unsigned Elt = DAG.getDataLayout().isBigEndian()
+                         ? MemVT.getVectorNumElements() - I - 1
+                         : I;
       Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, Build,
-                                DAG.getConstant(I, dl, MVT::i32)));
+                                DAG.getConstant(Elt, dl, MVT::i32)));
+    }
     for (unsigned I = MemVT.getVectorNumElements(); I < 16; I++)
       Ops.push_back(DAG.getUNDEF(MVT::i32));
     Build = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v16i1, Ops);
   }
   SDValue GRP = DAG.getNode(ARMISD::PREDICATE_CAST, dl, MVT::i32, Build);
+  if (MemVT == MVT::v16i1 && DAG.getDataLayout().isBigEndian())
+    GRP = DAG.getNode(ISD::SRL, dl, MVT::i32,
+                      DAG.getNode(ISD::BITREVERSE, dl, MVT::i32, GRP),
+                      DAG.getConstant(16, dl, MVT::i32));
   return DAG.getTruncStore(
       ST->getChain(), dl, GRP, ST->getBasePtr(),
       EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
