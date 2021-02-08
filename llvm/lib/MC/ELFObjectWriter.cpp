@@ -730,7 +730,7 @@ void ELFWriter::computeSymbolTable(
                        ELF::SHN_ABS, true);
 
   // Symbols are required to be in lexicographic order.
-  array_pod_sort(LocalSymbolData.begin(), LocalSymbolData.end());
+  //array_pod_sort(LocalSymbolData.begin(), LocalSymbolData.end());
   array_pod_sort(ExternalSymbolData.begin(), ExternalSymbolData.end());
 
   // Set the symbol indices. Local symbols must come before all other

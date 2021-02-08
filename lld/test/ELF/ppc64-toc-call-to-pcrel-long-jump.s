@@ -13,8 +13,8 @@
 
 # SYM:      Symbol table '.symtab' contains 9 entries:
 # SYM:      1: 0000000010010000     0 NOTYPE  LOCAL  DEFAULT [<other: 0x20>]   1 callee
-# SYM-NEXT: 2: 0000000020020008     0 NOTYPE  LOCAL  DEFAULT [<other: 0x60>]   3 caller
-# SYM-NEXT: 3: 0000000010020008     0 NOTYPE  LOCAL  DEFAULT                  2 caller_close
+# SYM-NEXT: 2: 0000000010020008     0 NOTYPE  LOCAL  DEFAULT                  2 caller_close
+# SYM-NEXT: 3: 0000000020020008     0 NOTYPE  LOCAL  DEFAULT [<other: 0x60>]   3 caller
 # SYM-NEXT: 4: 0000000520020008     0 NOTYPE  LOCAL  DEFAULT                  4 caller_far
 # SYM-NEXT: 5: 0000000520028038     0 NOTYPE  LOCAL  HIDDEN                   6 .TOC.
 # SYM-NEXT: 6: 0000000010020020     8 FUNC    LOCAL  DEFAULT                  2 __toc_save_callee
