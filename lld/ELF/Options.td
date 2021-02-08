@@ -159,6 +159,9 @@ defm dynamic_list : Eq<"dynamic-list",
    "shared object. Implies -Bsymbolic but does not set DF_SYMBOLIC">,
    MetaVarName<"<file>">;
 
+def eb: F<"EB">, HelpText<"Select the big-endian format in OUTPUT_FORMAT">;
+def el: F<"EL">, HelpText<"Select the little-endian format in OUTPUT_FORMAT">;
+
 defm eh_frame_hdr: B<"eh-frame-hdr",
     "Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header",
     "Do not create .eh_frame_hdr section">;
@@ -687,8 +690,6 @@ def: F<"stats">;
 def: F<"warn-execstack">;
 def: F<"warn-once">;
 def: F<"warn-shared-textrel">;
-def: F<"EB">;
-def: F<"EL">;
 def: JoinedOrSeparate<["-"], "G">;
 def: F<"Qy">;
 

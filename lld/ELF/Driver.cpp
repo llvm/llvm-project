@@ -1125,6 +1125,13 @@ static void readConfigs(opt::InputArgList &args) {
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
 
+  if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
+    if (arg->getOption().matches(OPT_eb))
+      config->optEB = true;
+    else
+      config->optEL = true;
+  }
+
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
