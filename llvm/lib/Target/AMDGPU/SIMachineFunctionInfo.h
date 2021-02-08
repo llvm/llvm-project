@@ -480,6 +480,10 @@ private:
   // VGPRs used for AGPR spills.
   SmallVector<MCPhysReg, 32> SpillVGPR;
 
+  // Emergency stack slot. Sometimes, we create this before finalizing the stack
+  // frame, so save it here and add it to the RegScavenger later.
+  Optional<int> ScavengeFI;
+
 public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// frame pointer.
@@ -538,6 +542,8 @@ public:
   bool reserveVGPRforSGPRSpills(MachineFunction &MF);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
   void removeDeadFrameIndices(MachineFunction &MF);
+
+  int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
 
   bool hasCalculatedTID() const { return TIDReg != 0; };
   Register getTIDReg() const { return TIDReg; };
