@@ -7183,6 +7183,11 @@ bool AArch64InstrInfo::isWhileOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::InstrFlagIsWhile;
 }
 
+unsigned int
+AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
+  return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
+}
+
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
   if (MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr())
     return AArch64::BLRNoIP;

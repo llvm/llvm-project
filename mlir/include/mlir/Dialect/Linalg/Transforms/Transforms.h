@@ -376,8 +376,10 @@ enum class LinalgTilingLoopType {
 using TileSizeComputationFunction =
     std::function<SmallVector<Value, 4>(OpBuilder &, Operation *)>;
 
+/// Specify the padding value for an OpOperand. This should be a function of
+/// both the operation and the operand type.
 using PaddingValueComputationFunction =
-    std::function<Value(OpBuilder &, Operation *)>;
+    std::function<Value(OpBuilder &, OpOperand &)>;
 
 struct LinalgTilingOptions {
   /// Computation function that returns the tile sizes for each operation.

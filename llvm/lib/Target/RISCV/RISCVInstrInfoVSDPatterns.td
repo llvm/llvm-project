@@ -32,12 +32,10 @@ def riscv_trunc_vector : SDNode<"RISCVISD::TRUNCATE_VECTOR",
                                 SDTypeProfile<1, 1,
                                  [SDTCisVec<0>, SDTCisVec<1>]>>;
 
-// Penalize the generic form with Complexity=1 to give the simm5/uimm5 variants
-// precedence
-def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
-
-def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
-def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
+// Give explicit Complexity to prefer simm5/uimm5.
+def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector, rv32_splat_i64], [], 1>;
+def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
+def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
 
 def RVVBaseAddr : ComplexPattern<iPTR, 1, "SelectRVVBaseAddr">;
 
@@ -561,24 +559,25 @@ defm "" : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
 foreach fvti = AllFloatVectors in {
   // NOTE: We choose VFMADD because it has the most commuting freedom. So it
   // works best with how TwoAddressInstructionPass tries commuting.
+  defvar suffix = fvti.LMul.MX # "_COMMUTABLE";
   def : Pat<(fvti.Vector (fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                               fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFMADD_VV_"# fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFMADD_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma fvti.RegClass:$rs1, fvti.RegClass:$rd,
                               (fneg fvti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVFMSUB_VV_"# fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFMSUB_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                               (fneg fvti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVFNMADD_VV_"# fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMADD_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma (fneg fvti.RegClass:$rs1), fvti.RegClass:$rd,
                               fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFNMSUB_VV_"# fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMSUB_VV_"# suffix)
                  fvti.RegClass:$rd, fvti.RegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
 
@@ -586,35 +585,35 @@ foreach fvti = AllFloatVectors in {
   // commutable.
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               fvti.RegClass:$rd, fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFMADD_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVFMSUB_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
 
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               (fneg fvti.RegClass:$rd), (fneg fvti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma (splat_vector fvti.ScalarRegClass:$rs1),
                               (fneg fvti.RegClass:$rd), fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
 
   // The splat might be negated.
   def : Pat<(fvti.Vector (fma (fneg (splat_vector fvti.ScalarRegClass:$rs1)),
                               fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
   def : Pat<(fvti.Vector (fma (fneg (splat_vector fvti.ScalarRegClass:$rs1)),
                               fvti.RegClass:$rd, fvti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
                  fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
                  fvti.AVL, fvti.SEW)>;
 }
@@ -714,10 +713,10 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 
 let Predicates = [HasStdExtV] in {
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (splat_vector GPR:$rs1)),
+  def : Pat<(vti.Vector (SplatPat GPR:$rs1)),
             (!cast<Instruction>("PseudoVMV_V_X_" # vti.LMul.MX)
               GPR:$rs1, vti.AVL, vti.SEW)>;
-  def : Pat<(vti.Vector (splat_vector simm5:$rs1)),
+  def : Pat<(vti.Vector (SplatPat_simm5 simm5:$rs1)),
             (!cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX)
               simm5:$rs1, vti.AVL, vti.SEW)>;
 }
@@ -729,19 +728,6 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMCLR_M_"#mti.BX) mti.AVL, mti.SEW)>;
 }
 } // Predicates = [HasStdExtV]
-
-let Predicates = [HasStdExtV, IsRV32] in {
-foreach vti = AllIntegerVectors in {
-  if !eq(vti.SEW, 64) then {
-    def : Pat<(vti.Vector (rv32_splat_i64 GPR:$rs1)),
-              (!cast<Instruction>("PseudoVMV_V_X_" # vti.LMul.MX)
-                GPR:$rs1, vti.AVL, vti.SEW)>;
-    def : Pat<(vti.Vector (rv32_splat_i64 simm5:$rs1)),
-              (!cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX)
-                simm5:$rs1, vti.AVL, vti.SEW)>;
-  }
-}
-} // Predicates = [HasStdExtV, IsRV32]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 foreach fvti = AllFloatVectors in {

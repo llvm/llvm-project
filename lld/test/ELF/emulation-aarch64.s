@@ -12,11 +12,37 @@
 # RUN: ld.lld -m aarch64_elf64_le_vec %t.o -o %taosp
 # RUN: llvm-readobj --file-headers %taosp | FileCheck --check-prefixes=AARCH64,LE %s
 
+# RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
+# RUN: ld.lld %t.be.o -o %t
+# RUN: llvm-readobj --file-headers %t | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: ld.lld -m aarch64linuxb %t.be.o -o %t1.be
+# RUN: llvm-readobj --file-headers %t1.be | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: ld.lld -m aarch64elfb %t.be.o -o %t2.be
+# RUN: llvm-readobj --file-headers %t2.be | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: echo 'OUTPUT_FORMAT(elf64-bigaarch64)' > %t.script
+# RUN: ld.lld %t.script %t.be.o -o %t3.be
+# RUN: llvm-readobj --file-headers %t3.be | FileCheck --check-prefixes=AARCH64,BE %s
+
+## Test OUTPUT_FORMAT(default, big, little).
+# RUN: echo 'OUTPUT_FORMAT("elf64-littleaarch64", "elf64-bigaarch64", "elf64-littleaarch64")' > %t.script
+# RUN: ld.lld -EL -T %t.script %t.o -o %t4.le
+# RUN: llvm-readobj --file-headers %t4.le | FileCheck --check-prefixes=AARCH64,LE %s
+# RUN: not ld.lld -EB -T %t.script %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_BE %s
+
+# RUN: not ld.lld -T %t.script %t.be.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_LE %s
+# RUN: not ld.lld -EL -T %t.script %t.be.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_LE %s
+# RUN: ld.lld -EB -T %t.script %t.be.o -o %t4.be
+# RUN: llvm-readobj --file-headers %t4.be | FileCheck --check-prefixes=AARCH64,BE %s
+
+# ERR_LE: error: {{.*}}.o is incompatible with elf64-littleaarch64
+# ERR_BE: error: {{.*}}.o is incompatible with elf64-bigaarch64
+
 # AARCH64:      ElfHeader {
 # AARCH64-NEXT:   Ident {
 # AARCH64-NEXT:     Magic: (7F 45 4C 46)
 # AARCH64-NEXT:     Class: 64-bit (0x2)
 # LE-NEXT:          DataEncoding: LittleEndian (0x1)
+# BE-NEXT:          DataEncoding: BigEndian (0x2)
 # AARCH64-NEXT:     FileVersion: 1
 # AARCH64-NEXT:     OS/ABI: SystemV (0x0)
 # AARCH64-NEXT:     ABIVersion: 0

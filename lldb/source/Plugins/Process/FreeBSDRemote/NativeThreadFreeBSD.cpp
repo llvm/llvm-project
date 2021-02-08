@@ -46,6 +46,11 @@ Status NativeThreadFreeBSD::Resume() {
   if (!ret.Success())
     return ret;
   ret = NativeProcessFreeBSD::PtraceWrapper(PT_CLEARSTEP, GetID());
+  // we can get EINVAL if the architecture in question does not support
+  // hardware single-stepping -- that's fine, we have nothing to clear
+  // then
+  if (ret.GetError() == EINVAL)
+    ret.Clear();
   if (ret.Success())
     SetRunning();
   return ret;

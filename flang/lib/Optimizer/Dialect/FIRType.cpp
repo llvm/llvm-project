@@ -86,9 +86,25 @@ BoxProcType parseBoxProc(mlir::DialectAsmParser &parser, mlir::Location loc) {
   return parseTypeSingleton<BoxProcType>(parser, loc);
 }
 
-// `char` `<` kind `>`
+// `char` `<` kind [`,` `len`] `>`
 CharacterType parseCharacter(mlir::DialectAsmParser &parser) {
-  return parseKindSingleton<CharacterType>(parser);
+  int kind = 0;
+  if (parser.parseLess() || parser.parseInteger(kind)) {
+    parser.emitError(parser.getCurrentLocation(), "kind value expected");
+    return {};
+  }
+  CharacterType::LenType len = 1;
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalQuestion())) {
+      len = fir::CharacterType::unknownLen();
+    } else if (!mlir::succeeded(parser.parseInteger(len))) {
+      parser.emitError(parser.getCurrentLocation(), "len value expected");
+      return {};
+    }
+  }
+  if (parser.parseGreater())
+    return {};
+  return CharacterType::get(parser.getBuilder().getContext(), kind, len);
 }
 
 // `complex` `<` kind `>`
@@ -169,7 +185,7 @@ SequenceType parseSequence(mlir::DialectAsmParser &parser, mlir::Location) {
   }
   SequenceType::Shape shape;
   if (parser.parseOptionalStar()) {
-    if (parser.parseDimensionList(shape, true)) {
+    if (parser.parseDimensionList(shape, /*allowDynamic=*/true)) {
       parser.emitError(parser.getNameLoc(), "invalid shape");
       return {};
     }
@@ -373,26 +389,35 @@ namespace detail {
 
 /// `CHARACTER` storage
 struct CharacterTypeStorage : public mlir::TypeStorage {
-  using KeyTy = KindTy;
+  using KeyTy = std::tuple<KindTy, CharacterType::LenType>;
 
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
+  static unsigned hashKey(const KeyTy &key) {
+    auto hashVal = llvm::hash_combine(std::get<0>(key));
+    return llvm::hash_combine(hashVal, llvm::hash_combine(std::get<1>(key)));
+  }
 
-  bool operator==(const KeyTy &key) const { return key == getFKind(); }
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy{getFKind(), getLen()};
+  }
 
   static CharacterTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                         KindTy kind) {
+                                         const KeyTy &key) {
     auto *storage = allocator.allocate<CharacterTypeStorage>();
-    return new (storage) CharacterTypeStorage{kind};
+    return new (storage)
+        CharacterTypeStorage{std::get<0>(key), std::get<1>(key)};
   }
 
   KindTy getFKind() const { return kind; }
+  CharacterType::LenType getLen() const { return len; }
 
 protected:
   KindTy kind;
+  CharacterType::LenType len;
 
 private:
   CharacterTypeStorage() = delete;
-  explicit CharacterTypeStorage(KindTy kind) : kind{kind} {}
+  explicit CharacterTypeStorage(KindTy kind, CharacterType::LenType len)
+      : kind{kind}, len{len} {}
 };
 
 /// The type of a derived type part reference
@@ -580,9 +605,9 @@ struct BoxCharTypeStorage : public mlir::TypeStorage {
 
   KindTy getFKind() const { return kind; }
 
-  // a !fir.boxchar<k> always wraps a !fir.char<k>
+  // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
   CharacterType getElementType(mlir::MLIRContext *ctxt) const {
-    return CharacterType::get(ctxt, getFKind());
+    return CharacterType::getUnknownLen(ctxt, getFKind());
   }
 
 protected:
@@ -699,7 +724,7 @@ struct SequenceTypeStorage : public mlir::TypeStorage {
       std::tuple<SequenceType::Shape, mlir::Type, mlir::AffineMapAttr>;
 
   static unsigned hashKey(const KeyTy &key) {
-    auto shapeHash{hash_value(std::get<SequenceType::Shape>(key))};
+    auto shapeHash = hash_value(std::get<SequenceType::Shape>(key));
     shapeHash = llvm::hash_combine(shapeHash, std::get<mlir::Type>(key));
     return llvm::hash_combine(shapeHash, std::get<mlir::AffineMapAttr>(key));
   }
@@ -887,11 +912,16 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
 
 // CHARACTER
 
-CharacterType fir::CharacterType::get(mlir::MLIRContext *ctxt, KindTy kind) {
-  return Base::get(ctxt, kind);
+CharacterType fir::CharacterType::get(mlir::MLIRContext *ctxt, KindTy kind,
+                                      CharacterType::LenType len) {
+  return Base::get(ctxt, kind, len);
 }
 
 KindTy fir::CharacterType::getFKind() const { return getImpl()->getFKind(); }
+
+CharacterType::LenType fir::CharacterType::getLen() const {
+  return getImpl()->getLen();
+}
 
 // Field
 
@@ -1235,11 +1265,10 @@ namespace {
 void printBounds(llvm::raw_ostream &os, const SequenceType::Shape &bounds) {
   os << '<';
   for (auto &b : bounds) {
-    if (b >= 0) {
+    if (b >= 0)
       os << b << 'x';
-    } else {
+    else
       os << "?x";
-    }
   }
 }
 
@@ -1277,8 +1306,18 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
-  if (auto type = ty.dyn_cast<CharacterType>()) {
-    os << "char<" << type.getFKind() << '>';
+  if (auto chTy = ty.dyn_cast<CharacterType>()) {
+    // Fortran intrinsic type CHARACTER
+    os << "char<" << chTy.getFKind();
+    auto len = chTy.getLen();
+    if (len != fir::CharacterType::singleton()) {
+      os << ',';
+      if (len == fir::CharacterType::unknownLen())
+        os << '?';
+      else
+        os << len;
+    }
+    os << '>';
     return;
   }
   if (auto type = ty.dyn_cast<fir::ComplexType>()) {
@@ -1378,4 +1417,18 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
+}
+
+bool fir::isa_unknown_size_box(mlir::Type t) {
+  if (auto boxTy = t.dyn_cast<fir::BoxType>()) {
+    auto eleTy = boxTy.getEleTy();
+    if (auto actualEleTy = fir::dyn_cast_ptrEleTy(eleTy))
+      eleTy = actualEleTy;
+    if (eleTy.isa<mlir::NoneType>())
+      return true;
+    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+      if (seqTy.hasUnknownShape())
+        return true;
+  }
+  return false;
 }

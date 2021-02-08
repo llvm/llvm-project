@@ -1608,6 +1608,7 @@ static ELFKind getBitcodeELFKind(const Triple &t) {
 static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
   switch (t.getArch()) {
   case Triple::aarch64:
+  case Triple::aarch64_be:
     return EM_AARCH64;
   case Triple::amdgcn:
   case Triple::r600:

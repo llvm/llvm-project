@@ -157,7 +157,7 @@ genFIRType<Fortran::common::TypeCategory::Character>(mlir::MLIRContext *context,
                                                      int KIND) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
-    return fir::CharacterType::get(context, KIND);
+    return fir::CharacterType::get(context, KIND, 1);
   return {};
 }
 

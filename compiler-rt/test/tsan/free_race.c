@@ -1,4 +1,4 @@
-// RUN: %clang_tsan -O1 %s -o %t
+// RUN: %clang_tsan %s -o %t
 // RUN: %deflake %run %t | FileCheck %s --check-prefix=CHECK-NOZUPP
 // RUN: %env_tsan_opts=suppressions='%s.supp':print_suppressions=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUPP
 

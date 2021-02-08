@@ -27,6 +27,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_set>
 #include <vector>
@@ -66,14 +68,33 @@ static cl::opt<bool>
 // reported as filtered out.  The -print-before-changed option will print
 // the IR as it was before each pass that changed it.  The optional
 // value of quiet will only report when the IR changes, suppressing
-// all other messages, including the initial IR.
-enum ChangePrinter { NoChangePrinter, PrintChangedVerbose, PrintChangedQuiet };
+// all other messages, including the initial IR.  The values "diff" and
+// "diff-quiet" will present the changes in a form similar to a patch, in
+// either verbose or quiet mode, respectively.  The lines that are removed
+// and added are prefixed with '-' and '+', respectively.  The
+// -filter-print-funcs and -filter-passes can be used to filter the output.
+// This reporter relies on the linux diff utility to do comparisons and
+// insert the prefixes.  For systems that do not have the necessary
+// facilities, the error message will be shown in place of the expected output.
+//
+enum class ChangePrinter {
+  NoChangePrinter,
+  PrintChangedVerbose,
+  PrintChangedQuiet,
+  PrintChangedDiffVerbose,
+  PrintChangedDiffQuiet
+};
 static cl::opt<ChangePrinter> PrintChanged(
     "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
-    cl::ValueOptional, cl::init(NoChangePrinter),
-    cl::values(clEnumValN(PrintChangedQuiet, "quiet", "Run in quiet mode"),
+    cl::ValueOptional, cl::init(ChangePrinter::NoChangePrinter),
+    cl::values(clEnumValN(ChangePrinter::PrintChangedQuiet, "quiet",
+                          "Run in quiet mode"),
+               clEnumValN(ChangePrinter::PrintChangedDiffVerbose, "diff",
+                          "Display patch-like changes"),
+               clEnumValN(ChangePrinter::PrintChangedDiffQuiet, "diff-quiet",
+                          "Display patch-like changes in quiet mode"),
                // Sentinel value for unspecified option.
-               clEnumValN(PrintChangedVerbose, "", "")));
+               clEnumValN(ChangePrinter::PrintChangedVerbose, "", "")));
 
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
@@ -91,7 +112,78 @@ static cl::opt<bool>
                        cl::desc("Print before passes that change them"),
                        cl::init(false), cl::Hidden);
 
+// An option for specifying the diff used by print-changed=[diff | diff-quiet]
+static cl::opt<std::string>
+    DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
+               cl::desc("system diff used by change reporters"));
+
 namespace {
+
+// Perform a system based diff between \p Before and \p After, using
+// \p OldLineFormat, \p NewLineFormat, and \p UnchangedLineFormat
+// to control the formatting of the output.  Return an error message
+// for any failures instead of the diff.
+std::string doSystemDiff(StringRef Before, StringRef After,
+                         StringRef OldLineFormat, StringRef NewLineFormat,
+                         StringRef UnchangedLineFormat) {
+  StringRef SR[2]{Before, After};
+  // Store the 2 bodies into temporary files and call diff on them
+  // to get the body of the node.
+  const unsigned NumFiles = 3;
+  std::string FileName[NumFiles];
+  int FD[NumFiles]{-1, -1, -1};
+  for (unsigned I = 0; I < NumFiles; ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      std::error_code EC =
+          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
+      if (EC)
+        return "Unable to create temporary file.";
+      FileName[I] = Twine(SV).str();
+    }
+    // The third file is used as the result of the diff.
+    if (I == NumFiles - 1)
+      break;
+
+    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+    if (EC)
+      return "Unable to open temporary file for writing.";
+
+    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+    if (FD[I] == -1)
+      return "Error opening file for writing.";
+    OutStream << SR[I];
+  }
+
+  static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
+  if (!DiffExe)
+    return "Unable to find diff executable.";
+
+  SmallString<128> OLF = formatv("--old-line-format={0}", OldLineFormat);
+  SmallString<128> NLF = formatv("--new-line-format={0}", NewLineFormat);
+  SmallString<128> ULF =
+      formatv("--unchanged-line-format={0}", UnchangedLineFormat);
+
+  StringRef Args[] = {"-w", "-d", OLF, NLF, ULF, FileName[0], FileName[1]};
+  Optional<StringRef> Redirects[] = {None, StringRef(FileName[2]), None};
+  int Result = sys::ExecuteAndWait(*DiffExe, Args, None, Redirects);
+  if (Result < 0)
+    return "Error executing system diff.";
+  std::string Diff;
+  auto B = MemoryBuffer::getFile(FileName[2]);
+  if (B && *B)
+    Diff = (*B)->getBuffer().str();
+  else
+    return "Unable to read result.";
+
+  // Clean up.
+  for (unsigned I = 0; I < NumFiles; ++I) {
+    std::error_code EC = sys::fs::remove(FileName[I]);
+    if (EC)
+      return "Unable to remove temporary file.";
+  }
+  return Diff;
+}
 
 /// Extracting Module out of \p IR unit. Also fills a textual description
 /// of \p IR for use in header when printing.
@@ -371,6 +463,12 @@ void ChangeReporter<IRUnitT>::registerRequiredCallbacks(
       });
 }
 
+ChangedBlockData::ChangedBlockData(const BasicBlock &B)
+    : Label(B.getName().str()) {
+  raw_string_ostream SS(Body);
+  B.print(SS, nullptr, true, true);
+}
+
 template <typename IRUnitT>
 TextChangeReporter<IRUnitT>::TextChangeReporter(bool Verbose)
     : ChangeReporter<IRUnitT>(Verbose), Out(dbgs()) {}
@@ -415,7 +513,8 @@ void TextChangeReporter<IRUnitT>::handleIgnored(StringRef PassID,
 IRChangedPrinter::~IRChangedPrinter() {}
 
 void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (PrintChanged != NoChangePrinter)
+  if (PrintChanged == ChangePrinter::PrintChangedVerbose ||
+      PrintChanged == ChangePrinter::PrintChangedQuiet)
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
 }
 
@@ -462,6 +561,145 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
 
 bool IRChangedPrinter::same(const std::string &S1, const std::string &S2) {
   return S1 == S2;
+}
+
+template <typename IRData>
+void OrderedChangedData<IRData>::report(
+    const OrderedChangedData &Before, const OrderedChangedData &After,
+    function_ref<void(const IRData *, const IRData *)> HandlePair) {
+  const auto &BFD = Before.getData();
+  const auto &AFD = After.getData();
+  std::vector<std::string>::const_iterator BI = Before.getOrder().begin();
+  std::vector<std::string>::const_iterator BE = Before.getOrder().end();
+  std::vector<std::string>::const_iterator AI = After.getOrder().begin();
+  std::vector<std::string>::const_iterator AE = After.getOrder().end();
+
+  auto handlePotentiallyRemovedIRData = [&](std::string S) {
+    // The order in LLVM may have changed so check if still exists.
+    if (!AFD.count(S)) {
+      // This has been removed.
+      HandlePair(&BFD.find(*BI)->getValue(), nullptr);
+    }
+  };
+  auto handleNewIRData = [&](std::vector<const IRData *> &Q) {
+    // Print out any queued up new sections
+    for (const IRData *NBI : Q)
+      HandlePair(nullptr, NBI);
+    Q.clear();
+  };
+
+  // Print out the IRData in the after order, with before ones interspersed
+  // appropriately (ie, somewhere near where they were in the before list).
+  // Start at the beginning of both lists.  Loop through the
+  // after list.  If an element is common, then advance in the before list
+  // reporting the removed ones until the common one is reached.  Report any
+  // queued up new ones and then report the common one.  If an element is not
+  // common, then enqueue it for reporting.  When the after list is exhausted,
+  // loop through the before list, reporting any removed ones.  Finally,
+  // report the rest of the enqueued new ones.
+  std::vector<const IRData *> NewIRDataQueue;
+  while (AI != AE) {
+    if (!BFD.count(*AI)) {
+      // This section is new so place it in the queue.  This will cause it
+      // to be reported after deleted sections.
+      NewIRDataQueue.emplace_back(&AFD.find(*AI)->getValue());
+      ++AI;
+      continue;
+    }
+    // This section is in both; advance and print out any before-only
+    // until we get to it.
+    while (*BI != *AI) {
+      handlePotentiallyRemovedIRData(*BI);
+      ++BI;
+    }
+    // Report any new sections that were queued up and waiting.
+    handleNewIRData(NewIRDataQueue);
+
+    const IRData &AData = AFD.find(*AI)->getValue();
+    const IRData &BData = BFD.find(*AI)->getValue();
+    HandlePair(&BData, &AData);
+    ++BI;
+    ++AI;
+  }
+
+  // Check any remaining before sections to see if they have been removed
+  while (BI != BE) {
+    handlePotentiallyRemovedIRData(*BI);
+    ++BI;
+  }
+
+  handleNewIRData(NewIRDataQueue);
+}
+
+void ChangedIRComparer::compare(Any IR, StringRef Prefix, StringRef PassID,
+                                StringRef Name) {
+  if (!getModuleForComparison(IR)) {
+    // Not a module so just handle the single function.
+    assert(Before.getData().size() == 1 && "Expected only one function.");
+    assert(After.getData().size() == 1 && "Expected only one function.");
+    handleFunctionCompare(Name, Prefix, PassID, false,
+                          Before.getData().begin()->getValue(),
+                          After.getData().begin()->getValue());
+    return;
+  }
+
+  ChangedIRData::report(
+      Before, After, [&](const ChangedFuncData *B, const ChangedFuncData *A) {
+        ChangedFuncData Missing;
+        if (!B)
+          B = &Missing;
+        else if (!A)
+          A = &Missing;
+        assert(B != &Missing && A != &Missing &&
+               "Both functions cannot be missing.");
+        handleFunctionCompare(Name, Prefix, PassID, true, *B, *A);
+      });
+}
+
+void ChangedIRComparer::analyzeIR(Any IR, ChangedIRData &Data) {
+  if (const Module *M = getModuleForComparison(IR)) {
+    // Create data for each existing/interesting function in the module.
+    for (const Function &F : *M)
+      generateFunctionData(Data, F);
+    return;
+  }
+
+  const Function *F = nullptr;
+  if (any_isa<const Function *>(IR))
+    F = any_cast<const Function *>(IR);
+  else {
+    assert(any_isa<const Loop *>(IR) && "Unknown IR unit.");
+    const Loop *L = any_cast<const Loop *>(IR);
+    F = L->getHeader()->getParent();
+  }
+  assert(F && "Unknown IR unit.");
+  generateFunctionData(Data, *F);
+}
+
+const Module *ChangedIRComparer::getModuleForComparison(Any IR) {
+  if (any_isa<const Module *>(IR))
+    return any_cast<const Module *>(IR);
+  if (any_isa<const LazyCallGraph::SCC *>(IR))
+    return any_cast<const LazyCallGraph::SCC *>(IR)
+        ->begin()
+        ->getFunction()
+        .getParent();
+  return nullptr;
+}
+
+bool ChangedIRComparer::generateFunctionData(ChangedIRData &Data,
+                                             const Function &F) {
+  if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+    ChangedFuncData CFD;
+    for (const auto &B : F) {
+      CFD.getOrder().emplace_back(B.getName());
+      CFD.getData().insert({B.getName(), B});
+    }
+    Data.getOrder().emplace_back(F.getName());
+    Data.getData().insert({F.getName(), CFD});
+    return true;
+  }
+  return false;
 }
 
 PrintIRInstrumentation::~PrintIRInstrumentation() {
@@ -867,11 +1105,61 @@ void VerifyInstrumentation::registerCallbacks(
       });
 }
 
+InLineChangePrinter::~InLineChangePrinter() {}
+
+void InLineChangePrinter::generateIRRepresentation(Any IR, StringRef PassID,
+                                                   ChangedIRData &D) {
+  ChangedIRComparer::analyzeIR(IR, D);
+}
+
+void InLineChangePrinter::handleAfter(StringRef PassID, std::string &Name,
+                                      const ChangedIRData &Before,
+                                      const ChangedIRData &After, Any IR) {
+  if (Name == "")
+    Name = " (module)";
+  SmallString<20> Banner =
+      formatv("*** IR Dump After {0} ***{1}\n", PassID, Name);
+  Out << Banner;
+  ChangedIRComparer(Out, Before, After).compare(IR, "", PassID, Name);
+  Out << "\n";
+}
+
+bool InLineChangePrinter::same(const ChangedIRData &D1,
+                               const ChangedIRData &D2) {
+  return D1 == D2;
+}
+
+void ChangedIRComparer::handleFunctionCompare(StringRef Name, StringRef Prefix,
+                                              StringRef PassID, bool InModule,
+                                              const ChangedFuncData &Before,
+                                              const ChangedFuncData &After) {
+  // Print a banner when this is being shown in the context of a module
+  if (InModule)
+    Out << "\n*** IR for function " << Name << " ***\n";
+
+  ChangedFuncData::report(
+      Before, After, [&](const ChangedBlockData *B, const ChangedBlockData *A) {
+        StringRef BStr = B ? B->getBody() : "\n";
+        StringRef AStr = A ? A->getBody() : "\n";
+        const std::string Removed = "\033[31m-%l\033[0m\n";
+        const std::string Added = "\033[32m+%l\033[0m\n";
+        const std::string NoChange = " %l\n";
+        Out << doSystemDiff(BStr, AStr, Removed, Added, NoChange);
+      });
+}
+
+void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
+  if (PrintChanged == ChangePrinter::PrintChangedDiffVerbose ||
+      PrintChanged == ChangePrinter::PrintChangedDiffQuiet)
+    TextChangeReporter<ChangedIRData>::registerRequiredCallbacks(PIC);
+}
+
 StandardInstrumentations::StandardInstrumentations(bool DebugLogging,
                                                    bool VerifyEach)
     : PrintPass(DebugLogging), OptNone(DebugLogging),
-      PrintChangedIR(PrintChanged != PrintChangedQuiet), Verify(DebugLogging),
-      VerifyEach(VerifyEach) {}
+      PrintChangedIR(PrintChanged == ChangePrinter::PrintChangedVerbose),
+      PrintChangedDiff(PrintChanged == ChangePrinter::PrintChangedDiffVerbose),
+      Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
@@ -885,11 +1173,15 @@ void StandardInstrumentations::registerCallbacks(
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
     Verify.registerCallbacks(PIC);
+  PrintChangedDiff.registerCallbacks(PIC);
 }
 
 namespace llvm {
 
 template class ChangeReporter<std::string>;
 template class TextChangeReporter<std::string>;
+
+template class ChangeReporter<ChangedIRData>;
+template class TextChangeReporter<ChangedIRData>;
 
 } // namespace llvm
