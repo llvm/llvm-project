@@ -234,6 +234,8 @@ private:
   bool parseBindID(std::string &BindID);
   bool parseExpressionImpl(VariantValue *Value);
   bool parseMatcherExpressionImpl(const TokenInfo &NameToken,
+                                  const TokenInfo &OpenToken,
+                                  llvm::Optional<MatcherCtor> Ctor,
                                   VariantValue *Value);
   bool parseIdentifierPrefixImpl(VariantValue *Value);
 
