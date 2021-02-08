@@ -134,6 +134,7 @@ public:
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
   }
+  unsigned getMaxVectorSizeInBits() const;
 
 protected:
   // GlobalISel related APIs.
