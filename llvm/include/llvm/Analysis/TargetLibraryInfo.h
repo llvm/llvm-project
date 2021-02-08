@@ -164,18 +164,6 @@ public:
   /// such mapping exists, return the empty string.
   StringRef getVectorizedFunction(StringRef F, unsigned VF) const;
 
-  /// Return true if the function F has a scalar equivalent, and set VF to be
-  /// the vectorization factor.
-  bool isFunctionScalarizable(StringRef F, unsigned &VF) const {
-    return !getScalarizedFunction(F, VF).empty();
-  }
-
-  /// Return the name of the equivalent of F, scalarized. If no such mapping
-  /// exists, return the empty string.
-  ///
-  /// Set VF to the vectorization factor.
-  StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
-
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
   /// respectively.
