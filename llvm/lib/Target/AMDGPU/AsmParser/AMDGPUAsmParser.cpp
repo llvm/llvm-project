@@ -1483,6 +1483,7 @@ public:
   void cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands);
   void cvtIntersectRay(MCInst &Inst, const OperandVector &Operands);
 
+  bool parseDimId(unsigned &Encoding);
   OperandMatchResultTy parseDim(OperandVector &Operands);
   OperandMatchResultTy parseDPP8(OperandVector &Operands);
   OperandMatchResultTy parseDPPCtrl(OperandVector &Operands);
@@ -4882,16 +4883,21 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
     unsigned Prefix = Operands.size();
 
     for (;;) {
+      auto Loc = getLoc();
       ResTy = parseReg(Operands);
+      if (ResTy == MatchOperand_NoMatch)
+        Error(Loc, "expected a register");
       if (ResTy != MatchOperand_Success)
-        return ResTy;
+        return MatchOperand_ParseFail;
 
       RBraceLoc = getLoc();
       if (trySkipToken(AsmToken::RBrac))
         break;
 
-      if (!trySkipToken(AsmToken::Comma))
+      if (!skipToken(AsmToken::Comma,
+                     "expected a comma or a closing square bracket")) {
         return MatchOperand_ParseFail;
+      }
     }
 
     if (Operands.size() - Prefix > 1) {
@@ -7172,6 +7178,39 @@ bool AMDGPUOperand::isU16Imm() const {
   return isImm() && isUInt<16>(getImm());
 }
 
+//===----------------------------------------------------------------------===//
+// dim
+//===----------------------------------------------------------------------===//
+
+bool AMDGPUAsmParser::parseDimId(unsigned &Encoding) {
+  // We want to allow "dim:1D" etc.,
+  // but the initial 1 is tokenized as an integer.
+  std::string Token;
+  if (isToken(AsmToken::Integer)) {
+    SMLoc Loc = getToken().getEndLoc();
+    Token = std::string(getTokenStr());
+    lex();
+    if (getLoc() != Loc)
+      return false;
+  }
+
+  StringRef Suffix;
+  if (!parseId(Suffix))
+    return false;
+  Token += Suffix;
+
+  StringRef DimId = Token;
+  if (DimId.startswith("SQ_RSRC_IMG_"))
+    DimId = DimId.drop_front(12);
+
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByAsmSuffix(DimId);
+  if (!DimInfo)
+    return false;
+
+  Encoding = DimInfo->Encoding;
+  return true;
+}
+
 OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   if (!isGFX10Plus())
     return MatchOperand_NoMatch;
@@ -7181,34 +7220,21 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   if (!trySkipId("dim", AsmToken::Colon))
     return MatchOperand_NoMatch;
 
-  // We want to allow "dim:1D" etc., but the initial 1 is tokenized as an
-  // integer.
-  std::string Token;
-  if (isToken(AsmToken::Integer)) {
-    SMLoc Loc = getToken().getEndLoc();
-    Token = std::string(getTokenStr());
-    lex();
-    if (getLoc() != Loc)
-      return MatchOperand_ParseFail;
+  unsigned Encoding;
+  SMLoc Loc = getLoc();
+  if (!parseDimId(Encoding)) {
+    Error(Loc, "invalid dim value");
+    return MatchOperand_ParseFail;
   }
-  if (!isToken(AsmToken::Identifier))
-    return MatchOperand_ParseFail;
-  Token += getTokenStr();
 
-  StringRef DimId = Token;
-  if (DimId.startswith("SQ_RSRC_IMG_"))
-    DimId = DimId.substr(12);
-
-  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByAsmSuffix(DimId);
-  if (!DimInfo)
-    return MatchOperand_ParseFail;
-
-  lex();
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, DimInfo->Encoding, S,
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Encoding, S,
                                               AMDGPUOperand::ImmTyDim));
   return MatchOperand_Success;
 }
+
+//===----------------------------------------------------------------------===//
+// dpp
+//===----------------------------------------------------------------------===//
 
 OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
   SMLoc S = getLoc();

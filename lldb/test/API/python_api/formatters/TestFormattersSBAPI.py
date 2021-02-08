@@ -19,7 +19,6 @@ class SBFormattersAPITestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     def test_formatters_api(self):
         """Test Python APIs for working with formatters"""
         self.build()
@@ -436,7 +435,6 @@ class SBFormattersAPITestCase(TestBase):
                 lldb.eLanguageTypeObjC) is not None,
             "ObjC category is None")
 
-    @add_test_categories(['pyapi'])
     def test_force_synth_off(self):
         """Test that one can have the public API return non-synthetic SBValues if desired"""
         self.build(dictionary={'EXE': 'no_synth'})

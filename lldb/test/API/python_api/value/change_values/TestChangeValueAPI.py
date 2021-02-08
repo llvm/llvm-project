@@ -26,7 +26,6 @@ class ChangeValueAPITestCase(TestBase):
         self.end_line = line_number(
             'main.c', '// Set a breakpoint here at the end')
 
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr25652")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test_change_value(self):

@@ -21,7 +21,6 @@ class SymbolContextAPITestCase(TestBase):
         self.line = line_number(
             'main.c', '// Find the line number of function "c" here.')
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test(self):

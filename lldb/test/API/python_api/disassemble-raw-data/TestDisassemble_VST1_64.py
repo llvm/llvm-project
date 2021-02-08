@@ -17,7 +17,6 @@ class Disassemble_VST1_64(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfLLVMTargetMissing("ARM")
     @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.

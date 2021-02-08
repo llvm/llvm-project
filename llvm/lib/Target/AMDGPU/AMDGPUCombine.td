@@ -47,13 +47,21 @@ def rm_uniform_wf : GICombineRule<
          [{ return RegBankHelper.matchRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }])>;
 
+def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
+
+def clamp_i64_to_i16 : GICombineRule<
+  (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
+      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
+  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
-
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines]> {
+  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines, clamp_i64_to_i16]> {
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
+  let StateClass = "AMDGPUPreLegalizerCombinerHelperState";
 }
 
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<

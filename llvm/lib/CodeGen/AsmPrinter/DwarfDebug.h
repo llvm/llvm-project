@@ -467,6 +467,9 @@ private:
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
+  /// Construct a DIE for the subprogram definition \p SP and return it.
+  DIE &constructSubprogramDefinitionDIE(const DISubprogram *SP);
+
   /// Construct DIEs for call site entries describing the calls in \p MF.
   void constructCallSiteEntryDIEs(const DISubprogram &SP, DwarfCompileUnit &CU,
                                   DIE &ScopeDIE, const MachineFunction &MF);
@@ -769,9 +772,6 @@ public:
   /// * DW_FORM_data8 for 64-bit DWARFv3;
   /// * DW_FORM_data4 for 32-bit DWARFv3 and DWARFv2.
   dwarf::Form getDwarfSectionOffsetForm() const;
-
-  /// Construct a DIE for the subprogram definition \p SP and return it.
-  DIE &constructSubprogramDefinitionDIE(const DISubprogram *SP);
 
   /// Returns the previous CU that was being updated
   const DwarfCompileUnit *getPrevCU() const { return PrevCU; }

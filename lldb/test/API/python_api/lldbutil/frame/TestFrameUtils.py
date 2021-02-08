@@ -22,7 +22,6 @@ class FrameUtilsTestCase(TestBase):
         self.line = line_number('main.c',
                                 "// Find the line number here.")
 
-    @add_test_categories(['pyapi'])
     def test_frame_utils(self):
         """Test utility functions for the frame object."""
         self.build()

@@ -170,7 +170,7 @@ def nxv8i64 : ValueType<512, 136>; // n x  8 x i64 vector value
 def nxv16i64: ValueType<1024,137>; // n x 16 x i64 vector value
 def nxv32i64: ValueType<2048,138>; // n x 32 x i64 vector value
 
-def nxv1f16   : ValueType<32, 139>; // n x   1 x f16 vector value
+def nxv1f16   : ValueType<16, 139>; // n x   1 x f16 vector value
 def nxv2f16  : ValueType<32 , 140>; // n x  2 x f16 vector value
 def nxv4f16  : ValueType<64 , 141>; // n x  4 x f16 vector value
 def nxv8f16  : ValueType<128, 142>; // n x  8 x f16 vector value
