@@ -942,6 +942,8 @@ def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
            "file path and command line options) | 'random' (ID's generated as "
            "random numbers) | 'none' (disabled). Default is 'hash'. This option "
            "will be overriden by option '-cuid=[ID]' if it is specified." >;
+def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
+  HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_nvptx_bc_path_EQ : Joined<["--"], "libomptarget-nvptx-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx bitcode library">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
