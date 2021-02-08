@@ -16673,6 +16673,36 @@ The first two operands are vectors with the same type. The third argument
 the source/result vector. The ``imm`` is a signed integer constant in the range
 ``-VL <= imm < VL``. For values outside of this range the result is poison.
 
+
+'``llvm.experimental.stepvector``' Intrinsic
+
+This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
+to generate a vector whose lane values comprise the linear sequence
+<0, 1, 2, ...>. It is primarily intended for scalable vectors.
+
+::
+
+      declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+      declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+
+The '``llvm.experimental.stepvector``' intrinsics are used to create vectors
+of integers whose elements contain a linear sequence of values starting from 0
+with a step of 1.  This experimental intrinsic can only be used for vectors
+with integer elements that are at least 8 bits in size. If the sequence value
+exceeds the allowed limit for the element type then the result for that lane is
+undefined.
+
+These intrinsics work for both fixed and scalable vectors. While this intrinsic
+is marked as experimental, the recommended way to express this operation for
+fixed-width vectors is still to generate a constant vector instead.
+
+
+Arguments:
+""""""""""
+
+None.
+
+
 Matrix Intrinsics
 -----------------
 

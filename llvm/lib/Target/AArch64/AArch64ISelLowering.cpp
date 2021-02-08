@@ -1135,6 +1135,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::STEP_VECTOR, VT, Custom);
 
       setOperationAction(ISD::MULHU, VT, Expand);
       setOperationAction(ISD::MULHS, VT, Expand);
@@ -4402,6 +4403,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
+  case ISD::STEP_VECTOR:
+    return LowerSTEP_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::INSERT_SUBVECTOR:
@@ -9047,6 +9050,21 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue AArch64TargetLowering::LowerSTEP_VECTOR(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  assert(VT.isScalableVector() &&
+         "Only expect scalable vectors for STEP_VECTOR");
+  EVT ElemVT = VT.getScalarType();
+  assert(ElemVT != MVT::i1 &&
+         "Vectors of i1 types not supported for STEP_VECTOR");
+
+  SDValue StepVal = Op.getOperand(0);
+  SDValue Zero = DAG.getConstant(0, dl, StepVal.getValueType());
+  return DAG.getNode(AArch64ISD::INDEX_VECTOR, dl, VT, Zero, StepVal);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,

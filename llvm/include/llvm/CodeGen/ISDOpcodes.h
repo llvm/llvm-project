@@ -592,6 +592,14 @@ enum NodeType {
   /// scalars should have the same type.
   SPLAT_VECTOR_PARTS,
 
+  /// STEP_VECTOR(IMM) - Returns a scalable vector whose lanes are comprised
+  /// of a linear sequence of unsigned values starting from 0 with a step of
+  /// IMM, where IMM must be a constant positive integer value. The operation
+  /// does not support returning fixed-width vectors or non-constant operands.
+  /// If the sequence value exceeds the limit allowed for the element type then
+  /// the values for those lanes are undefined.
+  STEP_VECTOR,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
