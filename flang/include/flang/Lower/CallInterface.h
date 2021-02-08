@@ -126,6 +126,10 @@ public:
   /// FirPlaceHolder are place holders for the mlir inputs and outputs that are
   /// created during the first pass before the mlir::FuncOp is created.
   struct FirPlaceHolder {
+    FirPlaceHolder(mlir::Type t, int passedPosition, Property p,
+                   llvm::ArrayRef<mlir::NamedAttribute> attrs)
+        : type{t}, passedEntityPosition{passedPosition}, property{p},
+          attributes{attrs.begin(), attrs.end()} {}
     /// Type for this input/output
     mlir::Type type;
     /// Position of related passedEntity in passedArguments.
@@ -135,6 +139,8 @@ public:
     /// Indicate property of the entity passedEntityPosition that must be passed
     /// through this argument.
     Property property;
+    /// MLIR attributes for this argument
+    llvm::SmallVector<mlir::NamedAttribute, 1> attributes;
   };
 
   /// PassedEntity is what is provided back to the CallInterface user.
