@@ -523,6 +523,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
 
+        setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
         setOperationAction(ISD::ADD, VT, Custom);
@@ -550,6 +552,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
+
+        setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
@@ -756,6 +760,81 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
   case ISD::SETUGE:
     return RISCV::BGEU;
   }
+}
+
+// Return the largest legal scalable vector type that matches VT's element type.
+static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
+                                            const RISCVSubtarget &Subtarget) {
+  assert(VT.isFixedLengthVector() &&
+         DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+         "Expected legal fixed length vector!");
+
+  unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
+  assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
+
+  switch (VT.getVectorElementType().SimpleTy) {
+  default:
+    llvm_unreachable("unexpected element type for RVV container");
+  case MVT::i8:
+    return MVT::getScalableVectorVT(MVT::i8, LMul * 8);
+  case MVT::i16:
+    return MVT::getScalableVectorVT(MVT::i16, LMul * 4);
+  case MVT::i32:
+    return MVT::getScalableVectorVT(MVT::i32, LMul * 2);
+  case MVT::i64:
+    return MVT::getScalableVectorVT(MVT::i64, LMul);
+  case MVT::f16:
+    return MVT::getScalableVectorVT(MVT::f16, LMul * 4);
+  case MVT::f32:
+    return MVT::getScalableVectorVT(MVT::f32, LMul * 2);
+  case MVT::f64:
+    return MVT::getScalableVectorVT(MVT::f64, LMul);
+  }
+}
+
+// Grow V to consume an entire RVV register.
+static SDValue convertToScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
+  assert(VT.isScalableVector() &&
+         "Expected to convert into a scalable vector!");
+  assert(V.getValueType().isFixedLengthVector() &&
+         "Expected a fixed length vector operand!");
+  SDLoc DL(V);
+  SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V, Zero);
+}
+
+// Shrink V so it's just big enough to maintain a VT's worth of data.
+static SDValue convertFromScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  assert(VT.isFixedLengthVector() &&
+         "Expected to convert into a fixed length vector!");
+  assert(V.getValueType().isScalableVector() &&
+         "Expected a scalable vector operand!");
+  SDLoc DL(V);
+  SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V, Zero);
+}
+
+static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isFixedLengthVector() && "Unexpected vector!");
+
+  if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+    MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+    SDLoc DL(Op);
+    SDValue VL =
+        DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+
+    unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
+                                        : RISCVISD::VMV_V_X_VL;
+    Splat = DAG.getNode(Opc, DL, ContainerVT, Splat, VL);
+    return convertFromScalableVector(VT, Splat, DAG, Subtarget);
+  }
+
+  return SDValue();
 }
 
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
@@ -1005,6 +1084,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
     return lowerFPVECREDUCE(Op, DAG);
+  case ISD::BUILD_VECTOR:
+    return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::LOAD:
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
@@ -1704,6 +1785,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     assert(Op.getValueType() == Subtarget.getXLenVT() && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::riscv_vmv_v_x: {
+    SDValue Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(),
+                                 Op.getOperand(1));
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, Op.getValueType(),
+                       Scalar, Op.getOperand(2));
+  }
+  case Intrinsic::riscv_vfmv_v_f:
+    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
 }
 
@@ -1859,60 +1949,6 @@ SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
   SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, VectorVal, ScalarSplat);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
                      DAG.getConstant(0, DL, Subtarget.getXLenVT()));
-}
-
-// Return the largest legal scalable vector type that matches VT's element type.
-static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
-                                            const RISCVSubtarget &Subtarget) {
-  assert(VT.isFixedLengthVector() &&
-         DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
-         "Expected legal fixed length vector!");
-
-  unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
-  assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
-
-  switch (VT.getVectorElementType().SimpleTy) {
-  default:
-    llvm_unreachable("unexpected element type for RVV container");
-  case MVT::i8:
-    return MVT::getScalableVectorVT(MVT::i8, LMul * 8);
-  case MVT::i16:
-    return MVT::getScalableVectorVT(MVT::i16, LMul * 4);
-  case MVT::i32:
-    return MVT::getScalableVectorVT(MVT::i32, LMul * 2);
-  case MVT::i64:
-    return MVT::getScalableVectorVT(MVT::i64, LMul);
-  case MVT::f16:
-    return MVT::getScalableVectorVT(MVT::f16, LMul * 4);
-  case MVT::f32:
-    return MVT::getScalableVectorVT(MVT::f32, LMul * 2);
-  case MVT::f64:
-    return MVT::getScalableVectorVT(MVT::f64, LMul);
-  }
-}
-
-// Grow V to consume an entire RVV register.
-static SDValue convertToScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
-                                       const RISCVSubtarget &Subtarget) {
-  assert(VT.isScalableVector() &&
-         "Expected to convert into a scalable vector!");
-  assert(V.getValueType().isFixedLengthVector() &&
-         "Expected a fixed length vector operand!");
-  SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V, Zero);
-}
-
-// Shrink V so it's just big enough to maintain a VT's worth of data.
-static SDValue convertFromScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget) {
-  assert(VT.isFixedLengthVector() &&
-         "Expected to convert into a fixed length vector!");
-  assert(V.getValueType().isScalableVector() &&
-         "Expected a scalable vector operand!");
-  SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V, Zero);
 }
 
 SDValue
@@ -4540,6 +4576,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GREVIW)
   NODE_NAME_CASE(GORCI)
   NODE_NAME_CASE(GORCIW)
+  NODE_NAME_CASE(VMV_V_X_VL)
+  NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
