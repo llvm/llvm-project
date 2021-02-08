@@ -663,8 +663,8 @@ define void @test_ptr_need_one_upper_check(i32* readonly %src, i32* %dst, i32 %n
 ; CHECK-NEXT:    [[DST_UPPER:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[CMP_DST_IDX_UPPER:%.*]] = icmp ult i32* [[DST_IDX]], [[DST_UPPER]]
-; CHECK-NEXT:    call void @use(i1 [[CMP_DST_IDX_UPPER]])
-; CHECK-NEXT:    br i1 [[CMP_DST_IDX_UPPER]], label [[LOOP_LATCH_2]], label [[EXIT]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br i1 true, label [[LOOP_LATCH_2]], label [[EXIT]]
 ; CHECK:       loop.latch.2:
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
