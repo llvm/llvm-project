@@ -96,7 +96,8 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
         std::string(TLI.getVectorizedFunction(ScalarName, VF));
     if (!TLIName.empty()) {
       std::string MangledName = VFABI::mangleTLIVectorName(
-          TLIName, ScalarName, CI.getNumArgOperands(), VF);
+          TLIName, ScalarName, CI.getNumArgOperands(),
+          ElementCount::getFixed(VF));
       if (!OriginalSetOfMappings.count(MangledName)) {
         Mappings.push_back(MangledName);
         ++NumCallInjected;
