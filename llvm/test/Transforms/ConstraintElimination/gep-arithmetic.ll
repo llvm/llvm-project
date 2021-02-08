@@ -75,7 +75,7 @@ tgt.bb:
   ret i1 %cmp1
 }
 
-define i4 @ptr_N_signed_positive_explicit_check_constant_step(i8* %src, i8* %lower, i8* %upper, i16 %N, i16 %step) {
+define i4 @ptr_N_signed_positive_explicit_check_constant_step(i8* %src, i8* %lower, i8* %upper, i16 %N) {
 ; CHECK-LABEL: @ptr_N_signed_positive_explicit_check_constant_step(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N_POS:%.*]] = icmp sge i16 [[N:%.*]], 0
@@ -131,7 +131,7 @@ exit:
 }
 
 ; Same as ptr_N_signed_positive_explicit_check_constant_step, but without inbounds.
-define i4 @ptr_N_signed_positive_explicit_check_constant_step_no_inbonds(i8* %src, i8* %lower, i8* %upper, i16 %N, i16 %step) {
+define i4 @ptr_N_signed_positive_explicit_check_constant_step_no_inbonds(i8* %src, i8* %lower, i8* %upper, i16 %N) {
 ; CHECK-LABEL: @ptr_N_signed_positive_explicit_check_constant_step_no_inbonds(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N_POS:%.*]] = icmp sge i16 [[N:%.*]], 0
@@ -773,6 +773,120 @@ step.check:
 
 ptr.check:
   %src.step = getelementptr inbounds i8, i8* %src, i16 %step
+  %cmp.step.start = icmp ult i8* %src.step, %lower
+  %cmp.step.end = icmp uge i8* %src.step, %upper
+  %or.check = or i1 %cmp.step.start, %cmp.step.end
+  br i1 %or.check, label %trap.bb, label %exit
+
+exit:
+  ret i4 3
+}
+
+define i4 @ptr_N_step_zext_n_zext(i8* %src, i8* %lower, i8* %upper, i16 %N, i16 %step) {
+; CHECK-LABEL: @ptr_N_step_zext_n_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD_1:%.*]] = add nuw nsw i16 [[N:%.*]], 1
+; CHECK-NEXT:    [[N_ADD_1_EXT:%.*]] = zext i16 [[N_ADD_1]] to i32
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i32 [[N_ADD_1_EXT]]
+; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult i8* [[SRC]], [[LOWER:%.*]]
+; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge i8* [[SRC_END]], [[UPPER:%.*]]
+; CHECK-NEXT:    [[OR_PRECOND_0:%.*]] = or i1 [[CMP_SRC_START]], [[CMP_SRC_END]]
+; CHECK-NEXT:    br i1 [[OR_PRECOND_0]], label [[TRAP_BB:%.*]], label [[STEP_CHECK:%.*]]
+; CHECK:       trap.bb:
+; CHECK-NEXT:    ret i4 2
+; CHECK:       step.check:
+; CHECK-NEXT:    [[STEP_ADD_1:%.*]] = add nuw nsw i16 [[STEP:%.*]], 1
+; CHECK-NEXT:    [[STEP_ADD_1_EXT:%.*]] = zext i16 [[STEP_ADD_1]] to i32
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i32 [[STEP_ADD_1_EXT]], [[N_ADD_1_EXT]]
+; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
+; CHECK:       ptr.check:
+; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 [[STEP_ADD_1_EXT]]
+; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], false
+; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i4 3
+;
+
+entry:
+  %N.add.1 = add nuw nsw i16 %N, 1
+  %N.add.1.ext = zext i16 %N.add.1 to i32
+  %src.end = getelementptr inbounds i8, i8* %src, i32 %N.add.1.ext
+  %cmp.src.start = icmp ult i8* %src, %lower
+  %cmp.src.end = icmp uge i8* %src.end, %upper
+  %or.precond.0 = or i1 %cmp.src.start, %cmp.src.end
+  br i1 %or.precond.0, label %trap.bb, label %step.check
+
+trap.bb:
+  ret i4 2
+
+step.check:
+  %step.add.1 = add nuw nsw i16 %step, 1
+  %step.add.1.ext = zext i16 %step.add.1 to i32
+  %step.ult.N = icmp ult i32 %step.add.1.ext, %N.add.1.ext
+  br i1 %step.ult.N, label %ptr.check, label %exit
+
+ptr.check:
+  %src.step = getelementptr inbounds i8, i8* %src, i32 %step.add.1.ext
+  %cmp.step.start = icmp ult i8* %src.step, %lower
+  %cmp.step.end = icmp uge i8* %src.step, %upper
+  %or.check = or i1 %cmp.step.start, %cmp.step.end
+  br i1 %or.check, label %trap.bb, label %exit
+
+exit:
+  ret i4 3
+}
+
+define i4 @ptr_N_step_zext_n_zext_out_of_bounds(i8* %src, i8* %lower, i8* %upper, i16 %N, i16 %step) {
+; CHECK-LABEL: @ptr_N_step_zext_n_zext_out_of_bounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_ADD_2:%.*]] = add nuw nsw i16 [[N:%.*]], 2
+; CHECK-NEXT:    [[N_ADD_2_EXT:%.*]] = zext i16 [[N_ADD_2]] to i32
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i32 [[N_ADD_2_EXT]]
+; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult i8* [[SRC]], [[LOWER:%.*]]
+; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge i8* [[SRC_END]], [[UPPER:%.*]]
+; CHECK-NEXT:    [[OR_PRECOND_0:%.*]] = or i1 [[CMP_SRC_START]], [[CMP_SRC_END]]
+; CHECK-NEXT:    br i1 [[OR_PRECOND_0]], label [[TRAP_BB:%.*]], label [[STEP_CHECK:%.*]]
+; CHECK:       trap.bb:
+; CHECK-NEXT:    ret i4 2
+; CHECK:       step.check:
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw nsw i16 [[STEP:%.*]], 2
+; CHECK-NEXT:    [[STEP_ADD_2_EXT:%.*]] = zext i16 [[STEP_ADD_2]] to i32
+; CHECK-NEXT:    [[STEP_EXT:%.*]] = zext i16 [[STEP]] to i32
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i32 [[STEP_EXT]], [[N_ADD_2_EXT]]
+; CHECK-NEXT:    br i1 [[STEP_ULT_N]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
+; CHECK:       ptr.check:
+; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 [[STEP_ADD_2_EXT]]
+; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i4 3
+;
+
+entry:
+  %N.add.2 = add nuw nsw i16 %N, 2
+  %N.add.2.ext = zext i16 %N.add.2 to i32
+  %src.end = getelementptr inbounds i8, i8* %src, i32 %N.add.2.ext
+  %cmp.src.start = icmp ult i8* %src, %lower
+  %cmp.src.end = icmp uge i8* %src.end, %upper
+  %or.precond.0 = or i1 %cmp.src.start, %cmp.src.end
+  br i1 %or.precond.0, label %trap.bb, label %step.check
+
+trap.bb:
+  ret i4 2
+
+step.check:
+  %step.add.2 = add nuw nsw i16 %step, 2
+  %step.add.2.ext = zext i16 %step.add.2 to i32
+  %step.ext = zext i16 %step to i32
+  %step.ult.N = icmp ult i32 %step.ext, %N.add.2.ext
+  br i1 %step.ult.N, label %ptr.check, label %exit
+
+ptr.check:
+  %src.step = getelementptr inbounds i8, i8* %src, i32 %step.add.2.ext
   %cmp.step.start = icmp ult i8* %src.step, %lower
   %cmp.step.end = icmp uge i8* %src.step, %upper
   %or.check = or i1 %cmp.step.start, %cmp.step.end

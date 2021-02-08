@@ -652,7 +652,7 @@ define void @test_ptr_need_one_upper_check(i32* readonly %src, i32* %dst, i32 %n
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_CHECK_1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.check.1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[SRC_UPPER:%.*]] = getelementptr i32, i32* [[SRC:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SRC_UPPER:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_0]], 2
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[ADD]] to i64
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[IDXPROM]]
@@ -660,7 +660,7 @@ define void @test_ptr_need_one_upper_check(i32* readonly %src, i32* %dst, i32 %n
 ; CHECK-NEXT:    call void @use(i1 [[CMP_SRC_IDX_UPPER]])
 ; CHECK-NEXT:    br i1 [[CMP_SRC_IDX_UPPER]], label [[LOOP_LATCH:%.*]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[DST_UPPER:%.*]] = getelementptr i32, i32* [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[DST_UPPER:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[CMP_DST_IDX_UPPER:%.*]] = icmp ult i32* [[DST_IDX]], [[DST_UPPER]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP_DST_IDX_UPPER]])
@@ -680,7 +680,7 @@ loop.header:
 
 loop.check.1:
   %0 = zext i32 %n to i64
-  %src.upper = getelementptr i32, i32* %src, i64 %0
+  %src.upper = getelementptr inbounds i32, i32* %src, i64 %0
   %add = add nuw nsw i32 %i.0, 2
   %idxprom = zext i32 %add to i64
   %src.idx = getelementptr inbounds i32, i32* %src, i64 %idxprom
@@ -689,7 +689,7 @@ loop.check.1:
   br i1 %cmp.src.idx.upper, label %loop.latch, label %exit
 
 loop.latch:
-  %dst.upper = getelementptr i32, i32* %dst, i64 %0
+  %dst.upper = getelementptr inbounds i32, i32* %dst, i64 %0
   %dst.idx = getelementptr inbounds i32, i32* %dst, i64 %idxprom
   %cmp.dst.idx.upper = icmp ult i32* %dst.idx, %dst.upper
   call void @use(i1 %cmp.dst.idx.upper)
