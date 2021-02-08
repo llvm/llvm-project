@@ -331,3 +331,27 @@ steps:
   #     automatic:
   #       - exit_status: -1  # Agent was lost
   #         limit: 2
+
+  - label: "AArch64"
+    command: "libcxx/utils/ci/run-buildbot aarch64"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "AArch64 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
