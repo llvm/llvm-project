@@ -17,7 +17,7 @@
 
 // Initialized with a 64-bit mask with bits set in positions less than the
 // thread's lane number in the warp
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
   uint32_t lane = GetLaneId();
   int64_t ballot = __kmpc_impl_activemask();
   uint64_t mask = ((uint64_t)1 << lane) - (uint64_t)1;
@@ -26,7 +26,7 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
 
 // Initialized with a 64-bit mask with bits set in positions greater than the
 // thread's lane number in the warp
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   uint32_t lane = GetLaneId();
   if (lane == (WARPSIZE - 1))
     return 0;
@@ -35,9 +35,9 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return mask & ballot;
 }
 
-DEVICE double __kmpc_impl_get_wtick() { return ((double)1E-9); }
+EXTERN double __kmpc_impl_get_wtick() { return ((double)1E-9); }
 
-DEVICE double __kmpc_impl_get_wtime() {
+EXTERN double __kmpc_impl_get_wtime() {
   // The intrinsics for measuring time have undocumented frequency
   // This will probably need to be found by measurement on a number of
   // architectures. Until then, return 0, which is very inaccurate as a
@@ -46,11 +46,11 @@ DEVICE double __kmpc_impl_get_wtime() {
 }
 
 // Warp vote function
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
+EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __builtin_amdgcn_read_exec();
 }
 
-DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,
+EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,
                                      int32_t srcLane) {
   int width = WARPSIZE;
   int self = GetLaneId();
@@ -58,7 +58,7 @@ DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 
-DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
+EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
                                           uint32_t laneDelta, int32_t width) {
   int self = GetLaneId();
   int index = self + laneDelta;
@@ -68,12 +68,12 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
 
 static DEVICE SHARED uint32_t L1_Barrier;
 
-DEVICE void __kmpc_impl_target_init() {
+EXTERN void __kmpc_impl_target_init() {
   // Don't have global ctors, and shared memory is not zero init
   __atomic_store_n(&L1_Barrier, 0u, __ATOMIC_RELEASE);
 }
 
-DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
+EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
   uint32_t num_waves = num_threads / WARPSIZE;
@@ -85,9 +85,9 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   // Low bits for the number of waves, assumed zero before this call.
   // High bits to count the number of times the barrier has been passed.
 
-  assert(num_waves != 0);
-  assert(num_waves * WARPSIZE == num_threads);
-  assert(num_waves < 0xffffu);
+  // precondition: num_waves != 0;
+  // invariant: num_waves * WARPSIZE == num_threads;
+  // precondition: num_waves < 0xffffu;
 
   // Increment the low 16 bits once, using the lowest active thread.
   uint64_t lowestActiveThread = __kmpc_impl_ffs(__kmpc_impl_activemask()) - 1;
@@ -131,19 +131,19 @@ DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 }
 } // namespace
 
-DEVICE int GetNumberOfBlocksInKernel() {
+EXTERN int GetNumberOfBlocksInKernel() {
   return get_grid_dim(__builtin_amdgcn_grid_size_x(),
                       __builtin_amdgcn_workgroup_size_x());
 }
 
-DEVICE int GetNumberOfThreadsInBlock() {
+EXTERN int GetNumberOfThreadsInBlock() {
   return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
                            __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
 }
 
-DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
-DEVICE unsigned GetLaneId() {
+EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
@@ -186,38 +186,38 @@ DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
 }
 
 // Stub implementations
-DEVICE void *__kmpc_impl_malloc(size_t) { return nullptr; }
-DEVICE void __kmpc_impl_free(void *) {}
+EXTERN void *__kmpc_impl_malloc(size_t) { return nullptr; }
+EXTERN void __kmpc_impl_free(void *) {}
 
-DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
+EXTERN void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
   hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
 }
 
-DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
+EXTERN uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
   return (((uint64_t)hi) << 32) | (uint64_t)lo;
 }
 
-DEVICE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+EXTERN void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 
-DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+EXTERN void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
 
-DEVICE void __kmpc_impl_threadfence() {
+EXTERN void __kmpc_impl_threadfence() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
 }
 
-DEVICE void __kmpc_impl_threadfence_block() {
+EXTERN void __kmpc_impl_threadfence_block() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
 }
 
-DEVICE void __kmpc_impl_threadfence_system() {
+EXTERN void __kmpc_impl_threadfence_system() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
 }
 
 // Calls to the AMDGCN layer (assuming 1D layout)
-DEVICE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
-DEVICE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
+EXTERN int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+EXTERN int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 
 #pragma omp end declare target
