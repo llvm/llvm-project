@@ -890,3 +890,225 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                                         RISCVII::MO_CALL));
   return It;
 }
+
+// clang-format off
+#define CASE_VFMA_OPCODE_COMMON(OP, TYPE, LMUL)                                \
+  RISCV::PseudoV##OP##_##TYPE##_##LMUL##_COMMUTABLE
+
+#define CASE_VFMA_OPCODE_LMULS(OP, TYPE)                                       \
+  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF8):                                      \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF4):                                 \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF2):                                 \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M1):                                  \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M2):                                  \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M4):                                  \
+  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M8)
+
+#define CASE_VFMA_SPLATS(OP)                                                   \
+  CASE_VFMA_OPCODE_LMULS(OP, VF16):                                            \
+  case CASE_VFMA_OPCODE_LMULS(OP, VF32):                                       \
+  case CASE_VFMA_OPCODE_LMULS(OP, VF64)
+// clang-format on
+
+bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                           unsigned &SrcOpIdx1,
+                                           unsigned &SrcOpIdx2) const {
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (!Desc.isCommutable())
+    return false;
+
+  switch (MI.getOpcode()) {
+  case CASE_VFMA_SPLATS(FMADD):
+  case CASE_VFMA_SPLATS(FMSUB):
+  case CASE_VFMA_SPLATS(FMACC):
+  case CASE_VFMA_SPLATS(FMSAC):
+  case CASE_VFMA_SPLATS(FNMADD):
+  case CASE_VFMA_SPLATS(FNMSUB):
+  case CASE_VFMA_SPLATS(FNMACC):
+  case CASE_VFMA_SPLATS(FNMSAC):
+  case CASE_VFMA_OPCODE_LMULS(FMACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FMSAC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV): {
+    // For these instructions we can only swap operand 1 and operand 3 by
+    // changing the opcode.
+    unsigned CommutableOpIdx1 = 1;
+    unsigned CommutableOpIdx2 = 3;
+    if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
+                              CommutableOpIdx2))
+      return false;
+    return true;
+  }
+  case CASE_VFMA_OPCODE_LMULS(FMADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(FMSUB, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV): {
+    // For these instructions we have more freedom. We can commute with the
+    // other multiplicand or with the addend/subtrahend/minuend.
+
+    // Any fixed operand must be from source 1, 2 or 3.
+    if (SrcOpIdx1 != CommuteAnyOperandIndex && SrcOpIdx1 > 3)
+      return false;
+    if (SrcOpIdx2 != CommuteAnyOperandIndex && SrcOpIdx2 > 3)
+      return false;
+
+    // It both ops are fixed one must be the tied source.
+    if (SrcOpIdx1 != CommuteAnyOperandIndex &&
+        SrcOpIdx2 != CommuteAnyOperandIndex && SrcOpIdx1 != 1 && SrcOpIdx2 != 1)
+      return false;
+
+    // Look for two different register operands assumed to be commutable
+    // regardless of the FMA opcode. The FMA opcode is adjusted later if
+    // needed.
+    if (SrcOpIdx1 == CommuteAnyOperandIndex ||
+        SrcOpIdx2 == CommuteAnyOperandIndex) {
+      // At least one of operands to be commuted is not specified and
+      // this method is free to choose appropriate commutable operands.
+      unsigned CommutableOpIdx1 = SrcOpIdx1;
+      if (SrcOpIdx1 == SrcOpIdx2) {
+        // Both of operands are not fixed. Set one of commutable
+        // operands to the tied source.
+        CommutableOpIdx1 = 1;
+      } else if (SrcOpIdx1 == CommutableOpIdx1) {
+        // Only one of the operands is not fixed.
+        CommutableOpIdx1 = SrcOpIdx2;
+      }
+
+      // CommutableOpIdx1 is well defined now. Let's choose another commutable
+      // operand and assign its index to CommutableOpIdx2.
+      unsigned CommutableOpIdx2;
+      if (CommutableOpIdx1 != 1) {
+        // If we haven't already used the tied source, we must use it now.
+        CommutableOpIdx2 = 1;
+      } else {
+        Register Op1Reg = MI.getOperand(CommutableOpIdx1).getReg();
+
+        // The commuted operands should have different registers.
+        // Otherwise, the commute transformation does not change anything and
+        // is useless. We use this as a hint to make our decision.
+        if (Op1Reg != MI.getOperand(2).getReg())
+          CommutableOpIdx2 = 2;
+        else
+          CommutableOpIdx2 = 3;
+      }
+
+      // Assign the found pair of commutable indices to SrcOpIdx1 and
+      // SrcOpIdx2 to return those values.
+      if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
+                                CommutableOpIdx2))
+        return false;
+    }
+
+    return true;
+  }
+  }
+
+  return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+}
+
+#define CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, LMUL)               \
+  case RISCV::PseudoV##OLDOP##_##TYPE##_##LMUL##_COMMUTABLE:                   \
+    Opc = RISCV::PseudoV##NEWOP##_##TYPE##_##LMUL##_COMMUTABLE;                \
+    break;
+
+#define CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, TYPE)                      \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF8)                      \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF4)                      \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF2)                      \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M1)                       \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M2)                       \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M4)                       \
+  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M8)
+
+#define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
+  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF16)                            \
+  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF32)                            \
+  CASE_VFMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, VF64)
+
+MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                     bool NewMI,
+                                                     unsigned OpIdx1,
+                                                     unsigned OpIdx2) const {
+  auto cloneIfNew = [NewMI](MachineInstr &MI) -> MachineInstr & {
+    if (NewMI)
+      return *MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    return MI;
+  };
+
+  switch (MI.getOpcode()) {
+  case CASE_VFMA_SPLATS(FMACC):
+  case CASE_VFMA_SPLATS(FMADD):
+  case CASE_VFMA_SPLATS(FMSAC):
+  case CASE_VFMA_SPLATS(FMSUB):
+  case CASE_VFMA_SPLATS(FNMACC):
+  case CASE_VFMA_SPLATS(FNMADD):
+  case CASE_VFMA_SPLATS(FNMSAC):
+  case CASE_VFMA_SPLATS(FNMSUB):
+  case CASE_VFMA_OPCODE_LMULS(FMACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FMSAC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV): {
+    // It only make sense to toggle these between clobbering the
+    // addend/subtrahend/minuend one of the multiplicands.
+    assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
+    assert((OpIdx1 == 3 || OpIdx2 == 3) && "Unexpected opcode index");
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMACC, FMADD)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMADD, FMACC)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMSAC, FMSUB)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMSUB, FMSAC)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMACC, FNMADD)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMADD, FNMACC)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMSAC, FNMSUB)
+      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMSUB, FNMSAC)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(FMACC, FMADD, VV)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(FMSAC, FMSUB, VV)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(FNMACC, FNMADD, VV)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(FNMSAC, FNMSUB, VV)
+    }
+
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.setDesc(get(Opc));
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+  }
+  case CASE_VFMA_OPCODE_LMULS(FMADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(FMSUB, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV): {
+    assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
+    // If one of the operands, is the addend we need to change opcode.
+    // Otherwise we're just swapping 2 of the multiplicands.
+    if (OpIdx1 == 3 || OpIdx2 == 3) {
+      unsigned Opc;
+      switch (MI.getOpcode()) {
+        default:
+          llvm_unreachable("Unexpected opcode");
+        CASE_VFMA_CHANGE_OPCODE_LMULS(FMADD, FMACC, VV)
+        CASE_VFMA_CHANGE_OPCODE_LMULS(FMSUB, FMSAC, VV)
+        CASE_VFMA_CHANGE_OPCODE_LMULS(FNMADD, FNMACC, VV)
+        CASE_VFMA_CHANGE_OPCODE_LMULS(FNMSUB, FNMSAC, VV)
+      }
+
+      auto &WorkingMI = cloneIfNew(MI);
+      WorkingMI.setDesc(get(Opc));
+      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                     OpIdx1, OpIdx2);
+    }
+    // Let the default code handle it.
+    break;
+  }
+  }
+
+  return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
+#undef CASE_VFMA_CHANGE_OPCODE_SPLATS
+#undef CASE_VFMA_CHANGE_OPCODE_LMULS
+#undef CASE_VFMA_CHANGE_OPCODE_COMMON
+#undef CASE_VFMA_SPLATS
+#undef CASE_VFMA_OPCODE_LMULS
+#undef CASE_VFMA_OPCODE_COMMON
