@@ -803,7 +803,7 @@ define i4 @ptr_N_step_zext_n_zext(i8* %src, i8* %lower, i8* %upper, i16 %N, i16 
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i32 [[STEP_ADD_1_EXT]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp ult i8* [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp uge i8* [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], false
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3
