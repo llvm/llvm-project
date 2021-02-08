@@ -338,7 +338,7 @@ OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
       return a;
   }
   // If this is reached, all inputs were statically known passing.
-  return BoolAttr::get(getContext(), true);
+  return BoolAttr::get(true, getContext());
 }
 
 static LogicalResult verify(AssumingAllOp op) {
@@ -482,10 +482,10 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // Both operands are not needed if one is a scalar.
   if (operands[0] &&
       operands[0].cast<DenseIntElementsAttr>().getNumElements() == 0)
-    return BoolAttr::get(getContext(), true);
+    return BoolAttr::get(true, getContext());
   if (operands[1] &&
       operands[1].cast<DenseIntElementsAttr>().getNumElements() == 0)
-    return BoolAttr::get(getContext(), true);
+    return BoolAttr::get(true, getContext());
 
   if (operands[0] && operands[1]) {
     auto lhsShape = llvm::to_vector<6>(
@@ -494,7 +494,7 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
         operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
     SmallVector<int64_t, 6> resultShape;
     if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
-      return BoolAttr::get(getContext(), true);
+      return BoolAttr::get(true, getContext());
   }
 
   // Lastly, see if folding can be completed based on what constraints are known
@@ -506,7 +506,7 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
     return nullptr;
 
   if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
-    return BoolAttr::get(getContext(), true);
+    return BoolAttr::get(true, getContext());
 
   // Because a failing witness result here represents an eventual assertion
   // failure, we do not replace it with a constant witness.
@@ -526,7 +526,7 @@ void CstrEqOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
 OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
   if (llvm::all_of(operands,
                    [&](Attribute a) { return a && a == operands[0]; }))
-    return BoolAttr::get(getContext(), true);
+    return BoolAttr::get(true, getContext());
 
   // Because a failing witness result here represents an eventual assertion
   // failure, we do not try to replace it with a constant witness. Similarly, we
@@ -573,14 +573,14 @@ OpFoldResult CstrRequireOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult ShapeEqOp::fold(ArrayRef<Attribute> operands) {
   if (lhs() == rhs())
-    return BoolAttr::get(getContext(), true);
+    return BoolAttr::get(true, getContext());
   auto lhs = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
   if (lhs == nullptr)
     return {};
   auto rhs = operands[1].dyn_cast_or_null<DenseIntElementsAttr>();
   if (rhs == nullptr)
     return {};
-  return BoolAttr::get(getContext(), lhs == rhs);
+  return BoolAttr::get(lhs == rhs, getContext());
 }
 
 //===----------------------------------------------------------------------===//

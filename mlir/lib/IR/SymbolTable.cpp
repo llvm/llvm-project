@@ -46,7 +46,7 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
   assert(within->isAncestor(symbol) && "expected 'within' to be an ancestor");
   MLIRContext *ctx = symbol->getContext();
 
-  auto leafRef = FlatSymbolRefAttr::get(ctx, symbolName);
+  auto leafRef = FlatSymbolRefAttr::get(symbolName, ctx);
   results.push_back(leafRef);
 
   // Early exit for when 'within' is the parent of 'symbol'.
@@ -67,13 +67,13 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
         getNameIfSymbol(symbolTableOp, symbolNameId);
     if (!symbolTableName)
       return failure();
-    results.push_back(SymbolRefAttr::get(ctx, *symbolTableName, nestedRefs));
+    results.push_back(SymbolRefAttr::get(*symbolTableName, nestedRefs, ctx));
 
     symbolTableOp = symbolTableOp->getParentOp();
     if (symbolTableOp == within)
       break;
     nestedRefs.insert(nestedRefs.begin(),
-                      FlatSymbolRefAttr::get(ctx, *symbolTableName));
+                      FlatSymbolRefAttr::get(*symbolTableName, ctx));
   } while (true);
   return success();
 }
@@ -203,7 +203,7 @@ StringRef SymbolTable::getSymbolName(Operation *symbol) {
 /// Sets the name of the given symbol operation.
 void SymbolTable::setSymbolName(Operation *symbol, StringRef name) {
   symbol->setAttr(getSymbolAttrName(),
-                  StringAttr::get(symbol->getContext(), name));
+                  StringAttr::get(name, symbol->getContext()));
 }
 
 /// Returns the visibility of the given symbol operation.
@@ -235,7 +235,7 @@ void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
          "unknown symbol visibility kind");
 
   StringRef visName = vis == Visibility::Private ? "private" : "nested";
-  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(ctx, visName));
+  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(visName, ctx));
 }
 
 /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -603,7 +603,7 @@ static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
       // doesn't support parent references.
       if (SymbolTable::getNearestSymbolTable(limit->getParentOp()) ==
           symbol->getParentOp())
-        return {{SymbolRefAttr::get(symbol->getContext(), symName), limit}};
+        return {{SymbolRefAttr::get(symName, symbol->getContext()), limit}};
       return {};
     }
 
@@ -659,7 +659,7 @@ static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
 template <typename IRUnit>
 static SmallVector<SymbolScope, 1> collectSymbolScopes(StringRef symbol,
                                                        IRUnit *limit) {
-  return {{SymbolRefAttr::get(limit->getContext(), symbol), limit}};
+  return {{SymbolRefAttr::get(symbol, limit->getContext()), limit}};
 }
 
 /// Returns true if the given reference 'SubRef' is a sub reference of the
@@ -825,11 +825,11 @@ static Attribute rebuildAttrAfterRAUW(
   if (auto dictAttr = container.dyn_cast<DictionaryAttr>()) {
     auto newAttrs = llvm::to_vector<4>(dictAttr.getValue());
     updateAttrs(make_second_range(newAttrs));
-    return DictionaryAttr::get(dictAttr.getContext(), newAttrs);
+    return DictionaryAttr::get(newAttrs, dictAttr.getContext());
   }
   auto newAttrs = llvm::to_vector<4>(container.cast<ArrayAttr>().getValue());
   updateAttrs(newAttrs);
-  return ArrayAttr::get(container.getContext(), newAttrs);
+  return ArrayAttr::get(newAttrs, container.getContext());
 }
 
 /// Generates a new symbol reference attribute with a new leaf reference.
@@ -839,8 +839,8 @@ static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
     return newLeafAttr;
   auto nestedRefs = llvm::to_vector<2>(oldAttr.getNestedReferences());
   nestedRefs.back() = newLeafAttr;
-  return SymbolRefAttr::get(oldAttr.getContext(), oldAttr.getRootReference(),
-                            nestedRefs);
+  return SymbolRefAttr::get(oldAttr.getRootReference(), nestedRefs,
+                            oldAttr.getContext());
 }
 
 /// The implementation of SymbolTable::replaceAllSymbolUses below.
@@ -867,7 +867,7 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
 
   // Generate a new attribute to replace the given attribute.
   MLIRContext *ctx = limit->getContext();
-  FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(ctx, newSymbol);
+  FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(newSymbol, ctx);
   for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
     SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
     auto walkFn = [&](SymbolTable::SymbolUse symbolUse,
@@ -883,13 +883,13 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
       if (useRef != scope.symbol) {
         if (scope.symbol.isa<FlatSymbolRefAttr>()) {
           replacementRef =
-              SymbolRefAttr::get(ctx, newSymbol, useRef.getNestedReferences());
+              SymbolRefAttr::get(newSymbol, useRef.getNestedReferences(), ctx);
         } else {
           auto nestedRefs = llvm::to_vector<4>(useRef.getNestedReferences());
           nestedRefs[scope.symbol.getNestedReferences().size() - 1] =
               newLeafAttr;
           replacementRef =
-              SymbolRefAttr::get(ctx, useRef.getRootReference(), nestedRefs);
+              SymbolRefAttr::get(useRef.getRootReference(), nestedRefs, ctx);
         }
       }
 

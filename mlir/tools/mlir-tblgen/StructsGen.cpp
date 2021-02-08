@@ -150,7 +150,7 @@ static void emitFactoryDef(llvm::StringRef structName,
   }
 
   const char *getEndInfo = R"(
-  ::mlir::Attribute dict = ::mlir::DictionaryAttr::get(context, fields);
+  ::mlir::Attribute dict = ::mlir::DictionaryAttr::get(fields, context);
   return dict.dyn_cast<{0}>();
 }
 )";

@@ -166,7 +166,7 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
     newAttrs.insert(attr);
   for (auto &attr : getAttrs())
     newAttrs.insert(attr);
-  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs.takeVector()));
+  dest->setAttrs(DictionaryAttr::get(newAttrs.takeVector(), getContext()));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);

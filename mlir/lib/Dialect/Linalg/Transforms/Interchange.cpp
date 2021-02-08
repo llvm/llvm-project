@@ -77,9 +77,9 @@ LinalgOp mlir::linalg::interchange(LinalgOp op,
   applyPermutationToVector(itTypesVector, interchangeVector);
 
   op->setAttr(getIndexingMapsAttrName(),
-              ArrayAttr::get(context, newIndexingMaps));
+              ArrayAttr::get(newIndexingMaps, context));
   op->setAttr(getIteratorTypesAttrName(),
-              ArrayAttr::get(context, itTypesVector));
+              ArrayAttr::get(itTypesVector, context));
 
   return op;
 }

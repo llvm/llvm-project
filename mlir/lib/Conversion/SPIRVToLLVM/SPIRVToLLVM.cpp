@@ -687,8 +687,8 @@ public:
         rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, executionModeAttr);
     structValue = rewriter.create<LLVM::InsertValueOp>(
         loc, structType, structValue, executionMode,
-        ArrayAttr::get(context,
-                       {rewriter.getIntegerAttr(rewriter.getI32Type(), 0)}));
+        ArrayAttr::get({rewriter.getIntegerAttr(rewriter.getI32Type(), 0)},
+                       context));
 
     // Insert extra operands if they exist into execution mode info struct.
     for (unsigned i = 0, e = values.size(); i < e; ++i) {
@@ -696,9 +696,9 @@ public:
       Value entry = rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, attr);
       structValue = rewriter.create<LLVM::InsertValueOp>(
           loc, structType, structValue, entry,
-          ArrayAttr::get(context,
-                         {rewriter.getIntegerAttr(rewriter.getI32Type(), 1),
-                          rewriter.getIntegerAttr(rewriter.getI32Type(), i)}));
+          ArrayAttr::get({rewriter.getIntegerAttr(rewriter.getI32Type(), 1),
+                          rewriter.getIntegerAttr(rewriter.getI32Type(), i)},
+                         context));
     }
     rewriter.create<LLVM::ReturnOp>(loc, ArrayRef<Value>({structValue}));
     rewriter.eraseOp(op);
@@ -1297,17 +1297,17 @@ public:
     switch (funcOp.function_control()) {
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
-    newFuncOp->setAttr("passthrough", ArrayAttr::get(context, {llvmAttr}));    \
+    newFuncOp->setAttr("passthrough", ArrayAttr::get({llvmAttr}, context));    \
     break;
 
       DISPATCH(spirv::FunctionControl::Inline,
-               StringAttr::get(context, "alwaysinline"));
+               StringAttr::get("alwaysinline", context));
       DISPATCH(spirv::FunctionControl::DontInline,
-               StringAttr::get(context, "noinline"));
+               StringAttr::get("noinline", context));
       DISPATCH(spirv::FunctionControl::Pure,
-               StringAttr::get(context, "readonly"));
+               StringAttr::get("readonly", context));
       DISPATCH(spirv::FunctionControl::Const,
-               StringAttr::get(context, "readnone"));
+               StringAttr::get("readnone", context));
 
 #undef DISPATCH
 

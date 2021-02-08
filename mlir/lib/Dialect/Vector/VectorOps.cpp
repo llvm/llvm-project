@@ -247,7 +247,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
     if (traitAttrsSet.count(attr.first.strref()) > 0)
       attrs.push_back(attr);
 
-  auto dictAttr = DictionaryAttr::get(op.getContext(), attrs);
+  auto dictAttr = DictionaryAttr::get(attrs, op.getContext());
   p << op.getOperationName() << " " << dictAttr << " " << op.lhs() << ", ";
   p << op.rhs() << ", " << op.acc();
   if (op.masks().size() == 2)
@@ -1445,7 +1445,7 @@ static ArrayAttr makeI64ArrayAttr(ArrayRef<int64_t> values,
   auto attrs = llvm::map_range(values, [context](int64_t v) -> Attribute {
     return IntegerAttr::get(IntegerType::get(context, 64), APInt(64, v));
   });
-  return ArrayAttr::get(context, llvm::to_vector<8>(attrs));
+  return ArrayAttr::get(llvm::to_vector<8>(attrs), context);
 }
 
 static LogicalResult verify(InsertStridedSliceOp op) {
