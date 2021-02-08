@@ -11,7 +11,7 @@
 # RUN: llvm-objdump --macho --all-headers %t/dylib | \
 # RUN:     FileCheck %s --check-prefixes=DYLIB,COMMON
 # RUN: llvm-objdump --macho --all-headers %t/bundle | \
-# RUN:     FileCheck %s --check-prefixes=BUNDLE,COMMON
+# RUN:     FileCheck %s --check-prefix=COMMON
 
 ## Check that load commands and sections within segments occur in the proper
 ## sequence. On ARM64 kernel is especially picky about layout, and will
