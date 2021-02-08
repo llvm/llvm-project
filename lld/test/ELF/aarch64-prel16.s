@@ -27,6 +27,7 @@ _start:
 // 212a5a: S = 0x100, A = 0x1fa05a, P = 0x20215a
 //         S + A - P = 0x8000
 // LE-NEXT: 202158 ffff0080
+// BE-NEXT: 202158 ffff8000
 
 // RUN: not ld.lld -z max-page-size=4096 %t.o %t255.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
 // OVERFLOW1: relocation R_AARCH64_PREL16 out of range: -32769 is not in [-32768, 65535]; references foo
