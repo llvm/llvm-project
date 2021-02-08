@@ -260,12 +260,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       continue;
 
     MVT NewVT = TLI->getRegisterTypeForCallingConv(
-        F.getContext(), F.getCallingConv(), EVT(CurVT));
+        F.getContext(), CCInfo.getCallingConv(), EVT(CurVT));
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
     unsigned NumParts = TLI->getNumRegistersForCallingConv(
-        F.getContext(), F.getCallingConv(), CurVT);
+        F.getContext(), CCInfo.getCallingConv(), CurVT);
 
     if (NumParts == 1) {
       // Try to use the register type if we couldn't assign the VT.
