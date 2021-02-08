@@ -22,6 +22,7 @@
 
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/NativeProcessELF.h"
+#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "ProcessorTrace.h"
 
 namespace lldb_private {
@@ -36,7 +37,8 @@ namespace process_linux {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessLinux : public NativeProcessELF {
+class NativeProcessLinux : public NativeProcessELF,
+                           private NativeProcessSoftwareSingleStep {
 public:
   class Factory : public NativeProcessProtocol::Factory {
   public:
@@ -141,10 +143,6 @@ private:
 
   lldb::tid_t m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
 
-  // List of thread ids stepping with a breakpoint with the address of
-  // the relevan breakpoint
-  std::map<lldb::tid_t, lldb::addr_t> m_threads_stepping_with_breakpoint;
-
   /// Inferior memory (allocated by us) and its size.
   llvm::DenseMap<lldb::addr_t, lldb::addr_t> m_allocated_memory;
 
@@ -172,8 +170,6 @@ private:
 
   void MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread,
                      bool exited);
-
-  Status SetupSoftwareSingleStepping(NativeThreadLinux &thread);
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
