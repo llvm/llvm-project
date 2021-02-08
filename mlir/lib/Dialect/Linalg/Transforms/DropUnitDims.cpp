@@ -137,11 +137,11 @@ static ArrayAttr replaceUnitDims(DenseSet<unsigned> &unitDims,
   // wrong, so abort.
   if (!inversePermutation(concatAffineMaps(newIndexingMaps)))
     return nullptr;
-  return ArrayAttr::get(context,
-                        llvm::to_vector<4>(llvm::map_range(
-                            newIndexingMaps, [](AffineMap map) -> Attribute {
-                              return AffineMapAttr::get(map);
-                            })));
+  return ArrayAttr::get(
+      llvm::to_vector<4>(llvm::map_range(
+          newIndexingMaps,
+          [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); })),
+      context);
 }
 
 /// Modify the region of indexed generic op to drop arguments corresponding to
@@ -220,7 +220,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
 
     rewriter.startRootUpdate(op);
     op.indexing_mapsAttr(newIndexingMapAttr);
-    op.iterator_typesAttr(ArrayAttr::get(context, newIteratorTypes));
+    op.iterator_typesAttr(ArrayAttr::get(newIteratorTypes, context));
     (void)replaceBlockArgForUnitDimLoops(op, unitDims, rewriter);
     rewriter.finalizeRootUpdate(op);
     return success();
@@ -282,7 +282,7 @@ static UnitExtentReplacementInfo replaceUnitExtents(AffineMap indexMap,
       RankedTensorType::get(newShape, type.getElementType()),
       AffineMap::get(indexMap.getNumDims(), indexMap.getNumSymbols(),
                      newIndexExprs, context),
-      ArrayAttr::get(context, reassociationMaps)};
+      ArrayAttr::get(reassociationMaps, context)};
   return info;
 }
 
