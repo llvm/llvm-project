@@ -12,11 +12,23 @@
 # RUN: ld.lld -m aarch64_elf64_le_vec %t.o -o %taosp
 # RUN: llvm-readobj --file-headers %taosp | FileCheck --check-prefixes=AARCH64,LE %s
 
+# RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
+# RUN: ld.lld %t.be.o -o %t
+# RUN: llvm-readobj --file-headers %t | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: ld.lld -m aarch64linuxb %t.be.o -o %t1.be
+# RUN: llvm-readobj --file-headers %t1.be | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: ld.lld -m aarch64elfb %t.be.o -o %t2.be
+# RUN: llvm-readobj --file-headers %t2.be | FileCheck --check-prefixes=AARCH64,BE %s
+# RUN: echo 'OUTPUT_FORMAT(elf64-bigaarch64)' > %t.script
+# RUN: ld.lld %t.script %t.be.o -o %t3.be
+# RUN: llvm-readobj --file-headers %t3.be | FileCheck --check-prefixes=AARCH64,BE %s
+
 # AARCH64:      ElfHeader {
 # AARCH64-NEXT:   Ident {
 # AARCH64-NEXT:     Magic: (7F 45 4C 46)
 # AARCH64-NEXT:     Class: 64-bit (0x2)
 # LE-NEXT:          DataEncoding: LittleEndian (0x1)
+# BE-NEXT:          DataEncoding: BigEndian (0x2)
 # AARCH64-NEXT:     FileVersion: 1
 # AARCH64-NEXT:     OS/ABI: SystemV (0x0)
 # AARCH64-NEXT:     ABIVersion: 0
