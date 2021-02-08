@@ -4882,16 +4882,21 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic,
     unsigned Prefix = Operands.size();
 
     for (;;) {
+      auto Loc = getLoc();
       ResTy = parseReg(Operands);
+      if (ResTy == MatchOperand_NoMatch)
+        Error(Loc, "expected a register");
       if (ResTy != MatchOperand_Success)
-        return ResTy;
+        return MatchOperand_ParseFail;
 
       RBraceLoc = getLoc();
       if (trySkipToken(AsmToken::RBrac))
         break;
 
-      if (!trySkipToken(AsmToken::Comma))
+      if (!skipToken(AsmToken::Comma,
+                     "expected a comma or a closing square bracket")) {
         return MatchOperand_ParseFail;
+      }
     }
 
     if (Operands.size() - Prefix > 1) {

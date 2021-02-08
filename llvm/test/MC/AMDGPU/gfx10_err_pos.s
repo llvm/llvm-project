@@ -295,6 +295,16 @@ s_mov_b64 s[10:11], [s0,s1
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0,s1
 // CHECK-NEXT:{{^}}                          ^
 
+image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
+// CHECK: error: expected a comma or a closing square bracket
+// CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
+// CHECK-NEXT:{{^}}                                       ^
+
+image_load_mip v[253:255], [v255, v254
+// CHECK: error: expected a comma or a closing square bracket
+// CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254
+// CHECK-NEXT:{{^}}                                      ^
+
 //==============================================================================
 // expected a counter name
 
@@ -341,6 +351,19 @@ v_pk_add_u16 v1, v2, v3 op_sel:
 // CHECK: error: expected a left square bracket
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:
 // CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
+// expected a register
+
+image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
+// CHECK: error: expected a register
+// CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
+// CHECK-NEXT:{{^}}                            ^
+
+image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
+// CHECK: error: expected a register
+// CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
+// CHECK-NEXT:{{^}}                            ^
 
 //==============================================================================
 // expected a register or a list of registers
