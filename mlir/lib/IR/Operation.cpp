@@ -76,7 +76,7 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<NamedAttribute> attributes,
                              BlockRange successors, unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                DictionaryAttr::get(attributes, location.getContext()),
+                DictionaryAttr::get(location.getContext(), attributes),
                 successors, numRegions);
 }
 
