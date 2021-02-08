@@ -90,7 +90,6 @@ config("compiler_defaults") {
       }
     } else if (symbol_level == 1) {
       cflags += [ "-g1" ]
-
       # For linetable-only -g1 builds, --gdb-index makes links ~8% slower, but
       # links are 4x faster than -g builds so it's a fairly small absolute cost.
       # On the other hand, gdb startup is well below 1s with and without the
