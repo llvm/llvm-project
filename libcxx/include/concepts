@@ -184,6 +184,11 @@ template<class _Tp>
 concept default_initializable = constructible_from<_Tp> &&
     requires { _Tp{}; } && __default_initializable<_Tp>;
 
+// [concept.moveconstructible]
+template<class _Tp>
+concept move_constructible =
+  constructible_from<_Tp, _Tp> && convertible_to<_Tp, _Tp>;
+
 #endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
 _LIBCPP_END_NAMESPACE_STD
