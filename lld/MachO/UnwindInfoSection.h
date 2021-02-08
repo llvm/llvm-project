@@ -63,15 +63,18 @@ public:
 private:
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
   EncodingMap commonEncodingIndexes;
+  // Indices of personality functions within the GOT.
   std::vector<uint32_t> personalities;
   std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
   std::vector<CompactUnwindEntry64> cuVector;
-  std::vector<const CompactUnwindEntry64 *> cuPtrVector;
+  std::vector<CompactUnwindEntry64 *> cuPtrVector;
   std::vector<SecondLevelPage> secondLevelPages;
   MergedOutputSection *compactUnwindSection = nullptr;
   uint64_t level2PagesOffset = 0;
   uint64_t unwindInfoSize = 0;
 };
+
+void prepareCompactUnwind(InputSection *isec);
 
 } // namespace macho
 } // namespace lld
