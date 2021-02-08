@@ -154,6 +154,7 @@ enum NodeType : unsigned {
   FMUL_VL,
   FDIV_VL,
   FNEG_VL,
+  FMA_VL,
 
   // Set mask vector to all zeros or ones.
   VMCLR_VL,

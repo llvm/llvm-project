@@ -70,6 +70,15 @@ def riscv_fmul_vl : SDNode<"RISCVISD::FMUL_VL", SDT_RISCVFPBinOp_VL, [SDNPCommut
 def riscv_fdiv_vl : SDNode<"RISCVISD::FDIV_VL", SDT_RISCVFPBinOp_VL>;
 def riscv_fneg_vl : SDNode<"RISCVISD::FNEG_VL", SDT_RISCVFPUnOp_VL>;
 
+def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisVec<0>, SDTCisFP<0>,
+                                              SDTCVecEltisVT<4, i1>,
+                                              SDTCisSameNumEltsAs<0, 4>,
+                                              SDTCisVT<5, XLenVT>]>;
+def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL>;
+
 def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCisVec<0>,
                                                 SDTCVecEltisVT<0, i1>,
                                                 SDTCisVT<1, XLenVT>]>;
@@ -178,7 +187,19 @@ defm "" : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
 
-// 14.10. Vector Floating-Point Sign-Injection Instructions
+// 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
+foreach vti = AllFloatVectors in {
+  // NOTE: We choose VFMADD because it has the most commuting freedom. So it
+  // works best with how TwoAddressInstructionPass tries commuting.
+  def : Pat<(vti.Vector (riscv_fma_vl vti.RegClass:$rd, vti.RegClass:$rs1,
+                                      vti.RegClass:$rs2, (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMADD_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+}
+
+// 14.12. Vector Floating-Point Sign-Injection Instructions
 // Handle fneg with VFSGNJN using the same input for both operands.
 foreach vti = AllFloatVectors in {
   def : Pat<(riscv_fneg_vl (vti.Vector vti.RegClass:$rs), (vti.Mask true_mask),
