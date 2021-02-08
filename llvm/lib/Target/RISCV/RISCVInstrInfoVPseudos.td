@@ -445,10 +445,11 @@ class PseudoToVInst<string PseudoInst> {
                  !subst("_B32", "",
                  !subst("_B64", "",
                  !subst("_MASK", "",
+                 !subst("_COMMUTABLE", "",
                  !subst("F16", "F",
                  !subst("F32", "F",
                  !subst("F64", "F",
-                 !subst("Pseudo", "", PseudoInst)))))))))))))))))));
+                 !subst("Pseudo", "", PseudoInst))))))))))))))))))));
 }
 
 class ToLowerCase<string Upper> {
@@ -1777,6 +1778,23 @@ multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
 multiclass VPseudoTernaryV_VV_VF_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
   defm "" : VPseudoTernaryV_VF_AAXA<Constraint>;
+
+  foreach m = MxList.m in {
+    // Add a commutable version for use by IR fma.
+    // NOTE: We need this because we use a tail undisturbed policy on the
+    // intrinsic version so we can't commute those instructions since it would
+    // change which input operand is tied to the destination. That would
+    // remove user control of the tail elements.
+    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in {
+      def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
+                                                               m.vrclass,
+                                                               m.vrclass,
+                                                               Constraint>;
+      foreach f = FPList.fpinfo in
+        def "_V" # f.FX # "_" # m.MX # "_COMMUTABLE" :
+           VPseudoTernaryNoMask<m.vrclass, f.fprclass, m.vrclass, Constraint>;
+    }
+  }
 }
 
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -1817,7 +1835,7 @@ multiclass VPseudoBinaryM_VX_VI {
 
 multiclass VPseudoReductionV_VS {
   foreach m = MxList.m in {
-    let WritesElement0 = 1 in
+    let ForceTailAgnostic = true in
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>;
   }
 }
@@ -3640,8 +3658,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
       def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
                                              (ins m.vrclass:$rs2, ixlenimm:$sew),
                                              []>, RISCVVPseudo;
-      let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, WritesElement0 = 1,
-          Constraints = "$rd = $rs1" in
+      let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
+          ForceTailAgnostic = true, Constraints = "$rd = $rs1" in
       def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
                                              (ins m.vrclass:$rs1, GPR:$rs2,
                                                   GPR:$vl, ixlenimm:$sew),
@@ -3667,8 +3685,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
                                                  (ins m.vrclass:$rs2,
                                                       ixlenimm:$sew),
                                                  []>, RISCVVPseudo;
-        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, WritesElement0 = 1,
-            Constraints = "$rd = $rs1" in
+        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+            ForceTailAgnostic = true, Constraints = "$rd = $rs1" in
         def "PseudoVFMV_S_" # f.FX # "_" # m.MX :
                                           Pseudo<(outs m.vrclass:$rd),
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
