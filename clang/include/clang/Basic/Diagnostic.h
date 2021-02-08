@@ -806,7 +806,6 @@ public:
     return FatalErrorOccurred || UnrecoverableErrorOccurred;
   }
 
-  unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
 
   void setNumWarnings(unsigned NumWarnings) {
