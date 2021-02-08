@@ -96,12 +96,14 @@ set(ocl_sources
   
 set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hip_atomics.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.h
   ${devicertl_base_directory}/common/debug.h
   ${devicertl_base_directory}/common/device_environment.h
   ${devicertl_base_directory}/common/omptarget.h
   ${devicertl_base_directory}/common/omptargeti.h
   ${devicertl_base_directory}/common/state-queue.h
+  ${devicertl_base_directory}/common/target_atomic.h
   ${devicertl_base_directory}/common/state-queuei.h
   ${devicertl_base_directory}/common/support.h)
 
@@ -122,7 +124,7 @@ message("======> list of AMDGCN GPUs to build for :${mcpus}")
 macro(add_ocl_bc_library dir)
   set(cl_cmd ${AOMP_BINDIR}/clang
     -fvisibility=default
-    -S -nogpulib -nogpuinc -emit-llvm
+    -S -nogpulib -emit-llvm
     -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
     -Dcl_khr_fp64 -Dcl_khr_fp16
     -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
@@ -136,6 +138,9 @@ macro(add_ocl_bc_library dir)
     -I${ROCM_DIR}/include)
   set(cl_bc_files)
   file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
+  if(NOT ${AOMP_STANDALONE_BUILD})
+    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
+  endif(NOT ${AOMP_STANDALONE_BUILD})
 
   foreach(file ${ARGN})
      file(RELATIVE_PATH rfile ${dir} ${file})
@@ -160,21 +165,23 @@ endmacro()
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
     -std=c++14
-    -xc++
+    -fcuda-rdc
     -c
+    -D_OPENMP # FIXME This gets around ~./clang/lib/Headers/__clang_hip_runtime_wrapper.h
     -fvisibility=default
     --cuda-device-only
-    -fopenmp-cuda-mode # skip data sharing prologue on device functions
     -Wno-unused-value
-    -nogpulib
-    -D__AMDGCN__ # Code uses this to distinguish vs nvptx
-    -target x86_64-pc-linux-gnu -fopenmp
-    -fopenmp-targets=amdgcn-amd-amdhsa
-    -Xopenmp-target=amdgcn-amd-amdhsa -march=${mcpu}
+    -x hip
+    -nogpulib -nogpuinc
     -O${optimization_level}
+    --cuda-gpu-arch=${mcpu}
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory})
+
+  if(NOT ${AOMP_STANDALONE_BUILD})
+    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
+  endif(NOT ${AOMP_STANDALONE_BUILD})
 
   set(bc1_files)
 

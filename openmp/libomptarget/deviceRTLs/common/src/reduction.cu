@@ -9,9 +9,9 @@
 // This file contains the implementation of reduction with KMPC interface.
 //
 //===----------------------------------------------------------------------===//
-#pragma omp declare target
 
 #include "common/omptarget.h"
+#include "common/target_atomic.h"
 #include "target_impl.h"
 
 EXTERN
@@ -191,6 +191,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
       checkSPMDMode(loc), checkRuntimeUninitialized(loc));
 }
 
+
 // This apparently unused function is currently called by flang
 EXTERN
 int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
@@ -210,8 +211,6 @@ INLINE static uint32_t roundToWarpsize(uint32_t s) {
     return 1;
   return (s & ~(unsigned)(WARPSIZE - 1));
 }
-
-INLINE static uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
 DEVICE static volatile uint32_t IterCnt = 0;
 DEVICE static volatile uint32_t Cnt = 0;
@@ -240,8 +239,8 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
-  static unsigned SHARED(Bound);
-  static unsigned SHARED(ChunkTeamCount);
+  static SHARED unsigned Bound;
+  static SHARED unsigned ChunkTeamCount;
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal
@@ -294,7 +293,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   //         by returning 1 in the thread holding the reduction result.
 
   // Check if this is the very last team.
-  unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
+  unsigned NumRecs = __kmpc_impl_min(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
     //
     // Last team processing.
@@ -305,7 +304,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 #endif /*OMPD_SUPPORT*/
       return 0;
     }
-    NumThreads = roundToWarpsize(kmpcMin(NumThreads, NumRecs));
+    NumThreads = roundToWarpsize(__kmpc_impl_min(NumThreads, NumRecs));
     if (ThreadId >= NumThreads) {
 #ifdef OMPD_SUPPORT
       ompd_reset_device_thread_state();
@@ -324,7 +323,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 
       // When we have more than [warpsize] number of threads
       // a block reduction is performed here.
-      uint32_t ActiveThreads = kmpcMin(NumRecs, NumThreads);
+      uint32_t ActiveThreads = __kmpc_impl_min(NumRecs, NumThreads);
       if (ActiveThreads > WARPSIZE) {
         uint32_t WarpsNeeded = (ActiveThreads + WARPSIZE - 1) / WARPSIZE;
         // Gather all the reduced values from each warp
@@ -361,4 +360,3 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   return 0;
 }
 
-#pragma omp end declare target

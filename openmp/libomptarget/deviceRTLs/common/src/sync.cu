@@ -9,7 +9,6 @@
 // Include all synchronization.
 //
 //===----------------------------------------------------------------------===//
-#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "target_impl.h"
@@ -136,5 +135,3 @@ EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask) {
   PRINT0(LD_IO, "call __kmpc_syncwarp\n");
   __kmpc_impl_syncwarp(Mask);
 }
-
-#pragma omp end declare target

@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "common/target_atomic.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Task Descriptor
 ////////////////////////////////////////////////////////////////////////////////
@@ -41,7 +43,6 @@ omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   items.flags = 0;
   items.threadId = 0;         // is master
   items.runtimeChunkSize = 1; // preferred chunking statik with chunk 1
-  items.parLev = 0;
 }
 
 // This is called when all threads are started together in SPMD mode.
@@ -59,7 +60,6 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelOneTaskDescr(
   items.threadId =
       GetThreadIdInBlock(); // get ids from cuda (only called for 1st level)
   items.runtimeChunkSize = 1; // preferred chunking statik with chunk 1
-  items.parLev = parentTaskDescr->items.parLev + 1;
   prev = parentTaskDescr;
 }
 

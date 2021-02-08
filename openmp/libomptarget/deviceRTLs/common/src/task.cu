@@ -26,7 +26,6 @@
 //    - end
 //
 //===----------------------------------------------------------------------===//
-#pragma omp declare target
 
 #include "common/omptarget.h"
 
@@ -222,5 +221,3 @@ EXTERN void __kmpc_taskloop(kmp_Ident *loc, uint32_t global_tid,
 
   __kmpc_omp_task_with_deps(loc, global_tid, newKmpTaskDescr, 0, 0, 0, 0);
 }
-
-#pragma omp end declare target

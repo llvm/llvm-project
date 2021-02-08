@@ -14,12 +14,9 @@
 // The closest approximatation we can implement is to lock per-wavefront.
 //
 //===----------------------------------------------------------------------===//
-#pragma omp declare target
 
-
-#include "common/omptarget.h"
-#include "target_interface.h"
 #include "common/support.h"
+#include "common/target_atomic.h"
 #include "target_impl.h"
 
 #define UNSET 0u
@@ -52,4 +49,3 @@ DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock) {
   // Could be an atomic load
   return __kmpc_atomic_add(lock, 0u);
 }
-#pragma omp end declare target
