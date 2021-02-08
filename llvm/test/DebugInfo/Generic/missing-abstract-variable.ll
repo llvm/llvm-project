@@ -3,7 +3,7 @@
 ; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
 ; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
 ; issue.
-; XFAIL: powerpc64
+; XFAIL: powerpc64, aarch64
 
 ; Build from the following source with clang -O2.
 
