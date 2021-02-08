@@ -23,6 +23,20 @@
 # RUN: ld.lld %t.script %t.be.o -o %t3.be
 # RUN: llvm-readobj --file-headers %t3.be | FileCheck --check-prefixes=AARCH64,BE %s
 
+## Test OUTPUT_FORMAT(default, big, little).
+# RUN: echo 'OUTPUT_FORMAT("elf64-littleaarch64", "elf64-bigaarch64", "elf64-littleaarch64")' > %t.script
+# RUN: ld.lld -EL -T %t.script %t.o -o %t4.le
+# RUN: llvm-readobj --file-headers %t4.le | FileCheck --check-prefixes=AARCH64,LE %s
+# RUN: not ld.lld -EB -T %t.script %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_BE %s
+
+# RUN: not ld.lld -T %t.script %t.be.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_LE %s
+# RUN: not ld.lld -EL -T %t.script %t.be.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_LE %s
+# RUN: ld.lld -EB -T %t.script %t.be.o -o %t4.be
+# RUN: llvm-readobj --file-headers %t4.be | FileCheck --check-prefixes=AARCH64,BE %s
+
+# ERR_LE: error: {{.*}}.o is incompatible with elf64-littleaarch64
+# ERR_BE: error: {{.*}}.o is incompatible with elf64-bigaarch64
+
 # AARCH64:      ElfHeader {
 # AARCH64-NEXT:   Ident {
 # AARCH64-NEXT:     Magic: (7F 45 4C 46)
