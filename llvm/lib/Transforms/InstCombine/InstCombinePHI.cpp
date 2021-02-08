@@ -592,8 +592,14 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
   BasicBlock::iterator BBI = L->getIterator(), E = L->getParent()->end();
 
   for (++BBI; BBI != E; ++BBI)
-    if (BBI->mayWriteToMemory())
+    if (BBI->mayWriteToMemory()) {
+      // Calls that only access inaccessible memory do not block sinking the
+      // load.
+      if (auto *CB = dyn_cast<CallBase>(BBI))
+        if (CB->onlyAccessesInaccessibleMemory())
+          continue;
       return false;
+    }
 
   // Check for non-address taken alloca.  If not address-taken already, it isn't
   // profitable to do this xform.

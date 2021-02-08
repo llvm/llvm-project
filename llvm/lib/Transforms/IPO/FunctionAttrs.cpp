@@ -149,6 +149,13 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
       if (isNoModRef(MRI))
         continue;
 
+      // A pseudo probe call shouldn't change any function attribute since it
+      // doesn't translate to a real instruction. It comes with a memory access
+      // tag to prevent itself being removed by optimizations and not block
+      // other instructions being optimized.
+      if (isa<PseudoProbeInst>(I))
+        continue;
+
       if (!AliasAnalysis::onlyAccessesArgPointees(MRB)) {
         // The call could access any memory. If that includes writes, note it.
         if (isModSet(MRI))
