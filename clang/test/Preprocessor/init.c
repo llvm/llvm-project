@@ -1473,6 +1473,15 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-unknown-unknown \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-emscripten \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,EMSCRIPTEN %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-emscripten -pthread -target-feature +atomics \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,EMSCRIPTEN,EMSCRIPTEN-THREADS %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-emscripten \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,EMSCRIPTEN %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WEBASSEMBLY-WASI %s
@@ -1490,6 +1499,7 @@
 // WEBASSEMBLY32-NOT:#define _LP64
 // WEBASSEMBLY64-NOT:#define _ILP32
 // WEBASSEMBLY64:#define _LP64 1
+// EMSCRIPTEN-THREADS:#define _REENTRANT 1
 // WEBASSEMBLY-NEXT:#define __ATOMIC_ACQUIRE 2
 // WEBASSEMBLY-NEXT:#define __ATOMIC_ACQ_REL 4
 // WEBASSEMBLY-NEXT:#define __ATOMIC_CONSUME 1
@@ -1529,6 +1539,8 @@
 // WEBASSEMBLY-NEXT:#define __DBL_MIN__ 2.2250738585072014e-308
 // WEBASSEMBLY-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY-NOT:#define __ELF__
+// EMSCRIPTEN-THREADS-NEXT:#define __EMSCRIPTEN_PTHREADS__ 1
+// EMSCRIPTEN-NEXT:#define __EMSCRIPTEN__ 1
 // WEBASSEMBLY-NEXT:#define __FINITE_MATH_ONLY__ 0
 // WEBASSEMBLY-NEXT:#define __FLOAT128__ 1
 // WEBASSEMBLY-NOT:#define __FLT16_DECIMAL_DIG__

@@ -592,8 +592,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
         if (sec.sh_link != 0)
           this->addrsigSec = &sec;
         else if (config->icf == ICFLevel::Safe)
-          warn(toString(this) + ": --icf=safe is incompatible with object "
-                                "files created using objcopy or ld -r");
+          warn(toString(this) +
+               ": --icf=safe conservatively ignores "
+               "SHT_LLVM_ADDRSIG [index " +
+               Twine(i) +
+               "] with sh_link=0 "
+               "(likely created using objcopy or ld -r)");
       }
       this->sections[i] = &InputSection::discarded;
       continue;
@@ -1604,6 +1608,7 @@ static ELFKind getBitcodeELFKind(const Triple &t) {
 static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
   switch (t.getArch()) {
   case Triple::aarch64:
+  case Triple::aarch64_be:
     return EM_AARCH64;
   case Triple::amdgcn:
   case Triple::r600:

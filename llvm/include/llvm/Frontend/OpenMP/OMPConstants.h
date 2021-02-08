@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_CONSTANTS_H
-#define LLVM_OPENMP_CONSTANTS_H
+#ifndef LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H
+#define LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 
@@ -111,4 +111,4 @@ inline std::string getAllAssumeClauseOptions() {
 
 } // end namespace llvm
 
-#endif // LLVM_OPENMP_CONSTANTS_H
+#endif // LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H

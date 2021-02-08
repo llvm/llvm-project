@@ -765,9 +765,8 @@ void UnloopUpdater::updateBlockParents() {
 void UnloopUpdater::removeBlocksFromAncestors() {
   // Remove all unloop's blocks (including those in nested subloops) from
   // ancestors below the new parent loop.
-  for (Loop::block_iterator BI = Unloop.block_begin(), BE = Unloop.block_end();
-       BI != BE; ++BI) {
-    Loop *OuterParent = LI->getLoopFor(*BI);
+  for (BasicBlock *BB : Unloop.blocks()) {
+    Loop *OuterParent = LI->getLoopFor(BB);
     if (Unloop.contains(OuterParent)) {
       while (OuterParent->getParentLoop() != &Unloop)
         OuterParent = OuterParent->getParentLoop();
@@ -778,7 +777,7 @@ void UnloopUpdater::removeBlocksFromAncestors() {
     for (Loop *OldParent = Unloop.getParentLoop(); OldParent != OuterParent;
          OldParent = OldParent->getParentLoop()) {
       assert(OldParent && "new loop is not an ancestor of the original");
-      OldParent->removeBlockFromLoop(*BI);
+      OldParent->removeBlockFromLoop(BB);
     }
   }
 }

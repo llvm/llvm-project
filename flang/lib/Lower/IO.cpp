@@ -490,7 +490,7 @@ lowerSourceTextAsStringLit(Fortran::lower::AbstractConverter &converter,
   text = text.take_front(text.rfind(')') + 1);
   auto &builder = converter.getFirOpBuilder();
   auto lit = builder.createStringLit(
-      loc, /*FIXME*/ fir::CharacterType::get(builder.getContext(), 1), text);
+      loc, /*FIXME*/ fir::CharacterType::get(builder.getContext(), 1, 1), text);
   auto data =
       Fortran::lower::CharacterExprHelper{builder, loc}.materializeCharacter(
           lit);

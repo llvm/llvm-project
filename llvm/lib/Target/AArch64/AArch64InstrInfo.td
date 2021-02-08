@@ -979,7 +979,7 @@ let Predicates = [HasComplxNum, HasNEON] in {
   }
 }
 
-multiclass FCMLA_PATS<ValueType ty, RegisterClass Reg> {
+multiclass FCMLA_PATS<ValueType ty, DAGOperand Reg> {
   def : Pat<(ty (int_aarch64_neon_vcmla_rot0 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
             (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 0)>;
   def : Pat<(ty (int_aarch64_neon_vcmla_rot90 (ty Reg:$Rd), (ty Reg:$Rn), (ty Reg:$Rm))),
@@ -990,7 +990,7 @@ multiclass FCMLA_PATS<ValueType ty, RegisterClass Reg> {
             (!cast<Instruction>("FCMLA" # ty) $Rd, $Rn, $Rm, 3)>;
 }
 
-multiclass FCMLA_LANE_PATS<ValueType ty, RegisterClass Reg, dag RHSDup> {
+multiclass FCMLA_LANE_PATS<ValueType ty, DAGOperand Reg, dag RHSDup> {
   def : Pat<(ty (int_aarch64_neon_vcmla_rot0 (ty Reg:$Rd), (ty Reg:$Rn), RHSDup)),
             (!cast<Instruction>("FCMLA" # ty # "_indexed") $Rd, $Rn, $Rm, VectorIndexS:$idx, 0)>;
   def : Pat<(ty (int_aarch64_neon_vcmla_rot90 (ty Reg:$Rd), (ty Reg:$Rn), RHSDup)),
@@ -3237,7 +3237,7 @@ def : Pat<(truncstorei8 GPR64:$Rt, (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
 } // AddedComplexity = 10
 
 // Match stores from lane 0 to the appropriate subreg's store.
-multiclass VecStoreLane0Pat<Operand UIAddrMode, SDPatternOperator storeop,
+multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
                             ValueType VTy, ValueType STy,
                             SubRegIndex SubRegIdx, Operand IndexType,
                             Instruction STR> {

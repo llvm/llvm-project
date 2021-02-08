@@ -141,7 +141,7 @@ public:
   }
 
   bool isDeviceMangleContext() const override { return IsDevCtx; }
-  void setDeviceMangleContext(bool IsDev) override { IsDevCtx = IsDev;}
+  void setDeviceMangleContext(bool IsDev) override { IsDevCtx = IsDev; }
 
   void mangleCXXName(GlobalDecl GD, raw_ostream &) override;
   void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
@@ -1882,6 +1882,12 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // (in lexical order) with that same <lambda-sig> and context.
   //
   // The AST keeps track of the number for us.
+  //
+  // In CUDA/HIP, to ensure the consistent lamba numbering between the device-
+  // and host-side compilations, an extra device mangle context may be created
+  // if the host-side CXX ABI has different numbering for lambda. In such case,
+  // if the mangle context is that device-side one, use the device-side lambda
+  // mangling number for this lambda.
   unsigned Number = Context.isDeviceMangleContext()
                         ? Lambda->getDeviceLambdaManglingNumber()
                         : Lambda->getLambdaManglingNumber();

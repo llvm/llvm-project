@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLEBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLEBUILDER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
@@ -67,4 +67,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLEBUILDER_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLEBUILDER_H

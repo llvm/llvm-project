@@ -48,4 +48,4 @@ public:
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H
+#endif // LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H

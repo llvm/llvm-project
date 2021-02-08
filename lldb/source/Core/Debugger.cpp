@@ -816,24 +816,9 @@ void Debugger::SaveInputTerminalState() {
 void Debugger::RestoreInputTerminalState() { m_terminal_state.Restore(); }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
-  ExecutionContext exe_ctx;
-  TargetSP target_sp(GetSelectedTarget());
-  exe_ctx.SetTargetSP(target_sp);
-
-  if (target_sp) {
-    ProcessSP process_sp(target_sp->GetProcessSP());
-    exe_ctx.SetProcessSP(process_sp);
-    if (process_sp && !process_sp->IsRunning()) {
-      ThreadSP thread_sp(process_sp->GetThreadList().GetSelectedThread());
-      if (thread_sp) {
-        exe_ctx.SetThreadSP(thread_sp);
-        exe_ctx.SetFrameSP(thread_sp->GetSelectedFrame());
-        if (exe_ctx.GetFramePtr() == nullptr)
-          exe_ctx.SetFrameSP(thread_sp->GetStackFrameAtIndex(0));
-      }
-    }
-  }
-  return exe_ctx;
+  bool adopt_selected = true;
+  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
+  return ExecutionContext(exe_ctx_ref);
 }
 
 void Debugger::DispatchInputInterrupt() {

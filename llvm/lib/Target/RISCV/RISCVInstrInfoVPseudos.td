@@ -14,6 +14,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
+def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
+                              SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
+                                                   SDTCisVT<1, XLenVT>,
+                                                   SDTCisVT<2, XLenVT>]>>;
+def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
+                               SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisEltOfVec<1, 0>,
+                                                    SDTCisVT<2, XLenVT>]>>;
+
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
@@ -445,10 +454,11 @@ class PseudoToVInst<string PseudoInst> {
                  !subst("_B32", "",
                  !subst("_B64", "",
                  !subst("_MASK", "",
+                 !subst("_COMMUTABLE", "",
                  !subst("F16", "F",
                  !subst("F32", "F",
                  !subst("F64", "F",
-                 !subst("Pseudo", "", PseudoInst)))))))))))))))))));
+                 !subst("Pseudo", "", PseudoInst))))))))))))))))))));
 }
 
 class ToLowerCase<string Upper> {
@@ -1777,6 +1787,23 @@ multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
 multiclass VPseudoTernaryV_VV_VF_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
   defm "" : VPseudoTernaryV_VF_AAXA<Constraint>;
+
+  foreach m = MxList.m in {
+    // Add a commutable version for use by IR fma.
+    // NOTE: We need this because we use a tail undisturbed policy on the
+    // intrinsic version so we can't commute those instructions since it would
+    // change which input operand is tied to the destination. That would
+    // remove user control of the tail elements.
+    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in {
+      def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
+                                                               m.vrclass,
+                                                               m.vrclass,
+                                                               Constraint>;
+      foreach f = FPList.fpinfo in
+        def "_V" # f.FX # "_" # m.MX # "_COMMUTABLE" :
+           VPseudoTernaryNoMask<m.vrclass, f.fprclass, m.vrclass, Constraint>;
+    }
+  }
 }
 
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -1817,7 +1844,7 @@ multiclass VPseudoBinaryM_VX_VI {
 
 multiclass VPseudoReductionV_VS {
   foreach m = MxList.m in {
-    let WritesElement0 = 1 in
+    let ForceTailAgnostic = true in
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>;
   }
 }
@@ -3640,8 +3667,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
       def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
                                              (ins m.vrclass:$rs2, ixlenimm:$sew),
                                              []>, RISCVVPseudo;
-      let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, WritesElement0 = 1,
-          Constraints = "$rd = $rs1" in
+      let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
+          ForceTailAgnostic = true, Constraints = "$rd = $rs1" in
       def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
                                              (ins m.vrclass:$rs1, GPR:$rs2,
                                                   GPR:$vl, ixlenimm:$sew),
@@ -3667,8 +3694,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
                                                  (ins m.vrclass:$rs2,
                                                       ixlenimm:$sew),
                                                  []>, RISCVVPseudo;
-        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, WritesElement0 = 1,
-            Constraints = "$rd = $rs1" in
+        let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
+            ForceTailAgnostic = true, Constraints = "$rd = $rs1" in
         def "PseudoVFMV_S_" # f.FX # "_" # m.MX :
                                           Pseudo<(outs m.vrclass:$rd),
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
@@ -4030,10 +4057,10 @@ foreach vti = AllVectors in {
 }
 
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (int_riscv_vmv_v_x GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
              $rs2, GPR:$vl, vti.SEW)>;
-  def : Pat<(vti.Vector (int_riscv_vmv_v_x simm5:$imm5, (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl simm5:$imm5, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
              simm5:$imm5, GPR:$vl, vti.SEW)>;
 }
@@ -4188,12 +4215,12 @@ foreach fvti = AllFloatVectors in {
 //===----------------------------------------------------------------------===//
 foreach fvti = AllFloatVectors in {
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
-  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
              0, GPR:$vl, fvti.SEW)>;
 
-  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
                                 fvti.LMul.MX)
@@ -4417,3 +4444,4 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 
 // Include the non-intrinsic ISel patterns
 include "RISCVInstrInfoVSDPatterns.td"
+include "RISCVInstrInfoVVLPatterns.td"

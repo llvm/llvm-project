@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_DEPENDENCE_GRAPH_BUILDER_H
-#define LLVM_ANALYSIS_DEPENDENCE_GRAPH_BUILDER_H
+#ifndef LLVM_ANALYSIS_DEPENDENCEGRAPHBUILDER_H
+#define LLVM_ANALYSIS_DEPENDENCEGRAPHBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -200,4 +200,4 @@ protected:
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_DEPENDENCE_GRAPH_BUILDER_H
+#endif // LLVM_ANALYSIS_DEPENDENCEGRAPHBUILDER_H

@@ -1878,6 +1878,14 @@ let Predicates = [HasMVEInt] in {
             (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane)>;
   def : Pat<(ARMvgetlaneu (v8f16 MQPR:$src), imm:$lane),
             (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane)>;
+  // For i16's inserts being extracted from low lanes, then may use VINS.
+  def : Pat<(ARMinsertelt (v8i16 MQPR:$src1),
+                          (ARMvgetlaneu (v8i16 MQPR:$src2), imm_even:$extlane),
+                          imm_odd:$inslane),
+            (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$src1, MQPR)),
+                                (VINSH (EXTRACT_SUBREG MQPR:$src1, (SSubReg_f16_reg imm_odd:$inslane)),
+                                       (EXTRACT_SUBREG MQPR:$src2, (SSubReg_f16_reg imm_even:$extlane))),
+                                (SSubReg_f16_reg imm_odd:$inslane)), MQPR)>;
 
   def : Pat<(v16i8 (scalar_to_vector GPR:$src)),
             (MVE_VMOV_to_lane_8  (v16i8 (IMPLICIT_DEF)), rGPR:$src, (i32 0))>;
@@ -1901,6 +1909,8 @@ let Predicates = [HasMVEInt] in {
               (VMOVH (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_odd:$lane))),
               HPR)>;
 
+  def : Pat<(v2f64 (scalar_to_vector (f64 DPR:$src))),
+            (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
   def : Pat<(v4f32 (scalar_to_vector SPR:$src)),
             (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), SPR:$src, ssub_0)>;
   def : Pat<(v4f32 (scalar_to_vector GPR:$src)),

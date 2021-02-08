@@ -1739,14 +1739,10 @@ public:
   }
 
   /// Set the device side mangling number.
-  void setDeviceLambdaManglingNumber(unsigned Num) {
-    getLambdaData().DeviceManglingNumber = Num;
-  }
+  void setDeviceLambdaManglingNumber(unsigned Num) const;
 
-  unsigned getDeviceLambdaManglingNumber() const {
-    assert(isLambda() && "Not a lambda closure type!");
-    return getLambdaData().DeviceManglingNumber;
-  }
+  /// Retrieve the device side mangling number.
+  unsigned getDeviceLambdaManglingNumber() const;
 
   /// Returns the inheritance model used for this record.
   MSInheritanceModel getMSInheritanceModel() const;

@@ -313,4 +313,4 @@ void gcovOneInput(const GCOV::Options &options, StringRef filename,
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_GCOV_H
+#endif // LLVM_PROFILEDATA_GCOV_H

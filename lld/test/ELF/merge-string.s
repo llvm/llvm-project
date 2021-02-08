@@ -94,11 +94,11 @@ zed:
 // CHECK-NEXT: )
 
 
-// CHECK:      Name:    bar
-// CHECK-NEXT: Value: 0x20E
-
 // CHECK:      Name:    foo
 // CHECK-NEXT: Value: 0x20D
+
+// CHECK:      Name:    bar
+// CHECK-NEXT: Value: 0x20E
 
 // CHECK:      Name: zed
 // CHECK-NEXT: Value: 0x212

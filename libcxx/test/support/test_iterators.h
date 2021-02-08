@@ -315,6 +315,8 @@ operator-(const random_access_iterator<T>& x, const random_access_iterator<U>& y
 template <class It>
 class contiguous_iterator
 {
+    static_assert(std::is_pointer_v<It>, "Things probably break in this case");
+
     It it_;
 
     template <class U> friend class contiguous_iterator;
@@ -324,14 +326,14 @@ public:
     typedef typename std::iterator_traits<It>::difference_type difference_type;
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
-    typedef typename std::iterator_traits<It>::value_type      element_type;
+    typedef typename std::remove_pointer<It>::type             element_type;
 
     TEST_CONSTEXPR_CXX14 It base() const {return it_;}
 
     TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
     explicit TEST_CONSTEXPR_CXX14 contiguous_iterator(It it) : it_(it) {}
     template <class U>
-        TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) :it_(u.it_) {}
+        TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
     TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}

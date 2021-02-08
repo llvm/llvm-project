@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
-#define LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_RAWTYPES_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_RAWTYPES_H
 
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"

@@ -96,7 +96,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.read_registers(process)
-        self.assertFalse("g" in self.server.responder.packetLog)
+        self.assertNotIn("g", self.server.responder.packetLog)
         self.assertGreater(
                 len([p for p in self.server.responder.packetLog if p.startswith("p")]), 0)
 

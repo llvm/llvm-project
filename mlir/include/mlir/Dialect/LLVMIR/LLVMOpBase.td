@@ -63,21 +63,6 @@ def LLVM_AnyInteger : Type<
   CPred<"$_self.isa<::mlir::IntegerType>()">,
   "LLVM integer type">;
 
-// Type constraints accepting LLVM integer type of a specific width.
-class LLVM_IntBase<int width> :
-    Type<And<[
-        LLVM_AnyInteger.predicate,
-        CPred<"$_self.cast<::mlir::IntegerType>().getWidth() == "
-              # width>]>,
-        "LLVM " # width # "-bit integer type">,
-    BuildableType<
-        "::mlir::IntegerType::get($_builder.getContext(), "
-        # width # ")">;
-
-def LLVM_i1 : LLVM_IntBase<1>;
-def LLVM_i8 : LLVM_IntBase<8>;
-def LLVM_i32 : LLVM_IntBase<32>;
-
 // Type constraint accepting LLVM primitive types, i.e. all types except void
 // and function.
 def LLVM_PrimitiveType : Type<
@@ -107,8 +92,8 @@ class LLVM_PointerTo<Type pointee> : Type<
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
 class LLVM_IntPtrBase<int width> : Type<
-  LLVM_PointerTo<LLVM_IntBase<width>>.predicate,
-  "LLVM pointer to " # LLVM_IntBase<width>.summary>,
+  LLVM_PointerTo<I<width>>.predicate,
+  "LLVM pointer to " # I<width>.summary>,
   BuildableType<"::mlir::LLVM::LLVMPointerType::get("
                 "::mlir::IntegerType::get($_builder.getContext(), "
                 # width #"))">;

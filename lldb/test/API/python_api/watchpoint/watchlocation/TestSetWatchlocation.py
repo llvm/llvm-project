@@ -28,7 +28,6 @@ class SetWatchlocationAPITestCase(TestBase):
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
 
-    @add_test_categories(['pyapi'])
     def test_watch_location(self):
         """Exercise SBValue.WatchPointee() API to set a watchpoint."""
         self.build()

@@ -127,7 +127,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 self.assertTrue(line, lines[index])
                 # Store the "id" of the breakpoint that was set for later
                 line_to_id[line] = breakpoint['id']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint verified")
 
@@ -153,7 +153,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -172,7 +172,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -202,7 +202,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -217,7 +217,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -248,7 +248,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertTrue(line, lines[index])
             # Store the "id" of the breakpoint that was set for later
             line_to_id[line] = breakpoint['id']
-            self.assertTrue(line in lines, "line expected in lines array")
+            self.assertIn(line, lines, "line expected in lines array")
             self.assertTrue(breakpoint['verified'],
                             "expect breakpoint verified")
 

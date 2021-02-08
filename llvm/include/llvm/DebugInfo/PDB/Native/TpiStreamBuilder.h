@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAMBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAMBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_TPISTREAMBUILDER_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"

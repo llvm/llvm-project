@@ -210,6 +210,7 @@ WebAssemblyInstrInfo::getSerializableTargetIndices() const {
       {WebAssembly::TI_LOCAL, "wasm-local"},
       {WebAssembly::TI_GLOBAL_FIXED, "wasm-global-fixed"},
       {WebAssembly::TI_OPERAND_STACK, "wasm-operand-stack"},
-      {WebAssembly::TI_GLOBAL_RELOC, "wasm-global-reloc"}};
+      {WebAssembly::TI_GLOBAL_RELOC, "wasm-global-reloc"},
+      {WebAssembly::TI_LOCAL_INDIRECT, "wasm-local-indirect"}};
   return makeArrayRef(TargetIndices);
 }

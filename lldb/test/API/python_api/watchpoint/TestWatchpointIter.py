@@ -30,7 +30,6 @@ class WatchpointIteratorTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     def test_watch_iter(self):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()

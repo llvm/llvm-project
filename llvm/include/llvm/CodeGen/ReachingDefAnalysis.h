@@ -18,8 +18,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_REACHINGDEFSANALYSIS_H
-#define LLVM_CODEGEN_REACHINGDEFSANALYSIS_H
+#ifndef LLVM_CODEGEN_REACHINGDEFANALYSIS_H
+#define LLVM_CODEGEN_REACHINGDEFANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -278,4 +278,4 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_REACHINGDEFSANALYSIS_H
+#endif // LLVM_CODEGEN_REACHINGDEFANALYSIS_H

@@ -6,9 +6,9 @@ declare void @llvm.assume(i1)
 
 define void @test1(i32 %a) {
 ; CHECK-LABEL: Cached assumptions for function: test1
-; CHECK-NEXT: icmp ne i32 %{{.*}}, 0
-; CHECK-NEXT: icmp slt i32 %{{.*}}, 0
-; CHECK-NEXT: icmp sgt i32 %{{.*}}, 0
+; CHECK-DAG: icmp ne i32 %{{.*}}, 0
+; CHECK-DAG: icmp slt i32 %{{.*}}, 0
+; CHECK-DAG: icmp sgt i32 %{{.*}}, 0
 
 entry:
   %cond1 = icmp ne i32 %a, 0

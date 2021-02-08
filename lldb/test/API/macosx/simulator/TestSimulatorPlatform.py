@@ -29,7 +29,7 @@ class TestSimulatorPlatformLaunching(TestBase):
     def check_debugserver(self, log, expected_platform, expected_version):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
-        self.assertTrue('ostype' in process_info)
+        self.assertIn('ostype', process_info)
         self.assertEquals(process_info['ostype'], expected_platform)
         dylib_info = lldbutil.packetlog_get_dylib_info(log)
         self.assertTrue(dylib_info)

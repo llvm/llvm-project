@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_STAGE_H
-#define LLVM_MCA_STAGE_H
+#ifndef LLVM_MCA_STAGES_STAGE_H
+#define LLVM_MCA_STAGES_STAGE_H
 
 #include "llvm/MCA/HWEventListener.h"
 #include "llvm/Support/Error.h"
@@ -84,4 +84,4 @@ public:
 
 } // namespace mca
 } // namespace llvm
-#endif // LLVM_MCA_STAGE_H
+#endif // LLVM_MCA_STAGES_STAGE_H

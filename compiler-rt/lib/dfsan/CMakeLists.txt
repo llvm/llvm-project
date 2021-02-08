@@ -5,12 +5,14 @@ set(DFSAN_RTL_SOURCES
   dfsan.cpp
   dfsan_custom.cpp
   dfsan_interceptors.cpp
+  dfsan_thread.cpp
   )
 
 set(DFSAN_RTL_HEADERS
   dfsan.h
   dfsan_flags.inc
   dfsan_platform.h
+  dfsan_thread.h
   )
 
 set(DFSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})

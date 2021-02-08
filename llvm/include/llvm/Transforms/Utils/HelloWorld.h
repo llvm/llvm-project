@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_HELLONEW_HELLOWORLD_H
-#define LLVM_TRANSFORMS_HELLONEW_HELLOWORLD_H
+#ifndef LLVM_TRANSFORMS_UTILS_HELLOWORLD_H
+#define LLVM_TRANSFORMS_UTILS_HELLOWORLD_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -20,4 +20,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_HELLONEW_HELLOWORLD_H
+#endif // LLVM_TRANSFORMS_UTILS_HELLOWORLD_H

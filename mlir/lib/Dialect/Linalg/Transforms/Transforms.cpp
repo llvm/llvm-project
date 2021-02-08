@@ -127,13 +127,13 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
 ///      created PadTensorOp.
 /// Return failure if the operand cannot be padded to a static shape.
 static LogicalResult padOperandToSmallestStaticBoundingBox(
-    PatternRewriter &rewriter, linalg::LinalgOp opToPad, Value operand,
+    PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand &operand,
     const LinalgTilingOptions &options, Value &result) {
-  auto tensorType = operand.getType().cast<RankedTensorType>();
+  auto tensorType = operand.get().getType().cast<RankedTensorType>();
   // Already static shape, no need to pad.
   if (tensorType.hasStaticShape())
     return success();
-  auto subtensor = operand.getDefiningOp<SubTensorOp>();
+  auto subtensor = operand.get().getDefiningOp<SubTensorOp>();
   // Not a subtensor, cannot construct a static bounding box.
   if (!subtensor)
     return failure();
@@ -152,11 +152,11 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
           opToPad, "No constant bounding box can be found for padding");
     staticSizes.push_back(indexAttr.getInt());
   }
-  Value pad = options.paddingValueComputationFunction(rewriter, opToPad);
+  Value pad = options.paddingValueComputationFunction(rewriter, operand);
   auto staticTensorType =
       RankedTensorType::get(staticSizes, tensorType.getElementType());
-  result = linalg::PadTensorOp::createPadHighOp(staticTensorType, operand, pad,
-                                                opToPad->getLoc(), rewriter);
+  result = linalg::PadTensorOp::createPadHighOp(
+      staticTensorType, operand.get(), pad, opToPad->getLoc(), rewriter);
   return success();
 }
 
@@ -180,26 +180,26 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   // Set IP after op because we also take the dims of the original output.
   rewriter.setInsertionPointAfter(opToPad);
   // Make a copy of the shaped operands and update it.
-  SmallVector<Value> operands = opToPad.getShapedOperands();
-  for (Value &v : operands) {
+  SmallVector<Value> newOperands;
+  newOperands.reserve(opToPad.getNumShapedOperands());
+  for (OpOperand &operand : opToPad.getShapedOpOperands()) {
     Value paddedOperand;
     // If padding was requested but the shape cannot be bounded statically then
     // the pattern fails to apply.
-    if (failed(padOperandToSmallestStaticBoundingBox(rewriter, opToPad, v,
+    if (failed(padOperandToSmallestStaticBoundingBox(rewriter, opToPad, operand,
                                                      options, paddedOperand))) {
       return failure();
     }
-    // Update v if we indeed got a padded operand.
-    v = paddedOperand ? paddedOperand : v;
+    newOperands.push_back(paddedOperand ? paddedOperand : operand.get());
   }
 
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
-      ValueRange(operands).take_back(opToPad.getNumOutputs()).getTypes();
+      ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
   ValueRange otherOperands = opToPad.getAssumedNonShapedOperands();
-  operands.append(otherOperands.begin(), otherOperands.end());
+  newOperands.append(otherOperands.begin(), otherOperands.end());
   linalg::LinalgOp paddedOp =
-      opToPad.clone(rewriter, loc, resultTensorTypes, operands);
+      opToPad.clone(rewriter, loc, resultTensorTypes, newOperands);
 
   // Recover the subtensor out of the new static results. This keeps the
   // original linalg op around because it uses the dims of the original results.
@@ -468,10 +468,13 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  if (failed(vectorizeLinalgOpPrecondition(op)))
+  Optional<VectorizedLinalgOp> res = vectorizeLinalgOp(rewriter, op);
+  if (!res)
     return failure();
-  vectorizeLinalgOp(rewriter, op);
-  rewriter.eraseOp(op);
+  if (!res->tensorResults.empty())
+    rewriter.replaceOp(op, res->tensorResults);
+  else
+    rewriter.eraseOp(op);
   return success();
 }
 

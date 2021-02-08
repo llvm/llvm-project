@@ -831,6 +831,23 @@ static bool isEligibleLoopForm(const Loop &Root) {
     if (SubLoopsSize != 1)
       return false;
 
+    // Only loops with a single exit block can be unrolled and jammed.
+    // The function getExitBlock() is used for this check, rather than
+    // getUniqueExitBlock() to ensure loops with mulitple exit edges are
+    // disallowed.
+    if (!L->getExitBlock()) {
+      LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; only loops with single exit "
+                           "blocks can be unrolled and jammed.\n");
+      return false;
+    }
+
+    // Only loops with a single exiting block can be unrolled and jammed.
+    if (!L->getExitingBlock()) {
+      LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; only loops with single "
+                           "exiting blocks can be unrolled and jammed.\n");
+      return false;
+    }
+
     L = L->getSubLoops()[0];
   } while (L);
 

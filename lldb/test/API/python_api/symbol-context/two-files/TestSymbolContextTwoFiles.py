@@ -14,7 +14,6 @@ class SymbolContextTwoFilesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"])
     def test_lookup_by_address(self):
         """Test lookup by address in a module with multiple compilation units"""
@@ -36,7 +35,6 @@ class SymbolContextTwoFilesTestCase(TestBase):
             self.assertEqual(symbol_name,
                              sc_by_address.GetFunction().GetName())
 
-    @add_test_categories(['pyapi'])
     def test_ranges_in_multiple_compile_unit(self):
         """This test verifies that we correctly handle the case when multiple
         compile unit contains DW_AT_ranges and DW_AT_ranges_base attributes."""

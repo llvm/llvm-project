@@ -188,7 +188,7 @@ void RebaseSection::writeTo(uint8_t *buf) const {
 NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
                                                      const char *name)
     : SyntheticSection(segname, name) {
-  align = 8;
+  align = WordSize; // vector of pointers / mimic ld64
   flags = MachO::S_NON_LAZY_SYMBOL_POINTERS;
 }
 
@@ -389,7 +389,9 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
 
 StubsSection::StubsSection()
     : SyntheticSection(segment_names::text, "__stubs") {
-  flags = MachO::S_SYMBOL_STUBS;
+  flags = MachO::S_SYMBOL_STUBS | MachO::S_ATTR_SOME_INSTRUCTIONS |
+          MachO::S_ATTR_PURE_INSTRUCTIONS;
+  align = 4; // machine instructions / mimic ld64
   reserved2 = target->stubSize;
 }
 
@@ -413,7 +415,10 @@ bool StubsSection::addEntry(Symbol *sym) {
 }
 
 StubHelperSection::StubHelperSection()
-    : SyntheticSection(segment_names::text, "__stub_helper") {}
+    : SyntheticSection(segment_names::text, "__stub_helper") {
+  flags = MachO::S_ATTR_SOME_INSTRUCTIONS | MachO::S_ATTR_PURE_INSTRUCTIONS;
+  align = 4; // machine instructions / mimic ld64
+}
 
 uint64_t StubHelperSection::getSize() const {
   return target->stubHelperHeaderSize +
@@ -453,11 +458,12 @@ ImageLoaderCacheSection::ImageLoaderCacheSection() {
   uint8_t *arr = bAlloc.Allocate<uint8_t>(WordSize);
   memset(arr, 0, WordSize);
   data = {arr, WordSize};
+  align = WordSize; // pointer / mimic ld64
 }
 
 LazyPointerSection::LazyPointerSection()
     : SyntheticSection(segment_names::data, "__la_symbol_ptr") {
-  align = 8;
+  align = WordSize; // vector of pointers / mimic ld64
   flags = MachO::S_LAZY_SYMBOL_POINTERS;
 }
 
@@ -819,18 +825,23 @@ void IndirectSymtabSection::finalizeContents() {
   in.stubs->reserved1 = in.lazyPointers->reserved1 = off;
 }
 
+static uint32_t indirectValue(const Symbol *sym) {
+  return sym->symtabIndex != UINT32_MAX ? sym->symtabIndex
+                                        : MachO::INDIRECT_SYMBOL_LOCAL;
+}
+
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
   for (const Symbol *sym : in.tlvPointers->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
   for (const Symbol *sym : in.stubs->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBFILEBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBFILEBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILEBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILEBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"

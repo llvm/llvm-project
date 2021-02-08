@@ -477,9 +477,6 @@ static_assert(!L.size(), "");
 
 struct StructWithLazyNoexcept {
   void func() noexcept(L.size());
-// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: the 'empty' method should be used
-// CHECK-MESSAGES: :101:18: note: method 'Lazy'::empty() defined here
-// CHECK-FIXES: {{^  }}void func() noexcept(!L.empty());
 };
 
 #define CHECKSIZE(x) if (x.size()) {}

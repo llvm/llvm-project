@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GCS_H
-#define LLVM_CODEGEN_GCS_H
+#ifndef LLVM_CODEGEN_BUILTINGCS_H
+#define LLVM_CODEGEN_BUILTINGCS_H
 
 namespace llvm {
 

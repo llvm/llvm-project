@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
-#define LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -180,4 +180,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H

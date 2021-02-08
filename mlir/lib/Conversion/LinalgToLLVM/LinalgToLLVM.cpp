@@ -223,17 +223,12 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect using the converter defined above.
   OwningRewritePatternList patterns;
   LLVMTypeConverter converter(&getContext());
-  populateAffineToStdConversionPatterns(patterns, &getContext());
-  populateLoopToStdConversionPatterns(patterns, &getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns);
-  populateVectorToSCFConversionPatterns(patterns, &getContext());
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
-  populateVectorToLLVMConversionPatterns(converter, patterns);
   populateLinalgToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-  if (failed(applyFullConversion(module, target, std::move(patterns))))
+  target.addIllegalOp<RangeOp>();
+  target.addLegalOp<ModuleOp, ModuleTerminatorOp, LLVM::DialectCastOp>();
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

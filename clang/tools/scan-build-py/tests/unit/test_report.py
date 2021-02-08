@@ -3,6 +3,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+import json
 import libear
 import libscanbuild.report as sut
 import unittest
@@ -145,3 +146,516 @@ class GetPrefixFromCompilationDatabaseTest(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(
             sut.commonprefix([]), '')
+
+class MergeSarifTest(unittest.TestCase):
+
+    def test_merging_sarif(self):
+        sarif1 = {
+            '$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+            'runs': [
+                {
+                    'artifacts': [
+                        {
+                            'length': 100,
+                            'location': {
+                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                            },
+                            'mimeType': 'text/plain',
+                            'roles': [
+                                'resultFile'
+                            ]
+                        }
+                    ],
+                    'columnKind': 'unicodeCodePoints',
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'threadFlows': [
+                                        {
+                                            'locations': [
+                                                {
+                                                    'importance': 'important',
+                                                    'location': {
+                                                        'message': {
+                                                            'text': 'test message 1'
+                                                        },
+                                                        'physicalLocation': {
+                                                            'artifactLocation': {
+                                                                'index': 0,
+                                                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                                                            },
+                                                            'region': {
+                                                                'endColumn': 5,
+                                                                'startColumn': 1,
+                                                                'startLine': 2
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            'codeFlows': [
+                                {
+                                    'threadFlows': [
+                                        {
+                                            'locations': [
+                                                {
+                                                    'importance': 'important',
+                                                    'location': {
+                                                        'message': {
+                                                            'text': 'test message 2'
+                                                        },
+                                                        'physicalLocation': {
+                                                            'artifactLocation': {
+                                                                'index': 0,
+                                                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                                                            },
+                                                            'region': {
+                                                                'endColumn': 23,
+                                                                'startColumn': 9,
+                                                                'startLine': 10
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    'tool': {
+                        'driver': {
+                            'fullName': 'clang static analyzer',
+                            'language': 'en-US',
+                            'name': 'clang',
+                            'rules': [
+                                {
+                                    'fullDescription': {
+                                        'text': 'test rule for merge sarif test'
+                                    },
+                                    'helpUrl': '//clang/tools/scan-build-py/tests/unit/test_report.py',
+                                    'id': 'testId',
+                                    'name': 'testName'
+                                }
+                            ],
+                            'version': 'test clang'
+                        }
+                    }
+                }
+            ],
+            'version': '2.1.0'
+        }
+        sarif2 = {
+            '$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+            'runs': [
+                {
+                    'artifacts': [
+                        {
+                            'length': 1523,
+                            'location': {
+                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                            },
+                            'mimeType': 'text/plain',
+                            'roles': [
+                                'resultFile'
+                            ]
+                        }
+                    ],
+                    'columnKind': 'unicodeCodePoints',
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'threadFlows': [
+                                        {
+                                            'locations': [
+                                                {
+                                                    'importance': 'important',
+                                                    'location': {
+                                                        'message': {
+                                                            'text': 'test message 3'
+                                                        },
+                                                        'physicalLocation': {
+                                                            'artifactLocation': {
+                                                                'index': 0,
+                                                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                                                            },
+                                                            'region': {
+                                                                'endColumn': 99,
+                                                                'startColumn': 99,
+                                                                'startLine': 17
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            'codeFlows': [
+                                {
+                                    'threadFlows': [
+                                        {
+                                            'locations': [
+                                                {
+                                                    'importance': 'important',
+                                                    'location': {
+                                                        'message': {
+                                                            'text': 'test message 4'
+                                                        },
+                                                        'physicalLocation': {
+                                                            'artifactLocation': {
+                                                                'index': 0,
+                                                                'uri': '//clang/tools/scan-build-py/tests/unit/test_report.py'
+                                                            },
+                                                            'region': {
+                                                                'endColumn': 305,
+                                                                'startColumn': 304,
+                                                                'startLine': 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    'tool': {
+                        'driver': {
+                            'fullName': 'clang static analyzer',
+                            'language': 'en-US',
+                            'name': 'clang',
+                            'rules': [
+                                {
+                                    'fullDescription': {
+                                        'text': 'test rule for merge sarif test'
+                                    },
+                                    'helpUrl': '//clang/tools/scan-build-py/tests/unit/test_report.py',
+                                    'id': 'testId',
+                                    'name': 'testName'
+                                }
+                            ],
+                            'version': 'test clang'
+                        }
+                    }
+                }
+            ],
+            'version': '2.1.0'
+        }
+
+        contents = [sarif1, sarif2]
+        with libear.TemporaryDirectory() as tmpdir:
+            for idx, content in enumerate(contents):
+                file_name = os.path.join(tmpdir, 'results-{}.sarif'.format(idx))
+                with open(file_name, 'w') as handle:
+                    json.dump(content, handle)
+
+            sut.merge_sarif_files(tmpdir, sort_files=True)
+
+            self.assertIn('results-merged.sarif', os.listdir(tmpdir))
+            with open(os.path.join(tmpdir, 'results-merged.sarif')) as f:
+                merged = json.load(f)
+                self.assertEqual(len(merged['runs']), 2)
+                self.assertEqual(len(merged['runs'][0]['results']), 2)
+                self.assertEqual(len(merged['runs'][1]['results']), 2)
+
+                expected = sarif1
+                for run in sarif2['runs']:
+                    expected['runs'].append(run)
+
+                self.assertEqual(merged, expected)
+
+    def test_merge_updates_embedded_link(self):
+        sarif1 = {
+            'runs': [
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 1-1 [link](sarif:/runs/1/results/0) [link2](sarif:/runs/1/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 1-2 [link](sarif:/runs/1/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 2-1 [link](sarif:/runs/0/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 2-2 [link](sarif:/runs/0/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        sarif2 = {
+            'runs': [
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 3-1 [link](sarif:/runs/1/results/0) [link2](sarif:/runs/1/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 3-2 [link](sarif:/runs/1/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                },
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 4-1 [link](sarif:/runs/0/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 4-2 [link](sarif:/runs/0/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        sarif3 = {
+            'runs': [
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 5-1 [link](sarif:/runs/1/results/0) [link2](sarif:/runs/1/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 5-2 [link](sarif:/runs/1/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                },
+                {
+                    'results': [
+                        {
+                            'codeFlows': [
+                                {
+                                    'message': {
+                                        'text': 'test message 6-1 [link](sarif:/runs/0/results/0)'
+                                    },
+                                    'threadFlows': [
+                                        {
+                                            'message': {
+                                                'text': 'test message 6-2 [link](sarif:/runs/0/results/0)'
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+
+        contents = [sarif1, sarif2, sarif3]
+
+        with libear.TemporaryDirectory() as tmpdir:
+            for idx, content in enumerate(contents):
+                file_name = os.path.join(tmpdir, 'results-{}.sarif'.format(idx))
+                with open(file_name, 'w') as handle:
+                    json.dump(content, handle)
+
+            sut.merge_sarif_files(tmpdir, sort_files=True)
+
+            self.assertIn('results-merged.sarif', os.listdir(tmpdir))
+            with open(os.path.join(tmpdir, 'results-merged.sarif')) as f:
+                merged = json.load(f)
+                self.assertEqual(len(merged['runs']), 6)
+
+                code_flows = [merged['runs'][x]['results'][0]['codeFlows'][0]['message']['text'] for x in range(6)]
+                thread_flows = [merged['runs'][x]['results'][0]['codeFlows'][0]['threadFlows'][0]['message']['text'] for x in range(6)]
+
+                # The run index should be updated for the second and third sets of runs
+                self.assertEqual(code_flows,
+                    [
+                        'test message 1-1 [link](sarif:/runs/1/results/0) [link2](sarif:/runs/1/results/0)',
+                        'test message 2-1 [link](sarif:/runs/0/results/0)',
+                        'test message 3-1 [link](sarif:/runs/3/results/0) [link2](sarif:/runs/3/results/0)',
+                        'test message 4-1 [link](sarif:/runs/2/results/0)',
+                        'test message 5-1 [link](sarif:/runs/5/results/0) [link2](sarif:/runs/5/results/0)',
+                        'test message 6-1 [link](sarif:/runs/4/results/0)'
+                    ])
+                self.assertEquals(thread_flows,
+                    [
+                        'test message 1-2 [link](sarif:/runs/1/results/0)',
+                        'test message 2-2 [link](sarif:/runs/0/results/0)',
+                        'test message 3-2 [link](sarif:/runs/3/results/0)',
+                        'test message 4-2 [link](sarif:/runs/2/results/0)',
+                        'test message 5-2 [link](sarif:/runs/5/results/0)',
+                        'test message 6-2 [link](sarif:/runs/4/results/0)'
+                    ])
+
+    def test_overflow_run_count(self):
+        sarif1 = {
+            'runs': [
+                {'results': [{
+                    'message': {'text': 'run 1-0 [link](sarif:/runs/1/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-1 [link](sarif:/runs/2/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-2 [link](sarif:/runs/3/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-3 [link](sarif:/runs/4/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-4 [link](sarif:/runs/5/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-5 [link](sarif:/runs/6/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-6 [link](sarif:/runs/7/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-7 [link](sarif:/runs/8/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-8 [link](sarif:/runs/9/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 1-9 [link](sarif:/runs/0/results/0)'}
+                }]}
+            ]
+        }
+        sarif2 = {
+            'runs': [
+                {'results': [{
+                    'message': {'text': 'run 2-0 [link](sarif:/runs/1/results/0) [link2](sarif:/runs/2/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-1 [link](sarif:/runs/2/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-2 [link](sarif:/runs/3/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-3 [link](sarif:/runs/4/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-4 [link](sarif:/runs/5/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-5 [link](sarif:/runs/6/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-6 [link](sarif:/runs/7/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-7 [link](sarif:/runs/8/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-8 [link](sarif:/runs/9/results/0)'}
+                }]},
+                {'results': [{
+                    'message': {'text': 'run 2-9 [link](sarif:/runs/0/results/0)'}
+                }]}
+            ]
+        }
+
+        contents = [sarif1, sarif2]
+        with libear.TemporaryDirectory() as tmpdir:
+            for idx, content in enumerate(contents):
+                file_name = os.path.join(tmpdir, 'results-{}.sarif'.format(idx))
+                with open(file_name, 'w') as handle:
+                    json.dump(content, handle)
+
+            sut.merge_sarif_files(tmpdir, sort_files=True)
+
+            self.assertIn('results-merged.sarif', os.listdir(tmpdir))
+            with open(os.path.join(tmpdir, 'results-merged.sarif')) as f:
+                merged = json.load(f)
+                self.assertEqual(len(merged['runs']), 20)
+
+                messages = [merged['runs'][x]['results'][0]['message']['text'] for x in range(20)]
+                self.assertEqual(messages,
+                    [
+                        'run 1-0 [link](sarif:/runs/1/results/0)',
+                        'run 1-1 [link](sarif:/runs/2/results/0)',
+                        'run 1-2 [link](sarif:/runs/3/results/0)',
+                        'run 1-3 [link](sarif:/runs/4/results/0)',
+                        'run 1-4 [link](sarif:/runs/5/results/0)',
+                        'run 1-5 [link](sarif:/runs/6/results/0)',
+                        'run 1-6 [link](sarif:/runs/7/results/0)',
+                        'run 1-7 [link](sarif:/runs/8/results/0)',
+                        'run 1-8 [link](sarif:/runs/9/results/0)',
+                        'run 1-9 [link](sarif:/runs/0/results/0)',
+                        'run 2-0 [link](sarif:/runs/11/results/0) [link2](sarif:/runs/12/results/0)',
+                        'run 2-1 [link](sarif:/runs/12/results/0)',
+                        'run 2-2 [link](sarif:/runs/13/results/0)',
+                        'run 2-3 [link](sarif:/runs/14/results/0)',
+                        'run 2-4 [link](sarif:/runs/15/results/0)',
+                        'run 2-5 [link](sarif:/runs/16/results/0)',
+                        'run 2-6 [link](sarif:/runs/17/results/0)',
+                        'run 2-7 [link](sarif:/runs/18/results/0)',
+                        'run 2-8 [link](sarif:/runs/19/results/0)',
+                        'run 2-9 [link](sarif:/runs/10/results/0)'
+                    ])

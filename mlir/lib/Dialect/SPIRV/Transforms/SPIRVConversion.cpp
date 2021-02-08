@@ -269,12 +269,13 @@ convertScalarType(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
 static Optional<Type>
 convertVectorType(const spirv::TargetEnv &targetEnv, VectorType type,
                   Optional<spirv::StorageClass> storageClass = {}) {
+  if (type.getRank() == 1 && type.getNumElements() == 1)
+    return type.getElementType();
+
   if (!spirv::CompositeType::isValid(type)) {
-    // TODO: One-element vector types can be translated into scalar
-    // types. Vector types with more than four elements can be translated into
+    // TODO: Vector types with more than four elements can be translated into
     // array types.
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: 1- and > 4-element unimplemented\n");
+    LLVM_DEBUG(llvm::dbgs() << type << " illegal: > 4-element unimplemented\n");
     return llvm::None;
   }
 

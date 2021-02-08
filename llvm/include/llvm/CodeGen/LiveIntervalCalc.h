@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
-#define LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
+#ifndef LLVM_CODEGEN_LIVEINTERVALCALC_H
+#define LLVM_CODEGEN_LIVEINTERVALCALC_H
 
 #include "llvm/CodeGen/LiveRangeCalc.h"
 
@@ -68,4 +68,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
+#endif // LLVM_CODEGEN_LIVEINTERVALCALC_H

@@ -295,6 +295,16 @@ s_mov_b64 s[10:11], [s0,s1
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0,s1
 // CHECK-NEXT:{{^}}                          ^
 
+image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
+// CHECK: error: expected a comma or a closing square bracket
+// CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
+// CHECK-NEXT:{{^}}                                       ^
+
+image_load_mip v[253:255], [v255, v254
+// CHECK: error: expected a comma or a closing square bracket
+// CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254
+// CHECK-NEXT:{{^}}                                      ^
+
 //==============================================================================
 // expected a counter name
 
@@ -341,6 +351,19 @@ v_pk_add_u16 v1, v2, v3 op_sel:
 // CHECK: error: expected a left square bracket
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:
 // CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
+// expected a register
+
+image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
+// CHECK: error: expected a register
+// CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
+// CHECK-NEXT:{{^}}                            ^
+
+image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
+// CHECK: error: expected a register
+// CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
+// CHECK-NEXT:{{^}}                            ^
 
 //==============================================================================
 // expected a register or a list of registers
@@ -525,20 +548,10 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
 //==============================================================================
 // failed parsing operand.
 
-image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
-// CHECK-NEXT:{{^}}                                              ^
-
 v_ceil_f16 v0, abs(neg(1))
 // CHECK: error: failed parsing operand.
 // CHECK-NEXT:{{^}}v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}                   ^
-
-image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
-// CHECK-NEXT:{{^}}                                                  ^
 
 //==============================================================================
 // first register index should not exceed second index
@@ -645,6 +658,24 @@ s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK: error: invalid counter name x
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
+// invalid dim value
+
+image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
+// CHECK-NEXT:{{^}}                                            ^
+
+image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
+// CHECK-NEXT:{{^}}                                                  ^
+
+image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
+// CHECK: error: invalid dim value
+// CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
+// CHECK-NEXT:{{^}}                                            ^
 
 //==============================================================================
 // invalid dst_sel value

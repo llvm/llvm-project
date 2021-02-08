@@ -49,6 +49,21 @@
 #define __purefn __attribute__((pure))
 #define __cnfn __attribute__((const))
 
+// Define feature macros for OpenCL C 2.0
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
+#define __opencl_c_pipes 1
+#define __opencl_c_generic_address_space 1
+#define __opencl_c_work_group_collective_functions 1
+#define __opencl_c_atomic_order_acq_rel 1
+#define __opencl_c_atomic_order_seq_cst 1
+#define __opencl_c_atomic_scope_device 1
+#define __opencl_c_atomic_scope_all_devices 1
+#define __opencl_c_device_enqueue 1
+#define __opencl_c_read_write_images 1
+#define __opencl_c_program_scope_global_variables 1
+#define __opencl_c_images 1
+#endif
+
 // built-in scalar data types:
 
 /**

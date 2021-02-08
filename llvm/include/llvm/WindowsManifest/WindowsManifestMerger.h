@@ -22,8 +22,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
-#define LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
+#ifndef LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
+#define LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
 
 #include "llvm/Support/Error.h"
 

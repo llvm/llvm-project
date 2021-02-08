@@ -308,7 +308,7 @@ defm "" : SIMDLoadLane<I32x4, 90>;
 defm "" : SIMDLoadLane<I64x2, 91>;
 
 // Select loads with no constant offset.
-multiclass LoadLanePatNoOffset<Vec vec, PatFrag kind> {
+multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
   defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec#"_A32");
   defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec#"_A64");
   def : Pat<(vec.vt (kind (i32 I32:$addr),
@@ -381,7 +381,7 @@ defm "" : SIMDStoreLane<I32x4, 94>;
 defm "" : SIMDStoreLane<I64x2, 95>;
 
 // Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<Vec vec, PatFrag kind> {
+multiclass StoreLanePatNoOffset<Vec vec, Intrinsic kind> {
   def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
             (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, 0, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
@@ -705,7 +705,7 @@ defm EQ_v2i64 :
 // Bitwise operations
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDBinary<Vec vec, SDNode node, string name, bits<32> simdop> {
+multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                       (outs), (ins),
                       [(set (vec.vt V128:$dst),
@@ -714,7 +714,8 @@ multiclass SIMDBinary<Vec vec, SDNode node, string name, bits<32> simdop> {
                       vec.prefix#"."#name, simdop>;
 }
 
-multiclass SIMDBitwise<SDNode node, string name, bits<32> simdop, bit commutable = false> {
+multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
+                       bit commutable = false> {
   let isCommutable = commutable in
   defm "" : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                    (outs), (ins), [],
@@ -724,7 +725,7 @@ multiclass SIMDBitwise<SDNode node, string name, bits<32> simdop, bit commutable
             (!cast<NI>(NAME) $lhs, $rhs)>;
 }
 
-multiclass SIMDUnary<Vec vec, SDNode node, string name, bits<32> simdop> {
+multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$v), (outs), (ins),
                       [(set (vec.vt V128:$dst),
                         (vec.vt (node (vec.vt V128:$v))))],
@@ -811,21 +812,21 @@ defm : SIMDSignSelect<I64x2, 148>;
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDUnaryInt<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDUnaryInt<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDUnary<I8x16, node, name, baseInst>;
   defm "" : SIMDUnary<I16x8, node, name, !add(baseInst, 32)>;
   defm "" : SIMDUnary<I32x4, node, name, !add(baseInst, 64)>;
   defm "" : SIMDUnary<I64x2, node, name, !add(baseInst, 96)>;
 }
 
-multiclass SIMDReduceVec<Vec vec, SDNode op, string name, bits<32> simdop> {
+multiclass SIMDReduceVec<Vec vec, SDPatternOperator op, string name, bits<32> simdop> {
   defm _#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
                       [(set I32:$dst, (i32 (op (vec.vt V128:$vec))))],
                       vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name,
                       simdop>;
 }
 
-multiclass SIMDReduce<SDNode op, string name, bits<32> baseInst> {
+multiclass SIMDReduce<SDPatternOperator op, string name, bits<32> baseInst> {
   defm "" : SIMDReduceVec<I8x16, op, name, baseInst>;
   defm "" : SIMDReduceVec<I16x8, op, name, !add(baseInst, 32)>;
   defm "" : SIMDReduceVec<I32x4, op, name, !add(baseInst, 64)>;
@@ -912,23 +913,23 @@ defm SHR_U : SIMDShiftInt<wasm_shr_u, "shr_u", 109>;
 // Integer binary arithmetic
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDBinaryIntNoI8x16<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryIntNoI8x16<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<I16x8, node, name, !add(baseInst, 32)>;
   defm "" : SIMDBinary<I32x4, node, name, !add(baseInst, 64)>;
   defm "" : SIMDBinary<I64x2, node, name, !add(baseInst, 96)>;
 }
 
-multiclass SIMDBinaryIntSmall<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryIntSmall<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<I8x16, node, name, baseInst>;
   defm "" : SIMDBinary<I16x8, node, name, !add(baseInst, 32)>;
 }
 
-multiclass SIMDBinaryIntNoI64x2<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryIntNoI64x2<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinaryIntSmall<node, name, baseInst>;
   defm "" : SIMDBinary<I32x4, node, name, !add(baseInst, 64)>;
 }
 
-multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryInt<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinaryIntNoI64x2<node, name, baseInst>;
   defm "" : SIMDBinary<I64x2, node, name, !add(baseInst, 96)>;
 }
@@ -986,7 +987,7 @@ defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   186>;
 
 // Extending multiplication: extmul_{low,high}_P, extmul_high
-multiclass SIMDExtBinary<Vec vec, SDNode node, string name, bits<32> simdop> {
+multiclass SIMDExtBinary<Vec vec, Intrinsic node, string name, bits<32> simdop> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                       (outs), (ins),
                       [(set (vec.vt V128:$dst), (node
@@ -1054,7 +1055,7 @@ defm NEAREST: SIMDUnary<F64x2, int_wasm_nearest, "nearest", 223>;
 // Floating-point binary arithmetic
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
+multiclass SIMDBinaryFP<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<F32x4, node, name, baseInst>;
   defm "" : SIMDBinary<F64x2, node, name, !add(baseInst, 12)>;
 }
@@ -1089,7 +1090,7 @@ defm PMAX : SIMDBinaryFP<int_wasm_pmax, "pmax", 235>;
 // Conversions
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDConvert<Vec vec, Vec arg, SDNode op, string name,
+multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
                        bits<32> simdop> {
   defm op#_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
@@ -1345,7 +1346,7 @@ defm PREFETCH_NT_A64 :
          "prefetch.nt\t$off$p2align", 0xc6>;
 } // mayLoad, UseNamedOperandTable
 
-multiclass PrefetchPatNoOffset<PatFrag kind, string inst> {
+multiclass PrefetchPatNoOffset<Intrinsic kind, string inst> {
   def : Pat<(kind I32:$addr), (!cast<NI>(inst # "_A32") 0, 0, $addr)>,
         Requires<[HasAddr32]>;
   def : Pat<(kind I64:$addr), (!cast<NI>(inst # "_A64") 0, 0, $addr)>,

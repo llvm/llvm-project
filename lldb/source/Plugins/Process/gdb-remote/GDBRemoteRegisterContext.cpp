@@ -249,7 +249,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
           break;
         // We have a valid primordial register as our constituent. Grab the
         // corresponding register info.
-        const RegisterInfo *prim_reg_info = GetRegisterInfoAtIndex(prim_reg);
+        const RegisterInfo *prim_reg_info =
+            GetRegisterInfo(eRegisterKindProcessPlugin, prim_reg);
         if (prim_reg_info == nullptr)
           success = false;
         else {
@@ -395,7 +396,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
               break;
             // We have a valid primordial register as our constituent. Grab the
             // corresponding register info.
-            const RegisterInfo *value_reg_info = GetRegisterInfoAtIndex(reg);
+            const RegisterInfo *value_reg_info =
+                GetRegisterInfo(eRegisterKindProcessPlugin, reg);
             if (value_reg_info == nullptr)
               success = false;
             else
@@ -414,9 +416,10 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         if (reg_info->invalidate_regs) {
           for (uint32_t idx = 0, reg = reg_info->invalidate_regs[0];
                reg != LLDB_INVALID_REGNUM;
-               reg = reg_info->invalidate_regs[++idx]) {
-            SetRegisterIsValid(reg, false);
-          }
+               reg = reg_info->invalidate_regs[++idx])
+            SetRegisterIsValid(ConvertRegisterKindToRegisterNumber(
+                                   eRegisterKindProcessPlugin, reg),
+                               false);
         }
 
         return success;

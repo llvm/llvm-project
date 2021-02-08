@@ -83,6 +83,9 @@ AST_MATCHER(Expr, usedInBooleanContext) {
   });
   return Result;
 }
+AST_MATCHER(CXXConstructExpr, isDefaultConstruction) {
+  return Node.getConstructor()->isDefaultConstructor();
+}
 } // namespace ast_matchers
 namespace tidy {
 namespace readability {
@@ -116,24 +119,16 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto ValidContainer = qualType(
       anyOf(ValidContainerNonTemplateType, ValidContainerTemplateType));
 
-  const auto WrongUse = traverse(
-      TK_AsIs,
-      anyOf(
-          hasParent(binaryOperator(isComparisonOperator(),
-                                   hasEitherOperand(ignoringImpCasts(
-                                       anyOf(integerLiteral(equals(1)),
-                                             integerLiteral(equals(0))))))
-                        .bind("SizeBinaryOp")),
-          hasParent(implicitCastExpr(
-              hasImplicitDestinationType(booleanType()),
-              anyOf(hasParent(
-                        unaryOperator(hasOperatorName("!")).bind("NegOnSize")),
-                    anything()))),
-          usedInBooleanContext()));
+  const auto WrongUse =
+      anyOf(hasParent(binaryOperator(
+                          isComparisonOperator(),
+                          hasEitherOperand(anyOf(integerLiteral(equals(1)),
+                                                 integerLiteral(equals(0)))))
+                          .bind("SizeBinaryOp")),
+            usedInBooleanContext());
 
   Finder->addMatcher(
-      cxxMemberCallExpr(unless(isInTemplateInstantiation()),
-                        on(expr(anyOf(hasType(ValidContainer),
+      cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),
                                       hasType(pointsTo(ValidContainer)),
                                       hasType(references(ValidContainer))))
                                .bind("MemberCallObject")),
@@ -157,18 +152,9 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
           .bind("SizeCallExpr"),
       this);
 
-  // Empty constructor matcher.
-  const auto DefaultConstructor = cxxConstructExpr(
-          hasDeclaration(cxxConstructorDecl(isDefaultConstructor())));
   // Comparison to empty string or empty constructor.
   const auto WrongComparend = anyOf(
-      ignoringImpCasts(stringLiteral(hasSize(0))),
-      ignoringImpCasts(cxxBindTemporaryExpr(has(DefaultConstructor))),
-      ignoringImplicit(DefaultConstructor),
-      cxxConstructExpr(hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
-                       has(expr(ignoringImpCasts(DefaultConstructor)))),
-      cxxConstructExpr(hasDeclaration(cxxConstructorDecl(isMoveConstructor())),
-                       has(expr(ignoringImpCasts(DefaultConstructor)))),
+      stringLiteral(hasSize(0)), cxxConstructExpr(isDefaultConstruction()),
       cxxUnresolvedConstructExpr(argumentCountIs(0)));
   // Match the object being compared.
   const auto STLArg =
@@ -178,12 +164,11 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                     expr(hasType(pointsTo(ValidContainer))).bind("Pointee"))),
             expr(hasType(ValidContainer)).bind("STLObject"));
   Finder->addMatcher(
-      binaryOperation(unless(isInTemplateInstantiation()),
-                      hasAnyOperatorName("==", "!="),
-                      hasOperands(ignoringParenImpCasts(WrongComparend),
-                                  ignoringParenImpCasts(STLArg)),
-                      unless(hasAncestor(cxxMethodDecl(
-                          ofClass(equalsBoundNode("container"))))))
+      binaryOperation(hasAnyOperatorName("==", "!="),
+                      hasOperands(WrongComparend,
+                                  STLArg),
+                          unless(hasAncestor(cxxMethodDecl(
+                              ofClass(equalsBoundNode("container"))))))
           .bind("BinCmp"),
       this);
 }

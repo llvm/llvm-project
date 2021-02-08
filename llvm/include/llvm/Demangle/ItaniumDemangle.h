@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEMANGLE_ITANIUMDEMANGLE_H
-#define DEMANGLE_ITANIUMDEMANGLE_H
+#ifndef LLVM_DEMANGLE_ITANIUMDEMANGLE_H
+#define LLVM_DEMANGLE_ITANIUMDEMANGLE_H
 
 // FIXME: (possibly) incomplete list of features that clang mangles that this
 // file does not yet support:
@@ -5702,4 +5702,4 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
 
 DEMANGLE_NAMESPACE_END
 
-#endif // DEMANGLE_ITANIUMDEMANGLE_H
+#endif // LLVM_DEMANGLE_ITANIUMDEMANGLE_H

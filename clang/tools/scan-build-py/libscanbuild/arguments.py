@@ -244,6 +244,14 @@ def create_analyze_parser(from_build_command):
         action='store_const',
         help="""Cause the results as a set of .plist files with extra
         information on related files.""")
+    format_group.add_argument(
+        '--sarif',
+        '-sarif',
+        dest='output_format',
+        const='sarif',
+        default='html',
+        action='store_const',
+        help="""Cause the results as a result.sarif file.""")
 
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(

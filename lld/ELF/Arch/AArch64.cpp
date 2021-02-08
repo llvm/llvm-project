@@ -195,7 +195,7 @@ RelType AArch64::getDynRel(RelType type) const {
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64le(buf, in.plt->getVA());
+  write64(buf, in.plt->getVA());
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -323,20 +323,20 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
     checkIntUInt(loc, val, 16, rel);
-    write16le(loc, val);
+    write16(loc, val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     checkIntUInt(loc, val, 32, rel);
-    write32le(loc, val);
+    write32(loc, val);
     break;
   case R_AARCH64_PLT32:
     checkInt(loc, val, 32, rel);
-    write32le(loc, val);
+    write32(loc, val);
     break;
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
-    write64le(loc, val);
+    write64(loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
     or32AArch64Imm(loc, val);

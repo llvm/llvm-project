@@ -73,8 +73,10 @@ def main():
 
   if program_encodings_map != object_encodings_map:
     if args.debug:
-      pprint("program encodings map:\n" + str(program_encodings_map))
-      pprint("object encodings map:\n" + str(object_encodings_map))
+      print("program encodings map:")
+      pprint(program_encodings_map)
+      print("object encodings map:")
+      pprint(object_encodings_map)
     sys.exit("encoding maps differ")
 
   # Count frequency of object-file folded encodings

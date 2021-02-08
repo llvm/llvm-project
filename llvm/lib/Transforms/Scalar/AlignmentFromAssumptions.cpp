@@ -331,12 +331,11 @@ bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
   DT = DT_;
 
   bool Changed = false;
-  for (auto &AssumeVH : AC.assumptions())
-    if (AssumeVH) {
-      CallInst *Call = cast<CallInst>(AssumeVH);
-      for (unsigned Idx = 0; Idx < Call->getNumOperandBundles(); Idx++)
-        Changed |= processAssumption(Call, Idx);
-    }
+  for (auto &AssumeVH : AC.assumptions()) {
+    CallInst *Call = AssumeVH.getAssumeCI();
+    for (unsigned Idx = 0; Idx < Call->getNumOperandBundles(); Idx++)
+      Changed |= processAssumption(Call, Idx);
+  }
 
   return Changed;
 }

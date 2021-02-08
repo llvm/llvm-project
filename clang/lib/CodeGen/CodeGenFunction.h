@@ -4211,6 +4211,8 @@ public:
 
   void EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values);
 
+  void EmitARCNoopIntrinsicUse(ArrayRef<llvm::Value *> values);
+
   static Destroyer destroyARCStrongImprecise;
   static Destroyer destroyARCStrongPrecise;
   static Destroyer destroyARCWeak;

@@ -54,14 +54,10 @@ public:
   virtual unsigned getManglingNumber(const TagDecl *TD,
                                      unsigned MSLocalManglingNumber) = 0;
 
-  /// Has device mangle number context.
-  virtual bool hasDeviceMangleNumberingContext() { return false; }
-
   /// Retrieve the mangling number of a new lambda expression with the
-  /// given call operator within the device context.
-  virtual unsigned getDeviceManglingNumber(const CXXMethodDecl *) {
-    llvm_unreachable("There's no device context associated!");
-  }
+  /// given call operator within the device context. No device number is
+  /// assigned if there's no device numbering context is associated.
+  virtual unsigned getDeviceManglingNumber(const CXXMethodDecl *) { return 0; }
 };
 
 } // end namespace clang

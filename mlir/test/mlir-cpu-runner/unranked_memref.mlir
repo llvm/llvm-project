@@ -1,4 +1,9 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
+// RUN: mlir-opt %s -convert-linalg-to-loops \
+// RUN:             -convert-scf-to-std      \
+// RUN:             -convert-linalg-to-llvm  \
+// RUN:             -convert-std-to-llvm |   \
+// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 // CHECK: rank = 2
 // CHECK-SAME: sizes = [10, 3]

@@ -5186,6 +5186,15 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
   if (!Base || !CodeCompleter)
     return;
 
+  // Peel off the ParenListExpr by chosing the last one, as they don't have a
+  // predefined type.
+  if (auto *PLE = llvm::dyn_cast<ParenListExpr>(Base))
+    Base = PLE->getExpr(PLE->getNumExprs() - 1);
+  if (OtherOpBase) {
+    if (auto *PLE = llvm::dyn_cast<ParenListExpr>(OtherOpBase))
+      OtherOpBase = PLE->getExpr(PLE->getNumExprs() - 1);
+  }
+
   ExprResult ConvertedBase = PerformMemberExprBaseConversion(Base, IsArrow);
   if (ConvertedBase.isInvalid())
     return;
@@ -5615,12 +5624,17 @@ ProduceSignatureHelp(Sema &SemaRef, Scope *S,
 QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
                                         ArrayRef<Expr *> Args,
                                         SourceLocation OpenParLoc) {
-  if (!CodeCompleter)
+  if (!CodeCompleter || !Fn)
     return QualType();
+
+  // If we have a ParenListExpr for LHS, peel it off by chosing the last expr.
+  // As ParenListExprs don't have a predefined type.
+  if (auto *PLE = llvm::dyn_cast<ParenListExpr>(Fn))
+    Fn = PLE->getExpr(PLE->getNumExprs() - 1);
 
   // FIXME: Provide support for variadic template functions.
   // Ignore type-dependent call expressions entirely.
-  if (!Fn || Fn->isTypeDependent() || anyNullArguments(Args))
+  if (Fn->isTypeDependent() || anyNullArguments(Args))
     return QualType();
   // In presence of dependent args we surface all possible signatures using the
   // non-dependent args in the prefix. Afterwards we do a post filtering to make

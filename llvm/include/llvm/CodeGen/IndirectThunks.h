@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INDIRECTTHUNKS_H
-#define LLVM_INDIRECTTHUNKS_H
+#ifndef LLVM_CODEGEN_INDIRECTTHUNKS_H
+#define LLVM_CODEGEN_INDIRECTTHUNKS_H
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"

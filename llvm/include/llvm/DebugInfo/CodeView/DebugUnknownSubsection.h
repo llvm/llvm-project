@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGUNKNOWNFRAGMENT_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGUNKNOWNFRAGMENT_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGUNKNOWNSUBSECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_DEBUGUNKNOWNSUBSECTION_H
 
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamRef.h"

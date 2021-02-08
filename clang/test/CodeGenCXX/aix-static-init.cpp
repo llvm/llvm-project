@@ -38,6 +38,7 @@ namespace test4 {
   }
 } // namespace test4
 
+// CHECK: @_ZGVZN5test41fEvE11staticLocal = internal global i64 0, align 8
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I__, i8* null }]
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_a, i8* null }]
 
@@ -135,7 +136,7 @@ namespace test4 {
 
 // CHECK: define void @_ZN5test41fEv() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVZN5test41fEvE11staticLocal to i8*) acquire
+// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVZN5test41fEvE11staticLocal to i8*) acquire, align 8
 // CHECK:   %guard.uninitialized = icmp eq i8 %0, 0
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
