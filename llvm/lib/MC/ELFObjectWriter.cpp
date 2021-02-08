@@ -116,8 +116,9 @@ struct ELFWriter {
   /// Helper struct for containing some precomputed information on symbols.
   struct ELFSymbolData {
     const MCSymbolELF *Symbol;
-    uint32_t SectionIndex;
     StringRef Name;
+    uint32_t SectionIndex;
+    uint32_t Order;
 
     // Support lexicographic sorting.
     bool operator<(const ELFSymbolData &RHS) const {
@@ -626,11 +627,15 @@ void ELFWriter::computeSymbolTable(
 
   std::vector<ELFSymbolData> LocalSymbolData;
   std::vector<ELFSymbolData> ExternalSymbolData;
+  MutableArrayRef<std::pair<std::string, size_t>> FileNames =
+      Asm.getFileNames();
+  for (const std::pair<std::string, size_t> &F : FileNames)
+    StrTabBuilder.add(F.first);
 
   // Add the data for the symbols.
   bool HasLargeSectionIndex = false;
-  for (const MCSymbol &S : Asm.symbols()) {
-    const auto &Symbol = cast<MCSymbolELF>(S);
+  for (auto It : llvm::enumerate(Asm.symbols())) {
+    const auto &Symbol = cast<MCSymbolELF>(It.value());
     bool Used = Symbol.isUsedInReloc();
     bool WeakrefUsed = Symbol.isWeakrefUsedInReloc();
     bool isSignature = Symbol.isSignature();
@@ -646,6 +651,7 @@ void ELFWriter::computeSymbolTable(
 
     ELFSymbolData MSD;
     MSD.Symbol = cast<MCSymbolELF>(&Symbol);
+    MSD.Order = It.index();
 
     bool Local = Symbol.getBinding() == ELF::STB_LOCAL;
     assert(Local || !Symbol.isTemporary());
@@ -716,33 +722,39 @@ void ELFWriter::computeSymbolTable(
     SymtabShndxSection->setAlignment(Align(4));
   }
 
-  ArrayRef<std::string> FileNames = Asm.getFileNames();
-  for (const std::string &Name : FileNames)
-    StrTabBuilder.add(Name);
-
   StrTabBuilder.finalize();
-
-  // File symbols are emitted first and handled separately from normal symbols,
-  // i.e. a non-STT_FILE symbol with the same name may appear.
-  for (const std::string &Name : FileNames)
-    Writer.writeSymbol(StrTabBuilder.getOffset(Name),
-                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                       ELF::SHN_ABS, true);
 
   // Symbols are required to be in lexicographic order.
   //array_pod_sort(LocalSymbolData.begin(), LocalSymbolData.end());
   array_pod_sort(ExternalSymbolData.begin(), ExternalSymbolData.end());
 
-  // Set the symbol indices. Local symbols must come before all other
-  // symbols with non-local bindings.
-  unsigned Index = FileNames.size() + 1;
+  // Make the first STT_FILE precede previous local symbols.
+  unsigned Index = 1;
+  auto FileNameIt = FileNames.begin();
+  if (!FileNames.empty())
+    FileNames[0].second = 0;
 
   for (ELFSymbolData &MSD : LocalSymbolData) {
+    // Emit STT_FILE symbols before their associated local symbols.
+    for (; FileNameIt != FileNames.end() && FileNameIt->second <= MSD.Order;
+         ++FileNameIt) {
+      Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
+                         ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
+                         ELF::SHN_ABS, true);
+      ++Index;
+    }
+
     unsigned StringIndex = MSD.Symbol->getType() == ELF::STT_SECTION
                                ? 0
                                : StrTabBuilder.getOffset(MSD.Name);
     MSD.Symbol->setIndex(Index++);
     writeSymbol(Writer, StringIndex, MSD, Layout);
+  }
+  for (; FileNameIt != FileNames.end(); ++FileNameIt) {
+    Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
+                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
+                       ELF::SHN_ABS, true);
+    ++Index;
   }
 
   // Write the symbol table entries.
