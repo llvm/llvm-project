@@ -185,11 +185,6 @@ public:
 #ifdef GWP_ASAN_HOOKS
     gwp_asan::options::Options Opt;
     Opt.Enabled = getFlags()->GWP_ASAN_Enabled;
-    // Bear in mind - Scudo has its own alignment guarantees that are strictly
-    // enforced. Scudo exposes the same allocation function for everything from
-    // malloc() to posix_memalign, so in general this flag goes unused, as Scudo
-    // will always ask GWP-ASan for an aligned amount of bytes.
-    Opt.PerfectlyRightAlign = getFlags()->GWP_ASAN_PerfectlyRightAlign;
     Opt.MaxSimultaneousAllocations =
         getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
     Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
