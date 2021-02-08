@@ -450,9 +450,6 @@ public:
   }
 
   void addFileName(StringRef FileName) {
-    for (const std::pair<std::string, size_t> &F : FileNames)
-      if (F.first == FileName)
-        return;
     FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
 
