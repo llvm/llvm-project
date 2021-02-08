@@ -32,12 +32,10 @@ def riscv_trunc_vector : SDNode<"RISCVISD::TRUNCATE_VECTOR",
                                 SDTypeProfile<1, 1,
                                  [SDTCisVec<0>, SDTCisVec<1>]>>;
 
-// Penalize the generic form with Complexity=1 to give the simm5/uimm5 variants
-// precedence
-def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
-
-def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
-def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
+// Give explicit Complexity to prefer simm5/uimm5.
+def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector, rv32_splat_i64], [], 1>;
+def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
+def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
 
 def RVVBaseAddr : ComplexPattern<iPTR, 1, "SelectRVVBaseAddr">;
 
@@ -714,10 +712,10 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 
 let Predicates = [HasStdExtV] in {
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (splat_vector GPR:$rs1)),
+  def : Pat<(vti.Vector (SplatPat GPR:$rs1)),
             (!cast<Instruction>("PseudoVMV_V_X_" # vti.LMul.MX)
               GPR:$rs1, vti.AVL, vti.SEW)>;
-  def : Pat<(vti.Vector (splat_vector simm5:$rs1)),
+  def : Pat<(vti.Vector (SplatPat_simm5 simm5:$rs1)),
             (!cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX)
               simm5:$rs1, vti.AVL, vti.SEW)>;
 }
@@ -729,19 +727,6 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMCLR_M_"#mti.BX) mti.AVL, mti.SEW)>;
 }
 } // Predicates = [HasStdExtV]
-
-let Predicates = [HasStdExtV, IsRV32] in {
-foreach vti = AllIntegerVectors in {
-  if !eq(vti.SEW, 64) then {
-    def : Pat<(vti.Vector (rv32_splat_i64 GPR:$rs1)),
-              (!cast<Instruction>("PseudoVMV_V_X_" # vti.LMul.MX)
-                GPR:$rs1, vti.AVL, vti.SEW)>;
-    def : Pat<(vti.Vector (rv32_splat_i64 simm5:$rs1)),
-              (!cast<Instruction>("PseudoVMV_V_I_" # vti.LMul.MX)
-                simm5:$rs1, vti.AVL, vti.SEW)>;
-  }
-}
-} // Predicates = [HasStdExtV, IsRV32]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 foreach fvti = AllFloatVectors in {
