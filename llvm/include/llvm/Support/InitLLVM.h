@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_LLVM_H
-#define LLVM_SUPPORT_LLVM_H
+#ifndef LLVM_SUPPORT_INITLLVM_H
+#define LLVM_SUPPORT_INITLLVM_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"

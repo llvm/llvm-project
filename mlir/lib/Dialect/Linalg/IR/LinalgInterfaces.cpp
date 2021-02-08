@@ -115,6 +115,8 @@ static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
 }
 
 bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
+  if (!linalgOp)
+    return false;
   Operation *op = linalgOp.getOperation();
   return isa<ContractionOpInterface>(op) ||
          (isContractionInterfaceImpl(op) == MatchContractionResult::Success);

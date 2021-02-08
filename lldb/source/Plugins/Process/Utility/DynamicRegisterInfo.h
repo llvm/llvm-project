@@ -60,6 +60,9 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
                                                uint32_t num) const;
 
+  const lldb_private::RegisterInfo *GetRegisterInfo(uint32_t kind,
+                                                    uint32_t num) const;
+
   void Dump() const;
 
   void Clear();

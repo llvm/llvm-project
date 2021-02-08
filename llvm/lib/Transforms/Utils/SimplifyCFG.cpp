@@ -2279,8 +2279,8 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     // Do not hoist the instruction if any of its operands are defined but not
     // used in BB. The transformation will prevent the operand from
     // being sunk into the use block.
-    for (User::op_iterator i = I->op_begin(), e = I->op_end(); i != e; ++i) {
-      Instruction *OpI = dyn_cast<Instruction>(*i);
+    for (Use &Op : I->operands()) {
+      Instruction *OpI = dyn_cast<Instruction>(Op);
       if (!OpI || OpI->getParent() != BB || OpI->mayHaveSideEffects())
         continue; // Not a candidate for sinking.
 
@@ -2479,10 +2479,10 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
         N->setName(BBI->getName() + ".c");
 
       // Update operands due to translation.
-      for (User::op_iterator i = N->op_begin(), e = N->op_end(); i != e; ++i) {
-        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(*i);
+      for (Use &Op : N->operands()) {
+        DenseMap<Value *, Value *>::iterator PI = TranslateMap.find(Op);
         if (PI != TranslateMap.end())
-          *i = PI->second;
+          Op = PI->second;
       }
 
       // Check for trivial simplification.
@@ -3032,8 +3032,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   if (is_contained(successors(BB), BB))
     return Changed;
 
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    BasicBlock *PredBlock = *PI;
+  for (BasicBlock *PredBlock : predecessors(BB)) {
     BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
 
     // Check that we have two conditional branches.  If there is a PHI node in
@@ -4410,8 +4409,7 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
   // Find predecessors that end with branches.
   SmallVector<BasicBlock *, 8> UncondBranchPreds;
   SmallVector<BranchInst *, 8> CondBranchPreds;
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    BasicBlock *P = *PI;
+  for (BasicBlock *P : predecessors(BB)) {
     Instruction *PTI = P->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(PTI)) {
       if (BI->isUnconditional())
@@ -5641,8 +5639,7 @@ static void reuseTableCompare(
   // Although this check is invariant in the calling loops, it's better to do it
   // at this late stage. Practically we do it at most once for a switch.
   BasicBlock *BranchBlock = RangeCheckBranch->getParent();
-  for (auto PI = pred_begin(PhiBlock), E = pred_end(PhiBlock); PI != E; ++PI) {
-    BasicBlock *Pred = *PI;
+  for (BasicBlock *Pred : predecessors(PhiBlock)) {
     if (Pred != BranchBlock && Pred->getUniquePredecessor() != BranchBlock)
       return;
   }
@@ -6361,8 +6358,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI)
-    if (BranchInst *PBI = dyn_cast<BranchInst>((*PI)->getTerminator()))
+  for (BasicBlock *Pred : predecessors(BB))
+    if (BranchInst *PBI = dyn_cast<BranchInst>(Pred->getTerminator()))
       if (PBI != BI && PBI->isConditional())
         if (SimplifyCondBranchToCondBranch(PBI, BI, DTU, DL, TTI))
           return requestResimplify();

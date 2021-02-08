@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef OPTIMIZER_DIALECT_FIRTYPE_H
 #define OPTIMIZER_DIALECT_FIRTYPE_H
@@ -32,7 +36,7 @@ namespace fir {
 
 class FIROpsDialect;
 
-using KindTy = int;
+using KindTy = unsigned;
 
 namespace detail {
 struct BoxTypeStorage;
@@ -51,6 +55,7 @@ struct RecordTypeStorage;
 struct ReferenceTypeStorage;
 struct SequenceTypeStorage;
 struct TypeDescTypeStorage;
+struct VectorTypeStorage;
 } // namespace detail
 
 // These isa_ routines follow the precedent of llvm::isa_or_null<>
@@ -67,7 +72,9 @@ bool isa_fir_or_std_type(mlir::Type t);
 /// Is `t` a FIR dialect type that implies a memory (de)reference?
 bool isa_ref_type(mlir::Type t);
 
-/// Is `t` a type that is always trivially pass-by-reference?
+/// Is `t` a type that is always trivially pass-by-reference? Specifically, this
+/// is testing if `t` is a ReferenceType or any box type. Compare this to
+/// conformsWithPassByRef(), which includes pointers and allocatables.
 bool isa_passbyref_type(mlir::Type t);
 
 /// Is `t` a boxed type?
@@ -357,14 +364,6 @@ public:
                                                           llvm::StringRef name);
 };
 
-mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
-
-void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
-
-/// Guarantee `type` is a scalar integral type (standard Integer, standard
-/// Index, or FIR Int). Aborts execution if condition is false.
-void verifyIntegralType(mlir::Type type);
-
 /// Is `t` a FIR Real or MLIR Float type?
 inline bool isa_real(mlir::Type t) {
   return t.isa<fir::RealType>() || t.isa<mlir::FloatType>();
@@ -375,6 +374,33 @@ inline bool isa_integer(mlir::Type t) {
   return t.isa<mlir::IndexType>() || t.isa<mlir::IntegerType>() ||
          t.isa<fir::IntegerType>();
 }
+
+/// Replacement for the builtin vector type.
+/// The FIR vector type is always rank one. It's size is always a constant.
+/// A vector's element type must be real or integer.
+class VectorType : public mlir::Type::TypeBase<fir::VectorType, mlir::Type,
+                                               detail::VectorTypeStorage> {
+public:
+  using Base::Base;
+
+  static fir::VectorType get(uint64_t len, mlir::Type eleTy);
+  mlir::Type getEleTy() const;
+  uint64_t getLen() const;
+
+  static mlir::LogicalResult
+  verifyConstructionInvariants(mlir::Location, uint64_t len, mlir::Type eleTy);
+  static bool isValidElementType(mlir::Type t) {
+    return isa_real(t) || isa_integer(t);
+  }
+};
+
+mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
+
+void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
+
+/// Guarantee `type` is a scalar integral type (standard Integer, standard
+/// Index, or FIR Int). Aborts execution if condition is false.
+void verifyIntegralType(mlir::Type type);
 
 /// Is `t` a FIR or MLIR Complex type?
 inline bool isa_complex(mlir::Type t) {

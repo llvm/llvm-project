@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGLINE_H
-#define LLVM_DEBUGINFO_DWARFDEBUGLINE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -420,4 +420,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGLINE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGLINE_H

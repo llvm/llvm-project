@@ -766,4 +766,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_SERIALIZATION_H

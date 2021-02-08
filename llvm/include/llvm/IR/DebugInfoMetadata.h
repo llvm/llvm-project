@@ -3546,10 +3546,10 @@ public:
         InlinedAt(InlinedAt) {}
 
   const DILocalVariable *getVariable() const { return Variable; }
-  const Optional<FragmentInfo> getFragment() const { return Fragment; }
+  Optional<FragmentInfo> getFragment() const { return Fragment; }
   const DILocation *getInlinedAt() const { return InlinedAt; }
 
-  const FragmentInfo getFragmentOrDefault() const {
+  FragmentInfo getFragmentOrDefault() const {
     return Fragment.getValueOr(DefaultFragment);
   }
 

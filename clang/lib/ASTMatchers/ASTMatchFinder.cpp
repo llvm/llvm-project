@@ -1036,6 +1036,7 @@ private:
         Callback(Callback) {}
 
     void visitMatch(const BoundNodes& BoundNodesView) override {
+      TraversalKindScope RAII(*Context, Callback->getCheckTraversalKind());
       Callback->run(MatchFinder::MatchResult(BoundNodesView, Context));
     }
 
@@ -1335,7 +1336,13 @@ MatchFinder::~MatchFinder() {}
 
 void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
@@ -1347,7 +1354,13 @@ void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
@@ -1435,6 +1448,11 @@ void MatchFinder::registerTestCallbackAfterParsing(
 }
 
 StringRef MatchFinder::MatchCallback::getID() const { return "<unknown>"; }
+
+llvm::Optional<TraversalKind>
+MatchFinder::MatchCallback::getCheckTraversalKind() const {
+  return llvm::None;
+}
 
 } // end namespace ast_matchers
 } // end namespace clang

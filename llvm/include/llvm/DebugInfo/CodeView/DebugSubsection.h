@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENT_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENT_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTION_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -48,4 +48,4 @@ protected:
 } // namespace codeview
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENT_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTION_H

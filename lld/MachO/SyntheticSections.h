@@ -46,6 +46,12 @@ constexpr const char unwindInfo[] = "__unwind_info";
 // these are not synthetic, but in service of synthetic __unwind_info
 constexpr const char compactUnwind[] = "__compact_unwind";
 constexpr const char ehFrame[] = "__eh_frame";
+// these are not synthetic, but need to be sorted
+constexpr const char text[] = "__text";
+constexpr const char stubs[] = "__stubs";
+constexpr const char stubHelper[] = "__stub_helper";
+constexpr const char laSymbolPtr[] = "__la_symbol_ptr";
+constexpr const char data[] = "__data";
 
 } // namespace section_names
 
@@ -71,7 +77,7 @@ class LinkEditSection : public SyntheticSection {
 public:
   LinkEditSection(const char *segname, const char *name)
       : SyntheticSection(segname, name) {
-    align = WordSize;
+    align = WordSize; // mimic ld64
   }
 
   // Sections in __LINKEDIT are special: their offsets are recorded in the

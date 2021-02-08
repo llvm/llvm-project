@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_SERIALIZER_H
-#define LLVM_REMARKS_REMARK_SERIALIZER_H
+#ifndef LLVM_REMARKS_REMARKSERIALIZER_H
+#define LLVM_REMARKS_REMARKSERIALIZER_H
 
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
@@ -85,4 +85,4 @@ createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_SERIALIZER_H */
+#endif // LLVM_REMARKS_REMARKSERIALIZER_H

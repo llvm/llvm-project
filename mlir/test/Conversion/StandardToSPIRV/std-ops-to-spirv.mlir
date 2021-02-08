@@ -117,9 +117,9 @@ func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
   return
 }
 
-// CHECK-LABEL: @unsupported_1elem_vector
-func @unsupported_1elem_vector(%arg0: vector<1xi32>) {
-  // CHECK: addi
+// CHECK-LABEL: @one_elem_vector
+func @one_elem_vector(%arg0: vector<1xi32>) {
+  // CHECK: spv.IAdd %{{.+}}, %{{.+}}: i32
   %0 = addi %arg0, %arg0: vector<1xi32>
   return
 }

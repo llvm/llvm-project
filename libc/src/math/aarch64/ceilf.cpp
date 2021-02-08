@@ -13,12 +13,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
   float y;
-  __asm__ __volatile__("ldr s0, %1\n"
-                       "frintp s0, s0\n"
-                       "str s0, %0\n"
-                       : "=m"(y)
-                       : "m"(x)
-                       : "s0");
+  __asm__ __volatile__("frintp %s0, %s1\n\t" : "=w"(y) : "w"(x));
   return y;
 }
 

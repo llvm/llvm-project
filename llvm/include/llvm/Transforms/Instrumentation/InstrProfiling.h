@@ -10,8 +10,8 @@
 /// pass.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_INSTRPROFILING_H
-#define LLVM_TRANSFORMS_INSTRPROFILING_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -124,4 +124,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_INSTRPROFILING_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H

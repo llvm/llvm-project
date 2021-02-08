@@ -468,6 +468,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Expand various condition codes (explained above).
       for (auto CC : VFPCCToExpand)
         setCondCodeAction(CC, VT, Expand);
+
+      setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
     };
 
     if (Subtarget.hasStdExtZfh())
@@ -922,6 +925,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:
     return lowerVECREDUCE(Op, DAG);
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_SEQ_FADD:
+    return lowerFPVECREDUCE(Op, DAG);
   }
 }
 
@@ -1696,6 +1702,43 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
                              DAG.getConstant(0, DL, Subtarget.getXLenVT()));
   return DAG.getSExtOrTrunc(Elt0, DL, Op.getValueType());
+}
+
+// Given a reduction op, this function returns the matching reduction opcode,
+// the vector SDValue and the scalar SDValue required to lower this to a
+// RISCVISD node.
+static std::tuple<unsigned, SDValue, SDValue>
+getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
+  SDLoc DL(Op);
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Unhandled reduction");
+  case ISD::VECREDUCE_FADD:
+    return {RISCVISD::VECREDUCE_FADD, Op.getOperand(0),
+            DAG.getConstantFP(0.0, DL, EltVT)};
+  case ISD::VECREDUCE_SEQ_FADD:
+    return {RISCVISD::VECREDUCE_SEQ_FADD, Op.getOperand(1), Op.getOperand(0)};
+  }
+}
+
+SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VecEltVT = Op.getSimpleValueType();
+  // We have to perform a bit of a dance to get from our vector type to the
+  // correct LMUL=1 vector type. See above for an explanation.
+  unsigned NumElts = 64 / VecEltVT.getSizeInBits();
+  MVT M1VT = MVT::getScalableVectorVT(VecEltVT, NumElts);
+
+  unsigned RVVOpcode;
+  SDValue VectorVal, ScalarVal;
+  std::tie(RVVOpcode, VectorVal, ScalarVal) =
+      getRVVFPReductionOpAndOperands(Op, DAG, VecEltVT);
+
+  SDValue ScalarSplat = DAG.getSplatVector(M1VT, DL, ScalarVal);
+  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, VectorVal, ScalarSplat);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
+                     DAG.getConstant(0, DL, Subtarget.getXLenVT()));
 }
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
@@ -4264,6 +4307,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VECREDUCE_AND)
   NODE_NAME_CASE(VECREDUCE_OR)
   NODE_NAME_CASE(VECREDUCE_XOR)
+  NODE_NAME_CASE(VECREDUCE_FADD)
+  NODE_NAME_CASE(VECREDUCE_SEQ_FADD)
   }
   // clang-format on
   return nullptr;

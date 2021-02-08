@@ -17,6 +17,9 @@
 #include <unwind.h>
 #include <tuple>
 
+#if defined(_LIBCXXABI_ARM_EHABI)
+int main() {}
+#else
 template <typename T>
 struct Stop;
 
@@ -55,3 +58,4 @@ int main() {
   }
   abort();
 }
+#endif

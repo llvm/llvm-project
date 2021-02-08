@@ -7,15 +7,15 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --bind --lazy-bind --weak-bind --full-contents %t/test | \
 # RUN:   FileCheck %s
 
+# CHECK:      Contents of section __DATA_CONST,__got:
+## Check that this section contains a nonzero pointer. It should point to
+## _weak_external_for_gotpcrel.
+# CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
+
 # CHECK:      Contents of section __DATA,__la_symbol_ptr:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_fn, but we don't have a good way of testing the exact value as
 ## the bytes here are in little-endian order.
-# CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
-
-# CHECK:      Contents of section __DATA_CONST,__got:
-## Check that this section contains a nonzero pointer. It should point to
-## _weak_external_for_gotpcrel.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
 # CHECK:      <_main>:
@@ -30,11 +30,11 @@
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
 
 # CHECK-LABEL: Bind table:
+# CHECK-DAG:   __DATA_CONST  __got           0x[[#WEAK_DY_GOT_ADDR]] pointer 0 libfoo    _weak_dysym_for_gotpcrel
+# CHECK-DAG:   __DATA        __la_symbol_ptr 0x[[#%x,WEAK_DY_FN:]]   pointer 0 libfoo    _weak_dysym_fn
 # CHECK-DAG:   __DATA        __data          0x[[#%x,WEAK_DY:]]      pointer 0 libfoo    _weak_dysym
 # CHECK-DAG:   __DATA        __thread_vars   0x{{[0-9a-f]*}}         pointer 0 libSystem __tlv_bootstrap
 # CHECK-DAG:   __DATA        __thread_ptrs   0x[[#WEAK_DY_TLV_ADDR]] pointer 0 libfoo    _weak_dysym_tlv
-# CHECK-DAG:   __DATA_CONST  __got           0x[[#WEAK_DY_GOT_ADDR]] pointer 0 libfoo    _weak_dysym_for_gotpcrel
-# CHECK-DAG:   __DATA        __la_symbol_ptr 0x[[#%x,WEAK_DY_FN:]]   pointer 0 libfoo    _weak_dysym_fn
 ## Check that we don't have any other bindings
 # CHECK-NOT:   pointer
 

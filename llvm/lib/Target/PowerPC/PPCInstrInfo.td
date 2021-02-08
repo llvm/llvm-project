@@ -4003,7 +4003,7 @@ defm : CRNotPat<(i1 (setcc i64:$s1, i64:$s2, SETNE)),
                 (EXTRACT_SUBREG (CMPD $s1, $s2), sub_eq)>;
 }
 
-multiclass FSetCCPat<SDNode SetCC, ValueType Ty, PatLeaf FCmp> {
+multiclass FSetCCPat<SDPatternOperator SetCC, ValueType Ty, I FCmp> {
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
                   (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),

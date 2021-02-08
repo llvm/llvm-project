@@ -468,10 +468,13 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  if (failed(vectorizeLinalgOpPrecondition(op)))
+  Optional<VectorizedLinalgOp> res = vectorizeLinalgOp(rewriter, op);
+  if (!res)
     return failure();
-  vectorizeLinalgOp(rewriter, op);
-  rewriter.eraseOp(op);
+  if (!res->tensorResults.empty())
+    rewriter.replaceOp(op, res->tensorResults);
+  else
+    rewriter.eraseOp(op);
   return success();
 }
 

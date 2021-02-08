@@ -8,6 +8,8 @@ empty_func:
     end_function
 
 test0:
+# local labels can appear between label and its .functype.
+.Ltest0begin:
     # Test all types:
     .functype   test0 (i32, i64) -> (i32)
     .eventtype  __cpp_exception i32
@@ -116,17 +118,18 @@ test0:
     .globaltype __stack_pointer, i32
 
 .tabletype empty_eref_table, externref
-empty_eref_table:       
+empty_eref_table:
 
 .tabletype empty_fref_table, funcref
-empty_fref_table:       
+empty_fref_table:
 
-        
+
 # CHECK:           .text
 # CHECK-LABEL: empty_func:
 # CHECK-NEXT:      .functype	empty_func () -> ()
 # CHECK-NEXT:      end_function
 # CHECK-LABEL: test0:
+# CHECK-NEXT:  .Ltest0begin:
 # CHECK-NEXT:      .functype   test0 (i32, i64) -> (i32)
 # CHECK-NEXT:      .eventtype  __cpp_exception i32
 # CHECK-NEXT:      .local      f32, f64
@@ -226,6 +229,6 @@ empty_fref_table:
 
 # CHECK:           .tabletype empty_eref_table, externref
 # CHECK-NEXT: empty_eref_table:
-        
+
 # CHECK:           .tabletype empty_fref_table, funcref
 # CHECK-NEXT: empty_fref_table:

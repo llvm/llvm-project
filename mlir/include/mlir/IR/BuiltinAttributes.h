@@ -69,7 +69,7 @@ public:
   using Base::Base;
   using ValueType = ArrayRef<Attribute>;
 
-  static ArrayAttr get(ArrayRef<Attribute> value, MLIRContext *context);
+  static ArrayAttr get(MLIRContext *context, ArrayRef<Attribute> value);
 
   ArrayRef<Attribute> getValue() const;
   Attribute operator[](unsigned idx) const;
@@ -126,8 +126,8 @@ public:
   /// attributes. This method assumes that the provided list is unordered. If
   /// the caller can guarantee that the attributes are ordered by name,
   /// getWithSorted should be used instead.
-  static DictionaryAttr get(ArrayRef<NamedAttribute> value,
-                            MLIRContext *context);
+  static DictionaryAttr get(MLIRContext *context,
+                            ArrayRef<NamedAttribute> value);
 
   /// Construct a dictionary with an array of values that is known to already be
   /// sorted by name and uniqued.
@@ -250,7 +250,7 @@ public:
   using Attribute::Attribute;
   using ValueType = bool;
 
-  static BoolAttr get(bool value, MLIRContext *context);
+  static BoolAttr get(MLIRContext *context, bool value);
 
   /// Enable conversion to IntegerAttr. This uses conversion vs. inheritance to
   /// avoid bringing in all of IntegerAttrs methods.
@@ -292,8 +292,8 @@ public:
   using Base::Base;
 
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
-  static OpaqueAttr get(Identifier dialect, StringRef attrData, Type type,
-                        MLIRContext *context);
+  static OpaqueAttr get(MLIRContext *context, Identifier dialect,
+                        StringRef attrData, Type type);
 
   /// Get or create a new OpaqueAttr with the provided dialect and string data.
   /// If the given identifier is not a valid namespace for a dialect, then a
@@ -325,7 +325,7 @@ public:
   using ValueType = StringRef;
 
   /// Get an instance of a StringAttr with the given string.
-  static StringAttr get(StringRef bytes, MLIRContext *context);
+  static StringAttr get(MLIRContext *context, StringRef bytes);
 
   /// Get an instance of a StringAttr with the given string and Type.
   static StringAttr get(StringRef bytes, Type type);
@@ -348,13 +348,12 @@ public:
   using Base::Base;
 
   /// Construct a symbol reference for the given value name.
-  static FlatSymbolRefAttr get(StringRef value, MLIRContext *ctx);
+  static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value);
 
   /// Construct a symbol reference for the given value name, and a set of nested
   /// references that are further resolve to a nested symbol.
-  static SymbolRefAttr get(StringRef value,
-                           ArrayRef<FlatSymbolRefAttr> references,
-                           MLIRContext *ctx);
+  static SymbolRefAttr get(MLIRContext *ctx, StringRef value,
+                           ArrayRef<FlatSymbolRefAttr> references);
 
   /// Returns the name of the top level symbol reference, i.e. the root of the
   /// reference path.
@@ -377,8 +376,8 @@ public:
   using ValueType = StringRef;
 
   /// Construct a symbol reference for the given value name.
-  static FlatSymbolRefAttr get(StringRef value, MLIRContext *ctx) {
-    return SymbolRefAttr::get(value, ctx);
+  static FlatSymbolRefAttr get(MLIRContext *ctx, StringRef value) {
+    return SymbolRefAttr::get(ctx, value);
   }
 
   /// Returns the name of the held symbol reference.

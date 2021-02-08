@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_YAML_REMARK_SERIALIZER_H
-#define LLVM_REMARKS_YAML_REMARK_SERIALIZER_H
+#ifndef LLVM_REMARKS_YAMLREMARKSERIALIZER_H
+#define LLVM_REMARKS_YAMLREMARKSERIALIZER_H
 
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -105,4 +105,4 @@ struct YAMLStrTabMetaSerializer : public YAMLMetaSerializer {
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_SERIALIZER_H */
+#endif // LLVM_REMARKS_YAMLREMARKSERIALIZER_H

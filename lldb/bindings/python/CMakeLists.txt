@@ -10,6 +10,7 @@ add_custom_command(
       -c++
       -shadow
       -python
+      -py3
       -threads
       -outdir ${CMAKE_CURRENT_BINARY_DIR}
       -o ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp

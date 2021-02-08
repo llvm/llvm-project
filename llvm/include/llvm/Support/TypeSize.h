@@ -528,4 +528,4 @@ template <> struct DenseMapInfo<ElementCount> {
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_TypeSize_H
+#endif // LLVM_SUPPORT_TYPESIZE_H

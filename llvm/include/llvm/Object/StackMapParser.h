@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_STACKMAPPARSER_H
-#define LLVM_CODEGEN_STACKMAPPARSER_H
+#ifndef LLVM_OBJECT_STACKMAPPARSER_H
+#define LLVM_OBJECT_STACKMAPPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -464,4 +464,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_STACKMAPPARSER_H
+#endif // LLVM_OBJECT_STACKMAPPARSER_H

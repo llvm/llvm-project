@@ -155,6 +155,24 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
                      "a.out")
 
+
+    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    @skipIfReproducer
+    def test_read_memory(self):
+        """Test that we are able to read as many bytes as available"""
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        error = lldb.SBError()
+        bytesread = process.ReadMemory(0x400ff0, 20, error)
+        
+        # read only 16 bytes without zero bytes filling
+        self.assertEqual(len(bytesread), 16)
+        self.dbg.DeleteTarget(target)
+
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_FPR_SSE(self):

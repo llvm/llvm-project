@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
-#define LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
+#ifndef LLVM_CODEGEN_DBGENTITYHISTORYCALCULATOR_H
+#define LLVM_CODEGEN_DBGENTITYHISTORYCALCULATOR_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -150,4 +150,4 @@ void calculateDbgEntityHistory(const MachineFunction *MF,
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
+#endif // LLVM_CODEGEN_DBGENTITYHISTORYCALCULATOR_H

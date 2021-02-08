@@ -31,13 +31,6 @@ struct LinalgTilingOptions;
 //===----------------------------------------------------------------------===//
 using LinalgLoops = SmallVector<Operation *, 4>;
 
-struct TiledLinalgOp {
-  LinalgOp op;
-  SmallVector<Operation *, 8> loops;
-  SmallVector<Value, 4> tensorResults;
-  TiledLinalgOp &operator=(const TiledLinalgOp &) = default;
-};
-
 /// Populates patterns for vectorization of all ConvN-D ops.
 void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
@@ -63,6 +56,12 @@ void populateLinalgBufferizePatterns(MLIRContext *context,
 /// `interchangeVector = [1,2,0]`. All values in `interchangeVector` must be
 /// integers, in the range 0..`tileSizes.size()` without duplications
 /// (i.e. `[1,1,2]` is an invalid permutation).
+struct TiledLinalgOp {
+  LinalgOp op;
+  SmallVector<Operation *, 8> loops;
+  SmallVector<Value, 4> tensorResults;
+  TiledLinalgOp &operator=(const TiledLinalgOp &) = default;
+};
 Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
                                      const LinalgTilingOptions &options);
 
@@ -264,7 +263,12 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                    OperationFolder *folder = nullptr);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
-void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
+struct VectorizedLinalgOp {
+  SmallVector<Value> tensorResults;
+  VectorizedLinalgOp &operator=(const VectorizedLinalgOp &) = default;
+};
+Optional<VectorizedLinalgOp> vectorizeLinalgOp(OpBuilder &builder,
+                                               Operation *op);
 
 /// Emits a loop nest of `LoopTy` with the proper body for `op`.
 template <typename LoopTy>

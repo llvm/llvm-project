@@ -128,7 +128,7 @@ class Spy(object):
 class RunAnalyzerTest(unittest.TestCase):
 
     @staticmethod
-    def run_analyzer(content, failures_report):
+    def run_analyzer(content, failures_report, output_format='plist'):
         with libear.TemporaryDirectory() as tmpdir:
             filename = os.path.join(tmpdir, 'test.cpp')
             with open(filename, 'w') as handle:
@@ -141,30 +141,45 @@ class RunAnalyzerTest(unittest.TestCase):
                 'direct_args': [],
                 'file': filename,
                 'output_dir': tmpdir,
-                'output_format': 'plist',
+                'output_format': output_format,
                 'output_failures': failures_report
             }
             spy = Spy()
             result = sut.run_analyzer(opts, spy.call)
-            return (result, spy.arg)
+            output_files = []
+            for entry in os.listdir(tmpdir):
+                output_files.append(entry)
+            return (result, spy.arg, output_files)
 
     def test_run_analyzer(self):
         content = "int div(int n, int d) { return n / d; }"
-        (result, fwds) = RunAnalyzerTest.run_analyzer(content, False)
+        (result, fwds, _) = RunAnalyzerTest.run_analyzer(content, False)
         self.assertEqual(None, fwds)
         self.assertEqual(0, result['exit_code'])
 
     def test_run_analyzer_crash(self):
         content = "int div(int n, int d) { return n / d }"
-        (result, fwds) = RunAnalyzerTest.run_analyzer(content, False)
+        (result, fwds, _) = RunAnalyzerTest.run_analyzer(content, False)
         self.assertEqual(None, fwds)
         self.assertEqual(1, result['exit_code'])
 
     def test_run_analyzer_crash_and_forwarded(self):
         content = "int div(int n, int d) { return n / d }"
-        (_, fwds) = RunAnalyzerTest.run_analyzer(content, True)
+        (_, fwds, _) = RunAnalyzerTest.run_analyzer(content, True)
         self.assertEqual(1, fwds['exit_code'])
         self.assertTrue(len(fwds['error_output']) > 0)
+
+    def test_run_analyzer_with_sarif(self):
+        content = "int div(int n, int d) { return n / d; }"
+        (result, fwds, output_files) = RunAnalyzerTest.run_analyzer(content, False, output_format='sarif')
+        self.assertEqual(None, fwds)
+        self.assertEqual(0, result['exit_code'])
+
+        pattern = re.compile(r'^result-.+\.sarif$')
+        for f in output_files:
+            if re.match(pattern, f):
+                return
+        self.fail('no result sarif files found in output')
 
 
 class ReportFailureTest(unittest.TestCase):

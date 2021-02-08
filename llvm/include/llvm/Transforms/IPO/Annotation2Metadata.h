@@ -27,4 +27,4 @@ struct Annotation2MetadataPass : public PassInfoMixin<Annotation2MetadataPass> {
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_IPO_SCCP_H
+#endif // LLVM_TRANSFORMS_IPO_ANNOTATION2METADATA_H

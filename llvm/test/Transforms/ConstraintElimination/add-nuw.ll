@@ -335,5 +335,122 @@ if.end:                                           ; preds = %entry
 }
 
 
+define i1 @test_n_must_ule_1_due_to_nuw(i8 %n, i8 %i) {
+; CHECK-LABEL: @test_n_must_ule_1_due_to_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB_N_1:%.*]] = add nuw i8 [[N:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[I:%.*]], [[SUB_N_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[F]]
+;
+entry:
+  %sub.n.1 = add nuw i8 %n, -1
+  %add = add nuw i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
+
+define i1 @test_n_unknown_missing_nuw(i8 %n, i8 %i) {
+; CHECK-LABEL: @test_n_unknown_missing_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB_N_1:%.*]] = add i8 [[N:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[I:%.*]], [[SUB_N_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[F]]
+;
+entry:
+  %sub.n.1 = add i8 %n, -1
+  %add = add i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
+define i1 @test_n_must_ule_2_due_to_nuw(i8 %n, i8 %i) {
+; CHECK-LABEL: @test_n_must_ule_2_due_to_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB_N_1:%.*]] = add nuw i8 [[N:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[I:%.*]], [[SUB_N_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 2
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 2
+; CHECK-NEXT:    ret i1 [[F]]
+;
+entry:
+  %sub.n.1 = add nuw i8 %n, -2
+  %add = add nuw i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 2
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 2
+  ret i1 %f
+}
+
+
+define i1 @test_n_unknown_missing_nuw2(i8 %n, i8 %i) {
+; CHECK-LABEL: @test_n_unknown_missing_nuw2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB_N_1:%.*]] = add i8 [[N:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[I:%.*]], [[SUB_N_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 1
+; CHECK-NEXT:    ret i1 [[F]]
+;
+entry:
+  %sub.n.1 = add i8 %n, -2
+  %add = add i8 %i, %sub.n.1
+  %c.1 = icmp uge i8 %i, %add
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %t = icmp ule i8 %n, 1
+  ret i1 %t
+
+if.end:                                           ; preds = %entry
+  %f = icmp ule i8 %n, 1
+  ret i1 %f
+}
+
 declare void @use(i1)
-declare void @llvm.trap()

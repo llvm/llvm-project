@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDATAEXTRACTOR_H
-#define LLVM_DEBUGINFO_DWARFDATAEXTRACTOR_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
@@ -87,4 +87,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDATAEXTRACTOR_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H

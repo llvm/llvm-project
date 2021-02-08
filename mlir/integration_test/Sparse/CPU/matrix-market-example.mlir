@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:  -convert-scf-to-std -convert-vector-to-scf \
-// RUN:  -convert-linalg-to-llvm -convert-vector-to-llvm | \
+// RUN:  -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \

@@ -64,7 +64,7 @@ OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, 100, OCL_C_12P)
 OPENCL_EXTENSION(cl_khr_fp16, 100)
 OPENCL_EXTENSION(cl_khr_int64_base_atomics, 100)
 OPENCL_EXTENSION(cl_khr_int64_extended_atomics, 100)
-OPENCL_GENERIC_EXTENSION(cl_khr_3d_image_writes, 100, OCL_C_20, OCL_C_30)
+OPENCL_COREFEATURE(cl_khr_3d_image_writes, 100, OCL_C_20)
 
 // EMBEDDED_PROFILE
 OPENCL_EXTENSION(cles_khr_int64, 110)
@@ -99,6 +99,18 @@ OPENCL_EXTENSION(cl_intel_subgroups, 120)
 OPENCL_EXTENSION(cl_intel_subgroups_short, 120)
 OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, 120)
 
+// OpenCL C 3.0 features (6.2.1. Features)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_pipes, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_generic_address_space, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_acq_rel, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_seq_cst, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_subgroups, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_device_enqueue, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_read_write_images, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_program_scope_global_variables, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_fp64, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_images, 300, OCL_C_30)
 
 #undef OPENCL_OPTIONALCOREFEATURE
 #undef OPENCL_COREFEATURE

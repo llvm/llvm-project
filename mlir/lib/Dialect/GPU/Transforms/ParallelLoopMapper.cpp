@@ -53,7 +53,7 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
   ploopOp->setAttr(getMappingAttrName(),
-                   ArrayAttr::get(mappingAsAttrs, ploopOp.getContext()));
+                   ArrayAttr::get(ploopOp.getContext(), mappingAsAttrs));
   return success();
 }
 } // namespace gpu

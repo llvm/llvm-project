@@ -7,13 +7,13 @@
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset:
 // CHECK-NEXT:       Type:
-// CHECK-NEXT:       Symbol:  .foo (4)
+// CHECK-NEXT:       Symbol:  .foo (2)
 // CHECK-NEXT:       Addend:
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset:
 // CHECK-NEXT:       Type:
-// CHECK-NEXT:       Symbol:  .foo (5)
+// CHECK-NEXT:       Symbol:  .foo (4)
 // CHECK-NEXT:       Addend:
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
