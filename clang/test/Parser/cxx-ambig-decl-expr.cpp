@@ -24,7 +24,7 @@ void arr() {
 
   // This is array indexing not an array declarator because a comma expression
   // is not syntactically a constant-expression.
-  int(x[1,0]); // expected-warning 2{{unused}}
+  int(x[1,1]); // expected-warning 2{{unused}}
 
   // This is array indexing not an array declaration because a braced-init-list
   // is not syntactically a constant-expression.
