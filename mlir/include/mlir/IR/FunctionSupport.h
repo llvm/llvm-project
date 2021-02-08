@@ -569,7 +569,7 @@ void FunctionLike<ConcreteType>::setArgAttrs(
   if (attributes.empty())
     return (void)static_cast<ConcreteType *>(this)->removeAttr(nameOut);
   Operation *op = this->getOperation();
-  op->setAttr(nameOut, DictionaryAttr::get(attributes, op->getContext()));
+  op->setAttr(nameOut, DictionaryAttr::get(op->getContext(), attributes));
 }
 
 template <typename ConcreteType>
@@ -646,7 +646,7 @@ void FunctionLike<ConcreteType>::setResultAttrs(
   if (attributes.empty())
     return (void)this->getOperation()->removeAttr(nameOut);
   Operation *op = this->getOperation();
-  op->setAttr(nameOut, DictionaryAttr::get(attributes, op->getContext()));
+  op->setAttr(nameOut, DictionaryAttr::get(op->getContext(), attributes));
 }
 
 template <typename ConcreteType>

@@ -148,7 +148,7 @@ StringAttr GpuKernelToBlobPass::translateGPUModuleToBinaryAnnotation(
   auto blob = convertModuleToBlob(llvmModule, loc, name);
   if (!blob)
     return {};
-  return StringAttr::get({blob->data(), blob->size()}, loc->getContext());
+  return StringAttr::get(loc->getContext(), {blob->data(), blob->size()});
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

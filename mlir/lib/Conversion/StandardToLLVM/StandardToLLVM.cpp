@@ -4016,7 +4016,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
     m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
-               StringAttr::get(this->dataLayout, m.getContext()));
+               StringAttr::get(m.getContext(), this->dataLayout));
   }
 };
 } // end namespace

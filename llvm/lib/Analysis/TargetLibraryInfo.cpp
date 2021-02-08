@@ -1550,10 +1550,6 @@ static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
   return LHS.ScalarFnName < S;
 }
 
-static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
-  return LHS.VectorFnName < S;
-}
-
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::append_range(VectorDescs, Fns);
   llvm::sort(VectorDescs, compareByScalarFnName);
@@ -1625,20 +1621,6 @@ StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
     ++I;
   }
   return StringRef();
-}
-
-StringRef TargetLibraryInfoImpl::getScalarizedFunction(StringRef F,
-                                                       unsigned &VF) const {
-  F = sanitizeFunctionName(F);
-  if (F.empty())
-    return F;
-
-  std::vector<VecDesc>::const_iterator I =
-      llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
-  if (I == VectorDescs.end() || StringRef(I->VectorFnName) != F)
-    return StringRef();
-  VF = I->VectorizationFactor;
-  return I->ScalarFnName;
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,

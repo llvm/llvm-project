@@ -49,7 +49,8 @@ def SDTRVVVecReduce : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>
 ]>;
 
-foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR"] in
+foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",
+                "FADD", "SEQ_FADD"] in
   def rvv_vecreduce_#kind : SDNode<"RISCVISD::VECREDUCE_"#kind, SDTRVVVecReduce>;
 
 multiclass VPatUSLoadStoreSDNode<ValueType type,
@@ -362,9 +363,9 @@ multiclass VPatNConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatReductionSDNode<SDNode vop, string instruction_name> {
-  foreach vti = AllIntegerVectors in {
-    defvar vti_m1 = !cast<VTypeInfo>("VI" # vti.SEW # "M1");
+multiclass VPatReductionSDNode<SDNode vop, string instruction_name, bit is_float> {
+  foreach vti = !if(is_float, AllFloatVectors, AllIntegerVectors) in {
+    defvar vti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # vti.SEW # "M1");
     def: Pat<(vti_m1.Vector (vop (vti.Vector vti.RegClass:$rs1), VR:$rs2)),
         (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
             (vti_m1.Vector (IMPLICIT_DEF)),
@@ -495,14 +496,18 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 15.1. Vector Single-Width Integer Reduction Instructions
-defm "" : VPatReductionSDNode<rvv_vecreduce_ADD,  "PseudoVREDSUM">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_UMAX, "PseudoVREDMAXU">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_SMAX, "PseudoVREDMAX">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_UMIN, "PseudoVREDMINU">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_SMIN, "PseudoVREDMIN">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_AND,  "PseudoVREDAND">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_OR,   "PseudoVREDOR">;
-defm "" : VPatReductionSDNode<rvv_vecreduce_XOR,  "PseudoVREDXOR">;
+defm "" : VPatReductionSDNode<rvv_vecreduce_ADD,  "PseudoVREDSUM", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_UMAX, "PseudoVREDMAXU", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_SMAX, "PseudoVREDMAX", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_UMIN, "PseudoVREDMINU", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_SMIN, "PseudoVREDMIN", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_AND,  "PseudoVREDAND", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_OR,   "PseudoVREDOR", /*is_float*/0>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_XOR,  "PseudoVREDXOR", /*is_float*/0>;
+
+// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+defm "" : VPatReductionSDNode<rvv_vecreduce_SEQ_FADD, "PseudoVFREDOSUM", /*is_float*/1>;
+defm "" : VPatReductionSDNode<rvv_vecreduce_FADD,     "PseudoVFREDSUM", /*is_float*/1>;
 
 // 16.1. Vector Mask-Register Logical Instructions
 foreach mti = AllMasks in {
