@@ -341,6 +341,14 @@ void UnwindInfoSection::finalize() {
     }
   }
 
+  for (const CompactUnwindEntry64 *cu : cuPtrVector) {
+    uint32_t functionOffset = cu->functionAddress - in.header->addr;
+    functionToLsdaIndex[functionOffset] = lsdaEntries.size();
+    if (cu->lsda != 0)
+      lsdaEntries.push_back(
+          {functionOffset, static_cast<uint32_t>(cu->lsda - in.header->addr)});
+  }
+
   // compute size of __TEXT,__unwind_info section
   level2PagesOffset =
       sizeof(unwind_info_section_header) +
@@ -386,9 +394,12 @@ void UnwindInfoSection::writeTo(uint8_t *buf) const {
   uint64_t l2PagesOffset = level2PagesOffset;
   auto *iep = reinterpret_cast<unwind_info_section_header_index_entry *>(i32p);
   for (const SecondLevelPage &page : secondLevelPages) {
-    iep->functionOffset = cuPtrVector[page.entryIndex]->functionAddress;
+    iep->functionOffset =
+        cuPtrVector[page.entryIndex]->functionAddress - in.header->addr;
     iep->secondLevelPagesSectionOffset = l2PagesOffset;
-    iep->lsdaIndexArraySectionOffset = lsdaOffset;
+    iep->lsdaIndexArraySectionOffset =
+        lsdaOffset + functionToLsdaIndex.lookup(iep->functionOffset) *
+                         sizeof(unwind_info_section_header_lsda_index_entry);
     iep++;
     l2PagesOffset += SECOND_LEVEL_PAGE_BYTES;
   }
@@ -396,19 +407,19 @@ void UnwindInfoSection::writeTo(uint8_t *buf) const {
   const CompactUnwindEntry64 &cuEnd = cuVector.back();
   iep->functionOffset = cuEnd.functionAddress + cuEnd.functionLength;
   iep->secondLevelPagesSectionOffset = 0;
-  iep->lsdaIndexArraySectionOffset = lsdaOffset;
+  iep->lsdaIndexArraySectionOffset =
+      lsdaOffset +
+      lsdaEntries.size() * sizeof(unwind_info_section_header_lsda_index_entry);
   iep++;
 
   // LSDAs
-  auto *lep =
-      reinterpret_cast<unwind_info_section_header_lsda_index_entry *>(iep);
-  for (const unwind_info_section_header_lsda_index_entry &lsda : lsdaEntries) {
-    lep->functionOffset = lsda.functionOffset;
-    lep->lsdaOffset = lsda.lsdaOffset;
-  }
+  size_t lsdaBytes =
+      lsdaEntries.size() * sizeof(unwind_info_section_header_lsda_index_entry);
+  memcpy(iep, lsdaEntries.data(), lsdaBytes);
 
   // Level-2 pages
-  auto *pp = reinterpret_cast<uint32_t *>(lep);
+  auto *pp = reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(iep) +
+                                          lsdaBytes);
   for (const SecondLevelPage &page : secondLevelPages) {
     if (page.kind == UNWIND_SECOND_LEVEL_COMPRESSED) {
       uintptr_t functionAddressBase =
