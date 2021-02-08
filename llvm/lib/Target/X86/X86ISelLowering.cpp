@@ -21900,7 +21900,8 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
 
   // And if it is bigger, shrink it first.
   if (Sign.getSimpleValueType().bitsGT(VT))
-    Sign = DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(1, dl));
+    Sign =
+        DAG.getNode(ISD::FP_ROUND, dl, VT, Sign, DAG.getIntPtrConstant(0, dl));
 
   // At this point the operands and the result should have the same
   // type, and that won't be f80 since that is not custom lowered.
@@ -36946,11 +36947,27 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
     return DAG.getBitcast(VT, Res);
   }
   case X86ISD::VPERMILPI:
-    // TODO: Handle v4f64 permutes with different low/high lane masks.
+    // Handle v4f64 permutes with different low/high lane masks by permuting
+    // the permute mask on a lane-by-lane basis.
     if (SrcVT0 == MVT::v4f64) {
-      uint64_t Mask = Src0.getConstantOperandVal(1);
-      if ((Mask & 0x3) != ((Mask >> 2) & 0x3))
-        break;
+      if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
+        uint64_t LaneMask = V.getConstantOperandVal(2);
+        uint64_t Mask = Src0.getConstantOperandVal(1);
+        uint64_t LoMask = Mask & 0x3;
+        uint64_t HiMask = (Mask >> 2) & 0x3;
+        uint64_t NewMask = 0;
+        NewMask |= ((LaneMask & 0x02) ? HiMask : LoMask);
+        NewMask |= ((LaneMask & 0x02) ? HiMask : LoMask) << 2;
+        SDValue LHS = Src0.getOperand(0);
+        SDValue RHS =
+            Src1.isUndef() ? DAG.getUNDEF(SrcVT0) : Src1.getOperand(0);
+        SDValue Res = DAG.getNode(X86ISD::VPERM2X128, DL, SrcVT0, LHS, RHS,
+                                  V.getOperand(2));
+        Res = DAG.getNode(SrcOpc0, DL, SrcVT0, Res,
+                          DAG.getTargetConstant(NewMask, DL, MVT::i8));
+        return DAG.getBitcast(VT, Res);
+      }
+      break;
     }
     LLVM_FALLTHROUGH;
   case X86ISD::VSHLI:
@@ -49835,7 +49852,8 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
   // extract the lowest subvector instead which should allow
   // SimplifyDemandedVectorElts do more simplifications.
   if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
-                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD))
+                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+                      DAG.isSplatValue(InVec, /*AllowUndefs*/ false)))
     return extractSubVector(InVec, 0, DAG, SDLoc(N), SizeInBits);
 
   // If we're extracting a broadcasted subvector, just use the lowest subvector.

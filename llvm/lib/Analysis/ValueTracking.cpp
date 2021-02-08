@@ -5053,8 +5053,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
 bool llvm::isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB) {
   // TODO: This is slightly conservative for invoke instruction since exiting
   // via an exception *is* normal control for them.
-  for (auto I = BB->begin(), E = BB->end(); I != E; ++I)
-    if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
+  for (const Instruction &I : *BB)
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
       return false;
   return true;
 }

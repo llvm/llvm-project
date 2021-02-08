@@ -248,6 +248,19 @@ def NS_JOp : NS_Op<"op_with_InferTypeOpInterface_interface", [DeclareOpInterface
 // CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 // CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 
+// Check native OpTrait usage
+// ---
+
+def NS_TestTrait : NativeOpTrait<"TestTrait"> {
+    let cppNamespace = "SomeNamespace";
+}
+
+def NS_KWithTraitOp : NS_Op<"KWithTrait", [NS_TestTrait]>;
+
+// CHECK-LABEL: NS::KWithTraitOp declarations
+// CHECK:       class KWithTraitOp : public ::mlir::Op<KWithTraitOp
+// CHECK-SAME:      SomeNamespace::TestTrait
+
 // Test that type defs have the proper namespaces when used as a constraint.
 // ---
 

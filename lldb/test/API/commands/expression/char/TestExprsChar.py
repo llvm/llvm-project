@@ -20,6 +20,7 @@ class ExprCharTestCase(TestBase):
     def test_default_char(self):
         self.do_test()
 
+    @skipIf(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr23069")
     @expectedFailureAll(
         archs=[
             "aarch64",

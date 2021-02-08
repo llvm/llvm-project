@@ -115,7 +115,7 @@ struct PatternSortingPredicate {
     // pattern may have been resolved into multiple match patterns due to
     // alternative fragments.  To ensure deterministic output, always use
     // std::stable_sort with this predicate.
-    return LHS->ID < RHS->ID;
+    return LHS->getID() < RHS->getID();
   }
 };
 } // End anonymous namespace

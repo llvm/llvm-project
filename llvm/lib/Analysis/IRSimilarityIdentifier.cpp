@@ -835,8 +835,8 @@ void IRSimilarityIdentifier::findCandidates(
   // Iterate over the subsequences found by the Suffix Tree to create
   // IRSimilarityCandidates for each repeated subsequence and determine which
   // instances are structurally similar to one another.
-  for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {
-    createCandidatesFromSuffixTree(Mapper, InstrList, IntegerMapping, *It,
+  for (SuffixTree::RepeatedSubstring &RS : ST) {
+    createCandidatesFromSuffixTree(Mapper, InstrList, IntegerMapping, RS,
                                    CandsForRepSubstring);
 
     if (CandsForRepSubstring.size() < 2)

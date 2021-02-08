@@ -53,7 +53,7 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
     return {{CI->getSExtValue(), nullptr}};
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
-  if (GEP && GEP->getNumOperands() == 2) {
+  if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
     if (isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
       return {{cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))
                    ->getSExtValue(),
@@ -79,6 +79,9 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   }
 
   Value *Op0;
+  if (match(V, m_ZExt(m_Value(Op0))))
+    V = Op0;
+
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))))

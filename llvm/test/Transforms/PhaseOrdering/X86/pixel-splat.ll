@@ -2,6 +2,10 @@
 ; RUN: opt -O2                   -S < %s  | FileCheck %s
 ; RUN: opt -passes='default<O2>' -S < %s  | FileCheck %s
 
+
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-macosx10.15.0"
+
 ; https://llvm.org/PR49055
 ;
 ; void loop_or(const unsigned char* __restrict pIn, unsigned int* __restrict pOut, int s) {
@@ -11,9 +15,8 @@
 ;     pOut[i] = pixel;
 ;   }
 ; }
-
-target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.15.0"
+;
+; We are looking for the shifts to get combined into mul along with vectorization.
 
 define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
 ; CHECK-LABEL: @loop_or(
@@ -37,25 +40,21 @@ define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, <4 x i8>* [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[WIDE_LOAD3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw <4 x i32> [[TMP4]], <i32 8, i32 8, i32 8, i32 8>
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw <4 x i32> [[TMP5]], <i32 8, i32 8, i32 8, i32 8>
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw <4 x i32> [[TMP4]], <i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw <4 x i32> [[TMP5]], <i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i32> [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i32> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i32> [[TMP11]], [[TMP9]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i32> [[TMP12]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP15:%.*]] = or <4 x i32> [[TMP13]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[POUT:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP16]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP14]], <4 x i32>* [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[TMP16]], i64 4
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i32* [[TMP18]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw <4 x i32> [[TMP4]], <i32 65792, i32 65792, i32 65792, i32 65792>
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw nsw <4 x i32> [[TMP5]], <i32 65792, i32 65792, i32 65792, i32 65792>
+; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> [[TMP4]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
+; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i32> [[TMP5]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[POUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i64 4
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i32* [[TMP14]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* [[TMP15]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER4]]
@@ -65,13 +64,11 @@ define void @loop_or(i8* noalias %pIn, i32* noalias %pOut, i32 %s) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER4]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PIN]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP21]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV]], 8
-; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i32 [[CONV]], 16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[CONV]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR]], [[SHL1]]
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[OR2]], -16777216
+; CHECK-NEXT:    [[TMP17:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP17]] to i32
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul nuw nsw i32 [[CONV]], 65792
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[CONV]], -16777216
+; CHECK-NEXT:    [[OR3:%.*]] = add nsw i32 [[OR2]], [[REASS_MUL]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[POUT]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 [[OR3]], i32* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1

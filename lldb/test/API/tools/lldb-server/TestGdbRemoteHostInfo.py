@@ -66,8 +66,8 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
 
         # Validate keys are known.
         for (key, val) in list(host_info_dict.items()):
-            self.assertTrue(key in self.KNOWN_HOST_INFO_KEYS,
-                            "unknown qHostInfo key: " + key)
+            self.assertIn(key, self.KNOWN_HOST_INFO_KEYS,
+                          "unknown qHostInfo key: " + key)
             self.assertIsNotNone(val)
 
         # Return the key:val pairs.

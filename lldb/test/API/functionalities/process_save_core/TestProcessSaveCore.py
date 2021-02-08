@@ -56,7 +56,7 @@ class ProcessSaveCoreTestCase(TestBase):
                 os.path.join(
                     f.GetDirectory(),
                     f.GetFilename()) for f in files]
-            self.assertTrue(exe in paths)
+            self.assertIn(exe, paths)
 
         finally:
             # Clean up the mini dump file.

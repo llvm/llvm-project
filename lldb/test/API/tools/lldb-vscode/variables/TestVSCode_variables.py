@@ -69,8 +69,8 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
     def verify_variables(self, verify_dict, variables, varref_dict=None):
         for variable in variables:
             name = variable['name']
-            self.assertTrue(name in verify_dict,
-                            'variable "%s" in verify dictionary' % (name))
+            self.assertIn(name, verify_dict,
+                          'variable "%s" in verify dictionary' % (name))
             self.verify_values(verify_dict[name], variable, varref_dict)
 
     @skipIfWindows

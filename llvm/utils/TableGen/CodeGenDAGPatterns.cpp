@@ -4287,13 +4287,13 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   PatternsToMatch.swap(Copy);
 
   auto AppendPattern = [this, &ModeChecks](PatternToMatch &P, unsigned Mode) {
-    TreePatternNodePtr NewSrc = P.SrcPattern->clone();
-    TreePatternNodePtr NewDst = P.DstPattern->clone();
+    TreePatternNodePtr NewSrc = P.getSrcPattern()->clone();
+    TreePatternNodePtr NewDst = P.getDstPattern()->clone();
     if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
       return;
     }
 
-    std::vector<Predicate> Preds = P.Predicates;
+    std::vector<Predicate> Preds = P.getPredicates();
     const std::vector<Predicate> &MC = ModeChecks[Mode];
     llvm::append_range(Preds, MC);
     PatternsToMatch.emplace_back(P.getSrcRecord(), std::move(Preds),
@@ -4305,10 +4305,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
   for (PatternToMatch &P : Copy) {
     TreePatternNodePtr SrcP = nullptr, DstP = nullptr;
-    if (P.SrcPattern->hasProperTypeByHwMode())
-      SrcP = P.SrcPattern;
-    if (P.DstPattern->hasProperTypeByHwMode())
-      DstP = P.DstPattern;
+    if (P.getSrcPattern()->hasProperTypeByHwMode())
+      SrcP = P.getSrcPatternShared();
+    if (P.getDstPattern()->hasProperTypeByHwMode())
+      DstP = P.getDstPatternShared();
     if (!SrcP && !DstP) {
       PatternsToMatch.push_back(P);
       continue;

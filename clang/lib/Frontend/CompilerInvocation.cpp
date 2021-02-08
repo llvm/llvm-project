@@ -760,9 +760,121 @@ static void getAllNoBuiltinFuncValues(ArgList &Args,
   Funcs.insert(Funcs.end(), Values.begin(), Values.end());
 }
 
-static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &Diags) {
+static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
+                                 SmallVectorImpl<const char *> &Args,
+                                 CompilerInvocation::StringAllocator SA) {
+  const AnalyzerOptions *AnalyzerOpts = &Opts;
+
+#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef ANALYZER_OPTION_WITH_MARSHALLING
+
+  if (Opts.AnalysisStoreOpt != RegionStoreModel) {
+    switch (Opts.AnalysisStoreOpt) {
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)                           \
+  case NAME##Model:                                                            \
+    GenerateArg(Args, OPT_analyzer_store, CMDFLAG, SA);                        \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis store.");
+    }
+  }
+
+  if (Opts.AnalysisConstraintsOpt != RangeConstraintsModel) {
+    switch (Opts.AnalysisConstraintsOpt) {
+#define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)                     \
+  case NAME##Model:                                                            \
+    GenerateArg(Args, OPT_analyzer_constraints, CMDFLAG, SA);                  \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis constraint.");
+    }
+  }
+
+  if (Opts.AnalysisDiagOpt != PD_HTML) {
+    switch (Opts.AnalysisDiagOpt) {
+#define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATFN)                     \
+  case PD_##NAME:                                                              \
+    GenerateArg(Args, OPT_analyzer_output, CMDFLAG, SA);                       \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis diagnostic client.");
+    }
+  }
+
+  if (Opts.AnalysisPurgeOpt != PurgeStmt) {
+    switch (Opts.AnalysisPurgeOpt) {
+#define ANALYSIS_PURGE(NAME, CMDFLAG, DESC)                                    \
+  case NAME:                                                                   \
+    GenerateArg(Args, OPT_analyzer_purge, CMDFLAG, SA);                        \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis purge mode.");
+    }
+  }
+
+  if (Opts.InliningMode != NoRedundancy) {
+    switch (Opts.InliningMode) {
+#define ANALYSIS_INLINING_MODE(NAME, CMDFLAG, DESC)                            \
+  case NAME:                                                                   \
+    GenerateArg(Args, OPT_analyzer_inlining_mode, CMDFLAG, SA);                \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis inlining mode.");
+    }
+  }
+
+  for (const auto &CP : Opts.CheckersAndPackages) {
+    OptSpecifier Opt =
+        CP.second ? OPT_analyzer_checker : OPT_analyzer_disable_checker;
+    GenerateArg(Args, Opt, CP.first, SA);
+  }
+
+  AnalyzerOptions ConfigOpts;
+  parseAnalyzerConfigs(ConfigOpts, nullptr);
+
+  for (const auto &C : Opts.Config) {
+    // Don't generate anything that came from parseAnalyzerConfigs. It would be
+    // redundant and may not be valid on the command line.
+    auto Entry = ConfigOpts.Config.find(C.getKey());
+    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == C.getValue())
+      continue;
+
+    GenerateArg(Args, OPT_analyzer_config, C.getKey() + "=" + C.getValue(), SA);
+  }
+
+  // Nothing to generate for FullCompilerInvocation.
+}
+
+static bool ParseAnalyzerArgsImpl(AnalyzerOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags) {
+  AnalyzerOptions *AnalyzerOpts = &Opts;
   bool Success = true;
+
+#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef ANALYZER_OPTION_WITH_MARSHALLING
+
   if (Arg *A = Args.getLastArg(OPT_analyzer_store)) {
     StringRef Name = A->getValue();
     AnalysisStores Value = llvm::StringSwitch<AnalysisStores>(Name)
@@ -886,8 +998,10 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
       // TODO: Check checker options too, possibly in CheckerRegistry.
       // Leave unknown non-checker configs unclaimed.
       if (!key.contains(":") && Opts.isUnknownAnalyzerConfig(key)) {
-        if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
+        if (Opts.ShouldEmitErrorsOnInvalidConfigValue) {
           Diags.Report(diag::err_analyzer_config_unknown) << key;
+          Success = false;
+        }
         continue;
       }
 
@@ -910,6 +1024,24 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
+}
+
+static bool ParseAnalyzerArgs(CompilerInvocation &Res, AnalyzerOptions &Opts,
+                              ArgList &Args, DiagnosticsEngine &Diags) {
+  auto DummyOpts = IntrusiveRefCntPtr<AnalyzerOptions>(new AnalyzerOptions());
+
+  return RoundTrip(
+      [](CompilerInvocation &Res, ArgList &Args, DiagnosticsEngine &Diags) {
+        return ParseAnalyzerArgsImpl(*Res.getAnalyzerOpts(), Args, Diags);
+      },
+      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &Args,
+         CompilerInvocation::StringAllocator SA) {
+        GenerateAnalyzerArgs(*Res.getAnalyzerOpts(), Args, SA);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        Res.getAnalyzerOpts().swap(DummyOpts);
+      },
+      Res, Args, Diags, "AnalyzerOptions");
 }
 
 static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
@@ -2990,9 +3122,96 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   llvm_unreachable("invalid frontend action");
 }
 
-static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  frontend::ActionKind Action) {
+static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
+                                     SmallVectorImpl<const char *> &Args,
+                                     CompilerInvocation::StringAllocator SA,
+                                     const LangOptions &LangOpts,
+                                     const FrontendOptions &FrontendOpts,
+                                     const CodeGenOptions &CodeGenOpts) {
+  PreprocessorOptions *PreprocessorOpts = &Opts;
+
+#define PREPROCESSOR_OPTION_WITH_MARSHALLING(                                  \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef PREPROCESSOR_OPTION_WITH_MARSHALLING
+
+  if (Opts.PCHWithHdrStop && !Opts.PCHWithHdrStopCreate)
+    GenerateArg(Args, OPT_pch_through_hdrstop_use, SA);
+
+  for (const auto &D : Opts.DeserializedPCHDeclsToErrorOn)
+    GenerateArg(Args, OPT_error_on_deserialized_pch_decl, D, SA);
+
+  for (const auto &MP : Opts.MacroPrefixMap)
+    GenerateArg(Args, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second, SA);
+
+  if (Opts.PrecompiledPreambleBytes != std::make_pair(0u, false))
+    GenerateArg(Args, OPT_preamble_bytes_EQ,
+                Twine(Opts.PrecompiledPreambleBytes.first) + "," +
+                    (Opts.PrecompiledPreambleBytes.second ? "1" : "0"),
+                SA);
+
+  for (const auto &M : Opts.Macros) {
+    // Don't generate __CET__ macro definitions. They are implied by the
+    // -fcf-protection option that is generated elsewhere.
+    if (M.first == "__CET__=1" && !M.second &&
+        !CodeGenOpts.CFProtectionReturn && CodeGenOpts.CFProtectionBranch)
+      continue;
+    if (M.first == "__CET__=2" && !M.second && CodeGenOpts.CFProtectionReturn &&
+        !CodeGenOpts.CFProtectionBranch)
+      continue;
+    if (M.first == "__CET__=3" && !M.second && CodeGenOpts.CFProtectionReturn &&
+        CodeGenOpts.CFProtectionBranch)
+      continue;
+
+    GenerateArg(Args, M.second ? OPT_U : OPT_D, M.first, SA);
+  }
+
+  for (const auto &I : Opts.Includes) {
+    // Don't generate OpenCL includes. They are implied by other flags that are
+    // generated elsewhere.
+    if (LangOpts.OpenCL && LangOpts.IncludeDefaultHeader &&
+        ((LangOpts.DeclareOpenCLBuiltins && I == "opencl-c-base.h") ||
+         I == "opencl-c.h"))
+      continue;
+
+    GenerateArg(Args, OPT_include, I, SA);
+  }
+
+  for (const auto &CI : Opts.ChainedIncludes)
+    GenerateArg(Args, OPT_chain_include, CI, SA);
+
+  for (const auto &RF : Opts.RemappedFiles)
+    GenerateArg(Args, OPT_remap_file, RF.first + ";" + RF.second, SA);
+
+  // Don't handle LexEditorPlaceholders. It is implied by the action that is
+  // generated elsewhere.
+}
+
+static bool ParsePreprocessorArgsImpl(PreprocessorOptions &Opts, ArgList &Args,
+                                      DiagnosticsEngine &Diags,
+                                      frontend::ActionKind Action,
+                                      const FrontendOptions &FrontendOpts) {
+  PreprocessorOptions *PreprocessorOpts = &Opts;
+  bool Success = true;
+
+#define PREPROCESSOR_OPTION_WITH_MARSHALLING(                                  \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef PREPROCESSOR_OPTION_WITH_MARSHALLING
+
   Opts.PCHWithHdrStop = Args.hasArg(OPT_pch_through_hdrstop_create) ||
                         Args.hasArg(OPT_pch_through_hdrstop_use);
 
@@ -3063,6 +3282,48 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
+
+  return Success;
+}
+
+static bool ParsePreprocessorArgs(CompilerInvocation &Res,
+                                  PreprocessorOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags,
+                                  frontend::ActionKind Action,
+                                  FrontendOptions &FrontendOpts) {
+  auto DummyOpts = std::make_shared<PreprocessorOptions>();
+
+  auto Parse = [Action](CompilerInvocation &Res, ArgList &Args,
+                        DiagnosticsEngine &Diags) {
+    return ParsePreprocessorArgsImpl(Res.getPreprocessorOpts(), Args, Diags,
+                                     Action, Res.getFrontendOpts());
+  };
+
+  auto Generate = [&Args](CompilerInvocation &Res,
+                     SmallVectorImpl<const char *> &GeneratedArgs,
+                     CompilerInvocation::StringAllocator SA) {
+    GeneratePreprocessorArgs(Res.getPreprocessorOpts(), GeneratedArgs, SA,
+                             *Res.getLangOpts(), Res.getFrontendOpts(),
+                             Res.getCodeGenOpts());
+    // The ParsePreprocessorArgs function queries the -fcf-protection option,
+    // which means that it won't be directly copied during argument generation.
+    // The GeneratePreprocessorArgs function isn't responsible for generating it
+    // either. This would cause -fcf-protection to get forgotten during
+    // round-trip and the __CET__ macros wouldn't get deduced during second call
+    // to ParsePreprocessorArgs. Let's fix this by generating -fcf-protection
+    // here.
+    // TODO: Remove this once we're doing one big round-trip instead of many
+    // small ones.
+    if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ))
+      GenerateArg(GeneratedArgs, OPT_fcf_protection_EQ, A->getValue(), SA);
+  };
+
+  auto Swap = [&DummyOpts](CompilerInvocation &Res) {
+    std::swap(Res.PreprocessorOpts, DummyOpts);
+  };
+
+  return RoundTrip(Parse, Generate, Swap, Res, Args, Diags,
+                   "PreprocessorOptions");
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
@@ -3123,7 +3384,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
 
   Success &= Res.parseSimpleArgs(Args, Diags);
 
-  Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
   if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
       Res.getDependencyOutputOpts().Targets.empty()) {
@@ -3190,8 +3451,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       !LangOpts.Sanitize.has(SanitizerKind::Memory) &&
       !LangOpts.Sanitize.has(SanitizerKind::KernelMemory);
 
-  ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, Diags,
-                        Res.getFrontendOpts().ProgramAction);
+  ParsePreprocessorArgs(Res, Res.getPreprocessorOpts(), Args, Diags,
+                        Res.getFrontendOpts().ProgramAction,
+                        Res.getFrontendOpts());
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
 
@@ -3351,8 +3613,11 @@ void CompilerInvocation::generateCC1CommandLine(
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 
+  GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA);
+  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts,
+                           FrontendOpts, CodeGenOpts);
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

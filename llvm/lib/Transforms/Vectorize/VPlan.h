@@ -253,9 +253,9 @@ struct VPTransformState {
   VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
                    DominatorTree *DT, IRBuilder<> &Builder,
                    VectorizerValueMap &ValueMap, InnerLoopVectorizer *ILV,
-                   VPCallback &Callback)
+                   VPlan *Plan, VPCallback &Callback)
       : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
-        ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
+        ValueMap(ValueMap), ILV(ILV), Plan(Plan), Callback(Callback) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   ElementCount VF;
@@ -312,6 +312,7 @@ struct VPTransformState {
     Data.PerPartOutput[Def][Part] = V;
   }
   void set(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
+  void reset(VPValue *Def, Value *IRDef, Value *V, unsigned Part);
   void set(VPValue *Def, Value *IRDef, Value *V, const VPIteration &Instance);
 
   void set(VPValue *Def, Value *V, const VPIteration &Instance) {
@@ -375,6 +376,9 @@ struct VPTransformState {
 
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
+
+  /// Pointer to the VPlan code is generated for.
+  VPlan *Plan;
 
   VPCallback &Callback;
 };
