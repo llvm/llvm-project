@@ -14,6 +14,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
+def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
+                              SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
+                                                   SDTCisVT<1, XLenVT>,
+                                                   SDTCisVT<2, XLenVT>]>>;
+def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
+                               SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
+                                                    SDTCisEltOfVec<1, 0>,
+                                                    SDTCisVT<2, XLenVT>]>>;
+
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
@@ -4048,10 +4057,10 @@ foreach vti = AllVectors in {
 }
 
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (int_riscv_vmv_v_x GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
              $rs2, GPR:$vl, vti.SEW)>;
-  def : Pat<(vti.Vector (int_riscv_vmv_v_x simm5:$imm5, (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(vti.Vector (riscv_vmv_v_x_vl simm5:$imm5, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
              simm5:$imm5, GPR:$vl, vti.SEW)>;
 }
@@ -4206,12 +4215,12 @@ foreach fvti = AllFloatVectors in {
 //===----------------------------------------------------------------------===//
 foreach fvti = AllFloatVectors in {
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
-  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
              0, GPR:$vl, fvti.SEW)>;
 
-  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
                                 fvti.LMul.MX)
