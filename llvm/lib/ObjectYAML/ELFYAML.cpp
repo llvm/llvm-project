@@ -138,6 +138,11 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_GNU_BUILD_ID);
   ECase(NT_GNU_GOLD_VERSION);
   ECase(NT_GNU_PROPERTY_TYPE_0);
+  // FreeBSD note types.
+  ECase(NT_FREEBSD_ABI_TAG);
+  ECase(NT_FREEBSD_NOINIT_TAG);
+  ECase(NT_FREEBSD_ARCH_TAG);
+  ECase(NT_FREEBSD_FEATURE_CTL);
   // FreeBSD core note types.
   ECase(NT_FREEBSD_THRMISC);
   ECase(NT_FREEBSD_PROCSTAT_PROC);
