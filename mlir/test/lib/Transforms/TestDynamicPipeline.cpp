@@ -72,7 +72,7 @@ public:
     if (runOnNestedOp) {
       llvm::errs() << "Run on nested op\n";
       currentOp->walk([&](Operation *op) {
-        if (op == currentOp || !op->isKnownIsolatedFromAbove() ||
+        if (op == currentOp || !op->hasTrait<OpTrait::IsIsolatedFromAbove>() ||
             op->getName() != currentOp->getName())
           return;
         llvm::errs() << "Run on " << *op << "\n";

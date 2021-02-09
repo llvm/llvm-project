@@ -455,47 +455,6 @@ public:
   // Accessors for various properties of operations
   //===--------------------------------------------------------------------===//
 
-  /// Returns whether the operation is commutative.
-  bool isCommutative() {
-    if (auto *absOp = getAbstractOperation())
-      return absOp->hasProperty(OperationProperty::Commutative);
-    return false;
-  }
-
-  /// Represents the status of whether an operation is a terminator. We
-  /// represent an 'unknown' status because we want to support unregistered
-  /// terminators.
-  enum class TerminatorStatus { Terminator, NonTerminator, Unknown };
-
-  /// Returns the status of whether this operation is a terminator or not.
-  TerminatorStatus getTerminatorStatus() {
-    if (auto *absOp = getAbstractOperation()) {
-      return absOp->hasProperty(OperationProperty::Terminator)
-                 ? TerminatorStatus::Terminator
-                 : TerminatorStatus::NonTerminator;
-    }
-    return TerminatorStatus::Unknown;
-  }
-
-  /// Returns true if the operation is known to be a terminator.
-  bool isKnownTerminator() {
-    return getTerminatorStatus() == TerminatorStatus::Terminator;
-  }
-
-  /// Returns true if the operation is known to *not* be a terminator.
-  bool isKnownNonTerminator() {
-    return getTerminatorStatus() == TerminatorStatus::NonTerminator;
-  }
-
-  /// Returns true if the operation is known to be completely isolated from
-  /// enclosing regions, i.e., no internal regions reference values defined
-  /// above this operation.
-  bool isKnownIsolatedFromAbove() {
-    if (auto *absOp = getAbstractOperation())
-      return absOp->hasProperty(OperationProperty::IsolatedFromAbove);
-    return false;
-  }
-
   /// Attempt to fold this operation with the specified constant operand values
   /// - the elements in "operands" will correspond directly to the operands of
   /// the operation, but may be null if non-constant. If folding is successful,
@@ -506,8 +465,16 @@ public:
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait> bool hasTrait() {
-    auto *absOp = getAbstractOperation();
-    return absOp ? absOp->hasTrait<Trait>() : false;
+    const AbstractOperation *abstractOp = getAbstractOperation();
+    return abstractOp ? abstractOp->hasTrait<Trait>() : false;
+  }
+
+  /// Returns true if the operation is *might* have the provided trait. This
+  /// means that either the operation is unregistered, or it was registered with
+  /// the provide trait.
+  template <template <typename T> class Trait> bool mightHaveTrait() {
+    const AbstractOperation *abstractOp = getAbstractOperation();
+    return abstractOp ? abstractOp->hasTrait<Trait>() : true;
   }
 
   //===--------------------------------------------------------------------===//

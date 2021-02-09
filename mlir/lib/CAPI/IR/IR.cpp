@@ -485,7 +485,7 @@ MlirOperation mlirBlockGetTerminator(MlirBlock block) {
   if (cppBlock->empty())
     return wrap(static_cast<Operation *>(nullptr));
   Operation &back = cppBlock->back();
-  if (!back.isKnownTerminator())
+  if (!back.hasTrait<OpTrait::IsTerminator>())
     return wrap(static_cast<Operation *>(nullptr));
   return wrap(&back);
 }

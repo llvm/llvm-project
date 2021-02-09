@@ -30,7 +30,7 @@ getInsertionRegion(DialectInterfaceCollection<DialectFoldInterface> &interfaces,
     //  * The parent is unregistered, or is known to be isolated from above.
     //  * The parent is a top-level operation.
     auto *parentOp = region->getParentOp();
-    if (!parentOp->isRegistered() || parentOp->isKnownIsolatedFromAbove() ||
+    if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>() ||
         !parentOp->getBlock())
       return region;
 
@@ -182,7 +182,7 @@ LogicalResult OperationFolder::tryToFold(
   SmallVector<OpFoldResult, 8> foldResults;
 
   // If this is a commutative operation, move constants to be trailing operands.
-  if (op->getNumOperands() >= 2 && op->isCommutative()) {
+  if (op->getNumOperands() >= 2 && op->hasTrait<OpTrait::IsCommutative>()) {
     std::stable_partition(
         op->getOpOperands().begin(), op->getOpOperands().end(),
         [&](OpOperand &O) { return !matchPattern(O.get(), m_Constant()); });

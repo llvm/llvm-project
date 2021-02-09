@@ -671,10 +671,6 @@ class VariadicResults
 template <typename ConcreteType>
 class IsTerminator : public TraitBase<ConcreteType, IsTerminator> {
 public:
-  static AbstractOperation::OperationProperties getTraitProperties() {
-    return static_cast<AbstractOperation::OperationProperties>(
-        OperationProperty::Terminator);
-  }
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifyIsTerminator(op);
   }
@@ -1001,13 +997,7 @@ public:
 
 /// This class adds property that the operation is commutative.
 template <typename ConcreteType>
-class IsCommutative : public TraitBase<ConcreteType, IsCommutative> {
-public:
-  static AbstractOperation::OperationProperties getTraitProperties() {
-    return static_cast<AbstractOperation::OperationProperties>(
-        OperationProperty::Commutative);
-  }
-};
+class IsCommutative : public TraitBase<ConcreteType, IsCommutative> {};
 
 /// This class adds property that the operation is an involution.
 /// This means a unary to unary operation "f" that satisfies f(f(x)) = x
@@ -1110,10 +1100,6 @@ template <typename ConcreteType>
 class IsIsolatedFromAbove
     : public TraitBase<ConcreteType, IsIsolatedFromAbove> {
 public:
-  static AbstractOperation::OperationProperties getTraitProperties() {
-    return static_cast<AbstractOperation::OperationProperties>(
-        OperationProperty::IsolatedFromAbove);
-  }
   static LogicalResult verifyTrait(Operation *op) {
     for (auto &region : op->getRegions())
       if (!region.isIsolatedFromAbove(op->getLoc()))
@@ -1426,34 +1412,6 @@ foldTraits(Operation *op, ArrayRef<Attribute> operands,
 }
 
 //===----------------------------------------------------------------------===//
-// Trait Properties
-
-/// Trait to check if T provides a `getTraitProperties` method.
-template <typename T, typename... Args>
-using has_get_trait_properties = decltype(T::getTraitProperties());
-template <typename T>
-using detect_has_get_trait_properties =
-    llvm::is_detected<has_get_trait_properties, T>;
-
-/// The internal implementation of `getTraitProperties` below that returns the
-/// OR of invoking `getTraitProperties` on all of the provided trait types `Ts`.
-template <typename... Ts>
-static AbstractOperation::OperationProperties
-getTraitPropertiesImpl(std::tuple<Ts...> *) {
-  AbstractOperation::OperationProperties result = 0;
-  (void)std::initializer_list<int>{(result |= Ts::getTraitProperties(), 0)...};
-  return result;
-}
-
-/// Given a tuple type containing a set of traits that contain a
-/// `getTraitProperties` method, return the OR of all of the results of invoking
-/// those methods.
-template <typename TraitTupleT>
-static AbstractOperation::OperationProperties getTraitProperties() {
-  return getTraitPropertiesImpl((TraitTupleT *)nullptr);
-}
-
-//===----------------------------------------------------------------------===//
 // Trait Verification
 
 /// Trait to check if T provides a `verifyTrait` method.
@@ -1573,14 +1531,6 @@ private:
   using VerifiableTraitsTupleT =
       typename detail::FilterTypes<op_definition_impl::detect_has_verify_trait,
                                    Traits<ConcreteType>...>::type;
-
-  /// Returns the properties of this operation by combining the properties
-  /// defined by the traits.
-  static AbstractOperation::OperationProperties getOperationProperties() {
-    return op_definition_impl::getTraitProperties<typename detail::FilterTypes<
-        op_definition_impl::detect_has_get_trait_properties,
-        Traits<ConcreteType>...>::type>();
-  }
 
   /// Returns an interface map containing the interfaces registered to this
   /// operation.

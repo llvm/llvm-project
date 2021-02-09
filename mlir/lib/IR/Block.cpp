@@ -214,7 +214,7 @@ BlockArgument Block::insertArgument(args_iterator it, Type type) {
 /// Get the terminator operation of this block. This function asserts that
 /// the block has a valid terminator operation.
 Operation *Block::getTerminator() {
-  assert(!empty() && !back().isKnownNonTerminator());
+  assert(!empty() && back().mightHaveTrait<OpTrait::IsTerminator>());
   return &back();
 }
 
