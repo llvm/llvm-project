@@ -12,6 +12,7 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
@@ -32,6 +33,14 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
 #include "clang/Basic/Sanitizers.def"
     .Default(SanitizerMask());
   return ParsedKind;
+}
+
+void clang::serializeSanitizerSet(SanitizerSet Set,
+                                  SmallVectorImpl<StringRef> &Values) {
+#define SANITIZER(NAME, ID)                                                    \
+  if (Set.has(SanitizerKind::ID))                                              \
+    Values.push_back(NAME);
+#include "clang/Basic/Sanitizers.def"
 }
 
 SanitizerMask clang::expandSanitizerGroups(SanitizerMask Kinds) {
