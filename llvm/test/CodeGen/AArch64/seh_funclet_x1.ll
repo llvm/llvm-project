@@ -5,7 +5,7 @@
 
 ; CHECK:      ?dtor$3@?0?main@4HA":
 ; CHECK:      .seh_proc "?dtor$3@?0?main@4HA"
-; CHECK:      stp     x29, x30, [sp, #-16]!   ; 16-byte Folded Spill
+; CHECK:      stp     x29, x30, [sp, #-16]!   // 16-byte Folded Spill
 ; CHECK-NEXT: .seh_save_fplr_x 16
 ; CHECK-NEXT: .seh_endprologue
 ; CHECK-NEXT: mov     x29, x1

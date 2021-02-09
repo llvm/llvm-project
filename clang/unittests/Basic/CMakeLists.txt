@@ -8,6 +8,7 @@ add_clang_unittest(BasicTests
   FileEntryTest.cpp
   FileManagerTest.cpp
   LineOffsetMappingTest.cpp
+  SanitizersTest.cpp
   SourceManagerTest.cpp
   )
 

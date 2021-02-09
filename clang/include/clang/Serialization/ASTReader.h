@@ -1543,7 +1543,11 @@ public:
     /// The client can handle an AST file that cannot load because it's
     /// compiled configuration doesn't match that of the context it was
     /// loaded into.
-    ARR_ConfigurationMismatch = 0x8
+    ARR_ConfigurationMismatch = 0x8,
+
+    /// If a module file is marked with errors treat it as out-of-date so the
+    /// caller can rebuild it.
+    ARR_TreatModuleWithErrorsAsOutOfDate = 0x10
   };
 
   /// Load the AST file designated by the given file name.

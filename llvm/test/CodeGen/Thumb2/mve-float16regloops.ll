@@ -1481,15 +1481,11 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    vmovx.f16 s6, s12
 ; CHECK-NEXT:    vfma.f16 q3, q6, r4
 ; CHECK-NEXT:    vstr.16 s6, [r5, #2]
-; CHECK-NEXT:    vmov.f32 s12, s13
 ; CHECK-NEXT:    vmovx.f16 s6, s13
-; CHECK-NEXT:    vmov q7, q3
+; CHECK-NEXT:    vmov.f32 s12, s13
 ; CHECK-NEXT:    vins.f16 s12, s6
-; CHECK-NEXT:    vmov.16 q7[2], r7
 ; CHECK-NEXT:    adds r5, #4
-; CHECK-NEXT:    vmov.f32 s13, s29
-; CHECK-NEXT:    vmov.f32 s14, s30
-; CHECK-NEXT:    vmov.f32 s15, s31
+; CHECK-NEXT:    vmov.16 q3[2], r7
 ; CHECK-NEXT:    vmov q7, q3
 ; CHECK-NEXT:    le lr, .LBB17_5
 ; CHECK-NEXT:  .LBB17_6: @ %while.end

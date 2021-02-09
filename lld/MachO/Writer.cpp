@@ -720,8 +720,9 @@ void Writer::createOutputSections() {
 }
 
 void Writer::assignAddresses(OutputSegment *seg) {
-  addr = alignTo(addr, PageSize);
-  fileOff = alignTo(fileOff, PageSize);
+  uint64_t pageSize = target->getPageSize();
+  addr = alignTo(addr, pageSize);
+  fileOff = alignTo(fileOff, pageSize);
   seg->fileOff = fileOff;
 
   for (OutputSection *osec : seg->getSections()) {

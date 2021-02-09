@@ -5692,6 +5692,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsCuda || IsHIP) {
+    if (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
+      CmdArgs.push_back("-fgpu-rdc");
     if (Args.hasFlag(options::OPT_fgpu_defer_diag,
                      options::OPT_fno_gpu_defer_diag, false))
       CmdArgs.push_back("-fgpu-defer-diag");
@@ -6328,6 +6330,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasFlag(options::OPT_fcuda_short_ptr,
                      options::OPT_fno_cuda_short_ptr, false))
       CmdArgs.push_back("-fcuda-short-ptr");
+  }
+
+  if (IsCuda || IsHIP) {
+    // Determine the original source input.
+    const Action *SourceAction = &JA;
+    while (SourceAction->getKind() != Action::InputClass) {
+      assert(!SourceAction->getInputs().empty() && "unexpected root action!");
+      SourceAction = SourceAction->getInputs()[0];
+    }
+    auto CUID = cast<InputAction>(SourceAction)->getId();
+    if (!CUID.empty())
+      CmdArgs.push_back(Args.MakeArgString(Twine("-cuid=") + Twine(CUID)));
   }
 
   if (IsHIP)

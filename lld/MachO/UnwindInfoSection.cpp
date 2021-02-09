@@ -415,7 +415,8 @@ void UnwindInfoSection::writeTo(uint8_t *buf) const {
   // LSDAs
   size_t lsdaBytes =
       lsdaEntries.size() * sizeof(unwind_info_section_header_lsda_index_entry);
-  memcpy(iep, lsdaEntries.data(), lsdaBytes);
+  if (lsdaBytes > 0)
+    memcpy(iep, lsdaEntries.data(), lsdaBytes);
 
   // Level-2 pages
   auto *pp = reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(iep) +

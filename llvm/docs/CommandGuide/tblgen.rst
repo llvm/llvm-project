@@ -138,7 +138,7 @@ llvm-tblgen Options
 
 .. option:: -gen-compress-inst-emitter
 
-  Generate RISCV compressed instructions.
+  Generate RISC-V compressed instructions.
 
 .. option:: -gen-ctags
 

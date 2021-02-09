@@ -1439,6 +1439,37 @@ int registerOnlyStd() {
   return 0;
 }
 
+/// Tests backreference APIs
+static int testBackreferences() {
+  fprintf(stderr, "@test_backreferences\n");
+
+  MlirContext ctx = mlirContextCreate();
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+
+  MlirOperationState opState = mlirOperationStateGet(mlirStringRefCreateFromCString("invalid.op"), loc);
+  MlirRegion region = mlirRegionCreate();
+  MlirBlock block = mlirBlockCreate(0, NULL);
+  mlirRegionAppendOwnedBlock(region, block);
+  mlirOperationStateAddOwnedRegions(&opState, 1, &region);
+  MlirOperation op = mlirOperationCreate(&opState);
+
+  if (!mlirContextEqual(ctx, mlirOperationGetContext(op))) {
+    fprintf(stderr, "ERROR: Getting context from operation failed\n");
+    return 1;
+  }
+  if (!mlirOperationEqual(op, mlirBlockGetParentOperation(block))) {
+    fprintf(stderr, "ERROR: Getting parent operation from block failed\n");
+    return 2;
+  }
+  
+  mlirOperationDestroy(op);
+  mlirContextDestroy(ctx);
+
+  // CHECK-LABEL: @test_backreferences
+  return 0;
+}
+
 // Wraps a diagnostic into additional text we can match against.
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
@@ -1514,6 +1545,8 @@ int main() {
     return 8;
   if (registerOnlyStd())
     return 9;
+  if (testBackreferences())
+    return 10;
 
   mlirContextDestroy(ctx);
 

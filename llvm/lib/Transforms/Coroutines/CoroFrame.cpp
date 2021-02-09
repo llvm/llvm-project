@@ -508,7 +508,6 @@ void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
 void FrameTypeBuilder::addFieldForAllocas(const Function &F,
                                           FrameDataInfo &FrameData,
                                           coro::Shape &Shape) {
-  DenseMap<AllocaInst *, unsigned int> AllocaIndex;
   using AllocaSetType = SmallVector<AllocaInst *, 4>;
   SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
 
@@ -530,7 +529,6 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   if (!Shape.ReuseFrameSlot && !EnableReuseStorageInFrame) {
     for (const auto &A : FrameData.Allocas) {
       AllocaInst *Alloca = A.Alloca;
-      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
       NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
     }
     return;
@@ -611,13 +609,11 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
       bool CouldMerge = NoInference && Alignable;
       if (!CouldMerge)
         continue;
-      AllocaIndex[Alloca] = AllocaIndex[*AllocaSet.begin()];
       AllocaSet.push_back(Alloca);
       Merged = true;
       break;
     }
     if (!Merged) {
-      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
       NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
     }
   }
@@ -1288,7 +1284,6 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
     auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
-    SmallPtrSet<BasicBlock *, 4> SeenDbgBBs;
     TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(Alloca);
     if (!DIs.empty())
       DIBuilder(*Alloca->getModule(),

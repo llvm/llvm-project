@@ -596,8 +596,7 @@ static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
 
 static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
   InputGlobal *g = createGlobal(name, isMutable);
-  return symtab->addOptionalGlobalSymbols(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
-                                          g);
+  return symtab->addOptionalGlobalSymbol(name, g);
 }
 
 // Create ABI-defined synthetic symbols

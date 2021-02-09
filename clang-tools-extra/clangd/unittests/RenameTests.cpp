@@ -1083,11 +1083,22 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(
+        void func(int Var);
+
         void func(int V^ar) {
           bool Conflict;
         }
       )cpp",
        "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// No conflict: only forward declaration's argument is renamed.
+        void func(int [[V^ar]]);
+
+        void func(int Var) {
+          bool Conflict;
+        }
+      )cpp",
+       nullptr, !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(
         void func(int V^ar, int Conflict) {

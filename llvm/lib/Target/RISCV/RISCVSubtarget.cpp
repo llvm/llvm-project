@@ -39,6 +39,11 @@ static cl::opt<unsigned> RVVVectorLMULMax(
              "Fractional LMUL values are not supported."),
     cl::init(8), cl::Hidden);
 
+static cl::opt<unsigned> VectorBitsMax(
+    "riscv-vector-bits-max",
+    cl::desc("Assume RISC-V vector registers are at most this big"),
+    cl::init(0), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
@@ -60,6 +65,11 @@ RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
+}
+
+unsigned RISCVSubtarget::getMaxVectorSizeInBits() const {
+  assert(HasStdExtV && "Tried to get vector length without V support!");
+  return VectorBitsMax;
 }
 
 RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
