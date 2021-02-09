@@ -16,6 +16,48 @@ New entries should be added directly below the "Version" header.
 Version 14.0
 ------------
 
+* [libc++] `to_chars` for floating point.
+
+  This commit added the `to_chars` implementation for floating point values.
+  The entire implementation resides in the dylib and the functions specified
+  in the Standard are now part of the ABI.
+
+  arm64-apple-darwin
+  ------------------
+  Symbol added: _ZNSt3__18to_charsEPcS0_d
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_e
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_f
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
+
+  x86_64-apple-darwin
+  -------------------
+  Symbol added: _ZNSt3__18to_charsEPcS0_d
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_e
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_f
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNSt3__18to_charsEPcS0_d
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_e
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi
+  Symbol added: _ZNSt3__18to_charsEPcS0_f
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
+  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
+
 * [libc++] Resolve missing table_size symbol
 
   This commit added an out-of-line definition for `table_size` in the library.

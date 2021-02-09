@@ -55,6 +55,10 @@ New Features
   behavior of standard algorithms (e.g. equal elements in ``std::sort`` or
   randomization of both sides of partition for ``std::nth_element``)
 
+- Floating-point support for ``std::to_chars`` support has been added.
+  Thanks to Stephan T. Lavavej and Microsoft for providing their implemention
+  to libc++.
+
 API Changes
 -----------
 
