@@ -4877,11 +4877,12 @@ static StringRef getGNUGoldVersion(ArrayRef<uint8_t> Desc) {
 }
 
 template <typename ELFT>
-static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
+static bool printGNUNote(raw_ostream &OS, uint32_t NoteType,
                          ArrayRef<uint8_t> Desc) {
+  // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
-    return;
+    return false;
   case ELF::NT_GNU_ABI_TAG: {
     const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid)
@@ -4904,6 +4905,7 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
     break;
   }
   OS << '\n';
+  return true;
 }
 
 struct AMDNote {
@@ -4942,7 +4944,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
     msgpack::Document MsgPackDoc;
     if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
-      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
+      return {"", ""};
 
     AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
     std::string HSAMetadataString;
@@ -4950,8 +4952,14 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       HSAMetadataString = "Invalid AMDGPU Metadata\n";
 
     raw_string_ostream StrOS(HSAMetadataString);
+    if (MsgPackDoc.getRoot().isScalar()) {
+      // TODO: passing a scalar root to toYAML() asserts:
+      // (PolymorphicTraits<T>::getKind(Val) != NodeKind::Scalar &&
+      //    "plain scalar documents are not supported")
+      // To avoid this crash we print the raw data instead.
+      return {"", ""};
+    }
     MsgPackDoc.toYAML(StrOS);
-
     return {"AMDGPU Metadata", StrOS.str()};
   }
   }
@@ -5271,28 +5279,36 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       OS << "Unknown note type: (" << format_hex(Type, 10) << ")\n";
 
     // Print the description, or fallback to printing raw bytes for unknown
-    // owners.
+    // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      printGNUNote<ELFT>(OS, Type, Descriptor);
+      if (printGNUNote<ELFT>(OS, Type, Descriptor))
+        return Error::success();
     } else if (Name == "AMD") {
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "AMDGPU") {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor))
+        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
-        else
+          return Error::success();
+        } else {
           return NoteOrErr.takeError();
+        }
       }
-    } else if (!Descriptor.empty()) {
+    }
+    if (!Descriptor.empty()) {
       OS << "   description data:";
       for (uint8_t B : Descriptor)
         OS << " " << format("%02x", B);
@@ -6456,15 +6472,17 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printAddrsig() {
 }
 
 template <typename ELFT>
-static void printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
+static bool printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
                                   ScopedPrinter &W) {
+  // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
-    return;
+    return false;
   case ELF::NT_GNU_ABI_TAG: {
     const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid) {
       W.printString("ABI", "<corrupt GNU_ABI_TAG>");
+      return false;
     } else {
       W.printString("OS", AbiTag.OSName);
       W.printString("ABI", AbiTag.ABI);
@@ -6484,6 +6502,7 @@ static void printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
       W.printString(Property);
     break;
   }
+  return true;
 }
 
 static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
@@ -6531,28 +6550,36 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
                     "Unknown (" + to_string(format_hex(Type, 10)) + ")");
 
     // Print the description, or fallback to printing raw bytes for unknown
-    // owners.
+    // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W);
+      if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W))
+        return Error::success();
     } else if (Name == "AMD") {
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
+        return Error::success();
+      }
     } else if (Name == "AMDGPU") {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
+        return Error::success();
+      }
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        if (Expected<CoreNote> Note = readCoreNote(DescExtractor))
-          printCoreNoteLLVMStyle(*Note, W);
-        else
-          return Note.takeError();
+        if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
+          printCoreNoteLLVMStyle(*N, W);
+          return Error::success();
+        } else {
+          return N.takeError();
+        }
       }
-    } else if (!Descriptor.empty()) {
+    }
+    if (!Descriptor.empty()) {
       W.printBinaryBlock("Description data", Descriptor);
     }
     return Error::success();
