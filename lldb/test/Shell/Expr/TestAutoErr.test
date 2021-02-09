@@ -1,0 +1,14 @@
+# RUN: %clangxx_host %p/Inputs/auto.cpp -std=c++14 -g -o %t
+
+# Test for emitted 'auto' types: rdar://71352569
+
+# The warning shouldn't appear in the stderr output.
+# RUN: %lldb -o "expr Foo f"  %t -b 2>&1 | FileCheck --check-prefix=NO_OUT %s
+# But the warning should be in the log.
+# We add the log enable command here as an argument as the channel names
+# matches the word 'LLDB' and our sanity check substitution will kick in and
+# warn us about using the word 'LLDB' instead of '%lldb" in a run invocation.
+# RUN: %lldb -s %p/enable_log -o "expr Foo f" %t -b | FileCheck %s
+
+# CHECK: error: need to add support for DW_TAG_base_type 'auto'
+# NO_OUT-NOT: error: need to add support for DW_TAG_base_type 'auto'
