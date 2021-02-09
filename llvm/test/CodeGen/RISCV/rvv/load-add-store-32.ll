@@ -7,11 +7,11 @@
 define void @vadd_vint32m1(<vscale x 2 x i32> *%pc, <vscale x 2 x i32> *%pa, <vscale x 2 x i32> *%pb) nounwind {
 ; CHECK-LABEL: vadd_vint32m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e32,m1,ta,mu
-; CHECK-NEXT:    vle32.v v25, (a1)
-; CHECK-NEXT:    vle32.v v26, (a2)
+; CHECK-NEXT:    vl1re32.v v25, (a1)
+; CHECK-NEXT:    vl1re32.v v26, (a2)
+; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vadd.vv v25, v25, v26
-; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    vs1r.v v25, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 2 x i32>, <vscale x 2 x i32>* %pa
   %vb = load <vscale x 2 x i32>, <vscale x 2 x i32>* %pb
@@ -23,11 +23,11 @@ define void @vadd_vint32m1(<vscale x 2 x i32> *%pc, <vscale x 2 x i32> *%pa, <vs
 define void @vadd_vint32m2(<vscale x 4 x i32> *%pc, <vscale x 4 x i32> *%pa, <vscale x 4 x i32> *%pb) nounwind {
 ; CHECK-LABEL: vadd_vint32m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e32,m2,ta,mu
-; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vle32.v v28, (a2)
+; CHECK-NEXT:    vl2re32.v v26, (a1)
+; CHECK-NEXT:    vl2re32.v v28, (a2)
+; CHECK-NEXT:    vsetvli a1, zero, e32,m2,ta,mu
 ; CHECK-NEXT:    vadd.vv v26, v26, v28
-; CHECK-NEXT:    vse32.v v26, (a0)
+; CHECK-NEXT:    vs2r.v v26, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 4 x i32>, <vscale x 4 x i32>* %pa
   %vb = load <vscale x 4 x i32>, <vscale x 4 x i32>* %pb
@@ -39,11 +39,11 @@ define void @vadd_vint32m2(<vscale x 4 x i32> *%pc, <vscale x 4 x i32> *%pa, <vs
 define void @vadd_vint32m4(<vscale x 8 x i32> *%pc, <vscale x 8 x i32> *%pa, <vscale x 8 x i32> *%pb) nounwind {
 ; CHECK-LABEL: vadd_vint32m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e32,m4,ta,mu
-; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vle32.v v8, (a2)
+; CHECK-NEXT:    vl4re32.v v28, (a1)
+; CHECK-NEXT:    vl4re32.v v8, (a2)
+; CHECK-NEXT:    vsetvli a1, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vadd.vv v28, v28, v8
-; CHECK-NEXT:    vse32.v v28, (a0)
+; CHECK-NEXT:    vs4r.v v28, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 8 x i32>, <vscale x 8 x i32>* %pa
   %vb = load <vscale x 8 x i32>, <vscale x 8 x i32>* %pb
@@ -55,11 +55,11 @@ define void @vadd_vint32m4(<vscale x 8 x i32> *%pc, <vscale x 8 x i32> *%pa, <vs
 define void @vadd_vint32m8(<vscale x 16 x i32> *%pc, <vscale x 16 x i32> *%pa, <vscale x 16 x i32> *%pb) nounwind {
 ; CHECK-LABEL: vadd_vint32m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vle32.v v16, (a2)
+; CHECK-NEXT:    vl8re32.v v8, (a1)
+; CHECK-NEXT:    vl8re32.v v16, (a2)
+; CHECK-NEXT:    vsetvli a1, zero, e32,m8,ta,mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %va = load <vscale x 16 x i32>, <vscale x 16 x i32>* %pa
   %vb = load <vscale x 16 x i32>, <vscale x 16 x i32>* %pb
