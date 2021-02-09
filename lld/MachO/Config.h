@@ -68,6 +68,7 @@ struct Configuration {
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
+  std::vector<Symbol *> explicitUndefineds;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
 };
 
