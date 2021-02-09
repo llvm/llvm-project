@@ -34,7 +34,9 @@ class GpuAsyncRegionPass : public GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
 };
 } // namespace
 
-static bool isTerminator(Operation *op) { return !op->isKnownNonTerminator(); }
+static bool isTerminator(Operation *op) {
+  return op->mightHaveTrait<OpTrait::IsTerminator>();
+}
 static bool hasSideEffects(Operation *op) {
   return !MemoryEffectOpInterface::hasNoEffect(op);
 }

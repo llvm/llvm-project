@@ -953,7 +953,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 template <class _CharT, class _Traits>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX11 const _CharT *
 __search_substring(const _CharT *__first1, const _CharT *__last1,
-                   const _CharT *__first2, const _CharT *__last2) {
+                   const _CharT *__first2, const _CharT *__last2) _NOEXCEPT {
   // Take advantage of knowing source and pattern lengths.
   // Stop short when source is smaller than pattern.
   const ptrdiff_t __len2 = __last2 - __first2;

@@ -213,21 +213,31 @@ SourceLocation getHighlightableSpellingToken(SourceLocation L,
   return getHighlightableSpellingToken(SM.getImmediateSpellingLoc(L), SM);
 }
 
-unsigned evaluateHighlightPriority(HighlightingKind Kind) {
+unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
   enum HighlightPriority { Dependent = 0, Resolved = 1 };
-  return Kind == HighlightingKind::DependentType ||
-                 Kind == HighlightingKind::DependentName
+  return (Tok.Modifiers & (1 << uint32_t(HighlightingModifier::DependentName)))
              ? Dependent
              : Resolved;
 }
 
-// Sometimes we get conflicts between findExplicitReferences() returning
-// a heuristic result for a dependent name (e.g. Method) and
-// CollectExtraHighlighting returning a fallback dependent highlighting (e.g.
-// DependentName). In such cases, resolve the conflict in favour of the
-// resolved (non-dependent) highlighting.
-// With macros we can get other conflicts (if a spelled token has multiple
-// expansions with different token types) which we can't usefully resolve.
+// Sometimes we get multiple tokens at the same location:
+//
+// - findExplicitReferences() returns a heuristic result for a dependent name
+//   (e.g. Method) and CollectExtraHighlighting returning a fallback dependent
+//   highlighting (e.g. Unknown+Dependent).
+// - macro arguments are expanded multiple times and have different roles
+// - broken code recovery produces several AST nodes at the same location
+//
+// We should either resolve these to a single token, or drop them all.
+// Our heuristics are:
+//
+// - token kinds that come with "dependent-name" modifiers are less reliable
+//   (these tend to be vague, like Type or Unknown)
+// - if we have multiple equally reliable kinds, drop token rather than guess
+// - take the union of modifiers from all tokens
+//
+// In particular, heuristically resolved dependent names get their heuristic
+// kind, plus the dependent modifier.
 llvm::Optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
@@ -236,11 +246,13 @@ resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() != 2)
     return llvm::None;
 
-  unsigned Priority1 = evaluateHighlightPriority(Tokens[0].Kind);
-  unsigned Priority2 = evaluateHighlightPriority(Tokens[1].Kind);
-  if (Priority1 == Priority2)
+  unsigned Priority1 = evaluateHighlightPriority(Tokens[0]);
+  unsigned Priority2 = evaluateHighlightPriority(Tokens[1]);
+  if (Priority1 == Priority2 && Tokens[0].Kind != Tokens[1].Kind)
     return llvm::None;
-  return Priority1 > Priority2 ? Tokens[0] : Tokens[1];
+  auto Result = Priority1 > Priority2 ? Tokens[0] : Tokens[1];
+  Result.Modifiers = Tokens[0].Modifiers | Tokens[1].Modifiers;
+  return Result;
 }
 
 /// Consumes source locations and maps them to text ranges for highlightings.
@@ -430,7 +442,8 @@ public:
   bool VisitOverloadExpr(OverloadExpr *E) {
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.
-    auto &Tok = H.addToken(E->getNameLoc(), HighlightingKind::DependentName);
+    auto &Tok = H.addToken(E->getNameLoc(), HighlightingKind::Unknown)
+                    .addModifier(HighlightingModifier::DependentName);
     if (llvm::isa<UnresolvedMemberExpr>(E))
       Tok.addModifier(HighlightingModifier::ClassScope);
     // other case is UnresolvedLookupExpr, scope is unknown.
@@ -438,38 +451,58 @@ public:
   }
 
   bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
-    H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::DependentName)
+    H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::Unknown)
+        .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
-    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::DependentName)
+    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::Unknown)
+        .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
-    H.addToken(L.getNameLoc(), HighlightingKind::DependentType)
+    H.addToken(L.getNameLoc(), HighlightingKind::Type)
+        .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentTemplateSpecializationTypeLoc(
       DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType)
+    H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
+        .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc L) {
-    switch (L.getArgument().getKind()) {
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      // FIXME: this isn't *always* a dependent template name.
-      H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+    // Handle template template arguments only (other arguments are handled by
+    // their Expr, TypeLoc etc values).
+    if (L.getArgument().getKind() != TemplateArgument::Template &&
+        L.getArgument().getKind() != TemplateArgument::TemplateExpansion)
+      return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
+
+    TemplateName N = L.getArgument().getAsTemplateOrTemplatePattern();
+    switch (N.getKind()) {
+    case TemplateName::OverloadedTemplate:
+      // Template template params must always be class templates.
+      // Don't bother to try to work out the scope here.
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Class);
       break;
-    default:
+    case TemplateName::DependentTemplate:
+    case TemplateName::AssumedTemplate:
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Class)
+          .addModifier(HighlightingModifier::DependentName);
+      break;
+    case TemplateName::Template:
+    case TemplateName::QualifiedTemplate:
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::SubstTemplateTemplateParmPack:
+      // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
@@ -483,7 +516,8 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
     if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
       if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::DependentType)
+        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::Type)
+            .addModifier(HighlightingModifier::DependentName)
             .addModifier(HighlightingModifier::ClassScope);
     }
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
@@ -594,10 +628,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "EnumConstant";
   case HighlightingKind::Typedef:
     return OS << "Typedef";
-  case HighlightingKind::DependentType:
-    return OS << "DependentType";
-  case HighlightingKind::DependentName:
-    return OS << "DependentName";
+  case HighlightingKind::Type:
+    return OS << "Type";
+  case HighlightingKind::Unknown:
+    return OS << "Unknown";
   case HighlightingKind::Namespace:
     return OS << "Namespace";
   case HighlightingKind::TemplateParameter:
@@ -747,10 +781,10 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::EnumConstant:
     return "enumMember";
   case HighlightingKind::Typedef:
+  case HighlightingKind::Type:
     return "type";
-  case HighlightingKind::DependentType:
-  case HighlightingKind::DependentName:
-    return "dependent"; // nonstandard
+  case HighlightingKind::Unknown:
+    return "unknown"; // nonstandard
   case HighlightingKind::Namespace:
     return "namespace";
   case HighlightingKind::TemplateParameter:
@@ -781,6 +815,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "deduced"; // nonstandard
   case HighlightingModifier::Abstract:
     return "abstract";
+  case HighlightingModifier::DependentName:
+    return "dependentName"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:
@@ -850,9 +886,13 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "variable.other.enummember.cpp";
   case HighlightingKind::Typedef:
     return "entity.name.type.typedef.cpp";
-  case HighlightingKind::DependentType:
+  case HighlightingKind::Type:
+    // Fragile: all paths emitting `Type` are dependent names for now.
+    // But toTextMateScope is going away soon.
     return "entity.name.type.dependent.cpp";
-  case HighlightingKind::DependentName:
+  case HighlightingKind::Unknown:
+    // Fragile: all paths emitting `Unknown` are dependent names for now.
+    // But toTextMateScope is going away soon.
     return "entity.name.other.dependent.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";

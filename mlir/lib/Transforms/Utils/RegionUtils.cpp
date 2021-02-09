@@ -173,7 +173,7 @@ static bool isUseSpeciallyKnownDead(OpOperand &use, LiveMap &liveMap) {
   // And similarly, because each successor operand is really an operand to a phi
   // node, rather than to the terminator op itself, a terminator op can't e.g.
   // "print" the value of a successor operand.
-  if (owner->isKnownTerminator()) {
+  if (owner->hasTrait<OpTrait::IsTerminator>()) {
     if (BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(owner))
       if (auto arg = branchInterface.getSuccessorBlockArgument(operandIndex))
         return !liveMap.wasProvenLive(*arg);
@@ -194,7 +194,7 @@ static void processValue(Value value, LiveMap &liveMap) {
 
 static bool isOpIntrinsicallyLive(Operation *op) {
   // This pass doesn't modify the CFG, so terminators are never deleted.
-  if (!op->isKnownNonTerminator())
+  if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return true;
   // If the op has a side effect, we treat it as live.
   // TODO: Properly handle region side effects.
@@ -234,7 +234,7 @@ static void propagateLiveness(Operation *op, LiveMap &liveMap) {
     propagateLiveness(region, liveMap);
 
   // Process terminator operations.
-  if (op->isKnownTerminator())
+  if (op->hasTrait<OpTrait::IsTerminator>())
     return propagateTerminatorLiveness(op, liveMap);
 
   // Process the op itself.

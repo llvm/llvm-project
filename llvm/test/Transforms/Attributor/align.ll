@@ -157,7 +157,7 @@ define i32* @test6_2() #0 {
 define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f1
-; IS__TUNIT____-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR0]] {
+; IS__TUNIT____-SAME: (i8* noalias nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR0]] {
 ; IS__TUNIT____-NEXT:    br label [[TMP3:%.*]]
 ; IS__TUNIT____:       2:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -166,7 +166,7 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f1
-; IS__CGSCC_OPM-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR2:#.*]] {
+; IS__CGSCC_OPM-SAME: (i8* noalias nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR2:#.*]] {
 ; IS__CGSCC_OPM-NEXT:    br label [[TMP3:%.*]]
 ; IS__CGSCC_OPM:       2:
 ; IS__CGSCC_OPM-NEXT:    unreachable
@@ -251,7 +251,7 @@ define align 4 i8* @test7() #0 {
 define internal i8* @f1b(i8* readnone %0) local_unnamed_addr #0 {
 ; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f1b
-; IS__CGSCC_OPM-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR2]] {
+; IS__CGSCC_OPM-SAME: (i8* noalias nofree nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr [[ATTR2]] {
 ; IS__CGSCC_OPM-NEXT:    br label [[TMP3:%.*]]
 ; IS__CGSCC_OPM:       2:
 ; IS__CGSCC_OPM-NEXT:    unreachable

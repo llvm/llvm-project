@@ -29,7 +29,7 @@ void ReportShapeFnPass::runOnOperation() {
   // Report the shape function available to refine the op.
   auto shapeFnId = Identifier::get("shape.function", &getContext());
   auto remarkShapeFn = [&](shape::FunctionLibraryOp shapeFnLib, Operation *op) {
-    if (op->isKnownTerminator())
+    if (op->hasTrait<OpTrait::IsTerminator>())
       return true;
     if (auto typeInterface = dyn_cast<InferTypeOpInterface>(op)) {
       op->emitRemark() << "implements InferType op interface";

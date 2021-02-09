@@ -43,5 +43,4 @@ New Features
 API Changes
 -----------
 
-- Starting with libc++13 a C++20 capable compiler is required to build the
-  libc++ benchmarks.
+- ...

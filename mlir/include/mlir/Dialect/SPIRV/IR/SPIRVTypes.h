@@ -32,6 +32,7 @@ struct ImageTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
+struct SampledImageTypeStorage;
 struct StructTypeStorage;
 
 } // namespace detail
@@ -231,6 +232,28 @@ public:
                      Optional<StorageClass> storage = llvm::None);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        Optional<StorageClass> storage = llvm::None);
+};
+
+// SPIR-V sampled image type
+class SampledImageType
+    : public Type::TypeBase<SampledImageType, SPIRVType,
+                            detail::SampledImageTypeStorage> {
+public:
+  using Base::Base;
+
+  static SampledImageType get(Type imageType);
+
+  static SampledImageType getChecked(Type imageType, Location location);
+
+  static LogicalResult verifyConstructionInvariants(Location Loc,
+                                                    Type imageType);
+
+  Type getImageType() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     Optional<spirv::StorageClass> storage = llvm::None);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       Optional<spirv::StorageClass> storage = llvm::None);
 };
 
 /// SPIR-V struct type. Two kinds of struct types are supported:

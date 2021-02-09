@@ -62,6 +62,65 @@ define void @callback_caller() {
   ret void
 }
 
+; Drop the noundef if when we replace the call argument with `undef`. We use a
+; varargs function as we cannot (yet) rewrite their signature. If we ever can,
+; try to come up with a different scheme to verify the `noundef` is dropped if
+; signature rewriting is not happening.
+define internal void @callee_with_dead_noundef_arg(i1 noundef %create, ...) {
+; CHECK-LABEL: define {{[^@]+}}@callee_with_dead_noundef_arg
+; CHECK-SAME: (i1 [[CREATE:%.*]], ...) {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+  call void @unknown()
+  ret void
+}
+
+define void @caller_with_unused_arg(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@caller_with_unused_arg
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    call void (i1, ...) @callee_with_dead_noundef_arg(i1 undef)
+; CHECK-NEXT:    ret void
+;
+  call void (i1, ...) @callee_with_dead_noundef_arg(i1 %c)
+  ret void
+}
+
+define internal void @callee_with_dead_arg(i1 %create, ...) {
+; CHECK-LABEL: define {{[^@]+}}@callee_with_dead_arg
+; CHECK-SAME: (i1 [[CREATE:%.*]], ...) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[IF_THEN3:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.then3:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %create, label %if.then3, label %if.then
+
+if.then:                                          ; preds = %entry
+  ret void
+
+if.then3:                                         ; preds = %entry
+  call void @unknown()
+  ret void
+}
+
+; Drop the noundef if when we replace the call argument with `undef`. We use a
+; varargs function as we cannot (yet) rewrite their signature. If we ever can,
+; try to come up with a different scheme to verify the `noundef` is dropped if
+; signature rewriting is not happening.
+define void @caller_with_noundef_arg() {
+; CHECK-LABEL: define {{[^@]+}}@caller_with_noundef_arg() {
+; CHECK-NEXT:    call void (i1, ...) @callee_with_dead_arg(i1 undef)
+; CHECK-NEXT:    ret void
+;
+  call void (i1, ...) @callee_with_dead_arg(i1 noundef true)
+  ret void
+}
+
 declare !callback !0 void @callback_broker(void (i8*)*, i8*)
 !1 = !{i64 0, i64 1, i1 false}
 !0 = !{!1}
