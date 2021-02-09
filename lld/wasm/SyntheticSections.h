@@ -191,6 +191,11 @@ public:
 class GlobalSection : public SyntheticSection {
 public:
   GlobalSection() : SyntheticSection(llvm::wasm::WASM_SEC_GLOBAL) {}
+
+  static bool classof(const OutputSection *sec) {
+    return sec->type == llvm::wasm::WASM_SEC_GLOBAL;
+  }
+
   uint32_t numGlobals() const {
     assert(isSealed);
     return inputGlobals.size() + dataAddressGlobals.size() +

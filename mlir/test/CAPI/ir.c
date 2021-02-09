@@ -1456,6 +1456,7 @@ static int testBackreferences() {
   mlirRegionAppendOwnedBlock(region, block);
   mlirOperationStateAddOwnedRegions(&opState, 1, &region);
   MlirOperation op = mlirOperationCreate(&opState);
+  MlirIdentifier ident = mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("identifier"));
 
   if (!mlirContextEqual(ctx, mlirOperationGetContext(op))) {
     fprintf(stderr, "ERROR: Getting context from operation failed\n");
@@ -1464,6 +1465,10 @@ static int testBackreferences() {
   if (!mlirOperationEqual(op, mlirBlockGetParentOperation(block))) {
     fprintf(stderr, "ERROR: Getting parent operation from block failed\n");
     return 2;
+  }
+  if (!mlirContextEqual(ctx, mlirIdentifierGetContext(ident))) {
+    fprintf(stderr, "ERROR: Getting context from identifier failed\n");
+    return 3;
   }
   
   mlirOperationDestroy(op);

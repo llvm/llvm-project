@@ -32,6 +32,7 @@ struct NameUniquer {
   /// The sort of the unique name
   enum class NameKind {
     NOT_UNIQUED,
+    BLOCK_DATA_NAME,
     COMMON,
     CONSTANT,
     DERIVED_TYPE,
@@ -62,6 +63,9 @@ struct NameUniquer {
 
   /// Unique a common block name
   std::string doCommonBlock(llvm::StringRef name);
+
+  /// Unique a block data unit name
+  std::string doBlockData(llvm::StringRef name);
 
   /// Unique a (global) constant name
   std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,

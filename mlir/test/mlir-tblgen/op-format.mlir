@@ -291,6 +291,12 @@ test.format_custom_directive_results_with_type_refs : i64, i64 -> (i64) type_ref
 // CHECK: test.format_custom_directive_results_with_type_refs : i64 -> (i64) type_refs_capture : i64 -> (i64)
 test.format_custom_directive_results_with_type_refs : i64 -> (i64) type_refs_capture : i64 -> (i64)
 
+// CHECK: test.format_custom_directive_with_optional_operand_ref %[[I64]] : 1
+test.format_custom_directive_with_optional_operand_ref %i64 : 1
+
+// CHECK: test.format_custom_directive_with_optional_operand_ref : 0
+test.format_custom_directive_with_optional_operand_ref : 0
+
 func @foo() {
   // CHECK: test.format_custom_directive_successors ^bb1, ^bb2
   test.format_custom_directive_successors ^bb1, ^bb2

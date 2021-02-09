@@ -1698,8 +1698,18 @@ def FormatCustomDirectiveResultsWithTypeRefs
       type($result), type($optResult), type($varResults)
     )
     custom<CustomDirectiveWithTypeRefs>(
-      type_ref($result), type_ref($optResult), type_ref($varResults)
+      ref(type($result)), ref(type($optResult)), ref(type($varResults))
     )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveWithOptionalOperandRef
+    : TEST_Op<"format_custom_directive_with_optional_operand_ref"> {
+  let arguments = (ins Optional<I64>:$optOperand);
+  let assemblyFormat = [{
+    ($optOperand^)? `:`
+    custom<CustomDirectiveOptionalOperandRef>(ref($optOperand))
     attr-dict
   }];
 }

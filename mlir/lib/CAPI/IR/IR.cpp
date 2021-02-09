@@ -661,6 +661,10 @@ MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
   return wrap(Identifier::get(unwrap(str), unwrap(context)));
 }
 
+MlirContext mlirIdentifierGetContext(MlirIdentifier ident) {
+  return wrap(unwrap(ident).getContext());
+}
+
 bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
   return unwrap(ident) == unwrap(other);
 }
