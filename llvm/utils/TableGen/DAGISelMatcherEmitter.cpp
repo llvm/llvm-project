@@ -173,7 +173,7 @@ static std::string GetPatFromTreePatternNode(const TreePatternNode *N) {
   return str;
 }
 
-static size_t GetVBRSize(unsigned Val) {
+static unsigned GetVBRSize(unsigned Val) {
   if (Val <= 127) return 1;
 
   unsigned NumBytes = 0;
@@ -186,7 +186,7 @@ static size_t GetVBRSize(unsigned Val) {
 
 /// EmitVBRValue - Emit the specified value as a VBR, returning the number of
 /// bytes emitted.
-static uint64_t EmitVBRValue(uint64_t Val, raw_ostream &OS) {
+static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
   if (Val <= 127) {
     OS << Val << ", ";
     return 1;
@@ -255,7 +255,7 @@ SizeMatcher(Matcher *N, raw_ostream &OS) {
     assert(SM->getNext() == nullptr && "Scope matcher should not have next");
     unsigned Size = 1; // Count the kind.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
-      const size_t ChildSize = SizeMatcherList(SM->getChild(i), OS);
+      const unsigned ChildSize = SizeMatcherList(SM->getChild(i), OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       SM->getChild(i)->setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
@@ -283,7 +283,7 @@ SizeMatcher(Matcher *N, raw_ostream &OS) {
         Child = cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
         ++Size; // Count the child's type.
       }
-      const size_t ChildSize = SizeMatcherList(Child, OS);
+      const unsigned ChildSize = SizeMatcherList(Child, OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       Child->setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
@@ -381,9 +381,8 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
           OS.indent(Indent);
       }
 
-      size_t ChildSize = SM->getChild(i)->getSize();
-      size_t VBRSize = GetVBRSize(ChildSize);
-      EmitVBRValue(ChildSize, OS);
+      unsigned ChildSize = SM->getChild(i)->getSize();
+      unsigned VBRSize = EmitVBRValue(ChildSize, OS);
       if (!OmitComments) {
         OS << "/*->" << CurrentIdx + VBRSize + ChildSize << "*/";
         if (i == 0)
@@ -534,7 +533,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
                      "/*SwitchOpcode*/ " : "/*SwitchType*/ ");
       }
 
-      size_t ChildSize = Child->getSize();
+      unsigned ChildSize = Child->getSize();
       CurrentIdx += EmitVBRValue(ChildSize, OS) + IdxSize;
       if (const SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
         OS << "TARGET_VAL(" << SOM->getCaseOpcode(i).getEnumName() << "),";
