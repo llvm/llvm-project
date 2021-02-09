@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler -Wno-pointer-to-int-cast %s
 
 #define NULL (void *)0
 #define nil (id)0
