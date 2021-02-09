@@ -27,7 +27,7 @@ template <char *sz> class Qux {
 };
 
 void f1(int a[1]) {
-  int val = a[3]; // no warning for function argument
+  int val = a[3]; // no warning for function argumnet
 }
 
 void f2(const int (&a)[2]) { // expected-note {{declared here}}
@@ -133,7 +133,7 @@ int test_pr9296() {
 
 int test_sizeof_as_condition(int flag) {
   int arr[2] = { 0, 0 }; // expected-note {{array 'arr' declared here}}
-  if (flag)
+  if (flag) 
     return sizeof(char) != sizeof(char) ? arr[2] : arr[1];
   return sizeof(char) == sizeof(char) ? arr[2] : arr[1]; // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
 }
@@ -241,7 +241,7 @@ void test_pr10771() {
 }
 
 int test_pr11007_aux(const char * restrict, ...);
-
+  
 // Test checking with varargs.
 void test_pr11007() {
   double a[5]; // expected-note {{array 'a' declared here}}
@@ -320,33 +320,3 @@ void test() {
   arr<float>[1] = 0; // expected-warning {{array index 1 is past the end of the array (which contains 1 element)}}
 }
 } // namespace var_template_array
-
-namespace PR44343 {
-  const unsigned int array[2] = {0, 1}; // expected-note 5{{array 'array' declared here}}
-
-  const int i1 = (const int)array[2]; // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  const int i2 = static_cast<const int>(array[2]); // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  const int &i3 = reinterpret_cast<const int&>(array[2]); // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  unsigned int &i4 = const_cast<unsigned int&>(array[2]); // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  int i5 = int(array[2]); // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  const unsigned int *i6 = &(1 > 0 ? array[2] : array[1]); // no warning for one-past-end element's address retrieval
-
-  // Test dynamic cast
-  struct Base {
-    virtual ~Base();
-  };
-  struct Derived : Base {
-  };
-  Base baseArr[2]; // expected-note {{array 'baseArr' declared here}}
-  Derived *d1 = dynamic_cast<Derived *>(&baseArr[2]); // FIXME: Should actually warn because dynamic_cast accesses the vptr
-  Derived &d2 = dynamic_cast<Derived &>(baseArr[2]); // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-
-  // Test operator `&` in combination with operators `.` and `->`
-  struct A {
-    int n;
-  };
-  A a[2]; // expected-note {{array 'a' declared here}}
-  int *n = &a[2].n; // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-  A *aPtr[2]; // expected-note {{array 'aPtr' declared here}}
-  int *n2 = &aPtr[2]->n; // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-}

@@ -379,7 +379,7 @@ private:
   };
 
   struct VectorIndexOp {
-    unsigned Val;
+    int Val;
   };
 
   struct ImmOp {
@@ -599,7 +599,7 @@ public:
     return VectorList.Count;
   }
 
-  unsigned getVectorIndex() const {
+  int getVectorIndex() const {
     assert(Kind == k_VectorIndex && "Invalid access!");
     return VectorIndex.Val;
   }
@@ -1931,7 +1931,7 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateVectorIndex(unsigned Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateVectorIndex(int Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_VectorIndex, Ctx);
     Op->VectorIndex.Val = Idx;
     Op->StartLoc = S;

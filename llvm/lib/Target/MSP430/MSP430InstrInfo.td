@@ -443,7 +443,7 @@ def MOV16mn : I16mn<0b0100, (outs), (ins memdst:$dst, indreg:$rs),
 //===----------------------------------------------------------------------===//
 // Arithmetic Instructions
 
-multiclass Arith<bits<4> opcode, string asmstring, SDNode node,
+multiclass Arith<bits<4> opcode, string asmstring, SDPatternOperator node,
                  bit commutes, list<Register> uses> {
   let Defs = [SR], Uses = uses in {
   let Constraints = "$src2 = $rd" in {

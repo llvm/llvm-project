@@ -396,6 +396,8 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   }
+  setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2f64, Legal);
+
   // We can do bitwise operations on v2i64 vectors
   setOperationAction(ISD::AND, MVT::v2i64, Legal);
   setOperationAction(ISD::OR, MVT::v2i64, Legal);

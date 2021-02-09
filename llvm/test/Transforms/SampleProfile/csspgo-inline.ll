@@ -30,7 +30,6 @@
 
 ; INLINE-NEW-LIMIT1-NOT: remark
 
-; INLINE-NEW-LIMIT2: remark: merged.cpp:27:11: _Z8funcLeafi inlined into _Z5funcAi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11
 ; INLINE-NEW-LIMIT2: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
 ; INLINE-NEW-LIMIT2-NOT: remark
 

@@ -49,6 +49,7 @@ FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
 FunctionPass *createWebAssemblyLateEHPrepare();
 FunctionPass *createWebAssemblyCFGSort();
 FunctionPass *createWebAssemblyCFGStackify();
+FunctionPass *createWebAssemblyHandleEHTerminatePads();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
@@ -75,6 +76,7 @@ void initializeWebAssemblyLateEHPreparePass(PassRegistry &);
 void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
+void initializeWebAssemblyHandleEHTerminatePadsPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
@@ -87,10 +89,14 @@ enum TargetIndex {
   TI_LOCAL,
   // Followed by an absolute global index (ULEB). DEPRECATED.
   TI_GLOBAL_FIXED,
+  // Followed by the index from the bottom of the Wasm stack.
   TI_OPERAND_STACK,
   // Followed by a compilation unit relative global index (uint32_t)
   // that will have an associated relocation.
-  TI_GLOBAL_RELOC
+  TI_GLOBAL_RELOC,
+  // Like TI_LOCAL, but indicates an indirect value (e.g. byval arg
+  // passed by pointer).
+  TI_LOCAL_INDIRECT
 };
 } // end namespace WebAssembly
 

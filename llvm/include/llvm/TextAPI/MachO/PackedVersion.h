@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_PACKED_VERSION_H
-#define LLVM_TEXTAPI_MACHO_PACKED_VERSION_H
+#ifndef LLVM_TEXTAPI_MACHO_PACKEDVERSION_H
+#define LLVM_TEXTAPI_MACHO_PACKEDVERSION_H
 
 #include <cstdint>
 #include <utility>
@@ -64,4 +64,4 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PackedVersion &Version) {
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_PACKED_VERSION_H
+#endif // LLVM_TEXTAPI_MACHO_PACKEDVERSION_H

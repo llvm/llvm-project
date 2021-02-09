@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_TAR_WRITER_H
-#define LLVM_SUPPORT_TAR_WRITER_H
+#ifndef LLVM_SUPPORT_TARWRITER_H
+#define LLVM_SUPPORT_TARWRITER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"

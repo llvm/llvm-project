@@ -1465,8 +1465,8 @@ void PGOUseFunc::setBranchWeights() {
 }
 
 static bool isIndirectBrTarget(BasicBlock *BB) {
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    if (isa<IndirectBrInst>((*PI)->getTerminator()))
+  for (BasicBlock *Pred : predecessors(BB)) {
+    if (isa<IndirectBrInst>(Pred->getTerminator()))
       return true;
   }
   return false;
@@ -2124,14 +2124,13 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     if (!PGOInstrSelect)
       return Result;
 
-    for (auto BI = Node->begin(); BI != Node->end(); ++BI) {
-      auto *I = &*BI;
-      if (!isa<SelectInst>(I))
+    for (const Instruction &I : *Node) {
+      if (!isa<SelectInst>(&I))
         continue;
       // Display scaled counts for SELECT instruction:
       OS << "SELECT : { T = ";
       uint64_t TC, FC;
-      bool HasProf = I->extractProfMetadata(TC, FC);
+      bool HasProf = I.extractProfMetadata(TC, FC);
       if (!HasProf)
         OS << "Unknown, F = Unknown }\\l";
       else

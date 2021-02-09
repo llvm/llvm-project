@@ -1818,7 +1818,8 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 #define GET_SourcesOfDivergence_IMPL
 #define GET_Gfx9BufferFormat_IMPL
-#define GET_Gfx10PlusBufferFormat_IMPL
+#define GET_Gfx10BufferFormat_IMPL
+#define GET_Gfx11PlusBufferFormat_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
@@ -1831,16 +1832,20 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10Plus(STI)
-             ? getGfx10PlusBufferFormatInfo(BitsPerComp, NumComponents,
+  return isGFX11Plus(STI)
+             ? getGfx11PlusBufferFormatInfo(BitsPerComp, NumComponents,
                                             NumFormat)
-             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
+             : isGFX10(STI) ? getGfx10BufferFormatInfo(BitsPerComp,
+                                                       NumComponents, NumFormat)
+                            : getGfx9BufferFormatInfo(BitsPerComp,
+                                                      NumComponents, NumFormat);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10Plus(STI) ? getGfx10PlusBufferFormatInfo(Format)
-                          : getGfx9BufferFormatInfo(Format);
+  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
+                          : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
+                                         : getGfx9BufferFormatInfo(Format);
 }
 
 } // namespace AMDGPU

@@ -132,6 +132,9 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       call      __clang_call_terminate, $[[EXN]]
 ; CHECK:       unreachable
+; CHECK:     catch_all
+; CHECK:       call      _ZSt9terminatev
+; CHECK:       unreachable
 ; CHECK:     end_try
 ; CHECK:     rethrow
 ; CHECK:   end_try
@@ -429,6 +432,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__clang_call_terminate(i8*)
+declare void @_ZSt9terminatev()
 declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
 
 ; CHECK: __cpp_exception:

@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan %s -o %t && %deflake %run %t | FileCheck %s
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>

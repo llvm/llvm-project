@@ -608,8 +608,8 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   // without worrying about iterator invalidation.
   std::vector<AliasSet *> ASVector;
   ASVector.reserve(SaturationThreshold);
-  for (iterator I = begin(), E = end(); I != E; I++)
-    ASVector.push_back(&*I);
+  for (AliasSet &AS : *this)
+    ASVector.push_back(&AS);
 
   // Copy all instructions and pointers into a new set, and forward all other
   // sets to it.
@@ -755,8 +755,8 @@ namespace {
       auto &AAWP = getAnalysis<AAResultsWrapperPass>();
       AliasSetTracker Tracker(AAWP.getAAResults());
       errs() << "Alias sets for function '" << F.getName() << "':\n";
-      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
-        Tracker.add(&*I);
+      for (Instruction &I : instructions(F))
+        Tracker.add(&I);
       Tracker.print(errs());
       return false;
     }
@@ -779,8 +779,8 @@ PreservedAnalyses AliasSetsPrinterPass::run(Function &F,
   auto &AA = AM.getResult<AAManager>(F);
   AliasSetTracker Tracker(AA);
   OS << "Alias sets for function '" << F.getName() << "':\n";
-  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
-    Tracker.add(&*I);
+  for (Instruction &I : instructions(F))
+    Tracker.add(&I);
   Tracker.print(OS);
   return PreservedAnalyses::all();
 }

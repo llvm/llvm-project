@@ -16,19 +16,16 @@ class ThreadAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
         self.build()
         self.get_process()
 
-    @add_test_categories(['pyapi'])
     def test_get_stop_description(self):
         """Test Python SBThread.GetStopDescription() API."""
         self.build()
         self.get_stop_description()
 
-    @add_test_categories(['pyapi'])
     def test_run_to_address(self):
         """Test Python SBThread.RunToAddress() API."""
         # We build a different executable than the default build() does.
@@ -38,7 +35,6 @@ class ThreadAPITestCase(TestBase):
         self.run_to_address(self.exe_name)
 
     @skipIfAsan # The output looks different under ASAN.
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["linux"], archs=['arm'], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=["windows"])
     def test_step_out_of_malloc_into_function_b(self):
@@ -49,7 +45,6 @@ class ThreadAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.step_out_of_malloc_into_function_b(self.exe_name)
 
-    @add_test_categories(['pyapi'])
     def test_step_over_3_times(self):
         """Test Python SBThread.StepOver() API."""
         # We build a different executable than the default build() does.

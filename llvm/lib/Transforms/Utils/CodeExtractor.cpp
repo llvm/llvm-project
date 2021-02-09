@@ -1611,15 +1611,14 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
   SmallPtrSet<BasicBlock *, 1> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
-    for (succ_iterator SI = succ_begin(Block), SE = succ_end(Block); SI != SE;
-         ++SI) {
-      if (!Blocks.count(*SI)) {
+    for (BasicBlock *Succ : successors(Block)) {
+      if (!Blocks.count(Succ)) {
         // Update the branch weight for this successor.
         if (BFI) {
-          BlockFrequency &BF = ExitWeights[*SI];
-          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, *SI);
+          BlockFrequency &BF = ExitWeights[Succ];
+          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
         }
-        ExitBlocks.insert(*SI);
+        ExitBlocks.insert(Succ);
       }
     }
   }
@@ -1781,10 +1780,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
 bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
-  for (auto AssumeVH : AC->assumptions()) {
-    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
-    if (!I)
-      continue;
+  for (auto &AssumeVH : AC->assumptions()) {
+    auto *I = AssumeVH.getAssumeCI();
 
     // There shouldn't be any llvm.assume intrinsics in the new function.
     if (I->getFunction() != &OldFunc)

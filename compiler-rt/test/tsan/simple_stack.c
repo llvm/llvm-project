@@ -46,14 +46,14 @@ int main() {
   return 0;
 }
 
-// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 
 // Also check that functions instrumentation can be configured by either driver
 // or legacy flags:
 
-// RUN: %clangxx_tsan -O1 %s -o %t -fno-sanitize-thread-func-entry-exit && %deflake %run %t 2>&1 \
+// RUN: %clangxx_tsan %s -o %t -fno-sanitize-thread-func-entry-exit && %deflake %run %t 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FUNC-ENTRY-EXIT-OFF %s
-// RUN: %clangxx_tsan -O1 %s -o %t -mllvm -tsan-instrument-func-entry-exit=0 && %deflake %run %t 2>&1 \
+// RUN: %clangxx_tsan %s -o %t -mllvm -tsan-instrument-func-entry-exit=0 && %deflake %run %t 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FUNC-ENTRY-EXIT-OFF %s
 
 // CHECK:      WARNING: ThreadSanitizer: data race

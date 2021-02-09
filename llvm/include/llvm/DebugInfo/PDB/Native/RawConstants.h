@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_RAWCONSTANTS_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_RAWCONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -115,4 +115,4 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_RAWCONSTANTS_H

@@ -23,6 +23,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -877,11 +878,36 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
   }
+  case AArch64::MOVaddrBA: {
+    MachineFunction &MF = *MI.getParent()->getParent();
+    if (MF.getSubtarget<AArch64Subtarget>().isTargetMachO()) {
+      // blockaddress expressions have to come from a constant pool because the
+      // largest addend (and hence offset within a function) allowed for ADRP is
+      // only 8MB.
+      const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
+      assert(MI.getOperand(1).getOffset() == 0 && "unexpected offset");
 
+      MachineConstantPool *MCP = MF.getConstantPool();
+      unsigned CPIdx = MCP->getConstantPoolIndex(BA, Align(8));
+
+      Register DstReg = MI.getOperand(0).getReg();
+      auto MIB1 =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
+              .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
+      auto MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                          TII->get(AArch64::LDRXui), DstReg)
+                      .addUse(DstReg)
+                      .addConstantPoolIndex(
+                          CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+      transferImpOps(MI, MIB1, MIB2);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+    LLVM_FALLTHROUGH;
   case AArch64::MOVaddr:
   case AArch64::MOVaddrJT:
   case AArch64::MOVaddrCP:
-  case AArch64::MOVaddrBA:
   case AArch64::MOVaddrTLS:
   case AArch64::MOVaddrEXT: {
     // Expand into ADRP + ADD.

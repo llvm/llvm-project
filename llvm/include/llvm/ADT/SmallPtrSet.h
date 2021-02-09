@@ -366,6 +366,13 @@ public:
     return std::make_pair(makeIterator(p.first), p.second);
   }
 
+  /// Insert the given pointer with an iterator hint that is ignored. This is
+  /// identical to calling insert(Ptr), but allows SmallPtrSet to be used by
+  /// std::insert_iterator and std::inserter().
+  iterator insert(iterator, PtrType Ptr) {
+    return insert(Ptr).first;
+  }
+
   /// erase - If the set contains the specified pointer, remove it and return
   /// true, otherwise return false.
   bool erase(PtrType Ptr) {

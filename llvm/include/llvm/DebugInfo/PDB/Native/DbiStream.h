@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_DBISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"

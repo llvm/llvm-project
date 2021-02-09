@@ -23,7 +23,6 @@ class LLDBIteratorTestCase(TestBase):
             'main.cpp', '// Set break point at this line.')
         self.line2 = line_number('main.cpp', '// And that line.')
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_module(self):
         """Test module_iter works correctly for SBTarget -> SBModule."""
         self.build()
@@ -59,7 +58,6 @@ class LLDBIteratorTestCase(TestBase):
                 yours[i], mine[i],
                 "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_breakpoint(self):
         """Test breakpoint_iter works correctly for SBTarget -> SBBreakpoint."""
         self.build()
@@ -91,7 +89,6 @@ class LLDBIteratorTestCase(TestBase):
             self.assertEqual(yours[i], mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""
         self.build()

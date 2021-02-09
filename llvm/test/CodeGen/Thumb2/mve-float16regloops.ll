@@ -1418,6 +1418,213 @@ if.end:                                           ; preds = %while.end, %if.then
   ret void
 }
 
+%struct.arm_biquad_cascade_df2T_instance_f16 = type { i8, half*, half* }
+define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instance_f16* nocapture readonly %S, half* nocapture readonly %pSrc, half* nocapture %pDst, i32 %blockSize) {
+; CHECK-LABEL: arm_biquad_cascade_df2T_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    ldrd r12, r6, [r0, #4]
+; CHECK-NEXT:    and r8, r3, #1
+; CHECK-NEXT:    ldrb r0, [r0]
+; CHECK-NEXT:    vldr.16 s4, .LCPI17_0
+; CHECK-NEXT:    lsrs r3, r3, #1
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    b .LBB17_3
+; CHECK-NEXT:  .LBB17_1: @ %if.else
+; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
+; CHECK-NEXT:    vstr.16 s12, [r12]
+; CHECK-NEXT:    vmovx.f16 s13, s12
+; CHECK-NEXT:  .LBB17_2: @ %if.end
+; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
+; CHECK-NEXT:    vstr.16 s13, [r12, #2]
+; CHECK-NEXT:    adds r6, #10
+; CHECK-NEXT:    subs r0, #1
+; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    beq .LBB17_8
+; CHECK-NEXT:  .LBB17_3: @ %do.body
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB17_5 Depth 2
+; CHECK-NEXT:    vldrh.u16 q4, [r6]
+; CHECK-NEXT:    vldrh.u16 q2, [r6, #4]
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    vmov q5, q4
+; CHECK-NEXT:    vmov q6, q2
+; CHECK-NEXT:    vshlc q5, r5, #16
+; CHECK-NEXT:    vshlc q6, r5, #16
+; CHECK-NEXT:    vldrh.u16 q3, [r12]
+; CHECK-NEXT:    vmov.f32 s13, s1
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    wls lr, r3, .LBB17_6
+; CHECK-NEXT:  @ %bb.4: @ %while.body.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
+; CHECK-NEXT:    vmov q7, q3
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov lr, r3
+; CHECK-NEXT:  .LBB17_5: @ %while.body
+; CHECK-NEXT:    @ Parent Loop BB17_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    ldrh r7, [r1], #4
+; CHECK-NEXT:    vfma.f16 q7, q4, r7
+; CHECK-NEXT:    ldrh r4, [r1, #-2]
+; CHECK-NEXT:    vmov.u16 r7, q7[0]
+; CHECK-NEXT:    vmov q3, q7
+; CHECK-NEXT:    vfma.f16 q3, q2, r7
+; CHECK-NEXT:    vmov r7, s4
+; CHECK-NEXT:    vmov.16 q3[3], r7
+; CHECK-NEXT:    vstr.16 s28, [r5]
+; CHECK-NEXT:    vfma.f16 q3, q5, r4
+; CHECK-NEXT:    vmov.u16 r4, q3[1]
+; CHECK-NEXT:    vmovx.f16 s6, s12
+; CHECK-NEXT:    vfma.f16 q3, q6, r4
+; CHECK-NEXT:    vstr.16 s6, [r5, #2]
+; CHECK-NEXT:    vmov.f32 s12, s13
+; CHECK-NEXT:    vmovx.f16 s6, s13
+; CHECK-NEXT:    vmov q7, q3
+; CHECK-NEXT:    vins.f16 s12, s6
+; CHECK-NEXT:    vmov.16 q7[2], r7
+; CHECK-NEXT:    adds r5, #4
+; CHECK-NEXT:    vmov.f32 s13, s29
+; CHECK-NEXT:    vmov.f32 s14, s30
+; CHECK-NEXT:    vmov.f32 s15, s31
+; CHECK-NEXT:    vmov q7, q3
+; CHECK-NEXT:    le lr, .LBB17_5
+; CHECK-NEXT:  .LBB17_6: @ %while.end
+; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
+; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    beq .LBB17_1
+; CHECK-NEXT:  @ %bb.7: @ %if.then
+; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
+; CHECK-NEXT:    ldrh r1, [r1]
+; CHECK-NEXT:    vfma.f16 q3, q4, r1
+; CHECK-NEXT:    vmov.u16 r1, q3[0]
+; CHECK-NEXT:    vstr.16 s12, [r5]
+; CHECK-NEXT:    vfma.f16 q3, q2, r1
+; CHECK-NEXT:    vmovx.f16 s6, s12
+; CHECK-NEXT:    vstr.16 s6, [r12]
+; CHECK-NEXT:    b .LBB17_2
+; CHECK-NEXT:  .LBB17_8: @ %do.end
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    .p2align 1
+; CHECK-NEXT:  @ %bb.9:
+; CHECK-NEXT:  .LCPI17_0:
+; CHECK-NEXT:    .short 0x0000 @ half 0
+entry:
+  %pState1 = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 1
+  %0 = load half*, half** %pState1, align 4
+  %numStages = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 0
+  %1 = load i8, i8* %numStages, align 4
+  %conv = zext i8 %1 to i32
+  %pCoeffs = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 2
+  %2 = load half*, half** %pCoeffs, align 4
+  %div = lshr i32 %blockSize, 1
+  %cmp.not90 = icmp eq i32 %div, 0
+  %and = and i32 %blockSize, 1
+  %tobool.not = icmp eq i32 %and, 0
+  br label %do.body
+
+do.body:                                          ; preds = %if.end, %entry
+  %stage.0 = phi i32 [ %conv, %entry ], [ %dec23, %if.end ]
+  %pCurCoeffs.0 = phi half* [ %2, %entry ], [ %add.ptr2, %if.end ]
+  %pState.0 = phi half* [ %0, %entry ], [ %pState.1, %if.end ]
+  %pIn.0 = phi half* [ %pSrc, %entry ], [ %pDst, %if.end ]
+  %3 = bitcast half* %pCurCoeffs.0 to <8 x half>*
+  %4 = load <8 x half>, <8 x half>* %3, align 2
+  %add.ptr = getelementptr inbounds half, half* %pCurCoeffs.0, i32 2
+  %5 = bitcast half* %add.ptr to <8 x half>*
+  %6 = load <8 x half>, <8 x half>* %5, align 2
+  %add.ptr2 = getelementptr inbounds half, half* %pCurCoeffs.0, i32 5
+  %7 = bitcast half* %pState.0 to <8 x half>*
+  %8 = load <8 x half>, <8 x half>* %7, align 2
+  %9 = shufflevector <8 x half> %8, <8 x half> <half poison, half poison, half 0xH0000, half 0xH0000, half poison, half poison, half poison, half poison>, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+  %10 = bitcast <8 x half> %4 to <8 x i16>
+  %11 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %10, i32 0, i32 16)
+  %12 = extractvalue { i32, <8 x i16> } %11, 0
+  %13 = extractvalue { i32, <8 x i16> } %11, 1
+  %14 = bitcast <8 x i16> %13 to <8 x half>
+  %15 = bitcast <8 x half> %6 to <8 x i16>
+  %16 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %15, i32 %12, i32 16)
+  %17 = extractvalue { i32, <8 x i16> } %16, 1
+  %18 = bitcast <8 x i16> %17 to <8 x half>
+  br i1 %cmp.not90, label %while.end, label %while.body
+
+while.body:                                       ; preds = %do.body, %while.body
+  %pIn.194 = phi half* [ %incdec.ptr4, %while.body ], [ %pIn.0, %do.body ]
+  %state.093 = phi <8 x half> [ %30, %while.body ], [ %9, %do.body ]
+  %pOut.192 = phi half* [ %incdec.ptr12, %while.body ], [ %pDst, %do.body ]
+  %sample.091 = phi i32 [ %dec, %while.body ], [ %div, %do.body ]
+  %incdec.ptr = getelementptr inbounds half, half* %pIn.194, i32 1
+  %19 = load half, half* %pIn.194, align 2
+  %incdec.ptr4 = getelementptr inbounds half, half* %pIn.194, i32 2
+  %20 = load half, half* %incdec.ptr, align 2
+  %.splatinsert = insertelement <8 x half> poison, half %19, i32 0
+  %.splat = shufflevector <8 x half> %.splatinsert, <8 x half> poison, <8 x i32> zeroinitializer
+  %21 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %4, <8 x half> %.splat, <8 x half> %state.093)
+  %22 = extractelement <8 x half> %21, i32 0
+  %.splat6 = shufflevector <8 x half> %21, <8 x half> poison, <8 x i32> zeroinitializer
+  %23 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %6, <8 x half> %.splat6, <8 x half> %21)
+  %24 = insertelement <8 x half> %23, half 0xH0000, i32 3
+  %.splatinsert7 = insertelement <8 x half> poison, half %20, i32 0
+  %.splat8 = shufflevector <8 x half> %.splatinsert7, <8 x half> poison, <8 x i32> zeroinitializer
+  %25 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %14, <8 x half> %.splat8, <8 x half> %24)
+  %26 = extractelement <8 x half> %25, i32 1
+  %.splat10 = shufflevector <8 x half> %25, <8 x half> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %27 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %18, <8 x half> %.splat10, <8 x half> %25)
+  %28 = shufflevector <8 x half> %27, <8 x half> undef, <8 x i32> <i32 2, i32 undef, i32 undef, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %29 = insertelement <8 x half> %28, half 0xH0000, i32 2
+  %30 = shufflevector <8 x half> %29, <8 x half> %27, <8 x i32> <i32 0, i32 11, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %incdec.ptr11 = getelementptr inbounds half, half* %pOut.192, i32 1
+  store half %22, half* %pOut.192, align 2
+  %incdec.ptr12 = getelementptr inbounds half, half* %pOut.192, i32 2
+  store half %26, half* %incdec.ptr11, align 2
+  %dec = add nsw i32 %sample.091, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end, label %while.body
+
+while.end:                                        ; preds = %while.body, %do.body
+  %pOut.1.lcssa = phi half* [ %pDst, %do.body ], [ %incdec.ptr12, %while.body ]
+  %state.0.lcssa = phi <8 x half> [ %9, %do.body ], [ %30, %while.body ]
+  %pIn.1.lcssa = phi half* [ %pIn.0, %do.body ], [ %incdec.ptr4, %while.body ]
+  br i1 %tobool.not, label %if.else, label %if.then
+
+if.then:                                          ; preds = %while.end
+  %31 = load half, half* %pIn.1.lcssa, align 2
+  %.splatinsert14 = insertelement <8 x half> poison, half %31, i32 0
+  %.splat15 = shufflevector <8 x half> %.splatinsert14, <8 x half> poison, <8 x i32> zeroinitializer
+  %32 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %4, <8 x half> %.splat15, <8 x half> %state.0.lcssa)
+  %33 = extractelement <8 x half> %32, i32 0
+  %.splat17 = shufflevector <8 x half> %32, <8 x half> poison, <8 x i32> zeroinitializer
+  %34 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %6, <8 x half> %.splat17, <8 x half> %32)
+  store half %33, half* %pOut.1.lcssa, align 2
+  %35 = extractelement <8 x half> %34, i32 1
+  store half %35, half* %pState.0, align 2
+  %36 = extractelement <8 x half> %34, i32 2
+  br label %if.end
+
+if.else:                                          ; preds = %while.end
+  %37 = extractelement <8 x half> %state.0.lcssa, i32 0
+  store half %37, half* %pState.0, align 2
+  %38 = extractelement <8 x half> %state.0.lcssa, i32 1
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  %.sink = phi half [ %38, %if.else ], [ %36, %if.then ]
+  %39 = getelementptr inbounds half, half* %pState.0, i32 1
+  store half %.sink, half* %39, align 2
+  %pState.1 = getelementptr inbounds half, half* %pState.0, i32 2
+  %dec23 = add i32 %stage.0, -1
+  %cmp24.not = icmp eq i32 %dec23, 0
+  br i1 %cmp24.not, label %do.end, label %do.body
+
+do.end:                                           ; preds = %if.end
+  ret void
+}
+
+declare { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16>, i32, i32)
 declare void @llvm.assume(i1)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)

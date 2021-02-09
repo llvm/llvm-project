@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_ORCERROR_H
-#define LLVM_EXECUTIONENGINE_ORC_ORCERROR_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_ORCERROR_H
+#define LLVM_EXECUTIONENGINE_ORC_SHARED_ORCERROR_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -71,4 +71,4 @@ private:
 } // End namespace orc.
 } // End namespace llvm.
 
-#endif // LLVM_EXECUTIONENGINE_ORC_ORCERROR_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_ORCERROR_H

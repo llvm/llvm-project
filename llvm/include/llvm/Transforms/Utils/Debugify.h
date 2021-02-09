@@ -10,8 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORM_UTILS_DEBUGIFY_H
-#define LLVM_TRANSFORM_UTILS_DEBUGIFY_H
+#ifndef LLVM_TRANSFORMS_UTILS_DEBUGIFY_H
+#define LLVM_TRANSFORMS_UTILS_DEBUGIFY_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -148,4 +148,4 @@ public:
 };
 } // namespace llvm
 
-#endif // LLVM_TRANSFORM_UTILS_DEBUGIFY_H
+#endif // LLVM_TRANSFORMS_UTILS_DEBUGIFY_H

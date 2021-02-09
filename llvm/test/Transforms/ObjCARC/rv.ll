@@ -452,6 +452,29 @@ bb1:
   ret i8* %v3
 }
 
+; Remove operand bundle "clang.arc.rv" and the autoreleaseRV call if the call
+; is a tail call.
+
+; CHECK-LABEL: define i8* @test31(
+; CHECK: %[[CALL:.*]] = tail call i8* @returner()
+; CHECK: ret i8* %[[CALL]]
+
+define i8* @test31() {
+  %call = tail call i8* @returner() [ "clang.arc.rv"(i64 0) ]
+  %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
+  ret i8* %1
+}
+
+; CHECK-LABEL: define i8* @test32(
+; CHECK: %[[CALL:.*]] = call i8* @returner() [ "clang.arc.rv"(i64 0) ]
+; CHECK: call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[CALL]])
+
+define i8* @test32() {
+  %call = call i8* @returner() [ "clang.arc.rv"(i64 0) ]
+  %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
+  ret i8* %1
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }

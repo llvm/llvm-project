@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_RETIRE_CONTROL_UNIT_H
-#define LLVM_MCA_RETIRE_CONTROL_UNIT_H
+#ifndef LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H
+#define LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H
 
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
@@ -109,4 +109,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_RETIRE_CONTROL_UNIT_H
+#endif // LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H

@@ -258,11 +258,11 @@ class CodeGenOpts<string base>
 class HeaderSearchOpts<string base>
   : KeyPathAndMacro<"HeaderSearchOpts->", base, "HEADER_SEARCH_"> {}
 class PreprocessorOpts<string base>
-  : KeyPathAndMacro<"PreprocessorOpts->", base> {}
+  : KeyPathAndMacro<"PreprocessorOpts->", base, "PREPROCESSOR_"> {}
 class FileSystemOpts<string base>
   : KeyPathAndMacro<"FileSystemOpts.", base> {}
 class AnalyzerOpts<string base>
-  : KeyPathAndMacro<"AnalyzerOpts->", base> {}
+  : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base> {}
 

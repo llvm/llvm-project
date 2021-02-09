@@ -720,7 +720,9 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 /// and language version
 void TargetInfo::getOpenCLFeatureDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
-
+  // FIXME: OpenCL options which affect language semantics/syntax
+  // should be moved into LangOptions, thus macro definitions of
+  // such options is better to be done in clang::InitializePreprocessor
   auto defineOpenCLExtMacro = [&](llvm::StringRef Name, unsigned AvailVer,
                                   unsigned CoreVersions,
                                   unsigned OptionalVersions) {
@@ -737,7 +739,6 @@ void TargetInfo::getOpenCLFeatureDefines(const LangOptions &Opts,
   defineOpenCLExtMacro(#Ext, Avail, Core, Opt);
 #include "clang/Basic/OpenCLExtensions.def"
 
-  // FIXME: OpenCL options which affect language semantics/syntax
-  // should be moved into LangOptions, thus macro definitions of
-  // such options is better to be done in clang::InitializePreprocessor
+  // Assume compiling for FULL profile
+  Builder.defineMacro("__opencl_c_int64");
 }

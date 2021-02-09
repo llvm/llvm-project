@@ -161,6 +161,10 @@ Read a list of dynamic symbols from
 (shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
 .Cm -Bsymbolic
 but does not set DF_SYMBOLIC
+.It Fl -EB
+Select the big-endian format in the OUTPUT_FORMAT command.
+.It Fl -EL
+Select the little-endian format in the OUTPUT_FORMAT command.
 .It Fl -eh-frame-hdr
 Request creation of
 .Li .eh_frame_hdr

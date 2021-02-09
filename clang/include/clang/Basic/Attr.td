@@ -1178,8 +1178,10 @@ def OpenCLKernel : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def OpenCLUnrollHint : InheritableAttr {
+def OpenCLUnrollHint : StmtAttr {
   let Spellings = [GNU<"opencl_unroll_hint">];
+//  let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
+//                             ErrorDiag, "'for', 'while', and 'do' statements">;
   let Args = [UnsignedArgument<"UnrollHint">];
   let Documentation = [OpenCLUnrollHintDocs];
 }

@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_GRIDVALUES_H
-#define LLVM_OPENMP_GRIDVALUES_H
+#ifndef LLVM_FRONTEND_OPENMP_OMPGRIDVALUES_H
+#define LLVM_FRONTEND_OPENMP_OMPGRIDVALUES_H
 
 namespace llvm {
 
@@ -128,4 +128,4 @@ static constexpr unsigned NVPTXGpuGridValues[] = {
 } // namespace omp
 } // namespace llvm
 
-#endif // LLVM_OPENMP_GRIDVALUES_H
+#endif // LLVM_FRONTEND_OPENMP_OMPGRIDVALUES_H

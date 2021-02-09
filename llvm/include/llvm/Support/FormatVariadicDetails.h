@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_FORMATVARIADIC_DETAILS_H
-#define LLVM_SUPPORT_FORMATVARIADIC_DETAILS_H
+#ifndef LLVM_SUPPORT_FORMATVARIADICDETAILS_H
+#define LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"

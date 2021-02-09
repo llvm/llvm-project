@@ -30,7 +30,6 @@ class CommandRunInterpreterLegacyAPICase(TestBase):
         self.dbg.SetOutputFileHandle(self.devnull, False)
         self.dbg.SetErrorFileHandle (self.devnull, False)
 
-    @add_test_categories(['pyapi'])
     def test_run_session_with_error_and_quit_legacy(self):
         """Run non-existing and quit command returns appropriate values"""
 
@@ -64,7 +63,6 @@ class CommandRunInterpreterAPICase(TestBase):
         self.dbg.SetOutputFile(devnull)
         self.dbg.SetErrorFile(devnull)
 
-    @add_test_categories(['pyapi'])
     def test_run_session_with_error_and_quit(self):
         """Run non-existing and quit command returns appropriate values"""
 

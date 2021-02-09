@@ -25,6 +25,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/bit.h"
 #include <numeric>
 
 using namespace mlir;
@@ -246,7 +247,7 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
     if (traitAttrsSet.count(attr.first.strref()) > 0)
       attrs.push_back(attr);
 
-  auto dictAttr = DictionaryAttr::get(attrs, op.getContext());
+  auto dictAttr = DictionaryAttr::get(op.getContext(), attrs);
   p << op.getOperationName() << " " << dictAttr << " " << op.lhs() << ", ";
   p << op.rhs() << ", " << op.acc();
   if (op.masks().size() == 2)
@@ -1444,7 +1445,7 @@ static ArrayAttr makeI64ArrayAttr(ArrayRef<int64_t> values,
   auto attrs = llvm::map_range(values, [context](int64_t v) -> Attribute {
     return IntegerAttr::get(IntegerType::get(context, 64), APInt(64, v));
   });
-  return ArrayAttr::get(llvm::to_vector<8>(attrs), context);
+  return ArrayAttr::get(context, llvm::to_vector<8>(attrs));
 }
 
 static LogicalResult verify(InsertStridedSliceOp op) {
@@ -2803,6 +2804,30 @@ OpFoldResult BitCastOp::fold(ArrayRef<Attribute> operands) {
   if (auto otherOp = source().getDefiningOp<BitCastOp>())
     if (result().getType() == otherOp.source().getType())
       return otherOp.source();
+
+  Attribute sourceConstant = operands.front();
+  if (!sourceConstant)
+    return {};
+
+  Type srcElemType = getSourceVectorType().getElementType();
+  Type dstElemType = getResultVectorType().getElementType();
+
+  if (auto floatPack = sourceConstant.dyn_cast<DenseFPElementsAttr>()) {
+    if (floatPack.isSplat()) {
+      auto splat = floatPack.getSplatValue<FloatAttr>();
+
+      // Casting fp16 into fp32.
+      if (srcElemType.isF16() && dstElemType.isF32()) {
+        uint32_t bits = static_cast<uint32_t>(
+            splat.getValue().bitcastToAPInt().getZExtValue());
+        // Duplicate the 16-bit pattern.
+        bits = (bits << 16) | (bits & 0xffff);
+        APInt intBits(32, bits);
+        APFloat floatBits(llvm::APFloat::IEEEsingle(), intBits);
+        return DenseElementsAttr::get(getResultVectorType(), floatBits);
+      }
+    }
+  }
 
   return {};
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_WRITER_H
-#define LLVM_TEXTAPI_MACHO_WRITER_H
+#ifndef LLVM_TEXTAPI_MACHO_TEXTAPIWRITER_H
+#define LLVM_TEXTAPI_MACHO_TEXTAPIWRITER_H
 
 namespace llvm {
 
@@ -28,4 +28,4 @@ public:
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_WRITER_H
+#endif // LLVM_TEXTAPI_MACHO_TEXTAPIWRITER_H

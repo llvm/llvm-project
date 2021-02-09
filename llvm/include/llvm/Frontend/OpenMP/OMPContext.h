@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_CONTEXT_H
-#define LLVM_OPENMP_CONTEXT_H
+#ifndef LLVM_FRONTEND_OPENMP_OMPCONTEXT_H
+#define LLVM_FRONTEND_OPENMP_OMPCONTEXT_H
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/BitVector.h"
@@ -207,4 +207,4 @@ template <> struct DenseMapInfo<omp::TraitProperty> {
 };
 
 } // end namespace llvm
-#endif // LLVM_OPENMP_CONTEXT_H
+#endif // LLVM_FRONTEND_OPENMP_OMPCONTEXT_H

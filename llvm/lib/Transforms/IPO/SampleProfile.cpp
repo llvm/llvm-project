@@ -1093,7 +1093,6 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// \param Candidate  ICP and inline candidate.
 /// \param Sum  Sum of target counts for indirect call.
 /// \param PromotedInsns  Map to keep track of indirect call already processed.
-/// \param Candidate  ICP and inline candidate.
 /// \param InlinedCallSite  Output vector for new call sites exposed after
 /// inlining.
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(

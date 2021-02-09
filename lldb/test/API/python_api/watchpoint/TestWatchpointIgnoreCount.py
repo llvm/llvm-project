@@ -25,7 +25,6 @@ class WatchpointIgnoreCountTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_set_watch_ignore_count(self):

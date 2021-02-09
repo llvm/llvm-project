@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETINSTRINFO_H
-#define LLVM_TARGET_TARGETINSTRINFO_H
+#ifndef LLVM_CODEGEN_TARGETINSTRINFO_H
+#define LLVM_CODEGEN_TARGETINSTRINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1937,6 +1937,13 @@ public:
     return Formatter.get();
   }
 
+  /// Returns the target-specific default value for tail duplication.
+  /// This value will be used if the tail-dup-placement-threshold argument is
+  /// not provided.
+  virtual unsigned getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
+    return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
@@ -1974,4 +1981,4 @@ template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETINSTRINFO_H
+#endif // LLVM_CODEGEN_TARGETINSTRINFO_H
