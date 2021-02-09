@@ -12,6 +12,9 @@ N: Saleem Abdulrasool
 E: compnerd@compnerd.org
 D: Minor patches and Linux fixes.
 
+N: Ulf Adams
+D: Invented the Ryu and Ryu Printf algorithms used in floating-point to_chars, and wrote the initial code.
+
 N: Muiez Ahmed
 E: muiez@ibm.com
 D: z/OS port.
@@ -27,6 +30,9 @@ D: Visibility fixes, minor FreeBSD portability patches.
 N: Holger Arnold
 E: holgerar@gmail.com
 D: Minor fix.
+
+N: Jorg Brown
+D: Ported floating-point to_chars from MSVC to libc++.
 
 N: David Chisnall
 E: theraven at theravensnest dot org
@@ -80,6 +86,14 @@ D: Minor patches and bug fixes.
 N: Argyrios Kyrtzidis
 E: kyrtzidis@apple.com
 D: Bug fixes.
+
+N: Stephan T. Lavavej
+E: stl@microsoft.com
+E: stl@nuwen.net
+D: Implemented floating-point to_chars.
+
+N: Microsoft Corporation
+D: Contributed floating-point to_chars.
 
 N: Bruce Mitchener, Jr.
 E: bruce.mitchener@gmail.com
@@ -152,6 +166,7 @@ D: Minor bug fix.
 N: Mark de Wever
 E: koraq at xs4all dot nl
 D: Format library support.
+D: Finalized the porting of MSVC's to_chars to libc++.
 
 N: Zhang Xiongpang
 E: zhangxiongpang@gmail.com
