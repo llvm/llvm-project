@@ -42,10 +42,14 @@
 #include "comgr-objdump.h"
 #include "comgr-signal.h"
 #include "comgr-symbol.h"
+
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
+#include <fstream>
 #include <string>
+
+#include "time-stat/ts-interface.h"
 
 #ifndef AMD_NOINLINE
 #ifdef __GNUC__
@@ -57,6 +61,7 @@
 
 using namespace llvm;
 using namespace COMGR;
+using namespace TimeStatistics;
 
 static bool isLanguageValid(amd_comgr_language_t Language) {
   return Language >= AMD_COMGR_LANGUAGE_NONE &&
@@ -189,7 +194,7 @@ static amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
   }
 }
 
-static StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
+StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
   switch (ActionKind) {
   case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
     return "AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR";
@@ -1166,6 +1171,7 @@ amd_comgr_status_t AMD_COMGR_API
 
   // The normal log stream, used to return via a AMD_COMGR_DATA_KIND_LOG object.
   std::string LogStr;
+  std::string PerfLog = "PerfStatsLog.txt";
   raw_string_ostream LogS(LogStr);
 
   // The log stream when redirecting to a file.
@@ -1190,8 +1196,13 @@ amd_comgr_status_t AMD_COMGR_API
               << "': " << EC.message() << "\n";
       } else {
         LogP = LogF.get();
+        PerfLog = RedirectLog.str();
       }
     }
+  }
+
+  if (env::needTimeStatistics()) {
+    InitTimeStatistics(PerfLog);
   }
 
   if (env::shouldEmitVerboseLogs()) {
@@ -1228,13 +1239,17 @@ amd_comgr_status_t AMD_COMGR_API
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
+    StartAction(ActionKind);
     ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                           ResultSetP, *LogP);
+    EndAction();
     break;
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
   case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
+    StartAction(ActionKind);
     ActionStatus =
         dispatchAddAction(ActionKind, ActionInfoP, InputSetP, ResultSetP);
+    EndAction();
     break;
   default:
     ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

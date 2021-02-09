@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.0.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "2.1.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 include(GNUInstallDirs)
@@ -47,7 +47,8 @@ set(SOURCES
   src/comgr-metadata.cpp
   src/comgr-objdump.cpp
   src/comgr-signal.cpp
-  src/comgr-symbol.cpp)
+  src/comgr-symbol.cpp
+  src/time-stat/time-stat.cpp)
 
 if(COMGR_BUILD_SHARED_LIBS)
   add_library(amd_comgr SHARED ${SOURCES})

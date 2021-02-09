@@ -51,6 +51,9 @@ llvm::Optional<llvm::StringRef> getRedirectLogs();
 /// Return whether the environment requests verbose logging.
 bool shouldEmitVerboseLogs();
 
+/// Return whether the environment requests time statistics collection.
+bool needTimeStatistics();
+
 /// If environment variable ROCM_PATH is set, return the environment varaible,
 /// otherwise return the default ROCM path.
 llvm::StringRef getROCMPath();

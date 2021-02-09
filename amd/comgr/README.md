@@ -131,6 +131,8 @@ include:
   filename which logs should be appended to.
 * `AMD_COMGR_EMIT_VERBOSE_LOGS`: If this is set, and is not "0", logs will
   include additional Comgr-specific informational messages.
+* `AMD_COMGR_TIME_STATISTICS`: If this is set, and is not "0", logs will
+  include additional Comgr-specific timing information for compilation actions.
 
 Versioning
 ----------
@@ -142,6 +144,7 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `2.1`: Add `AMD_COMGR_TIME_STATISTICS` environment variable.
 * `2.0`: Add support for new target feature syntax introduced at [AMDGPUUsage](https://llvm.org/docs/AMDGPUUsage.html).
 * `1.9`: Add gfx1031
 * `1.8`: Implement GNU Symbol Versioning for all exported functions. Rename

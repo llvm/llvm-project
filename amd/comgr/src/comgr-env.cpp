@@ -55,6 +55,11 @@ Optional<StringRef> getRedirectLogs() {
   return StringRef(RedirectLogs);
 }
 
+bool needTimeStatistics() {
+  static char *TimeStatistics = getenv("AMD_COMGR_TIME_STATISTICS");
+  return TimeStatistics && StringRef(TimeStatistics) != "0";
+}
+
 bool shouldEmitVerboseLogs() {
   static char *VerboseLogs = getenv("AMD_COMGR_EMIT_VERBOSE_LOGS");
   return VerboseLogs && StringRef(VerboseLogs) != "0";
