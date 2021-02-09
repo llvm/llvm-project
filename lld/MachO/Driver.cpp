@@ -734,6 +734,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
+  for (auto *arg : args.filtered(OPT_u)) {
+    config->explicitUndefineds.push_back(symtab->addUndefined(
+        arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
+  }
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
@@ -863,6 +867,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
     error("undefined symbol: " + toString(*config->entry));
     return false;
+  }
+  // FIXME: This prints symbols that are undefined both in input files and
+  // via -u flag twice.
+  for (const auto *undefined : config->explicitUndefineds) {
+    if (isa<Undefined>(undefined)) {
+      error("undefined symbol: " + toString(*undefined) +
+            "\n>>> referenced by flag -u " + toString(*undefined));
+      return false;
+    }
   }
 
   createSyntheticSections();
