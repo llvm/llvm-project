@@ -96,6 +96,13 @@ private:
 
   bool analyzeReference(mlir::Value memref, mlir::Operation *op) {
     if (auto acoOp = memref.getDefiningOp<ArrayCoorOp>()) {
+      if (acoOp.memref().getType().isa<fir::BoxType>()) {
+        // TODO: Look if and how fir.box can be promoted to affine.
+        LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
+                                   "array memory operation uses fir.box\n";
+                   op->dump(); acoOp.dump(););
+        return false;
+      }
       bool canPromote = true;
       for (auto coordinate : acoOp.indices())
         canPromote = canPromote && analyzeCoordinate(coordinate, op);
