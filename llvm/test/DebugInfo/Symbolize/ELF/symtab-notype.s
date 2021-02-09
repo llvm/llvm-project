@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## STT_NOTYPE symbols are common in assembly files. Test we can symbolize them.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-symbolizer --obj=%t --inlines 0 1 2 3 4 5 6 7 | FileCheck %s
