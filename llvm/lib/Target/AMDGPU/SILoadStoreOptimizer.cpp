@@ -769,7 +769,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   CI.UseST64 = false;
   CI.BaseOff = 0;
 
-  // Handle DS instructions.
+  // Handle all non-DS instructions.
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     return (EltOffset0 + CI.Width == EltOffset1 ||
             EltOffset1 + Paired.Width == EltOffset0) &&
@@ -777,7 +777,6 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
            (CI.InstClass == S_BUFFER_LOAD_IMM || CI.SLC == Paired.SLC);
   }
 
-  // Handle SMEM and VMEM instructions.
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
   // the stride 64 versions.
   if ((EltOffset0 % 64 == 0) && (EltOffset1 % 64) == 0 &&
