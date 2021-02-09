@@ -49,10 +49,7 @@ define i32 @dont_widen_undef() {
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[M_011:%.*]] = phi i32 [ 0, [[BLOCK1]] ], [ 33, [[ENTRY]] ]
-; CHECK-NEXT:    [[M_1_OP:%.*]] = lshr i32 1, [[M_011]]
-; CHECK-NEXT:    [[SEXT_MASK:%.*]] = and i32 [[M_1_OP]], 65535
-; CHECK-NEXT:    [[CMP115:%.*]] = icmp ne i32 [[SEXT_MASK]], 0
+; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV2]]
@@ -82,10 +79,7 @@ define i32 @dont_widen_undef_logical() {
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[M_011:%.*]] = phi i32 [ 0, [[BLOCK1]] ], [ 33, [[ENTRY]] ]
-; CHECK-NEXT:    [[M_1_OP:%.*]] = lshr i32 1, [[M_011]]
-; CHECK-NEXT:    [[SEXT_MASK:%.*]] = and i32 [[M_1_OP]], 65535
-; CHECK-NEXT:    [[CMP115:%.*]] = icmp ne i32 [[SEXT_MASK]], 0
+; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV2]]

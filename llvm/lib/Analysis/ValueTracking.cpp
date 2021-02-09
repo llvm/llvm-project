@@ -1229,6 +1229,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
+    // Trailing zeros of a right-shifted constant never decrease.
+    const APInt *C;
+    if (match(I->getOperand(0), m_APInt(C)))
+      Known.Zero.setLowBits(C->countTrailingZeros());
     break;
   }
   case Instruction::LShr: {
@@ -1237,6 +1241,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
+    // Leading zeros of a left-shifted constant never decrease.
+    const APInt *C;
+    if (match(I->getOperand(0), m_APInt(C)))
+      Known.Zero.setHighBits(C->countLeadingZeros());
     break;
   }
   case Instruction::AShr: {
