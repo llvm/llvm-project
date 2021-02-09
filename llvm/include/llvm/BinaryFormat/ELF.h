@@ -1372,21 +1372,9 @@ enum {
 // ElfXX_VerNeed structure version (GNU versioning)
 enum { VER_NEED_NONE = 0, VER_NEED_CURRENT = 1 };
 
-// SHT_NOTE section types
-enum {
-  NT_FREEBSD_THRMISC = 7,
-  NT_FREEBSD_PROCSTAT_PROC = 8,
-  NT_FREEBSD_PROCSTAT_FILES = 9,
-  NT_FREEBSD_PROCSTAT_VMMAP = 10,
-  NT_FREEBSD_PROCSTAT_GROUPS = 11,
-  NT_FREEBSD_PROCSTAT_UMASK = 12,
-  NT_FREEBSD_PROCSTAT_RLIMIT = 13,
-  NT_FREEBSD_PROCSTAT_OSREL = 14,
-  NT_FREEBSD_PROCSTAT_PSSTRINGS = 15,
-  NT_FREEBSD_PROCSTAT_AUXV = 16,
-};
+// SHT_NOTE section types.
 
-// Generic note types
+// Generic note types.
 enum : unsigned {
   NT_VERSION = 1,
   NT_ARCH = 2,
@@ -1394,7 +1382,7 @@ enum : unsigned {
   NT_GNU_BUILD_ATTRIBUTE_FUNC = 0x101,
 };
 
-// Core note types
+// Core note types.
 enum : unsigned {
   NT_PRSTATUS = 1,
   NT_FPREGSET = 2,
@@ -1459,7 +1447,7 @@ enum {
   NT_LLVM_HWASAN_GLOBALS = 3,
 };
 
-// GNU note types
+// GNU note types.
 enum {
   NT_GNU_ABI_TAG = 1,
   NT_GNU_HWCAP = 2,
@@ -1526,6 +1514,20 @@ enum : unsigned {
   GNU_PROPERTY_X86_FEATURE_2_XSAVE = 1 << 7,
   GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT = 1 << 8,
   GNU_PROPERTY_X86_FEATURE_2_XSAVEC = 1 << 9,
+};
+
+// FreeBSD core note types.
+enum {
+  NT_FREEBSD_THRMISC = 7,
+  NT_FREEBSD_PROCSTAT_PROC = 8,
+  NT_FREEBSD_PROCSTAT_FILES = 9,
+  NT_FREEBSD_PROCSTAT_VMMAP = 10,
+  NT_FREEBSD_PROCSTAT_GROUPS = 11,
+  NT_FREEBSD_PROCSTAT_UMASK = 12,
+  NT_FREEBSD_PROCSTAT_RLIMIT = 13,
+  NT_FREEBSD_PROCSTAT_OSREL = 14,
+  NT_FREEBSD_PROCSTAT_PSSTRINGS = 15,
+  NT_FREEBSD_PROCSTAT_AUXV = 16,
 };
 
 // AMDGPU-specific section indices.
