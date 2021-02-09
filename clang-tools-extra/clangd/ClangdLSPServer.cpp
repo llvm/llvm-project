@@ -490,6 +490,15 @@ static std::vector<llvm::StringRef> semanticTokenTypes() {
   return Types;
 }
 
+static std::vector<llvm::StringRef> semanticTokenModifiers() {
+  std::vector<llvm::StringRef> Modifiers;
+  for (unsigned I = 0;
+       I <= static_cast<unsigned>(HighlightingModifier::LastModifier); ++I)
+    Modifiers.push_back(
+        toSemanticTokenModifier(static_cast<HighlightingModifier>(I)));
+  return Modifiers;
+}
+
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
@@ -628,8 +637,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                  {"full", llvm::json::Object{{"delta", true}}},
                  {"range", false},
                  {"legend",
-                  llvm::json::Object{{"tokenTypes", semanticTokenTypes()},
-                                     {"tokenModifiers", llvm::json::Array()}}},
+                  llvm::json::Object{
+                      {"tokenTypes", semanticTokenTypes()},
+                      {"tokenModifiers", semanticTokenModifiers()}}},
              }},
             {"signatureHelpProvider",
              llvm::json::Object{

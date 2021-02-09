@@ -49,9 +49,6 @@ public:
   bool isUnneededShiftMask(SDNode *N, unsigned Width) const;
 
   bool MatchSRLIW(SDNode *N) const;
-  bool MatchSLOI(SDNode *N) const;
-  bool MatchSROI(SDNode *N) const;
-  bool MatchSROIW(SDNode *N) const;
   bool MatchSLLIUW(SDNode *N) const;
 
   bool selectVLOp(SDValue N, SDValue &VL);

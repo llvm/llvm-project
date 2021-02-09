@@ -54,6 +54,9 @@ struct RealTypeStorage;
 struct RecordTypeStorage;
 struct ReferenceTypeStorage;
 struct SequenceTypeStorage;
+struct ShapeTypeStorage;
+struct ShapeShiftTypeStorage;
+struct SliceTypeStorage;
 struct TypeDescTypeStorage;
 struct VectorTypeStorage;
 } // namespace detail
@@ -214,6 +217,41 @@ public:
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
                                                           mlir::Type eleTy);
+};
+
+/// Type of a vector of runtime values that define the shape of a
+/// multidimensional array object. The vector is the extents of each array
+/// dimension. The rank of a ShapeType must be at least 1.
+class ShapeType : public mlir::Type::TypeBase<ShapeType, mlir::Type,
+                                              detail::ShapeTypeStorage> {
+public:
+  using Base::Base;
+  static ShapeType get(mlir::MLIRContext *ctx, unsigned rank);
+  unsigned getRank() const;
+};
+
+/// Type of a vector of runtime values that define the shape and the origin of a
+/// multidimensional array object. The vector is of pairs, origin offset and
+/// extent, of each array dimension. The rank of a ShapeShiftType must be at
+/// least 1.
+class ShapeShiftType
+    : public mlir::Type::TypeBase<ShapeShiftType, mlir::Type,
+                                  detail::ShapeShiftTypeStorage> {
+public:
+  using Base::Base;
+  static ShapeShiftType get(mlir::MLIRContext *ctx, unsigned rank);
+  unsigned getRank() const;
+};
+
+/// Type of a vector that represents an array slice operation on an array.
+/// Fortran slices are triples of lower bound, upper bound, and stride. The rank
+/// of a SliceType must be at least 1.
+class SliceType : public mlir::Type::TypeBase<SliceType, mlir::Type,
+                                              detail::SliceTypeStorage> {
+public:
+  using Base::Base;
+  static SliceType get(mlir::MLIRContext *ctx, unsigned rank);
+  unsigned getRank() const;
 };
 
 /// The type of a field name. Implementations may defer the layout of a Fortran

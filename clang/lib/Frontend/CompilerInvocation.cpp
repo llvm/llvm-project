@@ -386,7 +386,7 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 
 template <typename T, typename U, U Value>
 static T extractMaskValue(T KeyPath) {
-  return KeyPath & Value;
+  return ((KeyPath & Value) == Value) ? Value : T();
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(ARGS, DIAGS, SUCCESS, ID, FLAGS, PARAM,  \
@@ -2153,18 +2153,263 @@ static bool parseTestModuleFileExtensionArg(StringRef Arg,
   return false;
 }
 
-static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
-                                   DiagnosticsEngine &Diags,
-                                   bool &IsHeaderFile) {
+/// Return a table that associates command line option specifiers with the
+/// frontend action. Note: The pair {frontend::PluginAction, OPT_plugin} is
+/// intentionally missing, as this case is handled separately from other
+/// frontend options.
+static const auto &getFrontendActionTable() {
+  static const std::pair<frontend::ActionKind, unsigned> Table[] = {
+      {frontend::ASTDeclList, OPT_ast_list},
+
+      {frontend::ASTDump, OPT_ast_dump_all_EQ},
+      {frontend::ASTDump, OPT_ast_dump_all},
+      {frontend::ASTDump, OPT_ast_dump_EQ},
+      {frontend::ASTDump, OPT_ast_dump},
+      {frontend::ASTDump, OPT_ast_dump_lookups},
+      {frontend::ASTDump, OPT_ast_dump_decl_types},
+
+      {frontend::ASTPrint, OPT_ast_print},
+      {frontend::ASTView, OPT_ast_view},
+      {frontend::DumpCompilerOptions, OPT_compiler_options_dump},
+      {frontend::DumpRawTokens, OPT_dump_raw_tokens},
+      {frontend::DumpTokens, OPT_dump_tokens},
+      {frontend::EmitAssembly, OPT_S},
+      {frontend::EmitBC, OPT_emit_llvm_bc},
+      {frontend::EmitHTML, OPT_emit_html},
+      {frontend::EmitLLVM, OPT_emit_llvm},
+      {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
+      {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
+      {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
+      {frontend::EmitObj, OPT_emit_obj},
+
+      {frontend::FixIt, OPT_fixit_EQ},
+      {frontend::FixIt, OPT_fixit},
+
+      {frontend::GenerateModule, OPT_emit_module},
+      {frontend::GenerateModuleInterface, OPT_emit_module_interface},
+      {frontend::GenerateHeaderModule, OPT_emit_header_module},
+      {frontend::GeneratePCH, OPT_emit_pch},
+      {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
+      {frontend::InitOnly, OPT_init_only},
+      {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
+      {frontend::ModuleFileInfo, OPT_module_file_info},
+      {frontend::VerifyPCH, OPT_verify_pch},
+      {frontend::PrintPreamble, OPT_print_preamble},
+      {frontend::PrintPreprocessedInput, OPT_E},
+      {frontend::TemplightDump, OPT_templight_dump},
+      {frontend::RewriteMacros, OPT_rewrite_macros},
+      {frontend::RewriteObjC, OPT_rewrite_objc},
+      {frontend::RewriteTest, OPT_rewrite_test},
+      {frontend::RunAnalysis, OPT_analyze},
+      {frontend::MigrateSource, OPT_migrate},
+      {frontend::RunPreprocessorOnly, OPT_Eonly},
+      {frontend::PrintDependencyDirectivesSourceMinimizerOutput,
+          OPT_print_dependency_directives_minimized_source},
+  };
+
+  return Table;
+}
+
+/// Maps command line option to frontend action.
+static Optional<frontend::ActionKind> getFrontendAction(OptSpecifier &Opt) {
+  for (const auto &ActionOpt : getFrontendActionTable())
+    if (ActionOpt.second == Opt.getID())
+      return ActionOpt.first;
+
+  return None;
+}
+
+/// Maps frontend action to command line option.
+static Optional<OptSpecifier>
+getProgramActionOpt(frontend::ActionKind ProgramAction) {
+  for (const auto &ActionOpt : getFrontendActionTable())
+    if (ActionOpt.first == ProgramAction)
+      return OptSpecifier(ActionOpt.second);
+
+  return None;
+}
+
+static void GenerateFrontendArgs(const FrontendOptions &Opts,
+                                 SmallVectorImpl<const char *> &Args,
+                                 CompilerInvocation::StringAllocator SA,
+                                 bool IsHeader) {
+  const FrontendOptions &FrontendOpts = Opts;
+#define FRONTEND_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef FRONTEND_OPTION_WITH_MARSHALLING
+
+  Optional<OptSpecifier> ProgramActionOpt =
+      getProgramActionOpt(Opts.ProgramAction);
+
+  // Generating a simple flag covers most frontend actions.
+  std::function<void()> GenerateProgramAction = [&]() {
+    GenerateArg(Args, *ProgramActionOpt, SA);
+  };
+
+  if (!ProgramActionOpt) {
+    // PluginAction is the only program action handled separately.
+    assert(Opts.ProgramAction == frontend::PluginAction &&
+           "Frontend action without option.");
+    GenerateProgramAction = [&]() {
+      GenerateArg(Args, OPT_plugin, Opts.ActionName, SA);
+    };
+  }
+
+  // FIXME: Simplify the complex 'AST dump' command line.
+  if (Opts.ProgramAction == frontend::ASTDump) {
+    GenerateProgramAction = [&]() {
+      // ASTDumpLookups, ASTDumpDeclTypes and ASTDumpFilter are generated via
+      // marshalling infrastructure.
+
+      if (Opts.ASTDumpFormat != ADOF_Default) {
+        StringRef Format;
+        switch (Opts.ASTDumpFormat) {
+        case ADOF_Default:
+          llvm_unreachable("Default AST dump format.");
+        case ADOF_JSON:
+          Format = "json";
+          break;
+        }
+
+        if (Opts.ASTDumpAll)
+          GenerateArg(Args, OPT_ast_dump_all_EQ, Format, SA);
+        if (Opts.ASTDumpDecls)
+          GenerateArg(Args, OPT_ast_dump_EQ, Format, SA);
+      } else {
+        if (Opts.ASTDumpAll)
+          GenerateArg(Args, OPT_ast_dump_all, SA);
+        if (Opts.ASTDumpDecls)
+          GenerateArg(Args, OPT_ast_dump, SA);
+      }
+    };
+  }
+
+  if (Opts.ProgramAction == frontend::FixIt && !Opts.FixItSuffix.empty()) {
+    GenerateProgramAction = [&]() {
+      GenerateArg(Args, OPT_fixit_EQ, Opts.FixItSuffix, SA);
+    };
+  }
+
+  GenerateProgramAction();
+
+  for (const auto &PluginArgs : Opts.PluginArgs)
+    for (const auto &PluginArg : PluginArgs.second)
+      GenerateArg(Args, OPT_plugin_arg, PluginArgs.first + PluginArg, SA);
+
+  for (const auto &Ext : Opts.ModuleFileExtensions) {
+    if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get())) {
+      std::string Buffer;
+      llvm::raw_string_ostream OS(Buffer);
+      OS << *TestExt;
+      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, OS.str(), SA);
+    }
+  }
+
+  if (!Opts.CodeCompletionAt.FileName.empty())
+    GenerateArg(Args, OPT_code_completion_at, Opts.CodeCompletionAt.ToString(),
+                SA);
+
+  for (const auto &Plugin : Opts.Plugins)
+    GenerateArg(Args, OPT_load, Plugin, SA);
+
+  // ASTDumpDecls and ASTDumpAll already handled with ProgramAction.
+
+  for (const auto &ModuleFile : Opts.ModuleFiles)
+    GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
+
+  if (Opts.AuxTargetCPU.hasValue())
+    GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
+
+  if (Opts.AuxTargetFeatures.hasValue())
+    for (const auto &Feature : *Opts.AuxTargetFeatures)
+      GenerateArg(Args, OPT_aux_target_feature, Feature, SA);
+
+  {
+    StringRef Preprocessed = Opts.DashX.isPreprocessed() ? "-cpp-output" : "";
+    StringRef ModuleMap =
+        Opts.DashX.getFormat() == InputKind::ModuleMap ? "-module-map" : "";
+    StringRef Header = IsHeader ? "-header" : "";
+
+    StringRef Lang;
+    switch (Opts.DashX.getLanguage()) {
+    case Language::C:
+      Lang = "c";
+      break;
+    case Language::OpenCL:
+      Lang = "cl";
+      break;
+    case Language::CUDA:
+      Lang = "cuda";
+      break;
+    case Language::HIP:
+      Lang = "hip";
+      break;
+    case Language::CXX:
+      Lang = "c++";
+      break;
+    case Language::ObjC:
+      Lang = "objective-c";
+      break;
+    case Language::ObjCXX:
+      Lang = "objective-c++";
+      break;
+    case Language::RenderScript:
+      Lang = "renderscript";
+      break;
+    case Language::Asm:
+      Lang = "assembler-with-cpp";
+      break;
+    case Language::Unknown:
+      assert(Opts.DashX.getFormat() == InputKind::Precompiled &&
+             "Generating -x argument for unknown language (not precompiled).");
+      Lang = "ast";
+      break;
+    case Language::LLVM_IR:
+      Lang = "ir";
+      break;
+    }
+
+    GenerateArg(Args, OPT_x, Lang + Header + ModuleMap + Preprocessed, SA);
+  }
+
+  // OPT_INPUT has a unique class, generate it directly.
+  for (const auto &Input : Opts.Inputs)
+    Args.push_back(SA(Input.getFile()));
+}
+
+static bool ParseFrontendArgsImpl(FrontendOptions &Opts, ArgList &Args,
+                                  DiagnosticsEngine &Diags,
+                                  bool &IsHeaderFile) {
+  FrontendOptions &FrontendOpts = Opts;
+  bool Success = true;
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+#define FRONTEND_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef FRONTEND_OPTION_WITH_MARSHALLING
+
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
-    switch (A->getOption().getID()) {
-    default:
-      llvm_unreachable("Invalid option in group!");
-    case OPT_ast_list:
-      Opts.ProgramAction = frontend::ASTDeclList; break;
-    case OPT_ast_dump_all_EQ:
-    case OPT_ast_dump_EQ: {
+    OptSpecifier Opt = OptSpecifier(A->getOption().getID());
+    Optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);
+    assert(ProgramAction && "Option specifier not in Action_Group.");
+
+    if (ProgramAction == frontend::ASTDump &&
+        (Opt == OPT_ast_dump_all_EQ || Opt == OPT_ast_dump_EQ)) {
       unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
                          .CaseLower("default", ADOF_Default)
                          .CaseLower("json", ADOF_JSON)
@@ -2177,51 +2422,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << A->getAsString(Args) << A->getValue();
         Opts.ASTDumpFormat = ADOF_Default;
       }
-      LLVM_FALLTHROUGH;
     }
-    case OPT_ast_dump:
-    case OPT_ast_dump_all:
-    case OPT_ast_dump_lookups:
-    case OPT_ast_dump_decl_types:
-      Opts.ProgramAction = frontend::ASTDump; break;
-    case OPT_ast_print:
-      Opts.ProgramAction = frontend::ASTPrint; break;
-    case OPT_ast_view:
-      Opts.ProgramAction = frontend::ASTView; break;
-    case OPT_compiler_options_dump:
-      Opts.ProgramAction = frontend::DumpCompilerOptions; break;
-    case OPT_dump_raw_tokens:
-      Opts.ProgramAction = frontend::DumpRawTokens; break;
-    case OPT_dump_tokens:
-      Opts.ProgramAction = frontend::DumpTokens; break;
-    case OPT_S:
-      Opts.ProgramAction = frontend::EmitAssembly; break;
-    case OPT_emit_llvm_bc:
-      Opts.ProgramAction = frontend::EmitBC; break;
-    case OPT_emit_html:
-      Opts.ProgramAction = frontend::EmitHTML; break;
-    case OPT_emit_llvm:
-      Opts.ProgramAction = frontend::EmitLLVM; break;
-    case OPT_emit_llvm_only:
-      Opts.ProgramAction = frontend::EmitLLVMOnly; break;
-    case OPT_emit_codegen_only:
-      Opts.ProgramAction = frontend::EmitCodeGenOnly; break;
-    case OPT_emit_obj:
-      Opts.ProgramAction = frontend::EmitObj; break;
-    case OPT_fixit_EQ:
+
+    if (ProgramAction == frontend::FixIt && Opt == OPT_fixit_EQ)
       Opts.FixItSuffix = A->getValue();
-      LLVM_FALLTHROUGH;
-    case OPT_fixit:
-      Opts.ProgramAction = frontend::FixIt; break;
-    case OPT_emit_module:
-      Opts.ProgramAction = frontend::GenerateModule; break;
-    case OPT_emit_module_interface:
-      Opts.ProgramAction = frontend::GenerateModuleInterface; break;
-    case OPT_emit_header_module:
-      Opts.ProgramAction = frontend::GenerateHeaderModule; break;
-    case OPT_emit_pch:
-      Opts.ProgramAction = frontend::GeneratePCH; break;
-    case OPT_emit_interface_stubs: {
+
+    if (ProgramAction == frontend::GenerateInterfaceStubs) {
       StringRef ArgStr =
           Args.hasArg(OPT_interface_stub_version_EQ)
               ? Args.getLastArgValue(OPT_interface_stub_version_EQ)
@@ -2236,6 +2442,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << "Must specify a valid interface stub format type, ie: "
                "-interface-stub-version=experimental-ifs-v2"
             << ErrorMessage;
+        ProgramAction = frontend::ParseSyntaxOnly;
       } else if (!ArgStr.startswith("experimental-ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
@@ -2243,42 +2450,11 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << "Must specify a valid interface stub format type, ie: "
                "-interface-stub-version=experimental-ifs-v2"
             << ErrorMessage;
-      } else {
-        Opts.ProgramAction = frontend::GenerateInterfaceStubs;
+        ProgramAction = frontend::ParseSyntaxOnly;
       }
-      break;
     }
-    case OPT_init_only:
-      Opts.ProgramAction = frontend::InitOnly; break;
-    case OPT_fsyntax_only:
-      Opts.ProgramAction = frontend::ParseSyntaxOnly; break;
-    case OPT_module_file_info:
-      Opts.ProgramAction = frontend::ModuleFileInfo; break;
-    case OPT_verify_pch:
-      Opts.ProgramAction = frontend::VerifyPCH; break;
-    case OPT_print_preamble:
-      Opts.ProgramAction = frontend::PrintPreamble; break;
-    case OPT_E:
-      Opts.ProgramAction = frontend::PrintPreprocessedInput; break;
-    case OPT_templight_dump:
-      Opts.ProgramAction = frontend::TemplightDump; break;
-    case OPT_rewrite_macros:
-      Opts.ProgramAction = frontend::RewriteMacros; break;
-    case OPT_rewrite_objc:
-      Opts.ProgramAction = frontend::RewriteObjC; break;
-    case OPT_rewrite_test:
-      Opts.ProgramAction = frontend::RewriteTest; break;
-    case OPT_analyze:
-      Opts.ProgramAction = frontend::RunAnalysis; break;
-    case OPT_migrate:
-      Opts.ProgramAction = frontend::MigrateSource; break;
-    case OPT_Eonly:
-      Opts.ProgramAction = frontend::RunPreprocessorOnly; break;
-    case OPT_print_dependency_directives_minimized_source:
-      Opts.ProgramAction =
-          frontend::PrintDependencyDirectivesSourceMinimizerOutput;
-      break;
-    }
+
+    Opts.ProgramAction = *ProgramAction;
   }
 
   if (const Arg* A = Args.getLastArg(OPT_plugin)) {
@@ -2424,7 +2600,37 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
   }
 
-  return DashX;
+  Opts.DashX = DashX;
+
+  return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static bool ParseFrontendArgs(CompilerInvocation &Res, FrontendOptions &Opts,
+                              ArgList &Args, DiagnosticsEngine &Diags,
+                              bool &IsHeaderFile) {
+  FrontendOptions DummyOpts;
+
+  return RoundTrip(
+      [&IsHeaderFile](CompilerInvocation &Res, ArgList &Args,
+                      DiagnosticsEngine &Diags) {
+        // ParseFrontendArgsImpl handles frontend action without querying the
+        // options. Let's do it now so RoundTrip considers us responsible for
+        // generating it.
+        for (const auto &Pair : getFrontendActionTable())
+          Args.hasArg(Pair.second);
+
+        return ParseFrontendArgsImpl(Res.getFrontendOpts(), Args, Diags,
+                                     IsHeaderFile);
+      },
+      [&IsHeaderFile](CompilerInvocation &Res,
+                      SmallVectorImpl<const char *> &Args,
+                      CompilerInvocation::StringAllocator SA) {
+        GenerateFrontendArgs(Res.getFrontendOpts(), Args, SA, IsHeaderFile);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        std::swap(Res.getFrontendOpts(), DummyOpts);
+      },
+      Res, Args, Diags, "FrontendOptions");
 }
 
 std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
@@ -3968,9 +4174,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
   Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                                  /*DefaultDiagColor=*/false);
+  Success &= ParseFrontendArgs(Res, Res.getFrontendOpts(), Args, Diags,
+                               LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
-  InputKind DashX = ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
-                                      LangOpts.IsHeaderFile);
+  InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res, Res.getHeaderSearchOpts(), Args, Diags,
@@ -4187,6 +4394,7 @@ void CompilerInvocation::generateCC1CommandLine(
   llvm::Triple T(TargetOpts->Triple);
 
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
+  GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA, T);
   GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,

@@ -2325,18 +2325,6 @@ When lowered, any relocated value will be recorded in the corresponding
 :ref:`stackmap entry <statepoint-stackmap-format>`.  See the intrinsic description
 for further details.
 
-ObjC ARC RetainRV/ClaimRV Operand Bundles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A ``"clang.arc.rv"`` operand bundle on a call indicates the call is implicitly
-followed by a marker instruction and a call to an ObjC runtime function that
-uses the result of the call. If the argument passed to the operand bundle is 0,
-``@objc_retainAutoreleasedReturnValue`` is called. If 1 is passed,
-``@objc_unsafeClaimAutoreleasedReturnValue`` is called.
-
-The operand bundle is needed to ensure the call is immediately followed by the
-marker instruction or the ObjC runtime call in the final output.
-
 .. _moduleasm:
 
 Module-Level Inline Assembly

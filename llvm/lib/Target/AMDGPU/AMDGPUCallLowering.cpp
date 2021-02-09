@@ -513,7 +513,7 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
 
   CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(CC, F.isVarArg());
   AMDGPUOutgoingValueHandler RetHandler(B, *MRI, Ret, AssignFn);
-  return handleAssignments(B, SplitRetInfos, RetHandler);
+  return handleAssignments(B, SplitRetInfos, RetHandler, CC, F.isVarArg());
 }
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
@@ -1381,7 +1381,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv,
                                                       Info.IsVarArg);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);
-    if (!handleAssignments(MIRBuilder, InArgs, Handler))
+    if (!handleAssignments(MIRBuilder, InArgs, Handler, Info.CallConv,
+                           Info.IsVarArg))
       return false;
   }
 

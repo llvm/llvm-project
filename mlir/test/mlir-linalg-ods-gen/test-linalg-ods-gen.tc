@@ -92,6 +92,18 @@ def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
 // ODS: RankedI32ElementsAttr<[5, 6]>:$ivec_attr,
 // ODS: OptionalAttr<F32>:$optional_attr
 //
+// ODS: bool hasDynamicIndexingMaps();
+// ODS: LogicalResult verifyIndexingMapRequiredAttributes();
+//
+// IMPL: bool Test4Op::hasDynamicIndexingMaps() { return true; }
+// IMPL: LogicalResult Test4Op::verifyIndexingMapRequiredAttributes()
+// IMPL:   op->getAttrOfType<ArrayAttr>("array_attr")
+// IMPL:   op->getAttr("f32_attr")
+// IMPL:   op->getAttrOfType<DenseElementsAttr>("fvec_attr")
+// IMPL:   op->getAttr("i32_attr")
+// IMPL:   op->getAttr("i64_attr")
+// IMPL:   op->getAttrOfType<DenseElementsAttr>("ivec_attr")
+//
 ods_def<Test4Op> :
 def test4(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N))
 attr(

@@ -231,11 +231,13 @@ void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      SmallVectorImpl<ArgInfo> &Args,
                                      ValueHandler &Handler,
+                                     CallingConv::ID CallConv, bool IsVarArg,
                                      Register ThisReturnReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
+
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, F.getContext());
   return handleAssignments(CCInfo, ArgLocs, MIRBuilder, Args, Handler,
                            ThisReturnReg);
 }

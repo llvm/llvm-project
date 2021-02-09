@@ -405,6 +405,20 @@ llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
   llvm.return
 }
 
+// CHECK-LABEL: @stack_save
+llvm.func @stack_save() {
+  // CHECK: call i8* @llvm.stacksave
+  %0 = llvm.intr.stacksave : !llvm.ptr<i8>
+  llvm.return
+}
+
+// CHECK-LABEL: @stack_restore
+llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
+  // CHECK: call void @llvm.stackrestore
+  llvm.intr.stackrestore %arg0
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
