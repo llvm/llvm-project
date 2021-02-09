@@ -801,6 +801,10 @@ def canRunWatchpointTests():
         except subprocess.CalledProcessError:
             pass
         return False, "security.models.extensions.user_set_dbregs disabled"
+    elif platform == "freebsd" and configuration.arch == "aarch64":
+        import lldb
+        if lldb.SBPlatform.GetHostPlatform().GetOSMajorVersion() < 13:
+            return False, "Watchpoint support on arm64 requires FreeBSD 13.0"
     return True, "watchpoint support available"
 
 def checkWatchpointSupport():
