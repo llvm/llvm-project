@@ -31,6 +31,7 @@ public:
     VK_Sparc_L44,
     VK_Sparc_HH,
     VK_Sparc_HM,
+    VK_Sparc_LM,
     VK_Sparc_PC22,
     VK_Sparc_PC10,
     VK_Sparc_GOT22,
