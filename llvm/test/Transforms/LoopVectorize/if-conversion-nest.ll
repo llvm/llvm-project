@@ -39,7 +39,7 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 19, i32 19, i32 19, i32 19>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD6]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP12]], <4 x i32> <i32 4, i32 4, i32 4, i32 4>, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
-; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[TMP11]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP16:%.*]] = and <4 x i1> [[TMP10]], [[TMP15]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>

@@ -610,9 +610,9 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-DAG: %[[M1:.*]] = fmul fast <4 x float> %[[V0]], <float 3.000000e+00,
 ; CHECK-DAG: %[[M2:.*]] = fmul fast <4 x float> %[[V0]], <float 2.000000e+00,
 ; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
-; CHECK-DAG: %[[C12:.*]] = and <4 x i1> %[[C2]], %[[C11]]
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
 ; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
-; CHECK: %[[C22:.*]] = and <4 x i1> %[[C21]], %[[C11]]
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
 ; CHECK: %[[S1:.*]] = select <4 x i1> %[[C22]], <4 x float> %[[M1]], <4 x float> %[[M2]]
 ; CHECK: %[[S2:.*]] = select <4 x i1> %[[C1]], <4 x float> %[[V0]], <4 x float> %[[S1]]
 ; CHECK: fadd fast <4 x float> %[[S2]],
@@ -678,9 +678,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ; CHECK-DAG: %[[SUB:.*]] = fsub fast <4 x float>
 ; CHECK-DAG: %[[ADD:.*]] = fadd fast <4 x float>
 ; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
-; CHECK-DAG: %[[C12:.*]] = and <4 x i1> %[[C2]], %[[C11]]
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
 ; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
-; CHECK: %[[C22:.*]] = and <4 x i1> %[[C21]], %[[C11]]
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
 ; CHECK: %[[S1:.*]] = select <4 x i1> %[[C12]], <4 x float> %[[SUB]], <4 x float> %[[ADD]]
 ; CHECK: %[[S2:.*]] = select <4 x i1> %[[C22]], {{.*}} <4 x float> %[[S1]]
 define float @fcmp_fadd_fsub(float* nocapture readonly %a, i32 %n) nounwind readonly {
