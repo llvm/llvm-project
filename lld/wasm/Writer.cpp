@@ -1350,6 +1350,19 @@ void Writer::run() {
       addStartStopSymbols(seg);
   }
 
+  // Delay reporting error about explict exports until after addStartStopSymbols
+  // which can create optional symbols.
+  for (auto &entry : config->exportedSymbols) {
+    StringRef name = entry.first();
+    Symbol *sym = symtab->find(name);
+    if (sym && sym->isDefined())
+      sym->forceExport = true;
+    else if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
+      error(Twine("symbol exported via --export not found: ") + name);
+    else if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
+      warn(Twine("symbol exported via --export not found: ") + name);
+  }
+
   log("-- scanRelocations");
   scanRelocations();
   log("-- finalizeIndirectFunctionTable");
