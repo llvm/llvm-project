@@ -19,29 +19,7 @@ endif()
 
 set(LLVM_EXEGESIS_TARGETS "${LLVM_EXEGESIS_TARGETS} ${TARGETS_TO_APPEND}" PARENT_SCOPE)
 
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  CodeGen
-  Core
-  ExecutionEngine
-  GlobalISel
-  MC
-  MCDisassembler
-  MCJIT
-  MCParser
-  Object
-  ObjectYAML
-  RuntimeDyld
-  Support
-  )
-
-set(libs)
-if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
-  list(APPEND libs pfm)
-endif()
-
-add_llvm_library(LLVMExegesis
-  DISABLE_LLVM_LINK_LLVM_DYLIB
+add_library(LLVMExegesis
   STATIC
   Analysis.cpp
   Assembler.cpp
@@ -64,9 +42,28 @@ add_llvm_library(LLVMExegesis
   SnippetRepetitor.cpp
   Target.cpp
   UopsBenchmarkRunner.cpp
-
-  LINK_LIBS ${libs}
-
-  DEPENDS
-  intrinsics_gen
   )
+
+llvm_update_compile_flags(LLVMExegesis)
+llvm_map_components_to_libnames(libs
+  Analysis
+  CodeGen
+  Core
+  ExecutionEngine
+  GlobalISel
+  MC
+  MCDisassembler
+  MCJIT
+  MCParser
+  Object
+  ObjectYAML
+  RuntimeDyld
+  Support
+  )
+
+if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
+  list(APPEND libs pfm)
+endif()
+
+target_link_libraries(LLVMExegesis ${libs})
+set_target_properties(LLVMExegesis PROPERTIES FOLDER "Libraries")
