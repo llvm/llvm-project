@@ -1423,8 +1423,7 @@ def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Flags<[CoreOption, NoXarchOption]>;
 def fsanitize_blacklist : Joined<["-"], "fsanitize-blacklist=">,
                           Group<f_clang_Group>,
-                          HelpText<"Path to blacklist file for sanitizers">,
-                          MarshallingInfoStringVector<LangOpts<"SanitizerBlacklistFiles">>;
+                          HelpText<"Path to blacklist file for sanitizers">;
 def fsanitize_system_blacklist : Joined<["-"], "fsanitize-system-blacklist=">,
   HelpText<"Path to system blacklist file for sanitizers">,
   Flags<[CC1Option]>;
@@ -2159,8 +2158,7 @@ def fno_objc_nonfragile_abi : Flag<["-"], "fno-objc-nonfragile-abi">, Group<f_Gr
 def fobjc_sender_dependent_dispatch : Flag<["-"], "fobjc-sender-dependent-dispatch">, Group<f_Group>;
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>;
 def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Parse OpenMP pragmas and generate parallel code.">,
-  MarshallingInfoFlag<LangOpts<"OpenMP">, "0u">, Normalizer<"makeFlagToValueNormalizer(50u)">;
+  HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>, Flags<[NoArgumentUnused]>;
 def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
