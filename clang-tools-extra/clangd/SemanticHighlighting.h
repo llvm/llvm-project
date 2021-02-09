@@ -50,8 +50,8 @@ enum class HighlightingKind {
   Enum,
   EnumConstant,
   Typedef,
-  DependentType,
-  DependentName,
+  Type,
+  Unknown,
   Namespace,
   TemplateParameter,
   Concept,
@@ -75,6 +75,7 @@ enum class HighlightingModifier {
   Readonly,
   Static,
   Abstract,
+  DependentName,
 
   FunctionScope,
   ClassScope,
