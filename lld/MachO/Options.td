@@ -454,7 +454,6 @@ def flat_namespace : Flag<["-"], "flat_namespace">,
 def u : Separate<["-"], "u">,
      MetaVarName<"<symbol>">,
      HelpText<"Require that <symbol> be defined for the link to succeed">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def U : Separate<["-"], "U">,
      MetaVarName<"<symbol>">,
