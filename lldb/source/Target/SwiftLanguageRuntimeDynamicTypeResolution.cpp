@@ -1334,8 +1334,10 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       // superclass, and ends on null.
       auto *current_tr = tr;
       while (current_tr) {
-        auto *record_ti = llvm::cast<RecordTypeInfo>(
-            tc.getClassInstanceTypeInfo(tr, 0, &tip));
+        auto *record_ti = llvm::dyn_cast_or_null<RecordTypeInfo>(
+            tc.getClassInstanceTypeInfo(current_tr, 0, &tip));
+        if (!record_ti)
+          break;
         auto *super_tr = builder.lookupSuperclass(current_tr);
         uint32_t offset = super_tr ? 1 : 0;
         if (auto size = findFieldWithName(record_ti->getFields(), name,
