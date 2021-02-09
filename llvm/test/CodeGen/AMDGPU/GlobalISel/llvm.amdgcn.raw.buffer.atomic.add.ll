@@ -14,7 +14,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_vof
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_OFFEN_RTN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -34,7 +34,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__vg
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_OFFEN_RTN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -56,7 +56,7 @@ define amdgpu_ps <2 x float> @raw_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc__vg
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_OFFEN_RTN [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 8 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_OFFEN_RTN [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store 8 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN]].sub0
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN]].sub1
   ; CHECK:   $vgpr0 = COPY [[COPY8]]
@@ -81,7 +81,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__vgp
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_OFFEN_RTN [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 8 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_X2_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_OFFEN_RTN [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store 8 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   S_ENDPGM 0
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.add.i64(i64 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -121,7 +121,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_vof
   ; CHECK:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
   ; CHECK:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -170,7 +170,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__sgp
   ; CHECK:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
   ; CHECK:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -195,7 +195,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_vof
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 4095, 1, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource" + 4095, align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 4095, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource" + 4095, align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_OFFEN_RTN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %voffset = add i32 %voffset.base, 4095
@@ -217,7 +217,7 @@ define amdgpu_ps float @raw_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_vof
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, 1, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_ATOMIC_ADD_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 3, implicit $exec :: (volatile dereferenceable load store 4 on custom "BufferResource", align 1, addrspace 4)
   ; CHECK:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_OFFEN_RTN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 2)

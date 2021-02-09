@@ -44,7 +44,7 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
     $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
@@ -109,7 +109,7 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
     $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec

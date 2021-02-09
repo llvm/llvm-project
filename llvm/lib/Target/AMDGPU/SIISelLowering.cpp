@@ -5768,28 +5768,6 @@ static SDValue getBuildDwordsVector(SelectionDAG &DAG, SDLoc DL,
   return DAG.getBuildVector(Type, DL, VecElts);
 }
 
-static bool parseCachePolicy(SDValue CachePolicy, SelectionDAG &DAG,
-                             SDValue *GLC, SDValue *SLC, SDValue *DLC) {
-  auto CachePolicyConst = cast<ConstantSDNode>(CachePolicy.getNode());
-
-  uint64_t Value = CachePolicyConst->getZExtValue();
-  SDLoc DL(CachePolicy);
-  if (GLC) {
-    *GLC = DAG.getTargetConstant((Value & 0x1) ? 1 : 0, DL, MVT::i32);
-    Value &= ~(uint64_t)0x1;
-  }
-  if (SLC) {
-    *SLC = DAG.getTargetConstant((Value & 0x2) ? 1 : 0, DL, MVT::i32);
-    Value &= ~(uint64_t)0x2;
-  }
-  if (DLC) {
-    *DLC = DAG.getTargetConstant((Value & 0x4) ? 1 : 0, DL, MVT::i32);
-    Value &= ~(uint64_t)0x4;
-  }
-
-  return Value == 0;
-}
-
 static SDValue padEltsToUndef(SelectionDAG &DAG, const SDLoc &DL, EVT CastVT,
                               SDValue Src, int ExtraElts) {
   EVT SrcVT = Src.getValueType();
@@ -6184,19 +6162,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
-  SDValue GLC;
-  SDValue SLC;
-  SDValue DLC;
-  if (BaseOpcode->Atomic) {
-    GLC = True; // TODO no-return optimization
-    if (!parseCachePolicy(Op.getOperand(ArgOffset + Intr->CachePolicyIndex),
-                          DAG, nullptr, &SLC, IsGFX10Plus ? &DLC : nullptr))
-      return Op;
-  } else {
-    if (!parseCachePolicy(Op.getOperand(ArgOffset + Intr->CachePolicyIndex),
-                          DAG, &GLC, &SLC, IsGFX10Plus ? &DLC : nullptr))
-      return Op;
-  }
+  unsigned CPol = cast<ConstantSDNode>(
+      Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
+  if (BaseOpcode->Atomic)
+    CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
+  if (CPol & ~AMDGPU::CPol::ALL)
+    return Op;
 
   SmallVector<SDValue, 26> Ops;
   if (BaseOpcode->Store || BaseOpcode->Atomic)
@@ -6212,12 +6183,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
   Ops.push_back(Unorm);
-  if (!IsGFX10Plus)
-    Ops.push_back(DAG.getTargetConstant(0, SDLoc(), MVT::i1));
-  if (IsGFX10Plus)
-    Ops.push_back(DLC);
-  Ops.push_back(GLC);
-  Ops.push_back(SLC);
+  Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
   if (IsGFX10Plus)
@@ -6526,11 +6492,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
-    bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
-    SDValue GLC;
-    SDValue DLC = DAG.getTargetConstant(0, DL, MVT::i1);
-    if (!parseCachePolicy(Op.getOperand(3), DAG, &GLC, nullptr,
-                          IsGFX10Plus ? &DLC : nullptr))
+    unsigned CPol = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+    if (CPol & ~AMDGPU::CPol::ALL)
       return Op;
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
                         DAG);
@@ -11229,10 +11192,12 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   int NoRetAtomicOp = AMDGPU::getAtomicNoRetOp(MI.getOpcode());
   if (NoRetAtomicOp != -1) {
     if (!Node->hasAnyUseOfValue(0)) {
-      int Glc1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                               AMDGPU::OpName::glc1);
-      if (Glc1Idx != -1)
-        MI.RemoveOperand(Glc1Idx);
+      int CPolIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                               AMDGPU::OpName::cpol);
+      if (CPolIdx != -1) {
+        MachineOperand &CPol = MI.getOperand(CPolIdx);
+        CPol.setImm(CPol.getImm() & ~AMDGPU::CPol::GLC);
+      }
       MI.RemoveOperand(0);
       MI.setDesc(TII->get(NoRetAtomicOp));
       return;

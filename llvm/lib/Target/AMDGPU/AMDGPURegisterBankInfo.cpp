@@ -1702,24 +1702,12 @@ static bool isZero(Register Reg, MachineRegisterInfo &MRI) {
   return mi_match(Reg, MRI, m_ICst(C)) && C == 0;
 }
 
-static unsigned extractGLC(unsigned CachePolicy) {
-  return CachePolicy & 1;
-}
-
-static unsigned extractSLC(unsigned CachePolicy) {
-  return (CachePolicy >> 1) & 1;
-}
-
-static unsigned extractDLC(unsigned CachePolicy) {
-  return (CachePolicy >> 2) & 1;
+static unsigned extractCPol(unsigned CachePolicy) {
+  return CachePolicy & AMDGPU::CPol::ALL;
 }
 
 static unsigned extractSWZ(unsigned CachePolicy) {
   return (CachePolicy >> 3) & 1;
-}
-
-static unsigned extractSCCB(unsigned CachePolicy) {
-  return (CachePolicy >> 4) & 1;
 }
 
 
@@ -1787,12 +1775,9 @@ AMDGPURegisterBankInfo::selectStoreIntrinsic(MachineIRBuilder &B,
   MIB.addUse(RSrc)
      .addUse(SOffset)
      .addImm(ImmOffset)
-     .addImm(extractGLC(CachePolicy))
-     .addImm(extractSLC(CachePolicy))
+     .addImm(extractCPol(CachePolicy))
      .addImm(0) // tfe: FIXME: Remove from inst
-     .addImm(extractDLC(CachePolicy))
      .addImm(extractSWZ(CachePolicy))
-     .addImm(extractSCCB(CachePolicy))
      .cloneMemRefs(MI);
 
   // FIXME: We need a way to report failure from applyMappingImpl.
