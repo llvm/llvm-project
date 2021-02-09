@@ -302,6 +302,12 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   if (op->getNumResults() > linalgOp.getNumOutputTensors())
     return op->emitError("unexpected #results > #outputs");
 
+  // Before checking indexing maps, we need to make sure the attributes
+  // referenced by it are valid.
+  if (linalgOp.hasDynamicIndexingMaps())
+    if (failed(linalgOp.verifyIndexingMapRequiredAttributes()))
+      return failure();
+
   // All shaped operands must be indexed.
   if (linalgOp.indexing_maps().size() != linalgOp.getNumShapedOperands())
     return linalgOp.emitOpError("expected the number of indexing_map (")
