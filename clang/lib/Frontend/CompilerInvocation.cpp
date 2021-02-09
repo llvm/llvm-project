@@ -1164,8 +1164,8 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
 }
 
 /// Create a new Regex instance out of the string value in \p RpassArg.
-/// It returns a pointer to the newly generated Regex instance.
-static std::shared_ptr<llvm::Regex>
+/// It returns the string and a pointer to the newly generated Regex instance.
+static CodeGenOptions::RemarkPattern
 GenerateOptimizationRemarkRegex(DiagnosticsEngine &Diags, ArgList &Args,
                                 Arg *RpassArg) {
   StringRef Val = RpassArg->getValue();
@@ -1176,7 +1176,7 @@ GenerateOptimizationRemarkRegex(DiagnosticsEngine &Diags, ArgList &Args,
         << RegexError << RpassArg->getAsString(Args);
     Pattern.reset();
   }
-  return Pattern;
+  return {std::string(Val), Pattern};
 }
 
 static bool parseDiagnosticLevelMask(StringRef FlagName,
