@@ -275,6 +275,8 @@ private:
 
   LogicalResult processImageType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
+
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
   LogicalResult processStructType(ArrayRef<uint32_t> operands);

@@ -715,6 +715,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
+  case spirv::Opcode::OpTypeSampledImage:
+    return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
     return processRuntimeArrayType(operands);
   case spirv::Opcode::OpTypeStruct:
@@ -1051,6 +1053,21 @@ spirv::Deserializer::processImageType(ArrayRef<uint32_t> operands) {
   typeMap[operands[0]] = spirv::ImageType::get(
       elementTy, dim.getValue(), depthInfo.getValue(), arrayedInfo.getValue(),
       samplingInfo.getValue(), samplerUseInfo.getValue(), format.getValue());
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processSampledImageType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 2)
+    return emitError(unknownLoc, "OpTypeSampledImage must have two operands");
+
+  Type elementTy = getType(operands[1]);
+  if (!elementTy)
+    return emitError(unknownLoc,
+                     "OpTypeSampledImage references undefined <id>: ")
+           << operands[1];
+
+  typeMap[operands[0]] = spirv::SampledImageType::get(elementTy);
   return success();
 }
 

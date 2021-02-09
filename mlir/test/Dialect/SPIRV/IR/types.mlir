@@ -227,6 +227,20 @@ func private @image_parameters_nocomma_5(!spv.image<f32, Dim1D, NoDepth, NonArra
 // -----
 
 //===----------------------------------------------------------------------===//
+// SampledImageType
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @sampled_image_type(!spv.sampled_image<!spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>)
+func private @sampled_image_type(!spv.sampled_image<!spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image must be composed using image type, got 'f32'}}
+func private @samped_image_type_invaid_type(!spv.sampled_image<f32>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
 
