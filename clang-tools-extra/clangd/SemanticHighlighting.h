@@ -76,7 +76,12 @@ enum class HighlightingModifier {
   Static,
   Abstract,
 
-  LastModifier = Abstract
+  FunctionScope,
+  ClassScope,
+  FileScope,
+  GlobalScope,
+
+  LastModifier = GlobalScope
 };
 static_assert(static_cast<unsigned>(HighlightingModifier::LastModifier) < 32,
               "Increase width of modifiers bitfield!");

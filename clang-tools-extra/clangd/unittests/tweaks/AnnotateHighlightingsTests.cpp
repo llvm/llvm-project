@@ -18,17 +18,18 @@ TWEAK_TEST(AnnotateHighlightings);
 TEST_F(AnnotateHighlightingsTest, Test) {
   EXPECT_AVAILABLE("^vo^id^ ^f(^) {^}^"); // available everywhere.
   EXPECT_AVAILABLE("[[int a; int b;]]");
-  EXPECT_EQ("void /* Function [decl] */f() {}", apply("void ^f() {}"));
+  EXPECT_EQ("void /* Function [decl] [globalScope] */f() {}",
+            apply("void ^f() {}"));
 
-  EXPECT_EQ(
-      apply("[[int f1(); const int x = f1();]]"),
-      "int /* Function [decl] */f1(); "
-      "const int /* Variable [decl] [readonly] */x = /* Function */f1();");
+  EXPECT_EQ(apply("[[int f1(); const int x = f1();]]"),
+            "int /* Function [decl] [globalScope] */f1(); "
+            "const int /* Variable [decl] [readonly] [fileScope] */x = "
+            "/* Function [globalScope] */f1();");
 
   // Only the targeted range is annotated.
   EXPECT_EQ(apply("void f1(); void f2() {^}"),
             "void f1(); "
-            "void /* Function [decl] */f2() {}");
+            "void /* Function [decl] [globalScope] */f2() {}");
 }
 
 } // namespace

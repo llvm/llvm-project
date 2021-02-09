@@ -357,6 +357,46 @@ private:
   HighlightingToken Dummy; // returned from addToken(InvalidLoc)
 };
 
+llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  // Injected "Foo" within the class "Foo" has file scope, not class scope.
+  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+    if (R->isInjectedClassName())
+      DC = DC->getParent();
+  // Lambda captures are considered function scope, not class scope.
+  if (llvm::isa<FieldDecl>(D))
+    if (const auto *RD = llvm::dyn_cast<RecordDecl>(DC))
+      if (RD->isLambda())
+        return HighlightingModifier::FunctionScope;
+  // Walk up the DeclContext hierarchy until we find something interesting.
+  for (; !DC->isFileContext(); DC = DC->getParent()) {
+    if (DC->isFunctionOrMethod())
+      return HighlightingModifier::FunctionScope;
+    if (DC->isRecord())
+      return HighlightingModifier::ClassScope;
+  }
+  // Some template parameters (e.g. those for variable templates) don't have
+  // meaningful DeclContexts. That doesn't mean they're global!
+  if (DC->isTranslationUnit() && D->isTemplateParameter())
+    return llvm::None;
+  // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
+  if (D->getLinkageInternal() < ExternalLinkage)
+    return HighlightingModifier::FileScope;
+  return HighlightingModifier::GlobalScope;
+}
+
+llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
+  if (!T)
+    return llvm::None;
+  if (T->isBuiltinType())
+    return HighlightingModifier::GlobalScope;
+  if (auto *TD = dyn_cast<TemplateTypeParmType>(T))
+    return scopeModifier(TD->getDecl());
+  if (auto *TD = T->getAsTagDecl())
+    return scopeModifier(TD);
+  return llvm::None;
+}
+
 /// Produces highlightings, which are not captured by findExplicitReferences,
 /// e.g. highlights dependent names and 'auto' as the underlying type.
 class CollectExtraHighlightings
@@ -365,9 +405,12 @@ public:
   CollectExtraHighlightings(HighlightingsBuilder &H) : H(H) {}
 
   bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
-    if (auto K = kindForType(L.getTypePtr()))
-      H.addToken(L.getBeginLoc(), *K)
-          .addModifier(HighlightingModifier::Deduced);
+    if (auto K = kindForType(L.getTypePtr())) {
+      auto &Tok = H.addToken(L.getBeginLoc(), *K)
+                      .addModifier(HighlightingModifier::Deduced);
+      if (auto Mod = scopeModifier(L.getTypePtr()))
+        Tok.addModifier(*Mod);
+    }
     return true;
   }
 
@@ -375,38 +418,47 @@ public:
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;
-    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull()))
-      H.addToken(D->getTypeSpecStartLoc(), *K)
-          .addModifier(HighlightingModifier::Deduced);
+    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull())) {
+      auto &Tok = H.addToken(D->getTypeSpecStartLoc(), *K)
+                      .addModifier(HighlightingModifier::Deduced);
+      if (auto Mod = scopeModifier(AT->getDeducedType().getTypePtrOrNull()))
+        Tok.addModifier(*Mod);
+    }
     return true;
   }
 
   bool VisitOverloadExpr(OverloadExpr *E) {
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.
-    H.addToken(E->getNameLoc(), HighlightingKind::DependentName);
+    auto &Tok = H.addToken(E->getNameLoc(), HighlightingKind::DependentName);
+    if (llvm::isa<UnresolvedMemberExpr>(E))
+      Tok.addModifier(HighlightingModifier::ClassScope);
+    // other case is UnresolvedLookupExpr, scope is unknown.
     return true;
   }
 
   bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
-    H.addToken(E->getMemberNameInfo().getLoc(),
-               HighlightingKind::DependentName);
+    H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
-    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::DependentName);
+    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
-    H.addToken(L.getNameLoc(), HighlightingKind::DependentType);
+    H.addToken(L.getNameLoc(), HighlightingKind::DependentType)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentTemplateSpecializationTypeLoc(
       DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+    H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
@@ -414,6 +466,7 @@ public:
     switch (L.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
+      // FIXME: this isn't *always* a dependent template name.
       H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
       break;
     default:
@@ -430,7 +483,8 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
     if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
       if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::DependentType);
+        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::DependentType)
+            .addModifier(HighlightingModifier::ClassScope);
     }
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
   }
@@ -484,6 +538,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
         if (auto *Templated = TD->getTemplatedDecl())
           Decl = Templated;
       }
+      if (auto Mod = scopeModifier(Decl))
+        Tok.addModifier(*Mod);
       if (isConst(Decl))
         Tok.addModifier(HighlightingModifier::Readonly);
       if (isStatic(Decl))
@@ -499,6 +555,7 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   // Add highlightings for macro references.
   auto AddMacro = [&](const MacroOccurrence &M) {
     auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);
   };
@@ -724,7 +781,16 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "deduced"; // nonstandard
   case HighlightingModifier::Abstract:
     return "abstract";
+  case HighlightingModifier::FunctionScope:
+    return "functionScope"; // nonstandard
+  case HighlightingModifier::ClassScope:
+    return "classScope"; // nonstandard
+  case HighlightingModifier::FileScope:
+    return "fileScope"; // nonstandard
+  case HighlightingModifier::GlobalScope:
+    return "globalScope"; // nonstandard
   }
+  llvm_unreachable("unhandled HighlightingModifier");
 }
 
 std::vector<TheiaSemanticHighlightingInformation>

@@ -88,6 +88,10 @@
 # CHECK-NEXT:            "readonly",
 # CHECK-NEXT:            "static",
 # CHECK-NEXT:            "abstract"
+# CHECK-NEXT:            "functionScope",
+# CHECK-NEXT:            "classScope",
+# CHECK-NEXT:            "fileScope",
+# CHECK-NEXT:            "globalScope"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          "tokenTypes": [
 # CHECK-NEXT:            "variable",
