@@ -31,16 +31,6 @@ namespace lldb_private {
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 static const char *g_tau_underscore = g_dollar_tau_underscore + 1;
 
-static bool IsSymbolARuntimeThunk(const Symbol &symbol) {
-  llvm::StringRef symbol_name =
-      symbol.GetMangled().GetMangledName().GetStringRef();
-  if (symbol_name.empty())
-    return false;
-
-  swift::Demangle::Context demangle_ctx;
-  return demangle_ctx.isThunkSymbol(symbol_name);
-}
-
 namespace {
 
 enum class ThunkKind {
@@ -61,7 +51,9 @@ enum class ThunkAction {
 
 } // namespace
 
-static ThunkKind GetThunkKind(llvm::StringRef symbol_name) {
+static ThunkKind GetThunkKind(Symbol *symbol) {
+  auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
+
   swift::Demangle::Node::Kind kind;
   swift::Demangle::Context demangle_ctx;
   if (!demangle_ctx.isThunkSymbol(symbol_name))
@@ -161,10 +153,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   SymbolContext sc = stack_sp->GetSymbolContext(eSymbolContextEverything);
   Symbol *symbol = sc.symbol;
 
-  // Note, I don't really need to consult IsSymbolARuntimeThunk here,
-  // but it is fast to do and keeps this list and the one in
-  // IsSymbolARuntimeThunk in sync.
-  if (!symbol || !IsSymbolARuntimeThunk(*symbol))
+  if (!symbol)
     return new_thread_plan_sp;
 
   // Only do this if you are at the beginning of the thunk function:
@@ -179,7 +168,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
   const char *symbol_name = symbol_mangled_name.AsCString();
 
-  ThunkKind thunk_kind = GetThunkKind(symbol_mangled_name.GetStringRef());
+  ThunkKind thunk_kind = GetThunkKind(symbol);
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
 
   switch (thunk_action) {
