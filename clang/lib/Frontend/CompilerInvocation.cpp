@@ -2153,9 +2153,10 @@ static bool parseTestModuleFileExtensionArg(StringRef Arg,
   return false;
 }
 
-static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
-                                   DiagnosticsEngine &Diags,
-                                   bool &IsHeaderFile) {
+static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &Diags, bool &IsHeaderFile) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
     switch (A->getOption().getID()) {
@@ -2424,7 +2425,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
   }
 
-  return DashX;
+  Opts.DashX = DashX;
+
+  return Diags.getNumErrors() == NumErrorsBefore;
 }
 
 std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
@@ -3968,9 +3971,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
   Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                                  /*DefaultDiagColor=*/false);
+  Success &= ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
+                               LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
-  InputKind DashX = ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
-                                      LangOpts.IsHeaderFile);
+  InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res, Res.getHeaderSearchOpts(), Args, Diags,
