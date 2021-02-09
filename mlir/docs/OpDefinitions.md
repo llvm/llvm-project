@@ -613,6 +613,15 @@ The available directives are as follows:
 
     -   Represents all of the operands of an operation.
 
+*   `ref` ( input )
+
+    -   Represents a reference to the a variable or directive, that must have
+        already been resolved, that may be used as a parameter to a `custom`
+        directive.
+    -   Used to pass previously parsed entities to custom directives.
+    -   The input may be any directive or variable, aside from `functional-type`
+        and `custom`.
+
 *   `regions`
 
     -   Represents all of the regions of an operation.
@@ -630,14 +639,6 @@ The available directives are as follows:
     -   Represents the type of the given input.
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
-
-*   `type_ref` ( input )
-
-    -   Represents a reference to the type of the given input that must have
-        already been resolved.
-    -   `input` must be either an operand or result [variable](#variables), the
-        `operands` directive, or the `results` directive.
-    -   Used to pass previously parsed types to custom directives.
 
 #### Literals
 
@@ -716,6 +717,10 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `OpAsmParser::OperandType &`
     -   Optional: `Optional<OpAsmParser::OperandType> &`
     -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+*   Ref Directives
+    -   A reference directive is passed to the parser using the same mapping as
+        the input operand. For example, a single region would be passed as a
+        `Region &`.
 *   Region Variables
     -   Single: `Region &`
     -   Variadic: `SmallVectorImpl<std::unique_ptr<Region>> &`
@@ -726,10 +731,6 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
-*   TypeRef Directives
-    -   Single: `Type`
-    -   Optional: `Type`
-    -   Variadic: `const SmallVectorImpl<Type> &`
 *   `attr-dict` Directive: `NamedAttrList &`
 
 When a variable is optional, the value should only be specified if the variable
@@ -748,6 +749,10 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Value`
     -   Optional: `Value`
     -   Variadic: `OperandRange`
+*   Ref Directives
+    -   A reference directive is passed to the printer using the same mapping as
+        the input operand. For example, a single region would be passed as a
+        `Region &`.
 *   Region Variables
     -   Single: `Region &`
     -   Variadic: `MutableArrayRef<Region>`
@@ -755,10 +760,6 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Block *`
     -   Variadic: `SuccessorRange`
 *   Type Directives
-    -   Single: `Type`
-    -   Optional: `Type`
-    -   Variadic: `TypeRange`
-*   TypeRef Directives
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
