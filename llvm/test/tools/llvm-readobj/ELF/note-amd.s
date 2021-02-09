@@ -8,10 +8,11 @@
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
 // GNU-NEXT:     HSA Metadata:
-// GNU-NEXT: {{^ +$}}
+// GNU-NEXT: {{^        $}}
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_ISA (ISA Version)
 // GNU-NEXT:     ISA Version:
-// GNU-NEXT: {{^ +$}}
+// GNU-NEXT: {{^        $}}
+// GNU-EMPTY:
 // GNU-NEXT: Displaying notes found in: .note.desc
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x0000000a       NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
@@ -20,9 +21,11 @@
 // GNU-NEXT:   AMD                  0x00000009       NT_AMD_AMDGPU_ISA (ISA Version)
 // GNU-NEXT:     ISA Version:
 // GNU-NEXT:     isa_blah
+// GNU-EMPTY:
 // GNU-NEXT: Displaying notes found in: .note.other
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
+// GNU-EMPTY:
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
