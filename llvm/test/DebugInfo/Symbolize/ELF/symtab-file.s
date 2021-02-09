@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## When locating a local symbol, we can obtain the filename according to the
 ## preceding STT_FILE symbol.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
