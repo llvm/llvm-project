@@ -2158,7 +2158,7 @@ static bool parseTestModuleFileExtensionArg(StringRef Arg,
 /// intentionally missing, as this case is handled separately from other
 /// frontend options.
 static const auto &getFrontendActionTable() {
-  static const std::pair<frontend::ActionKind, OptSpecifier> Table[] = {
+  static const std::pair<frontend::ActionKind, unsigned> Table[] = {
       {frontend::ASTDeclList, OPT_ast_list},
 
       {frontend::ASTDump, OPT_ast_dump_all_EQ},
@@ -2213,7 +2213,7 @@ static const auto &getFrontendActionTable() {
 /// Maps command line option to frontend action.
 static Optional<frontend::ActionKind> getFrontendAction(OptSpecifier &Opt) {
   for (const auto &ActionOpt : getFrontendActionTable())
-    if (ActionOpt.second == Opt)
+    if (ActionOpt.second == Opt.getID())
       return ActionOpt.first;
 
   return None;
