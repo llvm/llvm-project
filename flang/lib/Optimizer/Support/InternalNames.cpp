@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -95,6 +97,11 @@ std::string fir::NameUniquer::doKinds(llvm::ArrayRef<std::int64_t> kinds) {
 std::string fir::NameUniquer::doCommonBlock(llvm::StringRef name) {
   std::string result = prefix();
   return result.append("B").append(toLower(name));
+}
+
+std::string fir::NameUniquer::doBlockData(llvm::StringRef name) {
+  std::string result = prefix();
+  return result.append("L").append(toLower(name));
 }
 
 std::string
@@ -236,6 +243,10 @@ fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
           nk = NameKind::VARIABLE;
           name = readName(uniq, i, i + 1, end);
         }
+        break;
+      case 'L':
+        nk = NameKind::BLOCK_DATA_NAME;
+        name = readName(uniq, i, i + 1, end);
         break;
       case 'P':
         nk = NameKind::PROCEDURE;
