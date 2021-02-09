@@ -987,6 +987,9 @@ namespace llvm {
     shouldExpandBuildVectorWithShuffles(EVT VT,
                                         unsigned DefinedValues) const override;
 
+    // Keep the zero-extensions for arguments to libcalls.
+    bool shouldKeepZExtForFP16Conv() const override { return true; }
+
     /// createFastISel - This method returns a target-specific FastISel object,
     /// or null if the target does not support "fast" instruction selection.
     FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,

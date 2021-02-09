@@ -22,6 +22,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r30, r30, -1
@@ -46,6 +47,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdphp f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
+; CHECK-P9-NEXT:    clrlwi r3, r3, 16
 ; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    xscvhpdp f0, f0

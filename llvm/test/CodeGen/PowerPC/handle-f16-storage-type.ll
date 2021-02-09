@@ -1156,6 +1156,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; P8-NEXT:    xscvsxdsp f1, f0
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
+; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    xsaddsp f1, f31, f1
@@ -1175,6 +1176,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    xscvdphp f1, f1
 ; CHECK-NEXT:    mffprwz r3, f1
+; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f1, r3
 ; CHECK-NEXT:    xscvhpdp f1, f1
 ; CHECK-NEXT:    xsaddsp f1, f0, f1
@@ -1225,6 +1227,7 @@ define half @PR40273(half) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
+; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlxor f0, f0, f0
@@ -1245,6 +1248,7 @@ define half @PR40273(half) #0 {
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    xxlxor f1, f1, f1
 ; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
