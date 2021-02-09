@@ -44,6 +44,9 @@ template <>
 A<int> A<int>::instance = bar();
 } // namespace test2
 
+// CHECK: @_ZGVN5test12t2E = linkonce_odr global i64 0, align 8
+// CHECK: @_ZGVN5test21AIvE8instanceE = weak_odr global i64 0, align 8
+// CHECK: @_ZGVN5test12t1IiEE = linkonce_odr global i64 0, align 8
 // CHECK: @llvm.global_ctors = appending global [4 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__cxx_global_var_init.1, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @__cxx_global_var_init.2, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @__cxx_global_var_init.4, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I__, i8* null }]
 // CHECK: @llvm.global_dtors = appending global [4 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__finalize__ZN5test12t2E, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @__finalize__ZN5test21AIvE8instanceE, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @__finalize__ZN5test12t1IiEE, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_a, i8* null }]
 
@@ -77,7 +80,7 @@ A<int> A<int>::instance = bar();
 
 // CHECK: define internal void @__cxx_global_var_init.1() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVN5test12t2E to i8*) acquire
+// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVN5test12t2E to i8*) acquire, align 8
 // CHECK:   %guard.uninitialized = icmp eq i8 %0, 0
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
@@ -119,14 +122,14 @@ A<int> A<int>::instance = bar();
 
 // CHECK: define internal void @__cxx_global_var_init.2() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   %0 = load i8, i8* bitcast (i64* @_ZGVN5test21AIvE8instanceE to i8*)
+// CHECK:   %0 = load i8, i8* bitcast (i64* @_ZGVN5test21AIvE8instanceE to i8*), align 8
 // CHECK:   %guard.uninitialized = icmp eq i8 %0, 0
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 // CHECK: init.check:
 // CHECK:   call void @_ZN5test21AIvEC1Ev(%"struct.test2::A"* {{[^,]*}} @_ZN5test21AIvE8instanceE)
 // CHECK:   %1 = call i32 @atexit(void ()* @__dtor__ZN5test21AIvE8instanceE)
-// CHECK:   store i64 1, i64* @_ZGVN5test21AIvE8instanceE
+// CHECK:   store i8 1, i8* bitcast (i64* @_ZGVN5test21AIvE8instanceE to i8*), align 8
 // CHECK:   br label %init.end
 
 // CHECK: init.end:
@@ -182,7 +185,7 @@ A<int> A<int>::instance = bar();
 
 // CHECK: define internal void @__cxx_global_var_init.4() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   %0 = load i8, i8* bitcast (i64* @_ZGVN5test12t1IiEE to i8*)
+// CHECK:   %0 = load i8, i8* bitcast (i64* @_ZGVN5test12t1IiEE to i8*), align 8
 // CHECK:   %guard.uninitialized = icmp eq i8 %0, 0
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
@@ -190,7 +193,7 @@ A<int> A<int>::instance = bar();
 // CHECK32: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1IiEE, i32 2)
 // CHECK64: call void @_ZN5test15Test1C1Ei(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1IiEE, i32 signext 2)
 // CHECK:   %1 = call i32 @atexit(void ()* @__dtor__ZN5test12t1IiEE)
-// CHECK:   store i64 1, i64* @_ZGVN5test12t1IiEE
+// CHECK:   store i8 1, i8* bitcast (i64* @_ZGVN5test12t1IiEE to i8*), align 8
 // CHECK:   br label %init.end
 
 // CHECK: init.end:

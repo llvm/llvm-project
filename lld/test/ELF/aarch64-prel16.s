@@ -3,6 +3,8 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs255.s -o %t255.o
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs256.s -o %t256.o
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/abs257.s -o %t257.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64_be %S/Inputs/abs256.s -o %t256.be.o
 
 .globl _start
 _start:
@@ -16,6 +18,8 @@ _start:
 //       if it is already fixed. Then, update addends accordingly.
 // RUN: ld.lld -z max-page-size=4096 %t.o %t256.o -o %t
 // RUN: llvm-objdump -s --section=.data %t | FileCheck %s --check-prefixes=CHECK,LE
+// RUN: ld.lld -z max-page-size=4096 %t.be.o %t256.be.o -o %t.be
+// RUN: llvm-objdump -s --section=.data %t.be | FileCheck %s --check-prefixes=CHECK,BE
 
 // CHECK: Contents of section .data:
 // 202158: S = 0x100, A = 0x212157, P = 0x202158

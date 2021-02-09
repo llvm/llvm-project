@@ -10,6 +10,8 @@
 #define liblldb_NativeProcessFreeBSD_H_
 
 #include "Plugins/Process/POSIX/NativeProcessELF.h"
+#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
+
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
@@ -25,7 +27,8 @@ namespace process_freebsd {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessFreeBSD : public NativeProcessELF {
+class NativeProcessFreeBSD : public NativeProcessELF,
+                             private NativeProcessSoftwareSingleStep {
 public:
   class Factory : public NativeProcessProtocol::Factory {
   public:
@@ -83,6 +86,8 @@ public:
   // Interface used by NativeRegisterContext-derived classes.
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
+
+  bool SupportHardwareSingleStepping() const;
 
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>

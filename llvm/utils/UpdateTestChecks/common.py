@@ -30,14 +30,9 @@ def parse_commandline_args(parser):
                        help='Activate CHECK line generation from this point forward')
   parser.add_argument('--disable', action='store_false', dest='enabled',
                       help='Deactivate CHECK line generation from this point forward')
-  parser.add_argument('--disable-verbose-prefix-warnings', action='store_false', 
-                      default=True,
-                      dest='verbose_prefix_warnings',
-                      help='Disable warnings about unused prefixes.')
   args = parser.parse_args()
-  global _verbose, _verbose_prefix_warnings
+  global _verbose
   _verbose = args.verbose
-  _verbose_prefix_warnings = args.verbose_prefix_warnings
   return args
 
 
@@ -277,9 +272,8 @@ class FunctionTestBuilder:
         self._func_order.update({prefix: []})
 
   def finish_and_get_func_dict(self):
-    if _verbose_prefix_warnings:
-      for prefix in self._get_failed_prefixes():
-        warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
+    for prefix in self._get_failed_prefixes():
+      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
     return self._func_dict
 
   def func_order(self):
@@ -335,9 +329,6 @@ class FunctionTestBuilder:
               # so the body can't be common accross RUN lines. We use None to
               # indicate that.
               self._func_dict[prefix][func] = None
-              if _verbose_prefix_warnings:
-                warn('Function %s had conflicting output from different RUN lines for prefix %s' % (
-                    func, prefix))
               continue
 
         self._func_dict[prefix][func] = function_body(

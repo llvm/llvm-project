@@ -380,14 +380,14 @@ llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
 // CHECK-LABEL: @coro_suspend
 llvm.func @coro_suspend(%arg0: !llvm.token, %arg1 : i1) {
   // CHECK: call i8 @llvm.coro.suspend
-  %0 = llvm.intr.coro.suspend %arg0, %arg1 : !llvm.i8
+  %0 = llvm.intr.coro.suspend %arg0, %arg1 : i8
   llvm.return
 }
 
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr<i8>, %arg1 : i1) {
   // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1 : !llvm.i1
+  %0 = llvm.intr.coro.end %arg0, %arg1 : i1
   llvm.return
 }
 

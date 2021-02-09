@@ -825,18 +825,23 @@ void IndirectSymtabSection::finalizeContents() {
   in.stubs->reserved1 = in.lazyPointers->reserved1 = off;
 }
 
+static uint32_t indirectValue(const Symbol *sym) {
+  return sym->symtabIndex != UINT32_MAX ? sym->symtabIndex
+                                        : MachO::INDIRECT_SYMBOL_LOCAL;
+}
+
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
   for (const Symbol *sym : in.tlvPointers->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
   for (const Symbol *sym : in.stubs->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
 }

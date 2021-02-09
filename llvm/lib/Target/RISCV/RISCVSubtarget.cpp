@@ -27,6 +27,18 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+static cl::opt<unsigned> RVVVectorBitsMin(
+    "riscv-v-vector-bits-min",
+    cl::desc("Assume V extension vector registers are at least this big, "
+             "with zero meaning no minimum size is assumed."),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> RVVVectorLMULMax(
+    "riscv-v-fixed-length-vector-lmul-max",
+    cl::desc("The maximum LMUL value to use for fixed length vectors. "
+             "Fractional LMUL values are not supported."),
+    cl::init(8), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
@@ -80,4 +92,31 @@ const LegalizerInfo *RISCVSubtarget::getLegalizerInfo() const {
 
 const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
   return RegBankInfo.get();
+}
+
+unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
+  assert(hasStdExtV() &&
+         "Tried to get vector length without V extension support!");
+  assert((RVVVectorBitsMin == 0 ||
+          (RVVVectorBitsMin >= 128 && isPowerOf2_32(RVVVectorBitsMin))) &&
+         "V extension requires vector length to be at least 128 and a power of "
+         "2!");
+  return PowerOf2Floor(RVVVectorBitsMin < 128 ? 0 : RVVVectorBitsMin);
+}
+
+unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
+  assert(hasStdExtV() &&
+         "Tried to get maximum LMUL without V extension support!");
+  assert(RVVVectorLMULMax <= 8 && isPowerOf2_32(RVVVectorLMULMax) &&
+         "V extension requires a LMUL to be at most 8 and a power of 2!");
+  return PowerOf2Floor(std::max<unsigned>(RVVVectorLMULMax, 1));
+}
+
+bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
+  return hasStdExtV() && getMinRVVVectorSizeInBits() != 0;
+}
+
+unsigned RISCVSubtarget::getLMULForFixedLengthVector(MVT VT) const {
+  unsigned MinVLen = getMinRVVVectorSizeInBits();
+  return divideCeil(VT.getSizeInBits(), MinVLen);
 }

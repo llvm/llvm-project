@@ -54,28 +54,43 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
   if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
-    if (isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
-      return {{cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))
-                   ->getSExtValue(),
-               nullptr},
-              {1, GEP->getPointerOperand()}};
-    }
     Value *Op0;
     ConstantInt *CI;
+
+    // If the index is zero-extended, it is guaranteed to be positive.
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+              m_ZExt(m_Value(Op0)))) {
+      if (match(Op0, m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
+        return {{0, nullptr},
+                {1, GEP->getPointerOperand()},
+                {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+      if (match(Op0, m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+        return {{CI->getSExtValue(), nullptr},
+                {1, GEP->getPointerOperand()},
+                {1, Op0}};
+      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+    }
+
+    if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
+        !CI->isNegative())
+      return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
+
+    SmallVector<std::pair<int64_t, Value *>, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
-      return {{0, nullptr},
-              {1, GEP->getPointerOperand()},
-              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
-    if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-              m_ZExt(m_NUWShl(m_Value(Op0), m_ConstantInt(CI)))))
-      return {{0, nullptr},
-              {1, GEP->getPointerOperand()},
-              {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
-
-    return {{0, nullptr},
-            {1, GEP->getPointerOperand()},
-            {1, GEP->getOperand(GEP->getNumOperands() - 1)}};
+      Result = {{0, nullptr},
+                {1, GEP->getPointerOperand()},
+                {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+    else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
+                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+      Result = {{CI->getSExtValue(), nullptr},
+                {1, GEP->getPointerOperand()},
+                {1, Op0}};
+    else {
+      Op0 = GEP->getOperand(GEP->getNumOperands() - 1);
+      Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+    }
+    return Result;
   }
 
   Value *Op0;
@@ -106,34 +121,39 @@ struct ConstraintTy {
   unsigned size() const { return Coefficients.size(); }
 };
 
-/// Turn a condition \p CmpI into a constraint vector, using indices from \p
-/// Value2Index. If \p ShouldAdd is true, new indices are added for values not
-/// yet in \p Value2Index.
+/// Turn a condition \p CmpI into a vector of constraints, using indices from \p
+/// Value2Index. Additional indices for newly discovered values are added to \p
+/// NewIndices.
 static SmallVector<ConstraintTy, 4>
 getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-              DenseMap<Value *, unsigned> &Value2Index, bool ShouldAdd) {
+              const DenseMap<Value *, unsigned> &Value2Index,
+              DenseMap<Value *, unsigned> &NewIndices) {
   int64_t Offset1 = 0;
   int64_t Offset2 = 0;
 
-  auto TryToGetIndex = [ShouldAdd,
-                        &Value2Index](Value *V) -> Optional<unsigned> {
-    if (ShouldAdd) {
-      Value2Index.insert({V, Value2Index.size() + 1});
-      return Value2Index[V];
-    }
-    auto I = Value2Index.find(V);
-    if (I == Value2Index.end())
-      return None;
-    return I->second;
+  // First try to look up \p V in Value2Index and NewIndices. Otherwise add a
+  // new entry to NewIndices.
+  auto GetOrAddIndex = [&Value2Index, &NewIndices](Value *V) -> unsigned {
+    auto V2I = Value2Index.find(V);
+    if (V2I != Value2Index.end())
+      return V2I->second;
+    auto NewI = NewIndices.find(V);
+    if (NewI != NewIndices.end())
+      return NewI->second;
+    auto Insert =
+        NewIndices.insert({V, Value2Index.size() + NewIndices.size() + 1});
+    return Insert.first->second;
   };
 
   if (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE)
     return getConstraint(CmpInst::getSwappedPredicate(Pred), Op1, Op0,
-                         Value2Index, ShouldAdd);
+                         Value2Index, NewIndices);
 
   if (Pred == CmpInst::ICMP_EQ) {
-    auto A = getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, ShouldAdd);
-    auto B = getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index, ShouldAdd);
+    auto A =
+        getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, NewIndices);
+    auto B =
+        getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index, NewIndices);
     append_range(A, B);
     return A;
   }
@@ -160,31 +180,29 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   auto VariablesA = make_range(std::next(ADec.begin()), ADec.end());
   auto VariablesB = make_range(std::next(BDec.begin()), BDec.end());
 
-  // Check if each referenced value in the constraint is already in the system
-  // or can be added (if ShouldAdd is true).
+  // Make sure all variables have entries in Value2Index or NewIndices.
   for (const auto &KV :
        concat<std::pair<int64_t, Value *>>(VariablesA, VariablesB))
-    if (!TryToGetIndex(KV.second))
-      return {};
+    GetOrAddIndex(KV.second);
 
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
-  SmallVector<int64_t, 8> R(Value2Index.size() + 1, 0);
+  SmallVector<int64_t, 8> R(Value2Index.size() + NewIndices.size() + 1, 0);
   for (const auto &KV : VariablesA)
-    R[Value2Index[KV.second]] += KV.first;
+    R[GetOrAddIndex(KV.second)] += KV.first;
 
   for (const auto &KV : VariablesB)
-    R[Value2Index[KV.second]] -= KV.first;
+    R[GetOrAddIndex(KV.second)] -= KV.first;
 
   R[0] = Offset1 + Offset2 + (Pred == CmpInst::ICMP_ULT ? -1 : 0);
   return {R};
 }
 
 static SmallVector<ConstraintTy, 4>
-getConstraint(CmpInst *Cmp, DenseMap<Value *, unsigned> &Value2Index,
-              bool ShouldAdd) {
+getConstraint(CmpInst *Cmp, const DenseMap<Value *, unsigned> &Value2Index,
+              DenseMap<Value *, unsigned> &NewIndices) {
   return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
-                       Cmp->getOperand(1), Value2Index, ShouldAdd);
+                       Cmp->getOperand(1), Value2Index, NewIndices);
 }
 
 namespace {
@@ -343,9 +361,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         auto *Cmp = dyn_cast<CmpInst>(&I);
         if (!Cmp)
           continue;
-        auto R = getConstraint(Cmp, Value2Index, false);
-        if (R.size() != 1 || R[0].size() == 1)
+
+        DenseMap<Value *, unsigned> NewIndices;
+        auto R = getConstraint(Cmp, Value2Index, NewIndices);
+        if (R.size() != 1)
           continue;
+
+        // Check if all coefficients of new indices are 0 after building the
+        // constraint. Skip if any of the new indices has a non-null
+        // coefficient.
+        bool HasNewIndex = false;
+        for (unsigned I = 0; I < NewIndices.size(); ++I) {
+          int64_t Last = R[0].Coefficients.pop_back_val();
+          if (Last != 0) {
+            HasNewIndex = true;
+            break;
+          }
+        }
+        if (HasNewIndex || R[0].size() == 1)
+          continue;
+
         if (CS.isConditionImplied(R[0].Coefficients)) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
@@ -399,9 +434,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
     // Otherwise, add the condition to the system and stack, if we can transform
     // it into a constraint.
-    auto R = getConstraint(CB.Condition, Value2Index, true);
+    DenseMap<Value *, unsigned> NewIndices;
+    auto R = getConstraint(CB.Condition, Value2Index, NewIndices);
     if (R.empty())
       continue;
+
+    for (auto &KV : NewIndices)
+      Value2Index.insert(KV);
 
     LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
     bool Added = false;

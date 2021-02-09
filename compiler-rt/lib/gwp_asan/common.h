@@ -49,7 +49,7 @@ struct AllocationMetadata {
   static constexpr size_t kMaxTraceLengthToCollect = 128;
 
   // Records the given allocation metadata into this struct.
-  void RecordAllocation(uintptr_t Addr, size_t Size);
+  void RecordAllocation(uintptr_t Addr, size_t RequestedSize);
   // Record that this allocation is now deallocated.
   void RecordDeallocation();
 
@@ -70,7 +70,7 @@ struct AllocationMetadata {
   // valid, as the allocation has never occurred.
   uintptr_t Addr = 0;
   // Represents the actual size of the allocation.
-  size_t Size = 0;
+  size_t RequestedSize = 0;
 
   CallSiteInfo AllocationTrace;
   CallSiteInfo DeallocationTrace;

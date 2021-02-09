@@ -646,6 +646,28 @@ func @pad_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
 
 // -----
 
+func @pad_num_yields(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
+  // expected-error @+3 {{op expected single yield operand (got 2)}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: index, %arg3: index):  // no predecessors
+    linalg.yield %arg1, %arg1 : i32, i32
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
+func @pad_yield_type(%arg0: tensor<?x4xi32>, %arg1: i8) -> tensor<?x9xi32> {
+  // expected-error @+3 {{op expected yield type to match shape element type}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: index, %arg3: index):  // no predecessors
+    linalg.yield %arg1 : i8
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
 func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
