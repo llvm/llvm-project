@@ -85,9 +85,9 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   // Low bits for the number of waves, assumed zero before this call.
   // High bits to count the number of times the barrier has been passed.
 
-  assert(num_waves != 0);
-  assert(num_waves * WARPSIZE == num_threads);
-  assert(num_waves < 0xffffu);
+  // precondition: num_waves != 0;
+  // invariant: num_waves * WARPSIZE == num_threads;
+  // precondition: num_waves < 0xffffu;
 
   // Increment the low 16 bits once, using the lowest active thread.
   uint64_t lowestActiveThread = __kmpc_impl_ffs(__kmpc_impl_activemask()) - 1;
@@ -132,11 +132,13 @@ DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
 } // namespace
 
 DEVICE int GetNumberOfBlocksInKernel() {
-  return get_grid_dim(__builtin_amdgcn_grid_size_x(), __builtin_amdgcn_workgroup_size_x());
+  return get_grid_dim(__builtin_amdgcn_grid_size_x(),
+                      __builtin_amdgcn_workgroup_size_x());
 }
 
 DEVICE int GetNumberOfThreadsInBlock() {
-  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(), __builtin_amdgcn_grid_size_x(),
+  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(),
+                           __builtin_amdgcn_grid_size_x(),
                            __builtin_amdgcn_workgroup_size_x());
 }
 
@@ -151,10 +153,45 @@ EXTERN char * global_allocate(uint32_t bufsz);
 EXTERN int global_free(void*);
 
 // Memory
-DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
+EXTERN void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
-EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
+DEVICE uint32_t __kmpc_amdgcn_gpu_num_threads() {
   return GetNumberOfThreadsInBlock();
 }
 
+// Atomics
+DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+  return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
+}
+DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+  return __builtin_amdgcn_atomic_inc32(Address, Val, __ATOMIC_SEQ_CST, "");
+}
+DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+  return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
+}
+
+DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+  uint32_t R;
+  __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
+  return R;
+}
+DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
+                                  uint32_t Val) {
+  (void)__atomic_compare_exchange(Address, &Compare, &Val, false,
+                                  __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+  return Compare;
+}
+
+DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                                 unsigned long long Val) {
+  unsigned long long R;
+  __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
+  return R;
+}
+DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                            unsigned long long Val) {
+  return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
+}
+
+#pragma omp end declare target

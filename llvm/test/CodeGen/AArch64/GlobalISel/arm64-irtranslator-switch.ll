@@ -788,8 +788,8 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
   ; CHECK:   $x1 = COPY [[LOAD]](p0)
-  ; CHECK:   BL @wibble, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $x0
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   G_BR %bb.59
   ; CHECK: bb.57.bb62:
@@ -797,8 +797,8 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
   ; CHECK:   $x1 = COPY [[COPY2]](p0)
-  ; CHECK:   BL @wibble, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $x0
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   G_BR %bb.59
   ; CHECK: bb.58.bb64:
@@ -812,8 +812,8 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
   ; CHECK:   $x1 = COPY [[COPY5]](p0)
-  ; CHECK:   BL @wibble, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit-def $x0
-  ; CHECK:   [[COPY6:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK: bb.59.bb68:
   ; CHECK:   RET_ReallyLR

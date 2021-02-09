@@ -149,16 +149,27 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
                                         DataExtractor *OpdExtractor,
                                         uint64_t OpdAddress) {
   // Avoid adding symbols from an unknown/undefined section.
-  const ObjectFile *Obj = Symbol.getObject();
+  const ObjectFile &Obj = *Symbol.getObject();
   Expected<section_iterator> Sec = Symbol.getSection();
-  if (!Sec || (Obj && Obj->section_end() == *Sec))
+  if (!Sec || Obj.section_end() == *Sec)
     return Error::success();
+
   Expected<SymbolRef::Type> SymbolTypeOrErr = Symbol.getType();
   if (!SymbolTypeOrErr)
     return SymbolTypeOrErr.takeError();
   SymbolRef::Type SymbolType = *SymbolTypeOrErr;
-  if (SymbolType != SymbolRef::ST_Function && SymbolType != SymbolRef::ST_Data)
+  if (Obj.isELF()) {
+    // Allow function and data symbols. Additionally allow STT_NONE, which are
+    // common for functions defined in assembly.
+    uint8_t Type = ELFSymbolRef(Symbol).getELFType();
+    if (Type != ELF::STT_NOTYPE && Type != ELF::STT_FUNC &&
+        Type != ELF::STT_OBJECT && Type != ELF::STT_GNU_IFUNC)
+      return Error::success();
+  } else if (SymbolType != SymbolRef::ST_Function &&
+             SymbolType != SymbolRef::ST_Data) {
     return Error::success();
+  }
+
   Expected<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
   if (!SymbolAddressOrErr)
     return SymbolAddressOrErr.takeError();
@@ -186,11 +197,17 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
     SymbolName = SymbolName.drop_front();
-  // FIXME: If a function has alias, there are two entries in symbol table
-  // with same address size. Make sure we choose the correct one.
-  auto &M = SymbolType == SymbolRef::ST_Function ? Functions : Objects;
-  SymbolDesc SD = { SymbolAddress, SymbolSize };
-  M.emplace_back(SD, SymbolName);
+
+  SymbolDesc SD = {SymbolAddress, SymbolSize};
+
+  // DATA command symbolizes just ST_Data (ELF STT_OBJECT) symbols as an
+  // optimization. Treat everything else (e.g. ELF STT_NOTYPE, STT_FUNC and
+  // STT_GNU_IFUNC) as function symbols which can be used to symbolize
+  // addresses.
+  if (SymbolType == SymbolRef::ST_Data)
+    Objects.emplace_back(SD, SymbolName);
+  else
+    Functions.emplace_back(SD, SymbolName);
   return Error::success();
 }
 

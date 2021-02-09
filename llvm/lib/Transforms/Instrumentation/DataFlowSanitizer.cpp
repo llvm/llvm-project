@@ -574,6 +574,10 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
+
+private:
+  // Returns false when this is an invoke of a custom function.
+  bool visitWrappedCallBase(Function &F, CallBase &CB);
 };
 
 } // end anonymous namespace
@@ -1942,6 +1946,136 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
   }
 }
 
+bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
+  IRBuilder<> IRB(&CB);
+  switch (DFSF.DFS.getWrapperKind(&F)) {
+  case DataFlowSanitizer::WK_Warning:
+    CB.setCalledFunction(&F);
+    IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
+                   IRB.CreateGlobalStringPtr(F.getName()));
+    DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
+    return true;
+  case DataFlowSanitizer::WK_Discard:
+    CB.setCalledFunction(&F);
+    DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
+    return true;
+  case DataFlowSanitizer::WK_Functional:
+    CB.setCalledFunction(&F);
+    visitOperandShadowInst(CB);
+    return true;
+  case DataFlowSanitizer::WK_Custom:
+    // Don't try to handle invokes of custom functions, it's too complicated.
+    // Instead, invoke the dfsw$ wrapper, which will in turn call the __dfsw_
+    // wrapper.
+    CallInst *CI = dyn_cast<CallInst>(&CB);
+    if (!CI)
+      return false;
+
+    FunctionType *FT = F.getFunctionType();
+    TransformedFunction CustomFn = DFSF.DFS.getCustomFunctionType(FT);
+    std::string CustomFName = "__dfsw_";
+    CustomFName += F.getName();
+    FunctionCallee CustomF = DFSF.DFS.Mod->getOrInsertFunction(
+        CustomFName, CustomFn.TransformedType);
+    if (Function *CustomFn = dyn_cast<Function>(CustomF.getCallee())) {
+      CustomFn->copyAttributesFrom(&F);
+
+      // Custom functions returning non-void will write to the return label.
+      if (!FT->getReturnType()->isVoidTy()) {
+        CustomFn->removeAttributes(AttributeList::FunctionIndex,
+                                   DFSF.DFS.ReadOnlyNoneAttrs);
+      }
+    }
+
+    std::vector<Value *> Args;
+
+    // Adds non-variable arguments.
+    auto *I = CB.arg_begin();
+    for (unsigned n = FT->getNumParams(); n != 0; ++I, --n) {
+      Type *T = (*I)->getType();
+      FunctionType *ParamFT;
+      if (isa<PointerType>(T) &&
+          (ParamFT = dyn_cast<FunctionType>(
+               cast<PointerType>(T)->getElementType()))) {
+        std::string TName = "dfst";
+        TName += utostr(FT->getNumParams() - n);
+        TName += "$";
+        TName += F.getName();
+        Constant *T = DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
+        Args.push_back(T);
+        Args.push_back(
+            IRB.CreateBitCast(*I, Type::getInt8PtrTy(*DFSF.DFS.Ctx)));
+      } else {
+        Args.push_back(*I);
+      }
+    }
+
+    // Adds non-variable argument shadows.
+    I = CB.arg_begin();
+    const unsigned ShadowArgStart = Args.size();
+    for (unsigned N = FT->getNumParams(); N != 0; ++I, --N)
+      Args.push_back(DFSF.collapseToPrimitiveShadow(DFSF.getShadow(*I), &CB));
+
+    // Adds variable argument shadows.
+    if (FT->isVarArg()) {
+      auto *LabelVATy = ArrayType::get(DFSF.DFS.PrimitiveShadowTy,
+                                       CB.arg_size() - FT->getNumParams());
+      auto *LabelVAAlloca =
+          new AllocaInst(LabelVATy, getDataLayout().getAllocaAddrSpace(),
+                         "labelva", &DFSF.F->getEntryBlock().front());
+
+      for (unsigned N = 0; I != CB.arg_end(); ++I, ++N) {
+        auto *LabelVAPtr = IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, N);
+        IRB.CreateStore(DFSF.collapseToPrimitiveShadow(DFSF.getShadow(*I), &CB),
+                        LabelVAPtr);
+      }
+
+      Args.push_back(IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, 0));
+    }
+
+    // Adds the return value shadow.
+    if (!FT->getReturnType()->isVoidTy()) {
+      if (!DFSF.LabelReturnAlloca) {
+        DFSF.LabelReturnAlloca = new AllocaInst(
+            DFSF.DFS.PrimitiveShadowTy, getDataLayout().getAllocaAddrSpace(),
+            "labelreturn", &DFSF.F->getEntryBlock().front());
+      }
+      Args.push_back(DFSF.LabelReturnAlloca);
+    }
+
+    // Adds variable arguments.
+    append_range(Args, drop_begin(CB.args(), FT->getNumParams()));
+
+    CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
+    CustomCI->setCallingConv(CI->getCallingConv());
+    CustomCI->setAttributes(TransformFunctionAttributes(
+        CustomFn, CI->getContext(), CI->getAttributes()));
+
+    // Update the parameter attributes of the custom call instruction to
+    // zero extend the shadow parameters. This is required for targets
+    // which consider PrimitiveShadowTy an illegal type.
+    for (unsigned N = 0; N < FT->getNumParams(); N++) {
+      const unsigned ArgNo = ShadowArgStart + N;
+      if (CustomCI->getArgOperand(ArgNo)->getType() ==
+          DFSF.DFS.PrimitiveShadowTy)
+        CustomCI->addParamAttr(ArgNo, Attribute::ZExt);
+    }
+
+    // Loads the return value shadow.
+    if (!FT->getReturnType()->isVoidTy()) {
+      LoadInst *LabelLoad =
+          IRB.CreateLoad(DFSF.DFS.PrimitiveShadowTy, DFSF.LabelReturnAlloca);
+      DFSF.setShadow(CustomCI, DFSF.expandFromPrimitiveShadow(
+                                   FT->getReturnType(), LabelLoad, &CB));
+    }
+
+    CI->replaceAllUsesWith(CustomCI);
+    CI->eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
 void DFSanVisitor::visitCallBase(CallBase &CB) {
   Function *F = CB.getCalledFunction();
   if ((F && F->isIntrinsic()) || CB.isInlineAsm()) {
@@ -1954,137 +2088,17 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   if (F == DFSF.DFS.DFSanVarargWrapperFn.getCallee()->stripPointerCasts())
     return;
 
-  IRBuilder<> IRB(&CB);
-
   DenseMap<Value *, Function *>::iterator i =
       DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
-  if (i != DFSF.DFS.UnwrappedFnMap.end()) {
-    Function *F = i->second;
-    switch (DFSF.DFS.getWrapperKind(F)) {
-    case DataFlowSanitizer::WK_Warning:
-      CB.setCalledFunction(F);
-      IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
-                     IRB.CreateGlobalStringPtr(F->getName()));
-      DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
+  if (i != DFSF.DFS.UnwrappedFnMap.end())
+    if (visitWrappedCallBase(*i->second, CB))
       return;
-    case DataFlowSanitizer::WK_Discard:
-      CB.setCalledFunction(F);
-      DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
-      return;
-    case DataFlowSanitizer::WK_Functional:
-      CB.setCalledFunction(F);
-      visitOperandShadowInst(CB);
-      return;
-    case DataFlowSanitizer::WK_Custom:
-      // Don't try to handle invokes of custom functions, it's too complicated.
-      // Instead, invoke the dfsw$ wrapper, which will in turn call the __dfsw_
-      // wrapper.
-      if (CallInst *CI = dyn_cast<CallInst>(&CB)) {
-        FunctionType *FT = F->getFunctionType();
-        TransformedFunction CustomFn = DFSF.DFS.getCustomFunctionType(FT);
-        std::string CustomFName = "__dfsw_";
-        CustomFName += F->getName();
-        FunctionCallee CustomF = DFSF.DFS.Mod->getOrInsertFunction(
-            CustomFName, CustomFn.TransformedType);
-        if (Function *CustomFn = dyn_cast<Function>(CustomF.getCallee())) {
-          CustomFn->copyAttributesFrom(F);
 
-          // Custom functions returning non-void will write to the return label.
-          if (!FT->getReturnType()->isVoidTy()) {
-            CustomFn->removeAttributes(AttributeList::FunctionIndex,
-                                       DFSF.DFS.ReadOnlyNoneAttrs);
-          }
-        }
-
-        std::vector<Value *> Args;
-
-        auto i = CB.arg_begin();
-        for (unsigned n = FT->getNumParams(); n != 0; ++i, --n) {
-          Type *T = (*i)->getType();
-          FunctionType *ParamFT;
-          if (isa<PointerType>(T) &&
-              (ParamFT = dyn_cast<FunctionType>(
-                   cast<PointerType>(T)->getElementType()))) {
-            std::string TName = "dfst";
-            TName += utostr(FT->getNumParams() - n);
-            TName += "$";
-            TName += F->getName();
-            Constant *T = DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
-            Args.push_back(T);
-            Args.push_back(
-                IRB.CreateBitCast(*i, Type::getInt8PtrTy(*DFSF.DFS.Ctx)));
-          } else {
-            Args.push_back(*i);
-          }
-        }
-
-        i = CB.arg_begin();
-        const unsigned ShadowArgStart = Args.size();
-        for (unsigned n = FT->getNumParams(); n != 0; ++i, --n)
-          Args.push_back(
-              DFSF.collapseToPrimitiveShadow(DFSF.getShadow(*i), &CB));
-
-        if (FT->isVarArg()) {
-          auto *LabelVATy = ArrayType::get(DFSF.DFS.PrimitiveShadowTy,
-                                           CB.arg_size() - FT->getNumParams());
-          auto *LabelVAAlloca = new AllocaInst(
-              LabelVATy, getDataLayout().getAllocaAddrSpace(),
-              "labelva", &DFSF.F->getEntryBlock().front());
-
-          for (unsigned n = 0; i != CB.arg_end(); ++i, ++n) {
-            auto LabelVAPtr = IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, n);
-            IRB.CreateStore(
-                DFSF.collapseToPrimitiveShadow(DFSF.getShadow(*i), &CB),
-                LabelVAPtr);
-          }
-
-          Args.push_back(IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, 0));
-        }
-
-        if (!FT->getReturnType()->isVoidTy()) {
-          if (!DFSF.LabelReturnAlloca) {
-            DFSF.LabelReturnAlloca =
-                new AllocaInst(DFSF.DFS.PrimitiveShadowTy,
-                               getDataLayout().getAllocaAddrSpace(),
-                               "labelreturn", &DFSF.F->getEntryBlock().front());
-          }
-          Args.push_back(DFSF.LabelReturnAlloca);
-        }
-
-        append_range(Args, drop_begin(CB.args(), FT->getNumParams()));
-
-        CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
-        CustomCI->setCallingConv(CI->getCallingConv());
-        CustomCI->setAttributes(TransformFunctionAttributes(CustomFn,
-            CI->getContext(), CI->getAttributes()));
-
-        // Update the parameter attributes of the custom call instruction to
-        // zero extend the shadow parameters. This is required for targets
-        // which consider PrimitiveShadowTy an illegal type.
-        for (unsigned n = 0; n < FT->getNumParams(); n++) {
-          const unsigned ArgNo = ShadowArgStart + n;
-          if (CustomCI->getArgOperand(ArgNo)->getType() ==
-              DFSF.DFS.PrimitiveShadowTy)
-            CustomCI->addParamAttr(ArgNo, Attribute::ZExt);
-        }
-
-        if (!FT->getReturnType()->isVoidTy()) {
-          LoadInst *LabelLoad = IRB.CreateLoad(DFSF.DFS.PrimitiveShadowTy,
-                                               DFSF.LabelReturnAlloca);
-          DFSF.setShadow(CustomCI, DFSF.expandFromPrimitiveShadow(
-                                       FT->getReturnType(), LabelLoad, &CB));
-        }
-
-        CI->replaceAllUsesWith(CustomCI);
-        CI->eraseFromParent();
-        return;
-      }
-      break;
-    }
-  }
+  IRBuilder<> IRB(&CB);
 
   FunctionType *FT = CB.getFunctionType();
   if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
+    // Stores argument shadows.
     unsigned ArgOffset = 0;
     const DataLayout &DL = getDataLayout();
     for (unsigned I = 0, N = FT->getNumParams(); I != N; ++I) {
@@ -2118,6 +2132,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
 
     if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
+      // Loads the return value shadow.
       IRBuilder<> NextIRB(Next);
       const DataLayout &DL = getDataLayout();
       unsigned Size = DL.getTypeAllocSize(DFSF.DFS.getShadowTy(&CB));

@@ -143,8 +143,8 @@ DEVICE void __kmpc_impl_unset_lock(omp_lock_t *lock);
 DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock);
 
 // Memory
-DEVICE void *__kmpc_impl_malloc(size_t x);
-DEVICE void __kmpc_impl_free(void *x);
+EXTERN void *__kmpc_impl_malloc(size_t x);
+EXTERN void __kmpc_impl_free(void *x);
 
 // DEVICE versions of part of libc
 INLINE void __assert_fail(const char *, const char *, unsigned int,
