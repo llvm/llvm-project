@@ -45,25 +45,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   }];
 }
 
-
-// Check that it is a SLOI (Shift Left Ones Immediate).
-def SLOIPat : PatFrag<(ops node:$A, node:$B),
-                      (or (shl node:$A, node:$B), imm), [{
-  return MatchSLOI(N);
-}]>;
-
-// Check that it is a SROI (Shift Right Ones Immediate).
-def SROIPat : PatFrag<(ops node:$A, node:$B),
-                      (or (srl node:$A, node:$B), imm), [{
-  return MatchSROI(N);
-}]>;
-
-// Check that it is a SROIW (Shift Right Ones Immediate i32 on RV64).
-def SROIWPat : PatFrag<(ops node:$A, node:$B),
-                       (or (srl node:$A, node:$B), imm), [{
-  return MatchSROIW(N);
-}]>;
-
 // Checks if this mask has a single 0 bit and cannot be used with ANDI.
 def BCLRMask : ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
@@ -210,11 +191,6 @@ def SH2ADD : ALU_rr<0b0010000, 0b100, "sh2add">, Sched<[]>;
 def SH3ADD : ALU_rr<0b0010000, 0b110, "sh3add">, Sched<[]>;
 } // Predicates = [HasStdExtZba]
 
-let Predicates = [HasStdExtZbp] in {
-def SLO  : ALU_rr<0b0010000, 0b001, "slo">, Sched<[]>;
-def SRO  : ALU_rr<0b0010000, 0b101, "sro">, Sched<[]>;
-} // Predicates = [HasStdExtZbp]
-
 let Predicates = [HasStdExtZbbOrZbp] in {
 def ROL   : ALU_rr<0b0110000, 0b001, "rol">, Sched<[]>;
 def ROR   : ALU_rr<0b0110000, 0b101, "ror">, Sched<[]>;
@@ -236,11 +212,6 @@ let Predicates = [HasStdExtZbp] in {
 def XPERMN : ALU_rr<0b0010100, 0b010, "xperm.n">, Sched<[]>;
 def XPERMB : ALU_rr<0b0010100, 0b100, "xperm.b">, Sched<[]>;
 def XPERMH : ALU_rr<0b0010100, 0b110, "xperm.h">, Sched<[]>;
-} // Predicates = [HasStdExtZbp]
-
-let Predicates = [HasStdExtZbp] in {
-def SLOI : RVBShift_ri<0b00100, 0b001, OPC_OP_IMM, "sloi">, Sched<[]>;
-def SROI : RVBShift_ri<0b00100, 0b101, OPC_OP_IMM, "sroi">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbbOrZbp] in
@@ -369,11 +340,6 @@ def SH2ADDUW : ALUW_rr<0b0010000, 0b100, "sh2add.uw">, Sched<[]>;
 def SH3ADDUW : ALUW_rr<0b0010000, 0b110, "sh3add.uw">, Sched<[]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def SLOW   : ALUW_rr<0b0010000, 0b001, "slow">, Sched<[]>;
-def SROW   : ALUW_rr<0b0010000, 0b101, "srow">, Sched<[]>;
-} // Predicates = [HasStdExtZbp, IsRV64]
-
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 def ROLW  : ALUW_rr<0b0110000, 0b001, "rolw">, Sched<[]>;
 def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">, Sched<[]>;
@@ -393,11 +359,6 @@ def GREVW  : ALUW_rr<0b0110100, 0b101, "grevw">, Sched<[]>;
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def XPERMW : ALU_rr<0b0010100, 0b000, "xperm.w">, Sched<[]>;
-} // Predicates = [HasStdExtZbp, IsRV64]
-
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def SLOIW  : RVBShiftW_ri<0b0010000, 0b001, OPC_OP_IMM_32, "sloiw">, Sched<[]>;
-def SROIW  : RVBShiftW_ri<0b0010000, 0b101, OPC_OP_IMM_32, "sroiw">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
@@ -673,13 +634,6 @@ def : Pat<(or  GPR:$rs1, (not GPR:$rs2)), (ORN  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(xor GPR:$rs1, (not GPR:$rs2)), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
-let Predicates = [HasStdExtZbp] in {
-def : Pat<(not (shiftop<shl> (not GPR:$rs1), GPR:$rs2)),
-          (SLO GPR:$rs1, GPR:$rs2)>;
-def : Pat<(not (shiftop<srl> (not GPR:$rs1), GPR:$rs2)),
-          (SRO GPR:$rs1, GPR:$rs2)>;
-} // Predicates = [HasStdExtZbp]
-
 let Predicates = [HasStdExtZbbOrZbp] in {
 def : Pat<(rotl GPR:$rs1, GPR:$rs2), (ROL GPR:$rs1, GPR:$rs2)>;
 def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROR GPR:$rs1, GPR:$rs2)>;
@@ -709,13 +663,6 @@ def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
           (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 }
-
-let Predicates = [HasStdExtZbp] in {
-def : Pat<(SLOIPat GPR:$rs1, uimmlog2xlen:$shamt),
-          (SLOI GPR:$rs1, uimmlog2xlen:$shamt)>;
-def : Pat<(SROIPat GPR:$rs1, uimmlog2xlen:$shamt),
-          (SROI GPR:$rs1, uimmlog2xlen:$shamt)>;
-} // Predicates = [HasStdExtZbp]
 
 // There's no encoding for roli in the the 'B' extension as it can be
 // implemented with rori by negating the immediate.
@@ -936,13 +883,6 @@ def : Pat<(add (SLLIUWPat GPR:$rs1, (XLenVT 3)), GPR:$rs2),
           (SH3ADDUW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(not (shiftopw<riscv_sllw> (not GPR:$rs1), GPR:$rs2)),
-          (SLOW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(not (shiftopw<riscv_srlw> (not GPR:$rs1), GPR:$rs2)),
-          (SROW GPR:$rs1, GPR:$rs2)>;
-} // Predicates = [HasStdExtZbp, IsRV64]
-
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 def : Pat<(riscv_rolw GPR:$rs1, GPR:$rs2),
           (ROLW GPR:$rs1, GPR:$rs2)>;
@@ -981,13 +921,6 @@ def : Pat<(xor (assertsexti32 GPR:$rs1), BSETINVWMask:$mask),
           (BINVIW GPR:$rs1, (BSETINVXForm imm:$mask))>;
 
 } // Predicates = [HasStdExtZbs, IsRV64]
-
-let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(sext_inreg (SLOIPat GPR:$rs1, uimm5:$shamt), i32),
-          (SLOIW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(SROIWPat GPR:$rs1, uimm5:$shamt),
-          (SROIW GPR:$rs1, uimm5:$shamt)>;
-} // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(riscv_rorw (riscv_greviw GPR:$rs1, 24), (i64 16)), (GREVIW GPR:$rs1, 8)>;
