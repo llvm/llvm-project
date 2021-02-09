@@ -2153,19 +2153,84 @@ static bool parseTestModuleFileExtensionArg(StringRef Arg,
   return false;
 }
 
+/// Return a table that associates command line option specifiers with the
+/// frontend action. Note: The pair {frontend::PluginAction, OPT_plugin} is
+/// intentionally missing, as this case is handled separately from other
+/// frontend options.
+static const auto &getFrontendActionTable() {
+  static const std::pair<frontend::ActionKind, OptSpecifier> Table[] = {
+      {frontend::ASTDeclList, OPT_ast_list},
+
+      {frontend::ASTDump, OPT_ast_dump_all_EQ},
+      {frontend::ASTDump, OPT_ast_dump_all},
+      {frontend::ASTDump, OPT_ast_dump_EQ},
+      {frontend::ASTDump, OPT_ast_dump},
+      {frontend::ASTDump, OPT_ast_dump_lookups},
+      {frontend::ASTDump, OPT_ast_dump_decl_types},
+
+      {frontend::ASTPrint, OPT_ast_print},
+      {frontend::ASTView, OPT_ast_view},
+      {frontend::DumpCompilerOptions, OPT_compiler_options_dump},
+      {frontend::DumpRawTokens, OPT_dump_raw_tokens},
+      {frontend::DumpTokens, OPT_dump_tokens},
+      {frontend::EmitAssembly, OPT_S},
+      {frontend::EmitBC, OPT_emit_llvm_bc},
+      {frontend::EmitHTML, OPT_emit_html},
+      {frontend::EmitLLVM, OPT_emit_llvm},
+      {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
+      {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
+      {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
+      {frontend::EmitObj, OPT_emit_obj},
+
+      {frontend::FixIt, OPT_fixit_EQ},
+      {frontend::FixIt, OPT_fixit},
+
+      {frontend::GenerateModule, OPT_emit_module},
+      {frontend::GenerateModuleInterface, OPT_emit_module_interface},
+      {frontend::GenerateHeaderModule, OPT_emit_header_module},
+      {frontend::GeneratePCH, OPT_emit_pch},
+      {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
+      {frontend::InitOnly, OPT_init_only},
+      {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
+      {frontend::ModuleFileInfo, OPT_module_file_info},
+      {frontend::VerifyPCH, OPT_verify_pch},
+      {frontend::PrintPreamble, OPT_print_preamble},
+      {frontend::PrintPreprocessedInput, OPT_E},
+      {frontend::TemplightDump, OPT_templight_dump},
+      {frontend::RewriteMacros, OPT_rewrite_macros},
+      {frontend::RewriteObjC, OPT_rewrite_objc},
+      {frontend::RewriteTest, OPT_rewrite_test},
+      {frontend::RunAnalysis, OPT_analyze},
+      {frontend::MigrateSource, OPT_migrate},
+      {frontend::RunPreprocessorOnly, OPT_Eonly},
+      {frontend::PrintDependencyDirectivesSourceMinimizerOutput,
+          OPT_print_dependency_directives_minimized_source},
+  };
+
+  return Table;
+}
+
+/// Maps command line option to frontend action.
+static Optional<frontend::ActionKind> getFrontendAction(OptSpecifier &Opt) {
+  for (const auto &ActionOpt : getFrontendActionTable())
+    if (ActionOpt.second == Opt)
+      return ActionOpt.first;
+
+  return None;
+}
+
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                               DiagnosticsEngine &Diags, bool &IsHeaderFile) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
-    switch (A->getOption().getID()) {
-    default:
-      llvm_unreachable("Invalid option in group!");
-    case OPT_ast_list:
-      Opts.ProgramAction = frontend::ASTDeclList; break;
-    case OPT_ast_dump_all_EQ:
-    case OPT_ast_dump_EQ: {
+    OptSpecifier Opt = OptSpecifier(A->getOption().getID());
+    Optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);
+    assert(ProgramAction && "Option specifier not in Action_Group.");
+
+    if (ProgramAction == frontend::ASTDump &&
+        (Opt == OPT_ast_dump_all_EQ || Opt == OPT_ast_dump_EQ)) {
       unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
                          .CaseLower("default", ADOF_Default)
                          .CaseLower("json", ADOF_JSON)
@@ -2178,51 +2243,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << A->getAsString(Args) << A->getValue();
         Opts.ASTDumpFormat = ADOF_Default;
       }
-      LLVM_FALLTHROUGH;
     }
-    case OPT_ast_dump:
-    case OPT_ast_dump_all:
-    case OPT_ast_dump_lookups:
-    case OPT_ast_dump_decl_types:
-      Opts.ProgramAction = frontend::ASTDump; break;
-    case OPT_ast_print:
-      Opts.ProgramAction = frontend::ASTPrint; break;
-    case OPT_ast_view:
-      Opts.ProgramAction = frontend::ASTView; break;
-    case OPT_compiler_options_dump:
-      Opts.ProgramAction = frontend::DumpCompilerOptions; break;
-    case OPT_dump_raw_tokens:
-      Opts.ProgramAction = frontend::DumpRawTokens; break;
-    case OPT_dump_tokens:
-      Opts.ProgramAction = frontend::DumpTokens; break;
-    case OPT_S:
-      Opts.ProgramAction = frontend::EmitAssembly; break;
-    case OPT_emit_llvm_bc:
-      Opts.ProgramAction = frontend::EmitBC; break;
-    case OPT_emit_html:
-      Opts.ProgramAction = frontend::EmitHTML; break;
-    case OPT_emit_llvm:
-      Opts.ProgramAction = frontend::EmitLLVM; break;
-    case OPT_emit_llvm_only:
-      Opts.ProgramAction = frontend::EmitLLVMOnly; break;
-    case OPT_emit_codegen_only:
-      Opts.ProgramAction = frontend::EmitCodeGenOnly; break;
-    case OPT_emit_obj:
-      Opts.ProgramAction = frontend::EmitObj; break;
-    case OPT_fixit_EQ:
+
+    if (ProgramAction == frontend::FixIt && Opt == OPT_fixit_EQ)
       Opts.FixItSuffix = A->getValue();
-      LLVM_FALLTHROUGH;
-    case OPT_fixit:
-      Opts.ProgramAction = frontend::FixIt; break;
-    case OPT_emit_module:
-      Opts.ProgramAction = frontend::GenerateModule; break;
-    case OPT_emit_module_interface:
-      Opts.ProgramAction = frontend::GenerateModuleInterface; break;
-    case OPT_emit_header_module:
-      Opts.ProgramAction = frontend::GenerateHeaderModule; break;
-    case OPT_emit_pch:
-      Opts.ProgramAction = frontend::GeneratePCH; break;
-    case OPT_emit_interface_stubs: {
+
+    if (ProgramAction == frontend::GenerateInterfaceStubs) {
       StringRef ArgStr =
           Args.hasArg(OPT_interface_stub_version_EQ)
               ? Args.getLastArgValue(OPT_interface_stub_version_EQ)
@@ -2237,6 +2263,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << "Must specify a valid interface stub format type, ie: "
                "-interface-stub-version=experimental-ifs-v2"
             << ErrorMessage;
+        ProgramAction = frontend::ParseSyntaxOnly;
       } else if (!ArgStr.startswith("experimental-ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
@@ -2244,42 +2271,11 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
             << "Must specify a valid interface stub format type, ie: "
                "-interface-stub-version=experimental-ifs-v2"
             << ErrorMessage;
-      } else {
-        Opts.ProgramAction = frontend::GenerateInterfaceStubs;
+        ProgramAction = frontend::ParseSyntaxOnly;
       }
-      break;
     }
-    case OPT_init_only:
-      Opts.ProgramAction = frontend::InitOnly; break;
-    case OPT_fsyntax_only:
-      Opts.ProgramAction = frontend::ParseSyntaxOnly; break;
-    case OPT_module_file_info:
-      Opts.ProgramAction = frontend::ModuleFileInfo; break;
-    case OPT_verify_pch:
-      Opts.ProgramAction = frontend::VerifyPCH; break;
-    case OPT_print_preamble:
-      Opts.ProgramAction = frontend::PrintPreamble; break;
-    case OPT_E:
-      Opts.ProgramAction = frontend::PrintPreprocessedInput; break;
-    case OPT_templight_dump:
-      Opts.ProgramAction = frontend::TemplightDump; break;
-    case OPT_rewrite_macros:
-      Opts.ProgramAction = frontend::RewriteMacros; break;
-    case OPT_rewrite_objc:
-      Opts.ProgramAction = frontend::RewriteObjC; break;
-    case OPT_rewrite_test:
-      Opts.ProgramAction = frontend::RewriteTest; break;
-    case OPT_analyze:
-      Opts.ProgramAction = frontend::RunAnalysis; break;
-    case OPT_migrate:
-      Opts.ProgramAction = frontend::MigrateSource; break;
-    case OPT_Eonly:
-      Opts.ProgramAction = frontend::RunPreprocessorOnly; break;
-    case OPT_print_dependency_directives_minimized_source:
-      Opts.ProgramAction =
-          frontend::PrintDependencyDirectivesSourceMinimizerOutput;
-      break;
-    }
+
+    Opts.ProgramAction = *ProgramAction;
   }
 
   if (const Arg* A = Args.getLastArg(OPT_plugin)) {
