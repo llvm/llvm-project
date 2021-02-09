@@ -129,7 +129,7 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   // If users do not specify the maximum vector length, we have no way to
   // know whether the LoopVectorizer is safe to do or not.
   // We only consider to use single vector register (LMUL = 1) to vectorize.
-  unsigned MaxVectorSizeInBits = ST->getMaxVectorSizeInBits();
+  unsigned MaxVectorSizeInBits = ST->getMaxRVVVectorSizeInBits();
   if (ST->hasStdExtV() && MaxVectorSizeInBits != 0)
     return MaxVectorSizeInBits / RISCV::RVVBitsPerBlock;
   return BaseT::getMaxVScale();
