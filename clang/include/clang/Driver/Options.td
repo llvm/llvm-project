@@ -4453,12 +4453,7 @@ def migrator_no_finalize_removal : Flag<["-"], "no-finalize-removal">,
 //===----------------------------------------------------------------------===//
 
 let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
-def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">,
-  Values<"line-tables-only,line-directives-only,constructor,limited,standalone,unused-types">,
-  NormalizedValuesScope<"codegenoptions">,
-  NormalizedValues<["DebugLineTablesOnly", "DebugDirectivesOnly", "DebugInfoConstructor",
-                    "LimitedDebugInfo", "FullDebugInfo", "UnusedTypeInfo"]>,
-  MarshallingInfoString<CodeGenOpts<"DebugInfo">, "NoDebugInfo">, AutoNormalizeEnum;
+def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
