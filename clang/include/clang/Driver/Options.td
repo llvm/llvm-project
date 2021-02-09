@@ -248,7 +248,7 @@ class LangOpts<string base>
 class TargetOpts<string base>
   : KeyPathAndMacro<"TargetOpts->", base> {}
 class FrontendOpts<string base>
-  : KeyPathAndMacro<"FrontendOpts.", base> {}
+  : KeyPathAndMacro<"FrontendOpts.", base, "FRONTEND_"> {}
 class PreprocessorOutputOpts<string base>
   : KeyPathAndMacro<"PreprocessorOutputOpts.", base> {}
 class DependencyOutputOpts<string base>
