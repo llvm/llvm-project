@@ -3,6 +3,7 @@ set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 set(MLIR_INTEGRATION_TEST_DEPENDS
   FileCheck count not
+  lli
   mlir-cpu-runner
   mlir-opt
   mlir_runner_utils
