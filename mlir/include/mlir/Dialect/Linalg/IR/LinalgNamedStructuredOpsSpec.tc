@@ -92,7 +92,7 @@ def conv_3d_ncdhw(I: f32(N, C, D, H, W), K: f32(F, C, KD, KH, KW)) -> (O: f32(N,
     I(n, c, d + kd, h + kh, w + kw), K(f, c, kd, kh, kw)));
 }
 
-ods_def<DepthwiseConvNHWCOp>:
+ods_def<DepthwiseConvInputNHWCFilterHWCOp>:
 def depthwise_conv_2d_input_nhwc_filter_hwc
       (I: f32(N, IH, IW, C), K: f32(KH, KW, C))
    -> (O: f32(N, OH, OW, C))
