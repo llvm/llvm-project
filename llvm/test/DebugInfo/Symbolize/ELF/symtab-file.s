@@ -4,8 +4,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-symbolizer --obj=%t 0 1 2 | FileCheck %s
 
-# REQUIRES: x86-registered-target
-
 ## TODO Find the preceding STT_FILE symbol as the filename of a local symbol.
 # CHECK:       local1
 # CHECK-NEXT:  ??:0:0
