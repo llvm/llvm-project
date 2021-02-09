@@ -20,7 +20,6 @@ define i32 @different_array_test(i64 %A, i64 %B) {
 ; CHECK-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
 ; CHECK-NEXT:    [[ARRAY22_SUB:%.*]] = getelementptr inbounds [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 0
 ; CHECK-NEXT:    [[ARRAY11_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY11]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAY11_SUB]], i32 4) ]
 ; CHECK-NEXT:    call void @external(i32* nonnull [[ARRAY11_SUB]])
 ; CHECK-NEXT:    call void @external(i32* nonnull [[ARRAY22_SUB]])
 ; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 [[B:%.*]]
