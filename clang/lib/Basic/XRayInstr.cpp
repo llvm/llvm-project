@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/XRayInstr.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
@@ -30,4 +31,30 @@ XRayInstrMask parseXRayInstrValue(StringRef Value) {
   return ParsedKind;
 }
 
+void serializeXRayInstrValue(XRayInstrSet Set,
+                             SmallVectorImpl<StringRef> &Values) {
+  if (Set.Mask == XRayInstrKind::All) {
+    Values.push_back("all");
+    return;
+  }
+
+  if (Set.Mask == XRayInstrKind::None) {
+    Values.push_back("none");
+    return;
+  }
+
+  if (Set.has(XRayInstrKind::Custom))
+    Values.push_back("custom");
+
+  if (Set.has(XRayInstrKind::Typed))
+    Values.push_back("typed");
+
+  if (Set.has(XRayInstrKind::FunctionEntry) &&
+      Set.has(XRayInstrKind::FunctionExit))
+    Values.push_back("function");
+  else if (Set.has(XRayInstrKind::FunctionEntry))
+    Values.push_back("function-entry");
+  else if (Set.has(XRayInstrKind::FunctionExit))
+    Values.push_back("function-exit");
+}
 } // namespace clang
