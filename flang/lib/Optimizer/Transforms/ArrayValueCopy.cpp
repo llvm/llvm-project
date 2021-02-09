@@ -414,21 +414,32 @@ static mlir::Type getEleTy(mlir::Type ty) {
   return ReferenceType::get(ty);
 }
 
+/// Get origins from fir.shape_shit/fir.shift op. Empty result if
+/// \p shapeVal is empty or is a fir.shape.
+static std::vector<mlir::Value> getOrigins(mlir::Value shapeVal) {
+  if (shapeVal)
+    if (auto *shapeOp = shapeVal.getDefiningOp()) {
+      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
+        return shOp.getOrigins();
+      else if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp))
+        return shOp.getOrigins();
+    }
+  return {};
+}
+
 /// Convert the normalized indices on array_fetch and array_update to the
 /// dynamic (and non-zero) origin required by array_coor.
 static std::vector<mlir::Value>
 originateIndices(mlir::Location loc, mlir::PatternRewriter &rewriter,
                  mlir::Value shapeVal, mlir::ValueRange indices) {
   std::vector<mlir::Value> result;
-  if (shapeVal)
-    if (auto *shapeOp = shapeVal.getDefiningOp())
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
-        assert(indices.size() == shOp.getOrigins().size());
-        for (auto v : llvm::zip(indices, shOp.getOrigins()))
-          result.push_back(rewriter.create<mlir::AddIOp>(loc, std::get<0>(v),
-                                                         std::get<1>(v)));
-        return result;
-      }
+  auto origins = getOrigins(shapeVal);
+  if (!origins.empty()) {
+    assert(indices.size() == origins.size());
+    for (auto [i, lb] : llvm::zip(indices, origins))
+      result.push_back(rewriter.create<mlir::AddIOp>(loc, i, lb));
+    return result;
+  }
   assert(!shapeVal || mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()));
   auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
   for (auto v : indices)
@@ -450,7 +461,7 @@ static void getExtents(llvm::SmallVectorImpl<mlir::Value> &result,
     result.insert(result.end(), e.begin(), e.end());
     return;
   }
-  llvm::report_fatal_error("not a shape op");
+  llvm::report_fatal_error("not a fir.shape/fir.shape_shift op");
 }
 
 // Place the extents of the array loaded by an ArrayLoadOp into the result

@@ -166,3 +166,20 @@ func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   // CHECK: ret void
   return
 }
+
+// Non contiguous array with lower bounds (x = y(100), with y(4:))
+// Test array_coor offset computation.
+// CHECK-LABEL:  define void @f7(
+// CHECK: float* %[[X:[^,]*]], { float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[Y:.*]])
+func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
+  %c4 = constant 4 : index
+  %c100 = constant 100 : index
+  %0 = fir.shift %c4 : (index) -> !fir.shift<1>
+  // CHECK: %[[STRIDE_GEP:.*]] = getelementptr {{.*}}* %[[Y]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[STRIDE:.*]] = load i64, i64* %[[STRIDE_GEP]]
+  // CHECK: mul i64 96, %[[STRIDE]]
+  %1 = fir.array_coor %arg1(%0) %c100 : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
+  %2 = fir.load %1 : !fir.ref<f32>
+  fir.store %2 to %arg0 : !fir.ref<f32>
+  return
+} 

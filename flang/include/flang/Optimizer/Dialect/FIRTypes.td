@@ -92,6 +92,33 @@ def fir_BoxType : FIR_Type<"Box", "box"> {
   let genVerifyDecl = 1;
 }
 
+def fir_ShiftType : FIR_Type<"Shift", "shift"> {
+  let summary = "lower bounds of a multidimensional array object";
+
+  let description = [{
+    Type of a vector of runtime values that define the lower bounds of a
+    multidimensional array object. The vector is the lower bounds of each array
+    dimension. The rank of a ShiftType must be at least 1.
+  }];
+
+  let parameters = (ins "unsigned":$rank);
+
+  let printer = [{
+    $_printer << "shift<" << getImpl()->rank << ">";
+  }];
+
+  let parser = [{
+    if ($_parser.parseLess())
+      return Type();
+    int rank;
+    if ($_parser.parseInteger(rank))
+      return Type();
+    if ($_parser.parseGreater())
+      return Type();
+    return get(context, rank);
+  }];
+}
+
 def fir_CharacterType : FIR_Type<"Character", "char"> {
   let summary = "FIR character type";
 
