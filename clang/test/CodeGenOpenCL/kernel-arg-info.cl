@@ -107,6 +107,16 @@ kernel void foo8(pipe int p1, pipe uchar p2, pipe uchar2 p3, const pipe uchar p4
 // CHECK-NOT: !kernel_arg_name
 // ARGINFO: !kernel_arg_name ![[PIPE_ARG_NAMES:[0-9]+]]
 
+kernel void foo9(signed char sc1,  global const signed char* sc2) {}
+// CHECK: define{{.*}} spir_kernel void @foo9{{[^!]+}}
+// CHECK: !kernel_arg_addr_space ![[SCHAR_AS_QUAL:[0-9]+]]
+// CHECK: !kernel_arg_access_qual ![[MD42]]
+// CHECK: !kernel_arg_type ![[SCHAR_TY:[0-9]+]]
+// CHECK: !kernel_arg_base_type ![[SCHAR_TY]]
+// CHECK: !kernel_arg_type_qual ![[SCHAR_QUAL:[0-9]+]]
+// CHECK-NOT: !kernel_arg_name
+// ARGINFO: !kernel_arg_name ![[SCHAR_ARG_NAMES:[0-9]+]]
+
 // CHECK: ![[MD11]] = !{i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 1, i32 1, i32 1, i32 1, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 0, i32 0, i32 0, i32 0}
 // CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none"}
 // CHECK: ![[MD13]] = !{!"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int", !"int", !"int", !"int"}
@@ -146,3 +156,7 @@ kernel void foo8(pipe int p1, pipe uchar p2, pipe uchar2 p3, const pipe uchar p4
 // CHECK: ![[PIPE_BASE_TY]] = !{!"int", !"uchar", !"uchar __attribute__((ext_vector_type(2)))", !"uchar", !"uchar"}
 // CHECK: ![[PIPE_QUAL]] = !{!"pipe", !"pipe", !"pipe", !"pipe", !"pipe"}
 // ARGINFO: ![[PIPE_ARG_NAMES]] = !{!"p1", !"p2", !"p3", !"p4", !"p5"}
+// CHECK: ![[SCHAR_AS_QUAL]] = !{i32 0, i32 1}
+// CHECK: ![[SCHAR_TY]] = !{!"char", !"char*"}
+// CHECK: ![[SCHAR_QUAL]] = !{!"", !"const"}
+// ARGINFO: ![[SCHAR_ARG_NAMES]] = !{!"sc1", !"sc2"}

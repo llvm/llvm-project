@@ -1503,6 +1503,8 @@ void CodeGenModule::GenOpenCLArgMetadata(llvm::Function *Fn,
           // Turn "unsigned type" to "utype"
           if (typeNameRef.consume_front("unsigned "))
             return std::string("u") + typeNameRef.str();
+          if (typeNameRef.consume_front("signed "))
+            return typeNameRef.str();
         }
 
         return typeName;
