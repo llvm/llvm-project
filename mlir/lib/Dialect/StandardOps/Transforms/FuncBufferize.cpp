@@ -51,7 +51,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     // implement the trait or interface, mark them as illegal no matter what.
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       // If it is not a terminator, ignore it.
-      if (op->isKnownNonTerminator())
+      if (!op->mightHaveTrait<OpTrait::IsTerminator>())
         return true;
       // If it is not the last operation in the block, also ignore it. We do
       // this to handle unknown operations, as well.

@@ -659,15 +659,14 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
 }
 
 void AbstractOperation::insert(
-    StringRef name, Dialect &dialect, OperationProperties opProperties,
-    TypeID typeID, ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait) {
-  AbstractOperation opInfo(name, dialect, opProperties, typeID, parseAssembly,
-                           printAssembly, verifyInvariants, foldHook,
-                           getCanonicalizationPatterns, std::move(interfaceMap),
-                           hasTrait);
+  AbstractOperation opInfo(
+      name, dialect, typeID, parseAssembly, printAssembly, verifyInvariants,
+      foldHook, getCanonicalizationPatterns, std::move(interfaceMap), hasTrait);
 
   auto &impl = dialect.getContext()->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
@@ -681,14 +680,14 @@ void AbstractOperation::insert(
 }
 
 AbstractOperation::AbstractOperation(
-    StringRef name, Dialect &dialect, OperationProperties opProperties,
-    TypeID typeID, ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait)
     : name(Identifier::get(name, dialect.getContext())), dialect(dialect),
-      typeID(typeID), opProperties(opProperties),
-      interfaceMap(std::move(interfaceMap)), foldHookFn(foldHook),
+      typeID(typeID), interfaceMap(std::move(interfaceMap)),
+      foldHookFn(foldHook),
       getCanonicalizationPatternsFn(getCanonicalizationPatterns),
       hasTraitFn(hasTrait), parseAssemblyFn(parseAssembly),
       printAssemblyFn(printAssembly), verifyInvariantsFn(verifyInvariants) {}
