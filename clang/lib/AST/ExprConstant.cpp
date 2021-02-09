@@ -3497,8 +3497,8 @@ static bool diagnoseMutableFields(EvalInfo &Info, const Expr *E, AccessKinds AK,
 static bool lifetimeStartedInEvaluation(EvalInfo &Info,
                                         APValue::LValueBase Base,
                                         bool MutableSubobject = false) {
-  // A temporary we created.
-  if (Base.getCallIndex())
+  // A temporary or transient heap allocation we created.
+  if (Base.getCallIndex() || Base.is<DynamicAllocLValue>())
     return true;
 
   switch (Info.IsEvaluatingDecl) {

@@ -176,3 +176,37 @@ constexpr bool construct_after_lifetime_2() {
   return true;
 }
 static_assert(construct_after_lifetime_2()); // expected-error {{}} expected-note {{in call}}
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
+
+  constexpr bool g() {
+    A *p = new A;
+    p->~A();
+    std::construct_at<A>(p);
+    delete p;
+    return true;
+  }
+  static_assert(g());
+
+  constexpr bool h() {
+    std::allocator<A> alloc;
+    A *p = alloc.allocate(1);
+    std::construct_at<A>(p);
+    p->~A();
+    std::construct_at<A>(p);
+    p->~A();
+    alloc.deallocate(p);
+    return true;
+  }
+  static_assert(h());
+}
