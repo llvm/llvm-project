@@ -142,7 +142,7 @@ function(add_benchmark_test name source_file)
           RUNTIME_OUTPUT_DIRECTORY "${BENCHMARK_OUTPUT_DIR}"
           COMPILE_FLAGS "${BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}"
-          CXX_STANDARD 20
+          CXX_STANDARD 17
           CXX_STANDARD_REQUIRED YES
           CXX_EXTENSIONS NO)
   cxx_link_system_libraries(${libcxx_target})
@@ -172,7 +172,7 @@ function(add_benchmark_test name source_file)
           INCLUDE_DIRECTORIES ""
           COMPILE_FLAGS "${BENCHMARK_TEST_NATIVE_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_NATIVE_LINK_FLAGS}"
-          CXX_STANDARD 20
+          CXX_STANDARD 17
           CXX_STANDARD_REQUIRED YES
           CXX_EXTENSIONS NO)
   endif()
