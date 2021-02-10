@@ -84,6 +84,12 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "ptrauth operand bundle id drifted!");
   (void)PtrauthEntry;
 
+  auto *ClangAttachedCall =
+      pImpl->getOrInsertBundleTag("clang.arc.attachedcall");
+  assert(ClangAttachedCall->second == LLVMContext::OB_clang_arc_attachedcall &&
+         "clang.arc.attachedcall operand bundle id drifted!");
+  (void)ClangAttachedCall;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&
