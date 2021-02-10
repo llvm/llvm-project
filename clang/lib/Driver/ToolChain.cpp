@@ -929,9 +929,12 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     unwindLibType = ToolChain::UNW_None;
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
-    if (RtLibType == ToolChain::RLT_CompilerRT)
-      unwindLibType = ToolChain::UNW_None;
-    else if (RtLibType == ToolChain::RLT_Libgcc)
+    if (RtLibType == ToolChain::RLT_CompilerRT) {
+      if (getTriple().isAndroid())
+        unwindLibType = ToolChain::UNW_CompilerRT;
+      else
+        unwindLibType = ToolChain::UNW_None;
+    } else if (RtLibType == ToolChain::RLT_Libgcc)
       unwindLibType = ToolChain::UNW_Libgcc;
   } else if (LibName == "libunwind") {
     if (GetRuntimeLibType(Args) == RLT_Libgcc)
