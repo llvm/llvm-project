@@ -20,21 +20,20 @@
 # CHECK-EMPTY:
 
 # CHECK-NEXT:  l_notype
-# CHECK-NEXT:  ??:0:0
+# CHECK-NEXT:  symtab-notype.s:0:0
 # CHECK-EMPTY:
 
 ## TODO addr2line does not symbolize the last two out-of-bounds addresses.
 # CHECK-NEXT:  l_notype_nosize
-# CHECK-NEXT:  ??:0:0
+# CHECK-NEXT:  symtab-notype.s:0:0
 # CHECK-EMPTY:
 # CHECK-NEXT:  l_notype_nosize
-# CHECK-NEXT:  ??:0:0
+# CHECK-NEXT:  symtab-notype.s:0:0
 # CHECK-EMPTY:
 # CHECK-NEXT:  l_notype_nosize
-# CHECK-NEXT:  ??:0:0
+# CHECK-NEXT:  symtab-notype.s:0:0
 # CHECK-EMPTY:
 
-## TODO Find the preceding STT_FILE symbol as the filename of a local symbol.
 .file "symtab-notype.s"
 
 .globl _start, g_notype
