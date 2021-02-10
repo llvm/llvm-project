@@ -5,6 +5,8 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  Core
+  Codegen
   MC
   MCParser
   Object
