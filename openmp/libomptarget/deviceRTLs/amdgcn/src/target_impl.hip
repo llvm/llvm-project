@@ -9,7 +9,11 @@
 // Definitions of target specific functions
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
+#include "common/omptarget.h"
+#include "target_interface.h"
+#include "common/allocator.h"
 #include "target_impl.h"
 
 // Implementations initially derived from hcc
@@ -66,7 +70,13 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 
-static DEVICE SHARED uint32_t L1_Barrier;
+
+// static doesn't work for openmp + shared, the variable is discarded by llc
+// and lld then fails to link. Unclear why the variable hasn't been associated
+// with the kernel. Dropping the static qualifier for now.
+
+// static
+DEVICE  uint32_t SHARED(L1_Barrier);
 
 DEVICE void __kmpc_impl_target_init() {
   // Don't have global ctors, and shared memory is not zero init
@@ -85,9 +95,12 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   // Low bits for the number of waves, assumed zero before this call.
   // High bits to count the number of times the barrier has been passed.
 
-  // precondition: num_waves != 0;
-  // invariant: num_waves * WARPSIZE == num_threads;
-  // precondition: num_waves < 0xffffu;
+  if (num_waves == 0)
+    __builtin_trap();
+  if (num_waves * WARPSIZE != num_threads)
+    __builtin_trap();
+  //if (num_waves >= 0xffffu)
+  //  __builtin_trap();
 
   // Increment the low 16 bits once, using the lowest active thread.
   uint64_t lowestActiveThread = __kmpc_impl_ffs(__kmpc_impl_activemask()) - 1;
@@ -146,6 +159,11 @@ DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
+
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
+  return GetNumberOfThreadsInBlock();
+}
+
 // global_allocate is hostrpc service to return pointer to device memory
 // In the future, we will implement a heap allocation and minimize
 // host service calls. 
@@ -153,12 +171,8 @@ EXTERN char * global_allocate(uint32_t bufsz);
 EXTERN int global_free(void*);
 
 // Memory
-EXTERN void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
-
+DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
-DEVICE uint32_t __kmpc_amdgcn_gpu_num_threads() {
-  return GetNumberOfThreadsInBlock();
-}
 
 // Atomics
 DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
@@ -193,5 +207,36 @@ DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
                                             unsigned long long Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
+
+DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
+  lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
+  hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
+}
+
+DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
+  return (((uint64_t)hi) << 32) | (uint64_t)lo;
+}
+
+DEVICE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
+
+DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+  // AMDGCN doesn't need to sync threads in a warp
+}
+
+DEVICE void __kmpc_impl_threadfence() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+}
+
+DEVICE void __kmpc_impl_threadfence_block() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+}
+
+DEVICE void __kmpc_impl_threadfence_system() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
+}
+
+// Calls to the AMDGCN layer (assuming 1D layout)
+DEVICE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+DEVICE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 
 #pragma omp end declare target

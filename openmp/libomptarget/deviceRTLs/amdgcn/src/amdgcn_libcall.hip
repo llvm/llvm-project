@@ -10,9 +10,9 @@
 // the user in an OpenMP region that are not yet available for other targets
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
-#include "common/target_atomic.h"
 #include "target_impl.h"
 
 EXTERN int omp_ext_get_warp_id() {
@@ -64,3 +64,4 @@ EXTERN unsigned long long omp_ext_get_active_threads_mask() {
 }
 #endif
 
+#pragma omp end declare target

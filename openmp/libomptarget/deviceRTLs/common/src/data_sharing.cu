@@ -9,6 +9,8 @@
 // This file contains the implementation of data sharing environments
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
+
 #include "common/omptarget.h"
 #include "target_impl.h"
 
@@ -275,3 +277,4 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
   omptarget_nvptx_simpleMemoryManager.Release();
 }
 
+#pragma omp end declare target

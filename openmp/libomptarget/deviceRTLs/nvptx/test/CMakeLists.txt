@@ -3,7 +3,7 @@ if(NOT OPENMP_TEST_COMPILER_ID STREQUAL "Clang")
   return()
 endif()
 
-set(deps omptarget-nvptx omptarget omp)
+set(deps omptarget omp)
 if(LIBOMPTARGET_NVPTX_ENABLE_BCLIB)
   set(deps ${deps} omptarget-nvptx-bc)
 endif()

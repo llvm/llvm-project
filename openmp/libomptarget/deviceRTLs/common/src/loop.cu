@@ -11,10 +11,10 @@
 // interface as loops.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "target_impl.h"
-#include "common/target_atomic.h"
 #ifdef OMPD_SUPPORT
   #include "common/ompd-specific.h"
 #endif /*OMPD_SUPPORT*/
@@ -769,3 +769,5 @@ EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid) {
 #endif
   PRINT0(LD_IO, "call kmpc_for_static_fini\n");
 }
+
+#pragma omp end declare target
