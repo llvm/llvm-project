@@ -1947,19 +1947,76 @@ bool CompilerInvocation::ParseCodeGenArgs(
       Res, Args, Diags, "CodeGenOptions");
 }
 
-static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
-                                      ArgList &Args) {
+static void
+GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
+                             SmallVectorImpl<const char *> &Args,
+                             CompilerInvocation::StringAllocator SA) {
+  const DependencyOutputOptions &DependencyOutputOpts = Opts;
+#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(                             \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
+
+  if (Opts.ShowIncludesDest != ShowIncludesDestination::None)
+    GenerateArg(Args, OPT_show_includes, SA);
+
+  for (const auto &Dep : Opts.ExtraDeps) {
+    switch (Dep.second) {
+    case EDK_SanitizeBlacklist:
+      // Sanitizer blacklist arguments are generated from LanguageOptions.
+      continue;
+    case EDK_ModuleFile:
+      // Module file arguments are generated from FrontendOptions and
+      // HeaderSearchOptions.
+      continue;
+    case EDK_ProfileList:
+      GenerateArg(Args, OPT_fprofile_list_EQ, Dep.first, SA);
+      break;
+    case EDK_DepFileEntry:
+      GenerateArg(Args, OPT_fdepfile_entry, Dep.first, SA);
+      break;
+    }
+  }
+}
+
+static bool ParseDependencyOutputArgsImpl(
+    DependencyOutputOptions &Opts, ArgList &Args,
+    DiagnosticsEngine &Diags,
+    frontend::ActionKind Action, bool ShowLineMarkers) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+  bool Success = true;
+
+  DependencyOutputOptions &DependencyOutputOpts = Opts;
+#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(                             \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
+
   if (Args.hasArg(OPT_show_includes)) {
     // Writing both /showIncludes and preprocessor output to stdout
     // would produce interleaved output, so use stderr for /showIncludes.
     // This behaves the same as cl.exe, when /E, /EP or /P are passed.
-    if (Args.hasArg(options::OPT_E) || Args.hasArg(options::OPT_P))
+    if (Action == frontend::PrintPreprocessedInput || !ShowLineMarkers)
       Opts.ShowIncludesDest = ShowIncludesDestination::Stderr;
     else
       Opts.ShowIncludesDest = ShowIncludesDestination::Stdout;
   } else {
     Opts.ShowIncludesDest = ShowIncludesDestination::None;
   }
+
   // Add sanitizer blacklists as extra dependencies.
   // They won't be discovered by the regular preprocessor, so
   // we let make / ninja to know about this implicit dependency.
@@ -1967,32 +2024,84 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
     for (const auto *A : Args.filtered(OPT_fsanitize_blacklist)) {
       StringRef Val = A->getValue();
       if (Val.find('=') == StringRef::npos)
-        Opts.ExtraDeps.push_back(std::string(Val));
+        Opts.ExtraDeps.emplace_back(std::string(Val), EDK_SanitizeBlacklist);
     }
     if (Opts.IncludeSystemHeaders) {
       for (const auto *A : Args.filtered(OPT_fsanitize_system_blacklist)) {
         StringRef Val = A->getValue();
         if (Val.find('=') == StringRef::npos)
-          Opts.ExtraDeps.push_back(std::string(Val));
+          Opts.ExtraDeps.emplace_back(std::string(Val), EDK_SanitizeBlacklist);
       }
     }
   }
 
   // -fprofile-list= dependencies.
   for (const auto &Filename : Args.getAllArgValues(OPT_fprofile_list_EQ))
-    Opts.ExtraDeps.push_back(Filename);
+    Opts.ExtraDeps.emplace_back(Filename, EDK_ProfileList);
 
   // Propagate the extra dependencies.
-  for (const auto *A : Args.filtered(OPT_fdepfile_entry)) {
-    Opts.ExtraDeps.push_back(A->getValue());
-  }
+  for (const auto *A : Args.filtered(OPT_fdepfile_entry))
+    Opts.ExtraDeps.emplace_back(A->getValue(), EDK_DepFileEntry);
 
   // Only the -fmodule-file=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
     StringRef Val = A->getValue();
     if (Val.find('=') == StringRef::npos)
-      Opts.ExtraDeps.push_back(std::string(Val));
+      Opts.ExtraDeps.emplace_back(std::string(Val), EDK_ModuleFile);
   }
+
+  return Success && Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static bool ParseDependencyOutputArgs(CompilerInvocation &Res,
+                                      DependencyOutputOptions &Opts,
+                                      ArgList &Args, DiagnosticsEngine &Diags,
+                                      frontend::ActionKind Action,
+                                      bool ShowLineMarkers) {
+  DependencyOutputOptions DummyOpts;
+
+  return RoundTrip(
+      [Action, ShowLineMarkers](CompilerInvocation &Res, ArgList &Args,
+                                DiagnosticsEngine &Diags) {
+        return ParseDependencyOutputArgsImpl(Res.getDependencyOutputOpts(),
+                                             Args, Diags, Action,
+                                             ShowLineMarkers);
+      },
+      [&Args](CompilerInvocation &Res,
+              SmallVectorImpl<const char *> &GeneratedArgs,
+              CompilerInvocation::StringAllocator SA) {
+        GenerateDependencyOutputArgs(Res.getDependencyOutputOpts(),
+                                     GeneratedArgs, SA);
+        // We're querying sanitizer blacklist and module file arguments, but
+        // they are generated from LanguageOptions and HeaderSearchOptions.
+        // Let's satisfy RoundTrip by generating them ourselves for now.
+        if (!Args.hasArg(OPT_fno_sanitize_blacklist)) {
+          for (const auto *A : Args.filtered(OPT_fsanitize_blacklist)) {
+            StringRef Val = A->getValue();
+            if (Val.find('=') == StringRef::npos)
+              GenerateArg(GeneratedArgs, OPT_fsanitize_blacklist, Val, SA);
+          }
+          if (Res.getDependencyOutputOpts().IncludeSystemHeaders) {
+            for (const auto *A :
+                 Args.filtered(OPT_fsanitize_system_blacklist)) {
+              StringRef Val = A->getValue();
+              if (Val.find('=') == StringRef::npos)
+                GenerateArg(GeneratedArgs, OPT_fsanitize_system_blacklist, Val,
+                            SA);
+            }
+          }
+        }
+
+        for (const auto *A : Args.filtered(OPT_fmodule_file)) {
+          StringRef Val = A->getValue();
+          if (Val.find('=') == StringRef::npos)
+            GenerateArg(GeneratedArgs, OPT_fmodule_file, Val, SA);
+        }
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        std::swap(Res.getDependencyOutputOpts(), DummyOpts);
+      },
+      Res, Args, Diags, "DependencyOutputOptions");
 }
 
 static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
@@ -4284,12 +4393,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= Res.parseSimpleArgs(Args, Diags);
 
   Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
-  ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
-  if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
-      Res.getDependencyOutputOpts().Targets.empty()) {
-    Diags.Report(diag::err_fe_dependency_file_requires_MT);
-    Success = false;
-  }
   Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                                  /*DefaultDiagColor=*/false);
   Success &= ParseFrontendArgs(Res, Res.getFrontendOpts(), Args, Diags,
@@ -4356,6 +4459,15 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                         Res.getFrontendOpts());
   ParsePreprocessorOutputArgs(Res, Res.getPreprocessorOutputOpts(), Args, Diags,
                               Res.getFrontendOpts().ProgramAction);
+
+  ParseDependencyOutputArgs(Res, Res.getDependencyOutputOpts(), Args, Diags,
+                            Res.getFrontendOpts().ProgramAction,
+                            Res.getPreprocessorOutputOpts().ShowLineMarkers);
+  if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
+      Res.getDependencyOutputOpts().Targets.empty()) {
+    Diags.Report(diag::err_fe_dependency_file_requires_MT);
+    Success = false;
+  }
 
   // Turn on -Wspir-compat for SPIR target.
   if (T.isSPIR())
@@ -4522,6 +4634,7 @@ void CompilerInvocation::generateCC1CommandLine(
                            CodeGenOpts);
   GeneratePreprocessorOutputArgs(PreprocessorOutputOpts, Args, SA,
                                  FrontendOpts.ProgramAction);
+  GenerateDependencyOutputArgs(DependencyOutputOpts, Args, SA);
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
