@@ -119,12 +119,12 @@ to supply the function name prepended by the module name:"
 
 The function itself must have either of the following prototypes:
 
-def breakpoint_callback(frame, bp_loc, dict):
+def breakpoint_callback(frame, bp_loc, internal_dict):
   # Your code goes here
 
 or:
 
-def breakpoint_callback(frame, bp_loc, extra_args, dict):
+def breakpoint_callback(frame, bp_loc, extra_args, internal_dict):
   # Your code goes here
 
 )"
