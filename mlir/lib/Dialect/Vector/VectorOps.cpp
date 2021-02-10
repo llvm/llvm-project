@@ -1122,8 +1122,8 @@ public:
 
 } // namespace
 
-void BroadcastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void BroadcastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
   results.insert<BroadcastToShapeCast>(context);
 }
 
@@ -2026,17 +2026,32 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
 
 /// Builder that sets padding to zero.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vector, Value source, ValueRange indices,
-                           AffineMap permutationMap,
+                           VectorType vectorType, Value source,
+                           ValueRange indices, AffineMap permutationMap,
                            ArrayRef<bool> maybeMasked) {
   Type elemType = source.getType().cast<ShapedType>().getElementType();
   Value padding = builder.create<ConstantOp>(result.location, elemType,
                                              builder.getZeroAttr(elemType));
   if (maybeMasked.empty())
-    return build(builder, result, vector, source, indices, permutationMap,
+    return build(builder, result, vectorType, source, indices, permutationMap,
                  padding, ArrayAttr());
   ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
-  build(builder, result, vector, source, indices, permutationMap, padding,
+  build(builder, result, vectorType, source, indices, permutationMap, padding,
+        maskedArrayAttr);
+}
+
+/// Builder that sets permutation map to 'getMinorIdentityMap'.
+void TransferReadOp::build(OpBuilder &builder, OperationState &result,
+                           VectorType vectorType, Value source,
+                           ValueRange indices, Value padding,
+                           ArrayRef<bool> maybeMasked) {
+  auto permMap = getTransferMinorIdentityMap(
+      source.getType().cast<ShapedType>(), vectorType);
+  if (maybeMasked.empty())
+    return build(builder, result, vectorType, source, indices, permMap, padding,
+                 ArrayAttr());
+  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
+  build(builder, result, vectorType, source, indices, permMap, padding,
         maskedArrayAttr);
 }
 
