@@ -129,9 +129,9 @@ def breakpoint_callback(frame, bp_loc, extra_args, dict):
 
 )"
         "The arguments are the same as the arguments passed to generated functions as \
-described above.  In the second form, any -k and -v pairs provided to the command will \ 
+described above.  In the second form, any -k and -v pairs provided to the command will \
 be packaged into a SBDictionary in an SBStructuredData and passed as the extra_args parameter. \
-\n\n\  
+\n\n\
 Note that the global variable 'lldb.frame' will NOT be updated when \
 this function is called, so be sure to use the 'frame' argument. The 'frame' argument \
 can get you to the thread via frame.GetThread(), the thread can get you to the \
