@@ -110,6 +110,10 @@ public:
     return Entries[Index];
   }
 
+  /// Test whether a vector of entries features any non-empty locations. It
+  /// could have no entries, or only DBG_VALUE $noreg entries.
+  bool hasNonEmptyLocation(const Entries &Entries) const;
+
   /// Drop location ranges which exist entirely outside each variable's scope.
   void trimLocationRanges(const MachineFunction &MF, LexicalScopes &LScopes,
                           const InstructionOrdering &Ordering);
