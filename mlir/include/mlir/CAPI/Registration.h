@@ -35,7 +35,9 @@ typedef struct MlirDialectRegistrationHooks MlirDialectRegistrationHooks;
 
 #define MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Name, Namespace, ClassName)      \
   static void mlirContextRegister##Name##Dialect(MlirContext context) {        \
-    unwrap(context)->getDialectRegistry().insert<ClassName>();                 \
+    mlir::DialectRegistry registry;                                            \
+    registry.insert<ClassName>();                                              \
+    unwrap(context)->appendDialectRegistry(registry);                          \
   }                                                                            \
   static MlirDialect mlirContextLoad##Name##Dialect(MlirContext context) {     \
     return wrap(unwrap(context)->getOrLoadDialect<ClassName>());               \
