@@ -102,3 +102,29 @@ bool WebAssemblyTTIImpl::areInlineCompatible(const Function *Caller,
 
   return (CallerBits & CalleeBits) == CalleeBits;
 }
+
+void WebAssemblyTTIImpl::getUnrollingPreferences(
+  Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP) const {
+  // Scan the loop: don't unroll loops with calls. This is a standard approach
+  // for most (all?) targets.
+  for (BasicBlock *BB : L->blocks())
+    for (Instruction &I : *BB)
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (const Function *F = cast<CallBase>(I).getCalledFunction())
+          if (isLoweredToCall(F))
+            return;
+
+  // The chosen threshold is within the range of 'LoopMicroOpBufferSize' of
+  // the various microarchitectures that use the BasicTTI implementation and
+  // has been selected through heuristics across multiple cores and runtimes.
+  UP.Partial = UP.Runtime = UP.UpperBound = true;
+  UP.PartialThreshold = 30;
+
+  // Avoid unrolling when optimizing for size.
+  UP.OptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = 0;
+
+  // Set number of instructions optimized when "back edge"
+  // becomes "fall through" to default value of 2.
+  UP.BEInsns = 2;
+}
