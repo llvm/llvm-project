@@ -262,8 +262,7 @@ define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
 
 define i32 @mul_splat_fold(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 65537
-; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[M]], 16
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[X:%.*]], 65535
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nuw i32 %x, 65537
@@ -271,13 +270,15 @@ define i32 @mul_splat_fold(i32 %x) {
   ret i32 %t
 }
 
+; Vector type, extra use, weird types are all ok.
+
 declare void @usevec(<3 x i14>)
 
 define <3 x i14> @mul_splat_fold_vec(<3 x i14> %x) {
 ; CHECK-LABEL: @mul_splat_fold_vec(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i14> [[X:%.*]], <i14 129, i14 129, i14 129>
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[M]])
-; CHECK-NEXT:    [[T:%.*]] = lshr <3 x i14> [[M]], <i14 7, i14 7, i14 7>
+; CHECK-NEXT:    [[T:%.*]] = and <3 x i14> [[X]], <i14 127, i14 127, i14 127>
 ; CHECK-NEXT:    ret <3 x i14> [[T]]
 ;
   %m = mul nuw <3 x i14> %x, <i14 129, i14 129, i14 129>
@@ -285,6 +286,8 @@ define <3 x i14> @mul_splat_fold_vec(<3 x i14> %x) {
   %t = lshr <3 x i14> %m, <i14 7, i14 7, i14 7>
   ret <3 x i14> %t
 }
+
+; Negative test
 
 define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_mul_const(
@@ -297,6 +300,8 @@ define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
   ret i32 %t
 }
 
+; Negative test
+
 define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_lshr_const(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 65537
@@ -307,6 +312,8 @@ define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
   %t = lshr i32 %m, 15
   ret i32 %t
 }
+
+; Negative test
 
 define i32 @mul_splat_fold_no_nuw(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_nuw(
