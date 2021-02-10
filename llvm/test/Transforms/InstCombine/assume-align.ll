@@ -11,7 +11,7 @@ define void @f1(i8* %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[A]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[PTR]], i64 4) ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[PTR]] to i32*
 ; CHECK-NEXT:    store i32 4, i32* [[TMP3]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
