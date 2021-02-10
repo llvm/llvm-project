@@ -246,7 +246,7 @@ class DiagnosticOpts<string base>
 class LangOpts<string base>
   : KeyPathAndMacro<"LangOpts->", base, "LANG_"> {}
 class TargetOpts<string base>
-  : KeyPathAndMacro<"TargetOpts->", base> {}
+  : KeyPathAndMacro<"TargetOpts->", base, "TARGET_"> {}
 class FrontendOpts<string base>
   : KeyPathAndMacro<"FrontendOpts.", base, "FRONTEND_"> {}
 class PreprocessorOutputOpts<string base>
