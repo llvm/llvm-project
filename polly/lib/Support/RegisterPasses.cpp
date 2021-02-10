@@ -616,7 +616,10 @@ createScopAnalyses(FunctionAnalysisManager &FAM,
                    PassInstrumentationCallbacks *PIC) {
   OwningScopAnalysisManagerFunctionProxy Proxy;
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  Proxy.getManager().registerPass([PIC] { return CREATE_PASS; });
+  Proxy.getManager().registerPass([PIC] {                                      \
+    (void)PIC;                                                                 \
+    return CREATE_PASS;                                                        \
+  });
 #include "PollyPasses.def"
 
   Proxy.getManager().registerPass(
