@@ -82,10 +82,10 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
                               (uintptr_t)TgtPtrBegin /*TgtPtrBegin*/, nullptr,
                               true /*IsRefCountINF*/);
 
-  DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", HstEnd="
-      DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(newEntry.HstPtrBase),
-      DPxPTR(newEntry.HstPtrBegin), DPxPTR(newEntry.HstPtrEnd),
-      DPxPTR(newEntry.TgtPtrBegin));
+  DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD
+     ", HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n",
+     DPxPTR(newEntry.HstPtrBase), DPxPTR(newEntry.HstPtrBegin),
+     DPxPTR(newEntry.HstPtrEnd), DPxPTR(newEntry.TgtPtrBegin));
   HostDataToTargetMap.insert(newEntry);
 
   DataMapMtx.unlock();
@@ -146,7 +146,7 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
   LookupResult lr;
 
   DP("Looking up mapping(HstPtrBegin=" DPxMOD ", Size=%" PRId64 ")...\n",
-      DPxPTR(hp), Size);
+     DPxPTR(hp), Size);
 
   if (HostDataToTargetMap.empty())
     return lr;
@@ -158,7 +158,7 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
     auto &HT = *lr.Entry;
     // Is it contained?
     lr.Flags.IsContained = hp >= HT.HstPtrBegin && hp < HT.HstPtrEnd &&
-        (hp+Size) <= HT.HstPtrEnd;
+                           (hp + Size) <= HT.HstPtrEnd;
     // Does it extend beyond the mapped region?
     lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
   }
@@ -169,18 +169,19 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
     lr.Entry = upper;
     auto &HT = *lr.Entry;
     // Does it extend into an already mapped region?
-    lr.Flags.ExtendsBefore = hp < HT.HstPtrBegin && (hp+Size) > HT.HstPtrBegin;
+    lr.Flags.ExtendsBefore =
+        hp < HT.HstPtrBegin && (hp + Size) > HT.HstPtrBegin;
     // Does it extend beyond the mapped region?
-    lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp+Size) > HT.HstPtrEnd;
+    lr.Flags.ExtendsAfter = hp < HT.HstPtrEnd && (hp + Size) > HT.HstPtrEnd;
   }
 
   if (lr.Flags.ExtendsBefore) {
     DP("WARNING: Pointer is not mapped but section extends into already "
-        "mapped data\n");
+       "mapped data\n");
   }
   if (lr.Flags.ExtendsAfter) {
     DP("WARNING: Pointer is already mapped but section extends beyond mapped "
-        "region\n");
+       "region\n");
   }
 
   return lr;
@@ -228,8 +229,9 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
   } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
     MESSAGE("explicit extension not allowed: host address specified is " DPxMOD
-            " (%" PRId64 " bytes), but device allocation maps to host at "
-            DPxMOD " (%" PRId64 " bytes)",
+            " (%" PRId64
+            " bytes), but device allocation maps to host at " DPxMOD
+            " (%" PRId64 " bytes)",
             DPxPTR(HstPtrBegin), Size, DPxPTR(lr.Entry->HstPtrBegin),
             lr.Entry->HstPtrEnd - lr.Entry->HstPtrBegin);
     if (HasPresentModifier)
@@ -298,16 +300,18 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
 
     uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
     DP("Mapping exists with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
-        "Size=%" PRId64 ",%s RefCount=%s\n", DPxPTR(HstPtrBegin), DPxPTR(tp),
-        Size, (UpdateRefCount ? " updated" : ""),
-        HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
+       "Size=%" PRId64 ",%s RefCount=%s\n",
+       DPxPTR(HstPtrBegin), DPxPTR(tp), Size,
+       (UpdateRefCount ? " updated" : ""),
+       HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
   } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
     DP("Get HstPtrBegin " DPxMOD " Size=%" PRId64 " RefCount=%s\n",
-       DPxPTR((uintptr_t)HstPtrBegin), Size, (UpdateRefCount ? " updated" : ""));
+       DPxPTR((uintptr_t)HstPtrBegin), Size,
+       (UpdateRefCount ? " updated" : ""));
     IsHostPtr = true;
     rc = HstPtrBegin;
   }
@@ -345,11 +349,12 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
       HT.resetRefCount();
     if (HT.decRefCount() == 0) {
       DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
-          DPxPTR(HT.TgtPtrBegin), Size);
+         DPxPTR(HT.TgtPtrBegin), Size);
       deleteData((void *)HT.TgtPtrBegin);
       DP("Removing%s mapping with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
-          ", Size=%" PRId64 "\n", (ForceDelete ? " (forced)" : ""),
-          DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size);
+         ", Size=%" PRId64 "\n",
+         (ForceDelete ? " (forced)" : ""), DPxPTR(HT.HstPtrBegin),
+         DPxPTR(HT.TgtPtrBegin), Size);
       HostDataToTargetMap.erase(lr.Entry);
     }
     rc = OFFLOAD_SUCCESS;
@@ -504,7 +509,7 @@ bool device_is_ready(int device_num) {
   DeviceTy &Device = PM->Devices[device_num];
 
   DP("Is the device %d (local ID %d) initialized? %d\n", device_num,
-       Device.RTLDeviceID, Device.IsInit);
+     Device.RTLDeviceID, Device.IsInit);
 
   // Init the device if not done before
   if (!Device.IsInit && Device.initOnce() != OFFLOAD_SUCCESS) {
