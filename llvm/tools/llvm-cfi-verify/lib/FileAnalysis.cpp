@@ -374,7 +374,9 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   MCPU = "";
   std::string ErrorString;
 
-  Symbolizer.reset(new LLVMSymbolizer());
+  LLVMSymbolizer::Options Opt;
+  Opt.UseSymbolTable = false;
+  Symbolizer.reset(new LLVMSymbolizer(Opt));
 
   ObjectTarget =
       TargetRegistry::lookupTarget(ArchName, ObjectTriple, ErrorString);
