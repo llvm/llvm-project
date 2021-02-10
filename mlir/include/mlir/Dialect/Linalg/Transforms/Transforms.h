@@ -1016,9 +1016,9 @@ enum class SparseIntType { kNative, kI64, kI32, kI16, kI8 };
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
                         SparseVectorizationStrategy v, unsigned vl,
-                        SparseIntType pt, SparseIntType it)
+                        SparseIntType pt, SparseIntType it, bool fo)
       : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        ptrType(pt), indType(it) {
+        ptrType(pt), indType(it), fastOutput(fo) {
     // TODO: remove restriction when vectors with index elements are supported
     assert((v != SparseVectorizationStrategy::kAnyStorageInnerLoop ||
             (ptrType != SparseIntType::kNative &&
@@ -1028,18 +1028,24 @@ struct SparsificationOptions {
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
                               SparseVectorizationStrategy::kNone, 1u,
-                              SparseIntType::kNative, SparseIntType::kNative) {}
+                              SparseIntType::kNative, SparseIntType::kNative,
+                              false) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
   SparseIntType ptrType;
   SparseIntType indType;
+  bool fastOutput; // experimental: fast output buffers
 };
 
-/// Set up sparsification rewriting rules with the given options.
+/// Sets up sparsification rewriting rules with the given options.
 void populateSparsificationPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns,
     const SparsificationOptions &options = SparsificationOptions());
+
+/// Sets up sparsification conversion rules with the given options.
+void populateSparsificationConversionPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns);
 
 } // namespace linalg
 } // namespace mlir
