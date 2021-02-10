@@ -1187,6 +1187,8 @@ def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;
+def LLVM_MaximumOp : LLVM_BinarySameArgsIntrinsicOp<"maximum">;
+def LLVM_MinimumOp : LLVM_BinarySameArgsIntrinsicOp<"minimum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
 
