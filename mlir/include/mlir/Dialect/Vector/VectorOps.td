@@ -1213,6 +1213,10 @@ def Vector_TransferReadOp :
     OpBuilderDAG<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, "AffineMap":$permutationMap,
       CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>,
+    // Builder that sets padding to 'getMinorIdentityMap'.
+    OpBuilderDAG<(ins "VectorType":$vector, "Value":$source,
+      "ValueRange":$indices, "Value":$padding,
+      CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>,
     // Builder that sets permutation map (resp. padding) to
     // 'getMinorIdentityMap' (resp. zero).
     OpBuilderDAG<(ins "VectorType":$vector, "Value":$source,

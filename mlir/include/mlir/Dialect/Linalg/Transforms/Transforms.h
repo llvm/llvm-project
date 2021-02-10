@@ -809,6 +809,16 @@ void populateLinalgConvGeneralizationPatterns(
 //===----------------------------------------------------------------------===//
 // Op-specific patterns.
 //===----------------------------------------------------------------------===//
+
+/// PadTensorOp does not implement the LinalgStructuredOpInterface `LinalgOp`,
+/// it needs a specific pattern to vectorize.
+struct PadTensorOpVectorizationPattern : public OpRewritePattern<PadTensorOp> {
+  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadTensorOp padOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 /// Match and rewrite for the pattern:
 /// ```
 ///    %alloc = ...
