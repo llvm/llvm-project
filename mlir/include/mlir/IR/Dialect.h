@@ -26,6 +26,8 @@ class OpBuilder;
 class Type;
 
 using DialectAllocatorFunction = std::function<Dialect *(MLIRContext *)>;
+using InterfaceAllocatorFunction =
+    std::function<std::unique_ptr<DialectInterface>(Dialect *)>;
 
 /// Dialects are groups of MLIR operations, types and attributes, as well as
 /// behavior associated with the entire group.  For example, hooks into other
@@ -222,6 +224,7 @@ private:
   /// A collection of registered dialect interfaces.
   DenseMap<TypeID, std::unique_ptr<DialectInterface>> registeredInterfaces;
 
+  friend class DialectRegistry;
   friend void registerDialect();
   friend class MLIRContext;
 };
@@ -234,8 +237,13 @@ private:
 class DialectRegistry {
   using MapTy =
       std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
+  using InterfaceMapTy =
+      DenseMap<TypeID, SmallVector<InterfaceAllocatorFunction, 2>>;
 
 public:
+  explicit DialectRegistry(MLIRContext *context = nullptr)
+      : owningContext(context) {}
+
   template <typename ConcreteDialect>
   void insert() {
     insert(TypeID::get<ConcreteDialect>(),
@@ -254,7 +262,9 @@ public:
     insert<OtherDialect, MoreDialects...>();
   }
 
-  /// Add a new dialect constructor to the registry.
+  /// Add a new dialect constructor to the registry. The constructor must be
+  /// calling MLIRContext::getOrLoadDialect in order for the context to take
+  /// ownership of the dialect and for delayed interface registration to happen.
   void insert(TypeID typeID, StringRef name, DialectAllocatorFunction ctor);
 
   /// Load a dialect for this namespace in the provided context.
@@ -267,6 +277,7 @@ public:
       destination.insert(nameAndRegistrationIt.second.first,
                          nameAndRegistrationIt.first,
                          nameAndRegistrationIt.second.second);
+    destination.interfaces.insert(interfaces.begin(), interfaces.end());
   }
   // Load all dialects available in the registry in the provided context.
   void loadAll(MLIRContext *context) {
@@ -274,11 +285,47 @@ public:
       nameAndRegistrationIt.second.second(context);
   }
 
-  MapTy::const_iterator begin() const { return registry.begin(); }
-  MapTy::const_iterator end() const { return registry.end(); }
+  /// Return the names of dialects known to this registry.
+  auto getDialectNames() {
+    return llvm::map_range(
+        registry, [](const MapTy::value_type &item) { return item.first; });
+  }
+
+  /// Add an interface constructed with the given allocation function to the
+  /// dialect provided as template parameter. The dialect must be present in
+  /// the registry, but may or may not be loaded. If it is not loaded, the
+  /// interface registration is delayed until the loading.
+  template <typename DialectTy>
+  void addDialectInterface(InterfaceAllocatorFunction allocator) {
+    addDialectInterface(DialectTy::getDialectNamespace(), allocator);
+  }
+
+  /// Add an interface to the dialect, both provided as template parameter. The
+  /// dialect must be present in the registry, but may or may not be loaded. If
+  /// it is not loaded, the interface registration is delayed until the loading.
+  template <typename DialectTy, typename InterfaceTy>
+  void addDialectInterface() {
+    addDialectInterface<DialectTy>([](Dialect *dialect) {
+      return std::make_unique<InterfaceTy>(dialect);
+    });
+  }
+
+  /// Register any interfaces required for the given dialect (based on its
+  /// TypeID). Users are not expected to call this directly.
+  void registerDelayedInterfaces(Dialect *dialect);
 
 private:
+  /// Add an interface constructed with the given allocation function to the
+  /// dialect identified by its namespace.
+  void addDialectInterface(StringRef dialectName,
+                           InterfaceAllocatorFunction allocator);
+
   MapTy registry;
+  InterfaceMapTy interfaces;
+
+  /// If this registry belongs to a context, this points back to the context.
+  /// Useful for checking if a dialect is loaded in the context.
+  MLIRContext *owningContext;
 };
 
 } // namespace mlir

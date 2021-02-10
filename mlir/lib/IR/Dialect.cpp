@@ -22,6 +22,29 @@ using namespace detail;
 
 DialectAsmParser::~DialectAsmParser() {}
 
+//===----------------------------------------------------------------------===//
+// DialectRegistry
+//===----------------------------------------------------------------------===//
+
+void DialectRegistry::addDialectInterface(
+    StringRef dialectName, InterfaceAllocatorFunction allocator) {
+  assert(allocator && "unexpected null interface allocation function");
+
+  // If the dialect is already loaded, directly add the interface.
+  if (Dialect *dialect = owningContext
+                             ? owningContext->getLoadedDialect(dialectName)
+                             : nullptr) {
+    dialect->addInterface(allocator(dialect));
+    return;
+  }
+
+  // Otherwise, store it in the interface map for delayed registration.
+  auto it = registry.find(dialectName.str());
+  assert(it != registry.end() &&
+         "adding an interface for an unregistered dialect");
+  interfaces[it->second.first].push_back(allocator);
+}
+
 Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
   auto it = registry.find(name.str());
   if (it == registry.end())
@@ -38,6 +61,15 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
         "Trying to register different dialects for the same namespace: " +
         name);
   }
+}
+
+void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) {
+  auto it = interfaces.find(dialect->getTypeID());
+  if (it == interfaces.end())
+    return;
+
+  for (const InterfaceAllocatorFunction &createInterface : it->second)
+    dialect->addInterface(createInterface(dialect));
 }
 
 //===----------------------------------------------------------------------===//

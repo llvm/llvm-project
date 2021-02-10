@@ -201,10 +201,8 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   {
     llvm::raw_string_ostream os(helpHeader);
     MLIRContext context;
-    interleaveComma(registry, os, [&](auto &registryEntry) {
-      StringRef name = registryEntry.first;
-      os << name;
-    });
+    interleaveComma(registry.getDialectNames(), os,
+                    [&](auto name) { os << name; });
   }
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
@@ -212,8 +210,8 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   if (showDialects) {
     llvm::outs() << "Available Dialects:\n";
     interleave(
-        registry, llvm::outs(),
-        [](auto &registryEntry) { llvm::outs() << registryEntry.first; }, "\n");
+        registry.getDialectNames(), llvm::outs(),
+        [](auto name) { llvm::outs() << name; }, "\n");
     return success();
   }
 
