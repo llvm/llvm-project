@@ -165,8 +165,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
     return new_thread_plan_sp;
 
   Address target_address;
-  ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
-  const char *symbol_name = symbol_mangled_name.AsCString();
+  const char *symbol_name = symbol->GetMangled().GetMangledName().AsCString();
 
   ThunkKind thunk_kind = GetThunkKind(symbol);
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
@@ -214,7 +213,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
     // with that function name.
     swift::Demangle::Context demangle_ctx;
     swift::Demangle::NodePointer demangled_nodes =
-        demangle_ctx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
+        demangle_ctx.demangleSymbolAsNode(symbol_name);
 
     // Now find the ProtocolWitness node in the demangled result.
 
