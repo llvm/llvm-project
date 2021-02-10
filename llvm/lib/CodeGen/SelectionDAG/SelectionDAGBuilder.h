@@ -553,7 +553,7 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
-                   const BasicBlock *EHPadBB = nullptr);
+                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
