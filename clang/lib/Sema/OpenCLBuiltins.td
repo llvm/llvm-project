@@ -58,6 +58,7 @@ def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ba
 def FuncExtKhrSubgroupNonUniformArithmetic: FunctionExtension<"cl_khr_subgroup_non_uniform_arithmetic">;
 def FuncExtKhrSubgroupShuffle            : FunctionExtension<"cl_khr_subgroup_shuffle">;
 def FuncExtKhrSubgroupShuffleRelative    : FunctionExtension<"cl_khr_subgroup_shuffle_relative">;
+def FuncExtKhrSubgroupClusteredReduce    : FunctionExtension<"cl_khr_subgroup_clustered_reduce">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
 def FuncExtKhrLocalInt32BaseAtomics      : FunctionExtension<"cl_khr_local_int32_base_atomics">;
@@ -1551,7 +1552,17 @@ let Extension = FuncExtKhrSubgroupShuffleRelative in {
 }
 
 // Section 38.10.1 - cl_khr_subgroup_clustered_reduce
-// TODO
+let Extension = FuncExtKhrSubgroupClusteredReduce in {
+  foreach op = ["add", "min", "max", "mul"] in {
+    def : Builtin<"sub_group_clustered_reduce_" # op, [AGenType1, AGenType1, UInt]>;
+  }
+  foreach op = ["and", "or", "xor"] in {
+    def : Builtin<"sub_group_clustered_reduce_" # op, [AIGenType1, AIGenType1, UInt]>;
+  }
+  foreach op = ["and", "or", "xor"] in {
+    def : Builtin<"sub_group_clustered_reduce_logical_" # op, [Int, Int, UInt]>;
+  }
+}
 
 //--------------------------------------------------------------------
 // Arm extensions.
