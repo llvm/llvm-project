@@ -2155,21 +2155,70 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
   return Success;
 }
 
-bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
-                                         DiagnosticsEngine &Diags) {
+static void GenerateFileSystemArgs(const FileSystemOptions &FileSystemOpts,
+                                   SmallVectorImpl<const char *> &Args,
+                                   CompilerInvocation::StringAllocator SA) {
+#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
+}
+
+static bool ParseFileSystemArgs(FileSystemOptions &FileSystemOpts,
+                                const ArgList &Args, DiagnosticsEngine &Diags) {
   bool Success = true;
 
-#define OPTION_WITH_MARSHALLING(                                               \
+#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
     DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
     MERGER, EXTRACTOR, TABLE_INDEX)                                            \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
-                                SHOULD_PARSE, this->KEYPATH, DEFAULT_VALUE,    \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                 IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
                                 MERGER, TABLE_INDEX)
 #include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING
+#undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
+
+  return Success;
+}
+
+static void GenerateMigratorArgs(const MigratorOptions &MigratorOpts,
+                                 SmallVectorImpl<const char *> &Args,
+                                 CompilerInvocation::StringAllocator SA) {
+#define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef MIGRATOR_OPTION_WITH_MARSHALLING
+}
+
+static bool ParseMigratorArgs(MigratorOptions &MigratorOpts,
+                              const ArgList &Args, DiagnosticsEngine &Diags) {
+  bool Success = true;
+
+#define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef MIGRATOR_OPTION_WITH_MARSHALLING
 
   return Success;
 }
@@ -4487,8 +4536,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     Success = false;
   }
 
-  Success &= Res.parseSimpleArgs(Args, Diags);
-
+  Success &= ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
+  Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
   Success &=
       ParseDiagnosticArgsRoundTrip(Res, Res.getDiagnosticOpts(), Args, &Diags,
@@ -4702,20 +4751,10 @@ std::string CompilerInvocation::getModuleHash() const {
 
 void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
-#define OPTION_WITH_MARSHALLING(                                               \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, KIND, FLAGS, SPELLING,            \
-                                   ALWAYS_EMIT, this->KEYPATH, DEFAULT_VALUE,  \
-                                   IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, \
-                                   EXTRACTOR, TABLE_INDEX)
-#include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING
-
   llvm::Triple T(TargetOpts->Triple);
 
+  GenerateFileSystemArgs(FileSystemOpts, Args, SA);
+  GenerateMigratorArgs(MigratorOpts, Args, SA);
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
   GenerateDiagnosticArgs(*DiagnosticOpts, Args, SA, false);
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
