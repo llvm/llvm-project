@@ -568,11 +568,11 @@ static llvm::RegisterStandardPasses RegisterPollyOptimizerScalarLate(
     registerPollyScalarOptimizerLatePasses);
 
 static OwningScopAnalysisManagerFunctionProxy
-createScopAnalyses(FunctionAnalysisManager &FAM) {
+createScopAnalyses(FunctionAnalysisManager &FAM,
+                   PassInstrumentationCallbacks *PIC) {
   OwningScopAnalysisManagerFunctionProxy Proxy;
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  Proxy.getManager().registerPass([] { return CREATE_PASS; });
-
+  Proxy.getManager().registerPass([PIC] { return CREATE_PASS; });
 #include "PollyPasses.def"
 
   Proxy.getManager().registerPass(
@@ -580,13 +580,15 @@ createScopAnalyses(FunctionAnalysisManager &FAM) {
   return Proxy;
 }
 
-static void registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
+static void registerFunctionAnalyses(FunctionAnalysisManager &FAM,
+                                     PassInstrumentationCallbacks *PIC) {
+
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   FAM.registerPass([] { return CREATE_PASS; });
 
 #include "PollyPasses.def"
 
-  FAM.registerPass([&FAM] { return createScopAnalyses(FAM); });
+  FAM.registerPass([&FAM, PIC] { return createScopAnalyses(FAM, PIC); });
 }
 
 static bool
@@ -612,7 +614,8 @@ parseFunctionPipeline(StringRef Name, FunctionPassManager &FPM,
   return false;
 }
 
-static bool parseScopPass(StringRef Name, ScopPassManager &SPM) {
+static bool parseScopPass(StringRef Name, ScopPassManager &SPM,
+                          PassInstrumentationCallbacks *PIC) {
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (parseAnalysisUtilityPasses<                                              \
           std::remove_reference<decltype(CREATE_PASS)>::type>(NAME, Name,      \
@@ -631,13 +634,14 @@ static bool parseScopPass(StringRef Name, ScopPassManager &SPM) {
 }
 
 static bool parseScopPipeline(StringRef Name, FunctionPassManager &FPM,
+                              PassInstrumentationCallbacks *PIC,
                               ArrayRef<PassBuilder::PipelineElement> Pipeline) {
   if (Name != "scop")
     return false;
   if (!Pipeline.empty()) {
     ScopPassManager SPM;
     for (const auto &E : Pipeline)
-      if (!parseScopPass(E.Name, SPM))
+      if (!parseScopPass(E.Name, SPM, PIC))
         return false;
     FPM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
   }
@@ -661,7 +665,7 @@ static bool isScopPassName(StringRef Name) {
 }
 
 static bool
-parseTopLevelPipeline(ModulePassManager &MPM,
+parseTopLevelPipeline(ModulePassManager &MPM, PassInstrumentationCallbacks *PIC,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline,
                       bool DebugLogging) {
   std::vector<PassBuilder::PipelineElement> FullPipeline;
@@ -678,7 +682,7 @@ parseTopLevelPipeline(ModulePassManager &MPM,
     auto &InnerPipeline = Element.InnerPipeline;
     if (!InnerPipeline.empty()) // Scop passes don't have inner pipelines
       return false;
-    if (!parseScopPass(Name, SPM))
+    if (!parseScopPass(Name, SPM, PIC))
       return false;
   }
 
@@ -689,10 +693,22 @@ parseTopLevelPipeline(ModulePassManager &MPM,
 }
 
 void registerPollyPasses(PassBuilder &PB) {
-  PB.registerAnalysisRegistrationCallback(registerFunctionAnalyses);
+  PassInstrumentationCallbacks *PIC = PB.getPassInstrumentationCallbacks();
+  PB.registerAnalysisRegistrationCallback([PIC](FunctionAnalysisManager &FAM) {
+    registerFunctionAnalyses(FAM, PIC);
+  });
   PB.registerPipelineParsingCallback(parseFunctionPipeline);
-  PB.registerPipelineParsingCallback(parseScopPipeline);
-  PB.registerParseTopLevelPipelineCallback(parseTopLevelPipeline);
+  PB.registerPipelineParsingCallback(
+      [PIC](StringRef Name, FunctionPassManager &FPM,
+            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+        return parseScopPipeline(Name, FPM, PIC, Pipeline);
+      });
+  PB.registerParseTopLevelPipelineCallback(
+      [PIC](ModulePassManager &MPM,
+            ArrayRef<PassBuilder::PipelineElement> Pipeline,
+            bool DebugLogging) -> bool {
+        return parseTopLevelPipeline(MPM, PIC, Pipeline, DebugLogging);
+      });
 
   if (PassPosition == POSITION_BEFORE_VECTORIZER)
     PB.registerVectorizerStartEPCallback(buildDefaultPollyPipeline);
