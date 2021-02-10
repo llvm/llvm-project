@@ -88,11 +88,10 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   if (ActionInfo->Language == AMD_COMGR_LANGUAGE_HIP) {
-    if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
-                                "hip_lib.bc", hip_lib, hip_lib_size))
+    if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC, "hip_lib.bc",
+                                hip_lib, hip_lib_size))
       return Status;
-  }
-  else {
+  } else {
     if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
                                 "opencl_lib.bc", opencl_lib, opencl_lib_size))
       return Status;

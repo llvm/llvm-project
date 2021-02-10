@@ -5,103 +5,104 @@
 #include <stdlib.h>
 #include <string.h>
 
-void metadata_test1(void);
+void metadataTest1(void);
 
 typedef struct test_meta_data_s {
-  char *buf;
-  amd_comgr_data_t data;
-  amd_comgr_metadata_node_t root;
+  char *Buf;
+  amd_comgr_data_t Data;
+  amd_comgr_metadata_node_t Root;
 } test_meta_data_t;
 
-void read_metadata(test_meta_data_t *meta_data, const char *file,
-                  bool error_expected, bool display) {
-  long size;
-  amd_comgr_status_t status;
-  amd_comgr_metadata_kind_t mkind = AMD_COMGR_METADATA_KIND_NULL;
+void read_metadata(test_meta_data_t *MetaData, const char *File,
+                   bool ErrorExpected, bool Display) {
+  long Size;
+  amd_comgr_status_t Status;
+  amd_comgr_metadata_kind_t Mkind = AMD_COMGR_METADATA_KIND_NULL;
 
   // Read input file
-  char buffer[1024];
-  snprintf(buffer, 1024, "%s/%s", TEST_OBJ_DIR, file);
-  size = setBuf(buffer, &meta_data->buf);
+  char Buffer[1024];
+  snprintf(Buffer, 1024, "%s/%s", TEST_OBJ_DIR, File);
+  Size = setBuf(Buffer, &MetaData->Buf);
 
-  status =
-      amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &meta_data->data);
-  checkError(status, "amd_comgr_create_data");
+  Status =
+      amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &MetaData->Data);
+  checkError(Status, "amd_comgr_create_data");
 
-  status = amd_comgr_set_data(meta_data->data, size, meta_data->buf);
-  checkError(status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data(MetaData->Data, Size, MetaData->Buf);
+  checkError(Status, "amd_comgr_set_data");
 
-  status = amd_comgr_set_data_name(meta_data->data, NULL);
-  checkError(status, "amd_comgr_set_data_name");
+  Status = amd_comgr_set_data_name(MetaData->Data, NULL);
+  checkError(Status, "amd_comgr_set_data_name");
 
   // Get metadata from data object
-  if (display)
-    printf("Get metadata from %s\n", file);
+  if (Display)
+    printf("Get metadata from %s\n", File);
 
-  status = amd_comgr_get_data_metadata(meta_data->data, &meta_data->root);
-  if (!error_expected && status) {
+  Status = amd_comgr_get_data_metadata(MetaData->Data, &MetaData->Root);
+  if (!ErrorExpected && Status) {
     printf("Unexpected error from amd_comgr_get_data_metadata\n");
     exit(1);
   } else {
     return;
   }
 
-  checkError(status, "amd_comgr_get_data_metadata");
+  checkError(Status, "amd_comgr_get_data_metadata");
 
   // the root must be map
-  status = amd_comgr_get_metadata_kind(meta_data->root, &mkind);
-  checkError(status, "amd_comgr_get_metadata_kind");
-  if (mkind != AMD_COMGR_METADATA_KIND_MAP) {
+  Status = amd_comgr_get_metadata_kind(MetaData->Root, &Mkind);
+  checkError(Status, "amd_comgr_get_metadata_kind");
+  if (Mkind != AMD_COMGR_METADATA_KIND_MAP) {
     printf("Root is not map\n");
     exit(1);
   }
 
-  if (display) {
+  if (Display) {
     // print code object metadata
-    int indent = 0;
-    printf("Metadata for file %s : start\n", file);
-    status = amd_comgr_iterate_map_metadata(meta_data->root, printEntry,
-                                            (void *)&indent);
-    checkError(status, "amd_comgr_iterate_map_metadata");
-    printf("Metadata for file %s : end\n\n", file);
+    int Indent = 0;
+    printf("Metadata for file %s : start\n", File);
+    Status = amd_comgr_iterate_map_metadata(MetaData->Root, printEntry,
+                                            (void *)&Indent);
+    checkError(Status, "amd_comgr_iterate_map_metadata");
+    printf("Metadata for file %s : end\n\n", File);
   }
 }
 
-void lookup_meta_data(test_meta_data_t *meta_data, const char *key,
-                     amd_comgr_metadata_kind_t kind, void *data,
-                     bool error_expected) {
-  amd_comgr_status_t status;
-  amd_comgr_metadata_node_t lookup_node;
-  amd_comgr_metadata_kind_t lookup_kind;
+void lookup_meta_data(test_meta_data_t *MetaData, const char *Key,
+                      amd_comgr_metadata_kind_t Kind, void *Data,
+                      bool ErrorExpected) {
+  amd_comgr_status_t Status;
+  amd_comgr_metadata_node_t LookupNode;
+  amd_comgr_metadata_kind_t LookupKind;
 
-  status = amd_comgr_metadata_lookup(meta_data->root, key, &lookup_node);
-  checkError(status, "amd_comgr_metadata_lookup");
+  Status = amd_comgr_metadata_lookup(MetaData->Root, Key, &LookupNode);
+  checkError(Status, "amd_comgr_metadata_lookup");
 
-  status = amd_comgr_get_metadata_kind(lookup_node, &lookup_kind);
-  if (!error_expected && status) {
+  Status = amd_comgr_get_metadata_kind(LookupNode, &LookupKind);
+  if (!ErrorExpected && Status) {
     printf("Unexpected error from amd_comgr_get_metadata_kind\n");
     exit(1);
   } else {
-    status = amd_comgr_destroy_metadata(lookup_node);
-    checkError(status, "amd_comgr_destroy_metadata");
+    Status = amd_comgr_destroy_metadata(LookupNode);
+    checkError(Status, "amd_comgr_destroy_metadata");
     return;
   }
 
-  checkError(status, "amd_comgr_get_metadata_kind");
-  if (lookup_kind != kind) {
+  checkError(Status, "amd_comgr_get_metadata_kind");
+  if (LookupKind != Kind) {
     printf("Metadata kind mismatch in lookup\n");
     exit(1);
   }
 
-  switch (kind) {
+  switch (Kind) {
   case AMD_COMGR_METADATA_KIND_LIST: {
-    size_t size = 0;
-    size_t nentries = *((size_t *)data);
+    size_t Size = 0;
+    size_t Nentries = *((size_t *)Data);
 
-    status = amd_comgr_get_metadata_list_size(lookup_node, &size);
-    checkError(status, "amd_comgr_get_metadata_list_size");
-    if (size != nentries) {
-      printf("List node size mismatch : expected %zu got %zu\n", nentries, size);
+    Status = amd_comgr_get_metadata_list_size(LookupNode, &Size);
+    checkError(Status, "amd_comgr_get_metadata_list_size");
+    if (Size != Nentries) {
+      printf("List node size mismatch : expected %zu got %zu\n", Nentries,
+             Size);
       exit(1);
     }
   } break;
@@ -111,53 +112,55 @@ void lookup_meta_data(test_meta_data_t *meta_data, const char *key,
     exit(1);
   }
 
-  status = amd_comgr_destroy_metadata(lookup_node);
-  checkError(status, "amd_comgr_destroy_metadata");
+  Status = amd_comgr_destroy_metadata(LookupNode);
+  checkError(Status, "amd_comgr_destroy_metadata");
 }
 
-void close_meta_data(test_meta_data_t *meta_data) {
-  amd_comgr_status_t status;
+void close_meta_data(test_meta_data_t *MetaData) {
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_destroy_metadata(meta_data->root);
-  checkError(status, "amd_comgr_destroy_metadata");
+  Status = amd_comgr_destroy_metadata(MetaData->Root);
+  checkError(Status, "amd_comgr_destroy_metadata");
 
-  status = amd_comgr_release_data(meta_data->data);
-  checkError(status, "amd_comgr_release_data");
-  free(meta_data->buf);
+  Status = amd_comgr_release_data(MetaData->Data);
+  checkError(Status, "amd_comgr_release_data");
+  free(MetaData->Buf);
 
-  memset(meta_data, 0, sizeof(test_meta_data_t));
+  memset(MetaData, 0, sizeof(test_meta_data_t));
 }
 
 int main(int argc, char *argv[]) {
-  test_meta_data_t meta_data;
+  test_meta_data_t MetaData;
 
-  memset(&meta_data, 0, sizeof(test_meta_data_t));
+  memset(&MetaData, 0, sizeof(test_meta_data_t));
 
-#define READ_METADATA(meta, file, is_error, display) do {   \
-  read_metadata(&meta, file, is_error, display);            \
-  close_meta_data(&meta);                                   \
-}while(0)
+#define READ_METADATA(meta, file, is_error, display)                           \
+  do {                                                                         \
+    read_metadata(&meta, file, is_error, display);                             \
+    close_meta_data(&meta);                                                    \
+  } while (0)
 
-#define LOOKUP_LIST_METADATA(meta, file, key, size, is_error) do {          \
-  size_t n = size;                                                             \
-  read_metadata(&meta, file, is_error, false);                              \
-  lookup_meta_data(&meta, key, AMD_COMGR_METADATA_KIND_LIST, &n, is_error); \
-  close_meta_data(&meta);                                                   \
-}while(0)
+#define LOOKUP_LIST_METADATA(meta, file, key, size, is_error)                  \
+  do {                                                                         \
+    size_t n = size;                                                           \
+    read_metadata(&meta, file, is_error, false);                               \
+    lookup_meta_data(&meta, key, AMD_COMGR_METADATA_KIND_LIST, &n, is_error);  \
+    close_meta_data(&meta);                                                    \
+  } while (0)
 
-  READ_METADATA(meta_data, "source1-v2.o", false, true);
-  READ_METADATA(meta_data, "source2-v2.o", false, true);
-  READ_METADATA(meta_data, "source1-v3.o", false, true);
-  READ_METADATA(meta_data, "source2-v3.o", false, true);
+  READ_METADATA(MetaData, "source1-v2.o", false, true);
+  READ_METADATA(MetaData, "source2-v2.o", false, true);
+  READ_METADATA(MetaData, "source1-v3.o", false, true);
+  READ_METADATA(MetaData, "source2-v3.o", false, true);
 
-  READ_METADATA(meta_data, "shared12-v2.so", true, true);
+  READ_METADATA(MetaData, "shared12-v2.so", true, true);
 
-  LOOKUP_LIST_METADATA(meta_data, "shared12-v3.so", "amdhsa.printf", 1, false);
-  LOOKUP_LIST_METADATA(meta_data, "shared12-v3.so", "amdhsa.kernels", 2, false);
-  LOOKUP_LIST_METADATA(meta_data, "shared12-v3.so", "amdhsa.version", 2, false);
+  LOOKUP_LIST_METADATA(MetaData, "shared12-v3.so", "amdhsa.printf", 1, false);
+  LOOKUP_LIST_METADATA(MetaData, "shared12-v3.so", "amdhsa.kernels", 2, false);
+  LOOKUP_LIST_METADATA(MetaData, "shared12-v3.so", "amdhsa.version", 2, false);
 
-  LOOKUP_LIST_METADATA(meta_data, "shared14-v3.so", "amdhsa.version", 2, true);
-  LOOKUP_LIST_METADATA(meta_data, "shared23-v3.so", "amdhsa.kernels", 2, true);
+  LOOKUP_LIST_METADATA(MetaData, "shared14-v3.so", "amdhsa.version", 2, true);
+  LOOKUP_LIST_METADATA(MetaData, "shared23-v3.so", "amdhsa.kernels", 2, true);
 
   printf("Metadata merge tests : passed\n");
 

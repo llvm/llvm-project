@@ -40,65 +40,65 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  char *bufSource1;
-  size_t sizeSource1;
-  amd_comgr_data_t dataSource1;
-  amd_comgr_data_set_t dataSetIn, dataSetFatBin;
-  amd_comgr_action_info_t dataAction;
-  amd_comgr_status_t status;
-  size_t count;
-  const char *options[] = {"--amdgpu-target=gfx900", "-hip-path",
+  char *BufSource1;
+  size_t SizeSource1;
+  amd_comgr_data_t DataSource1;
+  amd_comgr_data_set_t DataSetIn, DataSetFatBin;
+  amd_comgr_action_info_t DataAction;
+  amd_comgr_status_t Status;
+  size_t Count;
+  const char *Options[] = {"--amdgpu-target=gfx900", "-hip-path",
                            "/opt/rocm/hip"};
-  size_t optionsCount = sizeof(options) / sizeof(options[0]);
+  size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
-  sizeSource1 = setBuf(TEST_OBJ_DIR "/source1.hip", &bufSource1);
+  SizeSource1 = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource1);
 
-  status = amd_comgr_create_data_set(&dataSetIn);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetIn);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &dataSource1);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataSource1, sizeSource1, bufSource1);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataSource1, "source1.hip");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataSource1);
-  checkError(status, "amd_comgr_data_set_add");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource1);
+  checkError(Status, "amd_comgr_create_data");
+  Status = amd_comgr_set_data(DataSource1, SizeSource1, BufSource1);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataSource1, "source1.hip");
+  checkError(Status, "amd_comgr_set_data_name");
+  Status = amd_comgr_data_set_add(DataSetIn, DataSource1);
+  checkError(Status, "amd_comgr_data_set_add");
 
-  status = amd_comgr_create_action_info(&dataAction);
-  checkError(status, "amd_comgr_create_action_info");
-  status =
-      amd_comgr_action_info_set_language(dataAction, AMD_COMGR_LANGUAGE_HIP);
-  checkError(status, "amd_comgr_action_info_set_language");
-  status =
-      amd_comgr_action_info_set_option_list(dataAction, options, optionsCount);
-  checkError(status, "amd_comgr_action_info_set_option_list");
+  Status = amd_comgr_create_action_info(&DataAction);
+  checkError(Status, "amd_comgr_create_action_info");
+  Status =
+      amd_comgr_action_info_set_language(DataAction, AMD_COMGR_LANGUAGE_HIP);
+  checkError(Status, "amd_comgr_action_info_set_language");
+  Status =
+      amd_comgr_action_info_set_option_list(DataAction, Options, OptionsCount);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
-  status = amd_comgr_create_data_set(&dataSetFatBin);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetFatBin);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN,
-                               dataAction, dataSetIn, dataSetFatBin);
-  checkError(status, "amd_comgr_do_action");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN,
+                               DataAction, DataSetIn, DataSetFatBin);
+  checkError(Status, "amd_comgr_do_action");
 
-  status = amd_comgr_action_data_count(dataSetFatBin,
-                                       AMD_COMGR_DATA_KIND_FATBIN, &count);
-  checkError(status, "amd_comgr_action_data_count");
+  Status = amd_comgr_action_data_count(DataSetFatBin,
+                                       AMD_COMGR_DATA_KIND_FATBIN, &Count);
+  checkError(Status, "amd_comgr_action_data_count");
 
-  if (count != 1) {
+  if (Count != 1) {
     printf("AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN Failed: "
            "produced %zu fab binaries (expected 1)\n",
-           count);
+           Count);
     exit(1);
   }
 
-  status = amd_comgr_release_data(dataSource1);
-  checkError(status, "amd_comgr_release_data");
-  status = amd_comgr_destroy_data_set(dataSetIn);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetFatBin);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_action_info(dataAction);
-  checkError(status, "amd_comgr_destroy_action_info");
-  free(bufSource1);
+  Status = amd_comgr_release_data(DataSource1);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_destroy_data_set(DataSetIn);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetFatBin);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_action_info(DataAction);
+  checkError(Status, "amd_comgr_destroy_action_info");
+  free(BufSource1);
 }

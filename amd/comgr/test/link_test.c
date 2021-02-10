@@ -40,91 +40,91 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  size_t size1, size2;
-  char *buf1, *buf2;
-  size_t count;
-  amd_comgr_data_t dataIn1, dataIn2;
-  amd_comgr_data_set_t dataSetIn, dataSetOutReloc, dataSetOutExec;
-  amd_comgr_action_info_t dataAction;
-  amd_comgr_status_t status;
+  size_t Size1, Size2;
+  char *Buf1, *Buf2;
+  size_t Count;
+  amd_comgr_data_t DataIn1, DataIn2;
+  amd_comgr_data_set_t DataSetIn, DataSetOutReloc, DataSetOutExec;
+  amd_comgr_action_info_t DataAction;
+  amd_comgr_status_t Status;
 
   // Read input file
-  size1 = setBuf(TEST_OBJ_DIR "/reloc1.o", &buf1);
-  size2 = setBuf(TEST_OBJ_DIR "/reloc2.o", &buf2);
+  Size1 = setBuf(TEST_OBJ_DIR "/reloc1.o", &Buf1);
+  Size2 = setBuf(TEST_OBJ_DIR "/reloc2.o", &Buf2);
 
   // Create data object
-  status = amd_comgr_create_data_set(&dataSetIn);
-  checkError(status, "amd_cogmr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetIn);
+  checkError(Status, "amd_cogmr_create_data_set");
 
   // File 1
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn1);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataIn1, size1, buf1);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataIn1, "DO_IN1");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataIn1);
-  checkError(status, "amd_cogmr_data_set_add");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataIn1);
+  checkError(Status, "amd_comgr_create_data");
+  Status = amd_comgr_set_data(DataIn1, Size1, Buf1);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataIn1, "DO_IN1");
+  checkError(Status, "amd_comgr_set_data_name");
+  Status = amd_comgr_data_set_add(DataSetIn, DataIn1);
+  checkError(Status, "amd_cogmr_data_set_add");
 
   // File 2
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn2);
-  checkError(status, "amd_comgr_create_data_2");
-  status = amd_comgr_set_data(dataIn2, size2, buf2);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataIn2, "DO_IN2");
-  checkError(status, "amd_comgr_set_data_name_2");
-  status = amd_comgr_data_set_add(dataSetIn, dataIn2);
-  checkError(status, "amd_cogmr_data_set_add_2");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataIn2);
+  checkError(Status, "amd_comgr_create_data_2");
+  Status = amd_comgr_set_data(DataIn2, Size2, Buf2);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataIn2, "DO_IN2");
+  checkError(Status, "amd_comgr_set_data_name_2");
+  Status = amd_comgr_data_set_add(DataSetIn, DataIn2);
+  checkError(Status, "amd_cogmr_data_set_add_2");
 
-  status = amd_comgr_create_data_set(&dataSetOutReloc);
-  checkError(status, "amd_cogmr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetOutReloc);
+  checkError(Status, "amd_cogmr_create_data_set");
 
-  status = amd_comgr_create_action_info(&dataAction);
-  checkError(status, "amd_comgr_create_action_info");
-  amd_comgr_action_info_set_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx803");
-  checkError(status, "amd_comgr_action_info_set_language");
+  Status = amd_comgr_create_action_info(&DataAction);
+  checkError(Status, "amd_comgr_create_action_info");
+  amd_comgr_action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx803");
+  checkError(Status, "amd_comgr_action_info_set_language");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE,
-                               dataAction, dataSetIn, dataSetOutReloc);
-  checkError(status, "amd_comgr_do_action");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE,
+                               DataAction, DataSetIn, DataSetOutReloc);
+  checkError(Status, "amd_comgr_do_action");
 
-  status = amd_comgr_action_data_count(dataSetOutReloc,
-                                       AMD_COMGR_DATA_KIND_RELOCATABLE, &count);
-  checkError(status, "amd_comgr_action_data_count");
-  if (count != 1) {
-    printf("Failed, output %ld relocatable objects (should output 1)\n", count);
+  Status = amd_comgr_action_data_count(DataSetOutReloc,
+                                       AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
+  checkError(Status, "amd_comgr_action_data_count");
+  if (Count != 1) {
+    printf("Failed, output %ld relocatable objects (should output 1)\n", Count);
     exit(1);
   }
 
-  status = amd_comgr_create_data_set(&dataSetOutExec);
-  checkError(status, "amd_cogmr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetOutExec);
+  checkError(Status, "amd_cogmr_create_data_set");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
-                               dataAction, dataSetIn, dataSetOutExec);
-  checkError(status, "amd_comgr_do_action");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
+                               DataAction, DataSetIn, DataSetOutExec);
+  checkError(Status, "amd_comgr_do_action");
 
-  status = amd_comgr_action_data_count(dataSetOutExec,
-                                       AMD_COMGR_DATA_KIND_EXECUTABLE, &count);
-  checkError(status, "amd_comgr_action_data_count");
-  if (count != 1) {
-    printf("Failed, output %ld executable objects (should output 1)\n", count);
+  Status = amd_comgr_action_data_count(DataSetOutExec,
+                                       AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
+  checkError(Status, "amd_comgr_action_data_count");
+  if (Count != 1) {
+    printf("Failed, output %ld executable objects (should output 1)\n", Count);
     exit(1);
   }
 
-  status = amd_comgr_destroy_data_set(dataSetIn);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetOutReloc);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetOutExec);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_action_info(dataAction);
-  checkError(status, "amd_comgr_destroy_action_info");
-  status = amd_comgr_release_data(dataIn1);
-  checkError(status, "amd_comgr_release_data");
-  status = amd_comgr_release_data(dataIn2);
-  checkError(status, "amd_comgr_release_data");
-  free(buf1);
-  free(buf2);
+  Status = amd_comgr_destroy_data_set(DataSetIn);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetOutReloc);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetOutExec);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_action_info(DataAction);
+  checkError(Status, "amd_comgr_destroy_action_info");
+  Status = amd_comgr_release_data(DataIn1);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DataIn2);
+  checkError(Status, "amd_comgr_release_data");
+  free(Buf1);
+  free(Buf2);
 
   return 0;
 }

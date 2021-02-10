@@ -274,8 +274,7 @@ void checkCount(const char *id, amd_comgr_data_set_t dataSet,
   amd_comgr_status_t status;
 
   size_t count;
-  status =
-      amd_comgr_action_data_count(dataSet, dataKind, &count);
+  status = amd_comgr_action_data_count(dataSet, dataKind, &count);
   checkError(status, "checkCount:amd_comgr_action_data_count");
 
   if (count != expected)

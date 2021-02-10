@@ -39,37 +39,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-void expectSymbol(const char *objectFilename, const char *symbolName,
-                  amd_comgr_symbol_type_t expectedType) {
-  long size;
-  char *buf;
-  amd_comgr_data_t dataObject;
-  amd_comgr_symbol_t symbol;
-  amd_comgr_status_t status;
+void expectSymbol(const char *ObjectFilename, const char *SymbolName,
+                  amd_comgr_symbol_type_t ExpectedType) {
+  long Size;
+  char *Buf;
+  amd_comgr_data_t DataObject;
+  amd_comgr_symbol_t Symbol;
+  amd_comgr_status_t Status;
 
-  size = setBuf(objectFilename, &buf);
+  Size = setBuf(ObjectFilename, &Buf);
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataObject);
-  checkError(status, "amd_comgr_create_data");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &DataObject);
+  checkError(Status, "amd_comgr_create_data");
 
-  status = amd_comgr_set_data(dataObject, size, buf);
-  checkError(status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data(DataObject, Size, Buf);
+  checkError(Status, "amd_comgr_set_data");
 
-  status = amd_comgr_symbol_lookup(dataObject, symbolName, &symbol);
-  checkError(status, "amd_comgr_symbol_lookup");
+  Status = amd_comgr_symbol_lookup(DataObject, SymbolName, &Symbol);
+  checkError(Status, "amd_comgr_symbol_lookup");
 
-  amd_comgr_symbol_type_t type;
-  status = amd_comgr_symbol_get_info(symbol, AMD_COMGR_SYMBOL_INFO_TYPE,
-                                     (void *)&type);
-  checkError(status, "amd_comgr_symbol_get_info");
+  amd_comgr_symbol_type_t Type;
+  Status = amd_comgr_symbol_get_info(Symbol, AMD_COMGR_SYMBOL_INFO_TYPE,
+                                     (void *)&Type);
+  checkError(Status, "amd_comgr_symbol_get_info");
 
-  if (type != expectedType)
+  if (Type != ExpectedType)
     fail("unexpected symbol type for symbol %s: expected %d, saw %d\n",
-         symbolName, expectedType, type);
+         SymbolName, ExpectedType, Type);
 
-  status = amd_comgr_release_data(dataObject);
-  checkError(status, "amd_comgr_release_data");
-  free(buf);
+  Status = amd_comgr_release_data(DataObject);
+  checkError(Status, "amd_comgr_release_data");
+  free(Buf);
 }
 
 int main(int argc, char *argv[]) {

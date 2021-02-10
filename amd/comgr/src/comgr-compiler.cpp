@@ -179,13 +179,13 @@ public:
     DwarfVersion = 0;
   }
 
-  static bool CreateFromArgs(AssemblerInvocation &Res,
+  static bool createFromArgs(AssemblerInvocation &Res,
                              ArrayRef<const char *> Argv,
                              DiagnosticsEngine &Diags);
 };
 } // namespace
 
-bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
+bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
                                          ArrayRef<const char *> Argv,
                                          DiagnosticsEngine &Diags) {
   bool Success = true;
@@ -196,7 +196,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   const unsigned IncludedFlagsBitmask = options::CC1AsOption;
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = OptTbl.ParseArgs(Argv, MissingArgIndex, MissingArgCount,
-                                        IncludedFlagsBitmask);
+                                       IncludedFlagsBitmask);
 
   // Check for missing argument error.
   if (MissingArgCount) {
@@ -252,9 +252,12 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
-  Opts.DwarfDebugFlags = std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
-  Opts.DwarfDebugProducer = std::string(Args.getLastArgValue(OPT_dwarf_debug_producer));
-  Opts.DebugCompilationDir = std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
+  Opts.DwarfDebugFlags =
+      std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
+  Opts.DwarfDebugProducer =
+      std::string(Args.getLastArgValue(OPT_dwarf_debug_producer));
+  Opts.DebugCompilationDir =
+      std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
   Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
 
   // Frontend Options
@@ -298,7 +301,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.RelaxAll = Args.hasArg(OPT_mrelax_all);
   Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
-  Opts.RelocationModel = std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
+  Opts.RelocationModel =
+      std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.IncrementalLinkerCompatible =
       Args.hasArg(OPT_mincremental_linker_compatible);
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
@@ -329,7 +333,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   return Out;
 }
 
-static bool ExecuteAssembler(AssemblerInvocation &Opts,
+static bool executeAssembler(AssemblerInvocation &Opts,
                              DiagnosticsEngine &Diags, raw_ostream &LogS) {
   // Get the target specific parser.
   std::string Error;
@@ -413,8 +417,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   std::string FS;
   if (!Opts.Features.empty()) {
     FS = Opts.Features[0];
-    for (unsigned i = 1, e = Opts.Features.size(); i != e; ++i)
-      FS += "," + Opts.Features[i];
+    for (unsigned I = 1, E = Opts.Features.size(); I != E; ++I)
+      FS += "," + Opts.Features[I];
   }
 
   std::unique_ptr<MCStreamer> Str;
@@ -630,7 +634,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
     Argv.push_back(nullptr);
 
     // By default clang driver will ask CC1 to leak memory.
-    auto IT = find(Argv, StringRef("-disable-free"));
+    auto *IT = find(Argv, StringRef("-disable-free"));
     if (IT != Argv.end())
       Argv.erase(IT);
 
@@ -657,11 +661,11 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
         logArgv(LogS, "clang", Argv);
       Argv.erase(Argv.begin() + 1);
       AssemblerInvocation Asm;
-      if (!AssemblerInvocation::CreateFromArgs(Asm, Argv, Diags))
+      if (!AssemblerInvocation::createFromArgs(Asm, Argv, Diags))
         return AMD_COMGR_STATUS_ERROR;
       if (auto Status = parseLLVMOptions(Asm.LLVMArgs))
         return Status;
-      if (ExecuteAssembler(Asm, Diags, LogS))
+      if (executeAssembler(Asm, Diags, LogS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
       if (env::shouldEmitVerboseLogs())
@@ -716,10 +720,10 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
       if (I == E) {
         LogS << "Error: -hip-path option misses argument.\n";
         return AMD_COMGR_STATUS_ERROR;
-      } else {
-        Exec = (Twine(Args[I]) + "/bin/hipcc").str();
-        ArgsV[0] = Exec;
       }
+      Exec = (Twine(Args[I]) + "/bin/hipcc").str();
+      ArgsV[0] = Exec;
+
     } else
       ArgsV.push_back(Args[I]);
   }
@@ -768,7 +772,7 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
 amd_comgr_status_t
 AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
                              const char *OutputSuffix) {
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_INCLUDE)
       continue;
     auto IncludeFilePath = getFilePath(Input, IncludeDir);
@@ -776,7 +780,7 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
       return Status;
   }
 
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_SOURCE &&
         Input->DataKind != AMD_COMGR_DATA_KIND_BC &&
         Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
@@ -820,7 +824,7 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
   Args.push_back("-I");
   Args.push_back(IncludeDir.c_str());
 
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER)
       continue;
     PrecompiledHeaders.push_back(getFilePath(Input, IncludeDir));
@@ -861,13 +865,15 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t
-AMDGPUCompiler::addCompilationFlags() {
+amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   HIPIncludePath = (Twine(env::getHIPPath()) + "/include").str();
   // HIP headers depend on hsa.h which is in ROCM_DIR/include.
   ROCMIncludePath = (Twine(env::getROCMPath()) + "/include").str();
-  ClangIncludePath = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING).str();
-  ClangIncludePath2 = (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING + "/include").str();
+  ClangIncludePath =
+      (Twine(env::getLLVMPath()) + "/lib/clang/" + CLANG_VERSION_STRING).str();
+  ClangIncludePath2 = (Twine(env::getLLVMPath()) + "/lib/clang/" +
+                       CLANG_VERSION_STRING + "/include")
+                          .str();
 
   Args.push_back("-x");
 
@@ -990,7 +996,7 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   Linker L(*Composite);
   unsigned ApplicableFlags = Linker::Flags::None;
 
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_BC)
       continue;
 
@@ -1082,7 +1088,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
       continue;
 
@@ -1127,7 +1133,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
     Args.push_back(Option.c_str());
 
   SmallVector<SmallString<128>, 128> Inputs;
-  for (auto Input : InSet->DataObjects) {
+  for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
       continue;
 

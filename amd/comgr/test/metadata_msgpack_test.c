@@ -40,73 +40,73 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  char *arg = NULL;
-  long size1;
-  char *buf;
-  amd_comgr_data_t dataIn;
-  amd_comgr_status_t status;
-  amd_comgr_metadata_kind_t mkind = AMD_COMGR_METADATA_KIND_NULL;
+  char *Arg = NULL;
+  long Size1;
+  char *Buf;
+  amd_comgr_data_t DataIn;
+  amd_comgr_status_t Status;
+  amd_comgr_metadata_kind_t Mkind = AMD_COMGR_METADATA_KIND_NULL;
 
   // Read input file
-  size1 = setBuf(TEST_OBJ_DIR "/shared-v3.so", &buf);
+  Size1 = setBuf(TEST_OBJ_DIR "/shared-v3.so", &Buf);
 
   // Create data object
   {
     printf("Test create input data object\n");
 
-    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn);
-    checkError(status, "amd_comgr_create_data");
+    Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataIn);
+    checkError(Status, "amd_comgr_create_data");
 
-    status = amd_comgr_set_data(dataIn, size1, buf);
-    checkError(status, "amd_comgr_set_data");
+    Status = amd_comgr_set_data(DataIn, Size1, Buf);
+    checkError(Status, "amd_comgr_set_data");
 
-    status = amd_comgr_set_data_name(dataIn, arg);
-    checkError(status, "amd_comgr_set_data_name");
+    Status = amd_comgr_set_data_name(DataIn, Arg);
+    checkError(Status, "amd_comgr_set_data_name");
   }
 
   // Get metadata from data object
   {
     printf("Get metadata from shared.so\n");
 
-    amd_comgr_metadata_node_t meta;
-    status = amd_comgr_get_data_metadata(dataIn, &meta);
-    checkError(status, "amd_comgr_get_data_metadata");
+    amd_comgr_metadata_node_t Meta;
+    Status = amd_comgr_get_data_metadata(DataIn, &Meta);
+    checkError(Status, "amd_comgr_get_data_metadata");
 
     // the root must be map
-    status = amd_comgr_get_metadata_kind(meta, &mkind);
-    checkError(status, "amd_comgr_get_metadata_kind");
-    if (mkind != AMD_COMGR_METADATA_KIND_MAP) {
+    Status = amd_comgr_get_metadata_kind(Meta, &Mkind);
+    checkError(Status, "amd_comgr_get_metadata_kind");
+    if (Mkind != AMD_COMGR_METADATA_KIND_MAP) {
       printf("Root is not map\n");
       exit(1);
     }
 
-    amd_comgr_metadata_node_t metaLookup;
-    amd_comgr_metadata_kind_t mkindLookup;
-    status = amd_comgr_metadata_lookup(meta, "amdhsa.version", &metaLookup);
-    checkError(status, "amd_comgr_metadata_lookup");
-    status = amd_comgr_get_metadata_kind(metaLookup, &mkindLookup);
-    checkError(status, "amd_comgr_get_metadata_kind");
-    if (mkindLookup != AMD_COMGR_METADATA_KIND_LIST) {
+    amd_comgr_metadata_node_t MetaLookup;
+    amd_comgr_metadata_kind_t MkindLookup;
+    Status = amd_comgr_metadata_lookup(Meta, "amdhsa.version", &MetaLookup);
+    checkError(Status, "amd_comgr_metadata_lookup");
+    Status = amd_comgr_get_metadata_kind(MetaLookup, &MkindLookup);
+    checkError(Status, "amd_comgr_get_metadata_kind");
+    if (MkindLookup != AMD_COMGR_METADATA_KIND_LIST) {
       printf("Lookup of Version should return a list\n");
       exit(1);
     }
-    status = amd_comgr_destroy_metadata(metaLookup);
-    checkError(status, "amd_comgr_destroy_metadata");
+    Status = amd_comgr_destroy_metadata(MetaLookup);
+    checkError(Status, "amd_comgr_destroy_metadata");
 
     // print code object metadata
-    int indent = 0;
-    status = amd_comgr_iterate_map_metadata(meta, printEntry, (void *)&indent);
-    checkError(status, "amd_comgr_iterate_map_metadata");
+    int Indent = 0;
+    Status = amd_comgr_iterate_map_metadata(Meta, printEntry, (void *)&Indent);
+    checkError(Status, "amd_comgr_iterate_map_metadata");
 
-    status = amd_comgr_destroy_metadata(meta);
-    checkError(status, "amd_comgr_destroy_metadata");
+    Status = amd_comgr_destroy_metadata(Meta);
+    checkError(Status, "amd_comgr_destroy_metadata");
   }
 
   {
     printf("Cleanup ...\n");
-    status = amd_comgr_release_data(dataIn);
-    checkError(status, "amd_comgr_release_data");
-    free(buf);
+    Status = amd_comgr_release_data(DataIn);
+    checkError(Status, "amd_comgr_release_data");
+    free(Buf);
   }
 
   return 0;

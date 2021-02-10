@@ -39,282 +39,282 @@
 #include <stdlib.h>
 #include <string.h>
 
-void testFlat(amd_comgr_action_info_t actionInfo, const char *options) {
-  amd_comgr_status_t status;
+void testFlat(amd_comgr_action_info_t ActionInfo, const char *Options) {
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_action_info_set_options(actionInfo, options);
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(ActionInfo, Options);
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  size_t size;
-  status = amd_comgr_action_info_get_options(actionInfo, &size, NULL);
-  checkError(status, "amd_comgr_action_info_get_options");
+  size_t Size;
+  Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
+  checkError(Status, "amd_comgr_action_info_get_options");
 
-  char *retOptions = calloc(size, sizeof(char));
-  status = amd_comgr_action_info_get_options(actionInfo, &size, retOptions);
-  checkError(status, "amd_comgr_action_info_get_options");
+  char *RetOptions = calloc(Size, sizeof(char));
+  Status = amd_comgr_action_info_get_options(ActionInfo, &Size, RetOptions);
+  checkError(Status, "amd_comgr_action_info_get_options");
 
-  if (strcmp(options, retOptions))
-    fail("incorrect options string: expected '%s', saw '%s'", options,
-         retOptions);
+  if (strcmp(Options, RetOptions))
+    fail("incorrect options string: expected '%s', saw '%s'", Options,
+         RetOptions);
 
-  free(retOptions);
+  free(RetOptions);
 }
 
 void testFlats() {
-  amd_comgr_action_info_t actionInfo;
-  amd_comgr_status_t status;
+  amd_comgr_action_info_t ActionInfo;
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_create_action_info(&actionInfo);
-  checkError(status, "amd_comgr_create_action_info");
+  Status = amd_comgr_create_action_info(&ActionInfo);
+  checkError(Status, "amd_comgr_create_action_info");
 
-  const char *options[] = {"foo", "foo bar", "bar baz qux",
+  const char *Options[] = {"foo", "foo bar", "bar baz qux",
                            "aaaaaaaaaaaaaaaaaaaaa"};
-  size_t optionsCount = sizeof(options) / sizeof(options[0]);
+  size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
-  for (size_t i = 0; i < optionsCount; ++i)
-    testFlat(actionInfo, options[i]);
+  for (size_t I = 0; I < OptionsCount; ++I)
+    testFlat(ActionInfo, Options[I]);
 
-  status = amd_comgr_destroy_action_info(actionInfo);
-  checkError(status, "amd_comgr_destroy_action_info");
+  Status = amd_comgr_destroy_action_info(ActionInfo);
+  checkError(Status, "amd_comgr_destroy_action_info");
 }
 
-void testList(amd_comgr_action_info_t actionInfo, const char *options[],
-              size_t count) {
-  size_t actualCount;
-  amd_comgr_status_t status;
+void testList(amd_comgr_action_info_t ActionInfo, const char *Options[],
+              size_t Count) {
+  size_t ActualCount;
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_action_info_set_option_list(actionInfo, options, count);
-  checkError(status, "amd_comgr_action_info_set_option_list");
+  Status = amd_comgr_action_info_set_option_list(ActionInfo, Options, Count);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
-  status =
-      amd_comgr_action_info_get_option_list_count(actionInfo, &actualCount);
-  checkError(status, "amd_comgr_action_info_get_option_list_count");
+  Status =
+      amd_comgr_action_info_get_option_list_count(ActionInfo, &ActualCount);
+  checkError(Status, "amd_comgr_action_info_get_option_list_count");
 
-  if (count != actualCount)
-    fail("incorrect option count: expected %zu, saw %zu", count, actualCount);
+  if (Count != ActualCount)
+    fail("incorrect option count: expected %zu, saw %zu", Count, ActualCount);
 
-  for (size_t i = 0; i < count; ++i) {
-    size_t size;
-    status =
-        amd_comgr_action_info_get_option_list_item(actionInfo, i, &size, NULL);
-    checkError(status, "amd_comgr_action_info_get_option_list_item");
-    char *option = calloc(size, sizeof(char));
-    status = amd_comgr_action_info_get_option_list_item(actionInfo, i, &size,
-                                                        option);
-    checkError(status, "amd_comgr_action_info_get_option_list_item");
-    if (strcmp(options[i], option))
-      fail("incorrect option string: expected '%s', saw '%s'", options[i],
-           option);
-    free(option);
+  for (size_t I = 0; I < Count; ++I) {
+    size_t Size;
+    Status =
+        amd_comgr_action_info_get_option_list_item(ActionInfo, I, &Size, NULL);
+    checkError(Status, "amd_comgr_action_info_get_option_list_item");
+    char *Option = calloc(Size, sizeof(char));
+    Status = amd_comgr_action_info_get_option_list_item(ActionInfo, I, &Size,
+                                                        Option);
+    checkError(Status, "amd_comgr_action_info_get_option_list_item");
+    if (strcmp(Options[I], Option))
+      fail("incorrect option string: expected '%s', saw '%s'", Options[I],
+           Option);
+    free(Option);
   }
 }
 
 void testLists() {
-  amd_comgr_action_info_t actionInfo;
-  amd_comgr_status_t status;
+  amd_comgr_action_info_t ActionInfo;
+  amd_comgr_status_t Status;
 
-  status = amd_comgr_create_action_info(&actionInfo);
-  checkError(status, "amd_comgr_create_action_info");
+  Status = amd_comgr_create_action_info(&ActionInfo);
+  checkError(Status, "amd_comgr_create_action_info");
 
-  const char *options[] = {"foo", "bar", "bazqux", "aaaaaaaaaaaaaaaaaaaaa"};
-  size_t optionsCount = sizeof(options) / sizeof(options[0]);
+  const char *Options[] = {"foo", "bar", "bazqux", "aaaaaaaaaaaaaaaaaaaaa"};
+  size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
-  for (size_t i = 0; i <= optionsCount; ++i)
-    for (size_t j = 0; i + j <= optionsCount; ++j)
-      testList(actionInfo, options + i, j);
+  for (size_t I = 0; I <= OptionsCount; ++I)
+    for (size_t J = 0; I + J <= OptionsCount; ++J)
+      testList(ActionInfo, Options + I, J);
 
-  status = amd_comgr_destroy_action_info(actionInfo);
-  checkError(status, "amd_comgr_destroy_action_info");
+  Status = amd_comgr_destroy_action_info(ActionInfo);
+  checkError(Status, "amd_comgr_destroy_action_info");
 }
 
 void testMixed() {
-  amd_comgr_action_info_t actionInfo;
-  amd_comgr_status_t status;
-  size_t size;
+  amd_comgr_action_info_t ActionInfo;
+  amd_comgr_status_t Status;
+  size_t Size;
 
-  status = amd_comgr_create_action_info(&actionInfo);
-  checkError(status, "amd_comgr_create_action_info");
+  Status = amd_comgr_create_action_info(&ActionInfo);
+  checkError(Status, "amd_comgr_create_action_info");
 
   // Confirm the default is the legacy flat options string.
-  status = amd_comgr_action_info_get_options(actionInfo, &size, NULL);
-  if (status != AMD_COMGR_STATUS_SUCCESS)
+  Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
     fail("expected new action_info to default to a flat options string, but "
          "amd_comgr_action_info_get_options fails");
 
-  status = amd_comgr_action_info_get_option_list_count(actionInfo, &size);
-  if (status != AMD_COMGR_STATUS_ERROR)
+  Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
+  if (Status != AMD_COMGR_STATUS_ERROR)
     fail("expected new action_info to default to a flat options string, but "
          "amd_comgr_action_info_get_option_list_count does not fail");
 
   // Confirm the inverse: if we set using a list, we should not be able to
   // access as if it were flat.
-  status = amd_comgr_action_info_set_option_list(actionInfo, NULL, 0);
-  checkError(status, "amd_comgr_action_info_set_option_list");
+  Status = amd_comgr_action_info_set_option_list(ActionInfo, NULL, 0);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
-  status = amd_comgr_action_info_get_options(actionInfo, &size, NULL);
-  if (status != AMD_COMGR_STATUS_ERROR)
+  Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
+  if (Status != AMD_COMGR_STATUS_ERROR)
     fail("amd_comgr_action_info_get_options does not fail with list options");
 
-  status = amd_comgr_action_info_get_option_list_count(actionInfo, &size);
-  if (status != AMD_COMGR_STATUS_SUCCESS)
+  Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
     fail("amd_comgr_action_info_get_option_list_count fails with list options");
 
   // Also confirm we can switch back to flat.
-  status = amd_comgr_action_info_set_options(actionInfo, "");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(ActionInfo, "");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_action_info_get_options(actionInfo, &size, NULL);
-  if (status != AMD_COMGR_STATUS_SUCCESS)
+  Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
+  if (Status != AMD_COMGR_STATUS_SUCCESS)
     fail("amd_comgr_action_info_get_options fails with flat options string");
 
-  status = amd_comgr_action_info_get_option_list_count(actionInfo, &size);
-  if (status != AMD_COMGR_STATUS_ERROR)
+  Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
+  if (Status != AMD_COMGR_STATUS_ERROR)
     fail("amd_comgr_action_info_get_option_list_count does not fail with flat "
          "options string");
 
-  status = amd_comgr_destroy_action_info(actionInfo);
-  checkError(status, "amd_comgr_destroy_action_info");
+  Status = amd_comgr_destroy_action_info(ActionInfo);
+  checkError(Status, "amd_comgr_destroy_action_info");
 }
 
 void testFlatSplitting() {
-  char *bufSource, *bufInclude;
-  size_t sizeSource, sizeInclude;
-  amd_comgr_data_t dataSource, dataInclude;
-  amd_comgr_data_set_t dataSetIn, dataSetBC, dataSetDevLibs;
-  amd_comgr_action_info_t dataAction;
-  amd_comgr_status_t status;
+  char *BufSource, *BufInclude;
+  size_t SizeSource, SizeInclude;
+  amd_comgr_data_t DataSource, DataInclude;
+  amd_comgr_data_set_t DataSetIn, DataSetBc, DataSetDevLibs;
+  amd_comgr_action_info_t DataAction;
+  amd_comgr_status_t Status;
 
-  sizeSource = setBuf(TEST_OBJ_DIR "/source1.cl", &bufSource);
-  sizeInclude = setBuf(TEST_OBJ_DIR "/include-a.h", &bufInclude);
+  SizeSource = setBuf(TEST_OBJ_DIR "/source1.cl", &BufSource);
+  SizeInclude = setBuf(TEST_OBJ_DIR "/include-a.h", &BufInclude);
 
-  status = amd_comgr_create_data_set(&dataSetIn);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetIn);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &dataSource);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataSource, sizeSource, bufSource);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataSource, "source1.cl");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataSource);
-  checkError(status, "amd_comgr_data_set_add");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource);
+  checkError(Status, "amd_comgr_create_data");
+  Status = amd_comgr_set_data(DataSource, SizeSource, BufSource);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataSource, "source1.cl");
+  checkError(Status, "amd_comgr_set_data_name");
+  Status = amd_comgr_data_set_add(DataSetIn, DataSource);
+  checkError(Status, "amd_comgr_data_set_add");
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_INCLUDE, &dataInclude);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataInclude, sizeInclude, bufInclude);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataInclude, "include-a.h");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataInclude);
-  checkError(status, "amd_comgr_data_set_add");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_INCLUDE, &DataInclude);
+  checkError(Status, "amd_comgr_create_data");
+  Status = amd_comgr_set_data(DataInclude, SizeInclude, BufInclude);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataInclude, "include-a.h");
+  checkError(Status, "amd_comgr_set_data_name");
+  Status = amd_comgr_data_set_add(DataSetIn, DataInclude);
+  checkError(Status, "amd_comgr_data_set_add");
 
-  status = amd_comgr_create_action_info(&dataAction);
-  checkError(status, "amd_comgr_create_action_info");
-  status = amd_comgr_action_info_set_language(dataAction,
+  Status = amd_comgr_create_action_info(&DataAction);
+  checkError(Status, "amd_comgr_create_action_info");
+  Status = amd_comgr_action_info_set_language(DataAction,
                                               AMD_COMGR_LANGUAGE_OPENCL_1_2);
-  checkError(status, "amd_comgr_action_info_set_language");
-  status = amd_comgr_action_info_set_isa_name(dataAction,
+  checkError(Status, "amd_comgr_action_info_set_language");
+  Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx803");
-  checkError(status, "amd_comgr_action_info_set_isa_name");
+  checkError(Status, "amd_comgr_action_info_set_isa_name");
 
   // Confirm we get space-delimited for non-device-libs actions
 
   // Check with empty string
-  status = amd_comgr_create_data_set(&dataSetBC);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetBc);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction, "");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(DataAction, "");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
-                               dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+                               DataAction, DataSetIn, DataSetBc);
+  checkError(Status, "amd_comgr_do_action_compile_source_to_bc");
 
-  status = amd_comgr_destroy_data_set(dataSetBC);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetBc);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
   // Check with a single option
-  status = amd_comgr_create_data_set(&dataSetBC);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetBc);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction, "-O3");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(DataAction, "-O3");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
-                               dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+                               DataAction, DataSetIn, DataSetBc);
+  checkError(Status, "amd_comgr_do_action_compile_source_to_bc");
 
-  status = amd_comgr_destroy_data_set(dataSetBC);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetBc);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
   // Check with a multiple options
-  status = amd_comgr_create_data_set(&dataSetBC);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetBc);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction,
+  Status = amd_comgr_action_info_set_options(DataAction,
                                              "-mllvm -amdgpu-early-inline-all");
-  checkError(status, "amd_comgr_action_info_set_options");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
-                               dataAction, dataSetIn, dataSetBC);
-  checkError(status, "amd_comgr_do_action_compile_source_to_bc");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+                               DataAction, DataSetIn, DataSetBc);
+  checkError(Status, "amd_comgr_do_action_compile_source_to_bc");
 
   // Confirm we get comma-delimited for the device-libs action
 
   // Check with empty string
-  status = amd_comgr_create_data_set(&dataSetDevLibs);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetDevLibs);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction, "");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(DataAction, "");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
-                               dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action_add_device_libraries 0");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
+                               DataAction, DataSetBc, DataSetDevLibs);
+  checkError(Status, "amd_comgr_do_action_add_device_libraries 0");
 
-  status = amd_comgr_destroy_data_set(dataSetDevLibs);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetDevLibs);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
   // Check with a single option
-  status = amd_comgr_create_data_set(&dataSetDevLibs);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetDevLibs);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status = amd_comgr_action_info_set_options(dataAction, "finite_only");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status = amd_comgr_action_info_set_options(DataAction, "finite_only");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
-                               dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action_add_device_libraries 1");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
+                               DataAction, DataSetBc, DataSetDevLibs);
+  checkError(Status, "amd_comgr_do_action_add_device_libraries 1");
 
-  status = amd_comgr_destroy_data_set(dataSetDevLibs);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetDevLibs);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
   // Check with multiple options
-  status = amd_comgr_create_data_set(&dataSetDevLibs);
-  checkError(status, "amd_comgr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetDevLibs);
+  checkError(Status, "amd_comgr_create_data_set");
 
-  status =
-      amd_comgr_action_info_set_options(dataAction, "finite_only,unsafe_math");
-  checkError(status, "amd_comgr_action_info_set_options");
+  Status =
+      amd_comgr_action_info_set_options(DataAction, "finite_only,unsafe_math");
+  checkError(Status, "amd_comgr_action_info_set_options");
 
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
-                               dataAction, dataSetBC, dataSetDevLibs);
-  checkError(status, "amd_comgr_do_action_add_device_libraries 2");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
+                               DataAction, DataSetBc, DataSetDevLibs);
+  checkError(Status, "amd_comgr_do_action_add_device_libraries 2");
 
-  status = amd_comgr_release_data(dataSource);
-  checkError(status, "amd_comgr_release_data");
-  status = amd_comgr_release_data(dataInclude);
-  checkError(status, "amd_comgr_release_data");
-  status = amd_comgr_destroy_data_set(dataSetIn);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetBC);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetDevLibs);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_action_info(dataAction);
-  checkError(status, "amd_comgr_destroy_action_info");
-  free(bufSource);
-  free(bufInclude);
+  Status = amd_comgr_release_data(DataSource);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DataInclude);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_destroy_data_set(DataSetIn);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetBc);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetDevLibs);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_action_info(DataAction);
+  checkError(Status, "amd_comgr_destroy_action_info");
+  free(BufSource);
+  free(BufInclude);
 }
 
 int main(int argc, char *argv[]) {

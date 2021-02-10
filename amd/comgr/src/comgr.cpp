@@ -107,7 +107,7 @@ dispatchDisassembleAction(amd_comgr_action_kind_t ActionKind,
   Options.insert(Options.end(), ActionOptions.begin(), ActionOptions.end());
   // Loop through the input data set, perform actions and add result
   // to output data set.
-  for (auto Input : Objects) {
+  for (auto *Input : Objects) {
     if (auto Status = Helper.disassembleAction(
             StringRef(Input->Data, Input->Size), Options))
       return Status;
@@ -328,7 +328,7 @@ void COMGR::ensureLLVMInitialized() {
 
 void COMGR::clearLLVMOptions() {
   cl::ResetAllOptionOccurrences();
-  for (auto SC : cl::getRegisteredSubcommands()) {
+  for (auto *SC : cl::getRegisteredSubcommands()) {
     for (auto &OM : SC->OptionsMap) {
       cl::Option *O = OM.second;
       O->setDefault();
@@ -450,13 +450,12 @@ ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
   if (DocNode.isScalar())
     return AMD_COMGR_METADATA_KIND_STRING;
-  else if (DocNode.isArray())
+  if (DocNode.isArray())
     return AMD_COMGR_METADATA_KIND_LIST;
-  else if (DocNode.isMap())
+  if (DocNode.isMap())
     return AMD_COMGR_METADATA_KIND_MAP;
-  else
-    // treat as NULL
-    return AMD_COMGR_METADATA_KIND_NULL;
+  // treat as NULL
+  return AMD_COMGR_METADATA_KIND_NULL;
 }
 
 std::string DataMeta::convertDocNodeToString(msgpack::DocNode DocNode) {

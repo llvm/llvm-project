@@ -41,27 +41,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-const int expectedUserData;
+const int ExpectedUserData;
 
-void checkUserData(void *userData) {
-  if (userData != (void *)&expectedUserData)
+void checkUserData(void *UserData) {
+  if (UserData != (void *)&ExpectedUserData)
     fail("user_data changed");
 }
 
-const char *skipspace(const char *s) {
-  while (isspace(*s))
-    ++s;
-  return s;
+const char *skipspace(const char *S) {
+  while (isspace(*S))
+    ++S;
+  return S;
 }
 
-size_t strlenWithoutTrailingWhitespace(const char *s) {
-  size_t i = strlen(s);
-  while (i && isspace(s[--i]))
+size_t strlenWithoutTrailingWhitespace(const char *S) {
+  size_t I = strlen(S);
+  while (I && isspace(S[--I]))
     ;
-  return i + 1;
+  return I + 1;
 }
 
-const char program[] = {
+const char Program[] = {
     '\x02', '\x00', '\x06', '\xC0', '\x00', '\x00', '\x00', '\x00', '\x7f',
     '\xC0', '\x8c', '\xbf', '\x00', '\x80', '\x12', '\xbf', '\x05', '\x00',
     '\x85', '\xbf', '\x00', '\x02', '\x00', '\x7e', '\xc0', '\x02', '\x04',
@@ -69,7 +69,7 @@ const char program[] = {
     '\x00', '\x02', '\x7f', '\x00', '\x00', '\x00', '\x81', '\xbf',
 };
 
-const char *instructions[] = {
+const char *Instructions[] = {
     "s_load_dwordx2 s[0:1], s[4:5], 0x0",
     "s_waitcnt lgkmcnt(0)",
     "s_cmp_eq_u64 s[0:1], 0",
@@ -80,76 +80,76 @@ const char *instructions[] = {
     "global_store_dword v[0:1], v2, off",
     "s_endpgm",
 };
-const size_t instructionsLen = sizeof(instructions) / sizeof(*instructions);
-size_t instructionsIdx = 0;
-const size_t brInstructionIdx = 3;
-const size_t brInstructionAddr = 40;
+const size_t InstructionsLen = sizeof(Instructions) / sizeof(*Instructions);
+size_t InstructionsIdx = 0;
+const size_t BrInstructionIdx = 3;
+const size_t BrInstructionAddr = 40;
 
-uint64_t readMemoryCallback(uint64_t from, char *to, uint64_t size,
-                            void *userData) {
-  checkUserData(userData);
-  if (from >= sizeof(program))
+uint64_t readMemoryCallback(uint64_t From, char *To, uint64_t Size,
+                            void *UserData) {
+  checkUserData(UserData);
+  if (From >= sizeof(Program))
     return 0;
-  if (from + size > sizeof(program))
-    size = sizeof(program) - from;
-  memcpy(to, program + from, size);
-  return size;
+  if (From + Size > sizeof(Program))
+    Size = sizeof(Program) - From;
+  memcpy(To, Program + From, Size);
+  return Size;
 }
 
-void printInstructionCallback(const char *instruction, void *userData) {
-  checkUserData(userData);
-  if (instructionsIdx == instructionsLen)
+void printInstructionCallback(const char *Instruction, void *UserData) {
+  checkUserData(UserData);
+  if (InstructionsIdx == InstructionsLen)
     fail("too many instructions");
-  const char *expected = skipspace(instructions[instructionsIdx++]);
-  const char *actual = skipspace(instruction);
-  if (strncmp(expected, actual, strlenWithoutTrailingWhitespace(actual)))
-    fail("incorrect instruction: expected '%s', actual '%s'", expected, actual);
+  const char *Expected = skipspace(Instructions[InstructionsIdx++]);
+  const char *Actual = skipspace(Instruction);
+  if (strncmp(Expected, Actual, strlenWithoutTrailingWhitespace(Actual)))
+    fail("incorrect instruction: expected '%s', actual '%s'", Expected, Actual);
 }
 
-void printAddressCallback(uint64_t address, void *userData) {
-  checkUserData(userData);
-  size_t actualIdx = instructionsIdx - 1;
-  if (actualIdx != brInstructionIdx)
+void printAddressCallback(uint64_t Address, void *UserData) {
+  checkUserData(UserData);
+  size_t ActualIdx = InstructionsIdx - 1;
+  if (ActualIdx != BrInstructionIdx)
     fail("absolute address resolved for instruction index %zu, expected index "
          "%zu",
-         instructionsIdx, brInstructionIdx);
-  if (address != brInstructionAddr)
+         InstructionsIdx, BrInstructionIdx);
+  if (Address != BrInstructionAddr)
     fail("incorrect absolute address %u resolved for instruction index %zu, "
          "expected %u",
-         address, actualIdx, brInstructionAddr);
+         Address, ActualIdx, BrInstructionAddr);
 }
 
 int main(int argc, char *argv[]) {
-  amd_comgr_status_t status;
+  amd_comgr_status_t Status;
 
-  amd_comgr_disassembly_info_t disassemblyInfo;
+  amd_comgr_disassembly_info_t DisassemblyInfo;
 
-  status = amd_comgr_create_disassembly_info(
+  Status = amd_comgr_create_disassembly_info(
       "amdgcn-amd-amdhsa--gfx900", &readMemoryCallback,
-      &printInstructionCallback, &printAddressCallback, &disassemblyInfo);
-  checkError(status, "amd_comgr_create_disassembly_info");
+      &printInstructionCallback, &printAddressCallback, &DisassemblyInfo);
+  checkError(Status, "amd_comgr_create_disassembly_info");
 
-  uint64_t addr = 0;
-  uint64_t size = 0;
-  while (status == AMD_COMGR_STATUS_SUCCESS && addr < sizeof(program)) {
-    status = amd_comgr_disassemble_instruction(
-        disassemblyInfo, addr, (void *)&expectedUserData, &size);
-    checkError(status, "amd_comgr_disassemble_instruction");
-    addr += size;
+  uint64_t Addr = 0;
+  uint64_t Size = 0;
+  while (Status == AMD_COMGR_STATUS_SUCCESS && Addr < sizeof(Program)) {
+    Status = amd_comgr_disassemble_instruction(
+        DisassemblyInfo, Addr, (void *)&ExpectedUserData, &Size);
+    checkError(Status, "amd_comgr_disassemble_instruction");
+    Addr += Size;
   }
 
-  if (instructionsIdx != instructionsLen)
+  if (InstructionsIdx != InstructionsLen)
     fail("too few instructions\n");
 
-  addr = sizeof(program) - 1;
-  size = 0;
-  status = amd_comgr_disassemble_instruction(disassemblyInfo, addr,
-                                             (void *)&expectedUserData, &size);
-  if (status != AMD_COMGR_STATUS_ERROR)
+  Addr = sizeof(Program) - 1;
+  Size = 0;
+  Status = amd_comgr_disassemble_instruction(DisassemblyInfo, Addr,
+                                             (void *)&ExpectedUserData, &Size);
+  if (Status != AMD_COMGR_STATUS_ERROR)
     fail("successfully disassembled invalid instruction encoding");
 
-  status = amd_comgr_destroy_disassembly_info(disassemblyInfo);
-  checkError(status, "amd_comgr_destroy_disassembly_info");
+  Status = amd_comgr_destroy_disassembly_info(DisassemblyInfo);
+  checkError(Status, "amd_comgr_destroy_disassembly_info");
 
   return EXIT_SUCCESS;
 }

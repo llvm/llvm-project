@@ -40,29 +40,29 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  amd_comgr_status_t status;
+  amd_comgr_status_t Status;
 
   // how many isa_names do we support?
-  size_t isaCounts;
-  status = amd_comgr_get_isa_count(&isaCounts);
-  checkError(status, "amd_comgr_get_isa_count");
-  printf("isa count = %zu\n\n", isaCounts);
+  size_t IsaCounts;
+  Status = amd_comgr_get_isa_count(&IsaCounts);
+  checkError(Status, "amd_comgr_get_isa_count");
+  printf("isa count = %zu\n\n", IsaCounts);
 
   // print the list
   printf("*** List of ISA names supported:\n");
-  for (size_t i = 0; i < isaCounts; i++) {
-    const char *name;
-    status = amd_comgr_get_isa_name(i, &name);
-    checkError(status, "amd_comgr_get_isa_name");
-    printf("%zu: %s\n", i, name);
-    amd_comgr_metadata_node_t meta;
-    status = amd_comgr_get_isa_metadata(name, &meta);
-    checkError(status, "amd_comgr_get_isa_metadata");
-    int indent = 1;
-    status = amd_comgr_iterate_map_metadata(meta, printEntry, (void *)&indent);
-    checkError(status, "amd_comgr_iterate_map_metadata");
-    status = amd_comgr_destroy_metadata(meta);
-    checkError(status, "amd_comgr_destroy_metadata");
+  for (size_t I = 0; I < IsaCounts; I++) {
+    const char *Name;
+    Status = amd_comgr_get_isa_name(I, &Name);
+    checkError(Status, "amd_comgr_get_isa_name");
+    printf("%zu: %s\n", I, Name);
+    amd_comgr_metadata_node_t Meta;
+    Status = amd_comgr_get_isa_metadata(Name, &Meta);
+    checkError(Status, "amd_comgr_get_isa_metadata");
+    int Indent = 1;
+    Status = amd_comgr_iterate_map_metadata(Meta, printEntry, (void *)&Indent);
+    checkError(Status, "amd_comgr_iterate_map_metadata");
+    Status = amd_comgr_destroy_metadata(Meta);
+    checkError(Status, "amd_comgr_destroy_metadata");
   }
 
   return 0;

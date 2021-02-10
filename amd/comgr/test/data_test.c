@@ -40,47 +40,47 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  long size1;
-  char *buf;
-  amd_comgr_data_t dataObject, dataObject2, dataObject3;
-  amd_comgr_data_set_t dataSet;
-  amd_comgr_status_t status;
-  size_t count;
+  long Size1;
+  char *Buf;
+  amd_comgr_data_t DataObject, DataObject2, DataObject3;
+  amd_comgr_data_set_t DataSet;
+  amd_comgr_status_t Status;
+  size_t Count;
 
   // Read input file
-  size1 = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
+  Size1 = setBuf(TEST_OBJ_DIR "/shared.so", &Buf);
 
   // Create data object
   {
     printf("Test 1 ...\n");
 
-    status =
-        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataObject);
-    checkError(status, "amd_comgr_create_data");
+    Status =
+        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataObject);
+    checkError(Status, "amd_comgr_create_data");
 
-    status = amd_comgr_set_data(dataObject, size1, buf);
-    checkError(status, "amd_comgr_set_data");
+    Status = amd_comgr_set_data(DataObject, Size1, Buf);
+    checkError(Status, "amd_comgr_set_data");
   }
 
   {
     printf("Test 2 ...\n");
-    status = amd_comgr_set_data_name(dataObject, "DO1");
-    checkError(status, "amd_comgr_set_data_name");
+    Status = amd_comgr_set_data_name(DataObject, "DO1");
+    checkError(Status, "amd_comgr_set_data_name");
 
-    size_t size;
-    char name[10];
-    status = amd_comgr_get_data_name(dataObject, &size, NULL);
-    checkError(status, "amd_comgr_get_data_name");
-    if (size != strlen("DO1") + 1) {
+    size_t Size;
+    char Name[10];
+    Status = amd_comgr_get_data_name(DataObject, &Size, NULL);
+    checkError(Status, "amd_comgr_get_data_name");
+    if (Size != strlen("DO1") + 1) {
       printf("FAILED_2a:\n");
-      printf("  amd_comgr_get_data_name size = %ld\n", size);
+      printf("  amd_comgr_get_data_name size = %ld\n", Size);
       printf("  expected size = %ld\n", strlen("DO1"));
     }
-    status = amd_comgr_get_data_name(dataObject, &size, &name[0]);
-    checkError(status, "amd_comgr_get_data_name");
-    if (strcmp(name, "DO1")) {
+    Status = amd_comgr_get_data_name(DataObject, &Size, &Name[0]);
+    checkError(Status, "amd_comgr_get_data_name");
+    if (strcmp(Name, "DO1")) {
       printf("FAILED_2b:\n");
-      printf("   amd_comgr_get_data_name name = %s\n", &name[0]);
+      printf("   amd_comgr_get_data_name name = %s\n", &Name[0]);
       printf("   expected name = DO1\n");
     }
   }
@@ -89,61 +89,61 @@ int main(int argc, char *argv[]) {
     printf("Test 3 ...\n");
 
     // Add data object 1
-    status = amd_comgr_create_data_set(&dataSet);
-    checkError(status, "amd_cogmr_create_data_set");
+    Status = amd_comgr_create_data_set(&DataSet);
+    checkError(Status, "amd_cogmr_create_data_set");
 
     // Add data object
-    status = amd_comgr_data_set_add(dataSet, dataObject);
-    checkError(status, "amd_cogmr_data_set_add");
+    Status = amd_comgr_data_set_add(DataSet, DataObject);
+    checkError(Status, "amd_cogmr_data_set_add");
 
     // Add data object 2
-    status =
-        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataObject2);
-    checkError(status, "amd_comgr_create_data_2");
-    status = amd_comgr_set_data(dataObject2, size1, buf); // Use the same data
-    checkError(status, "amd_comgr_set_data_2");
-    status = amd_comgr_set_data_name(dataObject2, "DO2");
-    checkError(status, "amd_comgr_set_data_name_2");
-    status = amd_comgr_data_set_add(dataSet, dataObject2);
-    checkError(status, "amd_cogmr_data_set_add_2");
+    Status =
+        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataObject2);
+    checkError(Status, "amd_comgr_create_data_2");
+    Status = amd_comgr_set_data(DataObject2, Size1, Buf); // Use the same data
+    checkError(Status, "amd_comgr_set_data_2");
+    Status = amd_comgr_set_data_name(DataObject2, "DO2");
+    checkError(Status, "amd_comgr_set_data_name_2");
+    Status = amd_comgr_data_set_add(DataSet, DataObject2);
+    checkError(Status, "amd_cogmr_data_set_add_2");
 
     // Add data object 3
-    status =
-        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataObject3);
-    checkError(status, "amd_comgr_create_data_3");
-    status = amd_comgr_set_data(dataObject3, size1, buf); // Use the same data
-    checkError(status, "amd_comgr_set_data_3");
-    status = amd_comgr_set_data_name(dataObject3, "DO3");
-    checkError(status, "amd_comgr_set_data_name_3");
-    status = amd_comgr_data_set_add(dataSet, dataObject3);
-    checkError(status, "amd_cogmr_data_set_add_3");
+    Status =
+        amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataObject3);
+    checkError(Status, "amd_comgr_create_data_3");
+    Status = amd_comgr_set_data(DataObject3, Size1, Buf); // Use the same data
+    checkError(Status, "amd_comgr_set_data_3");
+    Status = amd_comgr_set_data_name(DataObject3, "DO3");
+    checkError(Status, "amd_comgr_set_data_name_3");
+    Status = amd_comgr_data_set_add(DataSet, DataObject3);
+    checkError(Status, "amd_cogmr_data_set_add_3");
 
-    status = amd_comgr_action_data_count(
-        dataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &count);
-    checkError(status, "amd_comgr_action_data_count");
-    if (count != 3) {
+    Status = amd_comgr_action_data_count(
+        DataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+    if (Count != 3) {
       printf("FAILED_3a:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", count);
+      printf("   amd_comgr_action_data_count = %ld\n", Count);
       printf("   expected count = 3\n");
     }
 
-    amd_comgr_data_t data2;
-    status = amd_comgr_action_data_get_data(
-        dataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, 2, &data2);
-    checkError(status, "amd_comgr_action_data_get_data");
-    size_t size2;
-    char name2[10];
-    status = amd_comgr_get_data_name(data2, &size2, NULL);
-    checkError(status, "amd_comgr_get_data_name");
-    status = amd_comgr_get_data_name(data2, &size2, &name2[0]);
-    if (strcmp(name2, "DO3")) {
+    amd_comgr_data_t Data2;
+    Status = amd_comgr_action_data_get_data(
+        DataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, 2, &Data2);
+    checkError(Status, "amd_comgr_action_data_get_data");
+    size_t Size2;
+    char Name2[10];
+    Status = amd_comgr_get_data_name(Data2, &Size2, NULL);
+    checkError(Status, "amd_comgr_get_data_name");
+    Status = amd_comgr_get_data_name(Data2, &Size2, &Name2[0]);
+    if (strcmp(Name2, "DO3")) {
       printf("FAILED_3b:\n");
-      printf("   amd_comgr_get_data_name name_2 = %s\n", &name2[0]);
+      printf("   amd_comgr_get_data_name name_2 = %s\n", &Name2[0]);
       printf("   expected name = DO2\n");
     }
 
     // dataObject1, dataObject2 has refcount = 2, dataObject3 has refcount = 3.
-    amd_comgr_release_data(data2);
+    amd_comgr_release_data(Data2);
     // dataObject1, dataObject2 has refcount = 2, dataObject3 has refcount = 2.
   }
 
@@ -151,58 +151,58 @@ int main(int argc, char *argv[]) {
     printf("Test 4 ...\n");
 
     // Remove data object.
-    status = amd_comgr_data_set_remove(dataSet, AMD_COMGR_DATA_KIND_EXECUTABLE);
-    checkError(status, "amd_cogmr_data_set_remove"); // nothing to remove
-    status = amd_comgr_action_data_count(
-        dataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &count);
-    checkError(status, "amd_comgr_action_data_count");
-    if (count != 3) {
+    Status = amd_comgr_data_set_remove(DataSet, AMD_COMGR_DATA_KIND_EXECUTABLE);
+    checkError(Status, "amd_cogmr_data_set_remove"); // nothing to remove
+    Status = amd_comgr_action_data_count(
+        DataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+    if (Count != 3) {
       printf("FAILED_4a:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", count);
+      printf("   amd_comgr_action_data_count = %ld\n", Count);
       printf("   expected count = 3\n");
     }
 
-    status =
-        amd_comgr_data_set_remove(dataSet, AMD_COMGR_DATA_KIND_RELOCATABLE);
-    checkError(status, "amd_cogmr_data_set_remove_2");
-    status = amd_comgr_action_data_count(
-        dataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &count);
-    checkError(status, "amd_comgr_action_data_count");
-    if (count != 0) {
+    Status =
+        amd_comgr_data_set_remove(DataSet, AMD_COMGR_DATA_KIND_RELOCATABLE);
+    checkError(Status, "amd_cogmr_data_set_remove_2");
+    Status = amd_comgr_action_data_count(
+        DataSet, AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+    if (Count != 0) {
       printf("FAILED_4b:\n");
-      printf("   amd_comgr_action_data_count = %ld\n", count);
+      printf("   amd_comgr_action_data_count = %ld\n", Count);
       printf("   expected count = 1\n");
     }
 
     // dataObject1, dataObject2 has refcount = 1, dataObject3 has refcount = 1.
 
-    amd_comgr_data_kind_t kind2;
-    status = amd_comgr_get_data_kind(dataObject, &kind2);
-    checkError(status, "amd_cogmr_get_data_kind");
-    if (kind2 != AMD_COMGR_DATA_KIND_RELOCATABLE) {
+    amd_comgr_data_kind_t Kind2;
+    Status = amd_comgr_get_data_kind(DataObject, &Kind2);
+    checkError(Status, "amd_cogmr_get_data_kind");
+    if (Kind2 != AMD_COMGR_DATA_KIND_RELOCATABLE) {
       printf("FAILED_4c:\n");
-      printf("  amd_comgr_get_data_kind kind = %d\n", kind2);
+      printf("  amd_comgr_get_data_kind kind = %d\n", Kind2);
     }
 
     // insert 3 items back into set
-    status = amd_comgr_data_set_add(dataSet, dataObject);
-    status = amd_comgr_data_set_add(dataSet, dataObject2);
-    status = amd_comgr_data_set_add(dataSet, dataObject3);
+    Status = amd_comgr_data_set_add(DataSet, DataObject);
+    Status = amd_comgr_data_set_add(DataSet, DataObject2);
+    Status = amd_comgr_data_set_add(DataSet, DataObject3);
 
     // Destroy data set, amd_comgr_release_data to be called also
-    status = amd_comgr_destroy_data_set(dataSet);
-    checkError(status, "amd_comgr_destroy_data_set");
+    Status = amd_comgr_destroy_data_set(DataSet);
+    checkError(Status, "amd_comgr_destroy_data_set");
   }
 
   {
     printf("Cleanup ...\n");
-    status = amd_comgr_release_data(dataObject);
-    checkError(status, "amd_comgr_release_data");
-    status = amd_comgr_release_data(dataObject2);
-    checkError(status, "amd_comgr_release_data");
-    status = amd_comgr_release_data(dataObject3);
-    checkError(status, "amd_comgr_release_data");
-    free(buf);
+    Status = amd_comgr_release_data(DataObject);
+    checkError(Status, "amd_comgr_release_data");
+    Status = amd_comgr_release_data(DataObject2);
+    checkError(Status, "amd_comgr_release_data");
+    Status = amd_comgr_release_data(DataObject3);
+    checkError(Status, "amd_comgr_release_data");
+    free(Buf);
   }
 
   return 0;

@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *expectedOut = "\n"
+const char *ExpectedOut = "\n"
                           ":\tfile format elf64-amdgpu\n"
                           "\n"
                           "Disassembly of section .text:\n"
@@ -60,7 +60,7 @@ const char *expectedOut = "\n"
                           "          // 000000000020: BF810000 \n";
 
 // TODO: Fix Options
-const char *expectedLog =
+const char *ExpectedLog =
     ": Unknown command line argument '-file-header'.  Try: ' --help'\n"
     ": Did you mean '--file-headers'?\n"
     ": Unknown command line argument '-file headers'.  Try: ' --help'\n"
@@ -68,124 +68,124 @@ const char *expectedLog =
     ": Unknown command line argument '-file\\headers'.  Try: ' --help'\n"
     ": Did you mean '--file-headers'?\n";
 
-void printChars(const char *bytes, size_t count) {
-  for (size_t i = 0; i < count; i++)
-    printf("%c", bytes[i]);
+void printChars(const char *Bytes, size_t Count) {
+  for (size_t I = 0; I < Count; I++)
+    printf("%c", Bytes[I]);
 }
 
-void expect(const char *expected, const char *actual, size_t count) {
-  if (strlen(expected) != count || strncmp(expected, actual, count)) {
+void expect(const char *Expected, const char *Actual, size_t Count) {
+  if (strlen(Expected) != Count || strncmp(Expected, Actual, Count)) {
     printf("FAILED: unexpected output\n");
     printf("expected:\n");
-    printf("%s", expected);
+    printf("%s", Expected);
     printf("actual:\n");
-    printChars(actual, count);
+    printChars(Actual, Count);
     exit(1);
   }
 }
 
 int main(int argc, char *argv[]) {
-  size_t size;
-  char *buf;
-  char *bytes;
-  amd_comgr_data_t dataIn, dataOut;
-  amd_comgr_data_set_t dataSetIn, dataSetOut;
-  amd_comgr_action_info_t dataAction;
-  amd_comgr_status_t status;
-  const char *disAsmOptions[] = {"-file-headers", "-file-header",
+  size_t Size;
+  char *Buf;
+  char *Bytes;
+  amd_comgr_data_t DataIn, DataOut;
+  amd_comgr_data_set_t DataSetIn, DataSetOut;
+  amd_comgr_action_info_t DataAction;
+  amd_comgr_status_t Status;
+  const char *DisAsmOptions[] = {"-file-headers", "-file-header",
                                  "-file headers", "-file\\headers"};
-  size_t disAsmOptionsCount = sizeof(disAsmOptions) / sizeof(disAsmOptions[0]);
+  size_t DisAsmOptionsCount = sizeof(DisAsmOptions) / sizeof(DisAsmOptions[0]);
 
   // Read input file
-  size = setBuf(TEST_OBJ_DIR "/reloc-asm.o", &buf);
+  Size = setBuf(TEST_OBJ_DIR "/reloc-asm.o", &Buf);
 
-  status = amd_comgr_create_data_set(&dataSetIn);
-  checkError(status, "amd_cogmr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetIn);
+  checkError(Status, "amd_cogmr_create_data_set");
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataIn, size, buf);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataIn, "DO_IN");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataIn);
-  checkError(status, "amd_cogmr_data_set_add");
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &DataIn);
+  checkError(Status, "amd_comgr_create_data");
+  Status = amd_comgr_set_data(DataIn, Size, Buf);
+  checkError(Status, "amd_comgr_set_data");
+  Status = amd_comgr_set_data_name(DataIn, "DO_IN");
+  checkError(Status, "amd_comgr_set_data_name");
+  Status = amd_comgr_data_set_add(DataSetIn, DataIn);
+  checkError(Status, "amd_cogmr_data_set_add");
 
-  status = amd_comgr_create_data_set(&dataSetOut);
-  checkError(status, "amd_cogmr_create_data_set");
+  Status = amd_comgr_create_data_set(&DataSetOut);
+  checkError(Status, "amd_cogmr_create_data_set");
 
-  status = amd_comgr_create_action_info(&dataAction);
-  checkError(status, "amd_comgr_create_action_info");
-  status = amd_comgr_action_info_set_isa_name(dataAction,
+  Status = amd_comgr_create_action_info(&DataAction);
+  checkError(Status, "amd_comgr_create_action_info");
+  Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx803");
-  checkError(status, "amd_comgr_action_info_set_isa_name");
-  status = amd_comgr_action_info_set_logging(dataAction, true);
-  checkError(status, "amd_comgr_action_info_set_logging");
-  status = amd_comgr_action_info_set_option_list(dataAction, disAsmOptions,
-                                                 disAsmOptionsCount);
-  checkError(status, "amd_comgr_action_info_set_option_list");
+  checkError(Status, "amd_comgr_action_info_set_isa_name");
+  Status = amd_comgr_action_info_set_logging(DataAction, true);
+  checkError(Status, "amd_comgr_action_info_set_logging");
+  Status = amd_comgr_action_info_set_option_list(DataAction, DisAsmOptions,
+                                                 DisAsmOptionsCount);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
-  status =
+  Status =
       amd_comgr_do_action(AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE,
-                          dataAction, dataSetIn, dataSetOut);
-  checkError(status, "amd_comgr_do_action");
+                          DataAction, DataSetIn, DataSetOut);
+  checkError(Status, "amd_comgr_do_action");
 
-  status = amd_comgr_destroy_data_set(dataSetIn);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetIn);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
-  size_t count;
-  status = amd_comgr_action_data_count(dataSetOut, AMD_COMGR_DATA_KIND_SOURCE,
-                                       &count);
-  checkError(status, "amd_comgr_action_data_count");
-  if (count != 1) {
+  size_t Count;
+  Status = amd_comgr_action_data_count(DataSetOut, AMD_COMGR_DATA_KIND_SOURCE,
+                                       &Count);
+  checkError(Status, "amd_comgr_action_data_count");
+  if (Count != 1) {
     printf("wrong number of source data objects (%ld returned, expected 1)\n",
-           count);
+           Count);
     exit(1);
   }
 
-  status =
-      amd_comgr_action_data_count(dataSetOut, AMD_COMGR_DATA_KIND_LOG, &count);
-  checkError(status, "amd_comgr_action_data_count");
-  if (count != 1) {
+  Status =
+      amd_comgr_action_data_count(DataSetOut, AMD_COMGR_DATA_KIND_LOG, &Count);
+  checkError(Status, "amd_comgr_action_data_count");
+  if (Count != 1) {
     printf("wrong number of log data objects (%ld returned, expected 1)\n",
-           count);
+           Count);
     exit(1);
   }
 
-  status = amd_comgr_action_data_get_data(
-      dataSetOut, AMD_COMGR_DATA_KIND_SOURCE, 0, &dataOut);
-  checkError(status, "amd_comgr_action_data_get_data");
-  status = amd_comgr_get_data(dataOut, &count, NULL);
-  checkError(status, "amd_comgr_get_data");
-  bytes = (char *)calloc(count, sizeof(char));
-  status = amd_comgr_get_data(dataOut, &count, bytes);
-  checkError(status, "amd_comgr_get_data");
-  expect(expectedOut, bytes, count);
-  free(bytes);
-  status = amd_comgr_release_data(dataOut);
-  checkError(status, "amd_comgr_release_data");
+  Status = amd_comgr_action_data_get_data(
+      DataSetOut, AMD_COMGR_DATA_KIND_SOURCE, 0, &DataOut);
+  checkError(Status, "amd_comgr_action_data_get_data");
+  Status = amd_comgr_get_data(DataOut, &Count, NULL);
+  checkError(Status, "amd_comgr_get_data");
+  Bytes = (char *)calloc(Count, sizeof(char));
+  Status = amd_comgr_get_data(DataOut, &Count, Bytes);
+  checkError(Status, "amd_comgr_get_data");
+  expect(ExpectedOut, Bytes, Count);
+  free(Bytes);
+  Status = amd_comgr_release_data(DataOut);
+  checkError(Status, "amd_comgr_release_data");
 
-  status = amd_comgr_action_data_get_data(dataSetOut, AMD_COMGR_DATA_KIND_LOG,
-                                          0, &dataOut);
-  checkError(status, "amd_comgr_action_data_get_data");
-  status = amd_comgr_get_data(dataOut, &count, NULL);
-  checkError(status, "amd_comgr_get_data");
-  bytes = (char *)calloc(count, sizeof(char));
-  status = amd_comgr_get_data(dataOut, &count, bytes);
-  checkError(status, "amd_comgr_get_data");
-  expect(expectedLog, bytes, count);
-  free(bytes);
-  status = amd_comgr_release_data(dataOut);
-  checkError(status, "amd_comgr_release_data");
+  Status = amd_comgr_action_data_get_data(DataSetOut, AMD_COMGR_DATA_KIND_LOG,
+                                          0, &DataOut);
+  checkError(Status, "amd_comgr_action_data_get_data");
+  Status = amd_comgr_get_data(DataOut, &Count, NULL);
+  checkError(Status, "amd_comgr_get_data");
+  Bytes = (char *)calloc(Count, sizeof(char));
+  Status = amd_comgr_get_data(DataOut, &Count, Bytes);
+  checkError(Status, "amd_comgr_get_data");
+  expect(ExpectedLog, Bytes, Count);
+  free(Bytes);
+  Status = amd_comgr_release_data(DataOut);
+  checkError(Status, "amd_comgr_release_data");
 
-  status = amd_comgr_destroy_data_set(dataSetOut);
-  checkError(status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetOut);
+  checkError(Status, "amd_comgr_destroy_data_set");
 
-  status = amd_comgr_destroy_action_info(dataAction);
-  checkError(status, "amd_comgr_destroy_action_info");
-  status = amd_comgr_release_data(dataIn);
-  checkError(status, "amd_comgr_release_data");
-  free(buf);
+  Status = amd_comgr_destroy_action_info(DataAction);
+  checkError(Status, "amd_comgr_destroy_action_info");
+  Status = amd_comgr_release_data(DataIn);
+  checkError(Status, "amd_comgr_release_data");
+  free(Buf);
 
   return 0;
 }

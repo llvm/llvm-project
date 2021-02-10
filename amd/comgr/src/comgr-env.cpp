@@ -68,13 +68,15 @@ llvm::StringRef getROCMPath() {
 
 llvm::StringRef getHIPPath() {
   static const char *TempHIPPath = std::getenv("HIP_PATH");
-  static const std::string HIPPath = TempHIPPath ? TempHIPPath : (getROCMPath() + "/hip").str();
+  static const std::string HIPPath =
+      TempHIPPath ? TempHIPPath : (getROCMPath() + "/hip").str();
   return HIPPath;
 }
 
 llvm::StringRef getLLVMPath() {
   static const char *TempLLVMPath = std::getenv("LLVM_PATH");
-  static const std::string  LLVMPath = TempLLVMPath ? TempLLVMPath : (getROCMPath() + "/llvm").str();
+  static const std::string LLVMPath =
+      TempLLVMPath ? TempLLVMPath : (getROCMPath() + "/llvm").str();
   return LLVMPath;
 }
 
