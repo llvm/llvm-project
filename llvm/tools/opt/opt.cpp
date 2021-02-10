@@ -762,7 +762,10 @@ int main(int argc, char **argv) {
   if ((EnableNewPassManager && !shouldForceLegacyPM()) ||
       PassPipeline.getNumOccurrences() > 0) {
     if (AnalyzeOnly) {
-      errs() << "Cannot specify -analyze under new pass manager\n";
+      errs() << "Cannot specify -analyze under new pass manager, either "
+                "specify '-enable-new-pm=0', or use the corresponding new pass "
+                "manager pass, e.g. '-passes=print<scalar-evolution>'. For a "
+                "full list of passes, see the '--print-passes' flag.\n";
       return 1;
     }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
