@@ -513,7 +513,7 @@ private:
   /// PreambleRequest.
   mutable std::condition_variable PreambleCV;
   /// Guards the callback that publishes results of AST-related computations
-  /// (diagnostics, highlightings) and file statuses.
+  /// (diagnostics) and file statuses.
   std::mutex PublishMu;
   // Used to prevent remove document + add document races that lead to
   // out-of-order callbacks for publishing results of onMainAST callback.

@@ -1261,17 +1261,23 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
           });
     }
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
-      int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
-      bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
-      PB.registerOptimizerLastEPCallback(
-          [TrackOrigins, Recover](ModulePassManager &MPM,
-                                  PassBuilder::OptimizationLevel Level) {
-            MPM.addPass(MemorySanitizerPass({TrackOrigins, Recover, false}));
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                MemorySanitizerPass({TrackOrigins, Recover, false})));
-          });
-    }
+    auto MSanPass = [&](SanitizerMask Mask, bool CompileKernel) {
+      if (LangOpts.Sanitize.has(Mask)) {
+        int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
+        bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
+        PB.registerOptimizerLastEPCallback(
+            [CompileKernel, TrackOrigins, Recover](
+                ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(
+                  MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
+              MPM.addPass(createModuleToFunctionPassAdaptor(
+                  MemorySanitizerPass({TrackOrigins, Recover, CompileKernel})));
+            });
+      }
+    };
+    MSanPass(SanitizerKind::Memory, false);
+    MSanPass(SanitizerKind::KernelMemory, true);
+
     if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
       PB.registerOptimizerLastEPCallback(
           [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {

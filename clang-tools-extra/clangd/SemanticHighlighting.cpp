@@ -526,29 +526,6 @@ public:
 private:
   HighlightingsBuilder &H;
 };
-
-void write32be(uint32_t I, llvm::raw_ostream &OS) {
-  std::array<char, 4> Buf;
-  llvm::support::endian::write32be(Buf.data(), I);
-  OS.write(Buf.data(), Buf.size());
-}
-
-void write16be(uint16_t I, llvm::raw_ostream &OS) {
-  std::array<char, 2> Buf;
-  llvm::support::endian::write16be(Buf.data(), I);
-  OS.write(Buf.data(), Buf.size());
-}
-
-// Get the highlightings on \c Line where the first entry of line is at \c
-// StartLineIt. If it is not at \c StartLineIt an empty vector is returned.
-ArrayRef<HighlightingToken>
-takeLine(ArrayRef<HighlightingToken> AllTokens,
-         ArrayRef<HighlightingToken>::iterator StartLineIt, int Line) {
-  return ArrayRef<HighlightingToken>(StartLineIt, AllTokens.end())
-      .take_while([Line](const HighlightingToken &Token) {
-        return Token.R.start.line == Line;
-      });
-}
 } // namespace
 
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
@@ -656,64 +633,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
   }
 }
 
-std::vector<LineHighlightings>
-diffHighlightings(ArrayRef<HighlightingToken> New,
-                  ArrayRef<HighlightingToken> Old) {
-  assert(std::is_sorted(New.begin(), New.end()) &&
-         "New must be a sorted vector");
-  assert(std::is_sorted(Old.begin(), Old.end()) &&
-         "Old must be a sorted vector");
-
-  // FIXME: There's an edge case when tokens span multiple lines. If the first
-  // token on the line started on a line above the current one and the rest of
-  // the line is the equal to the previous one than we will remove all
-  // highlights but the ones for the token spanning multiple lines. This means
-  // that when we get into the LSP layer the only highlights that will be
-  // visible are the ones for the token spanning multiple lines.
-  // Example:
-  // EndOfMultilineToken  Token Token Token
-  // If "Token Token Token" don't differ from previously the line is
-  // incorrectly removed. Suggestion to fix is to separate any multiline tokens
-  // into one token for every line it covers. This requires reading from the
-  // file buffer to figure out the length of each line though.
-  std::vector<LineHighlightings> DiffedLines;
-  // ArrayRefs to the current line in the highlightings.
-  ArrayRef<HighlightingToken> NewLine(New.begin(),
-                                      /*length*/ static_cast<size_t>(0));
-  ArrayRef<HighlightingToken> OldLine(Old.begin(),
-                                      /*length*/ static_cast<size_t>(0));
-  auto NewEnd = New.end();
-  auto OldEnd = Old.end();
-  auto NextLineNumber = [&]() {
-    int NextNew = NewLine.end() != NewEnd ? NewLine.end()->R.start.line
-                                          : std::numeric_limits<int>::max();
-    int NextOld = OldLine.end() != OldEnd ? OldLine.end()->R.start.line
-                                          : std::numeric_limits<int>::max();
-    return std::min(NextNew, NextOld);
-  };
-
-  for (int LineNumber = 0; NewLine.end() < NewEnd || OldLine.end() < OldEnd;
-       LineNumber = NextLineNumber()) {
-    NewLine = takeLine(New, NewLine.end(), LineNumber);
-    OldLine = takeLine(Old, OldLine.end(), LineNumber);
-    if (NewLine != OldLine) {
-      DiffedLines.push_back({LineNumber, NewLine, /*IsInactive=*/false});
-
-      // Turn a HighlightingKind::InactiveCode token into the IsInactive flag.
-      auto &AddedLine = DiffedLines.back();
-      llvm::erase_if(AddedLine.Tokens, [&](const HighlightingToken &T) {
-        if (T.Kind == HighlightingKind::InactiveCode) {
-          AddedLine.IsInactive = true;
-          return true;
-        }
-        return false;
-      });
-    }
-  }
-
-  return DiffedLines;
-}
-
 bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
   return std::tie(L.R, L.Kind, L.Modifiers) ==
          std::tie(R.R, R.Kind, R.Modifiers);
@@ -721,9 +640,6 @@ bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
 bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
   return std::tie(L.R, L.Kind, R.Modifiers) <
          std::tie(R.R, R.Kind, R.Modifiers);
-}
-bool operator==(const LineHighlightings &L, const LineHighlightings &R) {
-  return std::tie(L.Line, L.Tokens) == std::tie(R.Line, R.Tokens);
 }
 
 std::vector<SemanticToken>
@@ -827,87 +743,6 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "globalScope"; // nonstandard
   }
   llvm_unreachable("unhandled HighlightingModifier");
-}
-
-std::vector<TheiaSemanticHighlightingInformation>
-toTheiaSemanticHighlightingInformation(
-    llvm::ArrayRef<LineHighlightings> Tokens) {
-  if (Tokens.size() == 0)
-    return {};
-
-  // FIXME: Tokens might be multiple lines long (block comments) in this case
-  // this needs to add multiple lines for those tokens.
-  std::vector<TheiaSemanticHighlightingInformation> Lines;
-  Lines.reserve(Tokens.size());
-  for (const auto &Line : Tokens) {
-    llvm::SmallVector<char> LineByteTokens;
-    llvm::raw_svector_ostream OS(LineByteTokens);
-    for (const auto &Token : Line.Tokens) {
-      // Writes the token to LineByteTokens in the byte format specified by the
-      // LSP proposal. Described below.
-      // |<---- 4 bytes ---->|<-- 2 bytes -->|<--- 2 bytes -->|
-      // |    character      |  length       |    index       |
-
-      write32be(Token.R.start.character, OS);
-      write16be(Token.R.end.character - Token.R.start.character, OS);
-      write16be(static_cast<int>(Token.Kind), OS);
-    }
-
-    Lines.push_back({Line.Line, encodeBase64(LineByteTokens), Line.IsInactive});
-  }
-
-  return Lines;
-}
-
-llvm::StringRef toTextMateScope(HighlightingKind Kind) {
-  // FIXME: Add scopes for C and Objective C.
-  switch (Kind) {
-  case HighlightingKind::Function:
-    return "entity.name.function.cpp";
-  case HighlightingKind::Method:
-    return "entity.name.function.method.cpp";
-  case HighlightingKind::StaticMethod:
-    return "entity.name.function.method.static.cpp";
-  case HighlightingKind::Variable:
-    return "variable.other.cpp";
-  case HighlightingKind::LocalVariable:
-    return "variable.other.local.cpp";
-  case HighlightingKind::Parameter:
-    return "variable.parameter.cpp";
-  case HighlightingKind::Field:
-    return "variable.other.field.cpp";
-  case HighlightingKind::StaticField:
-    return "variable.other.field.static.cpp";
-  case HighlightingKind::Class:
-    return "entity.name.type.class.cpp";
-  case HighlightingKind::Enum:
-    return "entity.name.type.enum.cpp";
-  case HighlightingKind::EnumConstant:
-    return "variable.other.enummember.cpp";
-  case HighlightingKind::Typedef:
-    return "entity.name.type.typedef.cpp";
-  case HighlightingKind::Type:
-    // Fragile: all paths emitting `Type` are dependent names for now.
-    // But toTextMateScope is going away soon.
-    return "entity.name.type.dependent.cpp";
-  case HighlightingKind::Unknown:
-    // Fragile: all paths emitting `Unknown` are dependent names for now.
-    // But toTextMateScope is going away soon.
-    return "entity.name.other.dependent.cpp";
-  case HighlightingKind::Namespace:
-    return "entity.name.namespace.cpp";
-  case HighlightingKind::TemplateParameter:
-    return "entity.name.type.template.cpp";
-  case HighlightingKind::Concept:
-    return "entity.name.type.concept.cpp";
-  case HighlightingKind::Primitive:
-    return "storage.type.primitive.cpp";
-  case HighlightingKind::Macro:
-    return "entity.name.function.preprocessor.cpp";
-  case HighlightingKind::InactiveCode:
-    return "meta.disabled";
-  }
-  llvm_unreachable("unhandled HighlightingKind");
 }
 
 std::vector<SemanticTokensEdit>
