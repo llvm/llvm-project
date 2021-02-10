@@ -76,6 +76,7 @@
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/Transforms/Utils.h"
@@ -1079,8 +1080,22 @@ static void addSanitizers(const Triple &TargetTriple,
 
         MPM.addPass(
             MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
-        MPM.addPass(createModuleToFunctionPassAdaptor(
-            MemorySanitizerPass({TrackOrigins, Recover, CompileKernel})));
+        FunctionPassManager FPM(CodeGenOpts.DebugPassManager);
+        FPM.addPass(
+            MemorySanitizerPass({TrackOrigins, Recover, CompileKernel}));
+        if (Level != PassBuilder::OptimizationLevel::O0) {
+          // MemorySanitizer inserts complex instrumentation that mostly
+          // follows the logic of the original code, but operates on
+          // "shadow" values. It can benefit from re-running some
+          // general purpose optimization passes.
+          FPM.addPass(EarlyCSEPass());
+          // TODO: Consider add more passes like in
+          // addGeneralOptsForMemorySanitizer. EarlyCSEPass makes visible
+          // difference on size. It's not clear if the rest is still
+          // usefull. InstCombinePass breakes
+          // compiler-rt/test/msan/select_origin.cpp.
+        }
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       }
     };
     MSanPass(SanitizerKind::Memory, false);
