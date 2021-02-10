@@ -213,7 +213,7 @@ DependencyFileGenerator::DependencyFileGenerator(
       SkipUnusedModuleMaps(Opts.SkipUnusedModuleMaps),
       OutputFormat(Opts.OutputFormat), InputFileIndex(0) {
   for (const auto &ExtraDep : Opts.ExtraDeps) {
-    if (addDependency(ExtraDep))
+    if (addDependency(ExtraDep.first))
       ++InputFileIndex;
   }
 }

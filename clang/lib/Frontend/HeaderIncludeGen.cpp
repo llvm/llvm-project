@@ -119,7 +119,7 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
   // as sanitizer blacklists. It's only important for cl.exe compatibility,
   // the GNU way to generate rules is -M / -MM / -MD / -MMD.
   for (const auto &Header : DepOpts.ExtraDeps)
-    PrintHeaderInfo(OutputFile, Header, ShowDepth, 2, MSStyle);
+    PrintHeaderInfo(OutputFile, Header.first, ShowDepth, 2, MSStyle);
   PP.addPPCallbacks(std::make_unique<HeaderIncludesCallback>(
       &PP, ShowAllHeaders, OutputFile, DepOpts, OwnsOutputFile, ShowDepth,
       MSStyle));
