@@ -11,6 +11,7 @@
 
 #include "CallContext.h"
 #include "PseudoProbe.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -225,9 +226,11 @@ public:
     return FuncStartAddrMap[Offset];
   }
 
-  const FrameLocation &getInlineLeafFrameLoc(uint64_t Offset,
-                                             bool NameOnly = false) {
-    return getFrameLocationStack(Offset).back();
+  Optional<const FrameLocation> getInlineLeafFrameLoc(uint64_t Offset) {
+    const auto &Stack = getFrameLocationStack(Offset);
+    if (Stack.empty())
+      return {};
+    return Stack.back();
   }
 
   // Compare two addresses' inline context
