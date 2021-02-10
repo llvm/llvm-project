@@ -2155,9 +2155,11 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
   return Success;
 }
 
-static void GenerateFileSystemArgs(const FileSystemOptions &FileSystemOpts,
+static void GenerateFileSystemArgs(const FileSystemOptions &Opts,
                                    SmallVectorImpl<const char *> &Args,
                                    CompilerInvocation::StringAllocator SA) {
+  const FileSystemOptions &FileSystemOpts = Opts;
+
 #define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
@@ -2170,8 +2172,9 @@ static void GenerateFileSystemArgs(const FileSystemOptions &FileSystemOpts,
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 }
 
-static bool ParseFileSystemArgs(FileSystemOptions &FileSystemOpts,
-                                const ArgList &Args, DiagnosticsEngine &Diags) {
+static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
+                                DiagnosticsEngine &Diags) {
+  FileSystemOptions &FileSystemOpts = Opts;
   bool Success = true;
 
 #define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
@@ -2189,9 +2192,11 @@ static bool ParseFileSystemArgs(FileSystemOptions &FileSystemOpts,
   return Success;
 }
 
-static void GenerateMigratorArgs(const MigratorOptions &MigratorOpts,
+static void GenerateMigratorArgs(const MigratorOptions &Opts,
                                  SmallVectorImpl<const char *> &Args,
                                  CompilerInvocation::StringAllocator SA) {
+  const MigratorOptions &MigratorOpts = Opts;
+
 #define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
@@ -2204,8 +2209,9 @@ static void GenerateMigratorArgs(const MigratorOptions &MigratorOpts,
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 }
 
-static bool ParseMigratorArgs(MigratorOptions &MigratorOpts,
-                              const ArgList &Args, DiagnosticsEngine &Diags) {
+static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
+                              DiagnosticsEngine &Diags) {
+  MigratorOptions &MigratorOpts = Opts;
   bool Success = true;
 
 #define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
