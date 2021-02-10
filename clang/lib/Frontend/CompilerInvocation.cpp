@@ -731,17 +731,17 @@ static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
   for (auto *A : Args.filtered(Group)) {
     if (A->getOption().getKind() == Option::FlagClass) {
       // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
-      // its name (minus the "W" or "R" at the beginning) to the warning list.
+      // its name (minus the "W" or "R" at the beginning) to the diagnostics.
       Diagnostics.push_back(
           std::string(A->getOption().getName().drop_front(1)));
     } else if (A->getOption().matches(GroupWithValue)) {
-      // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic group.
+      // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic
+      // group. Add only the group name to the diagnostics.
       Diagnostics.push_back(
           std::string(A->getOption().getName().drop_front(1).rtrim("=-")));
     } else {
       // Otherwise, add its value (for OPT_W_Joined and similar).
-      for (const auto *Arg : A->getValues())
-        Diagnostics.emplace_back(Arg);
+      Diagnostics.push_back(A->getValue());
     }
   }
 }
@@ -2174,6 +2174,63 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
   return Success;
 }
 
+void CompilerInvocation::GenerateDiagnosticArgs(
+    const DiagnosticOptions &Opts, SmallVectorImpl<const char *> &Args,
+    StringAllocator SA, bool DefaultDiagColor) {
+  const DiagnosticOptions *DiagnosticOpts = &Opts;
+#define DIAG_OPTION_WITH_MARSHALLING(                                          \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef DIAG_OPTION_WITH_MARSHALLING
+
+  if (!Opts.DiagnosticSerializationFile.empty())
+    GenerateArg(Args, OPT_diagnostic_serialized_file,
+                Opts.DiagnosticSerializationFile, SA);
+
+  if (Opts.ShowColors)
+    GenerateArg(Args, OPT_fcolor_diagnostics, SA);
+
+  if (Opts.VerifyDiagnostics &&
+      llvm::is_contained(Opts.VerifyPrefixes, "expected"))
+    GenerateArg(Args, OPT_verify, SA);
+
+  for (const auto &Prefix : Opts.VerifyPrefixes)
+    if (Prefix != "expected")
+      GenerateArg(Args, OPT_verify_EQ, Prefix, SA);
+
+  DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
+  if (VIU == DiagnosticLevelMask::None) {
+    // This is the default, don't generate anything.
+  } else if (VIU == DiagnosticLevelMask::All) {
+    GenerateArg(Args, OPT_verify_ignore_unexpected, SA);
+  } else {
+    if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Note) != 0)
+      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "note", SA);
+    if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Remark) != 0)
+      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "remark", SA);
+    if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Warning) != 0)
+      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "warning", SA);
+    if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Error) != 0)
+      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "error", SA);
+  }
+
+  for (const auto &Warning : Opts.Warnings) {
+    // This option is automatically generated from UndefPrefixes.
+    if (Warning == "undef-prefix")
+      continue;
+    Args.push_back(SA(StringRef("-W") + Warning));
+  }
+
+  for (const auto &Remark : Opts.Remarks)
+    Args.push_back(SA(StringRef("-R") + Remark));
+}
+
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
@@ -2209,6 +2266,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
+  Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
   // Keep VerifyPrefixes in its original order for the sake of diagnostics, and
@@ -2236,6 +2294,45 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
 
   return Success;
+}
+
+bool CompilerInvocation::ParseDiagnosticArgsRoundTrip(CompilerInvocation &Res,
+                                                      DiagnosticOptions &Opts,
+                                                      ArgList &Args,
+                                                      DiagnosticsEngine *Diags,
+                                                      bool DefaultDiagColor) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DummyOpts(new DiagnosticOptions);
+
+  return RoundTrip(
+      [DefaultDiagColor](CompilerInvocation &Res, ArgList &Args,
+                         DiagnosticsEngine &Diags) {
+        // Query the options might not get queried properly during parsing, but
+        // should be generated from DiagnosticOptions.
+
+        Args.getLastArg(OPT_fcolor_diagnostics);
+        Args.getLastArg(OPT_fno_color_diagnostics);
+        Args.getLastArg(OPT_fdiagnostics_color);
+        Args.getLastArg(OPT_fno_diagnostics_color);
+        Args.getLastArg(OPT_fdiagnostics_color_EQ);
+
+        for (auto *A : Args.filtered(OPT_W_Group))
+          Args.getLastArg(A->getOption().getID());
+        for (auto *A : Args.filtered(OPT_R_Group))
+          Args.getLastArg(A->getOption().getID());
+
+        return clang::ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
+                                          DefaultDiagColor);
+      },
+      [DefaultDiagColor](CompilerInvocation &Res,
+                         SmallVectorImpl<const char *> &Args,
+                         CompilerInvocation::StringAllocator SA) {
+        GenerateDiagnosticArgs(Res.getDiagnosticOpts(), Args, SA,
+                               DefaultDiagColor);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        Res.DiagnosticOpts.swap(DummyOpts);
+      },
+      Res, Args, *Diags, "DiagnosticOptions");
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -4393,8 +4490,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= Res.parseSimpleArgs(Args, Diags);
 
   Success &= ParseAnalyzerArgs(Res, *Res.getAnalyzerOpts(), Args, Diags);
-  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                                 /*DefaultDiagColor=*/false);
+  Success &=
+      ParseDiagnosticArgsRoundTrip(Res, Res.getDiagnosticOpts(), Args, &Diags,
+                                   /*DefaultDiagColor=*/false);
   Success &= ParseFrontendArgs(Res, Res.getFrontendOpts(), Args, Diags,
                                LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
@@ -4613,17 +4711,13 @@ void CompilerInvocation::generateCC1CommandLine(
                                    ALWAYS_EMIT, this->KEYPATH, DEFAULT_VALUE,  \
                                    IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, \
                                    EXTRACTOR, TABLE_INDEX)
-
-#define DIAG_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
-
 #include "clang/Driver/Options.inc"
-
-#undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 
   llvm::Triple T(TargetOpts->Triple);
 
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
+  GenerateDiagnosticArgs(*DiagnosticOpts, Args, SA, false);
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
   GenerateTargetArgs(*TargetOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
