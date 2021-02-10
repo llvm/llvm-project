@@ -680,12 +680,12 @@ void SimplifyVisitor::releaseMemory() {
 }
 
 namespace {
-class SimplifyLegacyPass : public ScopPass {
+class SimplifyWrapperPass : public ScopPass {
 public:
   static char ID;
   SimplifyVisitor Imp;
 
-  explicit SimplifyLegacyPass(int CallNo = 0) : ScopPass(ID), Imp(CallNo) {}
+  explicit SimplifyWrapperPass(int CallNo = 0) : ScopPass(ID), Imp(CallNo) {}
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitive<ScopInfoRegionPass>();
@@ -704,7 +704,7 @@ public:
   virtual void releaseMemory() override { Imp.releaseMemory(); }
 };
 
-char SimplifyLegacyPass::ID;
+char SimplifyWrapperPass::ID;
 } // anonymous namespace
 
 namespace polly {
@@ -714,19 +714,30 @@ llvm::PreservedAnalyses SimplifyPass::run(Scop &S, ScopAnalysisManager &SAM,
   if (!Imp.visit(S, &SAR.LI))
     return llvm::PreservedAnalyses::all();
 
-  return llvm::PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
 }
 
 llvm::PreservedAnalyses
 SimplifyPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
                          ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
   bool Changed = Imp.visit(S, &SAR.LI);
+
+  OS << "Printing analysis 'Polly - Simplify' for region: '" << S.getName()
+     << "' in function '" << S.getFunction().getName() << "':\n";
   Imp.printScop(OS, S);
 
   if (!Changed)
     return llvm::PreservedAnalyses::all();
 
-  return llvm::PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
 }
 
 SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
@@ -749,12 +760,12 @@ SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
 }
 } // namespace polly
 
-Pass *polly::createSimplifyPass(int CallNo) {
-  return new SimplifyLegacyPass(CallNo);
+Pass *polly::createSimplifyWrapperPass(int CallNo) {
+  return new SimplifyWrapperPass(CallNo);
 }
 
-INITIALIZE_PASS_BEGIN(SimplifyLegacyPass, "polly-simplify", "Polly - Simplify",
+INITIALIZE_PASS_BEGIN(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(SimplifyLegacyPass, "polly-simplify", "Polly - Simplify",
+INITIALIZE_PASS_END(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
                     false, false)

@@ -147,6 +147,26 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return builder.create<SignedDivIOp>(loc, sum, divisor);
 }
 
+/// Helper to replace uses of loop carried values (iter_args) and loop
+/// yield values while promoting single iteration affine.for and scf.for ops.
+template <typename AffineOrSCFForOp>
+static void replaceIterArgsAndYieldResults(AffineOrSCFForOp forOp) {
+  static_assert(
+      llvm::is_one_of<AffineOrSCFForOp, AffineForOp, scf::ForOp>::value,
+      "only for affine.for and scf.for ops");
+  // Replace uses of iter arguments with iter operands (initial values).
+  auto iterOperands = forOp.getIterOperands();
+  auto iterArgs = forOp.getRegionIterArgs();
+  for (auto e : llvm::zip(iterOperands, iterArgs))
+    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
+
+  // Replace uses of loop results with the values yielded by the loop.
+  auto outerResults = forOp.getResults();
+  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
+  for (auto e : llvm::zip(outerResults, innerResults))
+    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
+}
+
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 // TODO: extend this for arbitrary affine bounds.
@@ -181,6 +201,9 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
       }
     }
   }
+
+  replaceIterArgsAndYieldResults(forOp);
+
   // Move the loop body operations, except for its terminator, to the loop's
   // containing block.
   forOp.getBody()->back().erase();
@@ -206,17 +229,7 @@ LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
   auto iv = forOp.getInductionVar();
   iv.replaceAllUsesWith(lbCstOp);
 
-  // Replace uses of iterArgs with iterOperands.
-  auto iterOperands = forOp.getIterOperands();
-  auto iterArgs = forOp.getRegionIterArgs();
-  for (auto e : llvm::zip(iterOperands, iterArgs))
-    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
-
-  // Replace uses of loop results with the values yielded by the loop.
-  auto outerResults = forOp.getResults();
-  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto e : llvm::zip(outerResults, innerResults))
-    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
+  replaceIterArgsAndYieldResults(forOp);
 
   // Move the loop body operations, except for its terminator, to the loop's
   // containing block.
@@ -1127,6 +1140,17 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
   if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
     OpBuilder builder(forOp->getBlock(), std::next(Block::iterator(forOp)));
     auto cleanupForOp = cast<AffineForOp>(builder.clone(*forOp));
+
+    // Update users of loop results.
+    auto results = forOp.getResults();
+    auto cleanupResults = cleanupForOp.getResults();
+    auto cleanupIterOperands = cleanupForOp.getIterOperands();
+
+    for (auto e : llvm::zip(results, cleanupResults, cleanupIterOperands)) {
+      std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
+      cleanupForOp->replaceUsesOfWith(std::get<2>(e), std::get<0>(e));
+    }
+
     AffineMap cleanupMap;
     SmallVector<Value, 4> cleanupOperands;
     getCleanupLoopLowerBound(forOp, unrollFactor, cleanupMap, cleanupOperands);
@@ -1142,18 +1166,21 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
     forOp.setUpperBound(cleanupOperands, cleanupMap);
   }
 
+  ValueRange iterArgs(forOp.getRegionIterArgs());
+  auto yieldedValues = forOp.getBody()->getTerminator()->getOperands();
+
   // Scale the step of loop being unrolled by unroll factor.
   int64_t step = forOp.getStep();
   forOp.setStep(step * unrollFactor);
-  generateUnrolledLoop(forOp.getBody(), forOp.getInductionVar(), unrollFactor,
-                       [&](unsigned i, Value iv, OpBuilder b) {
-                         // iv' = iv + i * step
-                         auto d0 = b.getAffineDimExpr(0);
-                         auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
-                         return b.create<AffineApplyOp>(forOp.getLoc(), bumpMap,
-                                                        iv);
-                       },
-                       /*iterArgs=*/{}, /*yieldedValues=*/{});
+  generateUnrolledLoop(
+      forOp.getBody(), forOp.getInductionVar(), unrollFactor,
+      [&](unsigned i, Value iv, OpBuilder b) {
+        // iv' = iv + i * step
+        auto d0 = b.getAffineDimExpr(0);
+        auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
+        return b.create<AffineApplyOp>(forOp.getLoc(), bumpMap, iv);
+      },
+      /*iterArgs=*/iterArgs, /*yieldedValues=*/yieldedValues);
 
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(forOp);
