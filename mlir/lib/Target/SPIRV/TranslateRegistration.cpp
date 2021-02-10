@@ -136,8 +136,9 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
   if (failed(spirv::serialize(*spirvModules.begin(), binary, emitDebugInfo)))
     return failure();
 
-  MLIRContext deserializationContext;
-  context->getDialectRegistry().loadAll(&deserializationContext);
+  MLIRContext deserializationContext(context->getDialectRegistry());
+  // TODO: we should only load the required dialects instead of all dialects.
+  deserializationContext.loadAllAvailableDialects();
   // Then deserialize to get back a SPIR-V module.
   spirv::OwningSPIRVModuleRef spirvModule =
       spirv::deserialize(binary, &deserializationContext);

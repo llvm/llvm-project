@@ -819,13 +819,6 @@ foreach vti = AllFloatVectors in {
                     vti.AVL, vti.SEW)>;
 }
 
-//===----------------------------------------------------------------------===//
-// Miscellaneous RISCVISD SDNodes
-//===----------------------------------------------------------------------===//
-
-def riscv_vid
-    : SDNode<"RISCVISD::VID", SDTypeProfile<1, 0, [SDTCisVec<0>]>, []>;
-
 def SDTRVVSlide : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>
 ]>;
@@ -834,10 +827,6 @@ def riscv_slideup : SDNode<"RISCVISD::VSLIDEUP", SDTRVVSlide, []>;
 def riscv_slidedown : SDNode<"RISCVISD::VSLIDEDOWN", SDTRVVSlide, []>;
 
 let Predicates = [HasStdExtV] in {
-
-foreach vti = AllIntegerVectors in
-  def : Pat<(vti.Vector riscv_vid),
-            (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) vti.AVL, vti.SEW)>;
 
 foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
     def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),

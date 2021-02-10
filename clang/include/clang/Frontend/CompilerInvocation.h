@@ -239,14 +239,17 @@ public:
   /// @}
 
 private:
-  /// Parse options for flags that expose marshalling information in their
-  /// table-gen definition
-  ///
-  /// \param Args - The argument list containing the arguments to parse
-  /// \param Diags - The DiagnosticsEngine associated with CreateFromArgs
-  /// \returns - True if parsing was successful, false otherwise
-  bool parseSimpleArgs(const llvm::opt::ArgList &Args,
-                       DiagnosticsEngine &Diags);
+  /// Parse command line options from DiagnosticOptions.
+  static bool ParseDiagnosticArgsRoundTrip(CompilerInvocation &Res,
+                                           DiagnosticOptions &Opts,
+                                           llvm::opt::ArgList &Args,
+                                           DiagnosticsEngine *Diags = nullptr,
+                                           bool DefaultDiagColor = true);
+
+  /// Generate command line options from DiagnosticOptions.
+  static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
+                                     SmallVectorImpl<const char *> &Args,
+                                     StringAllocator SA, bool DefaultDiagColor);
 
   /// Parse command line options that map to LangOptions.
   static bool ParseLangArgsImpl(LangOptions &Opts, llvm::opt::ArgList &Args,

@@ -12,7 +12,7 @@
 #include "mlir/InitAllDialects.h"
 
 void mlirRegisterAllDialects(MlirContext context) {
-  registerAllDialects(unwrap(context)->getDialectRegistry());
+  mlir::registerAllDialects(*unwrap(context));
   // TODO: we may not want to eagerly load here.
-  unwrap(context)->getDialectRegistry().loadAll(unwrap(context));
+  unwrap(context)->loadAllAvailableDialects();
 }
