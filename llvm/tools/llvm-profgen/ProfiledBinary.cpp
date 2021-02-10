@@ -119,7 +119,8 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
   const FrameLocationStack &Context2 = getFrameLocationStack(Offset2);
   if (Context1.size() != Context2.size())
     return false;
-
+  if (Context1.empty())
+    return false;
   // The leaf frame contains location within the leaf, and it
   // needs to be remove that as it's not part of the calling context
   return std::equal(Context1.begin(), Context1.begin() + Context1.size() - 1,
@@ -134,6 +135,10 @@ std::string ProfiledBinary::getExpandedContextStr(
   for (auto Address : Stack) {
     uint64_t Offset = virtualAddrToOffset(Address);
     const FrameLocationStack &ExpandedContext = getFrameLocationStack(Offset);
+    // An instruction without a valid debug line will be ignored by sample
+    // processing
+    if (ExpandedContext.empty())
+      return std::string();
     for (const auto &Loc : ExpandedContext) {
       ContextVec.push_back(getCallSite(Loc));
     }
@@ -242,9 +247,14 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
     const MCInstrDesc &MCDesc = MII->get(Inst.getOpcode());
 
     // Populate a vector of the symbolized callsite at this location
-    InstructionPointer IP(this, Offset);
-    Offset2LocStackMap[Offset] = symbolize(IP, true);
-
+    // We don't need symbolized info for probe-based profile, just use an empty
+    // stack as an entry to indicate a valid binary offset
+    FrameLocationStack SymbolizedCallStack;
+    if (!UsePseudoProbes) {
+      InstructionPointer IP(this, Offset);
+      SymbolizedCallStack = symbolize(IP, true);
+    }
+    Offset2LocStackMap[Offset] = SymbolizedCallStack;
     // Populate address maps.
     CodeAddrs.push_back(Offset);
     if (MCDesc.isCall())

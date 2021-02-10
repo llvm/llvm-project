@@ -93,6 +93,8 @@ std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
   KeyStr->Context = Binary->getExpandedContextStr(Stack);
+  if (KeyStr->Context.empty())
+    return nullptr;
   KeyStr->genHashCode();
   return KeyStr;
 }
@@ -116,6 +118,8 @@ void VirtualUnwinder::collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur,
     return;
 
   std::shared_ptr<ContextKey> Key = Stack.getContextKey();
+  if (Key == nullptr)
+    return;
   auto Ret = CtxCounterMap->emplace(Hashable<ContextKey>(Key), SampleCounter());
   SampleCounter &SCounter = Ret.first->second;
   for (auto &Item : Cur->RangeSamples) {
