@@ -133,8 +133,9 @@ struct StridedMemRefType {
   int64_t sizes[N];
   int64_t strides[N];
 
-  template <typename Range>
-  T &operator[](Range indices) {
+  template <typename Range,
+            typename sfinae = decltype(std::declval<Range>().begin())>
+  T &operator[](Range &&indices) {
     assert(indices.size() == N &&
            "indices should match rank in memref subscript");
     int64_t curOffset = offset;
@@ -170,7 +171,8 @@ struct StridedMemRefType<T, 1> {
   int64_t sizes[1];
   int64_t strides[1];
 
-  template <typename Range>
+  template <typename Range,
+            typename sfinae = decltype(std::declval<Range>().begin())>
   T &operator[](Range indices) {
     assert(indices.size() == 1 &&
            "indices should match rank in memref subscript");
@@ -190,7 +192,8 @@ struct StridedMemRefType<T, 0> {
   T *data;
   int64_t offset;
 
-  template <typename Range>
+  template <typename Range,
+            typename sfinae = decltype(std::declval<Range>().begin())>
   T &operator[](Range indices) {
     assert((indices.size() == 0) &&
            "Expect empty indices for 0-rank memref subscript");
