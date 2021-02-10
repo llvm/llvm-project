@@ -1155,7 +1155,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
 LogicalResult ModuleTranslation::checkSupportedModuleOps(Operation *m) {
   for (Operation &o : getModuleBody(m).getOperations())
-    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) && !o.isKnownTerminator())
+    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) &&
+        !o.hasTrait<OpTrait::IsTerminator>())
       return o.emitOpError("unsupported module-level operation");
   return success();
 }

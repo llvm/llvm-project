@@ -387,7 +387,8 @@ bool mlir::isValidSymbol(Value value, Region *region) {
   if (!defOp) {
     // A block argument that is not a top-level value is a valid symbol if it
     // dominates region's parent op.
-    if (region && !region->getParentOp()->isKnownIsolatedFromAbove())
+    Operation *regionOp = region ? region->getParentOp() : nullptr;
+    if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
       if (auto *parentOpRegion = region->getParentOp()->getParentRegion())
         return isValidSymbol(value, parentOpRegion);
     return false;
@@ -407,7 +408,8 @@ bool mlir::isValidSymbol(Value value, Region *region) {
     return isDimOpValidSymbol(dimOp, region);
 
   // Check for values dominating `region`'s parent op.
-  if (region && !region->getParentOp()->isKnownIsolatedFromAbove())
+  Operation *regionOp = region ? region->getParentOp() : nullptr;
+  if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
     if (auto *parentRegion = region->getParentOp()->getParentRegion())
       return isValidSymbol(value, parentRegion);
 

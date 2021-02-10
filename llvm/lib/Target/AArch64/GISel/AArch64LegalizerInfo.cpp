@@ -293,8 +293,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .widenScalarToNextPow2(0)
-      .clampMaxNumElements(0, s32, 2)
-      .clampMaxNumElements(0, s64, 1)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s64, 2)
       .customIf(IsPtrVecPred);
 
   getActionDefinitionsBuilder(G_STORE)

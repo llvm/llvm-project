@@ -589,3 +589,70 @@ vnsrl.wv v0, v4, v20, v0.t
 vfncvt.xu.f.w v0, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vfncvt.xu.f.w v0, v4, v0.t
+
+vl2re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs2r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+

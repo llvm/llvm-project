@@ -267,6 +267,7 @@ protected:
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder,
                          SmallVectorImpl<ArgInfo> &Args, ValueHandler &Handler,
+                         CallingConv::ID CallConv, bool IsVarArg,
                          Register ThisReturnReg = Register()) const;
   bool handleAssignments(CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,

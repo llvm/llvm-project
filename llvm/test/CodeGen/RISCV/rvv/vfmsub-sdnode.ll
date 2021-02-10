@@ -142,8 +142,8 @@ declare <vscale x 32 x half> @llvm.fma.v32f16(<vscale x 32 x half>, <vscale x 32
 define <vscale x 32 x half> @vfmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x half> %vc) {
 ; CHECK-LABEL: vfmsub_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vl8re16.v v24, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vfmsac.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %neg = fneg <vscale x 32 x half> %va
@@ -273,8 +273,8 @@ declare <vscale x 16 x float> @llvm.fma.v16f32(<vscale x 16 x float>, <vscale x 
 define <vscale x 16 x float> @vfmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x float> %vc) {
 ; CHECK-LABEL: vfmsub_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    vl8re32.v v24, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
 ; CHECK-NEXT:    vfmsub.vv v8, v24, v16
 ; CHECK-NEXT:    ret
   %neg = fneg <vscale x 16 x float> %vb
@@ -378,8 +378,8 @@ declare <vscale x 8 x double> @llvm.fma.v8f64(<vscale x 8 x double>, <vscale x 8
 define <vscale x 8 x double> @vfmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x double> %vc) {
 ; CHECK-LABEL: vfmsub_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfmsac.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %neg = fneg <vscale x 8 x double> %va

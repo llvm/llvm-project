@@ -487,7 +487,7 @@ void SCCPSolver::visitOperation(Operation *op) {
   }
 
   // If this is a terminator operation, process any control flow lattice state.
-  if (op->isKnownTerminator())
+  if (op->hasTrait<OpTrait::IsTerminator>())
     visitTerminatorOperation(op, operandConstants);
 
   // Process call operations. The call visitor processes result values, so we

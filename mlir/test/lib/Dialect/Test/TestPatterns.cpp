@@ -1017,7 +1017,7 @@ struct TestSelectiveOpReplacementPattern : public OpRewritePattern<TestCastOp> {
 
     // Replace non-terminator uses with the first operand.
     rewriter.replaceOpWithIf(op, operands[0], [](OpOperand &operand) {
-      return operand.getOwner()->isKnownTerminator();
+      return operand.getOwner()->hasTrait<OpTrait::IsTerminator>();
     });
     // Replace everything else with the second operand if the operation isn't
     // dead.

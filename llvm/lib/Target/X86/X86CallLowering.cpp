@@ -216,7 +216,8 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     }
 
     X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
-    if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+    if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
+                           F.isVarArg()))
       return false;
   }
 
@@ -364,7 +365,8 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     MIRBuilder.setInstr(*MBB.begin());
 
   FormalArgHandler Handler(MIRBuilder, MRI, CC_X86);
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
+                         F.isVarArg()))
     return false;
 
   // Move back to the end of the basic block.
@@ -420,7 +422,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
   // Do the actual argument marshalling.
   X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, CC_X86);
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, Info.CallConv,
+                         Info.IsVarArg))
     return false;
 
   bool IsFixed = Info.OrigArgs.empty() ? true : Info.OrigArgs.back().IsFixed;
@@ -469,7 +472,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     CallReturnHandler Handler(MIRBuilder, MRI, RetCC_X86, MIB);
-    if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+    if (!handleAssignments(MIRBuilder, SplitArgs, Handler, Info.CallConv,
+                           Info.IsVarArg))
       return false;
 
     if (!NewRegs.empty())

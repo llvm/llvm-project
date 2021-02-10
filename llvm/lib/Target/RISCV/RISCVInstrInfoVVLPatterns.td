@@ -210,3 +210,20 @@ foreach vti = AllFloatVectors in {
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// Miscellaneous RISCVISD SDNodes
+//===----------------------------------------------------------------------===//
+
+def riscv_vid_vl : SDNode<"RISCVISD::VID_VL", SDTypeProfile<1, 2,
+                          [SDTCisVec<0>, SDTCisVec<1>, SDTCVecEltisVT<1, i1>,
+                           SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, XLenVT>]>, []>;
+
+let Predicates = [HasStdExtV] in {
+
+foreach vti = AllIntegerVectors in
+  def : Pat<(vti.Vector (riscv_vid_vl (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) GPR:$vl, vti.SEW)>;
+
+} // Predicates = [HasStdExtV]

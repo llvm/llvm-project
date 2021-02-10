@@ -46,6 +46,16 @@ void validateDeconstructedName(
       << "Possible error: DeconstructedName mismatch";
 }
 
+TEST(InternalNamesTest, doBlockDataTest) {
+  NameUniquer obj;
+  std::string actual = obj.doBlockData("blockdatatest");
+  std::string actualBlank = obj.doBlockData("");
+  std::string expectedMangledName = "_QLblockdatatest";
+  std::string expectedMangledNameBlank = "_QL";
+  ASSERT_EQ(actual, expectedMangledName);
+  ASSERT_EQ(actualBlank, expectedMangledNameBlank);
+}
+
 TEST(InternalNamesTest, doCommonBlockTest) {
   NameUniquer obj;
   std::string actual = obj.doCommonBlock("hello");

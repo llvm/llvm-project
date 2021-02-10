@@ -253,7 +253,13 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
   assert((PreheaderBB->getTerminator()->getNumSuccessors() == 1) &&
          "Unexpected loop preheader");
   VPBasicBlock *PreheaderVPBB = getOrCreateVPBB(PreheaderBB);
-  createVPInstructionsForVPBB(PreheaderVPBB, PreheaderBB);
+  for (auto &I : *PreheaderBB) {
+    if (I.getType()->isVoidTy())
+      continue;
+    VPValue *VPV = new VPValue(&I);
+    Plan.addExternalDef(VPV);
+    IRDef2VPValue[&I] = VPV;
+  }
   // Create empty VPBB for Loop H so that we can link PH->H.
   VPBlockBase *HeaderVPBB = getOrCreateVPBB(TheLoop->getHeader());
   // Preheader's predecessors will be set during the loop RPO traversal below.

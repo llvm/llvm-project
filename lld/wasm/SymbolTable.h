@@ -91,8 +91,7 @@ public:
   DefinedFunction *addSyntheticFunction(StringRef name, uint32_t flags,
                                         InputFunction *function);
   DefinedData *addOptionalDataSymbol(StringRef name, uint64_t value = 0);
-  DefinedGlobal *addOptionalGlobalSymbols(StringRef name, uint32_t flags,
-                                          InputGlobal *global);
+  DefinedGlobal *addOptionalGlobalSymbol(StringRef name, InputGlobal *global);
   DefinedTable *addSyntheticTable(StringRef name, uint32_t flags,
                                   InputTable *global);
 

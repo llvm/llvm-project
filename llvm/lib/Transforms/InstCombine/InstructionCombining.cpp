@@ -3083,9 +3083,8 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       SmallVector<Value*, 4> Indices;
       // Prefix an i32 0 since we need the first element.
       Indices.push_back(Builder.getInt32(0));
-      for (ExtractValueInst::idx_iterator I = EV.idx_begin(), E = EV.idx_end();
-            I != E; ++I)
-        Indices.push_back(Builder.getInt32(*I));
+      for (unsigned Idx : EV.indices())
+        Indices.push_back(Builder.getInt32(Idx));
 
       // We need to insert these at the location of the old load, not at that of
       // the extractvalue.

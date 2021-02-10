@@ -40,65 +40,84 @@ STATISTIC(NumLoopsInScop, "Number of loops in scops after pruning");
 STATISTIC(NumBoxedLoops, "Number of boxed loops in SCoPs after pruning");
 STATISTIC(NumAffineLoops, "Number of affine loops in SCoPs after pruning");
 
-class PruneUnprofitable : public ScopPass {
-private:
-  void updateStatistics(Scop &S, bool Pruned) {
-    auto ScopStats = S.getStatistics();
-    if (Pruned) {
-      ScopsPruned++;
-      NumPrunedLoops += ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops;
-      NumPrunedBoxedLoops += ScopStats.NumBoxedLoops;
-      NumPrunedAffineLoops += ScopStats.NumAffineLoops;
-    } else {
-      ScopsSurvived++;
-      NumLoopsInScop += ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops;
-      NumBoxedLoops += ScopStats.NumBoxedLoops;
-      NumAffineLoops += ScopStats.NumAffineLoops;
-    }
+static void updateStatistics(Scop &S, bool Pruned) {
+  Scop::ScopStatistics ScopStats = S.getStatistics();
+  if (Pruned) {
+    ScopsPruned++;
+    NumPrunedLoops += ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops;
+    NumPrunedBoxedLoops += ScopStats.NumBoxedLoops;
+    NumPrunedAffineLoops += ScopStats.NumAffineLoops;
+  } else {
+    ScopsSurvived++;
+    NumLoopsInScop += ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops;
+    NumBoxedLoops += ScopStats.NumBoxedLoops;
+    NumAffineLoops += ScopStats.NumAffineLoops;
+  }
+}
+
+static bool runPruneUnprofitable(Scop &S) {
+  if (PollyProcessUnprofitable) {
+    LLVM_DEBUG(
+        dbgs() << "NOTE: -polly-process-unprofitable active, won't prune "
+                  "anything\n");
+    return false;
   }
 
+  ScopsProcessed++;
+
+  if (!S.isProfitable(true)) {
+    LLVM_DEBUG(
+        dbgs() << "SCoP pruned because it probably cannot be optimized in "
+                  "a significant way\n");
+    S.invalidate(PROFITABLE, DebugLoc());
+    updateStatistics(S, true);
+  } else {
+    updateStatistics(S, false);
+  }
+
+  return false;
+}
+
+class PruneUnprofitableWrapperPass : public ScopPass {
 public:
   static char ID;
 
-  explicit PruneUnprofitable() : ScopPass(ID) {}
-  PruneUnprofitable(const PruneUnprofitable &) = delete;
-  PruneUnprofitable &operator=(const PruneUnprofitable &) = delete;
+  explicit PruneUnprofitableWrapperPass() : ScopPass(ID) {}
+  PruneUnprofitableWrapperPass(const PruneUnprofitableWrapperPass &) = delete;
+  PruneUnprofitableWrapperPass &
+  operator=(const PruneUnprofitableWrapperPass &) = delete;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ScopInfoRegionPass>();
     AU.setPreservesAll();
   }
 
-  bool runOnScop(Scop &S) override {
-    if (PollyProcessUnprofitable) {
-      LLVM_DEBUG(
-          dbgs() << "NOTE: -polly-process-unprofitable active, won't prune "
-                    "anything\n");
-      return false;
-    }
-
-    ScopsProcessed++;
-
-    if (!S.isProfitable(true)) {
-      LLVM_DEBUG(
-          dbgs() << "SCoP pruned because it probably cannot be optimized in "
-                    "a significant way\n");
-      S.invalidate(PROFITABLE, DebugLoc());
-      updateStatistics(S, true);
-    } else {
-      updateStatistics(S, false);
-    }
-
-    return false;
-  }
+  bool runOnScop(Scop &S) override { return runPruneUnprofitable(S); }
 };
 } // namespace
 
-char PruneUnprofitable::ID;
+char PruneUnprofitableWrapperPass::ID;
 
-Pass *polly::createPruneUnprofitablePass() { return new PruneUnprofitable(); }
+Pass *polly::createPruneUnprofitableWrapperPass() {
+  return new PruneUnprofitableWrapperPass();
+}
 
-INITIALIZE_PASS_BEGIN(PruneUnprofitable, "polly-prune-unprofitable",
+INITIALIZE_PASS_BEGIN(PruneUnprofitableWrapperPass, "polly-prune-unprofitable",
                       "Polly - Prune unprofitable SCoPs", false, false)
-INITIALIZE_PASS_END(PruneUnprofitable, "polly-prune-unprofitable",
+INITIALIZE_PASS_END(PruneUnprofitableWrapperPass, "polly-prune-unprofitable",
                     "Polly - Prune unprofitable SCoPs", false, false)
+
+llvm::PreservedAnalyses
+PruneUnprofitablePass::run(Scop &S, ScopAnalysisManager &SAM,
+                           ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
+  bool Changed = runPruneUnprofitable(S);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
+}

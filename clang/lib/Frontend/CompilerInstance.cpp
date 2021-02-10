@@ -1144,7 +1144,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // module generation thread crashed.
   Instance.clearOutputFiles(/*EraseFiles=*/true);
 
-  return !Instance.getDiagnostics().hasErrorOccurred();
+  // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
+  // occurred.
+  return !Instance.getDiagnostics().hasErrorOccurred() ||
+         Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
 static const FileEntry *getPublicModuleMap(const FileEntry *File,
@@ -1697,7 +1700,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   // Try to load the module file. If we are not trying to load from the
   // module cache, we don't know how to rebuild modules.
   unsigned ARRFlags = Source == MS_ModuleCache
-                          ? ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing
+                          ? ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing |
+                                ASTReader::ARR_TreatModuleWithErrorsAsOutOfDate
                           : Source == MS_PrebuiltModulePath
                                 ? 0
                                 : ASTReader::ARR_ConfigurationMismatch;

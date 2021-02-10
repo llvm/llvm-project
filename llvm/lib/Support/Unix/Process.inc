@@ -31,7 +31,7 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if defined(HAVE_MALLINFO)
+#if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
 #if defined(HAVE_MALLCTL)
@@ -89,7 +89,11 @@ Expected<unsigned> Process::getPageSize() {
 }
 
 size_t Process::GetMallocUsage() {
-#if defined(HAVE_MALLINFO)
+#if defined(HAVE_MALLINFO2)
+  struct mallinfo2 mi;
+  mi = ::mallinfo2();
+  return mi.uordblks;
+#elif defined(HAVE_MALLINFO)
   struct mallinfo mi;
   mi = ::mallinfo();
   return mi.uordblks;

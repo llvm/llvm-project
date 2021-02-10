@@ -331,7 +331,7 @@ int mlir::JitRunnerMain(int argc, char **argv, JitRunnerConfig config) {
   }
 
   MLIRContext context;
-  registerAllDialects(context.getDialectRegistry());
+  registerAllDialects(context);
 
   auto m = parseMLIRInput(options.inputFilename, &context);
   if (!m) {

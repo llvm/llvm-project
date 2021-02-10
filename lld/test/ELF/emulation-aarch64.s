@@ -9,8 +9,6 @@
 # RUN: echo 'OUTPUT_FORMAT(elf64-littleaarch64)' > %t.script
 # RUN: ld.lld %t.script %t.o -o %t3
 # RUN: llvm-readobj --file-headers %t3 | FileCheck --check-prefixes=AARCH64,LE %s
-# RUN: ld.lld -m aarch64_elf64_le_vec %t.o -o %taosp
-# RUN: llvm-readobj --file-headers %taosp | FileCheck --check-prefixes=AARCH64,LE %s
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64_be %s -o %t.be.o
 # RUN: ld.lld %t.be.o -o %t

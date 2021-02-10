@@ -90,7 +90,7 @@ private:
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
   // Don't simplify terminator operations.
-  if (op->isKnownTerminator())
+  if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
 
   // If the operation is already trivially dead just add it to the erase list.
@@ -145,7 +145,7 @@ void CSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
     // captures in explicit capture only regions.
-    if (!inst.isRegistered() || inst.isKnownIsolatedFromAbove()) {
+    if (inst.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
       ScopedMapTy nestedKnownValues;
       for (auto &region : inst.getRegions())
         simplifyRegion(nestedKnownValues, domInfo, region);
