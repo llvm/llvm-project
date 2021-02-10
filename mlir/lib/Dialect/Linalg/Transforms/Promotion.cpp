@@ -40,7 +40,7 @@ using folded_affine_min = FoldedValueBuilder<AffineMinOp>;
 using folded_linalg_range = FoldedValueBuilder<linalg::RangeOp>;
 using folded_std_dim = FoldedValueBuilder<DimOp>;
 using folded_std_subview = FoldedValueBuilder<SubViewOp>;
-using folded_std_view = FoldedValueBuilder<ViewOp>;
+using folded_memref_view = FoldedValueBuilder<memref::ViewOp>;
 
 #define DEBUG_TYPE "linalg-promotion"
 
@@ -59,22 +59,22 @@ static Value allocBuffer(const LinalgPromotionOptions &options,
   if (!dynamicBuffers)
     if (auto cst = size.getDefiningOp<ConstantIndexOp>())
       return options.useAlloca
-                 ? std_alloca(MemRefType::get(width * cst.getValue(),
-                                              IntegerType::get(ctx, 8)),
-                              ValueRange{}, alignment_attr)
+                 ? memref_alloca(MemRefType::get(width * cst.getValue(),
+                                                 IntegerType::get(ctx, 8)),
+                                 ValueRange{}, alignment_attr)
                        .value
-                 : std_alloc(MemRefType::get(width * cst.getValue(),
-                                             IntegerType::get(ctx, 8)),
-                             ValueRange{}, alignment_attr)
+                 : memref_alloc(MemRefType::get(width * cst.getValue(),
+                                                IntegerType::get(ctx, 8)),
+                                ValueRange{}, alignment_attr)
                        .value;
   Value mul =
       folded_std_muli(folder, folded_std_constant_index(folder, width), size);
   return options.useAlloca
-             ? std_alloca(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
-                          alignment_attr)
+             ? memref_alloca(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
+                             alignment_attr)
                    .value
-             : std_alloc(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
-                         alignment_attr)
+             : memref_alloc(MemRefType::get(-1, IntegerType::get(ctx, 8)), mul,
+                            alignment_attr)
                    .value;
 }
 
@@ -100,7 +100,7 @@ static Optional<Value> defaultAllocBufferCallBack(
                              dynamicBuffers, folder, alignment);
   SmallVector<int64_t, 4> dynSizes(boundingSubViewSize.size(),
                                    ShapedType::kDynamicSize);
-  Value view = folded_std_view(
+  Value view = folded_memref_view(
       folder, MemRefType::get(dynSizes, viewType.getElementType()), buffer,
       zero, boundingSubViewSize);
   return view;
@@ -112,10 +112,10 @@ static Optional<Value> defaultAllocBufferCallBack(
 static LogicalResult
 defaultDeallocBufferCallBack(const LinalgPromotionOptions &options,
                              OpBuilder &b, Value fullLocalView) {
-  auto viewOp = fullLocalView.getDefiningOp<ViewOp>();
+  auto viewOp = fullLocalView.getDefiningOp<memref::ViewOp>();
   assert(viewOp && "expected full local view to be a ViewOp");
   if (!options.useAlloca)
-    std_dealloc(viewOp.source());
+    memref_dealloc(viewOp.source());
   return success();
 }
 

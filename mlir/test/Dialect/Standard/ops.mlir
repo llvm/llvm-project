@@ -67,24 +67,24 @@ func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
   return %new_unranked : memref<*xf32>
 }
 
-// CHECK-LABEL: global_memref @memref0 : memref<2xf32>
-global_memref @memref0 : memref<2xf32>
+// CHECK-LABEL: memref.global @memref0 : memref<2xf32>
+memref.global @memref0 : memref<2xf32>
 
-// CHECK-LABEL: global_memref constant @memref1 : memref<2xf32> = dense<[0.000000e+00, 1.000000e+00]>
-global_memref constant @memref1 : memref<2xf32> = dense<[0.0, 1.0]>
+// CHECK-LABEL: memref.global constant @memref1 : memref<2xf32> = dense<[0.000000e+00, 1.000000e+00]>
+memref.global constant @memref1 : memref<2xf32> = dense<[0.0, 1.0]>
 
-// CHECK-LABEL: global_memref @memref2 : memref<2xf32> = uninitialized
-global_memref @memref2 : memref<2xf32>  = uninitialized
+// CHECK-LABEL: memref.global @memref2 : memref<2xf32> = uninitialized
+memref.global @memref2 : memref<2xf32>  = uninitialized
 
-// CHECK-LABEL: global_memref "private" @memref3 : memref<2xf32> = uninitialized
-global_memref "private" @memref3 : memref<2xf32>  = uninitialized
+// CHECK-LABEL: memref.global "private" @memref3 : memref<2xf32> = uninitialized
+memref.global "private" @memref3 : memref<2xf32>  = uninitialized
 
-// CHECK-LABEL: global_memref "private" constant @memref4 : memref<2xf32> = uninitialized
-global_memref "private" constant @memref4 : memref<2xf32>  = uninitialized
+// CHECK-LABEL: memref.global "private" constant @memref4 : memref<2xf32> = uninitialized
+memref.global "private" constant @memref4 : memref<2xf32>  = uninitialized
 
 // CHECK-LABEL: func @write_global_memref
 func @write_global_memref() {
-  %0 = get_global_memref @memref0 : memref<2xf32>
+  %0 = memref.get_global @memref0 : memref<2xf32>
   %1 = constant dense<[1.0, 2.0]> : tensor<2xf32>
   tensor_store %1, %0 : memref<2xf32>
   return
@@ -92,7 +92,7 @@ func @write_global_memref() {
 
 // CHECK-LABEL: func @read_global_memref
 func @read_global_memref() {
-  %0 = get_global_memref @memref0 : memref<2xf32>
+  %0 = memref.get_global @memref0 : memref<2xf32>
   %1 = tensor_load %0 : memref<2xf32>
   return
 }

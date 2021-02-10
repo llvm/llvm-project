@@ -9,7 +9,7 @@
 // CHECK-LABEL: func @normalize_parallel()
 func @normalize_parallel() {
   %cst = constant 1.0 : f32
-  %0 = alloc() : memref<2x4xf32>
+  %0 = memref.alloc() : memref<2x4xf32>
   // CHECK: affine.parallel (%[[i0:.*]], %[[j0:.*]]) = (0, 0) to (4, 2)
   affine.parallel (%i, %j) = (0, 1) to (10, 5) step (3, 2) {
     // CHECK: %[[i1:.*]] = affine.apply [[$MAP0]](%[[i0]])

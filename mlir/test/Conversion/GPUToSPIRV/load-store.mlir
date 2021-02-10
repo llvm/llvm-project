@@ -17,7 +17,7 @@ module attributes {
     %c1_2 = constant 1 : index
     gpu.launch_func @kernels::@load_store_kernel
         blocks in (%0, %c1_2, %c1_2) threads in (%1, %c1_2, %c1_2)
-        args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>, 
+        args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>,
              %c0 : index, %c0_0 : index, %c1 : index, %c1_1 : index)
     return
   }
@@ -77,7 +77,7 @@ module attributes {
       %16 = addf %14, %15 : f32
       // CHECK: %[[PTR3:.*]] = spv.AccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: spv.Store "StorageBuffer" %[[PTR3]], %[[VAL3]]
-      store %16, %arg2[%12, %13] : memref<12x4xf32>
+      memref.store %16, %arg2[%12, %13] : memref<12x4xf32>
       gpu.return
     }
   }
