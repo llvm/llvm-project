@@ -943,6 +943,8 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   I.replaceAllUsesWith(Offset);
   I.eraseFromParent();
 
+  SmallVector<IntrinsicInst *> DeferredIntrs;
+
   for (Value *V : WorkList) {
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
@@ -997,22 +999,13 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       // These intrinsics are for address space 0 only
       Intr->eraseFromParent();
       continue;
-    case Intrinsic::memcpy: {
-      MemCpyInst *MemCpy = cast<MemCpyInst>(Intr);
-      Builder.CreateMemCpy(MemCpy->getRawDest(), MemCpy->getDestAlign(),
-                           MemCpy->getRawSource(), MemCpy->getSourceAlign(),
-                           MemCpy->getLength(), MemCpy->isVolatile());
-      Intr->eraseFromParent();
+    case Intrinsic::memcpy:
+    case Intrinsic::memmove:
+      // These have 2 pointer operands. In case if second pointer also needs
+      // to be replaced we defer processing of these intrinsics until all
+      // other values are processed.
+      DeferredIntrs.push_back(Intr);
       continue;
-    }
-    case Intrinsic::memmove: {
-      MemMoveInst *MemMove = cast<MemMoveInst>(Intr);
-      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getDestAlign(),
-                            MemMove->getRawSource(), MemMove->getSourceAlign(),
-                            MemMove->getLength(), MemMove->isVolatile());
-      Intr->eraseFromParent();
-      continue;
-    }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
       Builder.CreateMemSet(
@@ -1050,6 +1043,27 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       llvm_unreachable("Don't know how to promote alloca intrinsic use.");
     }
   }
+
+  for (IntrinsicInst *Intr : DeferredIntrs) {
+    Builder.SetInsertPoint(Intr);
+    Intrinsic::ID ID = Intr->getIntrinsicID();
+    assert(ID == Intrinsic::memcpy || ID == Intrinsic::memmove);
+
+    MemTransferInst *MI = cast<MemTransferInst>(Intr);
+    auto *B =
+      Builder.CreateMemTransferInst(ID, MI->getRawDest(), MI->getDestAlign(),
+                                    MI->getRawSource(), MI->getSourceAlign(),
+                                    MI->getLength(), MI->isVolatile());
+
+    for (unsigned I = 1; I != 3; ++I) {
+      if (uint64_t Bytes = Intr->getDereferenceableBytes(I)) {
+        B->addDereferenceableAttr(I, Bytes);
+      }
+    }
+
+    Intr->eraseFromParent();
+  }
+
   return true;
 }
 
