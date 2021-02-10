@@ -395,6 +395,8 @@ public:
 protected:
   friend class SampleCoverageTracker;
 
+  ~SampleProfileLoaderBaseImpl() = default;
+
   unsigned getFunctionLoc(Function &F);
   virtual ErrorOr<uint64_t> getInstWeight(const Instruction &Inst);
   ErrorOr<uint64_t> getInstWeightImpl(const Instruction &Inst);
@@ -483,7 +485,7 @@ protected:
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader : public SampleProfileLoaderBaseImpl {
+class SampleProfileLoader final : public SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
