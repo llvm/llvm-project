@@ -157,6 +157,14 @@ concept __same_as_impl = _VSTD::_IsSame<_Tp, _Up>::value;
 template<class _Tp, class _Up>
 concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
 
+// [concept.convertible]
+template<class _From, class _To>
+concept convertible_to =
+  is_convertible_v<_From, _To> &&
+  requires(add_rvalue_reference_t<_From> (&__f)()) {
+    static_cast<_To>(__f());
+  };
+
 // [concept.destructible]
 
 template<class _Tp>
@@ -175,7 +183,6 @@ concept __default_initializable = requires { ::new _Tp; };
 template<class _Tp>
 concept default_initializable = constructible_from<_Tp> &&
     requires { _Tp{}; } && __default_initializable<_Tp>;
-
 
 #endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
