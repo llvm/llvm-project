@@ -558,7 +558,8 @@ def Shape_SplitAtOp : Shape_Op<"split_at", [NoSideEffect]> {
     - `index` is in the range [-rank(operand),rank(operand)]
   }];
 
-  let arguments = (ins Shape_ShapeOrExtentTensorType:$operand, I32:$index);
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$operand,
+                       Shape_SizeOrIndexType:$index);
   let results = (outs Shape_ShapeType:$head, Shape_ShapeType:$tail);
   let hasFolder = 1;
 }
