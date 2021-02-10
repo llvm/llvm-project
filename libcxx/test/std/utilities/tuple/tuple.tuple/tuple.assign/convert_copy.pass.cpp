@@ -21,35 +21,31 @@
 
 #include "test_macros.h"
 
-struct B
-{
+struct B {
     int id_;
 
-    explicit B(int i = 0) : id_(i) {}
+    constexpr explicit B(int i = 0) : id_(i) {}
 };
 
-struct D
-    : B
-{
-    explicit D(int i = 0) : B(i) {}
+struct D : B {
+    constexpr explicit D(int i = 0) : B(i) {}
 };
 
 struct NonAssignable {
-  NonAssignable& operator=(NonAssignable const&) = delete;
-  NonAssignable& operator=(NonAssignable&&) = delete;
+    NonAssignable& operator=(NonAssignable const&) = delete;
+    NonAssignable& operator=(NonAssignable&&) = delete;
 };
 
-struct NothrowCopyAssignable
-{
+struct NothrowCopyAssignable {
     NothrowCopyAssignable& operator=(NothrowCopyAssignable const&) noexcept { return *this; }
 };
 
-struct PotentiallyThrowingCopyAssignable
-{
+struct PotentiallyThrowingCopyAssignable {
     PotentiallyThrowingCopyAssignable& operator=(PotentiallyThrowingCopyAssignable const&) { return *this; }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<long> T0;
@@ -102,6 +98,16 @@ int main(int, char**)
         assert(std::get<0>(t) == 43);
         assert(&std::get<0>(t) == &x);
     }
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
     {
         using T = std::tuple<int, NonAssignable>;
         using U = std::tuple<NonAssignable, int>;
@@ -116,6 +122,7 @@ int main(int, char**)
     {
         typedef std::tuple<PotentiallyThrowingCopyAssignable, long> T0;
         typedef std::tuple<PotentiallyThrowingCopyAssignable, int> T1;
+        static_assert(std::is_assignable<T0&, T1 const&>::value, "");
         static_assert(!std::is_nothrow_assignable<T0&, T1 const&>::value, "");
     }
 
