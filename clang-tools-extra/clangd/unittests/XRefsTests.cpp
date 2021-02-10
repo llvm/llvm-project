@@ -896,9 +896,6 @@ TEST(LocateSymbol, All) {
     TestTU TU;
     TU.Code = std::string(T.code());
 
-    // FIXME: Auto-completion in a template requires disabling delayed template
-    // parsing.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
