@@ -35,6 +35,7 @@ struct TestLinalgTransforms
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
     registry.insert<AffineDialect,
+                    memref::MemRefDialect,
                     scf::SCFDialect,
                     StandardOpsDialect,
                     vector::VectorDialect,
@@ -261,22 +262,22 @@ static void fillL1TilingAndMatmulToVectorPatterns(
 //===----------------------------------------------------------------------===//
 
 // Allocation call back
-static Optional<Value> allocCallBackFn(OpBuilder &b, SubViewOp subView,
+static Optional<Value> allocCallBackFn(OpBuilder &b, memref::SubViewOp subView,
                                        ArrayRef<Value> boundingSubViewSize,
                                        OperationFolder *folder) {
   SmallVector<int64_t, 4> shape(boundingSubViewSize.size(), -1);
   return b
-      .create<AllocOp>(subView.getLoc(),
-                       MemRefType::get(shape,
-                                       subView.getType().getElementType(),
-                                       /*affineMapComposition =*/{}, 3),
-                       boundingSubViewSize)
+      .create<memref::AllocOp>(
+          subView.getLoc(),
+          MemRefType::get(shape, subView.getType().getElementType(),
+                          /*affineMapComposition =*/{}, 3),
+          boundingSubViewSize)
       .getResult();
 }
 
 // Deallocation callback
 static LogicalResult deallocCallBackFn(OpBuilder &b, Value buffer) {
-  b.create<DeallocOp>(buffer.getLoc(), buffer);
+  b.create<memref::DeallocOp>(buffer.getLoc(), buffer);
   return success();
 }
 

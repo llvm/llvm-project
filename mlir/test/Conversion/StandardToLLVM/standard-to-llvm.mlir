@@ -3,10 +3,10 @@
 // CHECK-LABEL: func @address_space(
 // CHECK-SAME:    !llvm.ptr<f32, 7>
 func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
-  %0 = alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
+  %0 = memref.alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   %1 = constant 7 : index
   // CHECK: llvm.load %{{.*}} : !llvm.ptr<f32, 5>
-  %2 = load %0[%1] : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
+  %2 = memref.load %0[%1] : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   std.return
 }
 
@@ -122,25 +122,25 @@ func @assert_test_function(%arg : i1) {
 //       CHECK:   llvm.extractvalue {{.*}}[3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:    llvm.insertvalue {{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  %0 = transpose %arg0 (i, j, k) -> (k, i, j) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d0 * s2 + d1)>>
+  %0 = memref.transpose %arg0 (i, j, k) -> (k, i, j) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d0 * s2 + d1)>>
   return
 }
 
 // -----
 
 // CHECK: llvm.mlir.global external @gv0() : !llvm.array<2 x f32>
-global_memref @gv0 : memref<2xf32> = uninitialized
+memref.global @gv0 : memref<2xf32> = uninitialized
 
 // CHECK: llvm.mlir.global private @gv1() : !llvm.array<2 x f32>
-global_memref "private" @gv1 : memref<2xf32>
+memref.global "private" @gv1 : memref<2xf32>
 
 // CHECK: llvm.mlir.global external @gv2(dense<{{\[\[}}0.000000e+00, 1.000000e+00, 2.000000e+00], [3.000000e+00, 4.000000e+00, 5.000000e+00]]> : tensor<2x3xf32>) : !llvm.array<2 x array<3 x f32>>
-global_memref @gv2 : memref<2x3xf32> = dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]>
+memref.global @gv2 : memref<2x3xf32> = dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]>
 
 // Test 1D memref.
 // CHECK-LABEL: func @get_gv0_memref
 func @get_gv0_memref() {
-  %0 = get_global_memref @gv0 : memref<2xf32>
+  %0 = memref.get_global @gv0 : memref<2xf32>
   // CHECK: %[[DIM:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[STRIDE:.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @gv0 : !llvm.ptr<array<2 x f32>>
@@ -179,13 +179,13 @@ func @get_gv2_memref() {
   // CHECK: llvm.insertvalue %[[DIM1]], {{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.insertvalue %[[STRIDE1]], {{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 
-  %0 = get_global_memref @gv2 : memref<2x3xf32>
+  %0 = memref.get_global @gv2 : memref<2x3xf32>
   return
 }
 
 // Test scalar memref.
 // CHECK: llvm.mlir.global external @gv3(1.000000e+00 : f32) : f32
-global_memref @gv3 : memref<f32> = dense<1.0>
+memref.global @gv3 : memref<f32> = dense<1.0>
 
 // CHECK-LABEL: func @get_gv3_memref
 func @get_gv3_memref() {
@@ -199,7 +199,7 @@ func @get_gv3_memref() {
   // CHECK: llvm.insertvalue %[[GEP]], {{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
   // CHECK: %[[OFFSET:.*]] = llvm.mlir.constant(0 : index) : i64
   // CHECK: llvm.insertvalue %[[OFFSET]], {{.*}}[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64)>
-  %0 = get_global_memref @gv3 : memref<f32>
+  %0 = memref.get_global @gv3 : memref<f32>
   return
 }
 

@@ -50,8 +50,9 @@ framework, we need to provide two things (and an optional third):
 ## Conversion Target
 
 For our purposes, we want to convert the compute-intensive `Toy` operations into
-a combination of operations from the `Affine` `Standard` dialects for further
-optimization. To start off the lowering, we first define our conversion target:
+a combination of operations from the `Affine`, `MemRef` and `Standard` dialects
+for further optimization. To start off the lowering, we first define our
+conversion target:
 
 ```c++
 void ToyToAffineLoweringPass::runOnFunction() {
@@ -61,8 +62,9 @@ void ToyToAffineLoweringPass::runOnFunction() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine` and `Standard` dialects.
-  target.addLegalDialect<mlir::AffineDialect, mlir::StandardOpsDialect>();
+  // `Affine`, `MemRef` and `Standard` dialects.
+  target.addLegalDialect<mlir::AffineDialect, mlir::memref::MemRefDialect,
+                         mlir::StandardOpsDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

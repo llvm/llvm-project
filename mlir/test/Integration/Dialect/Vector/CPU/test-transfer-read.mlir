@@ -37,11 +37,11 @@ func @entry() {
   %c3 = constant 3: index
   %c4 = constant 4: index
   %c5 = constant 5: index
-  %A = alloc(%c5) : memref<?xf32>
+  %A = memref.alloc(%c5) : memref<?xf32>
   scf.for %i = %c0 to %c5 step %c1 {
     %i32 = index_cast %i : index to i32
     %fi = sitofp %i32 : i32 to f32
-    store %fi, %A[%i] : memref<?xf32>
+    memref.store %fi, %A[%i] : memref<?xf32>
   }
   // On input, memory contains [[ 0, 1, 2, 3, 4, xxx garbage xxx ]]
   // Read shifted by 2 and pad with -42:

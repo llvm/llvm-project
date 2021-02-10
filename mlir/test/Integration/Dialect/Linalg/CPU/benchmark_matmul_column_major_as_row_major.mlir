@@ -65,9 +65,9 @@ func @main() {
   %f0 = constant 0.0 : !elem_type_c
   %f1 = constant 1.0 : !elem_type_a
 
-  %cA = alloc() : !column_major_A
-  %cB = alloc() : !column_major_B
-  %cC = alloc() : !column_major_C
+  %cA = memref.alloc() : !column_major_A
+  %cB = memref.alloc() : !column_major_B
+  %cC = memref.alloc() : !column_major_C
 
   linalg.fill(%cA, %f1) : !column_major_A, !elem_type_a
   linalg.fill(%cB, %f1) : !column_major_B, !elem_type_b
@@ -78,9 +78,9 @@ func @main() {
   %iters = constant ${ITERS}: index
 
   /// Run and dump performance for matmul_column_major as a row-major
-  %A = alloc() : !row_major_A
-  %B = alloc() : !row_major_B
-  %C = alloc() : !row_major_C
+  %A = memref.alloc() : !row_major_A
+  %B = memref.alloc() : !row_major_B
+  %C = memref.alloc() : !row_major_C
   %t_start_matmul_column_major_as_row_major = call @rtclock() : () -> f64
   scf.for %arg0 = %c0 to %iters step %c1 {
     // linalg.matmul writes %C in place, need to reset it to zero every time.
@@ -97,34 +97,34 @@ func @main() {
   call @print_perf(%iters, %tmatmul_column_major_as_row_major) : (index, f64) -> ()
 
   // CHECK: {{^0$}}
-  %cC_ref = alloc() : !column_major_C
+  %cC_ref = memref.alloc() : !column_major_C
   linalg.fill(%cC_ref, %f0) : !column_major_C, !elem_type_c
   linalg.matmul_column_major ins(%cA, %cB : !column_major_A, !column_major_B)
     outs(%cC_ref: !column_major_C)
-  %act1 = memref_cast %cC : !column_major_C to memref<*xf32>
-  %exp1 = memref_cast %cC_ref : !column_major_C to memref<*xf32>
+  %act1 = memref.cast %cC : !column_major_C to memref<*xf32>
+  %exp1 = memref.cast %cC_ref : !column_major_C to memref<*xf32>
   %errors1 = call @verifyMemRefF32(%act1, %exp1) : (memref<*xf32>, memref<*xf32>) -> i64
   vector.print %errors1 : i64
-  dealloc %cC_ref : !column_major_C
+  memref.dealloc %cC_ref : !column_major_C
 
   // CHECK: {{^0$}}
-  %C_ref = alloc() : !row_major_C
+  %C_ref = memref.alloc() : !row_major_C
   linalg.fill(%C_ref, %f0) : !row_major_C, !elem_type_c
   linalg.matmul ins(%A, %B : !row_major_A, !row_major_B)
     outs(%C_ref: !row_major_C)
-  %act2 = memref_cast %C : !row_major_C to memref<*xf32>
-  %exp2 = memref_cast %C_ref : !row_major_C to memref<*xf32>
+  %act2 = memref.cast %C : !row_major_C to memref<*xf32>
+  %exp2 = memref.cast %C_ref : !row_major_C to memref<*xf32>
   %errors2 = call @verifyMemRefF32(%act2, %exp2) : (memref<*xf32>, memref<*xf32>) -> i64
   vector.print %errors2 : i64
-  dealloc %C_ref : !row_major_C
+  memref.dealloc %C_ref : !row_major_C
 
-  dealloc %A : !row_major_A
-  dealloc %B : !row_major_B
-  dealloc %C : !row_major_C
+  memref.dealloc %A : !row_major_A
+  memref.dealloc %B : !row_major_B
+  memref.dealloc %C : !row_major_C
 
-  dealloc %cA : !column_major_A
-  dealloc %cB : !column_major_B
-  dealloc %cC : !column_major_C
+  memref.dealloc %cA : !column_major_A
+  memref.dealloc %cB : !column_major_B
+  memref.dealloc %cC : !column_major_C
 
   return
 }

@@ -24,7 +24,7 @@ func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns a 2-D buffer of size (%s1, %s2) filled with the value %f
 func @alloc_2d_filled_f32(%s1 : index, %s2 : index, %f : f32) -> memref<?x?xf32> {
-  %buf = alloc(%s1, %s2) : memref<?x?xf32>
+  %buf = memref.alloc(%s1, %s2) : memref<?x?xf32>
   linalg.fill(%buf, %f) : memref<?x?xf32>, f32
   return %buf : memref<?x?xf32>
 }
@@ -49,14 +49,14 @@ func @main() {
   %in2D = call @alloc_2d_filled_f32(%c8, %c8, %val) : (index, index, f32) -> (memref<?x?xf32>)
   %out2D = call @alloc_2d_filled_f32(%c6, %c6, %zero) : (index, index, f32) -> (memref<?x?xf32>)
 
-  store %f10, %in2D[%c0, %c3] : memref<?x?xf32>
+  memref.store %f10, %in2D[%c0, %c3] : memref<?x?xf32>
   call @conv_2d(%in2D, %filter2D, %out2D) : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
-  %out2D_ = memref_cast %out2D : memref<?x?xf32> to memref<*xf32>
+  %out2D_ = memref.cast %out2D : memref<?x?xf32> to memref<*xf32>
   call @print_memref_f32(%out2D_): (memref<*xf32>) -> ()
 
-  dealloc %filter2D : memref<?x?xf32>
-  dealloc %in2D : memref<?x?xf32>
-  dealloc %out2D : memref<?x?xf32>
+  memref.dealloc %filter2D : memref<?x?xf32>
+  memref.dealloc %in2D : memref<?x?xf32>
+  memref.dealloc %out2D : memref<?x?xf32>
   return
 }
 

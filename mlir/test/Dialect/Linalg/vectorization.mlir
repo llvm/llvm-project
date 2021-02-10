@@ -166,7 +166,7 @@ func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
 
 // CHECK-LABEL: func @test_vectorize_copy_scalar
 func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
-  //       CHECK: %[[V:.*]] = load {{.*}} : memref<f32>
+  //       CHECK: %[[V:.*]] = memref.load {{.*}} : memref<f32>
   //       CHECK: store %[[V]], {{.*}} : memref<f32>
   linalg.copy(%A, %B) :  memref<f32>, memref<f32>
   return

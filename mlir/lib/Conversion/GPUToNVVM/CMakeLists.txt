@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRGPUToNVVMTransforms
   MLIRGPU
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMIR
+  MLIRMemRef
   MLIRNVVMIR
   MLIRPass
   MLIRStandardToLLVM

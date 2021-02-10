@@ -50,8 +50,8 @@ struct TestSparsification
 
   /// Registers all dialects required by testing.
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<scf::SCFDialect, vector::VectorDialect, LLVM::LLVMDialect>();
+    registry.insert<memref::MemRefDialect, scf::SCFDialect,
+                    vector::VectorDialect, LLVM::LLVMDialect>();
   }
 
   /// Returns parallelization strategy given on command line.
@@ -134,8 +134,7 @@ namespace test {
 
 void registerTestSparsification() {
   PassRegistration<TestSparsification> sparsificationPass(
-      "test-sparsification",
-      "Test automatic generation of sparse tensor code");
+      "test-sparsification", "Test automatic generation of sparse tensor code");
 }
 
 } // namespace test

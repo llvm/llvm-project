@@ -60,39 +60,39 @@ func @entry() {
   // Sanity check for the function under test.
   //
 
-  %LHS10 = alloc() {alignment = 64} : memref<1x10xf32>
-  %RHS10 = alloc() {alignment = 64} : memref<1x10xf32>
-  %DST10 = alloc() {alignment = 64} : memref<1x10xf32>
+  %LHS10 = memref.alloc() {alignment = 64} : memref<1x10xf32>
+  %RHS10 = memref.alloc() {alignment = 64} : memref<1x10xf32>
+  %DST10 = memref.alloc() {alignment = 64} : memref<1x10xf32>
 
   linalg.fill(%LHS10, %f1) : memref<1x10xf32>, f32
   linalg.fill(%RHS10, %f1) : memref<1x10xf32>, f32
 
-  %LHS = memref_cast %LHS10 : memref<1x10xf32> to memref<?x?xf32>
-  %RHS = memref_cast %RHS10 : memref<1x10xf32> to memref<?x?xf32>
-  %DST = memref_cast %DST10 : memref<1x10xf32> to memref<?x?xf32>
+  %LHS = memref.cast %LHS10 : memref<1x10xf32> to memref<?x?xf32>
+  %RHS = memref.cast %RHS10 : memref<1x10xf32> to memref<?x?xf32>
+  %DST = memref.cast %DST10 : memref<1x10xf32> to memref<?x?xf32>
 
   call @linalg_generic(%LHS, %RHS, %DST)
     : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
 
   // CHECK: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-  %U = memref_cast %DST10 :  memref<1x10xf32> to memref<*xf32>
+  %U = memref.cast %DST10 :  memref<1x10xf32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
-  dealloc %LHS10: memref<1x10xf32>
-  dealloc %RHS10: memref<1x10xf32>
-  dealloc %DST10: memref<1x10xf32>
+  memref.dealloc %LHS10: memref<1x10xf32>
+  memref.dealloc %RHS10: memref<1x10xf32>
+  memref.dealloc %DST10: memref<1x10xf32>
 
   //
   // Allocate data for microbenchmarks.
   //
 
-  %LHS1024 = alloc() {alignment = 64} : memref<1024x1024xf32>
-  %RHS1024 = alloc() {alignment = 64} : memref<1024x1024xf32>
-  %DST1024 = alloc() {alignment = 64} : memref<1024x1024xf32>
+  %LHS1024 = memref.alloc() {alignment = 64} : memref<1024x1024xf32>
+  %RHS1024 = memref.alloc() {alignment = 64} : memref<1024x1024xf32>
+  %DST1024 = memref.alloc() {alignment = 64} : memref<1024x1024xf32>
 
-  %LHS0 = memref_cast %LHS1024 : memref<1024x1024xf32> to memref<?x?xf32>
-  %RHS0 = memref_cast %RHS1024 : memref<1024x1024xf32> to memref<?x?xf32>
-  %DST0 = memref_cast %DST1024 : memref<1024x1024xf32> to memref<?x?xf32>
+  %LHS0 = memref.cast %LHS1024 : memref<1024x1024xf32> to memref<?x?xf32>
+  %RHS0 = memref.cast %RHS1024 : memref<1024x1024xf32> to memref<?x?xf32>
+  %DST0 = memref.cast %DST1024 : memref<1024x1024xf32> to memref<?x?xf32>
 
   //
   // Warm up.
@@ -117,9 +117,9 @@ func @entry() {
   vector.print %t1024 : f64
 
   // Free.
-  dealloc %LHS1024: memref<1024x1024xf32>
-  dealloc %RHS1024: memref<1024x1024xf32>
-  dealloc %DST1024: memref<1024x1024xf32>
+  memref.dealloc %LHS1024: memref<1024x1024xf32>
+  memref.dealloc %RHS1024: memref<1024x1024xf32>
+  memref.dealloc %DST1024: memref<1024x1024xf32>
 
   return
 }

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -237,12 +238,12 @@ namespace {
 /// to Workgroup memory when the size is constant.  Note that this pattern needs
 /// to be applied in a pass that runs at least at spv.module scope since it wil
 /// ladd global variables into the spv.module.
-class AllocOpPattern final : public OpConversionPattern<AllocOp> {
+class AllocOpPattern final : public OpConversionPattern<memref::AllocOp> {
 public:
-  using OpConversionPattern<AllocOp>::OpConversionPattern;
+  using OpConversionPattern<memref::AllocOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(AllocOp operation, ArrayRef<Value> operands,
+  matchAndRewrite(memref::AllocOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType allocType = operation.getType();
     if (!isAllocationSupported(allocType))
@@ -278,12 +279,12 @@ public:
 
 /// Removed a deallocation if it is a supported allocation. Currently only
 /// removes deallocation if the memory space is workgroup memory.
-class DeallocOpPattern final : public OpConversionPattern<DeallocOp> {
+class DeallocOpPattern final : public OpConversionPattern<memref::DeallocOp> {
 public:
-  using OpConversionPattern<DeallocOp>::OpConversionPattern;
+  using OpConversionPattern<memref::DeallocOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(DeallocOp operation, ArrayRef<Value> operands,
+  matchAndRewrite(memref::DeallocOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType deallocType = operation.memref().getType().cast<MemRefType>();
     if (!isAllocationSupported(deallocType))
@@ -430,23 +431,23 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.load to spv.Load.
-class IntLoadOpPattern final : public OpConversionPattern<LoadOp> {
+/// Converts memref.load to spv.Load.
+class IntLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern<LoadOp>::OpConversionPattern;
+  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::LoadOp loadOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.load to spv.Load.
-class LoadOpPattern final : public OpConversionPattern<LoadOp> {
+/// Converts memref.load to spv.Load.
+class LoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern<LoadOp>::OpConversionPattern;
+  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::LoadOp loadOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -469,23 +470,23 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.store to spv.Store on integers.
-class IntStoreOpPattern final : public OpConversionPattern<StoreOp> {
+/// Converts memref.store to spv.Store on integers.
+class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
-  using OpConversionPattern<StoreOp>::OpConversionPattern;
+  using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::StoreOp storeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.store to spv.Store.
-class StoreOpPattern final : public OpConversionPattern<StoreOp> {
+/// Converts memref.store to spv.Store.
+class StoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
-  using OpConversionPattern<StoreOp>::OpConversionPattern;
+  using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::StoreOp storeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -975,9 +976,10 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
+                                  ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
-  LoadOpAdaptor loadOperands(operands);
+  memref::LoadOpAdaptor loadOperands(operands);
   auto loc = loadOp.getLoc();
   auto memrefType = loadOp.memref().getType().cast<MemRefType>();
   if (!memrefType.getElementType().isSignlessInteger())
@@ -1051,9 +1053,9 @@ IntLoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
 }
 
 LogicalResult
-LoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter) const {
-  LoadOpAdaptor loadOperands(operands);
+  memref::LoadOpAdaptor loadOperands(operands);
   auto memrefType = loadOp.memref().getType().cast<MemRefType>();
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
@@ -1101,9 +1103,10 @@ SelectOpPattern::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-IntStoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp,
+                                   ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
-  StoreOpAdaptor storeOperands(operands);
+  memref::StoreOpAdaptor storeOperands(operands);
   auto memrefType = storeOp.memref().getType().cast<MemRefType>();
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
@@ -1180,9 +1183,10 @@ IntStoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
 }
 
 LogicalResult
-StoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp,
+                                ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter) const {
-  StoreOpAdaptor storeOperands(operands);
+  memref::StoreOpAdaptor storeOperands(operands);
   auto memrefType = storeOp.memref().getType().cast<MemRefType>();
   if (memrefType.getElementType().isSignlessInteger())
     return failure();

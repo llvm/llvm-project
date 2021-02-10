@@ -36,6 +36,7 @@ struct TestLinalgCodegenStrategy
     registry.insert<AffineDialect,
                     gpu::GPUDialect,
                     linalg::LinalgDialect,
+                    memref::MemRefDialect,
                     scf::SCFDialect,
                     StandardOpsDialect,
                     vector::VectorDialect>();
