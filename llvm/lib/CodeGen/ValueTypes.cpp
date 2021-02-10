@@ -456,6 +456,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableVectorType::get(Type::getHalfTy(Context), 16);
   case MVT::nxv32f16:
     return ScalableVectorType::get(Type::getHalfTy(Context), 32);
+  case MVT::nxv1bf16:
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 1);
   case MVT::nxv2bf16:
     return ScalableVectorType::get(Type::getBFloatTy(Context), 2);
   case MVT::nxv4bf16:
