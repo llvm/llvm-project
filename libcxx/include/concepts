@@ -135,7 +135,9 @@ namespace std {
 */
 
 #include <__config>
+#include <functional>
 #include <type_traits>
+#include <utility>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -215,6 +217,16 @@ concept copy_constructible =
   constructible_from<_Tp, _Tp&> && convertible_to<_Tp&, _Tp> &&
   constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
   constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
+
+// [concept.invocable]
+template<class _Fn, class... _Args>
+concept invocable = requires(_Fn&& __fn, _Args&&... __args) {
+  _VSTD::invoke(_VSTD::forward<_Fn>(__fn), _VSTD::forward<_Args>(__args)...); // not required to be equality preserving
+};
+
+// [concept.regular.invocable]
+template<class _Fn, class... _Args>
+concept regular_invocable = invocable<_Fn, _Args...>;
 
 #endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
 
