@@ -133,8 +133,8 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
-  Fortran::semantics::Semantics semantics{
-      ci.semanticsContext(), parseTree, ci.parsing().cooked().AsCharBlock()};
+  Fortran::semantics::Semantics semantics{ci.invocation().semanticsContext(),
+      parseTree, ci.parsing().cooked().AsCharBlock()};
 
   // Run semantic checks
   semantics.Perform();

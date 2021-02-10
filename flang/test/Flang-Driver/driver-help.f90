@@ -28,6 +28,8 @@
 ! HELP-NEXT: Use <value> as character line width in fixed mode
 ! HELP-NEXT: -ffree-form            Process source files in free form
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
+! HELP-NEXT: -fopenacc              Enable OpenACC
+! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
@@ -48,6 +50,8 @@
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
 ! HELP-FC1-NEXT: -ffree-form            Process source files in free form
+! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
+! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>

@@ -8,6 +8,7 @@
 #ifndef LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 #define LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 
+#include "flang/Common/Fortran-features.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -177,6 +178,9 @@ public:
   // The column after which characters are ignored in fixed form lines in the
   // source file.
   int fixedFormColumns_ = 72;
+
+  // Language features
+  common::LanguageFeatureControl features_;
 
 public:
   FrontendOptions() : showHelp_(false), showVersion_(false) {}

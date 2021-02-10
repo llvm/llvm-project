@@ -36947,27 +36947,11 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
     return DAG.getBitcast(VT, Res);
   }
   case X86ISD::VPERMILPI:
-    // Handle v4f64 permutes with different low/high lane masks by permuting
-    // the permute mask on a lane-by-lane basis.
+    // TODO: Handle v4f64 permutes with different low/high lane masks.
     if (SrcVT0 == MVT::v4f64) {
-      if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
-        uint64_t LaneMask = V.getConstantOperandVal(2);
-        uint64_t Mask = Src0.getConstantOperandVal(1);
-        uint64_t LoMask = Mask & 0x3;
-        uint64_t HiMask = (Mask >> 2) & 0x3;
-        uint64_t NewMask = 0;
-        NewMask |= ((LaneMask & 0x02) ? HiMask : LoMask);
-        NewMask |= ((LaneMask & 0x02) ? HiMask : LoMask) << 2;
-        SDValue LHS = Src0.getOperand(0);
-        SDValue RHS =
-            Src1.isUndef() ? DAG.getUNDEF(SrcVT0) : Src1.getOperand(0);
-        SDValue Res = DAG.getNode(X86ISD::VPERM2X128, DL, SrcVT0, LHS, RHS,
-                                  V.getOperand(2));
-        Res = DAG.getNode(SrcOpc0, DL, SrcVT0, Res,
-                          DAG.getTargetConstant(NewMask, DL, MVT::i8));
-        return DAG.getBitcast(VT, Res);
-      }
-      break;
+      uint64_t Mask = Src0.getConstantOperandVal(1);
+      if ((Mask & 0x3) != ((Mask >> 2) & 0x3))
+        break;
     }
     LLVM_FALLTHROUGH;
   case X86ISD::VSHLI:
