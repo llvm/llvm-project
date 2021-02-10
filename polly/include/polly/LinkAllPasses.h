@@ -16,7 +16,6 @@
 
 #include "polly/CodeGen/PPCGCodeGeneration.h"
 #include "polly/Config/config.h"
-#include "polly/Simplify.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdlib>
@@ -59,6 +58,7 @@ llvm::Pass *createFlattenSchedulePass();
 llvm::Pass *createForwardOpTreeWrapperPass();
 llvm::Pass *createDeLICMWrapperPass();
 llvm::Pass *createMaximalStaticExpansionPass();
+llvm::Pass *createSimplifyWrapperPass(int);
 llvm::Pass *createPruneUnprofitableWrapperPass();
 
 extern char &CodePreparationID;
@@ -99,7 +99,7 @@ struct PollyForcePassLinking {
     polly::createForwardOpTreeWrapperPass();
     polly::createDeLICMWrapperPass();
     polly::createDumpModulePass("", true);
-    polly::createSimplifyPass();
+    polly::createSimplifyWrapperPass(0);
     polly::createPruneUnprofitableWrapperPass();
   }
 } PollyForcePassLinking; // Force link by creating a global definition.
@@ -125,6 +125,7 @@ void initializePollyCanonicalizePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePass(llvm::PassRegistry &);
 void initializeForwardOpTreeWrapperPassPass(llvm::PassRegistry &);
 void initializeDeLICMWrapperPassPass(llvm::PassRegistry &);
+void initializeSimplifyWrapperPassPass(llvm::PassRegistry &);
 void initializePruneUnprofitableWrapperPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
