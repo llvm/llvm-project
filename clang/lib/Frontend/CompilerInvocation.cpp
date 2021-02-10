@@ -386,7 +386,7 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 
 template <typename T, typename U, U Value>
 static T extractMaskValue(T KeyPath) {
-  return ((KeyPath & Value) == Value) ? Value : T();
+  return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(ARGS, DIAGS, SUCCESS, ID, FLAGS, PARAM,  \
