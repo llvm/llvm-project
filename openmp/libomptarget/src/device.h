@@ -196,7 +196,7 @@ struct DeviceTy {
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t deleteData(void *TgtPtrBegin);
 
-  // Data transfer. When AsyncInfoPtr is nullptr, the transfer will be
+  // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
@@ -215,7 +215,7 @@ struct DeviceTy {
                         int32_t NumTeams, int32_t ThreadLimit,
                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
 
-  /// Synchronize device/queue/event based on \p AsyncInfoPtr and return
+  /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
 
