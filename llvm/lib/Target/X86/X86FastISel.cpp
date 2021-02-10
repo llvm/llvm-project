@@ -3250,7 +3250,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // fastcc with -tailcallopt is intended to provide a guaranteed
   // tail call optimization. Fastisel doesn't know how to do that.
   if ((CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt) ||
-      CC == CallingConv::Tail)
+      CC == CallingConv::Tail || CC == CallingConv::SwiftTail)
     return false;
 
   // Don't know how to handle Win64 varargs yet.  Nothing special needed for

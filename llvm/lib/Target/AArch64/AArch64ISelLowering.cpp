@@ -5311,6 +5311,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
 
+    // Update the required reserved area if this is the tail call requiring the
+    // most argument stack space.
+    if (FPDiff < 0 && FuncInfo->getTailCallReservedStack() < (unsigned)-FPDiff)
+      FuncInfo->setTailCallReservedStack(-FPDiff);
+
     // The stack pointer must be 16-byte aligned at all times it's used for a
     // memory operation, which in practice means at *all* times and in
     // particular across call boundaries. Therefore our own arguments started at
@@ -5322,7 +5327,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
   if (!IsSibCall)
-    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
+    Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
 
   SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, AArch64::SP,
                                         getPointerTy(DAG.getDataLayout()));
@@ -5590,7 +5595,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
   if (IsTailCall && !IsSibCall) {
-    Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, DL, true),
+    Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, DL, true),
                                DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
     InFlag = Chain.getValue(1);
   }
