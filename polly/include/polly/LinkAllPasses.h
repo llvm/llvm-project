@@ -58,7 +58,7 @@ createManagedMemoryRewritePassPass(GPUArch Arch = GPUArch::NVPTX64,
 llvm::Pass *createIslScheduleOptimizerPass();
 llvm::Pass *createFlattenSchedulePass();
 llvm::Pass *createForwardOpTreeWrapperPass();
-llvm::Pass *createDeLICMPass();
+llvm::Pass *createDeLICMWrapperPass();
 llvm::Pass *createMaximalStaticExpansionPass();
 
 extern char &CodePreparationID;
@@ -97,7 +97,7 @@ struct PollyForcePassLinking {
     polly::createMaximalStaticExpansionPass();
     polly::createFlattenSchedulePass();
     polly::createForwardOpTreeWrapperPass();
-    polly::createDeLICMPass();
+    polly::createDeLICMWrapperPass();
     polly::createDumpModulePass("", true);
     polly::createSimplifyPass();
     polly::createPruneUnprofitablePass();
@@ -124,7 +124,7 @@ void initializeMaximalStaticExpanderPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePass(llvm::PassRegistry &);
 void initializeForwardOpTreeWrapperPassPass(llvm::PassRegistry &);
-void initializeDeLICMPass(llvm::PassRegistry &);
+void initializeDeLICMWrapperPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

@@ -24,6 +24,7 @@
 #include "polly/CodeGen/CodegenCleanup.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodePreparation.h"
+#include "polly/DeLICM.h"
 #include "polly/DependenceInfo.h"
 #include "polly/ForwardOpTree.h"
 #include "polly/JSONExporter.h"
@@ -262,7 +263,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
   initializeForwardOpTreeWrapperPassPass(Registry);
-  initializeDeLICMPass(Registry);
+  initializeDeLICMWrapperPassPass(Registry);
   initializeSimplifyLegacyPassPass(Registry);
   initializeDumpModulePass(Registry);
   initializePruneUnprofitablePass(Registry);
@@ -323,7 +324,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (EnableForwardOpTree)
     PM.add(polly::createForwardOpTreeWrapperPass());
   if (EnableDeLICM)
-    PM.add(polly::createDeLICMPass());
+    PM.add(polly::createDeLICMWrapperPass());
   if (EnableSimplify)
     PM.add(polly::createSimplifyPass(1));
 
@@ -470,7 +471,8 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   assert(!EnablePolyhedralInfo && "This option is not implemented");
   if (EnableForwardOpTree)
     SPM.addPass(ForwardOpTreePass());
-  assert(!EnableDeLICM && "This option is not implemented");
+  if (EnableDeLICM)
+    SPM.addPass(DeLICMPass());
   assert(!EnableSimplify && "This option is not implemented");
   if (ImportJScop)
     SPM.addPass(JSONImportPass());
