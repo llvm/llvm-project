@@ -3206,18 +3206,18 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_default_constructible_v
 template <class _Tp>
 void __test_implicit_default_constructible(_Tp);
 
-template <class _Tp, class = void, bool = is_default_constructible<_Tp>::value>
+template <class _Tp, class = void, class = typename is_default_constructible<_Tp>::type>
 struct __is_implicitly_default_constructible
     : false_type
 { };
 
 template <class _Tp>
-struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), true>
+struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), true_type>
     : true_type
 { };
 
 template <class _Tp>
-struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), false>
+struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), false_type>
     : false_type
 { };
 #endif // !C++03
