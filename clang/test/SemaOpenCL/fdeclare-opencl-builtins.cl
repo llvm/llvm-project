@@ -38,6 +38,7 @@ typedef long long2 __attribute__((ext_vector_type(2)));
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
+#define cl_khr_subgroup_clustered_reduce 1
 #endif
 #endif
 
@@ -144,10 +145,12 @@ kernel void basic_subgroup(global uint *out) {
 kernel void extended_subgroup(global uint4 *out, global int *scalar) {
   out[0] = get_sub_group_eq_mask();
   scalar[0] = sub_group_non_uniform_scan_inclusive_or(3);
+  scalar[1] = sub_group_clustered_reduce_logical_xor(2, 4);
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-3{{implicit declaration of function 'get_sub_group_eq_mask' is invalid in OpenCL}}
-  // expected-error@-4{{implicit conversion changes signedness}}
-  // expected-error@-4{{implicit declaration of function 'sub_group_non_uniform_scan_inclusive_or' is invalid in OpenCL}}
+  // expected-error@-4{{implicit declaration of function 'get_sub_group_eq_mask' is invalid in OpenCL}}
+  // expected-error@-5{{implicit conversion changes signedness}}
+  // expected-error@-5{{implicit declaration of function 'sub_group_non_uniform_scan_inclusive_or' is invalid in OpenCL}}
+  // expected-error@-5{{implicit declaration of function 'sub_group_clustered_reduce_logical_xor' is invalid in OpenCL}}
 #endif
 }
 
