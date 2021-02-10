@@ -260,11 +260,11 @@ class HeaderSearchOpts<string base>
 class PreprocessorOpts<string base>
   : KeyPathAndMacro<"PreprocessorOpts->", base, "PREPROCESSOR_"> {}
 class FileSystemOpts<string base>
-  : KeyPathAndMacro<"FileSystemOpts.", base> {}
+  : KeyPathAndMacro<"FileSystemOpts.", base, "FILE_SYSTEM_"> {}
 class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
-  : KeyPathAndMacro<"MigratorOpts.", base> {}
+  : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
 
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
 // Args.hasArg(OPT_ffoo) is used to check that the flag is enabled.
