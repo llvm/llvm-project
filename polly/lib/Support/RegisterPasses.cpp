@@ -458,19 +458,35 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   PassBuilder PB;
   ScopPassManager SPM;
 
+  PM.addPass(CodePreparationPass());
+
   // TODO add utility passes for the various command line options, once they're
   // ported
-  assert(!DumpBefore && "This option is not implemented");
-  assert(DumpBeforeFile.empty() && "This option is not implemented");
+  if (DumpBefore)
+    report_fatal_error("Option -polly-dump-before not supported with NPM",
+                       false);
+  if (!DumpBeforeFile.empty())
+    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
+                       false);
 
-  if (PollyDetectOnly)
+  if (PollyDetectOnly) {
+    // Don't add more passes other than the ScopPassManager's detection passes.
+    PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
     return;
+  }
 
-  assert(!PollyViewer && "This option is not implemented");
-  assert(!PollyOnlyViewer && "This option is not implemented");
-  assert(!PollyPrinter && "This option is not implemented");
-  assert(!PollyOnlyPrinter && "This option is not implemented");
-  assert(!EnablePolyhedralInfo && "This option is not implemented");
+  if (PollyViewer)
+    report_fatal_error("Option -polly-show not supported with NPM", false);
+  if (PollyOnlyViewer)
+    report_fatal_error("Option -polly-show-only not supported with NPM", false);
+  if (PollyPrinter)
+    report_fatal_error("Option -polly-dot not supported with NPM", false);
+  if (PollyOnlyPrinter)
+    report_fatal_error("Option -polly-dot-only not supported with NPM", false);
+  if (EnablePolyhedralInfo)
+    report_fatal_error(
+        "Option -polly-enable-polyhedralinfo not supported with NPM", false);
+
   if (EnableSimplify)
     SPM.addPass(SimplifyPass(0));
   if (EnableForwardOpTree)
@@ -479,12 +495,21 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
     SPM.addPass(DeLICMPass());
   if (EnableSimplify)
     SPM.addPass(SimplifyPass(1));
+
   if (ImportJScop)
     SPM.addPass(JSONImportPass());
-  assert(!DeadCodeElim && "This option is not implemented");
+
+  if (DeadCodeElim)
+    report_fatal_error("Option -polly-run-dce not supported with NPM", false);
+
+  if (FullyIndexedStaticExpansion)
+    report_fatal_error("Option -polly-enable-mse not supported with NPM",
+                       false);
+
   if (EnablePruneUnprofitable)
     SPM.addPass(PruneUnprofitablePass());
-  if (Target == TARGET_CPU || Target == TARGET_HYBRID)
+
+  if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
     switch (Optimizer) {
     case OPTIMIZER_NONE:
       break; /* Do nothing */
@@ -492,8 +517,10 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
       SPM.addPass(IslScheduleOptimizerPass());
       break;
     }
+  }
 
-  assert(!ExportJScop && "This option is not implemented");
+  if (ExportJScop)
+    report_fatal_error("Option -polly-export not supported with NPM", false);
 
   if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
     switch (CodeGeneration) {
@@ -503,24 +530,32 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
                               ScopStandardAnalysisResults &, SPMUpdater &>());
       break;
     case CODEGEN_FULL:
-      SPM.addPass(polly::CodeGenerationPass());
+      SPM.addPass(CodeGenerationPass());
       break;
-    default:
+    case CODEGEN_NONE:
       break;
     }
-  }
 #ifdef GPU_CODEGEN
-  else
-    llvm_unreachable("Hybrid Target with GPU support is not implemented");
+  } else
+    report_fatal_error("Option -polly-target=gpu not supported for NPM", false);
 #endif
 
-  PM.addPass(CodePreparationPass());
+#ifdef GPU_CODEGEN
+  if (Target == TARGET_HYBRID)
+    report_fatal_error("Option -polly-target=hybrid not supported for NPM",
+                       false);
+#endif
+
   PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
   PM.addPass(PB.buildFunctionSimplificationPipeline(
       Level, ThinOrFullLTOPhase::None)); // Cleanup
 
-  assert(!DumpAfter && "This option is not implemented");
-  assert(DumpAfterFile.empty() && "This option is not implemented");
+  if (DumpAfter)
+    report_fatal_error("Option -polly-dump-after not supported with NPM",
+                       false);
+  if (!DumpAfterFile.empty())
+    report_fatal_error("Option -polly-dump-after-file not supported with NPM",
+                       false);
 
   if (CFGPrinter)
     PM.addPass(llvm::CFGPrinterPass());
@@ -718,9 +753,9 @@ void registerPollyPasses(PassBuilder &PB) {
         return parseTopLevelPipeline(MPM, PIC, Pipeline, DebugLogging);
       });
 
-  if (PassPosition == POSITION_BEFORE_VECTORIZER)
-    PB.registerVectorizerStartEPCallback(buildDefaultPollyPipeline);
-  // FIXME else Error?
+  if (PassPosition != POSITION_BEFORE_VECTORIZER)
+    report_fatal_error("Option -polly-position not supported with NPM", false);
+  PB.registerVectorizerStartEPCallback(buildDefaultPollyPipeline);
 }
 } // namespace polly
 
