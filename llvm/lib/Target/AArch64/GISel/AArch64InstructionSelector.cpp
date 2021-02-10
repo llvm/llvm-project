@@ -1085,7 +1085,9 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     //
     // Into:
     // %select = CSINC %reg, %x, cc
-    if (mi_match(Reg, MRI, m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)))) {
+    if (mi_match(Reg, MRI,
+                 m_any_of(m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)),
+                          m_GPtrAdd(m_Reg(MatchReg), m_SpecificICst(1))))) {
       Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
       Reg = MatchReg;
       if (Invert) {
