@@ -252,9 +252,10 @@ private:
 
   /// Emit a CSet for an integer compare.
   ///
-  /// \p DefReg is expected to be a 32-bit scalar register.
+  /// \p DefReg and \p SrcReg are expected to be 32-bit scalar registers.
   MachineInstr *emitCSetForICMP(Register DefReg, unsigned Pred,
-                                MachineIRBuilder &MIRBuilder) const;
+                                MachineIRBuilder &MIRBuilder,
+                                Register SrcReg = AArch64::WZR) const;
   /// Emit a CSet for a FP compare.
   ///
   /// \p Dst is expected to be a 32-bit scalar register.
@@ -2153,6 +2154,41 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
       return false;
 
     I.setDesc(TII.get(TargetOpcode::COPY));
+    return true;
+  }
+
+  case TargetOpcode::G_ADD: {
+    // Check if this is being fed by a G_ICMP on either side.
+    //
+    // (cmp pred, x, y) + z
+    //
+    // In the above case, when the cmp is true, we increment z by 1. So, we can
+    // fold the add into the cset for the cmp by using cinc.
+    //
+    // FIXME: This would probably be a lot nicer in PostLegalizerLowering.
+    Register X = I.getOperand(1).getReg();
+
+    // Only handle scalars. Scalar G_ICMP is only legal for s32, so bail out
+    // early if we see it.
+    LLT Ty = MRI.getType(X);
+    if (Ty.isVector() || Ty.getSizeInBits() != 32)
+      return false;
+
+    Register CmpReg = I.getOperand(2).getReg();
+    MachineInstr *Cmp = getOpcodeDef(TargetOpcode::G_ICMP, CmpReg, MRI);
+    if (!Cmp) {
+      std::swap(X, CmpReg);
+      Cmp = getOpcodeDef(TargetOpcode::G_ICMP, CmpReg, MRI);
+      if (!Cmp)
+        return false;
+    }
+    MachineIRBuilder MIRBuilder(I);
+    auto Pred =
+        static_cast<CmpInst::Predicate>(Cmp->getOperand(1).getPredicate());
+    emitIntegerCompare(Cmp->getOperand(2), Cmp->getOperand(3),
+                       Cmp->getOperand(1), MIRBuilder);
+    emitCSetForICMP(I.getOperand(0).getReg(), Pred, MIRBuilder, X);
+    I.eraseFromParent();
     return true;
   }
   default:
@@ -4367,14 +4403,13 @@ MachineInstr *AArch64InstructionSelector::emitFMovForFConstant(
 
 MachineInstr *
 AArch64InstructionSelector::emitCSetForICMP(Register DefReg, unsigned Pred,
-                                     MachineIRBuilder &MIRBuilder) const {
+                                            MachineIRBuilder &MIRBuilder,
+                                            Register SrcReg) const {
   // CSINC increments the result when the predicate is false. Invert it.
   const AArch64CC::CondCode InvCC = changeICMPPredToAArch64CC(
       CmpInst::getInversePredicate((CmpInst::Predicate)Pred));
-  auto I =
-      MIRBuilder
-    .buildInstr(AArch64::CSINCWr, {DefReg}, {Register(AArch64::WZR), Register(AArch64::WZR)})
-          .addImm(InvCC);
+  auto I = MIRBuilder.buildInstr(AArch64::CSINCWr, {DefReg}, {SrcReg, SrcReg})
+               .addImm(InvCC);
   constrainSelectedInstRegOperands(*I, TII, TRI, RBI);
   return &*I;
 }
