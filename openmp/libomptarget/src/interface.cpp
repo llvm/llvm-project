@@ -407,7 +407,8 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
   }
 #endif
 
-  int rc = target(loc, device_id, host_ptr, arg_num, args_base, args, arg_sizes,
+  DeviceTy &Device = PM->Devices[device_id];
+  int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, 0, 0, false /*team*/);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
   return rc;
@@ -487,7 +488,8 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
   }
 #endif
 
-  int rc = target(loc, device_id, host_ptr, arg_num, args_base, args, arg_sizes,
+  DeviceTy &Device = PM->Devices[device_id];
+  int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, team_num, thread_limit,
                   true /*team*/);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
