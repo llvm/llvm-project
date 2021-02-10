@@ -28,39 +28,38 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) {
 
 define swifttailcc void @caller_to8_from0() {
 ; COMMON-LABEL: caller_to8_from0:
-; COMMON: sub sp, sp, #32
 
 ; Key point is that the "42" should go #16 below incoming stack
 ; pointer (we didn't have arg space to reuse).
   tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
-; COMMON: str {{x[0-9]+}}, [sp, #16]!
+; COMMON: str {{x[0-9]+}}, [sp, #-16]!
 ; COMMON-NEXT: b callee_stack8
 }
 
 define swifttailcc void @caller_to8_from8([8 x i64], i64 %a) {
 ; COMMON-LABEL: caller_to8_from8:
-; COMMON: sub sp, sp, #16
+; COMMON-NOT: sub sp,
 
 ; Key point is that the "%a" should go where at SP on entry.
   tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
-; COMMON: str {{x[0-9]+}}, [sp, #16]!
+; COMMON: str {{x[0-9]+}}, [sp]
 ; COMMON-NEXT: b callee_stack8
 }
 
 define swifttailcc void @caller_to16_from8([8 x i64], i64 %a) {
 ; COMMON-LABEL: caller_to16_from8:
-; COMMON: sub sp, sp, #16
+; COMMON-NOT: sub sp,
 
 ; Important point is that the call reuses the "dead" argument space
 ; above %a on the stack. If it tries to go below incoming-SP then the
 ; callee will not deallocate the space, even in swifttailcc.
   tail call swifttailcc void @callee_stack16([8 x i64] undef, i64 42, i64 2)
 
-; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
+; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp]
 ; COMMON-NEXT: b callee_stack16
   ret void
 }
@@ -68,28 +67,28 @@ define swifttailcc void @caller_to16_from8([8 x i64], i64 %a) {
 
 define swifttailcc void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
 ; COMMON-LABEL: caller_to8_from24:
-; COMMON: sub sp, sp, #16
+; COMMON-NOT: sub sp,
 
 ; Key point is that the "%a" should go where at #16 above SP on entry.
   tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
   ret void
 
-; COMMON: str {{x[0-9]+}}, [sp, #32]!
+; COMMON: str {{x[0-9]+}}, [sp, #16]!
 ; COMMON-NEXT: b callee_stack8
 }
 
 
 define swifttailcc void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 ; COMMON-LABEL: caller_to16_from16:
-; COMMON: sub sp, sp, #16
+; COMMON-NOT: sub sp,
 
 ; Here we want to make sure that both loads happen before the stores:
 ; otherwise either %a or %b will be wrongly clobbered.
   tail call swifttailcc void @callee_stack16([8 x i64] undef, i64 %b, i64 %a)
   ret void
 
-; COMMON: ldp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
+; COMMON: ldp {{x[0-9]+}}, {{x[0-9]+}}, [sp]
+; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp]
 ; COMMON-NEXT: b callee_stack16
 }
 
@@ -155,4 +154,67 @@ define { double, [2 x double] } @test_mismatched_insert() {
   %res.012 = insertvalue { double, [2 x double] } %res.01, double %val2, 1, 1
 
   ret { double, [2 x double] } %res.012
+}
+
+define void @fromC_totail() {
+; COMMON-LABEL: fromC_totail:
+; COMMON: sub sp, sp, #32
+
+; COMMON-NOT: sub sp,
+; COMMON: mov w[[TMP:[0-9]+]], #42
+; COMMON: str x[[TMP]], [sp]
+; COMMON: bl callee_stack8
+  ; We must reset the stack to where it was before the call by undoing its extra stack pop.
+; COMMON: str x[[TMP]], [sp, #-16]!
+; COMMON: bl callee_stack8
+; COMMON: sub sp, sp, #16
+
+  call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  ret void
+}
+
+define void @fromC_totail_noreservedframe(i32 %len) {
+; COMMON-LABEL: fromC_totail_noreservedframe:
+; COMMON: stp x29, x30, [sp, #-32]!
+
+; COMMON: mov w[[TMP:[0-9]+]], #42
+  ; Note stack is subtracted here to allocate space for arg
+; COMMON: str x[[TMP]], [sp, #-16]!
+; COMMON: bl callee_stack8
+  ; And here.
+; COMMON: str x[[TMP]], [sp, #-16]!
+; COMMON: bl callee_stack8
+  ; But not restored here because callee_stack8 did that for us.
+; COMMON-NOT: sub sp,
+
+  ; Variable sized allocation prevents reserving frame at start of function so each call must allocate any stack space it needs.
+  %var = alloca i32, i32 %len
+
+  call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  ret void
+}
+
+declare void @Ccallee_stack8([8 x i64], i64)
+
+define swifttailcc void @fromtail_toC() {
+; COMMON-LABEL: fromtail_toC:
+; COMMON: sub sp, sp, #32
+
+; COMMON-NOT: sub sp,
+; COMMON: mov w[[TMP:[0-9]+]], #42
+; COMMON: str x[[TMP]], [sp]
+; COMMON: bl Ccallee_stack8
+  ; C callees will return with the stack exactly where we left it, so we mustn't try to fix anything.
+; COMMON-NOT: add sp,
+; COMMON-NOT: sub sp,
+; COMMON: str x[[TMP]], [sp]{{$}}
+; COMMON: bl Ccallee_stack8
+; COMMON-NOT: sub sp,
+
+
+  call void @Ccallee_stack8([8 x i64] undef, i64 42)
+  call void @Ccallee_stack8([8 x i64] undef, i64 42)
+  ret void
 }
