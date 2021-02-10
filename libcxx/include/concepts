@@ -157,6 +157,12 @@ concept __same_as_impl = _VSTD::_IsSame<_Tp, _Up>::value;
 template<class _Tp, class _Up>
 concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
 
+// [concept.derived]
+template<class _Dp, class _Bp>
+concept derived_from =
+  is_base_of_v<_Bp, _Dp> &&
+  is_convertible_v<const volatile _Dp*, const volatile _Bp*>;
+
 // [concept.convertible]
 template<class _From, class _To>
 concept convertible_to =
