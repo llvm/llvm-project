@@ -1,9 +1,14 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler -Wno-pointer-to-int-cast %s
 
 #define NULL (void *)0
 #define nil (id)0
 #define CALLED_ONCE __attribute__((called_once))
 #define NORETURN __attribute__((noreturn))
+#define LIKELY(X) __builtin_expect(!!(X), 1)
+#define UNLIKELY(X) __builtin_expect(!!(X), 0)
+#define LIKELY_WITH_PROBA(X, P) __builtin_expect_with_probability(!!(X), 1, P)
+#define UNLIKELY_WITH_PROBA(X, P) __builtin_expect_with_probability(!!(X), 0, P)
+#define UNPRED(X) __builtin_unpredictable((long)(X))
 
 @protocol NSObject
 @end
@@ -544,6 +549,70 @@ void call_with_check_6(void (^callback)(void) CALLED_ONCE) {
 
 int call_with_check_7(int (^callback)(void) CALLED_ONCE) {
   return callback ? callback() : 0;
+  // no-warning
+}
+
+void call_with_builtin_check_1(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY(callback))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_2(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY(callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_3(int (^callback)(void) CALLED_ONCE) {
+  if (__builtin_expect((long)callback, 0L)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_4(int (^callback)(void) CALLED_ONCE) {
+  if (__builtin_expect(0L, (long)callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_5(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY_WITH_PROBA(callback, 0.9))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_6(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY_WITH_PROBA(callback, 0.9)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_7(int (^callback)(void) CALLED_ONCE) {
+  if (UNPRED(callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_8(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY(callback != nil))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_9(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY(callback == NULL))
+    callback();
   // no-warning
 }
 
