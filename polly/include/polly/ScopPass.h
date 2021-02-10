@@ -20,6 +20,7 @@
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerImpl.h"
 
@@ -176,6 +177,7 @@ struct ScopStandardAnalysisResults {
   ScalarEvolution &SE;
   LoopInfo &LI;
   RegionInfo &RI;
+  TargetTransformInfo &TTI;
 };
 
 class SPMUpdater {
@@ -224,7 +226,8 @@ public:
                                       AM.getResult<ScopInfoAnalysis>(F),
                                       AM.getResult<ScalarEvolutionAnalysis>(F),
                                       AM.getResult<LoopAnalysis>(F),
-                                      AM.getResult<RegionInfoAnalysis>(F)};
+                                      AM.getResult<RegionInfoAnalysis>(F),
+                                      AM.getResult<TargetIRAnalysis>(F)};
 
     ScopAnalysisManager &SAM =
         AM.getResult<ScopAnalysisManagerFunctionProxy>(F).getManager();
