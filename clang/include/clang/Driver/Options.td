@@ -250,7 +250,7 @@ class TargetOpts<string base>
 class FrontendOpts<string base>
   : KeyPathAndMacro<"FrontendOpts.", base, "FRONTEND_"> {}
 class PreprocessorOutputOpts<string base>
-  : KeyPathAndMacro<"PreprocessorOutputOpts.", base> {}
+  : KeyPathAndMacro<"PreprocessorOutputOpts.", base, "PREPROCESSOR_OUTPUT_"> {}
 class DependencyOutputOpts<string base>
   : KeyPathAndMacro<"DependencyOutputOpts.", base> {}
 class CodeGenOpts<string base>
