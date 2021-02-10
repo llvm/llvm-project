@@ -33,7 +33,7 @@ define dso_local i8* @rv_marker_1() {
 ; GISEL-NOT:       mov x29, x29
 ;
 entry:
-  %call = call "rv_marker" i8* @foo1()
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
   ret i8* %call
 }
 
@@ -49,7 +49,7 @@ define dso_local void @rv_marker_2_select(i32 %c) {
 entry:
   %tobool.not = icmp eq i32 %c, 0
   %.sink = select i1 %tobool.not, i32 2, i32 1
-  %call1 = call "rv_marker" i8* @foo0(i32 %.sink)
+  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i64 0) ]
   tail call void @foo2(i8* %call1)
   ret void
 }
@@ -61,7 +61,7 @@ define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_
 ; SELDAG-NEXT:   mov x29, x29
 ;
 entry:
-  %call = call "rv_marker" i8* @foo1()
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
   invoke void @objc_object(i8* %call) #5
           to label %invoke.cont unwind label %lpad
 
@@ -87,7 +87,7 @@ entry:
   %s = alloca %struct.S, align 1
   %0 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %0) #2
-  %call = invoke "rv_marker" i8* @foo1()
+  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -127,12 +127,12 @@ define dso_local i8* @rv_marker_5_indirect_call() {
 ;
 entry:
   %0 = load i8* ()*, i8* ()** @fptr, align 8
-  %call = call "rv_marker" i8* %0()
+  %call = call i8* %0() [ "clang.arc.attachedcall"(i64 0) ]
   tail call void @foo2(i8* %call)
   ret i8* %call
 }
 
-declare void @foo(i64, i64, i64)
+declare i8* @foo(i64, i64, i64)
 
 define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: rv_marker_multiarg
@@ -142,7 +142,7 @@ define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:   bl  foo
 ; SELDAG-NEXT:  mov x29, x29
 ; GISEL-NOT:    mov x29, x29
-  call "rv_marker" void @foo(i64 %c, i64 %b, i64 %a)
+  call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i64 0) ]
   ret void
 }
 
