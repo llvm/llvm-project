@@ -40,6 +40,20 @@ unsigned fir::cg::XEmboxOp::getOutRank() {
   return outRank;
 }
 
+unsigned fir::cg::XReboxOp::getOutRank() {
+  if (auto seqTy =
+          fir::dyn_cast_ptrOrBoxEleTy(getType()).dyn_cast<fir::SequenceType>())
+    return seqTy.getDimension();
+  return 0;
+}
+
+unsigned fir::cg::XReboxOp::getRank() {
+  if (auto seqTy = fir::dyn_cast_ptrOrBoxEleTy(box().getType())
+                       .dyn_cast<fir::SequenceType>())
+    return seqTy.getDimension();
+  return 0;
+}
+
 unsigned fir::cg::XArrayCoorOp::getRank() {
   auto memrefTy = memref().getType();
   if (memrefTy.isa<fir::BoxType>())
