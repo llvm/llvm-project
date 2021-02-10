@@ -60,7 +60,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_BoxType : FIR_Type<"Box", "box"> {
@@ -89,7 +89,7 @@ def fir_BoxType : FIR_Type<"Box", "box"> {
     mlir::AffineMapAttr getLayoutMap() const { return getMap(); }
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -172,7 +172,7 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -235,7 +235,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -265,7 +265,7 @@ def fir_RealType : FIR_Type<"Real", "real"> {
     using KindTy = unsigned;
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_RecordType : FIR_Type<"Record", "type"> {
@@ -279,7 +279,7 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let parameters = (ins StringRefParameter<"name">:$name);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
   let genStorageClass = 0;
 
   let extraClassDeclaration = [{
@@ -327,7 +327,7 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     mlir::Type getElementType() const { return getEleTy(); }
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_ShapeType : FIR_Type<"Shape", "shape"> {
@@ -393,7 +393,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     "mlir::AffineMapAttr":$layoutMap
   );
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -451,7 +451,7 @@ def fir_TypeDescType : FIR_Type<"TypeDesc", "tdesc"> {
 
   let parameters = (ins "mlir::Type":$ofTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -473,7 +473,7 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let parameters = (ins "uint64_t":$len, "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let extraClassDeclaration = [{
     static bool isValidElementType(mlir::Type t);
