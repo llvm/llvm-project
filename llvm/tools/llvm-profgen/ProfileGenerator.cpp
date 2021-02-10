@@ -11,6 +11,8 @@
 static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::Required,
                                            cl::desc("Output profile file"));
+static cl::alias OutputA("o", cl::desc("Alias for --output"),
+                         cl::aliasopt(OutputFilename));
 
 static cl::opt<SampleProfileFormat> OutputFormat(
     "format", cl::desc("Format of output profile"), cl::init(SPF_Text),

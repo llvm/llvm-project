@@ -17,6 +17,9 @@ static cl::opt<bool> ShowUnwinderOutput("show-unwinder-output",
                                         cl::ZeroOrMore,
                                         cl::desc("Print unwinder output"));
 
+extern cl::opt<bool> ShowDisassemblyOnly;
+extern cl::opt<bool> ShowSourceLocations;
+
 namespace llvm {
 namespace sampleprof {
 
@@ -230,7 +233,44 @@ bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
   return true;
 }
 
-PerfReader::PerfReader(cl::list<std::string> &BinaryFilenames) {
+void PerfReader::validateCommandLine(
+    cl::list<std::string> &BinaryFilenames,
+    cl::list<std::string> &PerfTraceFilenames) {
+  // Allow the invalid perfscript if we only use to show binary disassembly
+  if (!ShowDisassemblyOnly) {
+    for (auto &File : PerfTraceFilenames) {
+      if (!llvm::sys::fs::exists(File)) {
+        std::string Msg = "Input perf script(" + File + ") doesn't exist!";
+        exitWithError(Msg);
+      }
+    }
+  }
+  if (BinaryFilenames.size() > 1) {
+    // TODO: remove this if everything is ready to support multiple binaries.
+    exitWithError(
+        "Currently only support one input binary, multiple binaries' "
+        "profile will be merged in one profile and make profile "
+        "summary info inaccurate. Please use `llvm-perfdata` to merge "
+        "profiles from multiple binaries.");
+  }
+  for (auto &Binary : BinaryFilenames) {
+    if (!llvm::sys::fs::exists(Binary)) {
+      std::string Msg = "Input binary(" + Binary + ") doesn't exist!";
+      exitWithError(Msg);
+    }
+  }
+  if (CSProfileGenerator::MaxCompressionSize < -1) {
+    exitWithError("Value of --compress-recursion should >= -1");
+  }
+  if (ShowSourceLocations && !ShowDisassemblyOnly) {
+    exitWithError("--show-source-locations should work together with "
+                  "--show-disassembly-only!");
+  }
+}
+
+PerfReader::PerfReader(cl::list<std::string> &BinaryFilenames,
+                       cl::list<std::string> &PerfTraceFilenames) {
+  validateCommandLine(BinaryFilenames, PerfTraceFilenames);
   // Load the binaries.
   for (auto Filename : BinaryFilenames)
     loadBinary(Filename, /*AllowNameConflict*/ false);
@@ -591,27 +631,13 @@ void PerfReader::parseAndAggregateTrace(StringRef Filename) {
 
 void PerfReader::checkAndSetPerfType(
     cl::list<std::string> &PerfTraceFilenames) {
-  bool HasHybridPerf = true;
   for (auto FileName : PerfTraceFilenames) {
-    if (!isHybridPerfScript(FileName)) {
-      HasHybridPerf = false;
-      break;
-    }
-  }
-
-  if (HasHybridPerf) {
-    PerfType = PERF_LBR_STACK;
-  } else {
-    // TODO: Support other type of perf script
-    PerfType = PERF_INVILID;
-  }
-
-  if (BinaryTable.size() > 1) {
-    // TODO: remove this if everything is ready to support multiple binaries.
-    exitWithError("Currently only support one input binary, multiple binaries' "
-                  "profile will be merged in one profile and make profile "
-                  "summary info inaccurate. Please use `perfdata` to merge "
-                  "profiles from multiple binaries.");
+    PerfScriptType Type = checkPerfScriptType(FileName);
+    if (Type == PERF_INVALID)
+      exitWithError("Invalid perf script input!");
+    if (PerfType != PERF_UNKNOWN && PerfType != Type)
+      exitWithError("Inconsistent sample among different perf scripts");
+    PerfType = Type;
   }
 }
 

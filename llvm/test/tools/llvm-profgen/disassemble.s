@@ -1,6 +1,6 @@
 # REQUIRES: x86-registered-target
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
-# RUN: llvm-profgen --binary=%t --perfscript=%s --output=%t1 -show-disassembly -x86-asm-syntax=intel | FileCheck %s --match-full-lines
+# RUN: llvm-profgen --binary=%t --perfscript=%s --output=%t1 -show-disassembly-only -x86-asm-syntax=intel | FileCheck %s --match-full-lines
 
 # CHECK: Disassembly of section .text [0x0, 0x66]:
 # CHECK: <foo1>:
