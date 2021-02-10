@@ -23,7 +23,7 @@ int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
   if (AsyncInfo.Queue) {
     // If we have a queue we need to synchronize it now.
-    Result = Device.synchronize(&AsyncInfo);
+    Result = Device.synchronize(*this);
     assert(AsyncInfo.Queue == nullptr &&
            "The device plugin should have nulled the queue to indicate there "
            "are no outstanding actions!");
@@ -166,6 +166,7 @@ static int InitLibrary(DeviceTy &Device) {
    * Run ctors for static objects
    */
   if (!Device.PendingCtorsDtors.empty()) {
+    AsyncInfoTy AsyncInfo(Device);
     // Call all ctors for all libraries registered so far
     for (auto &lib : Device.PendingCtorsDtors) {
       if (!lib.second.PendingCtors.empty()) {
@@ -174,7 +175,7 @@ static int InitLibrary(DeviceTy &Device) {
           void *ctor = entry;
           int rc =
               target(nullptr, Device, ctor, 0, nullptr, nullptr, nullptr,
-                     nullptr, nullptr, nullptr, 1, 1, true /*team*/, nullptr);
+                     nullptr, nullptr, nullptr, 1, 1, true /*team*/, AsyncInfo);
           if (rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(ctor));
             Device.PendingGlobalsMtx.unlock();
@@ -186,6 +187,9 @@ static int InitLibrary(DeviceTy &Device) {
         DP("Done with pending ctors for lib " DPxMOD "\n", DPxPTR(lib.first));
       }
     }
+    // All constructors have been issued, wait for them now.
+    if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
   }
   Device.HasPendingGlobals = false;
   Device.PendingGlobalsMtx.unlock();
@@ -226,6 +230,7 @@ static int32_t getParentIndex(int64_t type) {
 int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
                      int64_t arg_size, int64_t arg_type,
                      map_var_info_t arg_names, void *arg_mapper,
+                     AsyncInfoTy &AsyncInfo,
                      TargetDataFuncPtrTy target_data_function) {
   TIMESCOPE_WITH_IDENT(loc);
   DP("Calling the mapper function " DPxMOD "\n", DPxPTR(arg_mapper));
@@ -256,11 +261,10 @@ int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
     MapperArgNames[I] = C.Name;
   }
 
-  int rc = target_data_function(loc, Device, MapperComponents.Components.size(),
-                                MapperArgsBase.data(), MapperArgs.data(),
-                                MapperArgSizes.data(), MapperArgTypes.data(),
-                                MapperArgNames.data(), /*arg_mappers*/ nullptr,
-                                /* AsyncInfoTy */ nullptr);
+  int rc = target_data_function(
+      loc, Device, MapperComponents.Components.size(), MapperArgsBase.data(),
+      MapperArgs.data(), MapperArgSizes.data(), MapperArgTypes.data(),
+      MapperArgNames.data(), /*arg_mappers*/ nullptr, AsyncInfo);
 
   return rc;
 }
@@ -269,7 +273,7 @@ int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
 int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                     void **args_base, void **args, int64_t *arg_sizes,
                     int64_t *arg_types, map_var_info_t *arg_names,
-                    void **arg_mappers, AsyncInfoTy *AsyncInfo) {
+                    void **arg_mappers, AsyncInfoTy &AsyncInfo) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -286,7 +290,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       map_var_info_t arg_name = (!arg_names) ? nullptr : arg_names[i];
       int rc = targetDataMapper(loc, Device, args_base[i], args[i],
                                 arg_sizes[i], arg_types[i], arg_name,
-                                arg_mappers[i], targetDataBegin);
+                                arg_mappers[i], AsyncInfo, targetDataBegin);
 
       if (rc != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
@@ -416,7 +420,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
         DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
            data_size, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
         int rt =
-            Device.submitData(TgtPtrBegin, HstPtrBegin, data_size, *AsyncInfo);
+            Device.submitData(TgtPtrBegin, HstPtrBegin, data_size, AsyncInfo);
         if (rt != OFFLOAD_SUCCESS) {
           REPORT("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
@@ -430,7 +434,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
       void *TgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
       int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
-                                 sizeof(void *), *AsyncInfo);
+                                 sizeof(void *), AsyncInfo);
       if (rt != OFFLOAD_SUCCESS) {
         REPORT("Copying data to device failed.\n");
         return OFFLOAD_FAIL;
@@ -470,7 +474,7 @@ struct DeallocTgtPtrInfo {
 int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
-                  void **ArgMappers, AsyncInfoTy *AsyncInfo) {
+                  void **ArgMappers, AsyncInfoTy &AsyncInfo) {
   int Ret;
   std::vector<DeallocTgtPtrInfo> DeallocTgtPtrs;
   // process each input.
@@ -488,9 +492,9 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       DP("Calling targetDataMapper for the %dth argument\n", I);
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
-      Ret =
-          targetDataMapper(loc, Device, ArgBases[I], Args[I], ArgSizes[I],
-                           ArgTypes[I], ArgName, ArgMappers[I], targetDataEnd);
+      Ret = targetDataMapper(loc, Device, ArgBases[I], Args[I], ArgSizes[I],
+                             ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
+                             targetDataEnd);
 
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataEnd via targetDataMapper for custom mapper"
@@ -585,7 +589,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
              DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
           Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
-                                    *AsyncInfo);
+                                    AsyncInfo);
           if (Ret != OFFLOAD_SUCCESS) {
             REPORT("Copying data from device failed.\n");
             return OFFLOAD_FAIL;
@@ -637,17 +641,13 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     }
   }
 
+  // TODO: We should not synchronize here but pass the AsyncInfo object to the
+  //       allocate/deallocate device APIs.
+  //
   // We need to synchronize before deallocating data.
-  // If AsyncInfo is nullptr, the previous data transfer (if has) will be
-  // synchronous, so we don't need to synchronize again. If AsyncInfo->Queue is
-  // nullptr, there is no data transfer happened because once there is,
-  // AsyncInfo->Queue will not be nullptr, so again, we don't need to
-  // synchronize.
-  if (AsyncInfo) {
-    Ret = AsyncInfo->synchronize();
-    if (Ret != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-  }
+  Ret = AsyncInfo.synchronize();
+  if (Ret != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
 
   // Deallocate target pointer
   for (DeallocTgtPtrInfo &Info : DeallocTgtPtrs) {
@@ -664,7 +664,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 
 static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
                                 void *HstPtrBegin, int64_t ArgSize,
-                                int64_t ArgType) {
+                                int64_t ArgType, AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_IDENT(loc);
   bool IsLast, IsHostPtr;
   void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, ArgSize, IsLast, false,
@@ -690,7 +690,7 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
   if (ArgType & OMP_TGT_MAPTYPE_FROM) {
     DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
        ArgSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-    int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, nullptr);
+    int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Copying data from device failed.\n");
       return OFFLOAD_FAIL;
@@ -717,7 +717,7 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
   if (ArgType & OMP_TGT_MAPTYPE_TO) {
     DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
        ArgSize, DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
-    int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, nullptr);
+    int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Copying data to device failed.\n");
       return OFFLOAD_FAIL;
@@ -737,7 +737,7 @@ static int targetDataContiguous(ident_t *loc, DeviceTy &Device, void *ArgsBase,
          "pointer " DPxMOD "\n",
          DPxPTR(IT->second.TgtPtrVal), DPxPTR(IT->second.TgtPtrAddr));
       Ret = Device.submitData(IT->second.TgtPtrAddr, &IT->second.TgtPtrVal,
-                              sizeof(void *), nullptr);
+                              sizeof(void *), AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Copying data to device failed.\n");
         Device.ShadowMtx.unlock();
@@ -753,8 +753,8 @@ static int targetDataNonContiguous(ident_t *loc, DeviceTy &Device,
                                    void *ArgsBase,
                                    __tgt_target_non_contig *NonContig,
                                    uint64_t Size, int64_t ArgType,
-                                   int CurrentDim, int DimSize,
-                                   uint64_t Offset) {
+                                   int CurrentDim, int DimSize, uint64_t Offset,
+                                   AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_IDENT(loc);
   int Ret = OFFLOAD_SUCCESS;
   if (CurrentDim < DimSize) {
@@ -766,7 +766,7 @@ static int targetDataNonContiguous(ident_t *loc, DeviceTy &Device,
       if (CurrentDim != DimSize - 1 || I == 0) {
         Ret = targetDataNonContiguous(loc, Device, ArgsBase, NonContig, Size,
                                       ArgType, CurrentDim + 1, DimSize,
-                                      Offset + CurOffset);
+                                      Offset + CurOffset, AsyncInfo);
         // Stop the whole process if any contiguous piece returns anything
         // other than OFFLOAD_SUCCESS.
         if (Ret != OFFLOAD_SUCCESS)
@@ -778,7 +778,8 @@ static int targetDataNonContiguous(ident_t *loc, DeviceTy &Device,
     DP("Transfer of non-contiguous : host ptr " DPxMOD " offset %" PRIu64
        " len %" PRIu64 "\n",
        DPxPTR(Ptr), Offset, Size);
-    Ret = targetDataContiguous(loc, Device, ArgsBase, Ptr, Size, ArgType);
+    Ret = targetDataContiguous(loc, Device, ArgsBase, Ptr, Size, ArgType,
+                               AsyncInfo);
   }
   return Ret;
 }
@@ -794,12 +795,10 @@ static int getNonContigMergedDimension(__tgt_target_non_contig *NonContig,
 }
 
 /// Internal function to pass data to/from the target.
-// AsyncInfo is currently unused, added here so targetDataUpdate has the
-// same signature as targetDataBegin and targetDataEnd.
 int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
-                     void **ArgMappers, AsyncInfoTy *AsyncInfo) {
+                     void **ArgMappers, AsyncInfoTy &AsyncInfo) {
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
@@ -814,7 +813,7 @@ int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Ret = targetDataMapper(loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
-                                 ArgTypes[I], ArgName, ArgMappers[I],
+                                 ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
                                  targetDataUpdate);
 
       if (Ret != OFFLOAD_SUCCESS) {
@@ -837,10 +836,10 @@ int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
       int32_t MergedDim = getNonContigMergedDimension(NonContig, DimSize);
       Ret = targetDataNonContiguous(
           loc, Device, ArgsBase[I], NonContig, Size, ArgTypes[I],
-          /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0);
+          /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0, AsyncInfo);
     } else {
       Ret = targetDataContiguous(loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
-                                 ArgTypes[I]);
+                                 ArgTypes[I], AsyncInfo);
     }
     if (Ret == OFFLOAD_FAIL)
       return OFFLOAD_FAIL;
@@ -950,7 +949,7 @@ class PrivateArgumentManagerTy {
   /// A reference to the \p DeviceTy object
   DeviceTy &Device;
   /// A pointer to a \p AsyncInfoTy object
-  AsyncInfoTy *AsyncInfo;
+  AsyncInfoTy &AsyncInfo;
 
   // TODO: What would be the best value here? Should we make it configurable?
   // If the size is larger than this threshold, we will allocate and transfer it
@@ -959,7 +958,7 @@ class PrivateArgumentManagerTy {
 
 public:
   /// Constructor
-  PrivateArgumentManagerTy(DeviceTy &Dev, AsyncInfoTy *AsyncInfo)
+  PrivateArgumentManagerTy(DeviceTy &Dev, AsyncInfoTy &AsyncInfo)
       : Device(Dev), AsyncInfo(AsyncInfo) {}
 
   /// Add a private argument
@@ -986,7 +985,7 @@ public:
 #endif
       // If first-private, copy data from host
       if (IsFirstPrivate) {
-        int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, *AsyncInfo);
+        int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
           DP("Copying data to device failed, failed.\n");
           return OFFLOAD_FAIL;
@@ -1042,7 +1041,7 @@ public:
          FirstPrivateArgSize, DPxPTR(TgtPtr));
       // Transfer data to target device
       int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
-                                  FirstPrivateArgSize, *AsyncInfo);
+                                  FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         DP("Failed to submit data of private arguments.\n");
         return OFFLOAD_FAIL;
@@ -1090,7 +1089,7 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
                              std::vector<void *> &TgtArgs,
                              std::vector<ptrdiff_t> &TgtOffsets,
                              PrivateArgumentManagerTy &PrivateArgumentManager,
-                             AsyncInfoTy *AsyncInfo) {
+                             AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_NAME_AND_IDENT("mappingBeforeTargetRegion", loc);
   DeviceTy &Device = PM->Devices[DeviceId];
   int Ret = targetDataBegin(loc, Device, ArgNum, ArgBases, Args, ArgSizes,
@@ -1141,7 +1140,7 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
         DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
         Ret = Device.submitData(TgtPtrBegin, &PointerTgtPtrBegin,
-                                sizeof(void *), *AsyncInfo);
+                                sizeof(void *), AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
           REPORT("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
@@ -1211,7 +1210,7 @@ static int processDataAfter(ident_t *loc, int64_t DeviceId, void *HostPtr,
                             int64_t *ArgSizes, int64_t *ArgTypes,
                             map_var_info_t *ArgNames, void **ArgMappers,
                             PrivateArgumentManagerTy &PrivateArgumentManager,
-                            AsyncInfoTy *AsyncInfo) {
+                            AsyncInfoTy &AsyncInfo) {
   TIMESCOPE_WITH_NAME_AND_IDENT("mappingAfterTargetRegion", loc);
   DeviceTy &Device = PM->Devices[DeviceId];
 
@@ -1243,7 +1242,7 @@ static int processDataAfter(ident_t *loc, int64_t DeviceId, void *HostPtr,
 int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
            void **ArgBases, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
            map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
-           int32_t ThreadLimit, int IsTeamConstruct, AsyncInfoTy *AsyncInfo) {
+           int32_t ThreadLimit, int IsTeamConstruct, AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
 
   TableMap *TM = getTableMap(HostPtr);
@@ -1263,12 +1262,6 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     TargetTable = TM->Table->TargetsTable[DeviceId];
   }
   assert(TargetTable && "Global data has not been mapped\n");
-
-  // TODO: This will go away as soon as we consequently pass in async info
-  // objects (as references).
-  AsyncInfoTy InternalAsyncInfo(Device);
-  if (!AsyncInfo)
-    AsyncInfo = &InternalAsyncInfo;
 
   std::vector<void *> TgtArgs;
   std::vector<ptrdiff_t> TgtOffsets;
@@ -1301,10 +1294,10 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     if (IsTeamConstruct)
       Ret = Device.runTeamRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                                  TgtArgs.size(), TeamNum, ThreadLimit,
-                                 LoopTripCount, *AsyncInfo);
+                                 LoopTripCount, AsyncInfo);
     else
       Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
-                             TgtArgs.size(), *AsyncInfo);
+                             TgtArgs.size(), AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -1322,13 +1315,6 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
       REPORT("Failed to process data after launching the kernel.\n");
       return OFFLOAD_FAIL;
     }
-  } else {
-    // TODO: We should not synchronize here but on the outer level once we pass
-    // in a reference AsyncInfo object.
-    // If ArgNum is zero, but AsyncInfo.Queue is valid, then the kernel doesn't
-    // hava any argument, and the device supports async operations, so we need a
-    // sync at this point.
-    return AsyncInfo->synchronize();
   }
 
   return OFFLOAD_SUCCESS;

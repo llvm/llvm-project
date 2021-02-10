@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
@@ -183,8 +184,11 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
   }
 #endif
 
+  AsyncInfoTy AsyncInfo(Device);
   int rc = targetDataBegin(loc, Device, arg_num, args_base, args, arg_sizes,
-                           arg_types, arg_names, arg_mappers, nullptr);
+                           arg_types, arg_names, arg_mappers, AsyncInfo);
+  if (rc == OFFLOAD_SUCCESS)
+    rc = AsyncInfo.synchronize();
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
 }
 
@@ -270,8 +274,11 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
   }
 #endif
 
+  AsyncInfoTy AsyncInfo(Device);
   int rc = targetDataEnd(loc, Device, arg_num, args_base, args, arg_sizes,
-                         arg_types, arg_names, arg_mappers, nullptr);
+                         arg_types, arg_names, arg_mappers, AsyncInfo);
+  if (rc == OFFLOAD_SUCCESS)
+    rc = AsyncInfo.synchronize();
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
 }
 
@@ -335,8 +342,11 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
                          arg_names, "Updating OpenMP data");
 
   DeviceTy &Device = PM->Devices[device_id];
+  AsyncInfoTy AsyncInfo(Device);
   int rc = targetDataUpdate(loc, Device, arg_num, args_base, args, arg_sizes,
-                            arg_types, arg_names, arg_mappers, nullptr);
+                            arg_types, arg_names, arg_mappers, AsyncInfo);
+  if (rc == OFFLOAD_SUCCESS)
+    rc = AsyncInfo.synchronize();
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
 }
 
@@ -408,9 +418,12 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
 #endif
 
   DeviceTy &Device = PM->Devices[device_id];
-  int rc =
-      target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
-             arg_types, arg_names, arg_mappers, 0, 0, false /*team*/, nullptr);
+  AsyncInfoTy AsyncInfo(Device);
+  int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
+                  arg_types, arg_names, arg_mappers, 0, 0, false /*team*/,
+                  AsyncInfo);
+  if (rc == OFFLOAD_SUCCESS)
+    rc = AsyncInfo.synchronize();
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
   return rc;
 }
@@ -490,9 +503,12 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
 #endif
 
   DeviceTy &Device = PM->Devices[device_id];
+  AsyncInfoTy AsyncInfo(Device);
   int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, team_num, thread_limit,
-                  true /*team*/, nullptr);
+                  true /*team*/, AsyncInfo);
+  if (rc == OFFLOAD_SUCCESS)
+    rc = AsyncInfo.synchronize();
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
   return rc;
 }

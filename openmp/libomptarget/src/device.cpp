@@ -415,27 +415,27 @@ int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
 
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                             __tgt_async_info *AsyncInfoPtr) {
-  if (!AsyncInfoPtr || !RTL->data_submit_async || !RTL->synchronize)
+                             AsyncInfoTy &AsyncInfo) {
+  if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   else
     return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                  AsyncInfoPtr);
+                                  AsyncInfo);
 }
 
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
-                               int64_t Size, __tgt_async_info *AsyncInfoPtr) {
-  if (!AsyncInfoPtr || !RTL->data_retrieve_async || !RTL->synchronize)
+                               int64_t Size, AsyncInfoTy &AsyncInfo) {
+  if (!RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   else
     return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                    AsyncInfoPtr);
+                                    AsyncInfo);
 }
 
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
-                               int64_t Size, __tgt_async_info *AsyncInfo) {
+                               int64_t Size, AsyncInfoTy &AsyncInfo) {
   if (!AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
@@ -448,13 +448,13 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 // Run region on device
 int32_t DeviceTy::runRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                            __tgt_async_info *AsyncInfoPtr) {
-  if (!AsyncInfoPtr || !RTL->run_region || !RTL->synchronize)
+                            AsyncInfoTy &AsyncInfo) {
+  if (!RTL->run_region || !RTL->synchronize)
     return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                            TgtVarsSize);
   else
     return RTL->run_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
-                                 TgtOffsets, TgtVarsSize, AsyncInfoPtr);
+                                 TgtOffsets, TgtVarsSize, AsyncInfo);
 }
 
 // Run team region on device.
@@ -462,15 +462,15 @@ int32_t DeviceTy::runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                                 ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
                                 int32_t NumTeams, int32_t ThreadLimit,
                                 uint64_t LoopTripCount,
-                                __tgt_async_info *AsyncInfoPtr) {
-  if (!AsyncInfoPtr || !RTL->run_team_region_async || !RTL->synchronize)
+                                AsyncInfoTy &AsyncInfo) {
+  if (!RTL->run_team_region_async || !RTL->synchronize)
     return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                 TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
                                 LoopTripCount);
   else
     return RTL->run_team_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                       TgtOffsets, TgtVarsSize, NumTeams,
-                                      ThreadLimit, LoopTripCount, AsyncInfoPtr);
+                                      ThreadLimit, LoopTripCount, AsyncInfo);
 }
 
 // Whether data can be copied to DstDevice directly
@@ -485,9 +485,9 @@ bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
   return false;
 }
 
-int32_t DeviceTy::synchronize(__tgt_async_info *AsyncInfoPtr) {
+int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   if (RTL->synchronize)
-    return RTL->synchronize(RTLDeviceID, AsyncInfoPtr);
+    return RTL->synchronize(RTLDeviceID, AsyncInfo);
   return OFFLOAD_SUCCESS;
 }
 
