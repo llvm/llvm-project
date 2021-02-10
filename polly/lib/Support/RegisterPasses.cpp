@@ -261,7 +261,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeRewriteByrefParamsPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
-  initializeForwardOpTreePass(Registry);
+  initializeForwardOpTreeWrapperPassPass(Registry);
   initializeDeLICMPass(Registry);
   initializeSimplifyLegacyPassPass(Registry);
   initializeDumpModulePass(Registry);
@@ -321,7 +321,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (EnableSimplify)
     PM.add(polly::createSimplifyPass(0));
   if (EnableForwardOpTree)
-    PM.add(polly::createForwardOpTreePass());
+    PM.add(polly::createForwardOpTreeWrapperPass());
   if (EnableDeLICM)
     PM.add(polly::createDeLICMPass());
   if (EnableSimplify)
@@ -468,6 +468,8 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   assert(!PollyPrinter && "This option is not implemented");
   assert(!PollyOnlyPrinter && "This option is not implemented");
   assert(!EnablePolyhedralInfo && "This option is not implemented");
+  if (EnableForwardOpTree)
+    SPM.addPass(ForwardOpTreePass());
   assert(!EnableDeLICM && "This option is not implemented");
   assert(!EnableSimplify && "This option is not implemented");
   if (ImportJScop)
