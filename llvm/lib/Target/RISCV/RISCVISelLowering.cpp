@@ -524,6 +524,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
@@ -554,6 +555,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
@@ -853,6 +855,36 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget) {
+  SDValue V1 = Op.getOperand(0);
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  if (SVN->isSplat()) {
+    int Lane = SVN->getSplatIndex();
+    if (Lane >= 0) {
+      MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+      V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+      assert(Lane < (int)VT.getVectorNumElements() && "Unexpected lane!");
+
+      MVT XLenVT = Subtarget.getXLenVT();
+      SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+      MVT MaskVT =
+          MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+      SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+      SDValue Gather =
+          DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, V1,
+                      DAG.getConstant(Lane, DL, XLenVT), Mask, VL);
+      return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -1102,6 +1134,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFPVECREDUCE(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
   case ISD::LOAD:
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
@@ -4638,6 +4672,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMA_VL)
   NODE_NAME_CASE(VMCLR_VL)
   NODE_NAME_CASE(VMSET_VL)
+  NODE_NAME_CASE(VRGATHER_VX_VL)
   NODE_NAME_CASE(VLE_VL)
   NODE_NAME_CASE(VSE_VL)
   }

@@ -79,6 +79,14 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisVT<5, XLenVT>]>;
 def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL>;
 
+def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
+                                  SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                                       SDTCisSameAs<0, 1>,
+                                                       SDTCisVT<2, XLenVT>,
+                                                       SDTCVecEltisVT<3, i1>,
+                                                       SDTCisSameNumEltsAs<0, 3>,
+                                                       SDTCisVT<4, XLenVT>]>>;
+
 def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCisVec<0>,
                                                 SDTCVecEltisVT<0, i1>,
                                                 SDTCisVT<1, XLenVT>]>;
@@ -207,6 +215,41 @@ foreach vti = AllFloatVectors in {
                            (XLenVT (VLOp GPR:$vl))),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, GPR:$vl, vti.SEW)>;
+}
+
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+// 17.4. Vector Register GAther Instruction
+let Predicates = [HasStdExtV] in {
+
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, uimm5:$imm,
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
+}
+
+} // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+
+foreach vti = AllFloatVectors in {
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, uimm5:$imm,
+                                              (vti.Mask true_mask),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.SEW)>;
 }
 
 } // Predicates = [HasStdExtV, HasStdExtF]
