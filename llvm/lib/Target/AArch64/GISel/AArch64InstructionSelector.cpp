@@ -5219,7 +5219,7 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
   // Always fold if there is one use, or if we're optimizing for size.
   Register DefReg = MI.getOperand(0).getReg();
   if (MRI.hasOneNonDBGUse(DefReg) ||
-      MI.getParent()->getParent()->getFunction().hasMinSize())
+      MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
   // It's better to avoid folding and recomputing shifts when we don't have a
