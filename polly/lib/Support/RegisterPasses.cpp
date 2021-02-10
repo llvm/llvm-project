@@ -535,8 +535,9 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
     case CODEGEN_NONE:
       break;
     }
+  }
 #ifdef GPU_CODEGEN
-  } else
+  else
     report_fatal_error("Option -polly-target=gpu not supported for NPM", false);
 #endif
 
