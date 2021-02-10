@@ -166,10 +166,6 @@ private:
     EffectiveTriple = std::move(ET);
   }
 
-  mutable llvm::Optional<CXXStdlibType> cxxStdlibType;
-  mutable llvm::Optional<RuntimeLibType> runtimeLibType;
-  mutable llvm::Optional<UnwindLibType> unwindLibType;
-
 protected:
   MultilibSet Multilibs;
   Multilib SelectedMultilib;
