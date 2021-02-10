@@ -166,7 +166,8 @@ private:
              + field_size; // IMP imp;
     }
 
-    bool Read(Process *process, lldb::addr_t addr, bool, bool);
+    bool Read(Process *process, lldb::addr_t addr,
+              lldb::addr_t relative_method_lists_base_addr, bool, bool);
   };
 
   struct ivar_list_t {
