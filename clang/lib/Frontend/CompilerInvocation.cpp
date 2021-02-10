@@ -4179,8 +4179,44 @@ static bool ParsePreprocessorOutputArgs(CompilerInvocation &Res,
       Res, Args, Diags, "PreprocessorOutputOptions");
 }
 
-static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
-                            DiagnosticsEngine &Diags) {
+static void GenerateTargetArgs(const TargetOptions &Opts,
+                               SmallVectorImpl<const char *> &Args,
+                               CompilerInvocation::StringAllocator SA) {
+  const TargetOptions *TargetOpts = &Opts;
+#define TARGET_OPTION_WITH_MARSHALLING(                                        \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef TARGET_OPTION_WITH_MARSHALLING
+
+  if (!Opts.SDKVersion.empty())
+    GenerateArg(Args, OPT_target_sdk_version_EQ, Opts.SDKVersion.getAsString(),
+                SA);
+}
+
+static bool ParseTargetArgsImpl(TargetOptions &Opts, ArgList &Args,
+                                DiagnosticsEngine &Diags) {
+  TargetOptions *TargetOpts = &Opts;
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+  bool Success = true;
+
+#define TARGET_OPTION_WITH_MARSHALLING(                                        \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef TARGET_OPTION_WITH_MARSHALLING
+
   if (Arg *A = Args.getLastArg(options::OPT_target_sdk_version_EQ)) {
     llvm::VersionTuple Version;
     if (Version.tryParse(A->getValue()))
@@ -4189,6 +4225,27 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
     else
       Opts.SDKVersion = Version;
   }
+
+  return Success && Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static bool ParseTargetArgs(CompilerInvocation &Res, TargetOptions &Opts,
+                            ArgList &Args, DiagnosticsEngine &Diags) {
+  auto DummyOpts = std::make_shared<TargetOptions>();
+
+  return RoundTrip(
+      [](CompilerInvocation &Res, ArgList &Args,
+                    DiagnosticsEngine &Diags) {
+        return ParseTargetArgsImpl(Res.getTargetOpts(), Args, Diags);
+      },
+      [](CompilerInvocation &Res, SmallVectorImpl<const char *> &GeneratedArgs,
+         CompilerInvocation::StringAllocator SA) {
+        GenerateTargetArgs(Res.getTargetOpts(), GeneratedArgs, SA);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        Res.TargetOpts.swap(DummyOpts);
+      },
+      Res, Args, Diags, "TargetArgs");
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
@@ -4239,7 +4296,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                                LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
-  ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
+  ParseTargetArgs(Res, Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res, Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
@@ -4456,6 +4513,7 @@ void CompilerInvocation::generateCC1CommandLine(
 
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
+  GenerateTargetArgs(*TargetOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
   GenerateLangArgs(*LangOpts, Args, SA, T);
   GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,
