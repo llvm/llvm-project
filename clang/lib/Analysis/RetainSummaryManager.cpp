@@ -146,9 +146,7 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  // OSSymbols are particular OSObjects that are allocated globally
-  // and therefore aren't really refcounted, so we ignore them.
-  return D && isSubclass(D, "OSMetaClassBase") && !isSubclass(D, "OSSymbol");
+  return D && isSubclass(D, "OSMetaClassBase");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
