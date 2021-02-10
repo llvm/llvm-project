@@ -65,8 +65,7 @@ TEST(Dialect, DelayedInterfaceRegistration) {
   // Delayed registration of an interface for TestDialect.
   registry.addDialectInterface<TestDialect, TestDialectInterface>();
 
-  MLIRContext context;
-  registry.appendTo(context.getDialectRegistry());
+  MLIRContext context(registry);
 
   // Load the TestDialect and check that the interface got registered for it.
   auto *testDialect = context.getOrLoadDialect<TestDialect>();
@@ -85,8 +84,11 @@ TEST(Dialect, DelayedInterfaceRegistration) {
 
   // Use the same mechanism as for delayed registration but for an already
   // loaded dialect and check that the interface is now registered.
-  context.getDialectRegistry()
+  DialectRegistry secondRegistry;
+  secondRegistry.insert<SecondTestDialect>();
+  secondRegistry
       .addDialectInterface<SecondTestDialect, SecondTestDialectInterface>();
+  context.appendDialectRegistry(secondRegistry);
   secondTestDialectInterface =
       secondTestDialect->getRegisteredInterface<SecondTestDialectInterface>();
   EXPECT_TRUE(secondTestDialectInterface != nullptr);
