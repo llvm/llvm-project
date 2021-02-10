@@ -133,6 +133,27 @@ protected:
     return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
   }
 
+  /// Perform an extension or truncation as needed on an integer value. Lowering
+  /// to the specific target may involve some sign-extending or truncation of
+  /// values, particularly to fit them from abstract box types to the
+  /// appropriate reified structures.
+  mlir::Value integerCast(mlir::Location loc,
+                          mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Type ty, mlir::Value val) const {
+    auto valTy = val.getType();
+    // If the value was not yet lowered, lower its type so that it can
+    // be used in getPrimitiveTypeSizeInBits.
+    if (!valTy.isa<mlir::IntegerType>())
+      valTy = unwrap(convertType(valTy));
+    auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
+    auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
+    if (toSize < fromSize)
+      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+    return val;
+  }
+
   /// Method to construct code sequence to get the rank from a box.
   mlir::Value getRankFromBox(mlir::Location loc, mlir::Value box,
                              mlir::Type resultTy,
@@ -188,6 +209,16 @@ protected:
     auto pty = mlir::LLVM::LLVMPointerType::get(unwrap(ty));
     auto p = genGEP(loc, unwrap(pty), rewriter, box, c0, c0);
     // load the pointer from the buffer
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  }
+
+  mlir::Value
+  loadElementSizeFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
+                         mlir::ConversionPatternRewriter &rewriter) const {
+    auto c0 = genConstantOffset(loc, rewriter, 0);
+    auto c1 = genConstantOffset(loc, rewriter, 1);
+    auto pty = mlir::LLVM::LLVMPointerType::get(unwrap(ty));
+    auto p = genGEP(loc, unwrap(pty), rewriter, box, c0, c1);
     return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
   }
 
@@ -467,12 +498,8 @@ struct BoxEleSizeOpConversion : public FIROpConversion<fir::BoxEleSizeOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto a = operands[0];
     auto loc = boxelesz.getLoc();
-    auto c0 = genConstantOffset(loc, rewriter, 0);
-    auto c1 = genConstantOffset(loc, rewriter, 1);
     auto ty = convertType(boxelesz.getType());
-    auto pty = mlir::LLVM::LLVMPointerType::get(unwrap(ty));
-    auto p = genGEP(loc, unwrap(pty), rewriter, a, c0, c1);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(boxelesz, ty, p);
+    rewriter.replaceOp(boxelesz, loadElementSizeFromBox(loc, ty, a, rewriter));
     return success();
   }
 };
@@ -880,23 +907,6 @@ struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   }
 };
 
-/// Perform an extension or truncation as needed on an integer value. Lowering
-/// to the specific target may involve some sign-extending or truncation of
-/// values, particularly to fit them from abstract box types to the appropriate
-/// reified structures.
-static mlir::Value integerCast(mlir::Location loc,
-                               mlir::ConversionPatternRewriter &rewriter,
-                               mlir::Type ty, mlir::Value val) {
-  auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
-  auto fromSize =
-      mlir::LLVM::getPrimitiveTypeSizeInBits(val.getType().cast<mlir::Type>());
-  if (toSize < fromSize)
-    return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
-  if (toSize > fromSize)
-    return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
-  return val;
-}
-
 /// create a CHARACTER box
 struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
   using FIROpConversion::FIROpConversion;
@@ -1053,7 +1063,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (bitcast)
       value = rewriter.create<mlir::LLVM::BitcastOp>(loc, fldTy, value);
     else
-      value = integerCast(loc, rewriter, fldTy, value);
+      value = this->integerCast(loc, rewriter, fldTy, value);
     SmallVector<mlir::Attribute, 2> attrs;
     for (auto i : fldIndexes)
       attrs.push_back(rewriter.getI32IntegerAttr(i));
@@ -1061,12 +1071,31 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return rewriter.create<mlir::LLVM::InsertValueOp>(loc, boxTy, dest, value,
                                                       indexesAttr);
   }
+  mlir::Value insertLowerBound(mlir::ConversionPatternRewriter &rewriter,
+                               mlir::Location loc, mlir::Value dest,
+                               unsigned dim, mlir::Value lb) const {
+    return insertField(rewriter, loc, dest, {7, dim, 0}, lb);
+  }
+  mlir::Value insertExtent(mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Location loc, mlir::Value dest, unsigned dim,
+                           mlir::Value extent) const {
+    return insertField(rewriter, loc, dest, {7, dim, 1}, extent);
+  }
+  mlir::Value insertStride(mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Location loc, mlir::Value dest, unsigned dim,
+                           mlir::Value stride) const {
+    return insertField(rewriter, loc, dest, {7, dim, 2}, stride);
+  }
+  mlir::Value insertBaseAddress(mlir::ConversionPatternRewriter &rewriter,
+                                mlir::Location loc, mlir::Value dest,
+                                mlir::Value base) const {
+    return insertField(rewriter, loc, dest, {0}, base, /*bitCast=*/true);
+  }
 
   template <typename BOX>
   std::tuple<fir::BoxType, mlir::Value, mlir::Value>
-  consDescriptorPrefix(BOX box, OperandTy operands,
-                       mlir::ConversionPatternRewriter &rewriter, unsigned rank,
-                       unsigned dropFront) const {
+  consDescriptorPrefix(BOX box, mlir::ConversionPatternRewriter &rewriter,
+                       unsigned rank, mlir::ValueRange lenParams) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BoxType>();
     auto convTy = this->lowerTy().convertBoxType(boxTy, rank);
@@ -1076,8 +1105,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     mlir::Value dest = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmBoxTy);
 
     // Write each of the fields with the appropriate values
-    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(),
-                                               operands.drop_front(dropFront));
+    auto [eleSize, cfiTy] =
+        getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), lenParams);
     dest = insertField(rewriter, loc, dest, {1}, eleSize);
     dest = insertField(rewriter, loc, dest, {2},
                        this->genConstantOffset(loc, rewriter, CFI_VERSION));
@@ -1120,9 +1149,8 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     // There should be no dims on this embox op
     assert(!embox.getShape());
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
-        embox, operands, rewriter, /*rank=*/0, /*dropFront=*/1);
-    dest = insertField(rewriter, embox.getLoc(), dest, {0}, operands[0],
-                       /*bitCast=*/true);
+        embox, rewriter, /*rank=*/0, /*lenParams=*/operands.drop_front(1));
+    dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
     if (isDerivedType(boxTy))
       TODO(embox.getLoc(), "derived type fir.embox codegen");
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
@@ -1138,8 +1166,9 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::cg::XEmboxOp xbox, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
-        xbox, operands, rewriter, xbox.getOutRank(), xbox.lenParamOffset());
+    auto [boxTy, dest, eleSize] =
+        consDescriptorPrefix(xbox, rewriter, xbox.getOutRank(),
+                             operands.drop_front(xbox.lenParamOffset()));
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
     auto base = operands[0];
@@ -1183,7 +1212,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
             lb = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, lb,
                                                     operands[sliceOff]);
         }
-        dest = insertField(rewriter, loc, dest, {7, d, 0}, lb);
+        dest = insertLowerBound(rewriter, loc, dest, d, lb);
 
         // store extent
         if (hasSlice) {
@@ -1194,14 +1223,14 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
           extent = rewriter.create<mlir::LLVM::SDivOp>(loc, i64Ty, extent,
                                                        operands[sliceOff + 2]);
         }
-        dest = insertField(rewriter, loc, dest, {7, d, 1}, extent);
+        dest = insertExtent(rewriter, loc, dest, d, extent);
 
         // store step (scaled by shaped extent)
         mlir::Value step = prevDim;
         if (hasSlice)
           step = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step,
                                                     operands[sliceOff + 2]);
-        dest = insertField(rewriter, loc, dest, {7, d, 2}, step);
+        dest = insertStride(rewriter, loc, dest, d, step);
         d++;
       }
 
@@ -1224,14 +1253,203 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       // runtime.
       TODO(xbox.getLoc(), "intra-entity slice in fir.embox codegen");
     }
-    dest = insertField(rewriter, xbox.getLoc(), dest, {0}, base,
-                       /*bitCast=*/true);
+    dest = insertBaseAddress(rewriter, xbox.getLoc(), dest, base);
     if (isDerivedType(boxTy))
       TODO(xbox.getLoc(), "derived type in fir.embox codegen");
 
     auto result = placeInMemoryIfNotGlobalInit(rewriter, xbox.getLoc(), dest);
     rewriter.replaceOp(xbox, result);
     return success();
+  }
+};
+
+/// Create a new box given a box reference.
+struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
+  using EmboxCommonConversion::EmboxCommonConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::cg::XReboxOp rebox, OperandTy operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = rebox.getLoc();
+    auto idxTy = lowerTy().indexType();
+    auto loweredBox = operands[0];
+
+    // Create new descriptor and fill its non-shape related data.
+    llvm::SmallVector<mlir::Value, 2> lenParams;
+    auto inputEleTy = getInputEleTy(rebox);
+    if (auto charTy = inputEleTy.dyn_cast<fir::CharacterType>()) {
+      auto len = loadElementSizeFromBox(loc, idxTy, loweredBox, rewriter);
+      if (charTy.getFKind() != 1) {
+        auto width = genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
+        len = rewriter.create<mlir::LLVM::SDivOp>(loc, idxTy, len, width);
+      }
+      lenParams.emplace_back(len);
+    } else if (auto recTy = inputEleTy.dyn_cast<fir::RecordType>()) {
+      if (recTy.getNumLenParams() != 0)
+        TODO(loc, "reboxing descriptor of derived type with length parameters");
+    }
+    auto [boxTy, dest, eleSize] =
+        consDescriptorPrefix(rebox, rewriter, rebox.getOutRank(), lenParams);
+
+    // Read input extents, strides, and base address
+    llvm::SmallVector<mlir::Value, 8> inputExtents;
+    llvm::SmallVector<mlir::Value, 8> inputStrides;
+    const auto inputRank = rebox.getRank();
+    for (unsigned i = 0; i < inputRank; ++i) {
+      auto dim = genConstantIndex(loc, idxTy, rewriter, i);
+      auto dimInfo =
+          getDimsFromBox(loc, {idxTy, idxTy, idxTy}, loweredBox, dim, rewriter);
+      inputExtents.emplace_back(dimInfo[1]);
+      inputStrides.emplace_back(dimInfo[2]);
+    }
+    // Base address is cast to void* because strides are in bytes, so
+    // pointer arithmetic is done in bytes.
+    auto baseTy = getBaseAddrTypeFromBox(loweredBox.getType());
+    auto baseAddr = loadBaseAddrFromBox(loc, baseTy, loweredBox, rewriter);
+    auto voidPtrTy = getVoidPtrType(rebox.getContext());
+    baseAddr = rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, baseAddr);
+
+    if (!rebox.slice().empty() || !rebox.subcomponent().empty())
+      return sliceBox(rebox, dest, baseAddr, inputExtents, inputStrides,
+                      rewriter);
+    return reshapeBox(rebox, dest, baseAddr, inputExtents, inputStrides,
+                      rewriter);
+  }
+
+private:
+  /// Write resulting shape and base address in descriptor, and replace rebox
+  /// op.
+  mlir::LogicalResult
+  finalizeRebox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
+                mlir::ValueRange lbounds, mlir::ValueRange extents,
+                mlir::ValueRange strides,
+                mlir::ConversionPatternRewriter &rewriter) const {
+    auto loc = rebox.getLoc();
+    auto one = genConstantIndex(loc, lowerTy().indexType(), rewriter, 1);
+    for (auto iter : llvm::enumerate(llvm::zip(extents, strides))) {
+      auto dim = iter.index();
+      auto lb = lbounds.empty() ? one : lbounds[dim];
+      dest = insertLowerBound(rewriter, loc, dest, dim, lb);
+      dest = insertExtent(rewriter, loc, dest, dim, std::get<0>(iter.value()));
+      dest = insertStride(rewriter, loc, dest, dim, std::get<1>(iter.value()));
+    }
+    dest = insertBaseAddress(rewriter, loc, dest, base);
+    auto result = placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), dest);
+    rewriter.replaceOp(rebox, result);
+    return success();
+  }
+
+  // Apply slice given the base address, extents and strides of the input box.
+  mlir::LogicalResult
+  sliceBox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
+           mlir::ValueRange inputExtents, mlir::ValueRange inputStrides,
+           mlir::ConversionPatternRewriter &rewriter) const {
+    auto loc = rebox.getLoc();
+    auto voidPtrTy = getVoidPtrType(rebox.getContext());
+    // Apply subcomponent shift on base address.
+    if (!rebox.subcomponent().empty()) {
+      // Cast to inputEleTy* so that a GEP can be used.
+      auto inputEleTy = getInputEleTy(rebox);
+      auto llvmElePtrTy =
+          mlir::LLVM::LLVMPointerType::get(unwrap(convertType(inputEleTy)));
+      base = rewriter.create<mlir::LLVM::BitcastOp>(loc, llvmElePtrTy, base);
+      base = genGEP(loc, llvmElePtrTy, rewriter, base, rebox.subcomponent());
+      base = rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, base);
+    }
+    if (rebox.slice().empty())
+      // The slice is of the form array%component, keep the input array extents
+      // and strides.
+      return finalizeRebox(rebox, dest, base, /*lbounds*/ llvm::None,
+                           inputExtents, inputStrides, rewriter);
+
+    // The slice is of the form array(i:j:k)[%component]. Compute new extents
+    // and strides.
+    llvm::SmallVector<mlir::Value, 8> slicedExtents;
+    llvm::SmallVector<mlir::Value, 8> slicedStrides;
+    auto idxTy = lowerTy().indexType();
+    auto one = genConstantIndex(loc, idxTy, rewriter, 1);
+    const bool sliceHasOrigins = !rebox.shift().empty();
+    auto sliceOps = rebox.slice().begin();
+    auto shiftOps = rebox.shift().begin();
+    auto strideOps = inputStrides.begin();
+    const auto inputRank = inputStrides.size();
+    for (unsigned i = 0; i < inputRank;
+         ++i, ++strideOps, ++shiftOps, sliceOps += 3) {
+      auto sliceLb = integerCast(loc, rewriter, idxTy, *sliceOps);
+      auto inputStride = *strideOps; // already idxTy
+      // Apply origin shift: base += (lb-shift)*input_stride
+      auto sliceOrigin =
+          sliceHasOrigins ? integerCast(loc, rewriter, idxTy, *shiftOps) : one;
+      auto diff =
+          rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, sliceOrigin);
+      auto offset =
+          rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, inputStride);
+      base = genGEP(loc, voidPtrTy, rewriter, base, offset);
+      // Apply upper bound and step if this is a triplet. Otherwise, the
+      // dimension is dropped and no extents/strides are computed.
+      mlir::Value upper = *(sliceOps + 1);
+      const bool isTripletSlice =
+          !mlir::isa_and_nonnull<fir::UndefOp>(upper.getDefiningOp());
+      if (isTripletSlice) {
+        auto step = integerCast(loc, rewriter, idxTy, *(sliceOps + 2));
+        // extent = ub-lb+step/step
+        auto sliceUb = integerCast(loc, rewriter, idxTy, upper);
+        auto diff =
+            rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceUb, sliceLb);
+        auto numerator =
+            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, step);
+        auto extent =
+            rewriter.create<mlir::LLVM::SDivOp>(loc, idxTy, numerator, step);
+        slicedExtents.emplace_back(extent);
+        // stride = step*input_stride
+        auto stride =
+            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, step, inputStride);
+        slicedStrides.emplace_back(stride);
+      }
+    }
+    return finalizeRebox(rebox, dest, base, /*lbounds*/ llvm::None,
+                         slicedExtents, slicedStrides, rewriter);
+  }
+
+  /// Apply a new shape to the data described by a box given the base address,
+  /// extents and strides of the box.
+  mlir::LogicalResult
+  reshapeBox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
+             mlir::ValueRange inputExtents, mlir::ValueRange inputStrides,
+             mlir::ConversionPatternRewriter &rewriter) const {
+    if (rebox.shape().empty())
+      // Only setting new lower bounds.
+      return finalizeRebox(rebox, dest, base, rebox.shift(), inputExtents,
+                           inputStrides, rewriter);
+
+    llvm::SmallVector<mlir::Value, 8> newStrides;
+    llvm::SmallVector<mlir::Value, 8> newExtents;
+    auto loc = rebox.getLoc();
+    auto idxTy = lowerTy().indexType();
+    // First stride from input box is kept. The rest is assumed contiguous
+    // (it is not possible to reshape otherwise). If the input is scalar,
+    // which may be OK if all new extents are ones, the stride does not
+    // matter, use one.
+    auto stride = inputStrides.empty()
+                      ? genConstantIndex(loc, idxTy, rewriter, 1)
+                      : inputStrides[0];
+    for (auto rawExtent : rebox.shape()) {
+      auto extent = integerCast(loc, rewriter, idxTy, rawExtent);
+      newExtents.emplace_back(extent);
+      newStrides.emplace_back(stride);
+      // nextStride = extent * stride;
+      stride = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, extent, stride);
+    }
+    return finalizeRebox(rebox, dest, base, rebox.shift(), newExtents,
+                         newStrides, rewriter);
+  }
+
+  /// Return scalar element type of the input box.
+  static mlir::Type getInputEleTy(fir::cg::XReboxOp rebox) {
+    auto ty = fir::dyn_cast_ptrOrBoxEleTy(rebox.box().getType());
+    if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
+      return seqTy.getEleTy();
+    return ty;
   }
 };
 
@@ -1467,8 +1685,8 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.memref().getType().isa<fir::BoxType>();
     for (unsigned i = 0; i < rank;
          ++i, ++indexOps, ++shapeOps, ++shiftOps, sliceOps += 3) {
-      auto index = asType(loc, rewriter, idxTy, *indexOps);
-      auto lb = isShifted ? asType(loc, rewriter, idxTy, *shiftOps) : one;
+      auto index = integerCast(loc, rewriter, idxTy, *indexOps);
+      auto lb = isShifted ? integerCast(loc, rewriter, idxTy, *shiftOps) : one;
       mlir::Value step = one;
       auto normalSlice = isSliced;
       // Compute zero based index in dimension i of the element, applying
@@ -1477,13 +1695,13 @@ struct XArrayCoorOpConversion
         mlir::Value ub = *(sliceOps + 1);
         normalSlice = !mlir::isa_and_nonnull<fir::UndefOp>(ub.getDefiningOp());
         if (normalSlice)
-          step = asType(loc, rewriter, idxTy, *(sliceOps + 2));
+          step = integerCast(loc, rewriter, idxTy, *(sliceOps + 2));
       }
       auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
       mlir::Value diff =
           rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step);
       if (normalSlice) {
-        auto sliceLb = asType(loc, rewriter, idxTy, *sliceOps);
+        auto sliceLb = integerCast(loc, rewriter, idxTy, *sliceOps);
         auto adj = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb);
         diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj);
       }
@@ -1500,7 +1718,7 @@ struct XArrayCoorOpConversion
         off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
-        auto nextExt = asType(loc, rewriter, idxTy, *shapeOps);
+        auto nextExt = integerCast(loc, rewriter, idxTy, *shapeOps);
         prevExt =
             rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt, nextExt);
       }
@@ -1541,22 +1759,6 @@ struct XArrayCoorOpConversion
     args.append(coor.subcomponent().begin(), coor.subcomponent().end());
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(coor, ty, args);
     return success();
-  }
-
-  mlir::Value asType(mlir::Location loc,
-                     mlir::ConversionPatternRewriter &rewriter, mlir::Type toTy,
-                     mlir::Value val) const {
-    auto fromTy = unwrap(convertType(val.getType()));
-    auto fTy = fromTy.dyn_cast<mlir::IntegerType>();
-    auto tTy = toTy.dyn_cast<mlir::IntegerType>();
-    assert(fTy && tTy && "must be IntegerType");
-    auto fbw = mlir::LLVM::getPrimitiveTypeSizeInBits(fTy);
-    auto tbw = mlir::LLVM::getPrimitiveTypeSizeInBits(tTy);
-    if (fbw < tbw)
-      return rewriter.create<mlir::LLVM::SExtOp>(loc, toTy, val);
-    if (fbw > tbw)
-      return rewriter.create<mlir::LLVM::TruncOp>(loc, toTy, val);
-    return val;
   }
 };
 
@@ -2717,7 +2919,7 @@ struct FIRToLLVMLoweringPass
         StringLitOpConversion, SubcOpConversion, SubfOpConversion,
         UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
         UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion>(context, typeConverter);
+        XEmboxOpConversion, XReboxOpConversion>(context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
