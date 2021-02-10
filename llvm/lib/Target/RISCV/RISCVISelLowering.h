@@ -408,7 +408,7 @@ private:
 namespace RISCV {
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
-}; // namespace RISCV
+} // namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 
