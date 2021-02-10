@@ -4107,15 +4107,76 @@ static bool ParsePreprocessorArgs(CompilerInvocation &Res,
                    "PreprocessorOptions");
 }
 
-static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
-                                        ArgList &Args,
-                                        frontend::ActionKind Action) {
-  if (isStrictlyPreprocessorAction(Action))
-    Opts.ShowCPP = !Args.hasArg(OPT_dM);
-  else
-    Opts.ShowCPP = 0;
+static void GeneratePreprocessorOutputArgs(
+    const PreprocessorOutputOptions &Opts, SmallVectorImpl<const char *> &Args,
+    CompilerInvocation::StringAllocator SA, frontend::ActionKind Action) {
+  const PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
 
+#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(                           \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
+
+  bool Generate_dM = isStrictlyPreprocessorAction(Action) && !Opts.ShowCPP;
+  if (Generate_dM)
+    GenerateArg(Args, OPT_dM, SA);
+  if (!Generate_dM && Opts.ShowMacros)
+    GenerateArg(Args, OPT_dD, SA);
+}
+
+static bool ParsePreprocessorOutputArgsImpl(PreprocessorOutputOptions &Opts,
+                                            ArgList &Args,
+                                            DiagnosticsEngine &Diags,
+                                            frontend::ActionKind Action) {
+  PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+  bool Success = true;
+
+#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(                           \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
+
+  Opts.ShowCPP = isStrictlyPreprocessorAction(Action) && !Args.hasArg(OPT_dM);
   Opts.ShowMacros = Args.hasArg(OPT_dM) || Args.hasArg(OPT_dD);
+
+  return Success && Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static bool ParsePreprocessorOutputArgs(CompilerInvocation &Res,
+                                        PreprocessorOutputOptions &Opts,
+                                        ArgList &Args, DiagnosticsEngine &Diags,
+                                        frontend::ActionKind Action) {
+  PreprocessorOutputOptions DummyOpts;
+
+  return RoundTrip(
+      [Action](CompilerInvocation &Res, ArgList &Args,
+               DiagnosticsEngine &Diags) {
+        return ParsePreprocessorOutputArgsImpl(Res.getPreprocessorOutputOpts(),
+                                               Args, Diags, Action);
+      },
+      [Action](CompilerInvocation &Res, SmallVectorImpl<const char *> &Args,
+               CompilerInvocation::StringAllocator SA) {
+        GeneratePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
+                                       SA, Action);
+      },
+      [&DummyOpts](CompilerInvocation &Res) {
+        std::swap(DummyOpts, Res.getPreprocessorOutputOpts());
+      },
+      Res, Args, Diags, "PreprocessorOutputOptions");
 }
 
 static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
@@ -4236,7 +4297,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParsePreprocessorArgs(Res, Res.getPreprocessorOpts(), Args, Diags,
                         Res.getFrontendOpts().ProgramAction,
                         Res.getFrontendOpts());
-  ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
+  ParsePreprocessorOutputArgs(Res, Res.getPreprocessorOutputOpts(), Args, Diags,
                               Res.getFrontendOpts().ProgramAction);
 
   // Turn on -Wspir-compat for SPIR target.
@@ -4399,8 +4460,10 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateLangArgs(*LangOpts, Args, SA, T);
   GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,
                       &*LangOpts);
-  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts,
-                           FrontendOpts, CodeGenOpts);
+  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts, FrontendOpts,
+                           CodeGenOpts);
+  GeneratePreprocessorOutputArgs(PreprocessorOutputOpts, Args, SA,
+                                 FrontendOpts.ProgramAction);
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
