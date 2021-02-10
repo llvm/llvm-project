@@ -83,21 +83,25 @@ dispatchDisassembleAction(amd_comgr_action_kind_t ActionKind,
   DisassemHelper Helper(OutS, LogS);
 
   TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident))
+  if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident)) {
     return Status;
+  }
 
   // Handle the data object in set relevant to the action only
   auto Objects =
       make_filter_range(InputSet->DataObjects, [&](const DataObject *DO) {
         if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE)
+            DO->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
           return true;
+        }
         if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE)
+            DO->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
           return true;
+        }
         if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_BYTES)
+            DO->DataKind == AMD_COMGR_DATA_KIND_BYTES) {
           return true;
+        }
         return false;
       });
   std::vector<std::string> Options;
@@ -109,22 +113,27 @@ dispatchDisassembleAction(amd_comgr_action_kind_t ActionKind,
   // to output data set.
   for (auto *Input : Objects) {
     if (auto Status = Helper.disassembleAction(
-            StringRef(Input->Data, Input->Size), Options))
+            StringRef(Input->Data, Input->Size), Options)) {
       return Status;
+    }
 
     amd_comgr_data_t ResultT;
     if (auto Status =
-            amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &ResultT))
+            amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &ResultT)) {
       return Status;
+    }
     ScopedDataObjectReleaser ResultSDOR(ResultT);
     DataObject *Result = DataObject::convert(ResultT);
-    if (auto Status = Result->setName(std::string(Input->Name) + ".s"))
+    if (auto Status = Result->setName(std::string(Input->Name) + ".s")) {
       return Status;
-    if (auto Status = Result->setData(OutS.str()))
+    }
+    if (auto Status = Result->setData(OutS.str())) {
       return Status;
+    }
     Out.clear();
-    if (auto Status = amd_comgr_data_set_add(ResultSetT, ResultT))
+    if (auto Status = amd_comgr_data_set_add(ResultSetT, ResultT)) {
       return Status;
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -257,8 +266,9 @@ static StringRef getStatusName(amd_comgr_status_t Status) {
 static void printQuotedOption(raw_ostream &OS, StringRef Option) {
   OS << '"';
   for (const char C : Option) {
-    if (C == '"' || C == '\\')
+    if (C == '"' || C == '\\') {
       OS << '\\';
+    }
     OS << C;
   }
   OS << '"';
@@ -272,12 +282,14 @@ bool COMGR::isDataKindValid(amd_comgr_data_kind_t DataKind) {
 amd_comgr_status_t COMGR::setCStr(char *&Dest, StringRef Src, size_t *Size) {
   free(Dest);
   Dest = reinterpret_cast<char *>(malloc(Src.size() + 1));
-  if (!Dest)
+  if (!Dest) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
   memcpy(Dest, Src.data(), Src.size());
   Dest[Src.size()] = '\0';
-  if (Size)
+  if (Size) {
     *Size = Src.size();
+  }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
@@ -285,8 +297,9 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
                                                 TargetIdentifier &Ident) {
   SmallVector<StringRef, 5> IsaNameComponents;
   IdentStr.split(IsaNameComponents, '-', 4);
-  if (IsaNameComponents.size() != 5)
+  if (IsaNameComponents.size() != 5) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   Ident.Arch = IsaNameComponents[0];
   Ident.Vendor = IsaNameComponents[1];
@@ -302,12 +315,14 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
   size_t IsaIndex;
 
   amd_comgr_status_t Status = metadata::getIsaIndex(IdentStr, IsaIndex);
-  if (Status != AMD_COMGR_STATUS_SUCCESS)
+  if (Status != AMD_COMGR_STATUS_SUCCESS) {
     return Status;
+  }
 
   for (auto Feature : Ident.Features) {
-    if (!metadata::isSupportedFeature(IsaIndex, Feature))
+    if (!metadata::isSupportedFeature(IsaIndex, Feature)) {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -315,8 +330,9 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
 
 void COMGR::ensureLLVMInitialized() {
   static bool LLVMInitialized = false;
-  if (LLVMInitialized)
+  if (LLVMInitialized) {
     return;
+  }
   LLVMInitializeAMDGPUTarget();
   LLVMInitializeAMDGPUTargetInfo();
   LLVMInitializeAMDGPUTargetMC();
@@ -353,8 +369,9 @@ DataObject *DataObject::allocate(amd_comgr_data_kind_t DataKind) {
 }
 
 void DataObject::release() {
-  if (--RefCount == 0)
+  if (--RefCount == 0) {
     delete this;
+  }
 }
 
 amd_comgr_status_t DataObject::setName(llvm::StringRef Name) {
@@ -367,8 +384,9 @@ amd_comgr_status_t DataObject::setData(llvm::StringRef Data) {
 
 DataSet::DataSet() : DataObjects() {}
 DataSet::~DataSet() {
-  for (DataObject *Data : DataObjects)
+  for (DataObject *Data : DataObjects) {
     Data->release();
+  }
 }
 
 DataAction::DataAction()
@@ -395,8 +413,9 @@ amd_comgr_status_t DataAction::setOptionsFlat(StringRef Options) {
 }
 
 amd_comgr_status_t DataAction::getOptionsFlat(StringRef &Options) {
-  if (AreOptionsList)
+  if (AreOptionsList) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   Options = StringRef(FlatOptions.c_str(), FlatOptions.size() + 1);
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -404,24 +423,28 @@ amd_comgr_status_t DataAction::getOptionsFlat(StringRef &Options) {
 amd_comgr_status_t DataAction::setOptionList(ArrayRef<const char *> Options) {
   AreOptionsList = true;
   ListOptions.clear();
-  for (auto &Option : Options)
+  for (auto &Option : Options) {
     ListOptions.push_back(Option);
+  }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 amd_comgr_status_t DataAction::getOptionListCount(size_t &Size) {
-  if (!AreOptionsList)
+  if (!AreOptionsList) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   Size = ListOptions.size();
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 amd_comgr_status_t DataAction::getOptionListItem(size_t Index,
                                                  StringRef &Option) {
-  if (!AreOptionsList)
+  if (!AreOptionsList) {
     return AMD_COMGR_STATUS_ERROR;
-  if (Index >= ListOptions.size())
+  }
+  if (Index >= ListOptions.size()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
   auto &Str = ListOptions[Index];
   Option = StringRef(Str.c_str(), Str.size() + 1);
   return AMD_COMGR_STATUS_SUCCESS;
@@ -436,24 +459,29 @@ ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
     ListOptions.clear();
     StringRef OptionsRef(FlatOptions);
     SmallVector<StringRef, 16> OptionRefs;
-    if (IsDeviceLibs)
+    if (IsDeviceLibs) {
       OptionsRef.split(OptionRefs, ',', -1, false);
-    else
+    } else {
       OptionsRef.split(OptionRefs, ' ');
-    for (auto &Option : OptionRefs)
+    }
+    for (auto &Option : OptionRefs) {
       ListOptions.push_back(std::string(Option));
+    }
   }
 
   return ListOptions;
 }
 
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
-  if (DocNode.isScalar())
+  if (DocNode.isScalar()) {
     return AMD_COMGR_METADATA_KIND_STRING;
-  if (DocNode.isArray())
+  }
+  if (DocNode.isArray()) {
     return AMD_COMGR_METADATA_KIND_LIST;
-  if (DocNode.isMap())
+  }
+  if (DocNode.isMap()) {
     return AMD_COMGR_METADATA_KIND_MAP;
+  }
   // treat as NULL
   return AMD_COMGR_METADATA_KIND_NULL;
 }
@@ -461,8 +489,9 @@ amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
 std::string DataMeta::convertDocNodeToString(msgpack::DocNode DocNode) {
   assert(DocNode.isScalar() && "cannot convert non-scalar DocNode to string");
   if (MetaDoc->EmitIntegerBooleans &&
-      DocNode.getKind() == msgpack::Type::Boolean)
+      DocNode.getKind() == msgpack::Type::Boolean) {
     return DocNode.getBool() ? "1" : "0";
+  }
   return DocNode.toString();
 }
 
@@ -475,8 +504,9 @@ amd_comgr_status_t AMD_COMGR_API
     //
     (amd_comgr_status_t Status, const char **StatusString) {
   if (!StatusString || Status < AMD_COMGR_STATUS_SUCCESS ||
-      Status > AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES)
+      Status > AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   switch (Status) {
   case AMD_COMGR_STATUS_SUCCESS:
@@ -510,8 +540,9 @@ amd_comgr_status_t AMD_COMGR_API
     amd_comgr_get_isa_count
     //
     (size_t *Count) {
-  if (!Count)
+  if (!Count) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Count = metadata::getIsaCount();
 
@@ -523,8 +554,9 @@ amd_comgr_status_t AMD_COMGR_API
     amd_comgr_get_isa_name
     //
     (size_t Index, const char **IsaName) {
-  if (!IsaName || Index >= metadata::getIsaCount())
+  if (!IsaName || Index >= metadata::getIsaCount()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *IsaName = metadata::getIsaName(Index);
 
@@ -536,19 +568,23 @@ amd_comgr_status_t AMD_COMGR_API
     amd_comgr_get_isa_metadata
     //
     (const char *IsaName, amd_comgr_metadata_node_t *MetadataNode) {
-  if (!IsaName || !MetadataNode)
+  if (!IsaName || !MetadataNode) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   std::unique_ptr<DataMeta> MetaP(new (std::nothrow) DataMeta());
-  if (!MetaP)
+  if (!MetaP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   std::unique_ptr<MetaDocument> MetaDoc(new (std::nothrow) MetaDocument());
-  if (!MetaDoc)
+  if (!MetaDoc) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
-  if (auto Status = metadata::getIsaMetadata(IsaName, MetaDoc->Document))
+  if (auto Status = metadata::getIsaMetadata(IsaName, MetaDoc->Document)) {
     return Status;
+  }
 
   MetaP->MetaDoc.reset(MetaDoc.release());
   MetaP->MetaDoc->EmitIntegerBooleans = true;
@@ -567,12 +603,14 @@ amd_comgr_status_t AMD_COMGR_API
     //
     (amd_comgr_data_kind_t DataKind, amd_comgr_data_t *Data) {
   if (!Data || DataKind <= AMD_COMGR_DATA_KIND_UNDEF ||
-      DataKind > AMD_COMGR_DATA_KIND_LAST)
+      DataKind > AMD_COMGR_DATA_KIND_LAST) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   DataObject *DataP = DataObject::allocate(DataKind);
-  if (!DataP)
+  if (!DataP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   *Data = DataObject::convert(DataP);
 
@@ -586,8 +624,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_t Data) {
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!DataP || !DataP->hasValidDataKind())
+  if (!DataP || !DataP->hasValidDataKind()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   DataP->release();
 
@@ -618,8 +657,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_t Data, size_t Size, const char *Bytes) {
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!DataP || !DataP->hasValidDataKind() || !Size || !Bytes)
+  if (!DataP || !DataP->hasValidDataKind() || !Size || !Bytes) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return DataP->setData(StringRef(Bytes, Size));
 }
@@ -631,13 +671,15 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_t Data, size_t *Size, char *Bytes) {
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!DataP || !DataP->Data || !DataP->hasValidDataKind() || !Size)
+  if (!DataP || !DataP->Data || !DataP->hasValidDataKind() || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
-  if (Bytes)
+  if (Bytes) {
     memcpy(Bytes, DataP->Data, *Size);
-  else
+  } else {
     *Size = DataP->Size;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -649,8 +691,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_t Data, const char *Name) {
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!DataP || !DataP->hasValidDataKind())
+  if (!DataP || !DataP->hasValidDataKind()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return DataP->setName(Name);
 }
@@ -662,13 +705,15 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_t Data, size_t *Size, char *Name) {
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!DataP || !DataP->hasValidDataKind() || !Size)
+  if (!DataP || !DataP->hasValidDataKind() || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
-  if (Name)
+  if (Name) {
     memcpy(Name, DataP->Name, *Size);
-  else
+  } else {
     *Size = strlen(DataP->Name) + 1; // include terminating null
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -682,8 +727,9 @@ amd_comgr_status_t AMD_COMGR_API
 
   if (!DataP || !Size ||
       (DataP->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
-       DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE))
+       DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return metadata::getElfIsaName(DataP, Size, IsaName);
 }
@@ -695,12 +741,14 @@ amd_comgr_status_t AMD_COMGR_API
     amd_comgr_create_data_set
     //
     (amd_comgr_data_set_t *Set) {
-  if (!Set)
+  if (!Set) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   DataSet *SetP = new (std::nothrow) DataSet();
-  if (!SetP)
+  if (!SetP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   *Set = DataSet::convert(SetP);
 
@@ -714,8 +762,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_set_t Set) {
   DataSet *SetP = DataSet::convert(Set);
 
-  if (!SetP)
+  if (!SetP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   delete SetP;
 
@@ -730,12 +779,14 @@ amd_comgr_status_t AMD_COMGR_API
   DataSet *SetP = DataSet::convert(Set);
   DataObject *DataP = DataObject::convert(Data);
 
-  if (!SetP || !DataP || !DataP->hasValidDataKind() || !DataP->Name)
+  if (!SetP || !DataP || !DataP->hasValidDataKind() || !DataP->Name) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   // SmallSetVector: will not add if data was already added
-  if (SetP->DataObjects.insert(DataP))
+  if (SetP->DataObjects.insert(DataP)) {
     DataP->RefCount++;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -747,16 +798,18 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_set_t Set, amd_comgr_data_kind_t DataKind) {
   DataSet *SetP = DataSet::convert(Set);
 
-  if (!SetP || !isDataKindValid(DataKind))
+  if (!SetP || !isDataKindValid(DataKind)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   SmallVector<DataObject *, 8> Tmp = SetP->DataObjects.takeVector();
 
   for (DataObject *Data : Tmp) {
-    if (Data->DataKind == DataKind)
+    if (Data->DataKind == DataKind) {
       Data->release();
-    else
+    } else {
       SetP->DataObjects.insert(Data);
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -769,13 +822,16 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_data_set_t Set, amd_comgr_data_kind_t DataKind, size_t *Count) {
   DataSet *SetP = DataSet::convert(Set);
 
-  if (!SetP || !isDataKindValid(DataKind) || !Count)
+  if (!SetP || !isDataKindValid(DataKind) || !Count) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Count = 0;
-  for (DataObject *Data : SetP->DataObjects)
-    if (Data->DataKind == DataKind)
+  for (DataObject *Data : SetP->DataObjects) {
+    if (Data->DataKind == DataKind) {
       *Count += 1;
+    }
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -788,14 +844,17 @@ amd_comgr_status_t AMD_COMGR_API
      amd_comgr_data_t *Data) {
   DataSet *SetP = DataSet::convert(Set);
 
-  if (!SetP || !isDataKindValid(DataKind) || !Data)
+  if (!SetP || !isDataKindValid(DataKind) || !Data) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   size_t N;
-  if (auto Status = amd_comgr_action_data_count(Set, DataKind, &N))
+  if (auto Status = amd_comgr_action_data_count(Set, DataKind, &N)) {
     return Status;
-  if (Index > N)
+  }
+  if (Index > N) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   N = 0;
   for (auto &I : SetP->DataObjects) {
@@ -816,12 +875,14 @@ amd_comgr_status_t AMD_COMGR_API
     amd_comgr_create_action_info
     //
     (amd_comgr_action_info_t *ActionInfo) {
-  if (!ActionInfo)
+  if (!ActionInfo) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   DataAction *ActionP = new (std::nothrow) DataAction();
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   *ActionInfo = DataAction::convert(ActionP);
 
@@ -835,8 +896,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   delete ActionP;
 
@@ -850,8 +912,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, const char *IsaName) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   if (!IsaName || StringRef(IsaName) == "") {
     free(ActionP->IsaName);
@@ -859,8 +922,9 @@ amd_comgr_status_t AMD_COMGR_API
     return AMD_COMGR_STATUS_SUCCESS;
   }
 
-  if (!metadata::isValidIsaName(IsaName))
+  if (!metadata::isValidIsaName(IsaName)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return ActionP->setIsaName(IsaName);
 }
@@ -872,13 +936,15 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, size_t *Size, char *IsaName) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Size)
+  if (!ActionP || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
-  if (IsaName)
+  if (IsaName) {
     memcpy(IsaName, ActionP->IsaName, *Size);
-  else
+  } else {
     *Size = strlen(ActionP->IsaName) + 1; // include terminating null
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -890,8 +956,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, amd_comgr_language_t Language) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !isLanguageValid(Language))
+  if (!ActionP || !isLanguageValid(Language)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ActionP->Language = Language;
 
@@ -905,8 +972,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, amd_comgr_language_t *Language) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Language)
+  if (!ActionP || !Language) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Language = ActionP->Language;
 
@@ -920,8 +988,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, const char *Options) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return ActionP->setOptionsFlat(Options);
 }
@@ -933,17 +1002,20 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, size_t *Size, char *Options) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Size)
+  if (!ActionP || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   StringRef ActionOptions;
-  if (auto Status = ActionP->getOptionsFlat(ActionOptions))
+  if (auto Status = ActionP->getOptionsFlat(ActionOptions)) {
     return Status;
+  }
 
-  if (Options)
+  if (Options) {
     memcpy(Options, ActionOptions.data(), *Size);
-  else
+  } else {
     *Size = ActionOptions.size();
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -955,8 +1027,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, const char *Options[], size_t Count) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || (!Options && Count))
+  if (!ActionP || (!Options && Count)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return ActionP->setOptionList(ArrayRef<const char *>(Options, Count));
 }
@@ -968,8 +1041,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, size_t *Count) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Count)
+  if (!ActionP || !Count) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return ActionP->getOptionListCount(*Count);
 }
@@ -982,17 +1056,20 @@ amd_comgr_status_t AMD_COMGR_API
      char *Option) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Size)
+  if (!ActionP || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   StringRef ActionOption;
-  if (auto Status = ActionP->getOptionListItem(Index, ActionOption))
+  if (auto Status = ActionP->getOptionListItem(Index, ActionOption)) {
     return Status;
+  }
 
-  if (Option)
+  if (Option) {
     memcpy(Option, ActionOption.data(), *Size);
-  else
+  } else {
     *Size = ActionOption.size();
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1004,8 +1081,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, const char *Path) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ActionP->setActionPath(Path);
 
@@ -1019,13 +1097,15 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, size_t *Size, char *Path) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP || !Size)
+  if (!ActionP || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
-  if (Path)
+  if (Path) {
     memcpy(Path, ActionP->Path, *Size);
-  else
+  } else {
     *Size = strlen(ActionP->Path) + 1; // include terminating 0
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1037,8 +1117,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, bool Logging) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ActionP->Logging = Logging;
 
@@ -1052,8 +1133,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_action_info_t ActionInfo, bool *Logging) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
-  if (!ActionP)
+  if (!ActionP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Logging = ActionP->Logging;
 
@@ -1070,15 +1152,17 @@ amd_comgr_status_t AMD_COMGR_API
   DataSet *InputSetP = DataSet::convert(InputSet);
   DataSet *ResultSetP = DataSet::convert(ResultSet);
 
-  if (!isActionValid(ActionKind) || !InputSetP || !ResultSetP)
+  if (!isActionValid(ActionKind) || !InputSetP || !ResultSetP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ensureLLVMInitialized();
 
   // Save signal handlers so that they can be restored after the action has
   // completed.
-  if (auto Status = signal::saveHandlers())
+  if (auto Status = signal::saveHandlers()) {
     return Status;
+  }
 
   // The normal log stream, used to return via a AMD_COMGR_DATA_KIND_LOG object.
   std::string LogStr;
@@ -1092,11 +1176,11 @@ amd_comgr_status_t AMD_COMGR_API
 
   if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
     StringRef RedirectLog = *RedirectLogs;
-    if (RedirectLog == "stdout")
+    if (RedirectLog == "stdout") {
       LogP = &outs();
-    else if (RedirectLog == "stderr")
+    } else if (RedirectLog == "stderr") {
       LogP = &errs();
-    else {
+    } else {
       std::error_code EC;
       LogF.reset(new (std::nothrow) raw_fd_ostream(
           RedirectLog, EC, sys::fs::OF_Text | sys::fs::OF_Append));
@@ -1104,8 +1188,9 @@ amd_comgr_status_t AMD_COMGR_API
         LogF.reset();
         *LogP << "Comgr unable to redirect log to file '" << RedirectLog
               << "': " << EC.message() << "\n";
-      } else
+      } else {
         LogP = LogF.get();
+      }
     }
   }
 
@@ -1156,24 +1241,30 @@ amd_comgr_status_t AMD_COMGR_API
   }
 
   // Restore signal handlers.
-  if (auto Status = signal::restoreHandlers())
+  if (auto Status = signal::restoreHandlers()) {
     return Status;
+  }
 
-  if (env::shouldEmitVerboseLogs())
+  if (env::shouldEmitVerboseLogs()) {
     *LogP << "\tReturnStatus: " << getStatusName(ActionStatus) << "\n\n";
+  }
 
   if (ActionInfoP->Logging) {
     amd_comgr_data_t LogT;
-    if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &LogT))
+    if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &LogT)) {
       return Status;
+    }
     ScopedDataObjectReleaser LogSDOR(LogT);
     DataObject *Log = DataObject::convert(LogT);
-    if (auto Status = Log->setName("comgr.log"))
+    if (auto Status = Log->setName("comgr.log")) {
       return Status;
-    if (auto Status = Log->setData(LogS.str()))
+    }
+    if (auto Status = Log->setData(LogS.str())) {
       return Status;
-    if (auto Status = amd_comgr_data_set_add(ResultSet, LogT))
+    }
+    if (auto Status = amd_comgr_data_set_add(ResultSet, LogT)) {
       return Status;
+    }
   }
 
   return ActionStatus;
@@ -1187,22 +1278,26 @@ amd_comgr_status_t AMD_COMGR_API
   DataObject *DataP = DataObject::convert(Data);
 
   if (!DataP || !DataP->hasValidDataKind() ||
-      DataP->DataKind == AMD_COMGR_DATA_KIND_UNDEF || !MetadataNode)
+      DataP->DataKind == AMD_COMGR_DATA_KIND_UNDEF || !MetadataNode) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   std::unique_ptr<DataMeta> MetaP(new (std::nothrow) DataMeta());
-  if (!MetaP)
+  if (!MetaP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   MetaDocument *MetaDoc = new (std::nothrow) MetaDocument();
-  if (!MetaDoc)
+  if (!MetaDoc) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   MetaP->MetaDoc.reset(MetaDoc);
   MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
 
-  if (auto Status = metadata::getMetadataRoot(DataP, MetaP.get()))
+  if (auto Status = metadata::getMetadataRoot(DataP, MetaP.get())) {
     return Status;
+  }
 
   // if no metadata found in this data object, still return SUCCESS but
   // with default NULL kind
@@ -1230,8 +1325,9 @@ amd_comgr_status_t AMD_COMGR_API
      amd_comgr_metadata_kind_t *MetadataKind) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetadataKind)
+  if (!MetadataKind) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *MetadataKind = MetaP->getMetadataKind();
 
@@ -1245,15 +1341,17 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size, char *String) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_STRING || !Size)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_STRING || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   std::string Str = MetaP->convertDocNodeToString(MetaP->DocNode);
 
-  if (String)
+  if (String) {
     memcpy(String, Str.c_str(), *Size);
-  else
+  } else {
     *Size = Str.size() + 1;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1265,8 +1363,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Size)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Size = MetaP->DocNode.getMap().size();
 
@@ -1283,18 +1382,21 @@ amd_comgr_status_t AMD_COMGR_API
      void *UserData) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Callback)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Callback) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   auto Map = MetaP->DocNode.getMap();
 
   for (auto &KV : Map) {
-    if (KV.first.isEmpty() || KV.second.isEmpty())
+    if (KV.first.isEmpty() || KV.second.isEmpty()) {
       return AMD_COMGR_STATUS_ERROR;
+    }
     std::unique_ptr<DataMeta> KeyP(new (std::nothrow) DataMeta());
     std::unique_ptr<DataMeta> ValueP(new (std::nothrow) DataMeta());
-    if (!KeyP || !ValueP)
+    if (!KeyP || !ValueP) {
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    }
     KeyP->MetaDoc = MetaP->MetaDoc;
     KeyP->DocNode = KV.first;
     ValueP->MetaDoc = MetaP->MetaDoc;
@@ -1314,17 +1416,21 @@ amd_comgr_status_t AMD_COMGR_API
      amd_comgr_metadata_node_t *Value) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Key || !Value)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Key ||
+      !Value) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   for (auto Iter : MetaP->DocNode.getMap()) {
     if (!Iter.first.isScalar() ||
-        StringRef(Key) != MetaP->convertDocNodeToString(Iter.first))
+        StringRef(Key) != MetaP->convertDocNodeToString(Iter.first)) {
       continue;
+    }
 
     DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-    if (!NewMetaP)
+    if (!NewMetaP) {
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    }
 
     NewMetaP->MetaDoc = MetaP->MetaDoc;
     NewMetaP->DocNode = Iter.second;
@@ -1343,8 +1449,9 @@ amd_comgr_status_t AMD_COMGR_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Size)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   *Size = MetaP->DocNode.getArray().size();
 
@@ -1359,17 +1466,20 @@ amd_comgr_status_t AMD_COMGR_API
      amd_comgr_metadata_node_t *Value) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Value)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Value) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   auto List = MetaP->DocNode.getArray();
 
-  if (Index >= List.size())
+  if (Index >= List.size()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-  if (!NewMetaP)
+  if (!NewMetaP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   NewMetaP->MetaDoc = MetaP->MetaDoc;
   NewMetaP->DocNode = List[Index];
@@ -1391,8 +1501,9 @@ amd_comgr_status_t AMD_COMGR_API
   if (!DataP || !DataP->hasValidDataKind() ||
       !(DataP->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE ||
         DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) ||
-      !Callback)
+      !Callback) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ensureLLVMInitialized();
 
@@ -1410,8 +1521,9 @@ amd_comgr_status_t AMD_COMGR_API
 
   if (!DataP || !DataP->hasValidDataKind() ||
       !(DataP->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE ||
-        DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE))
+        DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE)) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   ensureLLVMInitialized();
 
@@ -1420,12 +1532,14 @@ amd_comgr_status_t AMD_COMGR_API
 
   StringRef Ins(DataP->Data, DataP->Size);
   SymbolContext *Sym = Helper.createBinary(Ins, Name, DataP->DataKind);
-  if (!Sym)
+  if (!Sym) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   DataSymbol *SymP = new (std::nothrow) DataSymbol(Sym);
-  if (!SymP)
+  if (!SymP) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   *Symbol = DataSymbol::convert(SymP);
 
@@ -1444,8 +1558,9 @@ amd_comgr_status_t AMD_COMGR_API
      void *Value) {
   DataSymbol *SymP = DataSymbol::convert(Symbol);
 
-  if (!Value || !isSymbolInfoValid(SymbolInfo) || !SymP->DataSym)
+  if (!Value || !isSymbolInfoValid(SymbolInfo) || !SymP->DataSym) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   SymbolContext *Sym = SymP->DataSym;
 
@@ -1485,12 +1600,14 @@ amd_comgr_status_t AMD_COMGR_API
 
   if (!IsaName || !metadata::isValidIsaName(IsaName) || !ReadMemoryCallback ||
       !PrintInstructionCallback || !PrintAddressAnnotationCallback ||
-      !DisasmInfo)
+      !DisasmInfo) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(IsaName, Ident))
+  if (auto Status = parseTargetIdentifier(IsaName, Ident)) {
     return Status;
+  }
 
   ensureLLVMInitialized();
 
@@ -1507,8 +1624,9 @@ amd_comgr_status_t AMD_COMGR_API
 
   DisassemblyInfo *DI = DisassemblyInfo::convert(DisasmInfo);
 
-  if (!DI)
+  if (!DI) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   delete DI;
 
@@ -1523,8 +1641,9 @@ amd_comgr_status_t AMD_COMGR_API
      uint64_t *Size) {
 
   DisassemblyInfo *DI = DisassemblyInfo::convert(DisasmInfo);
-  if (!DI || !Size)
+  if (!DI || !Size) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   return DI->disassembleInstruction(Address, UserData, *Size);
 }

@@ -35,8 +35,9 @@ void read_metadata(test_meta_data_t *MetaData, const char *File,
   checkError(Status, "amd_comgr_set_data_name");
 
   // Get metadata from data object
-  if (Display)
+  if (Display) {
     printf("Get metadata from %s\n", File);
+  }
 
   Status = amd_comgr_get_data_metadata(MetaData->Data, &MetaData->Root);
   if (!ErrorExpected && Status) {

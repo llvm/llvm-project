@@ -53,9 +53,10 @@ void testFlat(amd_comgr_action_info_t ActionInfo, const char *Options) {
   Status = amd_comgr_action_info_get_options(ActionInfo, &Size, RetOptions);
   checkError(Status, "amd_comgr_action_info_get_options");
 
-  if (strcmp(Options, RetOptions))
+  if (strcmp(Options, RetOptions)) {
     fail("incorrect options string: expected '%s', saw '%s'", Options,
          RetOptions);
+  }
 
   free(RetOptions);
 }
@@ -71,8 +72,9 @@ void testFlats() {
                            "aaaaaaaaaaaaaaaaaaaaa"};
   size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
-  for (size_t I = 0; I < OptionsCount; ++I)
+  for (size_t I = 0; I < OptionsCount; ++I) {
     testFlat(ActionInfo, Options[I]);
+  }
 
   Status = amd_comgr_destroy_action_info(ActionInfo);
   checkError(Status, "amd_comgr_destroy_action_info");
@@ -90,8 +92,9 @@ void testList(amd_comgr_action_info_t ActionInfo, const char *Options[],
       amd_comgr_action_info_get_option_list_count(ActionInfo, &ActualCount);
   checkError(Status, "amd_comgr_action_info_get_option_list_count");
 
-  if (Count != ActualCount)
+  if (Count != ActualCount) {
     fail("incorrect option count: expected %zu, saw %zu", Count, ActualCount);
+  }
 
   for (size_t I = 0; I < Count; ++I) {
     size_t Size;
@@ -102,9 +105,10 @@ void testList(amd_comgr_action_info_t ActionInfo, const char *Options[],
     Status = amd_comgr_action_info_get_option_list_item(ActionInfo, I, &Size,
                                                         Option);
     checkError(Status, "amd_comgr_action_info_get_option_list_item");
-    if (strcmp(Options[I], Option))
+    if (strcmp(Options[I], Option)) {
       fail("incorrect option string: expected '%s', saw '%s'", Options[I],
            Option);
+    }
     free(Option);
   }
 }
@@ -119,9 +123,11 @@ void testLists() {
   const char *Options[] = {"foo", "bar", "bazqux", "aaaaaaaaaaaaaaaaaaaaa"};
   size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
-  for (size_t I = 0; I <= OptionsCount; ++I)
-    for (size_t J = 0; I + J <= OptionsCount; ++J)
+  for (size_t I = 0; I <= OptionsCount; ++I) {
+    for (size_t J = 0; I + J <= OptionsCount; ++J) {
       testList(ActionInfo, Options + I, J);
+    }
+  }
 
   Status = amd_comgr_destroy_action_info(ActionInfo);
   checkError(Status, "amd_comgr_destroy_action_info");
@@ -137,14 +143,16 @@ void testMixed() {
 
   // Confirm the default is the legacy flat options string.
   Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
-  if (Status != AMD_COMGR_STATUS_SUCCESS)
+  if (Status != AMD_COMGR_STATUS_SUCCESS) {
     fail("expected new action_info to default to a flat options string, but "
          "amd_comgr_action_info_get_options fails");
+  }
 
   Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
-  if (Status != AMD_COMGR_STATUS_ERROR)
+  if (Status != AMD_COMGR_STATUS_ERROR) {
     fail("expected new action_info to default to a flat options string, but "
          "amd_comgr_action_info_get_option_list_count does not fail");
+  }
 
   // Confirm the inverse: if we set using a list, we should not be able to
   // access as if it were flat.
@@ -152,25 +160,29 @@ void testMixed() {
   checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
-  if (Status != AMD_COMGR_STATUS_ERROR)
+  if (Status != AMD_COMGR_STATUS_ERROR) {
     fail("amd_comgr_action_info_get_options does not fail with list options");
+  }
 
   Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
-  if (Status != AMD_COMGR_STATUS_SUCCESS)
+  if (Status != AMD_COMGR_STATUS_SUCCESS) {
     fail("amd_comgr_action_info_get_option_list_count fails with list options");
+  }
 
   // Also confirm we can switch back to flat.
   Status = amd_comgr_action_info_set_options(ActionInfo, "");
   checkError(Status, "amd_comgr_action_info_set_options");
 
   Status = amd_comgr_action_info_get_options(ActionInfo, &Size, NULL);
-  if (Status != AMD_COMGR_STATUS_SUCCESS)
+  if (Status != AMD_COMGR_STATUS_SUCCESS) {
     fail("amd_comgr_action_info_get_options fails with flat options string");
+  }
 
   Status = amd_comgr_action_info_get_option_list_count(ActionInfo, &Size);
-  if (Status != AMD_COMGR_STATUS_ERROR)
+  if (Status != AMD_COMGR_STATUS_ERROR) {
     fail("amd_comgr_action_info_get_option_list_count does not fail with flat "
          "options string");
+  }
 
   Status = amd_comgr_destroy_action_info(ActionInfo);
   checkError(Status, "amd_comgr_destroy_action_info");

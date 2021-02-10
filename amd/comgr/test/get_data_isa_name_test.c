@@ -150,19 +150,24 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
      * expected ISA string will have a supported feature set to ON. If the
      * feature setting does not match the default then it is not supported.
      */
-    if (!Isa->SupportedV2)
+    if (!Isa->SupportedV2) {
       return false;
+    }
     if (Isa->SrameccSupported) {
-      if (Sramecc == any)
+      if (Sramecc == any) {
         Sramecc = on;
-      if ((Sramecc == on) != (Isa->SrameccV2 == on || Isa->SrameccV2 == any))
+      }
+      if ((Sramecc == on) != (Isa->SrameccV2 == on || Isa->SrameccV2 == any)) {
         return false;
+      }
     }
     if (Isa->XnackSupported) {
-      if (Xnack == any)
+      if (Xnack == any) {
         Xnack = on;
-      if ((Xnack == on) != (Isa->XnackV2 == on || Isa->XnackV2 == any))
+      }
+      if ((Xnack == on) != (Isa->XnackV2 == on || Isa->XnackV2 == any)) {
         return false;
+      }
     }
     break;
   }
@@ -172,12 +177,14 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
      * be enabled in the expected isa.
      */
     if (Isa->SrameccSupported) {
-      if (Sramecc == any)
+      if (Sramecc == any) {
         Sramecc = on;
+      }
     }
     if (Isa->XnackSupported) {
-      if (Xnack == any)
+      if (Xnack == any) {
         Xnack = on;
+      }
     }
     break;
   }
@@ -380,7 +387,7 @@ int main(int argc, char *argv[]) {
 
     testIsaName(IsaName, "");
 
-    for (size_t I = 0; I < IsaFeaturesSize; I++)
+    for (size_t I = 0; I < IsaFeaturesSize; I++) {
       if (strncmp(IsaName, IsaFeatures[I].IsaName, MAX_ISA_NAME_SIZE) == 0) {
 
         if (IsaFeatures[I].SrameccSupported) {
@@ -402,6 +409,7 @@ int main(int argc, char *argv[]) {
 
         break;
       }
+    }
   }
 
   return 0;

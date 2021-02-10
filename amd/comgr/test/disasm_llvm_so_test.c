@@ -112,10 +112,11 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_action_data_count(DataSetOut, AMD_COMGR_DATA_KIND_SOURCE,
                                          &Count);
     checkError(Status, "amd_comgr_action_data_count");
-    if (Count == 2)
+    if (Count == 2) {
       printf("Passed, output data object returned = 2\n");
-    else
+    } else {
       printf("Failed, Output data object returned = %ld\n", Count);
+    }
 
     // Retrieve the result data object 1 from dataSetOut
     Status = amd_comgr_action_data_get_data(
@@ -128,8 +129,9 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_get_data");
 
     printf("Output = \n");
-    for (size_t I = 0; I < Count; I++)
+    for (size_t I = 0; I < Count; I++) {
       printf("%c", Bytes[I]);
+    }
     free(Bytes);
 
     // Retrieve the result data object 2 from dataSetOut
@@ -143,8 +145,9 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_get_data");
 
     printf("Output = \n");
-    for (size_t I = 0; I < Count; I++)
+    for (size_t I = 0; I < Count; I++) {
       printf("%c", Bytes2[I]);
+    }
     free(Bytes2);
 
     Status = amd_comgr_destroy_data_set(DataSetOut);

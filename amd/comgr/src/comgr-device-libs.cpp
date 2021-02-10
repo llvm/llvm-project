@@ -48,13 +48,16 @@ static amd_comgr_status_t addObject(DataSet *DataSet,
                                     const char *Name, const void *Data,
                                     size_t Size) {
   DataObject *Obj = DataObject::allocate(Kind);
-  if (!Obj)
+  if (!Obj) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-  if (auto Status = Obj->setName(Name))
+  }
+  if (auto Status = Obj->setName(Name)) {
     return Status;
+  }
   if (auto Status =
-          Obj->setData(StringRef(reinterpret_cast<const char *>(Data), Size)))
+          Obj->setData(StringRef(reinterpret_cast<const char *>(Data), Size))) {
     return Status;
+  }
   DataSet->DataObjects.insert(Obj);
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -84,37 +87,46 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
                                       DataSet *ResultSet) {
   if (ActionInfo->Language != AMD_COMGR_LANGUAGE_OPENCL_1_2 &&
       ActionInfo->Language != AMD_COMGR_LANGUAGE_OPENCL_2_0 &&
-      ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP)
+      ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   if (ActionInfo->Language == AMD_COMGR_LANGUAGE_HIP) {
     if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC, "hip_lib.bc",
-                                hip_lib, hip_lib_size))
+                                hip_lib, hip_lib_size)) {
       return Status;
+    }
   } else {
     if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC,
-                                "opencl_lib.bc", opencl_lib, opencl_lib_size))
+                                "opencl_lib.bc", opencl_lib, opencl_lib_size)) {
       return Status;
+    }
   }
 
   if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC, "ocml_lib.bc",
-                              ocml_lib, ocml_lib_size))
+                              ocml_lib, ocml_lib_size)) {
     return Status;
+  }
   if (auto Status = addObject(ResultSet, AMD_COMGR_DATA_KIND_BC, "ockl_lib.bc",
-                              ockl_lib, ockl_lib_size))
+                              ockl_lib, ockl_lib_size)) {
     return Status;
+  }
 
   TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident))
+  if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident)) {
     return Status;
-  if (!Ident.Processor.consume_front("gfx"))
+  }
+  if (!Ident.Processor.consume_front("gfx")) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
   auto IsaVersion = get_oclc_isa_version(Ident.Processor);
-  if (!std::get<0>(IsaVersion))
+  if (!std::get<0>(IsaVersion)) {
     report_fatal_error(Twine("Missing device library for gfx") +
                        Ident.Processor);
-  if (auto Status = addOCLCObject(ResultSet, IsaVersion))
+  }
+  if (auto Status = addOCLCObject(ResultSet, IsaVersion)) {
     return Status;
+  }
 
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
        UnsafeMath = false, Wavefrontsize64 = false;
@@ -127,23 +139,31 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
                      .Case("wavefrontsize64", &Wavefrontsize64)
                      .Default(nullptr);
     // It is invalid to provide an unknown option and to repeat an option.
-    if (!Flag || *Flag)
+    if (!Flag || *Flag) {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
     *Flag = true;
   }
 
   if (auto Status = addOCLCObject(
-          ResultSet, get_oclc_correctly_rounded_sqrt(CorrectlyRoundedSqrt)))
+          ResultSet, get_oclc_correctly_rounded_sqrt(CorrectlyRoundedSqrt))) {
     return Status;
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_daz_opt(DazOpt)))
+  }
+  if (auto Status = addOCLCObject(ResultSet, get_oclc_daz_opt(DazOpt))) {
     return Status;
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_finite_only(FiniteOnly)))
-    return Status;
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_unsafe_math(UnsafeMath)))
-    return Status;
+  }
   if (auto Status =
-          addOCLCObject(ResultSet, get_oclc_wavefrontsize64(Wavefrontsize64)))
+          addOCLCObject(ResultSet, get_oclc_finite_only(FiniteOnly))) {
     return Status;
+  }
+  if (auto Status =
+          addOCLCObject(ResultSet, get_oclc_unsafe_math(UnsafeMath))) {
+    return Status;
+  }
+  if (auto Status =
+          addOCLCObject(ResultSet, get_oclc_wavefrontsize64(Wavefrontsize64))) {
+    return Status;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

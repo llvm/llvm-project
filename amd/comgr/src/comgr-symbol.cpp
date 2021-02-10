@@ -87,14 +87,16 @@ SymbolHelper::mapToComgrSymbolType(uint8_t ELFSymbolType) {
 Expected<OwningBinary<Binary>> SymbolHelper::createBinary(StringRef InText) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getMemBuffer(InText);
-  if (std::error_code EC = BufOrErr.getError())
+  if (std::error_code EC = BufOrErr.getError()) {
     return errorCodeToError(EC);
+  }
   std::unique_ptr<MemoryBuffer> &Buffer = BufOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
       llvm::object::createBinary(Buffer->getMemBufferRef());
-  if (!BinOrErr)
+  if (!BinOrErr) {
     return BinOrErr.takeError();
+  }
   std::unique_ptr<Binary> &Bin = BinOrErr.get();
 
   return OwningBinary<Binary>(std::move(Bin), std::move(Buffer));
@@ -122,14 +124,16 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
         // executable kind, search dynsymtab
         iterator_range<elf_symbol_iterator> Dsyms =
             E->getDynamicSymbolIterators();
-        for (ELFSymbolRef Dsym : Dsyms)
+        for (ELFSymbolRef Dsym : Dsyms) {
           SymbolList.push_back(Dsym);
+        }
 
       } else if (Kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
         // relocatable kind, search symtab
         auto Syms = E->symbols();
-        for (ELFSymbolRef Sym : Syms)
+        for (ELFSymbolRef Sym : Syms) {
           SymbolList.push_back(Sym);
+        }
       }
     }
 
@@ -138,8 +142,9 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     bool Found = false;
     for (auto &Symbol : SymbolList) {
       Expected<StringRef> SymNameOrErr = Symbol.getName();
-      if (!SymNameOrErr)
+      if (!SymNameOrErr) {
         return NULL;
+      }
       StringRef SymName = *SymNameOrErr;
       if (SymName.equals(Sname)) {
 #if DEBUG
@@ -151,8 +156,9 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
       }
     }
 
-    if (!Found)
+    if (!Found) {
       return NULL;
+    }
 
     // ATTENTION: Do not attempt to split out the above "find symbol" code
     // into a separate function returning a found SymbolRef. For some
@@ -164,19 +170,22 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
 
     // Found the specified symbol, fill the SymbolContext values
     std::unique_ptr<SymbolContext> Symp(new (std::nothrow) SymbolContext());
-    if (!Symp)
+    if (!Symp) {
       return NULL;
+    }
 
     Symp->setName(Name);
     auto ExpectedFsymValue = Fsym.getValue();
-    if (!ExpectedFsymValue)
+    if (!ExpectedFsymValue) {
       return NULL;
+    }
     Symp->Value = ExpectedFsymValue.get();
 
     DataRefImpl Symb = Fsym.getRawDataRefImpl();
     auto Flags = Fsym.getObject()->getSymbolFlags(Symb);
-    if (!Flags)
+    if (!Flags) {
       return NULL;
+    }
 
     // symbol size
     ELFSymbolRef Esym(Fsym);
@@ -184,10 +193,11 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     Symp->Type = mapToComgrSymbolType(Esym.getELFType());
 
     // symbol undefined?
-    if (*Flags & SymbolRef::SF_Undefined)
+    if (*Flags & SymbolRef::SF_Undefined) {
       Symp->Undefined = true;
-    else
+    } else {
       Symp->Undefined = false;
+    }
 
     return Symp.release();
   }
@@ -217,39 +227,46 @@ amd_comgr_status_t SymbolHelper::iterateTable(
         // executable kind, search dynsymtab
         iterator_range<elf_symbol_iterator> Dsyms =
             E->getDynamicSymbolIterators();
-        for (ELFSymbolRef Dsym : Dsyms)
+        for (ELFSymbolRef Dsym : Dsyms) {
           SymbolList.push_back(Dsym);
+        }
 
       } else if (Kind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
         // relocatable kind, search symtab
         auto Syms = E->symbols();
-        for (ELFSymbolRef Sym : Syms)
+        for (ELFSymbolRef Sym : Syms) {
           SymbolList.push_back(Sym);
+        }
       }
     }
 
     for (auto &Symbol : SymbolList) {
       std::unique_ptr<SymbolContext> Ctxp(new (std::nothrow) SymbolContext());
-      if (!Ctxp)
+      if (!Ctxp) {
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+      }
 
       Expected<StringRef> SymNameOrErr = Symbol.getName();
-      if (!SymNameOrErr)
+      if (!SymNameOrErr) {
         return AMD_COMGR_STATUS_ERROR;
+      }
       StringRef SymName = *SymNameOrErr;
       Ctxp->setName(SymName);
       auto ExpectedSymbolValue = Symbol.getValue();
-      if (!ExpectedSymbolValue)
+      if (!ExpectedSymbolValue) {
         return AMD_COMGR_STATUS_ERROR;
+      }
       Ctxp->Value = ExpectedSymbolValue.get();
 
       Expected<SymbolRef::Type> TypeOrErr = Symbol.getType();
-      if (!TypeOrErr)
+      if (!TypeOrErr) {
         return AMD_COMGR_STATUS_ERROR;
+      }
       DataRefImpl Symb = Symbol.getRawDataRefImpl();
       auto Flags = Symbol.getObject()->getSymbolFlags(Symb);
-      if (!Flags)
+      if (!Flags) {
         return AMD_COMGR_STATUS_ERROR;
+      }
 
       ELFSymbolRef Esym(Symbol);
       Ctxp->Size = Esym.getSize();
@@ -259,8 +276,9 @@ amd_comgr_status_t SymbolHelper::iterateTable(
 
       std::unique_ptr<COMGR::DataSymbol> Symp(
           new (std::nothrow) COMGR::DataSymbol(Ctxp.release()));
-      if (!Symp)
+      if (!Symp) {
         return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+      }
       amd_comgr_symbol_t Symt = COMGR::DataSymbol::convert(Symp.get());
 
       (*Callback)(Symt, UserData);

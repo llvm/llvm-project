@@ -51,45 +51,53 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   std::string Isa = TT + Twine("-" + Ident.Processor).str();
   SmallVector<StringRef, 2> FeaturesVec;
 
-  for (auto &Feature : Ident.Features)
+  for (auto &Feature : Ident.Features) {
     FeaturesVec.push_back(
         Twine(Feature.take_back() + Feature.drop_back()).str());
+  }
 
   std::string Features = join(FeaturesVec, ",");
 
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-  if (!TheTarget)
+  if (!TheTarget) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::unique_ptr<const MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
-  if (!MRI)
+  if (!MRI) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   llvm::MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
-  if (!MAI)
+  if (!MAI) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  if (!MII)
+  if (!MII) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, Ident.Processor, Features));
-  if (!STI)
+  if (!STI) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::unique_ptr<MCContext> Ctx(new (std::nothrow)
                                      MCContext(MAI.get(), MRI.get(), nullptr));
-  if (!Ctx)
+  if (!Ctx) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::unique_ptr<const MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
-  if (!DisAsm)
+  if (!DisAsm) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   // Optional; currently AMDGPU does not implement this.
   std::unique_ptr<const MCInstrAnalysis> MIA(
@@ -97,15 +105,17 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
 
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       Triple(TT), MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
-  if (!IP)
+  if (!IP) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   DisassemblyInfo *DI = new (std::nothrow) DisassemblyInfo(
       ReadMemory, PrintInstruction, PrintAddressAnnotation, TheTarget,
       std::move(MAI), std::move(MRI), std::move(STI), std::move(MII),
       std::move(Ctx), std::move(DisAsm), std::move(MIA), std::move(IP));
-  if (!DI)
+  if (!DI) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+  }
 
   *DisassemblyInfoT = DisassemblyInfo::convert(DI);
 
@@ -120,8 +130,9 @@ amd_comgr_status_t DisassemblyInfo::disassembleInstruction(uint64_t Address,
 
   uint64_t ActualSize = ReadMemory(
       Address, reinterpret_cast<char *>(Buffer.data()), ReadSize, UserData);
-  if (!ActualSize || ActualSize > ReadSize)
+  if (!ActualSize || ActualSize > ReadSize) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   Buffer.resize(ActualSize);
 
@@ -129,8 +140,9 @@ amd_comgr_status_t DisassemblyInfo::disassembleInstruction(uint64_t Address,
   std::string Annotations;
   raw_string_ostream AnnotationsStream(Annotations);
   if (DisAsm->getInstruction(Inst, Size, Buffer, Address, AnnotationsStream) !=
-      MCDisassembler::Success)
+      MCDisassembler::Success) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   std::string InstStr;
   raw_string_ostream InstStream(InstStr);
@@ -141,8 +153,9 @@ amd_comgr_status_t DisassemblyInfo::disassembleInstruction(uint64_t Address,
   if (MIA && (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||
               MIA->isConditionalBranch(Inst))) {
     uint64_t Target;
-    if (MIA->evaluateBranch(Inst, Address, Size, Target))
+    if (MIA->evaluateBranch(Inst, Address, Size, Target)) {
       PrintAddressAnnotation(Target, UserData);
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;

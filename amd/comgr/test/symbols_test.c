@@ -63,9 +63,10 @@ void expectSymbol(const char *ObjectFilename, const char *SymbolName,
                                      (void *)&Type);
   checkError(Status, "amd_comgr_symbol_get_info");
 
-  if (Type != ExpectedType)
+  if (Type != ExpectedType) {
     fail("unexpected symbol type for symbol %s: expected %d, saw %d\n",
          SymbolName, ExpectedType, Type);
+  }
 
   Status = amd_comgr_release_data(DataObject);
   checkError(Status, "amd_comgr_release_data");

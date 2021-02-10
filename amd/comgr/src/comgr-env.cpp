@@ -49,8 +49,9 @@ bool shouldSaveTemps() {
 
 Optional<StringRef> getRedirectLogs() {
   static char *RedirectLogs = getenv("AMD_COMGR_REDIRECT_LOGS");
-  if (!RedirectLogs || StringRef(RedirectLogs) == "0")
+  if (!RedirectLogs || StringRef(RedirectLogs) == "0") {
     return None;
+  }
   return StringRef(RedirectLogs);
 }
 
@@ -61,8 +62,9 @@ bool shouldEmitVerboseLogs() {
 
 llvm::StringRef getROCMPath() {
   static const char *ROCMPath = std::getenv("ROCM_PATH");
-  if (!ROCMPath)
+  if (!ROCMPath) {
     ROCMPath = "/opt/rocm";
+  }
   return ROCMPath;
 }
 

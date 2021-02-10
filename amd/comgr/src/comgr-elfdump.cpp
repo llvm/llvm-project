@@ -51,9 +51,10 @@ void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
   typedef ELFFile<ELFT> ELFO;
   OS << "Program Header:\n";
   auto ProgramHeaderOrError = ELF.program_headers();
-  if (!ProgramHeaderOrError)
+  if (!ProgramHeaderOrError) {
     report_fatal_error(
         errorToErrorCode(ProgramHeaderOrError.takeError()).message());
+  }
   for (const typename ELFO::Elf_Phdr &Phdr : *ProgramHeaderOrError) {
     switch (Phdr.p_type) {
     case ELF::PT_DYNAMIC:
@@ -113,18 +114,22 @@ void printProgramHeaders(const ELFFile<ELFT> &ELF, raw_ostream &OS) {
 
 void llvm::DisassemHelper::printELFFileHeader(const object::ObjectFile *Obj) {
   // Little-endian 32-bit
-  if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
+  if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj)) {
     printProgramHeaders(ELFObj->getELFFile(), OutS);
+  }
 
   // Big-endian 32-bit
-  if (const ELF32BEObjectFile *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
+  if (const ELF32BEObjectFile *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj)) {
     printProgramHeaders(ELFObj->getELFFile(), OutS);
+  }
 
   // Little-endian 64-bit
-  if (const ELF64LEObjectFile *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
+  if (const ELF64LEObjectFile *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj)) {
     printProgramHeaders(ELFObj->getELFFile(), OutS);
+  }
 
   // Big-endian 64-bit
-  if (const ELF64BEObjectFile *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
+  if (const ELF64BEObjectFile *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj)) {
     printProgramHeaders(ELFObj->getELFFile(), OutS);
+  }
 }

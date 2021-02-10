@@ -209,11 +209,12 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
   for (const Arg *A : Args.filtered(OPT_UNKNOWN)) {
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (OptTbl.findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1)
+    if (OptTbl.findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1) {
       Diags.Report(diag::err_drv_unknown_argument) << ArgString;
-    else
+    } else {
       Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
           << ArgString << Nearest;
+    }
     Success = false;
   }
 
@@ -225,8 +226,9 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
   Opts.Features = Args.getAllArgValues(OPT_target_feature);
 
   // Use the default target triple if unspecified.
-  if (Opts.Triple.empty())
+  if (Opts.Triple.empty()) {
     Opts.Triple = llvm::sys::getDefaultTargetTriple();
+  }
 
   // Language Options
   Opts.IncludePaths = Args.getAllArgValues(OPT_I);
@@ -285,8 +287,9 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
     if (OutputType == ~0U) {
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
       Success = false;
-    } else
+    } else {
       Opts.OutputType = FileType(OutputType);
+    }
   }
   Opts.ShowHelp = Args.hasArg(OPT_help);
   Opts.ShowVersion = Args.hasArg(OPT_version);
@@ -313,13 +316,15 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
 static std::unique_ptr<raw_fd_ostream>
 getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
                 bool Binary) {
-  if (Opts.OutputPath.empty())
+  if (Opts.OutputPath.empty()) {
     Opts.OutputPath = "-";
+  }
 
   // Make sure that the Out file gets unlinked from the disk if we get a
   // SIGINT.
-  if (Opts.OutputPath != "-")
+  if (Opts.OutputPath != "-") {
     sys::RemoveFileOnSignal(Opts.OutputPath);
+  }
 
   std::error_code EC;
   auto Out = std::make_unique<raw_fd_ostream>(
@@ -338,8 +343,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
-  if (!TheTarget)
+  if (!TheTarget) {
     return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
       MemoryBuffer::getFileOrSTDIN(Opts.InputFile);
@@ -379,8 +385,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
   std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);
-  if (!FDOS)
+  if (!FDOS) {
     return true;
+  }
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
@@ -399,26 +406,33 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   }
 
   MOFI->InitMCObjectFileInfo(Triple(Opts.Triple), PIC, Ctx);
-  if (Opts.SaveTemporaryLabels)
+  if (Opts.SaveTemporaryLabels) {
     Ctx.setAllowTemporaryLabels(false);
-  if (Opts.GenDwarfForAssembly)
+  }
+  if (Opts.GenDwarfForAssembly) {
     Ctx.setGenDwarfForAssembly(true);
-  if (!Opts.DwarfDebugFlags.empty())
+  }
+  if (!Opts.DwarfDebugFlags.empty()) {
     Ctx.setDwarfDebugFlags(StringRef(Opts.DwarfDebugFlags));
-  if (!Opts.DwarfDebugProducer.empty())
+  }
+  if (!Opts.DwarfDebugProducer.empty()) {
     Ctx.setDwarfDebugProducer(StringRef(Opts.DwarfDebugProducer));
-  if (!Opts.DebugCompilationDir.empty())
+  }
+  if (!Opts.DebugCompilationDir.empty()) {
     Ctx.setCompilationDir(Opts.DebugCompilationDir);
-  if (!Opts.MainFileName.empty())
+  }
+  if (!Opts.MainFileName.empty()) {
     Ctx.setMainFileName(StringRef(Opts.MainFileName));
+  }
   Ctx.setDwarfVersion(Opts.DwarfVersion);
 
   // Build up the feature string from the target feature list.
   std::string FS;
   if (!Opts.Features.empty()) {
     FS = Opts.Features[0];
-    for (unsigned I = 1, E = Opts.Features.size(); I != E; ++I)
+    for (unsigned I = 1, E = Opts.Features.size(); I != E; ++I) {
       FS += "," + Opts.Features[I];
+    }
   }
 
   std::unique_ptr<MCStreamer> Str;
@@ -477,8 +491,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   MCTargetOptions Options;
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(*STI, *Parser, *MCII, Options));
-  if (!TAP)
+  if (!TAP) {
     Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+  }
 
   // Set values for symbols, if any.
   for (auto &S : Opts.SymbolDefs) {
@@ -487,8 +502,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
     auto Val = Pair.second;
     int64_t Value;
     // We have already error checked this in the driver.
-    if (!Val.getAsInteger(0, Value))
+    if (!Val.getAsInteger(0, Value)) {
       Ctx.setSymbolValue(Parser->getStreamer(), Sym, Value);
+    }
   }
 
   if (!Failed) {
@@ -504,8 +520,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   FDOS.reset();
 
   // Delete output file if there were errors.
-  if (Failed && Opts.OutputPath != "-")
+  if (Failed && Opts.OutputPath != "-") {
     sys::fs::remove(Opts.OutputPath);
+  }
 
   return Failed;
 }
@@ -518,8 +535,9 @@ static SmallString<128> getFilePath(DataObject *Object, StringRef Dir) {
 
 static amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
   auto BufOrError = MemoryBuffer::getFile(Path);
-  if (std::error_code EC = BufOrError.getError())
+  if (std::error_code EC = BufOrError.getError()) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   Object->setData(BufOrError.get()->getBuffer());
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -527,16 +545,19 @@ static amd_comgr_status_t inputFromFile(DataObject *Object, StringRef Path) {
 static amd_comgr_status_t outputToFile(StringRef Data, StringRef Path) {
   SmallString<128> DirPath = Path;
   path::remove_filename(DirPath);
-  if (fs::create_directories(DirPath))
+  if (fs::create_directories(DirPath)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   std::error_code EC;
   raw_fd_ostream OS(Path, EC, fs::F_None);
-  if (EC)
+  if (EC) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   OS << Data;
   OS.close();
-  if (OS.has_error())
+  if (OS.has_error()) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
@@ -559,8 +580,9 @@ parseLLVMOptions(const std::vector<std::string> &Options) {
     LLVMArgs.push_back("");
     LLVMArgs.push_back(Option.c_str());
     if (!cl::ParseCommandLineOptions(LLVMArgs.size(), &LLVMArgs[0],
-                                     "-mllvm options parsing"))
+                                     "-mllvm options parsing")) {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
     LLVMArgs.clear();
   }
   return AMD_COMGR_STATUS_SUCCESS;
@@ -578,19 +600,22 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   MScreen.lock();
   bool LLDRet = lld::elf::link(ArgRefs, false, LogS, LogE);
   MScreen.unlock();
-  if (!LLDRet)
+  if (!LLDRet) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 static void logArgv(raw_ostream &OS, StringRef ProgramName,
                     ArrayRef<const char *> Argv) {
   OS << "COMGR::executeInProcessDriver argv: " << ProgramName;
-  for (size_t I = 0; I < Argv.size(); ++I)
+  for (size_t I = 0; I < Argv.size(); ++I) {
     // Skip the first argument, which we replace with ProgramName, and the last
     // argument, which is a null terminator.
-    if (I && Argv[I])
+    if (I && Argv[I]) {
       OS << " \"" << Argv[I] << '\"';
+    }
+  }
   OS << '\n';
 }
 
@@ -623,9 +648,10 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
   TheDriver.setCheckInputsExist(false);
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
-  if (!C)
+  if (!C) {
     return C->containsError() ? AMD_COMGR_STATUS_ERROR
                               : AMD_COMGR_STATUS_SUCCESS;
+  }
   for (auto &Job : C->getJobs()) {
     auto Arguments = Job.getArguments();
     SmallVector<const char *, 128> Argv;
@@ -635,43 +661,54 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 
     // By default clang driver will ask CC1 to leak memory.
     auto *IT = find(Argv, StringRef("-disable-free"));
-    if (IT != Argv.end())
+    if (IT != Argv.end()) {
       Argv.erase(IT);
+    }
 
     clearLLVMOptions();
 
     if (Argv[1] == StringRef("-cc1")) {
-      if (env::shouldEmitVerboseLogs())
+      if (env::shouldEmitVerboseLogs()) {
         logArgv(LogS, "clang", Argv);
+      }
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->setVerboseOutputStream(LogS);
       if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
-                                              Diags))
+                                              Diags)) {
         return AMD_COMGR_STATUS_ERROR;
+      }
       // Internally this call refers to the invocation created above, so at
       // this point the DiagnosticsEngine should accurately reflect all user
       // requested configuration from Argv.
       Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
-      if (!Clang->hasDiagnostics())
+      if (!Clang->hasDiagnostics()) {
         return AMD_COMGR_STATUS_ERROR;
-      if (!ExecuteCompilerInvocation(Clang.get()))
+      }
+      if (!ExecuteCompilerInvocation(Clang.get())) {
         return AMD_COMGR_STATUS_ERROR;
+      }
     } else if (Argv[1] == StringRef("-cc1as")) {
-      if (env::shouldEmitVerboseLogs())
+      if (env::shouldEmitVerboseLogs()) {
         logArgv(LogS, "clang", Argv);
+      }
       Argv.erase(Argv.begin() + 1);
       AssemblerInvocation Asm;
-      if (!AssemblerInvocation::createFromArgs(Asm, Argv, Diags))
+      if (!AssemblerInvocation::createFromArgs(Asm, Argv, Diags)) {
         return AMD_COMGR_STATUS_ERROR;
-      if (auto Status = parseLLVMOptions(Asm.LLVMArgs))
+      }
+      if (auto Status = parseLLVMOptions(Asm.LLVMArgs)) {
         return Status;
-      if (executeAssembler(Asm, Diags, LogS))
+      }
+      if (executeAssembler(Asm, Diags, LogS)) {
         return AMD_COMGR_STATUS_ERROR;
+      }
     } else if (Job.getCreator().getName() == LinkerJobName) {
-      if (env::shouldEmitVerboseLogs())
+      if (env::shouldEmitVerboseLogs()) {
         logArgv(LogS, "lld", Argv);
-      if (auto Status = linkWithLLD(Arguments, LogS, LogS))
+      }
+      if (auto Status = linkWithLLD(Arguments, LogS, LogS)) {
         return Status;
+      }
     } else {
       return AMD_COMGR_STATUS_ERROR;
     }
@@ -680,32 +717,38 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 }
 
 amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
-  if (fs::createUniqueDirectory("comgr", TmpDir))
+  if (fs::createUniqueDirectory("comgr", TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   InputDir = TmpDir;
   path::append(InputDir, "input");
-  if (fs::create_directory(InputDir))
+  if (fs::create_directory(InputDir)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   OutputDir = TmpDir;
   path::append(OutputDir, "output");
-  if (fs::create_directory(OutputDir))
+  if (fs::create_directory(OutputDir)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   IncludeDir = TmpDir;
   path::append(IncludeDir, "include");
-  if (fs::create_directory(IncludeDir))
+  if (fs::create_directory(IncludeDir)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
-  if (TmpDir.empty())
+  if (TmpDir.empty()) {
     return AMD_COMGR_STATUS_SUCCESS;
-  if (fs::remove_directories(TmpDir))
+  }
+  if (fs::remove_directories(TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
@@ -724,8 +767,9 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
       Exec = (Twine(Args[I]) + "/bin/hipcc").str();
       ArgsV[0] = Exec;
 
-    } else
+    } else {
       ArgsV.push_back(Args[I]);
+    }
   }
 
   ArgsV.push_back("--genco");
@@ -742,13 +786,15 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
   SmallVector<const char *, 128> Argv;
 
-  for (auto &Arg : Args)
+  for (auto &Arg : Args) {
     Argv.push_back(Arg);
+  }
 
   for (auto &Option : ActionInfo->getOptions()) {
     Argv.push_back(Option.c_str());
-    if (Option.rfind("--rocm-path", 0) == 0)
+    if (Option.rfind("--rocm-path", 0) == 0) {
       NoGpuLib = false;
+    }
   }
 
   Argv.push_back(InputFilePath);
@@ -756,15 +802,17 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
   // By default, disable bitcode selection and linking by the driver.
   // FIXME: We should always let the driver take care of bitcode library
   // selection and linking when we have a consistent path to use.
-  if (NoGpuLib)
+  if (NoGpuLib) {
     Argv.push_back("-nogpulib");
+  }
 
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
 
   // For HIP OOP compilation, we launch a process.
-  if (CompileOOP && getLanguage() == AMD_COMGR_LANGUAGE_HIP)
+  if (CompileOOP && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
     return executeOutOfProcessHIPCompilation(Argv);
+  }
 
   return executeInProcessDriver(Argv);
 }
@@ -773,27 +821,32 @@ amd_comgr_status_t
 AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
                              const char *OutputSuffix) {
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_INCLUDE)
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_INCLUDE) {
       continue;
+    }
     auto IncludeFilePath = getFilePath(Input, IncludeDir);
-    if (auto Status = outputToFile(Input, IncludeFilePath))
+    if (auto Status = outputToFile(Input, IncludeFilePath)) {
       return Status;
+    }
   }
 
   for (auto *Input : InSet->DataObjects) {
     if (Input->DataKind != AMD_COMGR_DATA_KIND_SOURCE &&
         Input->DataKind != AMD_COMGR_DATA_KIND_BC &&
         Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
-        Input->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)
+        Input->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE) {
       continue;
+    }
 
     auto InputFilePath = getFilePath(Input, InputDir);
-    if (auto Status = outputToFile(Input, InputFilePath))
+    if (auto Status = outputToFile(Input, InputFilePath)) {
       return Status;
+    }
 
     amd_comgr_data_t OutputT;
-    if (auto Status = amd_comgr_create_data(OutputKind, &OutputT))
+    if (auto Status = amd_comgr_create_data(OutputKind, &OutputT)) {
       return Status;
+    }
     ScopedDataObjectReleaser SDOR(OutputT);
 
     DataObject *Output = DataObject::convert(OutputT);
@@ -802,14 +855,17 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
     auto OutputFilePath = getFilePath(Output, OutputDir);
 
     if (auto Status =
-            processFile(InputFilePath.c_str(), OutputFilePath.c_str()))
+            processFile(InputFilePath.c_str(), OutputFilePath.c_str())) {
       return Status;
+    }
 
-    if (auto Status = inputFromFile(Output, OutputFilePath))
+    if (auto Status = inputFromFile(Output, OutputFilePath)) {
       return Status;
+    }
 
-    if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT))
+    if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT)) {
       return Status;
+    }
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -825,12 +881,14 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
   Args.push_back(IncludeDir.c_str());
 
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER)
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER) {
       continue;
+    }
     PrecompiledHeaders.push_back(getFilePath(Input, IncludeDir));
     auto &PrecompiledHeaderPath = PrecompiledHeaders.back();
-    if (auto Status = outputToFile(Input, PrecompiledHeaderPath))
+    if (auto Status = outputToFile(Input, PrecompiledHeaderPath)) {
       return Status;
+    }
     Args.push_back("-include-pch");
     Args.push_back(PrecompiledHeaderPath.c_str());
     Args.push_back("-Xclang");
@@ -844,13 +902,15 @@ amd_comgr_status_t
 AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
                                          bool SrcToBC = false) {
   TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(IdentStr, Ident))
+  if (auto Status = parseTargetIdentifier(IdentStr, Ident)) {
     return Status;
+  }
   Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
 
   GPUArch = Twine(Ident.Processor).str();
-  if (!Ident.Features.empty())
+  if (!Ident.Features.empty()) {
     GPUArch += ":" + join(Ident.Features, ":");
+  }
 
   if (SrcToBC && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
     OffloadArch = (Twine("--offload-arch=") + GPUArch).str();
@@ -909,18 +969,23 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
       return Status;
+    }
+  }
 
-  if (auto Status = addIncludeFlags())
+  if (auto Status = addIncludeFlags()) {
     return Status;
+  }
 
-  if (auto Status = addCompilationFlags())
+  if (auto Status = addCompilationFlags()) {
     return Status;
+  }
 
   Args.push_back("-E");
 
@@ -928,18 +993,23 @@ amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true)) {
       return Status;
+    }
+  }
 
-  if (auto Status = addIncludeFlags())
+  if (auto Status = addIncludeFlags()) {
     return Status;
+  }
 
-  if (auto Status = addCompilationFlags())
+  if (auto Status = addCompilationFlags()) {
     return Status;
+  }
 
   Args.push_back("-c");
   Args.push_back("-emit-llvm");
@@ -953,16 +1023,18 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
     path::append(FakeRocmDir, "rocm");
     llvm::SmallString<128> DeviceLibsDir = FakeRocmDir;
     path::append(DeviceLibsDir, "amdgcn", "bitcode");
-    if (fs::create_directory(InputDir))
+    if (fs::create_directory(InputDir)) {
       return AMD_COMGR_STATUS_ERROR;
+    }
     Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
     NoGpuLib = false;
 
     for (auto DeviceLib : getDeviceLibraries()) {
       llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
       path::append(DeviceLibPath, std::get<0>(DeviceLib));
-      if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath))
+      if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
         return Status;
+      }
     }
   }
 
@@ -970,11 +1042,13 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP)
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
 
   // This is a workaround to support HIP OOP Fatbin Compilation
   CompileOOP = true;
@@ -985,8 +1059,9 @@ amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
   LLVMContext Context;
   Context.setDiagnosticHandler(
@@ -997,8 +1072,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   unsigned ApplicableFlags = Linker::Flags::None;
 
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_BC)
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_BC) {
       continue;
+    }
 
     SMDiagnostic SMDiag;
     // The data in Input outlives Mod, and the linker destructs Mod after
@@ -1012,13 +1088,16 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       SMDiag.print(Input->Name, LogS, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
     }
-    if (verifyModule(*Mod, &LogS))
+    if (verifyModule(*Mod, &LogS)) {
       return AMD_COMGR_STATUS_ERROR;
-    if (L.linkInModule(std::move(Mod), ApplicableFlags))
+    }
+    if (L.linkInModule(std::move(Mod), ApplicableFlags)) {
       return AMD_COMGR_STATUS_ERROR;
+    }
   }
-  if (verifyModule(*Composite, &LogS))
+  if (verifyModule(*Composite, &LogS)) {
     return AMD_COMGR_STATUS_ERROR;
+  }
 
   SmallString<0> OutBuf;
   BitcodeWriter Writer(OutBuf);
@@ -1027,8 +1106,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   Writer.writeStrtab();
 
   amd_comgr_data_t OutputT;
-  if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT))
+  if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT)) {
     return Status;
+  }
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
@@ -1039,12 +1119,15 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToRelocatable() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
       return Status;
+    }
+  }
 
   Args.push_back("-c");
 
@@ -1052,12 +1135,15 @@ amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToRelocatable() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToAssembly() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
       return Status;
+    }
+  }
 
   Args.push_back("-S");
 
@@ -1065,15 +1151,19 @@ amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToAssembly() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
       return Status;
+    }
+  }
 
-  if (auto Status = addIncludeFlags())
+  if (auto Status = addIncludeFlags()) {
     return Status;
+  }
 
   Args.push_back("-c");
 
@@ -1081,27 +1171,32 @@ amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  for (auto &Option : ActionInfo->getOptions())
+  for (auto &Option : ActionInfo->getOptions()) {
     Args.push_back(Option.c_str());
+  }
 
   SmallVector<SmallString<128>, 128> Inputs;
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE) {
       continue;
+    }
 
     Inputs.push_back(getFilePath(Input, InputDir));
-    if (auto Status = outputToFile(Input, Inputs.back()))
+    if (auto Status = outputToFile(Input, Inputs.back())) {
       return Status;
+    }
     Args.push_back(Inputs.back().c_str());
   }
 
   amd_comgr_data_t OutputT;
   if (auto Status =
-          amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &OutputT))
+          amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &OutputT)) {
     return Status;
+  }
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
@@ -1112,41 +1207,50 @@ amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
 
   Args.push_back("-r");
 
-  if (auto Status = linkWithLLD(Args, LogS, LogS))
+  if (auto Status = linkWithLLD(Args, LogS, LogS)) {
     return Status;
+  }
 
-  if (auto Status = inputFromFile(Output, OutputFilePath))
+  if (auto Status = inputFromFile(Output, OutputFilePath)) {
     return Status;
+  }
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
 }
 
 amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
-  if (auto Status = createTmpDirs())
+  if (auto Status = createTmpDirs()) {
     return Status;
+  }
 
-  if (ActionInfo->IsaName)
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName))
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
       return Status;
+    }
+  }
 
-  for (auto &Option : ActionInfo->getOptions())
+  for (auto &Option : ActionInfo->getOptions()) {
     Args.push_back(Option.c_str());
+  }
 
   SmallVector<SmallString<128>, 128> Inputs;
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+    if (Input->DataKind != AMD_COMGR_DATA_KIND_RELOCATABLE) {
       continue;
+    }
 
     Inputs.push_back(getFilePath(Input, InputDir));
-    if (auto Status = outputToFile(Input, Inputs.back()))
+    if (auto Status = outputToFile(Input, Inputs.back())) {
       return Status;
+    }
     Args.push_back(Inputs.back().c_str());
   }
 
   amd_comgr_data_t OutputT;
   if (auto Status =
-          amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &OutputT))
+          amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &OutputT)) {
     return Status;
+  }
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
@@ -1155,11 +1259,13 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
   Args.push_back("-o");
   Args.push_back(OutputFilePath.c_str());
 
-  if (auto Status = executeInProcessDriver(Args))
+  if (auto Status = executeInProcessDriver(Args)) {
     return Status;
+  }
 
-  if (auto Status = inputFromFile(Output, OutputFilePath))
+  if (auto Status = inputFromFile(Output, OutputFilePath)) {
     return Status;
+  }
 
   return amd_comgr_data_set_add(OutSetT, OutputT);
 }
@@ -1172,8 +1278,9 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
 }
 
 AMDGPUCompiler::~AMDGPUCompiler() {
-  if (!env::shouldSaveTemps())
+  if (!env::shouldSaveTemps()) {
     removeTmpDirs();
+  }
 }
 
 } // namespace COMGR

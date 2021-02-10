@@ -69,8 +69,9 @@ const char *ExpectedLog =
     ": Did you mean '--file-headers'?\n";
 
 void printChars(const char *Bytes, size_t Count) {
-  for (size_t I = 0; I < Count; I++)
+  for (size_t I = 0; I < Count; I++) {
     printf("%c", Bytes[I]);
+  }
 }
 
 void expect(const char *Expected, const char *Actual, size_t Count) {

@@ -44,20 +44,23 @@
 const int ExpectedUserData;
 
 void checkUserData(void *UserData) {
-  if (UserData != (void *)&ExpectedUserData)
+  if (UserData != (void *)&ExpectedUserData) {
     fail("user_data changed");
+  }
 }
 
 const char *skipspace(const char *S) {
-  while (isspace(*S))
+  while (isspace(*S)) {
     ++S;
+  }
   return S;
 }
 
 size_t strlenWithoutTrailingWhitespace(const char *S) {
   size_t I = strlen(S);
-  while (I && isspace(S[--I]))
+  while (I && isspace(S[--I])) {
     ;
+  }
   return I + 1;
 }
 
@@ -88,35 +91,41 @@ const size_t BrInstructionAddr = 40;
 uint64_t readMemoryCallback(uint64_t From, char *To, uint64_t Size,
                             void *UserData) {
   checkUserData(UserData);
-  if (From >= sizeof(Program))
+  if (From >= sizeof(Program)) {
     return 0;
-  if (From + Size > sizeof(Program))
+  }
+  if (From + Size > sizeof(Program)) {
     Size = sizeof(Program) - From;
+  }
   memcpy(To, Program + From, Size);
   return Size;
 }
 
 void printInstructionCallback(const char *Instruction, void *UserData) {
   checkUserData(UserData);
-  if (InstructionsIdx == InstructionsLen)
+  if (InstructionsIdx == InstructionsLen) {
     fail("too many instructions");
+  }
   const char *Expected = skipspace(Instructions[InstructionsIdx++]);
   const char *Actual = skipspace(Instruction);
-  if (strncmp(Expected, Actual, strlenWithoutTrailingWhitespace(Actual)))
+  if (strncmp(Expected, Actual, strlenWithoutTrailingWhitespace(Actual))) {
     fail("incorrect instruction: expected '%s', actual '%s'", Expected, Actual);
+  }
 }
 
 void printAddressCallback(uint64_t Address, void *UserData) {
   checkUserData(UserData);
   size_t ActualIdx = InstructionsIdx - 1;
-  if (ActualIdx != BrInstructionIdx)
+  if (ActualIdx != BrInstructionIdx) {
     fail("absolute address resolved for instruction index %zu, expected index "
          "%zu",
          InstructionsIdx, BrInstructionIdx);
-  if (Address != BrInstructionAddr)
+  }
+  if (Address != BrInstructionAddr) {
     fail("incorrect absolute address %u resolved for instruction index %zu, "
          "expected %u",
          Address, ActualIdx, BrInstructionAddr);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -138,15 +147,17 @@ int main(int argc, char *argv[]) {
     Addr += Size;
   }
 
-  if (InstructionsIdx != InstructionsLen)
+  if (InstructionsIdx != InstructionsLen) {
     fail("too few instructions\n");
+  }
 
   Addr = sizeof(Program) - 1;
   Size = 0;
   Status = amd_comgr_disassemble_instruction(DisassemblyInfo, Addr,
                                              (void *)&ExpectedUserData, &Size);
-  if (Status != AMD_COMGR_STATUS_ERROR)
+  if (Status != AMD_COMGR_STATUS_ERROR) {
     fail("successfully disassembled invalid instruction encoding");
+  }
 
   Status = amd_comgr_destroy_disassembly_info(DisassemblyInfo);
   checkError(Status, "amd_comgr_destroy_disassembly_info");

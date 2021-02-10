@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_action_data_count(
         DataSetOut, AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
     checkError(Status, "amd_comgr_action_data_count");
-    if (Count == 1)
+    if (Count == 1) {
       printf("Passed, output 1 relocatable object\n");
-    else {
+    } else {
       printf("Failed, output %ld relocatable objects (should output 1)\n",
              Count);
       exit(1);

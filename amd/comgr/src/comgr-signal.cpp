@@ -89,8 +89,9 @@ amd_comgr_status_t saveHandlers() {
   for (unsigned I = 0; I < NumSigs; ++I) {
     int Status = sigaction(Signals[I], nullptr, &SigActions[I]);
 
-    if (Status)
+    if (Status) {
       return AMD_COMGR_STATUS_ERROR;
+    }
   }
 #endif
   return AMD_COMGR_STATUS_SUCCESS;
@@ -102,8 +103,9 @@ amd_comgr_status_t restoreHandlers() {
   for (unsigned I = 0; I < NumSigs; ++I) {
     int Status = sigaction(Signals[I], &SigActions[I], nullptr);
 
-    if (Status)
+    if (Status) {
       return AMD_COMGR_STATUS_ERROR;
+    }
   }
 #endif
   return AMD_COMGR_STATUS_SUCCESS;
