@@ -417,14 +417,26 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
   return success();
 }
 
-static Value buildLoopTripCount(OpBuilder &b, Operation *op) {
-  MLIRContext *ctx = op->getContext();
-  AffineExpr lb, ub, step = getAffineSymbolExpr(0, ctx);
+/// Return the number of iterations in the loop (ub - lb).ceilDiv(step).
+static Value buildLoopTripCount(OpBuilder &b, scf::ForOp forOp) {
+  MLIRContext *ctx = forOp->getContext();
+  AffineExpr lb, ub, step;
   bindDims(ctx, lb, ub);
-  scf::ForOp forOp = cast<scf::ForOp>(op);
+  bindSymbols(ctx, step);
   return b.create<AffineApplyOp>(
-      op->getLoc(), AffineMap::get(2, 1, {(ub - lb).ceilDiv(step)}, ctx),
+      forOp->getLoc(), AffineMap::get(2, 1, {(ub - lb).ceilDiv(step)}, ctx),
       ValueRange{forOp.lowerBound(), forOp.upperBound(), forOp.step()});
+}
+
+/// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
+static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp forOp) {
+  MLIRContext *ctx = forOp->getContext();
+  AffineExpr iv, lb, step;
+  bindDims(ctx, iv, lb);
+  bindSymbols(ctx, step);
+  return b.create<AffineApplyOp>(
+      forOp->getLoc(), AffineMap::get(2, 1, {(iv - lb).ceilDiv(step)}, ctx),
+      ValueRange{forOp.getInductionVar(), forOp.lowerBound(), forOp.step()});
 }
 
 LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
@@ -455,8 +467,10 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   llvm::append_range(packedShape, paddedTensorType.getShape());
   auto packedTensorType =
       RankedTensorType::get(packedShape, paddedTensorType.getElementType());
-  auto dynamicSizes = llvm::to_vector<4>(llvm::map_range(
-      packingLoops, [&](Operation *op) { return buildLoopTripCount(b, op); }));
+  auto dynamicSizes =
+      llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *op) {
+        return buildLoopTripCount(b, cast<scf::ForOp>(op));
+      }));
   Value packedTensor = b.create<linalg::InitTensorOp>(
       loc, dynamicSizes, packedTensorType.getShape(),
       packedTensorType.getElementType());
@@ -469,8 +483,9 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   //   2. Create a SubTensorInsert at the top of the stack.
   //   3. Iteratively pop and yield the result of the SubTensorInsertOp across
   //     the cloned loops.
-  SmallVector<Value> clonedLoopIvs;
+  SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
   clonedLoopIvs.reserve(nLoops);
+  leadingPackedTensorIndexings.reserve(nLoops);
   BlockAndValueMapping bvm;
   // Stack step 1. iteratively clone loops and push `packedTensor`.
   // Insert `padTensorOp` into the backwardSlice so we clone it too.
@@ -492,13 +507,16 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
     assert(clonedForOp->getNumRegions() == 1);
     clonedLoopIvs.push_back(clonedForOp.getInductionVar());
     b.setInsertionPointToStart(&clonedForOp->getRegion(0).front());
+    leadingPackedTensorIndexings.push_back(
+        buildLoopIterationCount(b, clonedForOp));
     bvm.map(forOp.getInductionVar(), clonedLoopIvs.back());
     packedTensor = clonedForOp.getRegionIterArgs().front();
   }
 
   // Stack step 2. create SubTensorInsertOp at the top of the stack.
   // offsets = [clonedLoopIvs, 0 .. 0].
-  SmallVector<OpFoldResult> offsets(clonedLoopIvs.begin(), clonedLoopIvs.end());
+  SmallVector<OpFoldResult> offsets(leadingPackedTensorIndexings.begin(),
+                                    leadingPackedTensorIndexings.end());
   offsets.append(paddedRank, b.getIndexAttr(0));
   // sizes = [1 .. 1, paddedShape].
   SmallVector<OpFoldResult> sizes(nLoops, b.getIndexAttr(1));
@@ -527,12 +545,12 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   // Now the packed tensor is ready, replace the original padding op by a
   // 1x..x1 SubTensor [originalLoopIvs, 0 .. 0][1 .. 1, paddedShape][1 .. 1].
   b.setInsertionPoint(padTensorOp);
-  SmallVector<Value> originalLoopIvs =
-      llvm::to_vector<4>(llvm::map_range(packingLoops, [](Operation *loop) {
-        return cast<scf::ForOp>(loop).getInductionVar();
+  SmallVector<Value> loopIterationCounts =
+      llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *loop) {
+        return buildLoopIterationCount(b, cast<scf::ForOp>(loop));
       }));
   // offsets = [originalLoopIvs, 0 .. 0].
-  offsets.assign(originalLoopIvs.begin(), originalLoopIvs.end());
+  offsets.assign(loopIterationCounts.begin(), loopIterationCounts.end());
   offsets.append(paddedRank, b.getIndexAttr(0));
   // sizes = [1 .. 1, paddedShape] (definedabove).
   // strides = [1 .. 1] (defined above)
