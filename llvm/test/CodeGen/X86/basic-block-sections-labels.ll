@@ -1,6 +1,7 @@
 ; Check the basic block sections labels option
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefix=UNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefix=NOUNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefix=UNIQ
 
 define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
   br i1 %0, label %2, label %7
