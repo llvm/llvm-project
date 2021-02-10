@@ -95,6 +95,9 @@ def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
 
 def true_mask           : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 
+def SplatFPOp : PatFrag<(ops node:$op),
+                        (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
+
 class VPatBinaryVL_VV<SDNode vop,
                       string instruction_name,
                       ValueType result_type,
@@ -133,13 +136,46 @@ multiclass VPatBinaryVL_VV_VX_VI<SDNode vop, string instruction_name,
   }
 }
 
+class VPatBinaryVL_VF<SDNode vop,
+                      string instruction_name,
+                      ValueType result_type,
+                      ValueType vop_type,
+                      ValueType mask_type,
+                      int sew,
+                      LMULInfo vlmul,
+                      VReg RetClass,
+                      VReg vop_reg_class,
+                      RegisterClass scalar_reg_class> :
+    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                          (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+                          (mask_type true_mask),
+                          (XLenVT (VLOp GPR:$vl)))),
+        (!cast<Instruction>(instruction_name#"_"#vlmul.MX)
+                     vop_reg_class:$rs1,
+                     scalar_reg_class:$rs2,
+                     GPR:$vl, sew)>;
+
 multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     def : VPatBinaryVL_VV<vop, instruction_name,
                           vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                           vti.LMul, vti.RegClass, vti.RegClass>;
-    // FIXME: Support splats.
+    def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+                          vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                          vti.LMul, vti.RegClass, vti.RegClass,
+                          vti.ScalarRegClass>;
   }
+}
+
+multiclass VPatBinaryFPVL_R_VF<SDNode vop, string instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
+                                fvti.RegClass:$rs1,
+                                (fvti.Mask true_mask),
+                                (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                           fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                           GPR:$vl, fvti.SEW)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -190,10 +226,12 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
+defm "" : VPatBinaryFPVL_R_VF<riscv_fsub_vl, "PseudoVFRSUB">;
 
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
 defm "" : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
+defm "" : VPatBinaryFPVL_R_VF<riscv_fdiv_vl, "PseudoVFRDIV">;
 
 // 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 foreach vti = AllFloatVectors in {
@@ -205,6 +243,16 @@ foreach vti = AllFloatVectors in {
                                       (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMADD_VV_"# suffix)
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+
+  // The choice of VFMADD here is arbitrary, vfmadd.vf and vfmacc.vf are equally
+  // commutable.
+  def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                       vti.RegClass:$rd, vti.RegClass:$rs2,
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMADD_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.SEW)>;
 }
 
