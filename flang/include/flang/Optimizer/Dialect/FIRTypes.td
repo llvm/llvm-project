@@ -60,7 +60,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_BoxType : FIR_Type<"Box", "box"> {
@@ -89,7 +89,7 @@ def fir_BoxType : FIR_Type<"Box", "box"> {
     mlir::AffineMapAttr getLayoutMap() const { return getMap(); }
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -108,20 +108,27 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     using KindTy = unsigned;
     using LenType = std::int64_t;
 
-    // Return unknown length CHARACTER type.
+    /// Return unknown length Character type. e.g., CHARACTER(LEN=n).
     static CharacterType getUnknownLen(mlir::MLIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, unknownLen());
     }
 
-    // Return length 1 CHARACTER type.
+    /// Return length 1 Character type. e.g., CHARACTER(LEN=1).
     static CharacterType getSingleton(mlir::MLIRContext *ctxt, KindTy kind) {
       return get(ctxt, kind, singleton());
     }
 
-    // CHARACTER is a singleton and has a LEN of 1.
+    /// Character is a singleton and has a LEN of 1.
     static constexpr LenType singleton() { return 1; }
-    // CHARACTER has an unknown LEN property.
+
+    /// Character has a LEN value which is not a compile-time known constant.
     static constexpr LenType unknownLen() { return -1; }
+
+    /// Character LEN is a runtime value.
+    bool hasDynamicLen() { return getLen() == unknownLen(); }
+
+    /// Character LEN is a compile-time cpnstant value.
+    bool hasConstantLen() { return !hasDynamicLen(); }
   }];
 }
 
@@ -165,7 +172,7 @@ def fir_HeapType : FIR_Type<"Heap", "heap"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -228,7 +235,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
 
   let parameters = (ins "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -258,7 +265,7 @@ def fir_RealType : FIR_Type<"Real", "real"> {
     using KindTy = unsigned;
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_RecordType : FIR_Type<"Record", "type"> {
@@ -272,7 +279,7 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let parameters = (ins StringRefParameter<"name">:$name);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
   let genStorageClass = 0;
 
   let extraClassDeclaration = [{
@@ -320,7 +327,7 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     mlir::Type getElementType() const { return getEleTy(); }
   }];
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 }
 
 def fir_ShapeType : FIR_Type<"Shape", "shape"> {
@@ -386,7 +393,7 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     "mlir::AffineMapAttr":$layoutMap
   );
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -444,7 +451,7 @@ def fir_TypeDescType : FIR_Type<"TypeDesc", "tdesc"> {
 
   let parameters = (ins "mlir::Type":$ofTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let skipDefaultBuilders = 1;
 
@@ -466,7 +473,7 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let parameters = (ins "uint64_t":$len, "mlir::Type":$eleTy);
 
-  let genVerifyDecl = 1;
+  let genVerifyInvariantsDecl = 1;
 
   let extraClassDeclaration = [{
     static bool isValidElementType(mlir::Type t);

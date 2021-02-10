@@ -13,6 +13,8 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+
 
 using namespace mlir;
 
