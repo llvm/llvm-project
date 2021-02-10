@@ -287,10 +287,12 @@ static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
   bool UseAfterScope = CGOpts.SanitizeAddressUseAfterScope;
   bool UseOdrIndicator = CGOpts.SanitizeAddressUseOdrIndicator;
   bool UseGlobalsGC = asanUseGlobalsGC(T, CGOpts);
+  llvm::AsanDtorKind DestructorKind = CGOpts.getSanitizeAddressDtorKind();
   PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/ false, Recover,
                                             UseAfterScope));
   PM.add(createModuleAddressSanitizerLegacyPassPass(
-      /*CompileKernel*/ false, Recover, UseGlobalsGC, UseOdrIndicator));
+      /*CompileKernel*/ false, Recover, UseGlobalsGC, UseOdrIndicator,
+      DestructorKind));
 }
 
 static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
@@ -1111,9 +1113,12 @@ static void addSanitizers(const Triple &TargetTriple,
         bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
         bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
         bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
+        llvm::AsanDtorKind DestructorKind =
+            CodeGenOpts.getSanitizeAddressDtorKind();
         MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
         MPM.addPass(ModuleAddressSanitizerPass(
-            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator));
+            CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
+            DestructorKind));
         MPM.addPass(createModuleToFunctionPassAdaptor(
             AddressSanitizerPass(CompileKernel, Recover, UseAfterScope)));
       }
