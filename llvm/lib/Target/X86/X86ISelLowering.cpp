@@ -3981,7 +3981,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
   int FPDiff = 0;
-  if (isTailCall && !IsSibcall && !IsMustTail) {
+  if (isTailCall &&
+      shouldGuaranteeTCO(CallConv,
+                         MF.getTarget().Options.GuaranteedTailCallOpt)) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
 
