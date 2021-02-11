@@ -176,6 +176,16 @@ void ento::createPlistHTMLDiagnosticConsumer(
                                           CTU);
 }
 
+void ento::createSarifHTMLDiagnosticConsumer(
+  PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &sarif_file, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+  createHTMLDiagnosticConsumer(DiagOpts, C, std::string(llvm::sys::path::parent_path(sarif_file)), PP, CTU);
+  createSarifDiagnosticConsumer(DiagOpts, C, sarif_file, PP, CTU);
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, sarif_file, PP,
+                                          CTU);
+}
+
 //===----------------------------------------------------------------------===//
 // Report processing.
 //===----------------------------------------------------------------------===//
