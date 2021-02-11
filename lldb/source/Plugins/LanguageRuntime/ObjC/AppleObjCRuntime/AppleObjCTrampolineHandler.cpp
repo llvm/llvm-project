@@ -526,7 +526,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     CompilerType clang_void_ptr_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
 
-    input_value.SetValueType(Value::eValueTypeScalar);
+    input_value.SetValueType(Value::ValueType::Scalar);
     // input_value.SetContext (Value::eContextTypeClangType,
     // clang_void_ptr_type);
     input_value.SetCompilerType(clang_void_ptr_type);
@@ -936,7 +936,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     Value void_ptr_value;
     CompilerType clang_void_ptr_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-    void_ptr_value.SetValueType(Value::eValueTypeScalar);
+    void_ptr_value.SetValueType(Value::ValueType::Scalar);
     // void_ptr_value.SetContext (Value::eContextTypeClangType,
     // clang_void_ptr_type);
     void_ptr_value.SetCompilerType(clang_void_ptr_type);
@@ -1048,7 +1048,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
       Value isa_value(*(argument_values.GetValueAtIndex(obj_index)));
 
-      isa_value.SetValueType(Value::eValueTypeLoadAddress);
+      isa_value.SetValueType(Value::ValueType::LoadAddress);
       isa_value.ResolveValue(&exe_ctx);
       if (isa_value.GetScalar().IsValid()) {
         isa_addr = isa_value.GetScalar().ULongLong();
@@ -1110,7 +1110,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       CompilerType clang_int_type =
           clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
               lldb::eEncodingSint, 32);
-      flag_value.SetValueType(Value::eValueTypeScalar);
+      flag_value.SetValueType(Value::ValueType::Scalar);
       // flag_value.SetContext (Value::eContextTypeClangType, clang_int_type);
       flag_value.SetCompilerType(clang_int_type);
 

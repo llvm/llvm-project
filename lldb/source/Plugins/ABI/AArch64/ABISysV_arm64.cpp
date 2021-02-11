@@ -622,7 +622,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {
