@@ -19,8 +19,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
+#include "InputElement.h"
 #include "InputFiles.h"
-#include "InputGlobal.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -148,7 +148,7 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
       }
     } else if (auto *globals = dyn_cast<GlobalSection>(osec)) {
       for (auto *global : globals->inputGlobals) {
-        writeHeader(os, global->getGlobalIndex(), 0, 0);
+        writeHeader(os, global->getAssignedIndex(), 0, 0);
         os.indent(8) << global->getName() << '\n';
       }
     }
