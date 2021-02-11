@@ -279,7 +279,7 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
 uint64_t DefinedData::getVirtualAddress() const {
   LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   if (segment)
-    return segment->outputSeg->startVA + segment->outputSegmentOffset + offset;
+    return segment->getVA() + offset;
   return offset;
 }
 

@@ -138,7 +138,7 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
                     oseg->size);
         os << oseg->name << '\n';
         for (auto *chunk : oseg->inputSegments) {
-          writeHeader(os, oseg->startVA + chunk->outputSegmentOffset,
+          writeHeader(os, chunk->getVA(),
                       chunk->outputSec->getOffset() + chunk->outputOffset,
                       chunk->getSize());
           os.indent(8) << toString(chunk) << '\n';
