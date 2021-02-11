@@ -5672,6 +5672,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // File-scope asm is ignored during device-side OpenMP compilation.
     if (LangOpts.OpenMPIsDevice)
       break;
+    // File-scope asm is ignored during device-side SYCL compilation.
+    if (LangOpts.SYCLIsDevice)
+      break;
     auto *AD = cast<FileScopeAsmDecl>(D);
     getModule().appendModuleInlineAsm(AD->getAsmString()->getString());
     break;
