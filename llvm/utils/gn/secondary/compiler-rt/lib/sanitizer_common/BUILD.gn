@@ -38,6 +38,8 @@ source_set("sources") {
     "sanitizer_atomic_msvc.h",
     "sanitizer_bitvector.h",
     "sanitizer_bvgraph.h",
+    "sanitizer_chained_origin_depot.cpp",
+    "sanitizer_chained_origin_depot.h",
     "sanitizer_common.cpp",
     "sanitizer_common.h",
     "sanitizer_common_libcdep.cpp",
