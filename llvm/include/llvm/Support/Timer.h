@@ -24,12 +24,15 @@ class TimerGroup;
 class raw_ostream;
 
 class TimeRecord {
-  double WallTime;       ///< Wall clock time elapsed in seconds.
-  double UserTime;       ///< User time elapsed.
-  double SystemTime;     ///< System time elapsed.
-  ssize_t MemUsed;       ///< Memory allocated (in bytes).
+  double WallTime;               ///< Wall clock time elapsed in seconds.
+  double UserTime;               ///< User time elapsed.
+  double SystemTime;             ///< System time elapsed.
+  ssize_t MemUsed;               ///< Memory allocated (in bytes).
+  uint64_t InstructionsExecuted; ///< Number of instructions executed
 public:
-  TimeRecord() : WallTime(0), UserTime(0), SystemTime(0), MemUsed(0) {}
+  TimeRecord()
+      : WallTime(0), UserTime(0), SystemTime(0), MemUsed(0),
+        InstructionsExecuted(0) {}
 
   /// Get the current time and memory usage.  If Start is true we get the memory
   /// usage before the time, otherwise we get time before memory usage.  This
@@ -42,6 +45,7 @@ public:
   double getSystemTime() const { return SystemTime; }
   double getWallTime() const { return WallTime; }
   ssize_t getMemUsed() const { return MemUsed; }
+  uint64_t getInstructionsExecuted() const { return InstructionsExecuted; }
 
   bool operator<(const TimeRecord &T) const {
     // Sort by Wall Time elapsed, as it is the only thing really accurate
@@ -49,16 +53,18 @@ public:
   }
 
   void operator+=(const TimeRecord &RHS) {
-    WallTime   += RHS.WallTime;
-    UserTime   += RHS.UserTime;
+    WallTime += RHS.WallTime;
+    UserTime += RHS.UserTime;
     SystemTime += RHS.SystemTime;
-    MemUsed    += RHS.MemUsed;
+    MemUsed += RHS.MemUsed;
+    InstructionsExecuted += RHS.InstructionsExecuted;
   }
   void operator-=(const TimeRecord &RHS) {
-    WallTime   -= RHS.WallTime;
-    UserTime   -= RHS.UserTime;
+    WallTime -= RHS.WallTime;
+    UserTime -= RHS.UserTime;
     SystemTime -= RHS.SystemTime;
-    MemUsed    -= RHS.MemUsed;
+    MemUsed -= RHS.MemUsed;
+    InstructionsExecuted -= RHS.InstructionsExecuted;
   }
 
   /// Print the current time record to \p OS, with a breakdown showing
