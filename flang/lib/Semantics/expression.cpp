@@ -1980,20 +1980,26 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
   } else if (const auto *used{
                  originalGeneric.detailsIf<semantics::UseDetails>()}) {
     const auto &scope{originalGeneric.owner()};
-    auto iter{scope.find(specific.name())};
-    if (iter != scope.end() && iter->second->has<semantics::UseDetails>() &&
-        &iter->second->get<semantics::UseDetails>().symbol() == &specific) {
-      return specific;
-    } else {
-      // Create a renaming USE of the specific procedure.
-      auto rename{context_.SaveTempName(
-          used->symbol().owner().GetName().value().ToString() + "$" +
-          specific.name().ToString())};
-      return *const_cast<semantics::Scope &>(scope)
-                  .try_emplace(rename, specific.attrs(),
-                      semantics::UseDetails{rename, specific})
-                  .first->second;
+    if (auto iter{scope.find(specific.name())}; iter != scope.end()) {
+      if (const auto *useDetails{
+              iter->second->detailsIf<semantics::UseDetails>()}) {
+        const Symbol &usedSymbol{useDetails->symbol()};
+        const auto *usedGeneric{
+            usedSymbol.detailsIf<semantics::GenericDetails>()};
+        if (&usedSymbol == &specific ||
+            (usedGeneric && usedGeneric->specific() == &specific)) {
+          return specific;
+        }
+      }
     }
+    // Create a renaming USE of the specific procedure.
+    auto rename{context_.SaveTempName(
+        used->symbol().owner().GetName().value().ToString() + "$" +
+        specific.name().ToString())};
+    return *const_cast<semantics::Scope &>(scope)
+                .try_emplace(rename, specific.attrs(),
+                    semantics::UseDetails{rename, specific})
+                .first->second;
   } else {
     return specific;
   }
