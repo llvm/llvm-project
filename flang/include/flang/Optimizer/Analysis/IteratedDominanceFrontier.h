@@ -20,8 +20,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_ANALYSIS_IDF_H
-#define OPTIMIZER_ANALYSIS_IDF_H
+#ifndef FORTRAN_OPTIMIZER_ANALYSIS_ITERATEDDOMINANCEFRONTIER_H
+#define FORTRAN_OPTIMIZER_ANALYSIS_ITERATEDDOMINANCEFRONTIER_H
 
 #include "mlir/Support/LLVM.h"
 
@@ -92,4 +92,4 @@ typedef IDFCalculator<mlir::Block, false> ForwardIDFCalculator;
 
 } // namespace fir
 
-#endif // OPTIMIZER_ANALYSIS_IDF_H
+#endif // FORTRAN_OPTIMIZER_ANALYSIS_ITERATEDDOMINANCEFRONTIER_H

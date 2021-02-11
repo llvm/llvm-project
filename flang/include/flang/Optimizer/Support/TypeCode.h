@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_SUPPORT_TYPECODE_H
-#define OPTIMIZER_SUPPORT_TYPECODE_H
+#ifndef FORTRAN_OPTIMIZER_SUPPORT_TYPECODE_H
+#define FORTRAN_OPTIMIZER_SUPPORT_TYPECODE_H
 
 #include "flang/ISO_Fortran_binding.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -91,4 +91,4 @@ static constexpr int derivedToTypeCode() {
 
 } // namespace fir
 
-#endif // OPTIMIZER_SUPPORT_TYPECODE_H
+#endif // FORTRAN_OPTIMIZER_SUPPORT_TYPECODE_H

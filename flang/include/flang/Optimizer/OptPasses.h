@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_OPTPASSES_H
-#define OPTIMIZER_OPTPASSES_H
+#ifndef FORTRAN_OPTIMIZER_OPTPASSES_H
+#define FORTRAN_OPTIMIZER_OPTPASSES_H
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -19,4 +19,4 @@ inline void registerOptPasses() {
 }
 } // namespace fir
 
-#endif // OPTIMIZER_OPTPASSES_H
+#endif // FORTRAN_OPTIMIZER_OPTPASSES_H
