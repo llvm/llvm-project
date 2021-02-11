@@ -35,6 +35,7 @@ add_llvm_target(BPFCodeGen
   BTFDebug.cpp
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   CodeGen
   Core
