@@ -20,6 +20,9 @@
 
 #include "dfsan/dfsan.h"
 
+#include "dfsan/dfsan_chained_origin_depot.h"
+#include "dfsan/dfsan_flags.h"
+#include "dfsan/dfsan_origin.h"
 #include "dfsan/dfsan_thread.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -280,6 +283,46 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
   __dfsan_label_info[label].desc = desc;
   __dfsan_label_info[label].userdata = userdata;
   return label;
+}
+
+// For platforms which support slow unwinder only, we need to restrict the store
+// context size to 1, basically only storing the current pc, because the slow
+// unwinder which is based on libunwind is not async signal safe and causes
+// random freezes in forking applications as well as in signal handlers.
+// DFSan supports only Linux. So we do not restrict the store context size.
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp) \
+  BufferedStackTrace stack;                 \
+  stack.Unwind(pc, bp, nullptr, true, flags().store_context_size);
+
+#define PRINT_CALLER_STACK_TRACE        \
+  {                                     \
+    GET_CALLER_PC_BP_SP;                \
+    (void)sp;                           \
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp) \
+    stack.Print();                      \
+  }
+
+static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
+  // StackDepot is not async signal safe. Do not create new chains in a signal
+  // handler.
+  DFsanThread *t = GetCurrentThread();
+  if (t && t->InSignalHandler())
+    return id;
+
+  // As an optimization the origin of an application byte is updated only when
+  // its shadow is non-zero. Because we are only interested in the origins of
+  // taint labels, it does not matter what origin a zero label has. This reduces
+  // memory write cost. MSan does similar optimization. The following invariant
+  // may not hold because of some bugs. We check the invariant to help debug.
+  if (!from_init && id == 0 && flags().check_origin_invariant) {
+    Printf("  DFSan found invalid origin invariant\n");
+    PRINT_CALLER_STACK_TRACE
+  }
+
+  Origin o = Origin::FromRawId(id);
+  stack->tag = StackTrace::TAG_UNKNOWN;
+  Origin chained = Origin::CreateChainedOrigin(o, stack);
+  return chained.raw_id();
 }
 
 static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
