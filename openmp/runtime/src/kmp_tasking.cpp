@@ -620,7 +620,7 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
                 "current_task=%p\n",
                 gtid, loc_ref, taskdata, current_task));
 
-  if (taskdata->td_flags.tiedness == TASK_UNTIED) {
+  if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
     kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
@@ -883,7 +883,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
      hence overlapping the destructor invocations with some other work in the
      released tasks.  The OpenMP spec is not specific on when the destructors
      are invoked, so we should be free to choose. */
-  if (taskdata->td_flags.destructors_thunk) {
+  if (UNLIKELY(taskdata->td_flags.destructors_thunk)) {
     kmp_routine_entry_t destr_thunk = task->data1.destructors;
     KMP_ASSERT(destr_thunk);
     destr_thunk(gtid, task);
@@ -894,7 +894,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   KMP_DEBUG_ASSERT(taskdata->td_flags.freed == 0);
 
   bool detach = false;
-  if (taskdata->td_flags.detachable == TASK_DETACHABLE) {
+  if (UNLIKELY(taskdata->td_flags.detachable == TASK_DETACHABLE)) {
     if (taskdata->td_allow_completion_event.type ==
         KMP_EVENT_ALLOW_COMPLETION) {
       // event hasn't been fulfilled yet. Try to detach task.
@@ -987,7 +987,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
                                                   kmp_task_t *task) {
   KA_TRACE(10, ("__kmpc_omp_task_complete_if0(enter): T#%d loc=%p task=%p\n",
                 gtid, loc_ref, KMP_TASK_TO_TASKDATA(task)));
-  __kmp_assert_valid_gtid(gtid);
+  KMP_DEBUG_ASSERT(gtid >= 0);
   // this routine will provide task to resume
   __kmp_task_finish<ompt>(gtid, task, NULL);
 
@@ -1234,8 +1234,8 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   // Detachable tasks are not proxy tasks yet but could be in the future. Doing
   // the tasking setup
   // when that happens is too late.
-  if (flags->proxy == TASK_PROXY || flags->detachable == TASK_DETACHABLE ||
-      flags->hidden_helper) {
+  if (UNLIKELY(flags->proxy == TASK_PROXY ||
+               flags->detachable == TASK_DETACHABLE || flags->hidden_helper)) {
     if (flags->proxy == TASK_PROXY) {
       flags->tiedness = TASK_UNTIED;
       flags->merged_if0 = 1;
@@ -1875,7 +1875,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
   KMP_SET_THREAD_STATE_BLOCK(TASKWAIT);
 
   KA_TRACE(10, ("__kmpc_omp_taskwait(enter): T#%d loc=%p\n", gtid, loc_ref));
-  __kmp_assert_valid_gtid(gtid);
+  KMP_DEBUG_ASSERT(gtid >= 0);
 
   if (__kmp_tasking_mode != tskm_immediate_exec) {
     thread = __kmp_threads[gtid];
@@ -1915,9 +1915,10 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
     taskdata->td_taskwait_thread = gtid + 1;
 
 #if USE_ITT_BUILD
-    void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
+    void *itt_sync_obj = NULL;
+#if USE_ITT_NOTIFY
+    KMP_ITT_TASKWAIT_STARTING(itt_sync_obj);
+#endif /* USE_ITT_NOTIFY */
 #endif /* USE_ITT_BUILD */
 
     bool must_wait =
@@ -1943,8 +1944,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
       }
     }
 #if USE_ITT_BUILD
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_ITT_TASKWAIT_FINISHED(itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with children
 #endif /* USE_ITT_BUILD */
 
@@ -2028,9 +2028,10 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
     taskdata->td_taskwait_thread = gtid + 1;
 
 #if USE_ITT_BUILD
-    void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
+    void *itt_sync_obj = NULL;
+#if USE_ITT_NOTIFY
+    KMP_ITT_TASKWAIT_STARTING(itt_sync_obj);
+#endif /* USE_ITT_NOTIFY */
 #endif /* USE_ITT_BUILD */
     if (!taskdata->td_flags.team_serial) {
       kmp_task_team_t *task_team = thread->th.th_task_team;
@@ -2052,8 +2053,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
       }
     }
 #if USE_ITT_BUILD
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_ITT_TASKWAIT_FINISHED(itt_sync_obj);
 #endif /* USE_ITT_BUILD */
 
     // Debugger:  The taskwait is completed. Location remains, but thread is
@@ -2553,9 +2553,10 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #if USE_ITT_BUILD
     // For ITT the taskgroup wait is similar to taskwait until we need to
     // distinguish them
-    void *itt_sync_obj = __kmp_itt_taskwait_object(gtid);
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_starting(gtid, itt_sync_obj);
+    void *itt_sync_obj = NULL;
+#if USE_ITT_NOTIFY
+    KMP_ITT_TASKWAIT_STARTING(itt_sync_obj);
+#endif /* USE_ITT_NOTIFY */
 #endif /* USE_ITT_BUILD */
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -2588,8 +2589,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #endif
 
 #if USE_ITT_BUILD
-    if (UNLIKELY(itt_sync_obj != NULL))
-      __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_ITT_TASKWAIT_FINISHED(itt_sync_obj);
     KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with descendants
 #endif /* USE_ITT_BUILD */
   }
