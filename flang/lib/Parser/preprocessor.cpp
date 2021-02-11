@@ -232,20 +232,18 @@ static std::string FormatTime(const std::time_t &now, const char *format) {
       std::strftime(buffer, sizeof buffer, format, std::localtime(&now))};
 }
 
-Preprocessor::Preprocessor(AllSources &allSources) : allSources_{allSources} {
+Preprocessor::Preprocessor(AllSources &allSources) : allSources_{allSources} {}
+
+void Preprocessor::DefineStandardMacros() {
   // Capture current local date & time once now to avoid having the values
   // of __DATE__ or __TIME__ change during compilation.
   std::time_t now;
   std::time(&now);
-  definitions_.emplace(SaveTokenAsName("__DATE__"s), // e.g., "Jun 16 1904"
-      Definition{FormatTime(now, "\"%h %e %Y\""), allSources});
-  definitions_.emplace(SaveTokenAsName("__TIME__"s), // e.g., "23:59:60"
-      Definition{FormatTime(now, "\"%T\""), allSources});
+  Define("__DATE__"s, FormatTime(now, "\"%h %e %Y\"")); // e.g., "Jun 16 1904"
+  Define("__TIME__"s, FormatTime(now, "\"%T\"")); // e.g., "23:59:60"
   // The values of these predefined macros depend on their invocation sites.
-  definitions_.emplace(
-      SaveTokenAsName("__FILE__"s), Definition{"__FILE__"s, allSources});
-  definitions_.emplace(
-      SaveTokenAsName("__LINE__"s), Definition{"__LINE__"s, allSources});
+  Define("__FILE__"s, "__FILE__"s);
+  Define("__LINE__"s, "__LINE__"s);
 }
 
 void Preprocessor::Define(std::string macro, std::string value) {
@@ -257,6 +255,9 @@ void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
 std::optional<TokenSequence> Preprocessor::MacroReplacement(
     const TokenSequence &input, Prescanner &prescanner) {
   // Do quick scan for any use of a defined name.
+  if (definitions_.empty()) {
+    return std::nullopt;
+  }
   std::size_t tokens{input.SizeInTokens()};
   std::size_t j;
   for (j = 0; j < tokens; ++j) {
