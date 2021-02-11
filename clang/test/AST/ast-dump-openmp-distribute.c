@@ -105,6 +105,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPDistributeDirective {{.*}} <line:17:1, col:35>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:24, col:34>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:33> 'int'
+// CHECK-NEXT: |     | |-value: Int 1
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:33> 'int' 1
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:18:3, line:20:7>
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
@@ -147,6 +148,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPDistributeDirective {{.*}} <line:24:1, col:35>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:24, col:34>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:33> 'int'
+// CHECK-NEXT: |     | |-value: Int 2
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:33> 'int' 2
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:25:3, line:27:7>
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
@@ -190,6 +192,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:     `-OMPDistributeDirective {{.*}} <line:31:1, col:35>
 // CHECK-NEXT:       |-OMPCollapseClause {{.*}} <col:24, col:34>
 // CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:33> 'int'
+// CHECK-NEXT:       | |-value: Int 2
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:33> 'int' 2
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:32:3, line:35:9>
 // CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>

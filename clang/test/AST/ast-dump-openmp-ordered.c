@@ -57,6 +57,7 @@ void test_three(int x) {
 // CHECK-NEXT:     `-OMPForDirective {{.*}} <line:15:1, col:27>
 // CHECK-NEXT:       |-OMPOrderedClause {{.*}} <col:17, col:26>
 // CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:25> 'int'
+// CHECK-NEXT:       | |-value: Int 1
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:25> 'int' 1
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:16:3, line:18:3>
 // CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>

@@ -339,6 +339,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPTargetParallelForSimdDirective {{.*}} <line:17:1, col:49>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:38, col:48>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:47> 'int'
+// CHECK-NEXT: |     | |-value: Int 1
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:47> 'int' 1
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:18:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -524,6 +525,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPTargetParallelForSimdDirective {{.*}} <line:24:1, col:49>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:38, col:48>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:47> 'int'
+// CHECK-NEXT: |     | |-value: Int 2
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:47> 'int' 2
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:25:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -710,6 +712,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:     `-OMPTargetParallelForSimdDirective {{.*}} <line:31:1, col:49>
 // CHECK-NEXT:       |-OMPCollapseClause {{.*}} <col:38, col:48>
 // CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:47> 'int'
+// CHECK-NEXT:       | |-value: Int 2
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:47> 'int' 2
 // CHECK-NEXT:       |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT:       | |-DeclRefExpr {{.*}} <line:32:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
