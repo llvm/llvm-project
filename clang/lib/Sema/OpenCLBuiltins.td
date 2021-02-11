@@ -53,6 +53,7 @@ class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
 def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
+def FuncExtKhrSubgroupExtendedTypes      : FunctionExtension<"cl_khr_subgroup_extended_types">;
 def FuncExtKhrSubgroupNonUniformVote     : FunctionExtension<"cl_khr_subgroup_non_uniform_vote">;
 def FuncExtKhrSubgroupBallot             : FunctionExtension<"cl_khr_subgroup_ballot">;
 def FuncExtKhrSubgroupNonUniformArithmetic: FunctionExtension<"cl_khr_subgroup_non_uniform_arithmetic">;
@@ -367,6 +368,9 @@ def UGenTypeN              : GenericType<"UGenTypeN", TLUnsignedInts, VecAndScal
 def FGenTypeN              : GenericType<"FGenTypeN", TLFloat, VecAndScalar>;
 // (u)int, (u)long, and all floats
 def IntLongFloatGenType1   : GenericType<"IntLongFloatGenType1", TLIntLongFloats, Vec1>;
+// (u)char and (u)short
+def CharShortGenType1      : GenericType<"CharShortGenType1",
+                                 TypeList<[Char, UChar, Short, UShort]>, Vec1>;
 
 // GenType definitions for every single base type (e.g. fp32 only).
 // Names are like: GenTypeFloatVecAndScalar.
@@ -1496,7 +1500,19 @@ let Extension = FuncExtKhrSubgroups in {
 // OpenCL Extension v3.0 s38 - Extended Subgroup Functions
 
 // Section 38.4.1 - cl_khr_subgroup_extended_types
-// TODO
+let Extension = FuncExtKhrSubgroupExtendedTypes in {
+  // For sub_group_broadcast, add scalar char, uchar, short, and ushort support,
+  def : Builtin<"sub_group_broadcast", [CharShortGenType1, CharShortGenType1, UInt], Attr.Convergent>;
+  // gentype may additionally be one of the supported built-in vector data types.
+  def : Builtin<"sub_group_broadcast", [AGenTypeNNoScalar, AGenTypeNNoScalar, UInt], Attr.Convergent>;
+
+  foreach name = ["sub_group_reduce_", "sub_group_scan_exclusive_",
+                  "sub_group_scan_inclusive_"] in {
+    foreach op = ["add", "min", "max"] in {
+      def : Builtin<name # op, [CharShortGenType1, CharShortGenType1], Attr.Convergent>;
+    }
+  }
+}
 
 // Section 38.5.1 - cl_khr_subgroup_non_uniform_vote
 let Extension = FuncExtKhrSubgroupNonUniformVote in {
