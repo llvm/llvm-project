@@ -362,7 +362,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
           LLDB_LOG(log,
                    "== [UserExpression::Evaluate] Execution completed "
-                   "normally with result %s ==",
+                   "normally with result {0} ==",
                    result_valobj_sp->GetValueAsCString());
         } else {
           LLDB_LOG(log, "== [UserExpression::Evaluate] Execution completed "
