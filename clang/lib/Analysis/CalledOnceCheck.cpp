@@ -22,6 +22,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
@@ -328,6 +329,29 @@ public:
 
   const DeclRefExpr *VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
     return Visit(OVE->getSourceExpr());
+  }
+
+  const DeclRefExpr *VisitCallExpr(const CallExpr *CE) {
+    if (!ShouldRetrieveFromComparisons)
+      return nullptr;
+
+    // We want to see through some of the boolean builtin functions
+    // that we are likely to see in conditions.
+    switch (CE->getBuiltinCallee()) {
+    case Builtin::BI__builtin_expect:
+    case Builtin::BI__builtin_expect_with_probability: {
+      assert(CE->getNumArgs() >= 2);
+
+      const DeclRefExpr *Candidate = Visit(CE->getArg(0));
+      return Candidate != nullptr ? Candidate : Visit(CE->getArg(1));
+    }
+
+    case Builtin::BI__builtin_unpredictable:
+      return Visit(CE->getArg(0));
+
+    default:
+      return nullptr;
+    }
   }
 
   const DeclRefExpr *VisitExpr(const Expr *E) {

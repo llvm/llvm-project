@@ -23,11 +23,9 @@ protected:
     SCOPED_TRACE(llvm::join(GetParam().getCommandLineArgs(), " "));
 
     auto *Root = buildTree(Code, GetParam());
-    if (Diags->getClient()->getNumErrors() != 0) {
-      return ::testing::AssertionFailure()
-             << "Source file has syntax errors, they were printed to the test "
-                "log";
-    }
+    auto ErrorOK = errorOK(Code);
+    if (!ErrorOK)
+      return ErrorOK;
     auto Actual = StringRef(Root->dump(Arena->getSourceManager())).trim().str();
     // EXPECT_EQ shows the diff between the two strings if they are different.
     EXPECT_EQ(Tree.trim().str(), Actual);
@@ -45,11 +43,9 @@ protected:
     auto AnnotatedCode = llvm::Annotations(CodeWithAnnotations);
     auto *Root = buildTree(AnnotatedCode.code(), GetParam());
 
-    if (Diags->getClient()->getNumErrors() != 0) {
-      return ::testing::AssertionFailure()
-             << "Source file has syntax errors, they were printed to the test "
-                "log";
-    }
+    auto ErrorOK = errorOK(AnnotatedCode.code());
+    if (!ErrorOK)
+      return ErrorOK;
 
     auto AnnotatedRanges = AnnotatedCode.ranges();
     if (AnnotatedRanges.size() != TreeDumps.size()) {
@@ -76,6 +72,19 @@ protected:
     }
     return Failed ? ::testing::AssertionFailure()
                   : ::testing::AssertionSuccess();
+  }
+
+private:
+  ::testing::AssertionResult errorOK(StringRef RawCode) {
+    if (!RawCode.contains("error-ok")) {
+      if (Diags->getClient()->getNumErrors() != 0) {
+        return ::testing::AssertionFailure()
+               << "Source file has syntax errors (suppress with /*error-ok*/), "
+                  "they were printed to the "
+                  "test log";
+      }
+    }
+    return ::testing::AssertionSuccess();
   }
 };
 
@@ -4768,67 +4777,52 @@ TranslationUnit Detached
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Named) {
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-int func1(int a);
-int func2(int *ap);
-int func3(int a, float b);
-)cpp",
-      R"txt(
-TranslationUnit Detached
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func1'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       `-'a'
-| |     `-')' CloseParen
-| `-';'
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func2'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       |-'*'
-| |     |       `-'ap'
-| |     `-')' CloseParen
-| `-';'
-`-SimpleDeclaration
+     int func1([[int a]]);
+     int func2([[int *ap]]);
+     int func3([[int a, float b]]);
+     int func4([[undef a]]); // error-ok: no crash on invalid type
+   )cpp",
+      {R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
   |-'int'
-  |-DeclaratorList Declarators
-  | `-SimpleDeclarator ListElement
-  |   |-'func3'
-  |   `-ParametersAndQualifiers
-  |     |-'(' OpenParen
-  |     |-ParameterDeclarationList Parameters
-  |     | |-SimpleDeclaration ListElement
-  |     | | |-'int'
-  |     | | `-DeclaratorList Declarators
-  |     | |   `-SimpleDeclarator ListElement
-  |     | |     `-'a'
-  |     | |-',' ListDelimiter
-  |     | `-SimpleDeclaration ListElement
-  |     |   |-'float'
-  |     |   `-DeclaratorList Declarators
-  |     |     `-SimpleDeclarator ListElement
-  |     |       `-'b'
-  |     `-')' CloseParen
-  `-';'
-)txt"));
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'a'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'int'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      |-'*'
+      `-'ap'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+|-SimpleDeclaration ListElement
+| |-'int'
+| `-DeclaratorList Declarators
+|   `-SimpleDeclarator ListElement
+|     `-'a'
+|-',' ListDelimiter
+`-SimpleDeclaration ListElement
+  |-'float'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'b'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'undef'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'a'
+)txt"}));
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Unnamed) {

@@ -353,6 +353,33 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
 
 /*!
 @ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param num_teams_lo lower bound on number of teams requested for the teams
+construct
+@param num_teams_up upper bound on number of teams requested for the teams
+construct
+@param num_threads number of threads per team requested for the teams construct
+
+Set the number of teams to be used by the teams construct. The number of initial
+teams cretaed will be greater than or equal to the lower bound and less than or
+equal to the upper bound.
+This call is only required if the teams construct has a `num_teams` clause
+or a `thread_limit` clause (or both).
+*/
+void __kmpc_push_num_teams_51(ident_t *loc, kmp_int32 global_tid,
+                              kmp_int32 num_teams_lb, kmp_int32 num_teams_ub,
+                              kmp_int32 num_threads) {
+  KA_TRACE(20, ("__kmpc_push_num_teams_51: enter T#%d num_teams_lb=%d"
+                " num_teams_ub=%d num_threads=%d\n",
+                global_tid, num_teams_lb, num_teams_ub, num_threads));
+  __kmp_assert_valid_gtid(global_tid);
+  __kmp_push_num_teams_51(loc, global_tid, num_teams_lb, num_teams_ub,
+                          num_threads);
+}
+
+/*!
+@ingroup PARALLEL
 @param loc  source location information
 @param argc  total number of arguments in the ellipsis
 @param microtask  pointer to callback routine consisting of outlined teams

@@ -829,7 +829,6 @@ TEST(RenameTest, WithinFileRename) {
     SCOPED_TRACE(T);
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-xobjective-c++");
     auto AST = TU.build();
     for (const auto &RenamePos : Code.points()) {
@@ -1083,11 +1082,22 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(
+        void func(int Var);
+
         void func(int V^ar) {
           bool Conflict;
         }
       )cpp",
        "conflict", !HeaderFile, nullptr, "Conflict"},
+
+      {R"cpp(// No conflict: only forward declaration's argument is renamed.
+        void func(int [[V^ar]]);
+
+        void func(int Var) {
+          bool Conflict;
+        }
+      )cpp",
+       nullptr, !HeaderFile, nullptr, "Conflict"},
 
       {R"cpp(
         void func(int V^ar, int Conflict) {

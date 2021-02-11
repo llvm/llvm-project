@@ -54,8 +54,6 @@
 #include "llvm/Pass.h"
 #include <set>
 
-using namespace llvm;
-
 namespace llvm {
 class AAResults;
 
@@ -63,6 +61,32 @@ void initializeScopDetectionWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
 namespace polly {
+using llvm::AAResults;
+using llvm::AliasSetTracker;
+using llvm::AnalysisInfoMixin;
+using llvm::AnalysisKey;
+using llvm::AnalysisUsage;
+using llvm::BranchInst;
+using llvm::CallInst;
+using llvm::DenseMap;
+using llvm::DominatorTree;
+using llvm::Function;
+using llvm::FunctionAnalysisManager;
+using llvm::FunctionPass;
+using llvm::IntrinsicInst;
+using llvm::LoopInfo;
+using llvm::Module;
+using llvm::OptimizationRemarkEmitter;
+using llvm::PassInfoMixin;
+using llvm::PreservedAnalyses;
+using llvm::RegionInfo;
+using llvm::ScalarEvolution;
+using llvm::SCEVUnknown;
+using llvm::SetVector;
+using llvm::SmallSetVector;
+using llvm::SmallVectorImpl;
+using llvm::StringRef;
+using llvm::SwitchInst;
 
 using ParamSetType = std::set<const SCEV *>;
 
@@ -136,7 +160,7 @@ public:
     ///
     /// This set contains all base pointers and the locations where they are
     /// used for memory accesses that can not be detected as affine accesses.
-    SetVector<std::pair<const SCEVUnknown *, Loop *>> NonAffineAccesses;
+    llvm::SetVector<std::pair<const SCEVUnknown *, Loop *>> NonAffineAccesses;
     BaseToElSize ElementSize;
 
     /// The region has at least one load instruction.

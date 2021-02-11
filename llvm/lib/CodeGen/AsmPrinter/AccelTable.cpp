@@ -327,9 +327,9 @@ void AppleAccelTableWriter::emitBuckets() const {
 
 void AppleAccelTableWriter::emitData() const {
   const auto &Buckets = Contents.getBuckets();
-  for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
+  for (const AccelTableBase::HashList &Bucket : Buckets) {
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
-    for (auto &Hash : Buckets[i]) {
+    for (auto &Hash : Bucket) {
       // Terminate the previous entry if there is no hash collision with the
       // current one.
       if (PrevHash != std::numeric_limits<uint64_t>::max() &&
@@ -346,7 +346,7 @@ void AppleAccelTableWriter::emitData() const {
       PrevHash = Hash->HashValue;
     }
     // Emit the final end marker for the bucket.
-    if (!Buckets[i].empty())
+    if (!Bucket.empty())
       Asm->emitInt32(0);
   }
 }

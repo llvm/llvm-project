@@ -144,6 +144,24 @@ llvm.func @ctpop_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @maximum_test
+llvm.func @maximum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.maximum.f32
+  "llvm.intr.maximum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.maximum.v8f32
+  "llvm.intr.maximum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @minimum_test
+llvm.func @minimum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.minimum.f32
+  "llvm.intr.minimum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.minimum.v8f32
+  "llvm.intr.minimum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @maxnum_test
 llvm.func @maxnum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.maxnum.f32
@@ -402,6 +420,20 @@ llvm.func @coro_free(%arg0: !llvm.token, %arg1 : !llvm.ptr<i8>) {
 llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
   // CHECK: call void @llvm.coro.resume
   llvm.intr.coro.resume %arg0
+  llvm.return
+}
+
+// CHECK-LABEL: @stack_save
+llvm.func @stack_save() {
+  // CHECK: call i8* @llvm.stacksave
+  %0 = llvm.intr.stacksave : !llvm.ptr<i8>
+  llvm.return
+}
+
+// CHECK-LABEL: @stack_restore
+llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
+  // CHECK: call void @llvm.stackrestore
+  llvm.intr.stackrestore %arg0
   llvm.return
 }
 

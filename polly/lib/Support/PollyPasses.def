@@ -16,6 +16,7 @@ FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(errs()))
 #ifndef SCOP_ANALYSIS
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
+SCOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 SCOP_ANALYSIS("polly-ast", IslAstAnalysis())
 SCOP_ANALYSIS("polly-dependences", DependenceAnalysis())
 #undef SCOP_ANALYSIS
@@ -30,4 +31,11 @@ SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(outs()))
 SCOP_PASS("polly-codegen", CodeGenerationPass())
 SCOP_PASS("polly-simplify", SimplifyPass())
 SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(outs()))
+SCOP_PASS("polly-optree", ForwardOpTreePass())
+SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(outs()))
+SCOP_PASS("polly-delicm", DeLICMPass())
+SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(outs()))
+SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
+SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
+SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(outs()))
 #undef SCOP_PASS

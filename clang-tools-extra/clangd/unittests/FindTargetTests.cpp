@@ -326,9 +326,6 @@ TEST_F(TargetDeclTest, Types) {
   EXPECT_DECLS("TypedefTypeLoc", {"typedef ns::S X", Rel::Alias},
                {"struct S", Rel::Underlying});
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<class T>
     void foo() { [[T]] x; }
@@ -336,9 +333,6 @@ TEST_F(TargetDeclTest, Types) {
   EXPECT_DECLS("TemplateTypeParmTypeLoc", "class T");
   Flags.clear();
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<template<typename> class T>
     void foo() { [[T<int>]] x; }
@@ -615,9 +609,6 @@ TEST_F(TargetDeclTest, Lambda) {
 }
 
 TEST_F(TargetDeclTest, OverloadExpr) {
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Flags.push_back("--target=x86_64-pc-linux-gnu");
 
   Code = R"cpp(
@@ -676,8 +667,6 @@ TEST_F(TargetDeclTest, OverloadExpr) {
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
-  Flags = {"-fno-delayed-template-parsing"};
-
   // Heuristic resolution of method of dependent field
   Code = R"cpp(
         struct A { void foo() {} };
@@ -758,8 +747,6 @@ TEST_F(TargetDeclTest, DependentExprs) {
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
-  Flags = {"-fno-delayed-template-parsing"};
-
   // Heuristic resolution of dependent type name
   Code = R"cpp(
         template <typename>
@@ -981,7 +968,6 @@ protected:
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-std=c++20");
     TU.ExtraArgs.push_back("-xobjective-c++");
 

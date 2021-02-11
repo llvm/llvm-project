@@ -13,18 +13,35 @@
 #ifndef POLLY_FORWARDOPTREE_H
 #define POLLY_FORWARDOPTREE_H
 
-namespace llvm {
+#include "polly/ScopPass.h"
 
+namespace llvm {
 class PassRegistry;
 
-void initializeForwardOpTreePass(PassRegistry &);
+void initializeForwardOpTreeWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
 namespace polly {
+llvm::Pass *createForwardOpTreeWrapperPass();
 
-class ScopPass;
+struct ForwardOpTreePass : llvm::PassInfoMixin<ForwardOpTreePass> {
+  ForwardOpTreePass() {}
 
-ScopPass *createForwardOpTreePass();
+  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
+                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
+};
+
+struct ForwardOpTreePrinterPass
+    : llvm::PassInfoMixin<ForwardOpTreePrinterPass> {
+  ForwardOpTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
+                        ScopStandardAnalysisResults &SAR, SPMUpdater &);
+
+private:
+  llvm::raw_ostream &OS;
+};
+
 } // namespace polly
 
 #endif // POLLY_FORWARDOPTREE_H

@@ -37,14 +37,6 @@ def cvt_f32_ubyteN : GICombineRule<
          [{ return PostLegalizerHelper.matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
   (apply [{ PostLegalizerHelper.applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
-def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
-
-def clamp_i64_to_i16 : GICombineRule<
-  (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
-  (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
-      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
-  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
-
 // Combine support that removes amdgcn_waterfall_readfirstlane or amdgcn_waterfall_begin intrinsics when
 // the index is uniform
 def rm_uniform_wf_matchdata : GIDefMatchData<"AMDGPURegBankCombinerHelper::RmUniformWFMatchInfo">;
@@ -54,6 +46,14 @@ def rm_uniform_wf : GICombineRule<
   (match (wip_match_opcode G_INTRINSIC_W_SIDE_EFFECTS):$uniform_wf_candidate,
          [{ return RegBankHelper.matchRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyRmUniformWF(*${uniform_wf_candidate}, ${matchinfo}); }])>;
+
+def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
+
+def clamp_i64_to_i16 : GICombineRule<
+  (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
+      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
+  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
 
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;

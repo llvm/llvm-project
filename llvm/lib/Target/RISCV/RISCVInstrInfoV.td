@@ -110,9 +110,9 @@ class VIndexedLoad<RISCVMOP mop, RISCVWidth width, string opcodestr>
                 "$vd, (${rs1}), $vs2$vm">;
 
 // vl<nf>r.v vd, (rs1)
-class VWholeLoad<bits<3> nf, RISCVWidth width, string opcodestr>
+class VWholeLoad<bits<3> nf, RISCVWidth width, string opcodestr, RegisterClass VRC>
     : RVInstVLU<nf, width.Value{3}, LUMOPUnitStrideWholeReg,
-                width.Value{2-0}, (outs VR:$vd), (ins GPR:$rs1),
+                width.Value{2-0}, (outs VRC:$vd), (ins GPR:$rs1),
                 opcodestr, "$vd, (${rs1})"> {
   let vm = 1;
   let Uses = [];
@@ -169,9 +169,9 @@ class VIndexedStore<RISCVMOP mop, RISCVWidth width, string opcodestr>
                 opcodestr, "$vs3, (${rs1}), $vs2$vm">;
 
 // vs<nf>r.v vd, (rs1)
-class VWholeStore<bits<3> nf, string opcodestr>
+class VWholeStore<bits<3> nf, string opcodestr, RegisterClass VRC>
     : RVInstVSU<nf, 0, SUMOPUnitStrideWholeReg,
-                0b000, (outs), (ins VR:$vs3, GPR:$rs1),
+                0b000, (outs), (ins VRC:$vs3, GPR:$rs1),
                 opcodestr, "$vs3, (${rs1})"> {
   let vm = 1;
   let Uses = [];
@@ -430,11 +430,11 @@ multiclass VAMO<RISCVAMOOP amoop, RISCVWidth width, string opcodestr> {
   def _UNWD : VAMONoWd<amoop, width, opcodestr>;
 }
 
-multiclass VWholeLoad<bits<3> nf, string opcodestr> {
-  def E8_V : VWholeLoad<nf, LSWidth8, opcodestr # "e8.v">;
-  def E16_V : VWholeLoad<nf, LSWidth16, opcodestr # "e16.v">;
-  def E32_V : VWholeLoad<nf, LSWidth32, opcodestr # "e32.v">;
-  def E64_V : VWholeLoad<nf, LSWidth64, opcodestr # "e64.v">;
+multiclass VWholeLoad<bits<3> nf, string opcodestr, RegisterClass VRC> {
+  def E8_V : VWholeLoad<nf, LSWidth8, opcodestr # "e8.v", VRC>;
+  def E16_V : VWholeLoad<nf, LSWidth16, opcodestr # "e16.v", VRC>;
+  def E32_V : VWholeLoad<nf, LSWidth32, opcodestr # "e32.v", VRC>;
+  def E64_V : VWholeLoad<nf, LSWidth64, opcodestr # "e64.v", VRC>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -504,19 +504,19 @@ def VSOXEI16_V : VIndexedStore<MOPSTIndexedOrder, LSWidth16, "vsoxei16.v">;
 def VSOXEI32_V : VIndexedStore<MOPSTIndexedOrder, LSWidth32, "vsoxei32.v">;
 def VSOXEI64_V : VIndexedStore<MOPSTIndexedOrder, LSWidth64, "vsoxei64.v">;
 
-defm VL1R : VWholeLoad<1, "vl1r">;
-defm VL2R : VWholeLoad<2, "vl2r">;
-defm VL4R : VWholeLoad<4, "vl4r">;
-defm VL8R : VWholeLoad<8, "vl8r">;
+defm VL1R : VWholeLoad<1, "vl1r", VR>;
+defm VL2R : VWholeLoad<2, "vl2r", VRM2>;
+defm VL4R : VWholeLoad<4, "vl4r", VRM4>;
+defm VL8R : VWholeLoad<8, "vl8r", VRM8>;
 def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
-def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VR:$vd, GPR:$rs1)>;
-def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VR:$vd, GPR:$rs1)>;
-def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VR:$vd, GPR:$rs1)>;
+def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
+def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VRM4:$vd, GPR:$rs1)>;
+def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
 
-def VS1R_V : VWholeStore<1, "vs1r.v">;
-def VS2R_V : VWholeStore<2, "vs2r.v">;
-def VS4R_V : VWholeStore<4, "vs4r.v">;
-def VS8R_V : VWholeStore<8, "vs8r.v">;
+def VS1R_V : VWholeStore<1, "vs1r.v", VR>;
+def VS2R_V : VWholeStore<2, "vs2r.v", VRM2>;
+def VS4R_V : VWholeStore<4, "vs4r.v", VRM4>;
+def VS8R_V : VWholeStore<8, "vs8r.v", VRM8>;
 
 // Vector Single-Width Integer Add and Subtract
 defm VADD_V : VALU_IV_V_X_I<"vadd", 0b000000>;

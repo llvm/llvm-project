@@ -67,6 +67,30 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (store_instr reg_class:$rs2, RVVBaseAddr:$rs1, avl, sew)>;
 }
 
+multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
+                                        int sew,
+                                        LMULInfo vlmul,
+                                        VReg reg_class>
+{
+  defvar load_instr =
+    !cond(!eq(vlmul.value, V_M1.value): !cast<Instruction>("VL1RE"#sew#"_V"),
+          !eq(vlmul.value, V_M2.value): !cast<Instruction>("VL2RE"#sew#"_V"),
+          !eq(vlmul.value, V_M4.value): !cast<Instruction>("VL4RE"#sew#"_V"),
+          !eq(vlmul.value, V_M8.value): !cast<Instruction>("VL8RE"#sew#"_V"));
+  defvar store_instr =
+    !cond(!eq(vlmul.value, V_M1.value): VS1R_V,
+          !eq(vlmul.value, V_M2.value): VS2R_V,
+          !eq(vlmul.value, V_M4.value): VS4R_V,
+          !eq(vlmul.value, V_M8.value): VS8R_V);
+
+  // Load
+  def : Pat<(type (load RVVBaseAddr:$rs1)),
+            (load_instr RVVBaseAddr:$rs1)>;
+  // Store
+  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
+            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1)>;
+}
+
 multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
 {
   defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
@@ -380,9 +404,16 @@ multiclass VPatReductionSDNode<SDNode vop, string instruction_name, bit is_float
 let Predicates = [HasStdExtV] in {
 
 // 7.4. Vector Unit-Stride Instructions
-foreach vti = AllVectors in
+foreach vti = !listconcat(FractionalGroupIntegerVectors,
+                          FractionalGroupFloatVectors) in
   defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.SEW, vti.LMul,
                                   vti.AVL, vti.RegClass>;
+foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VF16M1, VF32M1, VF64M1] in
+  defm "" : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.SEW, vti.LMul,
+                                         vti.RegClass>;
+foreach vti = !listconcat(GroupIntegerVectors, GroupFloatVectors) in
+  defm "" : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.SEW, vti.LMul,
+                                         vti.RegClass>;
 foreach mti = AllMasks in
   defm "" : VPatUSLoadStoreMaskSDNode<mti>;
 
@@ -788,13 +819,6 @@ foreach vti = AllFloatVectors in {
                     vti.AVL, vti.SEW)>;
 }
 
-//===----------------------------------------------------------------------===//
-// Miscellaneous RISCVISD SDNodes
-//===----------------------------------------------------------------------===//
-
-def riscv_vid
-    : SDNode<"RISCVISD::VID", SDTypeProfile<1, 0, [SDTCisVec<0>]>, []>;
-
 def SDTRVVSlide : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>
 ]>;
@@ -803,10 +827,6 @@ def riscv_slideup : SDNode<"RISCVISD::VSLIDEUP", SDTRVVSlide, []>;
 def riscv_slidedown : SDNode<"RISCVISD::VSLIDEDOWN", SDTRVVSlide, []>;
 
 let Predicates = [HasStdExtV] in {
-
-foreach vti = AllIntegerVectors in
-  def : Pat<(vti.Vector riscv_vid),
-            (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) vti.AVL, vti.SEW)>;
 
 foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
     def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),

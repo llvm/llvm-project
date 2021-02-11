@@ -222,17 +222,16 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
         return false;
       });
 
-  // FIXME: these passes are causing numerical discrepancies, investigate and
-  // re-enable.
-
-  // PB.registerPipelineStartEPCallback(
-  //     [this, DebugPassManager](ModulePassManager &PM,
-  //                              PassBuilder::OptimizationLevel Level) {
-  //       FunctionPassManager FPM(DebugPassManager);
-  //       FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
-  //       FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
-  //       PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  //     });
+  PB.registerPipelineStartEPCallback(
+      [this, DebugPassManager](ModulePassManager &PM,
+                               PassBuilder::OptimizationLevel Level) {
+        FunctionPassManager FPM(DebugPassManager);
+        FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+        // FIXME: NVVMIntrRangePass is causing numerical discrepancies,
+        // investigate and re-enable.
+        // FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
 }
 
 TargetTransformInfo

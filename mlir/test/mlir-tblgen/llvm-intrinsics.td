@@ -20,8 +20,8 @@
 // The second operand is overloadable, but the first operand needs to
 // match the result type.
 // CHECK: [1]
-// It has no additional traits.
-// CHECK: []
+// It has no side effects.
+// CHECK: [NoSideEffect]
 // It has a result.
 // CHECK: 1>
 // CHECK: Arguments<(ins LLVM_Type, LLVM_Type

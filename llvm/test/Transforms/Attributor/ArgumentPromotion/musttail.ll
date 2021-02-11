@@ -167,7 +167,7 @@ define i32 @caller2b(%T* %g) {
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2b
 ; IS__CGSCC____-SAME: (%T* nocapture nofree readonly [[G:%.*]]) [[ATTR3]] {
-; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test2b(%T* nocapture nofree readonly [[G]], i32 noundef undef) [[ATTR6:#.*]]
+; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test2b(%T* nocapture nofree readonly [[G]], i32 undef) [[ATTR6:#.*]]
 ; IS__CGSCC____-NEXT:    ret i32 0
 ;
   %v = call i32 @test2b(%T* %g, i32 0)

@@ -421,6 +421,11 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     for (const auto *Parameter : EnclosingFunction->parameters())
       if (Parameter != &RenamedDecl && Parameter->getName() == NewName)
         return Parameter;
+    // FIXME: We don't modify all references to function parameters when
+    // renaming from forward declaration now, so using a name colliding with
+    // something in the definition's body is a valid transformation.
+    if (!EnclosingFunction->doesThisDeclarationHaveABody())
+      return nullptr;
     return CheckCompoundStmt(EnclosingFunction->getBody(), NewName);
   }
 

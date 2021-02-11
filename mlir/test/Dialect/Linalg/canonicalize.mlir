@@ -696,9 +696,13 @@ func @fold_init_tensor_with_subtensor
 //   CHECK-NOT:   linalg.fill
 //   CHECK-NOT:   linalg.matmul
 //   CHECK-NOT:   linalg.generic
+//   CHECK-NOT:   linalg.pad_tensor
 //       CHECK:   return
-func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>) {
+func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>,
+                         %arg2: tensor<?x?xf32>, %high : index) {
   %c0_i32 = constant 0 : i32
+  %c0 = constant 0 : index
+  %cst = constant 0.000000e+00 : f32
   %0 = linalg.fill(%arg0, %c0_i32) : tensor<7x7xi32>, i32 -> tensor<7x7xi32>
   %1 = linalg.matmul ins(%arg1, %arg1: tensor<7x7xf32>, tensor<7x7xf32>)
                      outs(%arg1: tensor<7x7xf32>) -> tensor<7x7xf32>
@@ -706,5 +710,9 @@ func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>) {
   ^bb(%3: i32) :
     linalg.yield %3 : i32
   } -> tensor<7x7xi32>
+  %3 = linalg.pad_tensor %arg2 low[%c0, %c0] high[%high, %high] {
+        ^bb0(%arg9: index, %arg10: index):  // no predecessors
+          linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<2x4xf32>
   return
 }

@@ -273,6 +273,23 @@ void DbgValueHistoryMap::trimLocationRanges(
   }
 }
 
+bool DbgValueHistoryMap::hasNonEmptyLocation(const Entries &Entries) const {
+  for (const auto &Entry : Entries) {
+    if (!Entry.isDbgValue())
+      continue;
+
+    const MachineInstr *MI = Entry.getInstr();
+    assert(MI->isDebugValue());
+    // A DBG_VALUE $noreg is an empty variable location
+    if (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == 0)
+      continue;
+
+    return true;
+  }
+
+  return false;
+}
+
 void DbgLabelInstrMap::addInstr(InlinedEntity Label, const MachineInstr &MI) {
   assert(MI.isDebugLabel() && "not a DBG_LABEL");
   LabelInstr[Label] = &MI;

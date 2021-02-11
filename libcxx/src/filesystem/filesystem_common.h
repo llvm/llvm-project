@@ -287,8 +287,7 @@ struct time_util_base {
           .count();
 
 private:
-#if _LIBCPP_STD_VER > 11 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
-  static constexpr fs_duration get_min_nsecs() {
+  static _LIBCPP_CONSTEXPR_AFTER_CXX11 fs_duration get_min_nsecs() {
     return duration_cast<fs_duration>(
         fs_nanoseconds(min_nsec_timespec) -
         duration_cast<fs_nanoseconds>(fs_seconds(1)));
@@ -298,7 +297,7 @@ private:
                     FileTimeT::duration::min(),
                 "value doesn't roundtrip");
 
-  static constexpr bool check_range() {
+  static _LIBCPP_CONSTEXPR_AFTER_CXX11 bool check_range() {
     // This kinda sucks, but it's what happens when we don't have __int128_t.
     if (sizeof(TimeT) == sizeof(rep)) {
       typedef duration<long long, ratio<3600 * 24 * 365> > Years;
@@ -309,7 +308,6 @@ private:
            min_seconds <= numeric_limits<TimeT>::min();
   }
   static_assert(check_range(), "the representable range is unacceptable small");
-#endif
 };
 
 template <class FileTimeT, class TimeT>

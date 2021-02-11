@@ -113,8 +113,9 @@ enum NodeType : unsigned {
   // XLenVT index (either constant or non-constant).
   VSLIDEUP,
   VSLIDEDOWN,
-  // Matches the semantics of the unmasked vid.v instruction.
-  VID,
+  // Matches the semantics of the vid.v instruction, with a mask and VL
+  // operand.
+  VID_VL,
   // Matches the semantics of the vfcnvt.rod function (Convert double-width
   // float to single-width float, rounding towards odd). Takes a double-width
   // float vector and produces a single-width float vector.
@@ -165,6 +166,9 @@ enum NodeType : unsigned {
   // Set mask vector to all zeros or ones.
   VMCLR_VL,
   VMSET_VL,
+
+  // Matches the semantics of vrgather.vx with an extra operand for VL.
+  VRGATHER_VX_VL,
 
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -340,6 +344,13 @@ public:
                                           Value *NewVal, Value *Mask,
                                           AtomicOrdering Ord) const override;
 
+  /// Returns true if the target allows unaligned memory accesses of the
+  /// specified type.
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *Fast = nullptr) const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -393,6 +404,11 @@ private:
 
   bool useRVVForFixedLengthVectorVT(MVT VT) const;
 };
+
+namespace RISCV {
+// We use 64 bits as the known part in the scalable vector types.
+static constexpr unsigned RVVBitsPerBlock = 64;
+} // namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

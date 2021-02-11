@@ -46,6 +46,54 @@ bb:
   ret void
 }
 
+; GCN-LABEL: ds_read32_combine_stride_20:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B4:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x640, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x6e0, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x780, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B4:v[0-9]+]], 0x820, [[BASE]]
+
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:20
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:20
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:20
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B4]] offset1:20
+define amdgpu_kernel void @ds_read32_combine_stride_20(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+bb:
+  %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 400
+  %tmp1 = load float, float addrspace(3)* %tmp, align 4
+  %tmp2 = fadd float %tmp1, 0.000000e+00
+  %tmp3 = getelementptr inbounds float, float addrspace(3)* %arg, i32 420
+  %tmp4 = load float, float addrspace(3)* %tmp3, align 4
+  %tmp5 = fadd float %tmp2, %tmp4
+  %tmp6 = getelementptr inbounds float, float addrspace(3)* %arg, i32 440
+  %tmp7 = load float, float addrspace(3)* %tmp6, align 4
+  %tmp8 = fadd float %tmp5, %tmp7
+  %tmp9 = getelementptr inbounds float, float addrspace(3)* %arg, i32 460
+  %tmp10 = load float, float addrspace(3)* %tmp9, align 4
+  %tmp11 = fadd float %tmp8, %tmp10
+  %tmp12 = getelementptr inbounds float, float addrspace(3)* %arg, i32 480
+  %tmp13 = load float, float addrspace(3)* %tmp12, align 4
+  %tmp14 = fadd float %tmp11, %tmp13
+  %tmp15 = getelementptr inbounds float, float addrspace(3)* %arg, i32 500
+  %tmp16 = load float, float addrspace(3)* %tmp15, align 4
+  %tmp17 = fadd float %tmp14, %tmp16
+  %tmp18 = getelementptr inbounds float, float addrspace(3)* %arg, i32 520
+  %tmp19 = load float, float addrspace(3)* %tmp18, align 4
+  %tmp20 = fadd float %tmp17, %tmp19
+  %tmp21 = getelementptr inbounds float, float addrspace(3)* %arg, i32 540
+  %tmp22 = load float, float addrspace(3)* %tmp21, align 4
+  %tmp23 = fadd float %tmp20, %tmp22
+  store float %tmp23, float *%arg1, align 4
+  ret void
+}
+
 ; GCN-LABEL: ds_read32_combine_stride_400_back:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]

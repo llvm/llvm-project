@@ -17,6 +17,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallVector.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIROpsTypes.h.inc"
+
 namespace llvm {
 class raw_ostream;
 class StringRef;
@@ -54,6 +57,7 @@ struct RealTypeStorage;
 struct RecordTypeStorage;
 struct ReferenceTypeStorage;
 struct SequenceTypeStorage;
+struct SliceTypeStorage;
 struct TypeDescTypeStorage;
 struct VectorTypeStorage;
 } // namespace detail
@@ -214,6 +218,17 @@ public:
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
                                                           mlir::Type eleTy);
+};
+
+/// Type of a vector that represents an array slice operation on an array.
+/// Fortran slices are triples of lower bound, upper bound, and stride. The rank
+/// of a SliceType must be at least 1.
+class SliceType : public mlir::Type::TypeBase<SliceType, mlir::Type,
+                                              detail::SliceTypeStorage> {
+public:
+  using Base::Base;
+  static SliceType get(mlir::MLIRContext *ctx, unsigned rank);
+  unsigned getRank() const;
 };
 
 /// The type of a field name. Implementations may defer the layout of a Fortran

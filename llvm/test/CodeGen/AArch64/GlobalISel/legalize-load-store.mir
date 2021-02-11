@@ -395,3 +395,99 @@ body:             |
     %ptr:_(p0) = COPY $x0
     G_STORE %val(<4 x s64>), %ptr(p0) :: (store 32)
     RET_ReallyLR
+...
+---
+name:            load_32xs8
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_32xs8
+    ; CHECK: liveins: $x0
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s8>) = G_LOAD %ptr(p0) :: (load 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[PTR_ADD]](p0) :: (load 16 + 16)
+    ; CHECK: G_STORE [[LOAD]](<16 x s8>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[LOAD1]](<16 x s8>), [[PTR_ADD1]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %val:_(<32 x s8>) = G_LOAD %ptr(p0) :: (load 32)
+    G_STORE %val(<32 x s8>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            load_16xs16
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_16xs16
+    ; CHECK: liveins: $x0
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<8 x s16>) = G_LOAD %ptr(p0) :: (load 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[PTR_ADD]](p0) :: (load 16 + 16)
+    ; CHECK: G_STORE [[LOAD]](<8 x s16>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[LOAD1]](<8 x s16>), [[PTR_ADD1]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %val:_(<16 x s16>) = G_LOAD %ptr(p0) :: (load 32)
+    G_STORE %val(<16 x s16>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            load_8xs32
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_8xs32
+    ; CHECK: liveins: $x0
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[PTR_ADD]](p0) :: (load 16 + 16)
+    ; CHECK: G_STORE [[LOAD]](<4 x s32>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[LOAD1]](<4 x s32>), [[PTR_ADD1]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %val:_(<8 x s32>) = G_LOAD %ptr(p0) :: (load 32)
+    G_STORE %val(<8 x s32>), %ptr(p0) :: (store 32)
+    RET_ReallyLR
+...
+---
+name:            load_4xs64
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_4xs64
+    ; CHECK: liveins: $x0
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD %ptr(p0) :: (load 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[PTR_ADD]](p0) :: (load 16 + 16)
+    ; CHECK: G_STORE [[LOAD]](<2 x s64>), %ptr(p0) :: (store 16, align 32)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[LOAD1]](<2 x s64>), [[PTR_ADD1]](p0) :: (store 16 + 16)
+    ; CHECK: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %val:_(<4 x s64>) = G_LOAD %ptr(p0) :: (load 32)
+    G_STORE %val(<4 x s64>), %ptr(p0) :: (store 32)
+    RET_ReallyLR

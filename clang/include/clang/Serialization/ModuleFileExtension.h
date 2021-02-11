@@ -60,8 +60,19 @@ class ModuleFileExtensionWriter;
 /// custom writer that can then be accessed via a custom reader when
 /// the module file or precompiled header is loaded.
 class ModuleFileExtension {
+protected:
+  /// Discriminator for LLVM-style RTTI.
+  enum ModuleFileExtensionKind {
+    MFEK_Test,
+  };
+
+  const ModuleFileExtensionKind Kind;
 public:
+  ModuleFileExtension(ModuleFileExtensionKind Kind) : Kind(Kind) {}
+
   virtual ~ModuleFileExtension();
+
+  ModuleFileExtensionKind getKind() const { return Kind; }
 
   /// Retrieves the metadata for this module file extension.
   virtual ModuleFileExtensionMetadata getExtensionMetadata() const = 0;

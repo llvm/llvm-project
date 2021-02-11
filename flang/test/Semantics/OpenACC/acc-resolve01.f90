@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
 
 ! Data-Mapping Attribute Clauses
 ! 2.15.14 default Clause

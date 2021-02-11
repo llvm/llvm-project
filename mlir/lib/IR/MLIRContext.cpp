@@ -336,7 +336,10 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
+MLIRContext::MLIRContext() : MLIRContext(DialectRegistry()) {}
+
+MLIRContext::MLIRContext(const DialectRegistry &registry)
+    : impl(new MLIRContextImpl) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -346,6 +349,9 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
 
   // Ensure the builtin dialect is always pre-loaded.
   getOrLoadDialect<BuiltinDialect>();
+
+  // Pre-populate the registry.
+  registry.appendTo(impl->dialectsRegistry);
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -423,7 +429,15 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 // Dialect and Operation Registration
 //===----------------------------------------------------------------------===//
 
-DialectRegistry &MLIRContext::getDialectRegistry() {
+void MLIRContext::appendDialectRegistry(const DialectRegistry &registry) {
+  registry.appendTo(impl->dialectsRegistry);
+
+  // For the already loaded dialects, register the interfaces immediately.
+  for (const auto &kvp : impl->loadedDialects)
+    registry.registerDelayedInterfaces(kvp.second.get());
+}
+
+const DialectRegistry &MLIRContext::getDialectRegistry() {
   return impl->dialectsRegistry;
 }
 
@@ -441,8 +455,8 @@ std::vector<Dialect *> MLIRContext::getLoadedDialects() {
 }
 std::vector<StringRef> MLIRContext::getAvailableDialects() {
   std::vector<StringRef> result;
-  for (auto &dialect : impl->dialectsRegistry)
-    result.push_back(dialect.first);
+  for (auto dialect : impl->dialectsRegistry.getDialectNames())
+    result.push_back(dialect);
   return result;
 }
 
@@ -458,7 +472,9 @@ Dialect *MLIRContext::getOrLoadDialect(StringRef name) {
   Dialect *dialect = getLoadedDialect(name);
   if (dialect)
     return dialect;
-  return impl->dialectsRegistry.loadByName(name, this);
+  DialectAllocatorFunctionRef allocator =
+      impl->dialectsRegistry.getDialectAllocator(name);
+  return allocator ? allocator(this) : nullptr;
 }
 
 /// Get a dialect for the provided namespace and TypeID: abort the program if a
@@ -493,6 +509,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           identifierEntry.first().startswith(dialectNamespace))
         identifierEntry.second = dialect.get();
 
+    // Actually register the interfaces with delayed registration.
+    impl.dialectsRegistry.registerDelayedInterfaces(dialect.get());
     return dialect.get();
   }
 
@@ -502,6 +520,11 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
+}
+
+void MLIRContext::loadAllAvailableDialects() {
+  for (StringRef name : getAvailableDialects())
+    getOrLoadDialect(name);
 }
 
 llvm::hash_code MLIRContext::getRegistryHash() {
@@ -659,15 +682,14 @@ const AbstractOperation *AbstractOperation::lookup(StringRef opName,
 }
 
 void AbstractOperation::insert(
-    StringRef name, Dialect &dialect, OperationProperties opProperties,
-    TypeID typeID, ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait) {
-  AbstractOperation opInfo(name, dialect, opProperties, typeID, parseAssembly,
-                           printAssembly, verifyInvariants, foldHook,
-                           getCanonicalizationPatterns, std::move(interfaceMap),
-                           hasTrait);
+  AbstractOperation opInfo(
+      name, dialect, typeID, parseAssembly, printAssembly, verifyInvariants,
+      foldHook, getCanonicalizationPatterns, std::move(interfaceMap), hasTrait);
 
   auto &impl = dialect.getContext()->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
@@ -681,14 +703,14 @@ void AbstractOperation::insert(
 }
 
 AbstractOperation::AbstractOperation(
-    StringRef name, Dialect &dialect, OperationProperties opProperties,
-    TypeID typeID, ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn parseAssembly, PrintAssemblyFn printAssembly,
     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait)
     : name(Identifier::get(name, dialect.getContext())), dialect(dialect),
-      typeID(typeID), opProperties(opProperties),
-      interfaceMap(std::move(interfaceMap)), foldHookFn(foldHook),
+      typeID(typeID), interfaceMap(std::move(interfaceMap)),
+      foldHookFn(foldHook),
       getCanonicalizationPatternsFn(getCanonicalizationPatterns),
       hasTraitFn(hasTrait), parseAssemblyFn(parseAssembly),
       printAssemblyFn(printAssembly), verifyInvariantsFn(verifyInvariants) {}

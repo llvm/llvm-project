@@ -26,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+using namespace llvm;
 using namespace polly;
 
 static cl::opt<bool> RewriteAllocas(

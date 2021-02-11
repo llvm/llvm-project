@@ -1025,6 +1025,9 @@ struct device_environment {
   //  - under review in trunk is debug_level, device_num
   //  - rocmcc matches aomp, patch to swap num_devices and device_num
 
+  // The symbol may also have been deadstripped because the device side
+  // accessors were unused.
+
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
@@ -1069,39 +1072,43 @@ struct device_environment {
   bool in_image() { return si.sh_type != SHT_NOBITS; }
 
   atmi_status_t before_loading(void *data, size_t size) {
-    assert(valid);
-    if (in_image()) {
-      DP("Setting global device environment before load (%u bytes)\n", si.size);
-      uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-      void *pos = (char *)data + offset;
-      memcpy(pos, &host_device_env, si.size);
+    if (valid) {
+      if (in_image()) {
+        DP("Setting global device environment before load (%u bytes)\n",
+           si.size);
+        uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+        void *pos = (char *)data + offset;
+        memcpy(pos, &host_device_env, si.size);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
 
   atmi_status_t after_loading() {
-    assert(valid);
-    if (!in_image()) {
-      DP("Setting global device environment after load (%u bytes)\n", si.size);
-      int device_id = host_device_env.device_num;
-
-      void *state_ptr;
-      uint32_t state_ptr_size;
-      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-          get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
-      if (err != ATMI_STATUS_SUCCESS) {
-        DP("failed to find %s in loaded image\n", sym());
-        return err;
-      }
-
-      if (state_ptr_size != si.size) {
-        DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+    if (valid) {
+      if (!in_image()) {
+        DP("Setting global device environment after load (%u bytes)\n",
            si.size);
-        return ATMI_STATUS_ERROR;
-      }
+        int device_id = host_device_env.device_num;
 
-      return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
-                                                  state_ptr_size, device_id);
+        void *state_ptr;
+        uint32_t state_ptr_size;
+        atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+            get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("failed to find %s in loaded image\n", sym());
+          return err;
+        }
+
+        if (state_ptr_size != si.size) {
+          DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+             si.size);
+          return ATMI_STATUS_ERROR;
+        }
+
+        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                    state_ptr_size, device_id);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
@@ -1165,9 +1172,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   {
     auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
                                   img_size);
-    if (!env.valid) {
-      return NULL;
-    }
 
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
@@ -1196,6 +1200,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   {
     // the device_State array is either large value in bss or a void* that
     // needs to be assigned to a pointer to an array of size device_state_bytes
+    // If absent, it has been deadstripped and needs no setup.
 
     void *state_ptr;
     uint32_t state_ptr_size;
@@ -1204,52 +1209,54 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         &state_ptr, &state_ptr_size);
 
     if (err != ATMI_STATUS_SUCCESS) {
-      fprintf(stderr, "failed to find device_state symbol\n");
-      return NULL;
-    }
-
-    if (state_ptr_size < sizeof(void *)) {
-      fprintf(stderr, "unexpected size of state_ptr %u != %zu\n",
-              state_ptr_size, sizeof(void *));
-      return NULL;
-    }
-
-    // if it's larger than a void*, assume it's a bss array and no further
-    // initialization is required. Only try to set up a pointer for
-    // sizeof(void*)
-    if (state_ptr_size == sizeof(void *)) {
-      uint64_t device_State_bytes =
-          get_device_State_bytes((char *)image->ImageStart, img_size);
-      if (device_State_bytes == 0) {
+      DP("No device_state symbol found, skipping initialization\n");
+    } else {
+      if (state_ptr_size < sizeof(void *)) {
+        DP("unexpected size of state_ptr %u != %zu\n", state_ptr_size,
+           sizeof(void *));
         return NULL;
       }
 
-      auto &dss = DeviceInfo.deviceStateStore[device_id];
-      if (dss.first.get() == nullptr) {
-        assert(dss.second == 0);
-        void *ptr = NULL;
-        atmi_status_t err =
-            atmi_calloc(&ptr, device_State_bytes, get_gpu_mem_place(device_id));
-        if (err != ATMI_STATUS_SUCCESS) {
-          fprintf(stderr, "Failed to allocate device_state array\n");
+      // if it's larger than a void*, assume it's a bss array and no further
+      // initialization is required. Only try to set up a pointer for
+      // sizeof(void*)
+      if (state_ptr_size == sizeof(void *)) {
+        uint64_t device_State_bytes =
+            get_device_State_bytes((char *)image->ImageStart, img_size);
+        if (device_State_bytes == 0) {
+          DP("Can't initialize device_State, missing size information\n");
           return NULL;
         }
-        dss = {std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
-               device_State_bytes};
-      }
 
-      void *ptr = dss.first.get();
-      if (device_State_bytes != dss.second) {
-        fprintf(stderr, "Inconsistent sizes of device_State unsupported\n");
-        exit(1);
-      }
+        auto &dss = DeviceInfo.deviceStateStore[device_id];
+        if (dss.first.get() == nullptr) {
+          assert(dss.second == 0);
+          void *ptr = NULL;
+          atmi_status_t err = atmi_calloc(&ptr, device_State_bytes,
+                                          get_gpu_mem_place(device_id));
+          if (err != ATMI_STATUS_SUCCESS) {
+            DP("Failed to allocate device_state array\n");
+            return NULL;
+          }
+          dss = {
+              std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
+              device_State_bytes,
+          };
+        }
 
-      // write ptr to device memory so it can be used by later kernels
-      err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr,
-                                                 sizeof(void *), device_id);
-      if (err != ATMI_STATUS_SUCCESS) {
-        fprintf(stderr, "memcpy install of state_ptr failed\n");
-        return NULL;
+        void *ptr = dss.first.get();
+        if (device_State_bytes != dss.second) {
+          DP("Inconsistent sizes of device_State unsupported\n");
+          return NULL;
+        }
+
+        // write ptr to device memory so it can be used by later kernels
+        err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr,
+                                                   sizeof(void *), device_id);
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("memcpy install of state_ptr failed\n");
+          return NULL;
+        }
       }
     }
   }
@@ -1285,9 +1292,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
           get_gpu_mem_place(device_id), e->name, &varptr, &varsize);
 
       if (err != ATMI_STATUS_SUCCESS) {
-        DP("Loading global '%s' (Failed)\n", e->name);
         // Inform the user what symbol prevented offloading
-        fprintf(stderr, "Loading global '%s' (Failed)\n", e->name);
+        DP("Loading global '%s' (Failed)\n", e->name);
         return NULL;
       }
 

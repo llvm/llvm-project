@@ -3,7 +3,8 @@
 ; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
 ; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
 ; issue.
-; XFAIL: powerpc64, aarch64
+; FIXME: arm64 is an alias for aarch64 on macs, apparently?
+; XFAIL: powerpc64, aarch64, arm64
 
 ; Build from the following source with clang -O2.
 

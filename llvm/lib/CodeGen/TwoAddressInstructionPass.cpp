@@ -801,8 +801,8 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
   MachineBasicBlock::iterator KillPos = KillMI;
   ++KillPos;
   for (MachineInstr &OtherMI : make_range(End, KillPos)) {
-    // Debug instructions cannot be counted against the limit.
-    if (OtherMI.isDebugInstr())
+    // Debug or pseudo instructions cannot be counted against the limit.
+    if (OtherMI.isDebugOrPseudoInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -974,8 +974,8 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
   unsigned NumVisited = 0;
   for (MachineInstr &OtherMI :
        make_range(mi, MachineBasicBlock::iterator(KillMI))) {
-    // Debug instructions cannot be counted against the limit.
-    if (OtherMI.isDebugInstr())
+    // Debug or pseudo instructions cannot be counted against the limit.
+    if (OtherMI.isDebugOrPseudoInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;

@@ -965,8 +965,8 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
 multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
     : MIMG_Gather<op, sample, 1>;
 
-class MIMG_IntersectRay_gfx10<int op, string opcode, RegisterClass AddrRC, bit A16>
-    : MIMG_gfx10<op, (outs VReg_128:$vdata), "AMDGPU"> {
+class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC, bit A16>
+    : MIMG_gfx10<op.GFX10M, (outs VReg_128:$vdata), "AMDGPU"> {
 
   let InOperandList = !con((ins AddrRC:$vaddr0, SReg_128:$srsrc),
                            !if(A16, (ins GFX10A16:$a16), (ins)));
@@ -975,8 +975,8 @@ class MIMG_IntersectRay_gfx10<int op, string opcode, RegisterClass AddrRC, bit A
   let nsa = 0;
 }
 
-class MIMG_IntersectRay_nsa_gfx10<int op, string opcode, int num_addrs, bit A16>
-    : MIMG_nsa_gfx10<op, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
+class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs, bit A16>
+    : MIMG_nsa_gfx10<op.GFX10M, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
   let InOperandList = !con(nsah.AddrIns,
                            (ins SReg_128:$srsrc),
                            !if(A16, (ins GFX10A16:$a16), (ins)));
@@ -993,15 +993,15 @@ class MIMG_IntersectRay_gfx11<int op, string opcode, RegisterClass AddrRC, bit A
   let nsa = 0;
 }
 
-class MIMG_IntersectRay_nsa_gfx11<int op, string opcode, int num_addrs, bit A16>
-    : MIMG_nsa_gfx10<op, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
+class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs, bit A16>
+    : MIMG_nsa_gfx10<op.GFX11, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
   let InOperandList = !con(nsah.AddrIns,
                            (ins SReg_128:$srsrc),
                            !if(A16, (ins GFX10A16:$a16), (ins)));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(A16, "$a16", "");
 }
 
-multiclass MIMG_IntersectRay<int op, string opcode, int num_addrs, bit A16> {
+multiclass MIMG_IntersectRay<mimgopc op, string opcode, int num_addrs, bit A16> {
   def "" : MIMGBaseOpcode;
   let SubtargetPredicate = HasGFX10_BEncoding,
       AssemblerPredicate = HasGFX10_BEncoding,
@@ -1158,10 +1158,10 @@ let SubtargetPredicate = HasGFX10_BEncoding in
 defm IMAGE_MSAA_LOAD : MIMG_NoSampler <mimgopc<0x18, 0x80>, "image_msaa_load", 1>;
 
 // GFX11 TODO: implement
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<0xe6, "image_bvh_intersect_ray", 11, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<0xe6, "image_bvh_intersect_ray", 8, 1>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<0xe7, "image_bvh64_intersect_ray", 12, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<0xe7, "image_bvh64_intersect_ray", 9, 1>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe6>, "image_bvh_intersect_ray", 11, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe6>, "image_bvh_intersect_ray", 8, 1>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe7>, "image_bvh64_intersect_ray", 12, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<MIMG.NOP, 0xe7>, "image_bvh64_intersect_ray", 9, 1>;
 
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/

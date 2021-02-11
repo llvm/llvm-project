@@ -1187,6 +1187,8 @@ def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;
+def LLVM_MaximumOp : LLVM_BinarySameArgsIntrinsicOp<"maximum">;
+def LLVM_MinimumOp : LLVM_BinarySameArgsIntrinsicOp<"minimum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
 
@@ -1275,6 +1277,19 @@ def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
 def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
   let arguments = (ins LLVM_i8Ptr:$handle);
   let assemblyFormat = "$handle attr-dict";
+}
+
+//
+// Stack save/restore intrinsics.
+//
+
+def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave"> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore"> {
+  let arguments = (ins LLVM_i8Ptr:$ptr);
+  let assemblyFormat = "$ptr attr-dict";
 }
 
 //

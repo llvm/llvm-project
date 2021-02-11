@@ -447,7 +447,6 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    movw r3, :lower16:b
 ; CHECK-NEXT:    movt r3, :upper16:b
 ; CHECK-NEXT:    str r1, [r3]
-; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    dlstp.32 lr, r6
 ; CHECK-NEXT:  .LBB1_10: @ %vector.body111
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
@@ -462,7 +461,6 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  .LBB1_11: @ %vector.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    vmov q1, q4
-; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    dlstp.32 lr, r6
 ; CHECK-NEXT:  .LBB1_12: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1

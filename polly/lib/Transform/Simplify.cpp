@@ -20,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+
 #define DEBUG_TYPE "polly-simplify"
 
 using namespace llvm;
@@ -116,10 +117,99 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   return UResult;
 }
-} // namespace
+
+class SimplifyImpl {
+private:
+  /// The invocation id (if there are multiple instances in the pass manager's
+  /// pipeline) to determine which statistics to update.
+  int CallNo;
+
+  /// The last/current SCoP that is/has been processed.
+  Scop *S = nullptr;
+
+  /// Number of statements with empty domains removed from the SCoP.
+  int EmptyDomainsRemoved = 0;
+
+  /// Number of writes that are overwritten anyway.
+  int OverwritesRemoved = 0;
+
+  /// Number of combined writes.
+  int WritesCoalesced = 0;
+
+  /// Number of redundant writes removed from this SCoP.
+  int RedundantWritesRemoved = 0;
+
+  /// Number of writes with empty access domain removed.
+  int EmptyPartialAccessesRemoved = 0;
+
+  /// Number of unused accesses removed from this SCoP.
+  int DeadAccessesRemoved = 0;
+
+  /// Number of unused instructions removed from this SCoP.
+  int DeadInstructionsRemoved = 0;
+
+  /// Number of unnecessary statements removed from the SCoP.
+  int StmtsRemoved = 0;
+
+  /// Remove statements that are never executed due to their domains being
+  /// empty.
+  ///
+  /// In contrast to Scop::simplifySCoP, this removes based on the SCoP's
+  /// effective domain, i.e. including the SCoP's context as used by some other
+  /// simplification methods in this pass. This is necessary because the
+  /// analysis on empty domains is unreliable, e.g. remove a scalar value
+  /// definition MemoryAccesses, but not its use.
+  void removeEmptyDomainStmts();
+
+  /// Remove writes that are overwritten unconditionally later in the same
+  /// statement.
+  ///
+  /// There must be no read of the same value between the write (that is to be
+  /// removed) and the overwrite.
+  void removeOverwrites();
+
+  /// Combine writes that write the same value if possible.
+  ///
+  /// This function is able to combine:
+  /// - Partial writes with disjoint domain.
+  /// - Writes that write to the same array element.
+  ///
+  /// In all cases, both writes must write the same values.
+  void coalesceWrites();
+
+  /// Remove writes that just write the same value already stored in the
+  /// element.
+  void removeRedundantWrites();
+
+  /// Remove statements without side effects.
+  void removeUnnecessaryStmts();
+
+  /// Remove accesses that have an empty domain.
+  void removeEmptyPartialAccesses();
+
+  /// Mark all reachable instructions and access, and sweep those that are not
+  /// reachable.
+  void markAndSweep(LoopInfo *LI);
+
+  /// Print simplification statistics to @p OS.
+  void printStatistics(llvm::raw_ostream &OS, int Indent = 0) const;
+
+  /// Print the current state of all MemoryAccesses to @p OS.
+  void printAccesses(llvm::raw_ostream &OS, int Indent = 0) const;
+
+public:
+  explicit SimplifyImpl(int CallNo = 0) : CallNo(CallNo) {}
+
+  void run(Scop &S, LoopInfo *LI);
+
+  void printScop(raw_ostream &OS, Scop &S) const;
+
+  /// Return whether at least one simplification has been applied.
+  bool isModified() const;
+};
 
 /// Return whether at least one simplification has been applied.
-bool SimplifyVisitor::isModified() const {
+bool SimplifyImpl::isModified() const {
   return EmptyDomainsRemoved > 0 || OverwritesRemoved > 0 ||
          WritesCoalesced > 0 || RedundantWritesRemoved > 0 ||
          EmptyPartialAccessesRemoved > 0 || DeadAccessesRemoved > 0 ||
@@ -134,7 +224,7 @@ bool SimplifyVisitor::isModified() const {
 /// simplification methods in this pass. This is necessary because the
 /// analysis on empty domains is unreliable, e.g. remove a scalar value
 /// definition MemoryAccesses, but not its use.
-void SimplifyVisitor::removeEmptyDomainStmts() {
+void SimplifyImpl::removeEmptyDomainStmts() {
   size_t NumStmtsBefore = S->getSize();
 
   S->removeStmts([](ScopStmt &Stmt) -> bool {
@@ -155,7 +245,7 @@ void SimplifyVisitor::removeEmptyDomainStmts() {
 ///
 /// There must be no read of the same value between the write (that is to be
 /// removed) and the overwrite.
-void SimplifyVisitor::removeOverwrites() {
+void SimplifyImpl::removeOverwrites() {
   for (auto &Stmt : *S) {
     isl::set Domain = Stmt.getDomain();
     isl::union_map WillBeOverwritten =
@@ -214,7 +304,7 @@ void SimplifyVisitor::removeOverwrites() {
 /// - Writes that write to the same array element.
 ///
 /// In all cases, both writes must write the same values.
-void SimplifyVisitor::coalesceWrites() {
+void SimplifyImpl::coalesceWrites() {
   for (auto &Stmt : *S) {
     isl::set Domain = Stmt.getDomain().intersect_params(S->getContext());
 
@@ -386,7 +476,7 @@ void SimplifyVisitor::coalesceWrites() {
 
 /// Remove writes that just write the same value already stored in the
 /// element.
-void SimplifyVisitor::removeRedundantWrites() {
+void SimplifyImpl::removeRedundantWrites() {
   for (auto &Stmt : *S) {
     SmallDenseMap<Value *, isl::set> ValueSets;
     auto makeValueSet = [&ValueSets, this](Value *V) -> isl::set {
@@ -480,7 +570,7 @@ void SimplifyVisitor::removeRedundantWrites() {
 }
 
 /// Remove statements without side effects.
-void SimplifyVisitor::removeUnnecessaryStmts() {
+void SimplifyImpl::removeUnnecessaryStmts() {
   auto NumStmtsBefore = S->getSize();
   S->simplifySCoP(true);
   assert(NumStmtsBefore >= S->getSize());
@@ -491,7 +581,7 @@ void SimplifyVisitor::removeUnnecessaryStmts() {
 }
 
 /// Remove accesses that have an empty domain.
-void SimplifyVisitor::removeEmptyPartialAccesses() {
+void SimplifyImpl::removeEmptyPartialAccesses() {
   for (ScopStmt &Stmt : *S) {
     // Defer the actual removal to not invalidate iterators.
     SmallVector<MemoryAccess *, 8> DeferredRemove;
@@ -520,7 +610,7 @@ void SimplifyVisitor::removeEmptyPartialAccesses() {
 
 /// Mark all reachable instructions and access, and sweep those that are not
 /// reachable.
-void SimplifyVisitor::markAndSweep(LoopInfo *LI) {
+void SimplifyImpl::markAndSweep(LoopInfo *LI) {
   DenseSet<MemoryAccess *> UsedMA;
   DenseSet<VirtualInstruction> UsedInsts;
 
@@ -578,7 +668,7 @@ void SimplifyVisitor::markAndSweep(LoopInfo *LI) {
 }
 
 /// Print simplification statistics to @p OS.
-void SimplifyVisitor::printStatistics(llvm::raw_ostream &OS, int Indent) const {
+void SimplifyImpl::printStatistics(llvm::raw_ostream &OS, int Indent) const {
   OS.indent(Indent) << "Statistics {\n";
   OS.indent(Indent + 4) << "Empty domains removed: " << EmptyDomainsRemoved
                         << '\n';
@@ -598,7 +688,7 @@ void SimplifyVisitor::printStatistics(llvm::raw_ostream &OS, int Indent) const {
 }
 
 /// Print the current state of all MemoryAccesses to @p OS.
-void SimplifyVisitor::printAccesses(llvm::raw_ostream &OS, int Indent) const {
+void SimplifyImpl::printAccesses(llvm::raw_ostream &OS, int Indent) const {
   OS.indent(Indent) << "After accesses {\n";
   for (auto &Stmt : *S) {
     OS.indent(Indent + 4) << Stmt.getBaseName() << "\n";
@@ -608,9 +698,9 @@ void SimplifyVisitor::printAccesses(llvm::raw_ostream &OS, int Indent) const {
   OS.indent(Indent) << "}\n";
 }
 
-bool SimplifyVisitor::visit(Scop &S, LoopInfo *LI) {
-  // Reset statistics of last processed SCoP.
-  releaseMemory();
+void SimplifyImpl::run(Scop &S, LoopInfo *LI) {
+  // Must not have run before.
+  assert(!this->S);
   assert(!isModified());
 
   // Prepare processing of this SCoP.
@@ -650,11 +740,9 @@ bool SimplifyVisitor::visit(Scop &S, LoopInfo *LI) {
   NumPHIWritesInLoops[CallNo] += ScopStats.NumPHIWritesInLoops;
   NumSingletonWrites[CallNo] += ScopStats.NumSingletonWrites;
   NumSingletonWritesInLoops[CallNo] += ScopStats.NumSingletonWritesInLoops;
-
-  return false;
 }
 
-void SimplifyVisitor::printScop(raw_ostream &OS, Scop &S) const {
+void SimplifyImpl::printScop(raw_ostream &OS, Scop &S) const {
   assert(&S == this->S &&
          "Can only print analysis for the last processed SCoP");
   printStatistics(OS);
@@ -666,26 +754,13 @@ void SimplifyVisitor::printScop(raw_ostream &OS, Scop &S) const {
   printAccesses(OS);
 }
 
-void SimplifyVisitor::releaseMemory() {
-  S = nullptr;
-
-  EmptyDomainsRemoved = 0;
-  OverwritesRemoved = 0;
-  WritesCoalesced = 0;
-  RedundantWritesRemoved = 0;
-  EmptyPartialAccessesRemoved = 0;
-  DeadAccessesRemoved = 0;
-  DeadInstructionsRemoved = 0;
-  StmtsRemoved = 0;
-}
-
-namespace {
-class SimplifyLegacyPass : public ScopPass {
+class SimplifyWrapperPass : public ScopPass {
 public:
   static char ID;
-  SimplifyVisitor Imp;
+  int CallNo;
+  Optional<SimplifyImpl> Impl;
 
-  explicit SimplifyLegacyPass(int CallNo = 0) : ScopPass(ID), Imp(CallNo) {}
+  explicit SimplifyWrapperPass(int CallNo = 0) : ScopPass(ID), CallNo(CallNo) {}
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitive<ScopInfoRegionPass>();
@@ -694,43 +769,61 @@ public:
   }
 
   virtual bool runOnScop(Scop &S) override {
-    return Imp.visit(S, &getAnalysis<LoopInfoWrapperPass>().getLoopInfo());
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    Impl.emplace(CallNo);
+    Impl->run(S, LI);
+
+    return false;
   }
 
   virtual void printScop(raw_ostream &OS, Scop &S) const override {
-    Imp.printScop(OS, S);
+    if (Impl)
+      Impl->printScop(OS, S);
   }
 
-  virtual void releaseMemory() override { Imp.releaseMemory(); }
+  virtual void releaseMemory() override { Impl.reset(); }
 };
 
-char SimplifyLegacyPass::ID;
+char SimplifyWrapperPass::ID;
+
+static llvm::PreservedAnalyses
+runSimplifyUsingNPM(Scop &S, ScopAnalysisManager &SAM,
+                    ScopStandardAnalysisResults &SAR, SPMUpdater &U, int CallNo,
+                    raw_ostream *OS) {
+  SimplifyImpl Impl(CallNo);
+  Impl.run(S, &SAR.LI);
+  if (OS) {
+    *OS << "Printing analysis 'Polly - Simplify' for region: '" << S.getName()
+        << "' in function '" << S.getFunction().getName() << "':\n";
+    Impl.printScop(*OS, S);
+  }
+
+  if (!Impl.isModified())
+    return llvm::PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
+}
+
 } // anonymous namespace
 
-namespace polly {
 llvm::PreservedAnalyses SimplifyPass::run(Scop &S, ScopAnalysisManager &SAM,
                                           ScopStandardAnalysisResults &SAR,
                                           SPMUpdater &U) {
-  if (!Imp.visit(S, &SAR.LI))
-    return llvm::PreservedAnalyses::all();
-
-  return llvm::PreservedAnalyses::none();
+  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, nullptr);
 }
 
 llvm::PreservedAnalyses
 SimplifyPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
                          ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  bool Changed = Imp.visit(S, &SAR.LI);
-  Imp.printScop(OS, S);
-
-  if (!Changed)
-    return llvm::PreservedAnalyses::all();
-
-  return llvm::PreservedAnalyses::none();
+  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, &OS);
 }
 
-SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
-
+SmallVector<MemoryAccess *, 32> polly::getAccessesInOrder(ScopStmt &Stmt) {
   SmallVector<MemoryAccess *, 32> Accesses;
 
   for (MemoryAccess *MemAcc : Stmt)
@@ -747,14 +840,13 @@ SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
 
   return Accesses;
 }
-} // namespace polly
 
-Pass *polly::createSimplifyPass(int CallNo) {
-  return new SimplifyLegacyPass(CallNo);
+Pass *polly::createSimplifyWrapperPass(int CallNo) {
+  return new SimplifyWrapperPass(CallNo);
 }
 
-INITIALIZE_PASS_BEGIN(SimplifyLegacyPass, "polly-simplify", "Polly - Simplify",
+INITIALIZE_PASS_BEGIN(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(SimplifyLegacyPass, "polly-simplify", "Polly - Simplify",
+INITIALIZE_PASS_END(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
                     false, false)

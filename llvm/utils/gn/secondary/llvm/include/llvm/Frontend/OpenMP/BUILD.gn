@@ -19,7 +19,7 @@ tablegen("OMP") {
 group("public_tablegen") {
   public_deps = [
     # Frontend/OpenMP's public headers include OMP.h.inc.
-    ":OMPh",
     ":OMP",
+    ":OMPh",
   ]
 }

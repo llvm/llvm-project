@@ -152,6 +152,16 @@ struct CallReturnHandler : public IncomingArgHandler {
   MachineInstrBuilder MIB;
 };
 
+/// A special return arg handler for "returned" attribute arg calls.
+struct ReturnedArgCallReturnHandler : public CallReturnHandler {
+  ReturnedArgCallReturnHandler(MachineIRBuilder &MIRBuilder,
+                               MachineRegisterInfo &MRI,
+                               MachineInstrBuilder MIB, CCAssignFn *AssignFn)
+      : CallReturnHandler(MIRBuilder, MRI, MIB, AssignFn) {}
+
+  void markPhysRegUsed(MCRegister PhysReg) override {}
+};
+
 struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
@@ -399,7 +409,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     }
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
-    Success = handleAssignments(MIRBuilder, SplitArgs, Handler);
+    Success =
+        handleAssignments(MIRBuilder, SplitArgs, Handler, CC, F.isVarArg());
   }
 
   if (SwiftErrorVReg) {
@@ -491,7 +502,8 @@ bool AArch64CallLowering::lowerFormalArguments(
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
   FormalArgHandler Handler(MIRBuilder, MRI, AssignFn);
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
+                         F.isVarArg()))
     return false;
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -785,6 +797,24 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   return AArch64::TCRETURNri;
 }
 
+static const uint32_t *
+getMaskForArgs(SmallVectorImpl<AArch64CallLowering::ArgInfo> &OutArgs,
+               AArch64CallLowering::CallLoweringInfo &Info,
+               const AArch64RegisterInfo &TRI, MachineFunction &MF) {
+  const uint32_t *Mask;
+  if (!OutArgs.empty() && OutArgs[0].Flags[0].isReturned()) {
+    // For 'this' returns, use the X0-preserving mask if applicable
+    Mask = TRI.getThisReturnPreservedMask(MF, Info.CallConv);
+    if (!Mask) {
+      OutArgs[0].Flags[0].setReturned(false);
+      Mask = TRI.getCallPreservedMask(MF, Info.CallConv);
+    }
+  } else {
+    Mask = TRI.getCallPreservedMask(MF, Info.CallConv);
+  }
+  return Mask;
+}
+
 bool AArch64CallLowering::lowerTailCall(
     MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
     SmallVectorImpl<ArgInfo> &OutArgs) const {
@@ -875,8 +905,10 @@ bool AArch64CallLowering::lowerTailCall(
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
                              AssignFnVarArg, true, FPDiff);
-  if (!handleAssignments(MIRBuilder, OutArgs, Handler))
+  if (!handleAssignments(MIRBuilder, OutArgs, Handler, CalleeCC, Info.IsVarArg))
     return false;
+
+  Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);
 
   if (Info.IsVarArg && Info.IsMustTailCall) {
     // Now we know what's being passed to the function. Add uses to the call for
@@ -979,20 +1011,24 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.add(Info.Callee);
 
   // Tell the call which registers are clobbered.
-  auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
-  const uint32_t *Mask = TRI->getCallPreservedMask(MF, Info.CallConv);
+  const uint32_t *Mask;
+  const auto *TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
+
+  // Do the actual argument marshalling.
+  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
+                             AssignFnVarArg, false);
+  if (!handleAssignments(MIRBuilder, OutArgs, Handler, Info.CallConv,
+                         Info.IsVarArg))
+    return false;
+
+  Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);
+
   if (MF.getSubtarget<AArch64Subtarget>().hasCustomCallingConv())
     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
   MIB.addRegMask(Mask);
 
   if (TRI->isAnyArgRegReserved(MF))
     TRI->emitReservedArgRegCallError(MF);
-
-  // Do the actual argument marshalling.
-  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, false);
-  if (!handleAssignments(MIRBuilder, OutArgs, Handler))
-    return false;
 
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
@@ -1011,7 +1047,14 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.OrigRet.Ty->isVoidTy()) {
     CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);
-    if (!handleAssignments(MIRBuilder, InArgs, Handler))
+    bool UsingReturnedArg =
+        !OutArgs.empty() && OutArgs[0].Flags[0].isReturned();
+    ReturnedArgCallReturnHandler ReturnedArgHandler(MIRBuilder, MRI, MIB,
+                                                    RetAssignFn);
+    if (!handleAssignments(MIRBuilder, InArgs,
+                           UsingReturnedArg ? ReturnedArgHandler : Handler,
+                           Info.CallConv, Info.IsVarArg,
+                           UsingReturnedArg ? OutArgs[0].Regs[0] : Register()))
       return false;
   }
 
@@ -1032,4 +1075,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       .addImm(CalleePopBytes);
 
   return true;
+}
+
+bool AArch64CallLowering::isTypeIsValidForThisReturn(EVT Ty) const {
+  return Ty.getSizeInBits() == 64;
 }

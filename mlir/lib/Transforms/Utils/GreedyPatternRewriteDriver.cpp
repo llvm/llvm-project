@@ -247,7 +247,7 @@ mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
   // prevent performing canonicalizations on operations defined at or above
   // the region containing 'op'.
   auto regionIsIsolated = [](Region &region) {
-    return region.getParentOp()->isKnownIsolatedFromAbove();
+    return region.getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>();
   };
   (void)regionIsIsolated;
   assert(llvm::all_of(regions, regionIsIsolated) &&

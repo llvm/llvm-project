@@ -22,11 +22,25 @@ using namespace detail;
 
 DialectAsmParser::~DialectAsmParser() {}
 
-Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
+//===----------------------------------------------------------------------===//
+// DialectRegistry
+//===----------------------------------------------------------------------===//
+
+void DialectRegistry::addDialectInterface(
+    StringRef dialectName, InterfaceAllocatorFunction allocator) {
+  assert(allocator && "unexpected null interface allocation function");
+  auto it = registry.find(dialectName.str());
+  assert(it != registry.end() &&
+         "adding an interface for an unregistered dialect");
+  interfaces[it->second.first].push_back(allocator);
+}
+
+DialectAllocatorFunctionRef
+DialectRegistry::getDialectAllocator(StringRef name) const {
   auto it = registry.find(name.str());
   if (it == registry.end())
     return nullptr;
-  return it->second.second(context);
+  return it->second.second;
 }
 
 void DialectRegistry::insert(TypeID typeID, StringRef name,
@@ -38,6 +52,15 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
         "Trying to register different dialects for the same namespace: " +
         name);
   }
+}
+
+void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
+  auto it = interfaces.find(dialect->getTypeID());
+  if (it == interfaces.end())
+    return;
+
+  for (const InterfaceAllocatorFunction &createInterface : it->second)
+    dialect->addInterface(createInterface(dialect));
 }
 
 //===----------------------------------------------------------------------===//

@@ -668,6 +668,8 @@ void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     compositeType.getExtensions(extensions, storage);
   } else if (auto imageType = dyn_cast<ImageType>()) {
     imageType.getExtensions(extensions, storage);
+  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+    sampledImageType.getExtensions(extensions, storage);
   } else if (auto matrixType = dyn_cast<MatrixType>()) {
     matrixType.getExtensions(extensions, storage);
   } else if (auto ptrType = dyn_cast<PointerType>()) {
@@ -686,6 +688,8 @@ void SPIRVType::getCapabilities(
     compositeType.getCapabilities(capabilities, storage);
   } else if (auto imageType = dyn_cast<ImageType>()) {
     imageType.getCapabilities(capabilities, storage);
+  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+    sampledImageType.getCapabilities(capabilities, storage);
   } else if (auto matrixType = dyn_cast<MatrixType>()) {
     matrixType.getCapabilities(capabilities, storage);
   } else if (auto ptrType = dyn_cast<PointerType>()) {
@@ -701,6 +705,56 @@ Optional<int64_t> SPIRVType::getSizeInBytes() {
   if (auto compositeType = dyn_cast<CompositeType>())
     return compositeType.getSizeInBytes();
   return llvm::None;
+}
+
+//===----------------------------------------------------------------------===//
+// SampledImageType
+//===----------------------------------------------------------------------===//
+struct spirv::detail::SampledImageTypeStorage : public TypeStorage {
+  using KeyTy = Type;
+
+  SampledImageTypeStorage(const KeyTy &key) : imageType{key} {}
+
+  bool operator==(const KeyTy &key) const { return key == KeyTy(imageType); }
+
+  static SampledImageTypeStorage *construct(TypeStorageAllocator &allocator,
+                                            const KeyTy &key) {
+    return new (allocator.allocate<SampledImageTypeStorage>())
+        SampledImageTypeStorage(key);
+  }
+
+  Type imageType;
+};
+
+SampledImageType SampledImageType::get(Type imageType) {
+  return Base::get(imageType.getContext(), imageType);
+}
+
+SampledImageType SampledImageType::getChecked(Type imageType,
+                                              Location location) {
+  return Base::getChecked(location, imageType);
+}
+
+Type SampledImageType::getImageType() const { return getImpl()->imageType; }
+
+LogicalResult SampledImageType::verifyConstructionInvariants(Location loc,
+                                                             Type imageType) {
+  if (!imageType.isa<ImageType>())
+    return emitError(loc, "expected image type");
+
+  return success();
+}
+
+void SampledImageType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    Optional<StorageClass> storage) {
+  getImageType().cast<ImageType>().getExtensions(extensions, storage);
+}
+
+void SampledImageType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  getImageType().cast<ImageType>().getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//

@@ -27,6 +27,12 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+static cl::opt<unsigned> RVVVectorBitsMax(
+    "riscv-v-vector-bits-max",
+    cl::desc("Assume V extension vector registers are at most this big, "
+             "with zero meaning no maximum size is assumed."),
+    cl::init(0), cl::Hidden);
+
 static cl::opt<unsigned> RVVVectorBitsMin(
     "riscv-v-vector-bits-min",
     cl::desc("Assume V extension vector registers are at least this big, "
@@ -94,6 +100,20 @@ const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
   return RegBankInfo.get();
 }
 
+unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
+  assert(hasStdExtV() && "Tried to get vector length without V support!");
+  if (RVVVectorBitsMax == 0)
+    return 0;
+  assert(RVVVectorBitsMax >= 128 && isPowerOf2_32(RVVVectorBitsMax) &&
+         "V extension requires vector length to be at least 128 and a power of "
+         "2!");
+  assert(RVVVectorBitsMax >= RVVVectorBitsMin &&
+         "Minimum V extension vector length should not be larger than its "
+         "maximum!");
+  unsigned Max = std::max(RVVVectorBitsMin, RVVVectorBitsMax);
+  return PowerOf2Floor(Max < 128 ? 0 : Max);
+}
+
 unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
   assert(hasStdExtV() &&
          "Tried to get vector length without V extension support!");
@@ -101,7 +121,13 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
           (RVVVectorBitsMin >= 128 && isPowerOf2_32(RVVVectorBitsMin))) &&
          "V extension requires vector length to be at least 128 and a power of "
          "2!");
-  return PowerOf2Floor(RVVVectorBitsMin < 128 ? 0 : RVVVectorBitsMin);
+  assert((RVVVectorBitsMax >= RVVVectorBitsMin || RVVVectorBitsMax == 0) &&
+         "Minimum V extension vector length should not be larger than its "
+         "maximum!");
+  unsigned Min = RVVVectorBitsMin;
+  if (RVVVectorBitsMax != 0)
+    Min = std::min(RVVVectorBitsMin, RVVVectorBitsMax);
+  return PowerOf2Floor(Min < 128 ? 0 : Min);
 }
 
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {

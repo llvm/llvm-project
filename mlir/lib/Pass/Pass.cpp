@@ -331,23 +331,26 @@ void OpPassManager::setNesting(Nesting nesting) { impl->nesting = nesting; }
 
 OpPassManager::Nesting OpPassManager::getNesting() { return impl->nesting; }
 
-void OpPassManager::initialize(MLIRContext *context,
-                               unsigned newInitGeneration) {
+LogicalResult OpPassManager::initialize(MLIRContext *context,
+                                        unsigned newInitGeneration) {
   if (impl->initializationGeneration == newInitGeneration)
-    return;
+    return success();
   impl->initializationGeneration = newInitGeneration;
   for (Pass &pass : getPasses()) {
     // If this pass isn't an adaptor, directly initialize it.
     auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
     if (!adaptor) {
-      pass.initialize(context);
+      if (failed(pass.initialize(context)))
+        return failure();
       continue;
     }
 
     // Otherwise, initialize each of the adaptors pass managers.
     for (OpPassManager &adaptorPM : adaptor->getPassManagers())
-      adaptorPM.initialize(context, newInitGeneration);
+      if (failed(adaptorPM.initialize(context, newInitGeneration)))
+        return failure();
   }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -357,11 +360,10 @@ void OpPassManager::initialize(MLIRContext *context,
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
                                      unsigned parentInitGeneration) {
-  if (!op->getName().getAbstractOperation())
+  if (!op->isRegistered())
     return op->emitOpError()
            << "trying to schedule a pass on an unregistered operation";
-  if (!op->getName().getAbstractOperation()->hasProperty(
-          OperationProperty::IsolatedFromAbove))
+  if (!op->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return op->emitOpError() << "trying to schedule a pass on an operation not "
                                 "marked as 'IsolatedFromAbove'";
 
@@ -380,7 +382,8 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
     assert(pipeline.getOpName() == root->getName().getStringRef());
 
     // Initialize the user provided pipeline and execute the pipeline.
-    pipeline.initialize(root->getContext(), parentInitGeneration);
+    if (failed(pipeline.initialize(root->getContext(), parentInitGeneration)))
+      return failure();
     AnalysisManager nestedAm = root == op ? am : am.nest(root);
     return OpToOpPassAdaptor::runPipeline(pipeline.getPasses(), root, nestedAm,
                                           verifyPasses, parentInitGeneration,
@@ -866,12 +869,15 @@ LogicalResult PassManager::run(Operation *op) {
   // Register all dialects for the current pipeline.
   DialectRegistry dependentDialects;
   getDependentDialects(dependentDialects);
-  dependentDialects.loadAll(context);
+  context->appendDialectRegistry(dependentDialects);
+  for (StringRef name : dependentDialects.getDialectNames())
+    context->getOrLoadDialect(name);
 
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   if (newInitKey != initializationKey) {
-    initialize(context, impl->initializationGeneration + 1);
+    if (failed(initialize(context, impl->initializationGeneration + 1)))
+      return failure();
     initializationKey = newInitKey;
   }
 
