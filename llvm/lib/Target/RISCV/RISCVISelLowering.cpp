@@ -821,17 +821,33 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+  SDLoc DL(Op);
+  SDValue VL =
+      DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-
-    SDLoc DL(Op);
-    SDValue VL =
-        DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
-
     unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
                                         : RISCVISD::VMV_V_X_VL;
     Splat = DAG.getNode(Opc, DL, ContainerVT, Splat, VL);
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
+  }
+
+  // Try and match an index sequence, which we can lower directly to the vid
+  // instruction. An all-undef vector is matched by getSplatValue, above.
+  bool IsVID = true;
+  if (VT.isInteger())
+    for (unsigned i = 0, e = Op.getNumOperands(); i < e && IsVID; i++)
+      IsVID &= Op.getOperand(i).isUndef() ||
+               (isa<ConstantSDNode>(Op.getOperand(i)) &&
+                Op.getConstantOperandVal(i) == i);
+
+  if (IsVID) {
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+    SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+    SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
+    return convertFromScalableVector(VT, VID, DAG, Subtarget);
   }
 
   return SDValue();
@@ -1706,12 +1722,15 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue SplattedVal = DAG.getSplatVector(VecVT, DL, Val);
   SDValue SplattedIdx = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Idx);
 
-  SDValue VID = DAG.getNode(RISCVISD::VID, DL, VecVT);
+  SDValue VL = DAG.getRegister(RISCV::X0, Subtarget.getXLenVT());
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
+  SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, VecVT, Mask, VL);
   auto SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VecVT);
-  SDValue Mask = DAG.getSetCC(DL, SetCCVT, VID, SplattedIdx, ISD::SETEQ);
+  SDValue SelectCond = DAG.getSetCC(DL, SetCCVT, VID, SplattedIdx, ISD::SETEQ);
 
-  return DAG.getNode(ISD::VSELECT, DL, VecVT, Mask, SplattedVal, Vec);
+  return DAG.getNode(ISD::VSELECT, DL, VecVT, SelectCond, SplattedVal, Vec);
 }
 
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
@@ -4586,7 +4605,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VLEFF_MASK)
   NODE_NAME_CASE(VSLIDEUP)
   NODE_NAME_CASE(VSLIDEDOWN)
-  NODE_NAME_CASE(VID)
+  NODE_NAME_CASE(VID_VL)
   NODE_NAME_CASE(VFNCVT_ROD)
   NODE_NAME_CASE(VECREDUCE_ADD)
   NODE_NAME_CASE(VECREDUCE_UMAX)

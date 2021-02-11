@@ -815,6 +815,29 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return true if the indexing map is depending on the current op instance.
+        This means that the indexing map is dynamically synthesized by using the
+        op instance's concrete attributes, instead of being static for all
+        instances of the same op kind.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasDynamicIndexingMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return false; }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Verify all attributes used by indexing maps are valid.
+      }],
+      /*retTy=*/"LogicalResult",
+      /*methodName=*/"verifyIndexingMapRequiredAttributes",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return success(); }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the indexing maps attribute within the current operation.
       }],
       /*retTy=*/"ArrayAttr",

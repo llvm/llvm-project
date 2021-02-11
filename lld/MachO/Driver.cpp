@@ -126,15 +126,19 @@ static Optional<std::string> findFramework(StringRef name) {
 }
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
-  StringRef arch = args.getLastArgValue(OPT_arch, "x86_64");
-  config->arch = MachO::getArchitectureFromName(
-      args.getLastArgValue(OPT_arch, arch));
-  switch (config->arch) {
-  case MachO::AK_x86_64:
-  case MachO::AK_x86_64h:
+  // TODO: should unspecified arch be an error rather than defaulting?
+  // Jez: ld64 seems to make unspecified arch an error when LTO is
+  // being used. I'm not sure why though. Feels like we should be able
+  // to infer the arch from our input files regardless
+  StringRef archName = args.getLastArgValue(OPT_arch, "x86_64");
+  config->arch = MachO::getArchitectureFromName(archName);
+  switch (MachO::getCPUTypeFromArchitecture(config->arch).first) {
+  case MachO::CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
+  case MachO::CPU_TYPE_ARM64:
+    return createARM64TargetInfo();
   default:
-    fatal("missing or unsupported -arch " + arch);
+    fatal("missing or unsupported -arch " + archName);
   }
 }
 
@@ -436,7 +440,8 @@ static void parseOrderFile(StringRef path) {
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
     // TODO: Update when we extend support for other CPUs
-    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64)
+    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64 &&
+        cpuType != CPU_TYPE_ARM64)
       continue;
 
     constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
@@ -634,9 +639,11 @@ static const char *getReproduceOption(opt::InputArgList &args) {
 static bool isPie(opt::InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
+  if (config->arch == AK_arm64 || config->arch == AK_arm64e)
+    return true;
 
   // TODO: add logic here as we support more archs. E.g. i386 should default
-  // to PIE from 10.7, arm64 should always be PIE, etc
+  // to PIE from 10.7
   assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
 
   PlatformKind kind = config->platform.kind;
@@ -727,6 +734,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
+  for (auto *arg : args.filtered(OPT_u)) {
+    config->explicitUndefineds.push_back(symtab->addUndefined(
+        arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
+  }
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
@@ -856,6 +867,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
     error("undefined symbol: " + toString(*config->entry));
     return false;
+  }
+  // FIXME: This prints symbols that are undefined both in input files and
+  // via -u flag twice.
+  for (const auto *undefined : config->explicitUndefineds) {
+    if (isa<Undefined>(undefined)) {
+      error("undefined symbol: " + toString(*undefined) +
+            "\n>>> referenced by flag -u " + toString(*undefined));
+      return false;
+    }
   }
 
   createSyntheticSections();

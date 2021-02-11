@@ -48,7 +48,8 @@ public:
                           unsigned MinorVersion,
                           bool Hashed,
                           StringRef UserInfo)
-    : BlockName(BlockName),
+    : ModuleFileExtension(ModuleFileExtensionKind::MFEK_Test),
+      BlockName(BlockName),
       MajorVersion(MajorVersion), MinorVersion(MinorVersion),
       Hashed(Hashed), UserInfo(UserInfo) { }
   ~TestModuleFileExtension() override;
@@ -64,6 +65,14 @@ public:
   createExtensionReader(const ModuleFileExtensionMetadata &Metadata,
                         ASTReader &Reader, serialization::ModuleFile &Mod,
                         const llvm::BitstreamCursor &Stream) override;
+
+  static bool classof(const ModuleFileExtension *E) {
+    return E->getKind() == MFEK_Test;
+  }
+
+  /// Serialize the extension.
+  friend llvm::raw_ostream &
+  operator<<(llvm::raw_ostream &OS, const TestModuleFileExtension &Extension);
 };
 
 } // end namespace clang

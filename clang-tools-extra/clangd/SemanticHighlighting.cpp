@@ -15,6 +15,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -118,17 +120,83 @@ llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
   return llvm::None;
 }
 
-llvm::Optional<HighlightingKind> kindForReference(const ReferenceLoc &R) {
-  llvm::Optional<HighlightingKind> Result;
-  for (const NamedDecl *Decl : R.Targets) {
-    if (!canHighlightName(Decl->getDeclName()))
-      return llvm::None;
-    auto Kind = kindForDecl(Decl);
-    if (!Kind || (Result && Kind != Result))
-      return llvm::None;
-    Result = Kind;
+// Whether T is const in a loose sense - is a variable with this type readonly?
+bool isConst(QualType T) {
+  if (T.isNull() || T->isDependentType())
+    return false;
+  T = T.getNonReferenceType();
+  if (T.isConstQualified())
+    return true;
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return isConst(AT->getElementType());
+  if (isConst(T->getPointeeType()))
+    return true;
+  return false;
+}
+
+// Whether D is const in a loose sense (should it be highlighted as such?)
+// FIXME: This is separate from whether *a particular usage* can mutate D.
+//        We may want V in V.size() to be readonly even if V is mutable.
+bool isConst(const Decl *D) {
+  if (llvm::isa<EnumConstantDecl>(D) || llvm::isa<NonTypeTemplateParmDecl>(D))
+    return true;
+  if (llvm::isa<FieldDecl>(D) || llvm::isa<VarDecl>(D) ||
+      llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
+    if (isConst(llvm::cast<ValueDecl>(D)->getType()))
+      return true;
   }
-  return Result;
+  if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
+    if (OCPD->isReadOnly())
+      return true;
+  }
+  if (const auto *MPD = llvm::dyn_cast<MSPropertyDecl>(D)) {
+    if (!MPD->hasSetter())
+      return true;
+  }
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
+    if (CMD->isConst())
+      return true;
+  }
+  return false;
+}
+
+// "Static" means many things in C++, only some get the "static" modifier.
+//
+// Meanings that do:
+// - Members associated with the class rather than the instance.
+//   This is what 'static' most often means across languages.
+// - static local variables
+//   These are similarly "detached from their context" by the static keyword.
+//   In practice, these are rarely used inside classes, reducing confusion.
+//
+// Meanings that don't:
+// - Namespace-scoped variables, which have static storage class.
+//   This is implicit, so the keyword "static" isn't so strongly associated.
+//   If we want a modifier for these, "global scope" is probably the concept.
+// - Namespace-scoped variables/functions explicitly marked "static".
+//   There the keyword changes *linkage* , which is a totally different concept.
+//   If we want to model this, "file scope" would be a nice modifier.
+//
+// This is confusing, and maybe we should use another name, but because "static"
+// is a standard LSP modifier, having one with that name has advantages.
+bool isStatic(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isStatic();
+  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
+    return VD->isStaticDataMember() || VD->isStaticLocal();
+  if (const auto *OPD = llvm::dyn_cast<ObjCPropertyDecl>(D))
+    return OPD->isClassProperty();
+  if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
+    return OMD->isClassMethod();
+  return false;
+}
+
+bool isAbstract(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isPure();
+  if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
+    return CRD->hasDefinition() && CRD->isAbstract();
+  return false;
 }
 
 // For a macro usage `DUMP(foo)`, we want:
@@ -145,21 +213,31 @@ SourceLocation getHighlightableSpellingToken(SourceLocation L,
   return getHighlightableSpellingToken(SM.getImmediateSpellingLoc(L), SM);
 }
 
-unsigned evaluateHighlightPriority(HighlightingKind Kind) {
+unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
   enum HighlightPriority { Dependent = 0, Resolved = 1 };
-  return Kind == HighlightingKind::DependentType ||
-                 Kind == HighlightingKind::DependentName
+  return (Tok.Modifiers & (1 << uint32_t(HighlightingModifier::DependentName)))
              ? Dependent
              : Resolved;
 }
 
-// Sometimes we get conflicts between findExplicitReferences() returning
-// a heuristic result for a dependent name (e.g. Method) and
-// CollectExtraHighlighting returning a fallback dependent highlighting (e.g.
-// DependentName). In such cases, resolve the conflict in favour of the
-// resolved (non-dependent) highlighting.
-// With macros we can get other conflicts (if a spelled token has multiple
-// expansions with different token types) which we can't usefully resolve.
+// Sometimes we get multiple tokens at the same location:
+//
+// - findExplicitReferences() returns a heuristic result for a dependent name
+//   (e.g. Method) and CollectExtraHighlighting returning a fallback dependent
+//   highlighting (e.g. Unknown+Dependent).
+// - macro arguments are expanded multiple times and have different roles
+// - broken code recovery produces several AST nodes at the same location
+//
+// We should either resolve these to a single token, or drop them all.
+// Our heuristics are:
+//
+// - token kinds that come with "dependent-name" modifiers are less reliable
+//   (these tend to be vague, like Type or Unknown)
+// - if we have multiple equally reliable kinds, drop token rather than guess
+// - take the union of modifiers from all tokens
+//
+// In particular, heuristically resolved dependent names get their heuristic
+// kind, plus the dependent modifier.
 llvm::Optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
@@ -168,11 +246,13 @@ resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() != 2)
     return llvm::None;
 
-  unsigned Priority1 = evaluateHighlightPriority(Tokens[0].Kind);
-  unsigned Priority2 = evaluateHighlightPriority(Tokens[1].Kind);
-  if (Priority1 == Priority2)
+  unsigned Priority1 = evaluateHighlightPriority(Tokens[0]);
+  unsigned Priority2 = evaluateHighlightPriority(Tokens[1]);
+  if (Priority1 == Priority2 && Tokens[0].Kind != Tokens[1].Kind)
     return llvm::None;
-  return Priority1 > Priority2 ? Tokens[0] : Tokens[1];
+  auto Result = Priority1 > Priority2 ? Tokens[0] : Tokens[1];
+  Result.Modifiers = Tokens[0].Modifiers | Tokens[1].Modifiers;
+  return Result;
 }
 
 /// Consumes source locations and maps them to text ranges for highlightings.
@@ -182,18 +262,24 @@ public:
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
         LangOpts(AST.getLangOpts()) {}
 
-  void addToken(HighlightingToken T) { Tokens.push_back(T); }
-
-  void addToken(SourceLocation Loc, HighlightingKind Kind) {
+  HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
-      return;
+      return Dummy;
     const auto *Tok = TB.spelledTokenAt(Loc);
     assert(Tok);
+    return addToken(
+        halfOpenToRange(SourceMgr,
+                        Tok->range(SourceMgr).toCharRange(SourceMgr)),
+        Kind);
+  }
 
-    auto Range = halfOpenToRange(SourceMgr,
-                                 Tok->range(SourceMgr).toCharRange(SourceMgr));
-    Tokens.push_back(HighlightingToken{Kind, std::move(Range)});
+  HighlightingToken &addToken(Range R, HighlightingKind Kind) {
+    HighlightingToken HT;
+    HT.R = std::move(R);
+    HT.Kind = Kind;
+    Tokens.push_back(std::move(HT));
+    return Tokens.back();
   }
 
   std::vector<HighlightingToken> collect(ParsedAST &AST) && {
@@ -248,10 +334,13 @@ public:
               MainCode.drop_front(*StartOfLine).take_until([](char C) {
                 return C == '\n';
               });
-          WithInactiveLines.push_back(
-              {HighlightingKind::InactiveCode,
-               {Position{Line, 0},
-                Position{Line, static_cast<int>(lspLength(LineText))}}});
+          HighlightingToken HT;
+          WithInactiveLines.emplace_back();
+          WithInactiveLines.back().Kind = HighlightingKind::InactiveCode;
+          WithInactiveLines.back().R.start.line = Line;
+          WithInactiveLines.back().R.end.line = Line;
+          WithInactiveLines.back().R.end.character =
+              static_cast<int>(lspLength(LineText));
         } else {
           elog("Failed to convert position to offset: {0}",
                StartOfLine.takeError());
@@ -277,7 +366,48 @@ private:
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
+  HighlightingToken Dummy; // returned from addToken(InvalidLoc)
 };
+
+llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
+  const DeclContext *DC = D->getDeclContext();
+  // Injected "Foo" within the class "Foo" has file scope, not class scope.
+  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+    if (R->isInjectedClassName())
+      DC = DC->getParent();
+  // Lambda captures are considered function scope, not class scope.
+  if (llvm::isa<FieldDecl>(D))
+    if (const auto *RD = llvm::dyn_cast<RecordDecl>(DC))
+      if (RD->isLambda())
+        return HighlightingModifier::FunctionScope;
+  // Walk up the DeclContext hierarchy until we find something interesting.
+  for (; !DC->isFileContext(); DC = DC->getParent()) {
+    if (DC->isFunctionOrMethod())
+      return HighlightingModifier::FunctionScope;
+    if (DC->isRecord())
+      return HighlightingModifier::ClassScope;
+  }
+  // Some template parameters (e.g. those for variable templates) don't have
+  // meaningful DeclContexts. That doesn't mean they're global!
+  if (DC->isTranslationUnit() && D->isTemplateParameter())
+    return llvm::None;
+  // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
+  if (D->getLinkageInternal() < ExternalLinkage)
+    return HighlightingModifier::FileScope;
+  return HighlightingModifier::GlobalScope;
+}
+
+llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
+  if (!T)
+    return llvm::None;
+  if (T->isBuiltinType())
+    return HighlightingModifier::GlobalScope;
+  if (auto *TD = dyn_cast<TemplateTypeParmType>(T))
+    return scopeModifier(TD->getDecl());
+  if (auto *TD = T->getAsTagDecl())
+    return scopeModifier(TD);
+  return llvm::None;
+}
 
 /// Produces highlightings, which are not captured by findExplicitReferences,
 /// e.g. highlights dependent names and 'auto' as the underlying type.
@@ -287,8 +417,12 @@ public:
   CollectExtraHighlightings(HighlightingsBuilder &H) : H(H) {}
 
   bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
-    if (auto K = kindForType(L.getTypePtr()))
-      H.addToken(L.getBeginLoc(), *K);
+    if (auto K = kindForType(L.getTypePtr())) {
+      auto &Tok = H.addToken(L.getBeginLoc(), *K)
+                      .addModifier(HighlightingModifier::Deduced);
+      if (auto Mod = scopeModifier(L.getTypePtr()))
+        Tok.addModifier(*Mod);
+    }
     return true;
   }
 
@@ -296,47 +430,79 @@ public:
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;
-    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull()))
-      H.addToken(D->getTypeSpecStartLoc(), *K);
+    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull())) {
+      auto &Tok = H.addToken(D->getTypeSpecStartLoc(), *K)
+                      .addModifier(HighlightingModifier::Deduced);
+      if (auto Mod = scopeModifier(AT->getDeducedType().getTypePtrOrNull()))
+        Tok.addModifier(*Mod);
+    }
     return true;
   }
 
   bool VisitOverloadExpr(OverloadExpr *E) {
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.
-    H.addToken(E->getNameLoc(), HighlightingKind::DependentName);
+    auto &Tok = H.addToken(E->getNameLoc(), HighlightingKind::Unknown)
+                    .addModifier(HighlightingModifier::DependentName);
+    if (llvm::isa<UnresolvedMemberExpr>(E))
+      Tok.addModifier(HighlightingModifier::ClassScope);
+    // other case is UnresolvedLookupExpr, scope is unknown.
     return true;
   }
 
   bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
-    H.addToken(E->getMemberNameInfo().getLoc(),
-               HighlightingKind::DependentName);
+    H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::Unknown)
+        .addModifier(HighlightingModifier::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
-    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::DependentName);
+    H.addToken(E->getNameInfo().getLoc(), HighlightingKind::Unknown)
+        .addModifier(HighlightingModifier::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
-    H.addToken(L.getNameLoc(), HighlightingKind::DependentType);
+    H.addToken(L.getNameLoc(), HighlightingKind::Type)
+        .addModifier(HighlightingModifier::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool VisitDependentTemplateSpecializationTypeLoc(
       DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+    H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
+        .addModifier(HighlightingModifier::DependentName)
+        .addModifier(HighlightingModifier::ClassScope);
     return true;
   }
 
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc L) {
-    switch (L.getArgument().getKind()) {
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+    // Handle template template arguments only (other arguments are handled by
+    // their Expr, TypeLoc etc values).
+    if (L.getArgument().getKind() != TemplateArgument::Template &&
+        L.getArgument().getKind() != TemplateArgument::TemplateExpansion)
+      return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
+
+    TemplateName N = L.getArgument().getAsTemplateOrTemplatePattern();
+    switch (N.getKind()) {
+    case TemplateName::OverloadedTemplate:
+      // Template template params must always be class templates.
+      // Don't bother to try to work out the scope here.
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Class);
       break;
-    default:
+    case TemplateName::DependentTemplate:
+    case TemplateName::AssumedTemplate:
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Class)
+          .addModifier(HighlightingModifier::DependentName);
+      break;
+    case TemplateName::Template:
+    case TemplateName::QualifiedTemplate:
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::SubstTemplateTemplateParmPack:
+      // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
@@ -350,7 +516,9 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
     if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
       if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::DependentType);
+        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::Type)
+            .addModifier(HighlightingModifier::DependentName)
+            .addModifier(HighlightingModifier::ClassScope);
     }
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
   }
@@ -391,16 +559,45 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.
   findExplicitReferences(C, [&](ReferenceLoc R) {
-    if (auto Kind = kindForReference(R))
-      Builder.addToken(R.NameLoc, *Kind);
+    for (const NamedDecl *Decl : R.Targets) {
+      if (!canHighlightName(Decl->getDeclName()))
+        continue;
+      auto Kind = kindForDecl(Decl);
+      if (!Kind)
+        continue;
+      auto &Tok = Builder.addToken(R.NameLoc, *Kind);
+
+      // The attribute tests don't want to look at the template.
+      if (auto *TD = dyn_cast<TemplateDecl>(Decl)) {
+        if (auto *Templated = TD->getTemplatedDecl())
+          Decl = Templated;
+      }
+      if (auto Mod = scopeModifier(Decl))
+        Tok.addModifier(*Mod);
+      if (isConst(Decl))
+        Tok.addModifier(HighlightingModifier::Readonly);
+      if (isStatic(Decl))
+        Tok.addModifier(HighlightingModifier::Static);
+      if (isAbstract(Decl))
+        Tok.addModifier(HighlightingModifier::Abstract);
+      if (Decl->isDeprecated())
+        Tok.addModifier(HighlightingModifier::Deprecated);
+      if (R.IsDecl)
+        Tok.addModifier(HighlightingModifier::Declaration);
+    }
   });
   // Add highlightings for macro references.
-  for (const auto &SIDToRefs : AST.getMacros().MacroRefs) {
+  auto AddMacro = [&](const MacroOccurrence &M) {
+    auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    T.addModifier(HighlightingModifier::GlobalScope);
+    if (M.IsDefinition)
+      T.addModifier(HighlightingModifier::Declaration);
+  };
+  for (const auto &SIDToRefs : AST.getMacros().MacroRefs)
     for (const auto &M : SIDToRefs.second)
-      Builder.addToken({HighlightingKind::Macro, M.Rng});
-  }
+      AddMacro(M);
   for (const auto &M : AST.getMacros().UnknownMacros)
-    Builder.addToken({HighlightingKind::Macro, M.Rng});
+    AddMacro(M);
 
   return std::move(Builder).collect(AST);
 }
@@ -431,10 +628,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "EnumConstant";
   case HighlightingKind::Typedef:
     return OS << "Typedef";
-  case HighlightingKind::DependentType:
-    return OS << "DependentType";
-  case HighlightingKind::DependentName:
-    return OS << "DependentName";
+  case HighlightingKind::Type:
+    return OS << "Type";
+  case HighlightingKind::Unknown:
+    return OS << "Unknown";
   case HighlightingKind::Namespace:
     return OS << "Namespace";
   case HighlightingKind::TemplateParameter:
@@ -449,6 +646,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "InactiveCode";
   }
   llvm_unreachable("invalid HighlightingKind");
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
+  switch (K) {
+  case HighlightingModifier::Declaration:
+    return OS << "decl"; // abbrevation for common case
+  default:
+    return OS << toSemanticTokenModifier(K);
+  }
 }
 
 std::vector<LineHighlightings>
@@ -510,10 +715,12 @@ diffHighlightings(ArrayRef<HighlightingToken> New,
 }
 
 bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind) == std::tie(R.R, R.Kind);
+  return std::tie(L.R, L.Kind, L.Modifiers) ==
+         std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind) < std::tie(R.R, R.Kind);
+  return std::tie(L.R, L.Kind, R.Modifiers) <
+         std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator==(const LineHighlightings &L, const LineHighlightings &R) {
   return std::tie(L.Line, L.Tokens) == std::tie(R.Line, R.Tokens);
@@ -544,6 +751,7 @@ toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens) {
     assert(Tok.R.end.line == Tok.R.start.line);
     Out.length = Tok.R.end.character - Tok.R.start.character;
     Out.tokenType = static_cast<unsigned>(Tok.Kind);
+    Out.tokenModifiers = Tok.Modifiers;
 
     Last = &Tok;
   }
@@ -573,11 +781,10 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
   case HighlightingKind::EnumConstant:
     return "enumMember";
   case HighlightingKind::Typedef:
+  case HighlightingKind::Type:
     return "type";
-  case HighlightingKind::DependentType:
-    return "dependent"; // nonstandard
-  case HighlightingKind::DependentName:
-    return "dependent"; // nonstandard
+  case HighlightingKind::Unknown:
+    return "unknown"; // nonstandard
   case HighlightingKind::Namespace:
     return "namespace";
   case HighlightingKind::TemplateParameter:
@@ -592,6 +799,34 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "comment";
   }
   llvm_unreachable("unhandled HighlightingKind");
+}
+
+llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
+  switch (Modifier) {
+  case HighlightingModifier::Declaration:
+    return "declaration";
+  case HighlightingModifier::Deprecated:
+    return "deprecated";
+  case HighlightingModifier::Readonly:
+    return "readonly";
+  case HighlightingModifier::Static:
+    return "static";
+  case HighlightingModifier::Deduced:
+    return "deduced"; // nonstandard
+  case HighlightingModifier::Abstract:
+    return "abstract";
+  case HighlightingModifier::DependentName:
+    return "dependentName"; // nonstandard
+  case HighlightingModifier::FunctionScope:
+    return "functionScope"; // nonstandard
+  case HighlightingModifier::ClassScope:
+    return "classScope"; // nonstandard
+  case HighlightingModifier::FileScope:
+    return "fileScope"; // nonstandard
+  case HighlightingModifier::GlobalScope:
+    return "globalScope"; // nonstandard
+  }
+  llvm_unreachable("unhandled HighlightingModifier");
 }
 
 std::vector<TheiaSemanticHighlightingInformation>
@@ -651,9 +886,13 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "variable.other.enummember.cpp";
   case HighlightingKind::Typedef:
     return "entity.name.type.typedef.cpp";
-  case HighlightingKind::DependentType:
+  case HighlightingKind::Type:
+    // Fragile: all paths emitting `Type` are dependent names for now.
+    // But toTextMateScope is going away soon.
     return "entity.name.type.dependent.cpp";
-  case HighlightingKind::DependentName:
+  case HighlightingKind::Unknown:
+    // Fragile: all paths emitting `Unknown` are dependent names for now.
+    // But toTextMateScope is going away soon.
     return "entity.name.other.dependent.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";

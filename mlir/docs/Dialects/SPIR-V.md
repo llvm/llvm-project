@@ -274,6 +274,7 @@ spirv-type ::= array-type
              | image-type
              | pointer-type
              | runtime-array-type
+             | sampled-image-type
              | struct-type
 ```
 
@@ -362,6 +363,22 @@ For example,
 !spv.rtarray<i32>
 !spv.rtarray<i32, stride=4>
 !spv.rtarray<vector<4 x f32>>
+```
+### Sampled image type
+
+This corresponds to SPIR-V [sampled image type][SampledImageType]. Its syntax is
+
+```
+sampled-image-type ::= `!spv.sampled_image<!spv.image<` element-type `,` dim `,` depth-info `,`
+                                                        arrayed-info `,` sampling-info `,`
+                                                        sampler-use-info `,` format `>>`
+```
+
+For example,
+
+```mlir
+!spv.sampled_image<!spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
+!spv.sampled_image<!spv.image<i32, Rect, DepthUnknown, Arrayed, MultiSampled, NeedSampler, R8ui>>
 ```
 
 ### Struct type
@@ -1382,6 +1399,7 @@ dialect.
 [ImageType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeImage
 [PointerType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypePointer
 [RuntimeArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeRuntimeArray
+[SampledImageType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeSampledImage
 [MlirDialectConversion]: ../DialectConversion.md
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools

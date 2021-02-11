@@ -21,6 +21,7 @@ class InputFile;
 class InputSection;
 class OutputSection;
 class Symbol;
+class Defined;
 
 struct Reloc {
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;

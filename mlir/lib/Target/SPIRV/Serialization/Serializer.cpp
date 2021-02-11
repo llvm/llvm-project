@@ -511,6 +511,17 @@ LogicalResult Serializer::prepareBasicType(
     return processTypeDecoration(loc, runtimeArrayType, resultID);
   }
 
+  if (auto sampledImageType = type.dyn_cast<spirv::SampledImageType>()) {
+    typeEnum = spirv::Opcode::OpTypeSampledImage;
+    uint32_t imageTypeID = 0;
+    if (failed(
+            processType(loc, sampledImageType.getImageType(), imageTypeID))) {
+      return failure();
+    }
+    operands.push_back(imageTypeID);
+    return success();
+  }
+
   if (auto structType = type.dyn_cast<spirv::StructType>()) {
     if (structType.isIdentified()) {
       (void)processName(resultID, structType.getIdentifier());

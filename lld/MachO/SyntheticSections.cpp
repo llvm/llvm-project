@@ -56,8 +56,8 @@ uint64_t MachHeaderSection::getSize() const {
 void MachHeaderSection::writeTo(uint8_t *buf) const {
   auto *hdr = reinterpret_cast<MachO::mach_header_64 *>(buf);
   hdr->magic = MachO::MH_MAGIC_64;
-  hdr->cputype = MachO::CPU_TYPE_X86_64;
-  hdr->cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL | MachO::CPU_SUBTYPE_LIB64;
+  hdr->cputype = target->cpuType;
+  hdr->cpusubtype = target->cpuSubtype | MachO::CPU_SUBTYPE_LIB64;
   hdr->filetype = config->outputType;
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
@@ -385,6 +385,8 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
     // get here
     llvm_unreachable("cannot bind to an undefined symbol");
   }
+  // TODO: understand the DSOHandle case better.
+  // Is it bindable?  Add a new test?
 }
 
 StubsSection::StubsSection()
@@ -710,8 +712,11 @@ void SymtabSection::finalizeContents() {
         // TODO: when we implement -dead_strip, we should filter out symbols
         // that belong to dead sections.
         if (auto *defined = dyn_cast<Defined>(sym)) {
-          if (!defined->isExternal())
-            addSymbol(localSymbols, sym);
+          if (!defined->isExternal()) {
+            StringRef name = defined->getName();
+            if (!name.startswith("l") && !name.startswith("L"))
+              addSymbol(localSymbols, sym);
+          }
         }
       }
     }

@@ -22,18 +22,6 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zbp -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: slo t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x12,0x73,0x20]
-slo t0, t1, t2
-# CHECK-ASM-AND-OBJ: sro t0, t1, t2
-# CHECK-ASM: encoding: [0xb3,0x52,0x73,0x20]
-sro t0, t1, t2
-# CHECK-ASM-AND-OBJ: sloi t0, t1, 0
-# CHECK-ASM: encoding: [0x93,0x12,0x03,0x20]
-sloi t0, t1, 0
-# CHECK-ASM-AND-OBJ: sroi t0, t1, 0
-# CHECK-ASM: encoding: [0x93,0x52,0x03,0x20]
-sroi t0, t1, 0
 # CHECK-ASM-AND-OBJ: gorc t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x52,0x73,0x28]
 gorc t0, t1, t2

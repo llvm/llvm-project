@@ -262,49 +262,49 @@ public:
 
     size_type find(const basic_string& str, size_type pos = 0) const noexcept;
     template <class T>
-        size_type find(const T& t, size_type pos = 0) const;  // C++17
+        size_type find(const T& t, size_type pos = 0) const noexcept; // C++17, noexcept as an extension
     size_type find(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type find(const value_type* s, size_type pos = 0) const noexcept;
     size_type find(value_type c, size_type pos = 0) const noexcept;
 
     size_type rfind(const basic_string& str, size_type pos = npos) const noexcept;
     template <class T>
-        size_type rfind(const T& t, size_type pos = npos) const;  // C++17
+        size_type rfind(const T& t, size_type pos = npos) const noexcept; // C++17, noexcept as an extension
     size_type rfind(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type rfind(const value_type* s, size_type pos = npos) const noexcept;
     size_type rfind(value_type c, size_type pos = npos) const noexcept;
 
     size_type find_first_of(const basic_string& str, size_type pos = 0) const noexcept;
     template <class T>
-        size_type find_first_of(const T& t, size_type pos = 0) const; // C++17
+        size_type find_first_of(const T& t, size_type pos = 0) const noexcept; // C++17, noexcept as an extension
     size_type find_first_of(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type find_first_of(const value_type* s, size_type pos = 0) const noexcept;
     size_type find_first_of(value_type c, size_type pos = 0) const noexcept;
 
     size_type find_last_of(const basic_string& str, size_type pos = npos) const noexcept;
     template <class T>
-        size_type find_last_of(const T& t, size_type pos = npos) const noexcept;  // C++17
+        size_type find_last_of(const T& t, size_type pos = npos) const noexcept noexcept; // C++17, noexcept as an extension
     size_type find_last_of(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type find_last_of(const value_type* s, size_type pos = npos) const noexcept;
     size_type find_last_of(value_type c, size_type pos = npos) const noexcept;
 
     size_type find_first_not_of(const basic_string& str, size_type pos = 0) const noexcept;
     template <class T>
-        size_type find_first_not_of(const T& t, size_type pos = 0) const; // C++17
+        size_type find_first_not_of(const T& t, size_type pos = 0) const noexcept; // C++17, noexcept as an extension
     size_type find_first_not_of(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type find_first_not_of(const value_type* s, size_type pos = 0) const noexcept;
     size_type find_first_not_of(value_type c, size_type pos = 0) const noexcept;
 
     size_type find_last_not_of(const basic_string& str, size_type pos = npos) const noexcept;
     template <class T>
-        size_type find_last_not_of(const T& t, size_type pos = npos) const; // C++17
+        size_type find_last_not_of(const T& t, size_type pos = npos) const noexcept; // C++17, noexcept as an extension
     size_type find_last_not_of(const value_type* s, size_type pos, size_type n) const noexcept;
     size_type find_last_not_of(const value_type* s, size_type pos = npos) const noexcept;
     size_type find_last_not_of(value_type c, size_type pos = npos) const noexcept;
 
     int compare(const basic_string& str) const noexcept;
     template <class T>
-        int compare(const T& t) const noexcept;  // C++17
+        int compare(const T& t) const noexcept;  // C++17, noexcept as an extension
     int compare(size_type pos1, size_type n1, const basic_string& str) const;
     template <class T>
         int compare(size_type pos1, size_type n1, const T& t) const;  // C++17
@@ -1284,7 +1284,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              find(const _Tp& __t, size_type __pos = 0) const;
+              find(const _Tp& __t, size_type __pos = 0) const _NOEXCEPT;
     size_type find(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type find(const value_type* __s, size_type __pos = 0) const _NOEXCEPT;
@@ -1300,7 +1300,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              rfind(const _Tp& __t, size_type __pos = npos) const;
+              rfind(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT;
     size_type rfind(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type rfind(const value_type* __s, size_type __pos = npos) const _NOEXCEPT;
@@ -1316,7 +1316,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              find_first_of(const _Tp& __t, size_type __pos = 0) const;
+              find_first_of(const _Tp& __t, size_type __pos = 0) const _NOEXCEPT;
     size_type find_first_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type find_first_of(const value_type* __s, size_type __pos = 0) const _NOEXCEPT;
@@ -1333,7 +1333,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              find_last_of(const _Tp& __t, size_type __pos = npos) const;
+              find_last_of(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT;
     size_type find_last_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type find_last_of(const value_type* __s, size_type __pos = npos) const _NOEXCEPT;
@@ -1350,7 +1350,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              find_first_not_of(const _Tp &__t, size_type __pos = 0) const;
+              find_first_not_of(const _Tp &__t, size_type __pos = 0) const _NOEXCEPT;
     size_type find_first_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type find_first_not_of(const value_type* __s, size_type __pos = 0) const _NOEXCEPT;
@@ -1367,7 +1367,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             size_type
         >
-              find_last_not_of(const _Tp& __t, size_type __pos = npos) const;
+              find_last_not_of(const _Tp& __t, size_type __pos = npos) const _NOEXCEPT;
     size_type find_last_not_of(const value_type* __s, size_type __pos, size_type __n) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     size_type find_last_not_of(const value_type* __s, size_type __pos = npos) const _NOEXCEPT;
@@ -1384,7 +1384,7 @@ public:
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             int
         >
-        compare(const _Tp &__t) const;
+        compare(const _Tp &__t) const _NOEXCEPT;
 
     template <class _Tp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -3543,7 +3543,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::find(const _Tp &__t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_find<value_type, size_type, traits_type, npos>
@@ -3601,7 +3601,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::rfind(const _Tp& __t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_rfind<value_type, size_type, traits_type, npos>
@@ -3659,7 +3659,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::find_first_of(const _Tp& __t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_find_first_of<value_type, size_type, traits_type, npos>
@@ -3717,7 +3717,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::find_last_of(const _Tp& __t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_find_last_of<value_type, size_type, traits_type, npos>
@@ -3775,7 +3775,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const _Tp& __t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_find_first_not_of<value_type, size_type, traits_type, npos>
@@ -3834,7 +3834,7 @@ _EnableIf
     typename basic_string<_CharT, _Traits, _Allocator>::size_type
 >
 basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const _Tp& __t,
-                                                size_type __pos) const
+                                                size_type __pos) const _NOEXCEPT
 {
     __self_view __sv = __t;
     return __str_find_last_not_of<value_type, size_type, traits_type, npos>
@@ -3871,7 +3871,7 @@ _EnableIf
     __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
     int
 >
-basic_string<_CharT, _Traits, _Allocator>::compare(const _Tp& __t) const
+basic_string<_CharT, _Traits, _Allocator>::compare(const _Tp& __t) const _NOEXCEPT
 {
     __self_view __sv = __t;
     size_t __lhs_sz = size();

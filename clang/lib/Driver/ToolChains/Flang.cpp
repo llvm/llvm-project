@@ -22,7 +22,8 @@ using namespace llvm::opt;
 void Flang::AddFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ});
+                            options::OPT_ffixed_line_length_EQ,
+                            options::OPT_fopenmp, options::OPT_fopenacc});
 }
 
 void Flang::AddPreprocessingOptions(const ArgList &Args,

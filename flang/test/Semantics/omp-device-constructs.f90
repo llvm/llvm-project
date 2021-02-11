@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang -fopenmp
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main

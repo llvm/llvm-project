@@ -258,16 +258,16 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
                                       nullptr, global);
 }
 
-DefinedGlobal *SymbolTable::addOptionalGlobalSymbols(StringRef name,
-                                                     uint32_t flags,
-                                                     InputGlobal *global) {
-  LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbols: " << name << " -> " << global
+DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
+                                                    InputGlobal *global) {
+  LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
   Symbol *s = find(name);
   if (!s || s->isDefined())
     return nullptr;
   syntheticGlobals.emplace_back(global);
-  return replaceSymbol<DefinedGlobal>(s, name, flags, nullptr, global);
+  return replaceSymbol<DefinedGlobal>(s, name, WASM_SYMBOL_VISIBILITY_HIDDEN,
+                                      nullptr, global);
 }
 
 DefinedTable *SymbolTable::addSyntheticTable(StringRef name, uint32_t flags,

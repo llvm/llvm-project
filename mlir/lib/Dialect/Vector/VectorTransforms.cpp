@@ -44,7 +44,6 @@
 #define DEBUG_TYPE "vector-to-vector"
 
 using namespace mlir;
-using llvm::dbgs;
 
 // Helper to find an index in an affine map.
 static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
@@ -2792,7 +2791,7 @@ static SmallVector<int64_t, 4> getIntValueVector(ArrayAttr arrayAttr) {
   return llvm::to_vector<4>(
       llvm::map_range(arrayAttr.getAsRange<IntegerAttr>(),
                       [](IntegerAttr attr) { return attr.getInt(); }));
-};
+}
 
 // Shuffles vector.bitcast op after vector.extract op.
 //

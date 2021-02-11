@@ -303,6 +303,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
       assert((TF == SparcMCExpr::VK_Sparc_HI
               || TF == SparcMCExpr::VK_Sparc_H44
               || TF == SparcMCExpr::VK_Sparc_HH
+              || TF == SparcMCExpr::VK_Sparc_LM
               || TF == SparcMCExpr::VK_Sparc_TLS_GD_HI22
               || TF == SparcMCExpr::VK_Sparc_TLS_LDM_HI22
               || TF == SparcMCExpr::VK_Sparc_TLS_LDO_HIX22

@@ -8,22 +8,31 @@
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_HSA_METADATA (AMD HSA Metadata)
 // GNU-NEXT:     AMD HSA Metadata:
-// GNU-NEXT:         Invalid AMD HSA Metadata
+// GNU-NEXT: {{^        $}}
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 // GNU-NEXT:     AMD HSA ISA Name:
-// GNU-NEXT:         Invalid AMD HSA ISA Name
+// GNU-NEXT: {{^        $}}
+// GNU-EMPTY:
 // GNU-NEXT: Displaying notes found in: .note.desc
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x0000000a       NT_AMD_HSA_METADATA (AMD HSA Metadata)
 // GNU-NEXT:     AMD HSA Metadata:
-// GNU-NEXT:         meta_blah
+// GNU-NEXT:     meta_blah
 // GNU-NEXT:   AMD                  0x00000009       NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 // GNU-NEXT:     AMD HSA ISA Name:
-// GNU-NEXT:         isa_blah
+// GNU-NEXT:     isa_blah
+// GNU-EMPTY:
 // GNU-NEXT: Displaying notes found in: .note.other
 // GNU-NEXT:   Owner                Data size        Description
 // GNU-NEXT:   AMD                  0x00000000       NT_AMD_PAL_METADATA (AMD PAL Metadata)
-// GNI-NEXT:     AMD PAL Metadata:
+// GNU-NEXT:     AMD PAL Metadata:
+// GNU-NEXT: {{^        $}}
+// GNU-EMPTY:
+// GNU-NEXT: Displaying notes found in: .note.unknown
+// GNU-NEXT:   Owner                Data size 	Description
+// GNU-NEXT:   AMD                  0x00000007	Unknown note type: (0x000004d2)
+// GNU-NEXT:    description data: 61 62 63 64 65 66 00
+// GNU-EMPTY:
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
@@ -71,6 +80,19 @@
 // LLVM-NEXT:       AMD PAL Metadata:
 // LLVM-NEXT:     }
 // LLVM-NEXT:   }
+// LLVM-NEXT:   NoteSection {
+// LLVM-NEXT:     Name: .note.unknown
+// LLVM-NEXT:     Offset:
+// LLVM-NEXT:     Size:
+// LLVM-NEXT:     Note {
+// LLVM-NEXT:       Owner: AMD
+// LLVM-NEXT:       Data size: 0x7
+// LLVM-NEXT:       Type: Unknown (0x000004d2)
+// LLVM-NEXT:       Description data (
+// LLVM-NEXT:         0000: 61626364 656600                      |abcdef.|
+// LLVM-NEXT:       )
+// LLVM-NEXT:     }
+// LLVM-NEXT:   }
 // LLVM-NEXT: ]
 
 .section ".note.no.desc", "a"
@@ -107,3 +129,13 @@ end.isa:
 	.long 0 /* descsz */
 	.long 12 /* type = NT_AMD_PAL_METADATA */
 	.asciz "AMD"
+.section ".note.unknown", "a"
+	.align 4
+	.long 4 /* namesz */
+	.long end.unknown_data - begin.unknown_data /* descsz */
+	.long 1234 /* type = unknown */
+	.asciz "AMD"
+begin.unknown_data:
+	.asciz "abcdef"
+end.unknown_data:
+	.align 4

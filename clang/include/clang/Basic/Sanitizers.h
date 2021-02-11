@@ -178,6 +178,10 @@ struct SanitizerSet {
 /// Returns a non-zero SanitizerMask, or \c 0 if \p Value is not known.
 SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 
+/// Serialize a SanitizerSet into values for -fsanitize= or -fno-sanitize=.
+void serializeSanitizerSet(SanitizerSet Set,
+                           SmallVectorImpl<StringRef> &Values);
+
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
 /// this group enables.
 SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);

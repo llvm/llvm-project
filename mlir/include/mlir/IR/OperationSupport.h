@@ -55,33 +55,12 @@ class OwningRewritePatternList;
 // AbstractOperation
 //===----------------------------------------------------------------------===//
 
-enum class OperationProperty {
-  /// This bit is set for an operation if it is a commutative
-  /// operation: that is an operator where order of operands does not
-  /// change the result of the operation.  For example, in a binary
-  /// commutative operation, "a op b" and "b op a" produce the same
-  /// results.
-  Commutative = 0x1,
-
-  /// This bit is set for an operation if it is a terminator: that means
-  /// an operation at the end of a block.
-  Terminator = 0x2,
-
-  /// This bit is set for operations that are completely isolated from above.
-  /// This is used for operations whose regions are explicit capture only, i.e.
-  /// they are never allowed to implicitly reference values defined above the
-  /// parent operation.
-  IsolatedFromAbove = 0x4,
-};
-
 /// This is a "type erased" representation of a registered operation.  This
 /// should only be used by things like the AsmPrinter and other things that need
 /// to be parameterized by generic operation hooks.  Most user code should use
 /// the concrete operation types.
 class AbstractOperation {
 public:
-  using OperationProperties = uint32_t;
-
   using GetCanonicalizationPatternsFn = void (*)(OwningRewritePatternList &,
                                                  MLIRContext *);
   using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
@@ -146,11 +125,6 @@ public:
     return getCanonicalizationPatternsFn(results, context);
   }
 
-  /// Returns whether the operation has a particular property.
-  bool hasProperty(OperationProperty property) const {
-    return opProperties & static_cast<OperationProperties>(property);
-  }
-
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this operation, null otherwise. This should not be used
   /// directly.
@@ -171,32 +145,27 @@ public:
   /// This constructor is used by Dialect objects when they register the list of
   /// operations they contain.
   template <typename T> static void insert(Dialect &dialect) {
-    insert(T::getOperationName(), dialect, T::getOperationProperties(),
-           TypeID::get<T>(), T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
+    insert(T::getOperationName(), dialect, TypeID::get<T>(),
+           T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
            T::getVerifyInvariantsFn(), T::getFoldHookFn(),
            T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
            T::getHasTraitFn());
   }
 
 private:
-  static void insert(StringRef name, Dialect &dialect,
-                     OperationProperties opProperties, TypeID typeID,
+  static void insert(StringRef name, Dialect &dialect, TypeID typeID,
                      ParseAssemblyFn parseAssembly,
                      PrintAssemblyFn printAssembly,
                      VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
                      GetCanonicalizationPatternsFn getCanonicalizationPatterns,
                      detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
 
-  AbstractOperation(StringRef name, Dialect &dialect,
-                    OperationProperties opProperties, TypeID typeID,
+  AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
                     ParseAssemblyFn parseAssembly,
                     PrintAssemblyFn printAssembly,
                     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
                     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
                     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
-
-  /// The properties of the operation.
-  const OperationProperties opProperties;
 
   /// A map of interfaces that were registered to this operation.
   detail::InterfaceMap interfaceMap;

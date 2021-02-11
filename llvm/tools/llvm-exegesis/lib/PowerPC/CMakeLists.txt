@@ -3,17 +3,16 @@ include_directories(
   ${LLVM_BINARY_DIR}/lib/Target/PowerPC
   )
 
-set(LLVM_LINK_COMPONENTS
-  PowerPC
-  Exegesis
-  Core
-  )
-
-add_llvm_library(LLVMExegesisPowerPC
-  DISABLE_LLVM_LINK_LLVM_DYLIB
+add_library(LLVMExegesisPowerPC
   STATIC
   Target.cpp
-
-  DEPENDS
-  intrinsics_gen
   )
+
+llvm_update_compile_flags(LLVMExegesisPowerPC)
+llvm_map_components_to_libnames(libs
+  PowerPC
+  Exegesis
+  )
+
+target_link_libraries(LLVMExegesisPowerPC ${libs})
+set_target_properties(LLVMExegesisPowerPC PROPERTIES FOLDER "Libraries")

@@ -212,8 +212,7 @@ declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.nxv16f16(
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f32_nxv16f16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x half> %2, <vscale x 16 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f32_nxv16f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a0)
+; CHECK-NEXT:    vl4re16.v v28, (a0)
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v28, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -394,8 +393,7 @@ declare <vscale x 8 x double> @llvm.riscv.vfwsub.w.mask.nxv8f64.nxv8f32(
 define <vscale x 8 x double> @intrinsic_vfwsub.w_mask_wv_nxv8f64_nxv8f64_nxv8f32(<vscale x 8 x double> %0, <vscale x 8 x double> %1, <vscale x 8 x float> %2, <vscale x 8 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv8f64_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e32,m4,ta,mu
-; CHECK-NEXT:    vle32.v v28, (a0)
+; CHECK-NEXT:    vl4re32.v v28, (a0)
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v28, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)

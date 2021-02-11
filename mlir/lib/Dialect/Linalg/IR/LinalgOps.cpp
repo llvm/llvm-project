@@ -780,6 +780,24 @@ void PadTensorOp::build(OpBuilder &b, OperationState &result, Type resultType,
         b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh));
 }
 
+PadTensorOp PadTensorOp::createPadScalarOp(Type type, Value source, Value pad,
+                                           ArrayRef<OpFoldResult> low,
+                                           ArrayRef<OpFoldResult> high,
+                                           Location loc, OpBuilder &builder) {
+  auto padTensorOp =
+      builder.create<linalg::PadTensorOp>(loc, type, source, low, high);
+  int rank = padTensorOp.getResultType().getRank();
+  SmallVector<Type, 4> blockArgTypes;
+  blockArgTypes.assign(rank, builder.getIndexType());
+  auto &region = padTensorOp.region();
+  // `builder.createBlock` changes the insertion point within the block. Create
+  // a guard to reset the insertion point of the builder after it is destroyed.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(&region, region.end(), blockArgTypes);
+  builder.create<linalg::YieldOp>(loc, pad);
+  return padTensorOp;
+}
+
 PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
                                          Location loc, OpBuilder &builder) {
   SmallVector<OpFoldResult, 4> low, high;
@@ -794,17 +812,8 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
     high.push_back(highValue);
     low.push_back(builder.createOrFold<ConstantIndexOp>(loc, 0));
   }
-  auto padTensorOp =
-      builder.create<linalg::PadTensorOp>(loc, type, source, low, high);
-  SmallVector<Type, 4> blockArgTypes;
-  blockArgTypes.assign(rank, builder.getIndexType());
-  auto &region = padTensorOp.region();
-  // `builder.createBlock` changes the insertion point within the block. Create
-  // a guard to reset the insertion point of the builder after it is destroyed.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.createBlock(&region, region.end(), blockArgTypes);
-  builder.create<linalg::YieldOp>(loc, pad);
-  return padTensorOp;
+  return PadTensorOp::createPadScalarOp(type, source, pad, low, high, loc,
+                                        builder);
 }
 
 //===----------------------------------------------------------------------===//

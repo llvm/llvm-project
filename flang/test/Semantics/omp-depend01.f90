@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang -fopenmp
 ! OpenMP Version 4.5
 ! 2.13.9 Depend Clause
 ! List items used in depend clauses cannot be zero-length array sections.

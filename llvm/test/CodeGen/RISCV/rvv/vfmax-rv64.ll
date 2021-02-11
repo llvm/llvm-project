@@ -251,8 +251,7 @@ declare <vscale x 32 x half> @llvm.riscv.vfmax.mask.nxv32f16.nxv32f16(
 define <vscale x 32 x half> @intrinsic_vfmax_mask_vv_nxv32f16_nxv32f16_nxv32f16(<vscale x 32 x half> %0, <vscale x 32 x half> %1, <vscale x 32 x half> %2, <vscale x 32 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfmax_mask_vv_nxv32f16_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m8,tu,mu
 ; CHECK-NEXT:    vfmax.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -473,8 +472,7 @@ declare <vscale x 16 x float> @llvm.riscv.vfmax.mask.nxv16f32.nxv16f32(
 define <vscale x 16 x float> @intrinsic_vfmax_mask_vv_nxv16f32_nxv16f32_nxv16f32(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfmax_mask_vv_nxv16f32_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m8,tu,mu
 ; CHECK-NEXT:    vfmax.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
@@ -651,8 +649,7 @@ declare <vscale x 8 x double> @llvm.riscv.vfmax.mask.nxv8f64.nxv8f64(
 define <vscale x 8 x double> @intrinsic_vfmax_mask_vv_nxv8f64_nxv8f64_nxv8f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfmax_mask_vv_nxv8f64_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
 ; CHECK-NEXT:    vfmax.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
