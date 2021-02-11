@@ -83,9 +83,6 @@ def fir_PointerType : Type<CPred<"$_self.isa<fir::PointerType>()">,
 def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
 
-// A descriptor tuple (captures a reference to an entity and other information)
-def fir_BoxType : Type<CPred<"$_self.isa<fir::BoxType>()">, "box type">;
-
 // CHARACTER type descriptor. A pair of a data reference and a LEN value.
 def fir_BoxCharType : Type<CPred<"$_self.isa<fir::BoxCharType>()">,
     "box character type">;
@@ -94,11 +91,11 @@ def fir_BoxCharType : Type<CPred<"$_self.isa<fir::BoxCharType>()">,
 def fir_BoxProcType : Type<CPred<"$_self.isa<fir::BoxProcType>()">,
     "box procedure type">;
 
-def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
+def AnyBoxLike : TypeConstraint<Or<[BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;
 
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
+    fir_HeapType.predicate, fir_PointerType.predicate, BoxType.predicate]>,
     "any reference or box">;
 
 def AnyShapeLike : TypeConstraint<Or<[ShapeType.predicate,
@@ -1048,7 +1045,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
 
   let arguments = (ins AnyReferenceLike:$memref, Variadic<AnyEmboxArg>:$args);
 
-  let results = (outs fir_BoxType);
+  let results = (outs BoxType);
 
   let parser = "return parseEmboxOp(parser, result);";
 
@@ -1257,7 +1254,7 @@ def fir_UnboxOp : fir_SimpleOp<"unbox", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$box);
+  let arguments = (ins BoxType:$box);
 
   let results = (outs
     fir_ReferenceType,  // pointer to data
@@ -1328,7 +1325,7 @@ def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs AnyReferenceLike);
 
@@ -1372,7 +1369,7 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoSideEffect]> {
     the box. The triple will be the lower bound, upper bound, and stride.
   }];
 
-  let arguments = (ins fir_BoxType:$val, AnyIntegerLike:$dim);
+  let arguments = (ins BoxType:$val, AnyIntegerLike:$dim);
 
   let results = (outs AnyIntegerLike, AnyIntegerLike, AnyIntegerLike);
 
@@ -1401,7 +1398,7 @@ def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoSideEffect]> {
     must box an array of REAL values (with dynamic rank and extent).
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs AnyIntegerLike);
 }
@@ -1424,7 +1421,7 @@ def fir_BoxIsAllocOp : fir_SimpleOp<"box_isalloc", [NoSideEffect]> {
     variable is an `ALLOCATABLE`.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs BoolLike);
 }
@@ -1445,7 +1442,7 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs BoolLike);
 }
@@ -1463,7 +1460,7 @@ def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs BoolLike);
 }
@@ -1507,7 +1504,7 @@ def fir_BoxRankOp : fir_SimpleOneResultOp<"box_rank", [NoSideEffect]> {
     descriptor may be either an array or a scalar, so the value is nonnegative.
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs AnyIntegerType);
 }
@@ -1525,7 +1522,7 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxType:$val);
 
   let results = (outs fir_TypeDescType);
 }
@@ -2100,7 +2097,7 @@ def fir_DispatchOp : fir_Op<"dispatch",
 
   let arguments = (ins
     StrAttr:$method,
-    fir_BoxType:$object,
+    BoxType:$object,
     Variadic<AnyType>:$args
   );
 
