@@ -4883,20 +4883,20 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
       ConstantSDNode *C0 = isConstOrConstSplat(LR);
       ConstantSDNode *C1 = isConstOrConstSplat(RR);
       if (LL == RL && C0 && C1 && !C0->isOpaque() && !C1->isOpaque()) {
-        // Canonicalize larger constant as C0.
-        if (C1->getAPIntValue().ugt(C0->getAPIntValue()))
-          std::swap(C0, C1);
-
+        const APInt &CMax =
+            APIntOps::umax(C0->getAPIntValue(), C1->getAPIntValue());
+        const APInt &CMin =
+            APIntOps::umin(C0->getAPIntValue(), C1->getAPIntValue());
         // The difference of the constants must be a single bit.
-        const APInt &C0Val = C0->getAPIntValue();
-        const APInt &C1Val = C1->getAPIntValue();
-        if ((C0Val - C1Val).isPowerOf2()) {
-          // and/or (setcc X, C0, ne), (setcc X, C1, ne/eq) -->
-          // setcc ((add X, -C1), ~(C0 - C1)), 0, ne/eq
-          SDValue OffsetC = DAG.getConstant(-C1Val, DL, OpVT);
-          SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LL, OffsetC);
-          SDValue MaskC = DAG.getConstant(~(C0Val - C1Val), DL, OpVT);
-          SDValue And = DAG.getNode(ISD::AND, DL, OpVT, Add, MaskC);
+        if ((CMax - CMin).isPowerOf2()) {
+          // and/or (setcc X, CMax, ne), (setcc X, CMin, ne/eq) -->
+          // setcc ((sub X, CMin), ~(CMax - CMin)), 0, ne/eq
+          SDValue Max = DAG.getNode(ISD::UMAX, DL, OpVT, LR, RR);
+          SDValue Min = DAG.getNode(ISD::UMIN, DL, OpVT, LR, RR);
+          SDValue Offset = DAG.getNode(ISD::SUB, DL, OpVT, LL, Min);
+          SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, Max, Min);
+          SDValue Mask = DAG.getNOT(DL, Diff, OpVT);
+          SDValue And = DAG.getNode(ISD::AND, DL, OpVT, Offset, Mask);
           SDValue Zero = DAG.getConstant(0, DL, OpVT);
           return DAG.getSetCC(DL, VT, And, Zero, CC0);
         }
