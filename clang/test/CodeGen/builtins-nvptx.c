@@ -201,85 +201,85 @@ __shared__ long long sll;
 __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
-  // CHECK: atomicrmw add
+  // CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
   __nvvm_atom_add_gen_i(ip, i);
-  // CHECK: atomicrmw add
+  // CHECK: atomicrmw add i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_add_gen_l(&dl, l);
-  // CHECK: atomicrmw add
+  // CHECK: atomicrmw add i64* {{.*}} seq_cst, align 8
   __nvvm_atom_add_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw sub
+  // CHECK: atomicrmw sub i32* {{.*}} seq_cst, align 4
   __nvvm_atom_sub_gen_i(ip, i);
-  // CHECK: atomicrmw sub
+  // CHECK: atomicrmw sub i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_sub_gen_l(&dl, l);
-  // CHECK: atomicrmw sub
+  // CHECK: atomicrmw sub i64* {{.*}} seq_cst, align 8
   __nvvm_atom_sub_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw and
+  // CHECK: atomicrmw and i32* {{.*}} seq_cst, align 4
   __nvvm_atom_and_gen_i(ip, i);
-  // CHECK: atomicrmw and
+  // CHECK: atomicrmw and i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_and_gen_l(&dl, l);
-  // CHECK: atomicrmw and
+  // CHECK: atomicrmw and i64* {{.*}} seq_cst, align 8
   __nvvm_atom_and_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw or
+  // CHECK: atomicrmw or i32* {{.*}} seq_cst, align 4
   __nvvm_atom_or_gen_i(ip, i);
-  // CHECK: atomicrmw or
+  // CHECK: atomicrmw or i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_or_gen_l(&dl, l);
-  // CHECK: atomicrmw or
+  // CHECK: atomicrmw or i64* {{.*}} seq_cst, align 8
   __nvvm_atom_or_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xor
+  // CHECK: atomicrmw xor i32* {{.*}} seq_cst, align 4
   __nvvm_atom_xor_gen_i(ip, i);
-  // CHECK: atomicrmw xor
+  // CHECK: atomicrmw xor i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_xor_gen_l(&dl, l);
-  // CHECK: atomicrmw xor
+  // CHECK: atomicrmw xor i64* {{.*}} seq_cst, align 8
   __nvvm_atom_xor_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xchg
+  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
   __nvvm_atom_xchg_gen_i(ip, i);
-  // CHECK: atomicrmw xchg
+  // CHECK: atomicrmw xchg i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_xchg_gen_l(&dl, l);
-  // CHECK: atomicrmw xchg
+  // CHECK: atomicrmw xchg i64* {{.*}} seq_cst, align 8
   __nvvm_atom_xchg_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw max i32*
+  // CHECK: atomicrmw max i32* {{.*}} seq_cst, align 4
   __nvvm_atom_max_gen_i(ip, i);
-  // CHECK: atomicrmw umax i32*
+  // CHECK: atomicrmw umax i32* {{.*}} seq_cst, align 4
   __nvvm_atom_max_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw max
+  // CHECK: atomicrmw max i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_max_gen_l(&dl, l);
-  // CHECK: atomicrmw umax
+  // CHECK: atomicrmw umax i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_max_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw max i64*
+  // CHECK: atomicrmw max i64* {{.*}} seq_cst, align 8
   __nvvm_atom_max_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umax i64*
+  // CHECK: atomicrmw umax i64* {{.*}} seq_cst, align 8
   __nvvm_atom_max_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: atomicrmw min i32*
+  // CHECK: atomicrmw min i32* {{.*}} seq_cst, align 4
   __nvvm_atom_min_gen_i(ip, i);
-  // CHECK: atomicrmw umin i32*
+  // CHECK: atomicrmw umin i32* {{.*}} seq_cst, align 4
   __nvvm_atom_min_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw min
+  // CHECK: atomicrmw min i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_min_gen_l(&dl, l);
-  // CHECK: atomicrmw umin
+  // CHECK: atomicrmw umin i{{32|64}}* {{.*}} seq_cst, align {{4|8}}
   __nvvm_atom_min_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw min i64*
+  // CHECK: atomicrmw min i64* {{.*}} seq_cst, align 8
   __nvvm_atom_min_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umin i64*
+  // CHECK: atomicrmw umin i64* {{.*}} seq_cst, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: cmpxchg
+  // CHECK: cmpxchg i32* {{.*}} seq_cst seq_cst, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
-  // CHECK: cmpxchg
+  // CHECK: cmpxchg i{{32|64}}* {{.*}} seq_cst seq_cst, align {{4|8}}
   // CHECK-NEXT: extractvalue { {{i32|i64}}, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_l(&dl, 0, l);
-  // CHECK: cmpxchg
+  // CHECK: cmpxchg i64* {{.*}} seq_cst seq_cst, align 8
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: atomicrmw fadd float
+  // CHECK: atomicrmw fadd float* {{.*}} seq_cst, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
   // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0i32
