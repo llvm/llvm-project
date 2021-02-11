@@ -286,6 +286,7 @@ RetiredFlag<bool> RecoveryAST("recovery-ast");
 RetiredFlag<bool> RecoveryASTType("recovery-ast-type");
 RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
+RetiredFlag<bool> CrossFileRename("cross-file-rename");
 
 opt<int> LimitResults{
     "limit-results",
@@ -295,20 +296,12 @@ opt<int> LimitResults{
     init(100),
 };
 
-
 list<std::string> TweakList{
     "tweaks",
     cat(Features),
     desc("Specify a list of Tweaks to enable (only for clangd developers)."),
     Hidden,
     CommaSeparated,
-};
-
-opt<bool> CrossFileRename{
-    "cross-file-rename",
-    cat(Features),
-    desc("Enable cross-file rename feature."),
-    init(true),
 };
 
 opt<bool> FoldingRanges{
@@ -851,9 +844,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
-
-  // Shall we allow to customize the file limit?
-  Opts.Rename.AllowCrossFile = CrossFileRename;
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
