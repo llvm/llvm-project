@@ -1527,7 +1527,7 @@ void ScopBuilder::addRecordedAssumptions() {
 void ScopBuilder::addUserAssumptions(
     AssumptionCache &AC, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
   for (auto &Assumption : AC.assumptions()) {
-    auto *CI = dyn_cast_or_null<CallInst>(Assumption.getAssumeCI());
+    auto *CI = dyn_cast_or_null<CallInst>(Assumption);
     if (!CI || CI->getNumArgOperands() != 1)
       continue;
 
