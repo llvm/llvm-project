@@ -7151,11 +7151,13 @@ public:
   /// [ValueDecl *] --> {LE(FieldIndex, Pointer),
   ///                    HE(FieldIndex, Pointer)}
   struct StructRangeInfoTy {
+    MapCombinedInfoTy PreliminaryMapData;
     std::pair<unsigned /*FieldIndex*/, Address /*Pointer*/> LowestElem = {
         0, Address::invalid()};
     std::pair<unsigned /*FieldIndex*/, Address /*Pointer*/> HighestElem = {
         0, Address::invalid()};
     Address Base = Address::invalid();
+    Address LB = Address::invalid();
     bool IsArraySection = false;
     bool HasCompleteRecord = false;
   };
@@ -7754,11 +7756,9 @@ private:
             (IsPointer || ForDeviceAddr) && EncounteredME &&
             (dyn_cast<MemberExpr>(I->getAssociatedExpression()) ==
              EncounteredME);
-        if (!OverlappedElements.empty()) {
+        if (!OverlappedElements.empty() && Next == CE) {
           // Handle base element with the info for overlapped elements.
           assert(!PartialStruct.Base.isValid() && "The base element is set.");
-          assert(Next == CE &&
-                 "Expected last element for the overlapped elements.");
           assert(!IsPointer &&
                  "Unexpected base element with the pointer type.");
           // Mark the whole struct as the struct that requires allocation on the
@@ -7775,13 +7775,17 @@ private:
                   PartialStruct.HighestElem.first)>::max(),
               HB};
           PartialStruct.Base = BP;
+          PartialStruct.LB = LB;
+          assert(
+              PartialStruct.PreliminaryMapData.BasePointers.empty() &&
+              "Overlapped elements must be used only once for the variable.");
+          std::swap(PartialStruct.PreliminaryMapData, CombinedInfo);
           // Emit data for non-overlapped data.
           OpenMPOffloadMappingFlags Flags =
               OMP_MAP_MEMBER_OF |
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              /*AddPtrFlag=*/false,
                              /*AddIsTargetParamFlag=*/false, IsNonContiguous);
-          LB = BP;
           llvm::Value *Size = nullptr;
           // Do bitcopy of all non-overlapped structure elements.
           for (OMPClauseMappableExprCommon::MappableExprComponentListRef
@@ -7890,6 +7894,7 @@ private:
               PartialStruct.HighestElem = {FieldIndex, LB};
             }
             PartialStruct.Base = BP;
+            PartialStruct.LB = BP;
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
             PartialStruct.LowestElem = {FieldIndex, LB};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
@@ -8609,8 +8614,8 @@ public:
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
     if (PartialStruct.HasCompleteRecord) {
-      LBAddr = PartialStruct.Base;
-      HBAddr = PartialStruct.Base;
+      LBAddr = PartialStruct.LB;
+      HBAddr = PartialStruct.LB;
     }
     CombinedInfo.Exprs.push_back(VD);
     // Base is the base of the struct
@@ -8909,11 +8914,17 @@ public:
     // Sort the overlapped elements for each item.
     llvm::SmallVector<const FieldDecl *, 4> Layout;
     if (!OverlappedData.empty()) {
-      if (const auto *CRD =
-              VD->getType().getCanonicalType()->getAsCXXRecordDecl())
+      const Type *BaseType = VD->getType().getCanonicalType().getTypePtr();
+      const Type *OrigType = BaseType->getPointeeOrArrayElementType();
+      while (BaseType != OrigType) {
+        BaseType = OrigType->getCanonicalTypeInternal().getTypePtr();
+        OrigType = BaseType->getPointeeOrArrayElementType();
+      }
+
+      if (const auto *CRD = BaseType->getAsCXXRecordDecl())
         getPlainLayout(CRD, Layout, /*AsBase=*/false);
       else {
-        const auto *RD = VD->getType().getCanonicalType()->getAsRecordDecl();
+        const auto *RD = BaseType->getAsRecordDecl();
         Layout.append(RD->field_begin(), RD->field_end());
       }
     }
@@ -9567,10 +9578,12 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///                                           void *base, void *begin,
 ///                                           int64_t size, int64_t type,
 ///                                           void *name = nullptr) {
-///   // Allocate space for an array section first.
-///   if ((size > 1 || base != begin) && !maptype.IsDelete)
+///   // Allocate space for an array section first or add a base/begin for
+///   // pointer dereference.
+///   if ((size > 1 || (base != begin && maptype.IsPtrAndObj)) &&
+///       !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
-///                                 size*sizeof(Ty), clearToFrom(type));
+///                                 size*sizeof(Ty), clearToFromMember(type));
 ///   // Map members.
 ///   for (unsigned i = 0; i < size; i++) {
 ///     // For each component specified by this mapper:
@@ -9585,9 +9598,9 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///     }
 ///   }
 ///   // Delete the array section.
-///   if ((size > 1 || base != begin) && maptype.IsDelete)
+///   if (size > 1 && maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
-///                                 size*sizeof(Ty), clearToFrom(type));
+///                                 size*sizeof(Ty), clearToFromMember(type));
 /// }
 /// \endcode
 void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
@@ -9851,18 +9864,26 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
       MapperCGF.createBasicBlock(getName({"omp.array", Prefix}));
   llvm::Value *IsArray = MapperCGF.Builder.CreateICmpSGT(
       Size, MapperCGF.Builder.getInt64(1), "omp.arrayinit.isarray");
-  // base != begin?
-  llvm::Value *BaseIsBegin = MapperCGF.Builder.CreateIsNotNull(
-      MapperCGF.Builder.CreatePtrDiff(Base, Begin));
-  llvm::Value *Cond = MapperCGF.Builder.CreateOr(IsArray, BaseIsBegin);
   llvm::Value *DeleteBit = MapperCGF.Builder.CreateAnd(
       MapType,
       MapperCGF.Builder.getInt64(MappableExprsHandler::OMP_MAP_DELETE));
   llvm::Value *DeleteCond;
+  llvm::Value *Cond;
   if (IsInit) {
+    // base != begin?
+    llvm::Value *BaseIsBegin = MapperCGF.Builder.CreateIsNotNull(
+        MapperCGF.Builder.CreatePtrDiff(Base, Begin));
+    // IsPtrAndObj?
+    llvm::Value *PtrAndObjBit = MapperCGF.Builder.CreateAnd(
+        MapType,
+        MapperCGF.Builder.getInt64(MappableExprsHandler::OMP_MAP_PTR_AND_OBJ));
+    PtrAndObjBit = MapperCGF.Builder.CreateIsNotNull(PtrAndObjBit);
+    BaseIsBegin = MapperCGF.Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
+    Cond = MapperCGF.Builder.CreateOr(IsArray, BaseIsBegin);
     DeleteCond = MapperCGF.Builder.CreateIsNull(
         DeleteBit, getName({"omp.array", Prefix, ".delete"}));
   } else {
+    Cond = IsArray;
     DeleteCond = MapperCGF.Builder.CreateIsNotNull(
         DeleteBit, getName({"omp.array", Prefix, ".delete"}));
   }
@@ -9879,7 +9900,8 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
   llvm::Value *MapTypeArg = MapperCGF.Builder.CreateAnd(
       MapType,
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
-                                   MappableExprsHandler::OMP_MAP_FROM)));
+                                   MappableExprsHandler::OMP_MAP_FROM |
+                                   MappableExprsHandler::OMP_MAP_MEMBER_OF)));
   llvm::Value *MapNameArg = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
 
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
@@ -10171,9 +10193,12 @@ void CGOpenMPRuntime::emitTargetCall(
 
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
-      if (PartialStruct.Base.isValid())
-        MEHandler.emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
-                                    nullptr, /*NoTargetParam=*/false);
+      if (PartialStruct.Base.isValid()) {
+        CombinedInfo.append(PartialStruct.PreliminaryMapData);
+        MEHandler.emitCombinedEntry(
+            CombinedInfo, CurInfo.Types, PartialStruct, nullptr,
+            !PartialStruct.PreliminaryMapData.BasePointers.empty());
+      }
 
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(CurInfo);

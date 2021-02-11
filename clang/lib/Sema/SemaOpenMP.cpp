@@ -5151,6 +5151,146 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
   }
 }
 
+static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
+                                            CXXScopeSpec &MapperIdScopeSpec,
+                                            const DeclarationNameInfo &MapperId,
+                                            QualType Type,
+                                            Expr *UnresolvedMapper);
+
+/// Perform DFS through the structure/class data members trying to find
+/// member(s) with user-defined 'default' mapper and generate implicit map
+/// clauses for such members with the found 'default' mapper.
+static void
+processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
+                                      SmallVectorImpl<OMPClause *> &Clauses) {
+  // Check for the deault mapper for data members.
+  if (S.getLangOpts().OpenMP < 50)
+    return;
+  SmallVector<OMPClause *, 4> ImplicitMaps;
+  DeclarationNameInfo DefaultMapperId;
+  DefaultMapperId.setName(S.Context.DeclarationNames.getIdentifier(
+      &S.Context.Idents.get("default")));
+  for (int Cnt = 0, EndCnt = Clauses.size(); Cnt < EndCnt; ++Cnt) {
+    auto *C = dyn_cast<OMPMapClause>(Clauses[Cnt]);
+    if (!C)
+      continue;
+    SmallVector<Expr *, 4> SubExprs;
+    auto *MI = C->mapperlist_begin();
+    for (auto I = C->varlist_begin(), End = C->varlist_end(); I != End;
+         ++I, ++MI) {
+      // Expression is mapped using mapper - skip it.
+      if (*MI)
+        continue;
+      Expr *E = *I;
+      // Expression is dependent - skip it, build the mapper when it gets
+      // instantiated.
+      if (E->isTypeDependent() || E->isValueDependent() ||
+          E->containsUnexpandedParameterPack())
+        continue;
+      // Array section - need to check for the mapping of the array section
+      // element.
+      QualType CanonType = E->getType().getCanonicalType();
+      if (CanonType->isSpecificBuiltinType(BuiltinType::OMPArraySection)) {
+        const auto *OASE = cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts());
+        QualType BaseType =
+            OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+        QualType ElemType;
+        if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+          ElemType = ATy->getElementType();
+        else
+          ElemType = BaseType->getPointeeType();
+        CanonType = ElemType;
+      }
+
+      // DFS over data members in structures/classes.
+      SmallVector<std::pair<QualType, FieldDecl *>, 4> Types(
+          1, {CanonType, nullptr});
+      llvm::DenseMap<const Type *, Expr *> Visited;
+      SmallVector<std::pair<FieldDecl *, unsigned>, 4> ParentChain(
+          1, {nullptr, 1});
+      while (!Types.empty()) {
+        QualType BaseType;
+        FieldDecl *CurFD;
+        std::tie(BaseType, CurFD) = Types.pop_back_val();
+        while (ParentChain.back().second == 0)
+          ParentChain.pop_back();
+        --ParentChain.back().second;
+        if (BaseType.isNull())
+          continue;
+        // Only structs/classes are allowed to have mappers.
+        const RecordDecl *RD = BaseType.getCanonicalType()->getAsRecordDecl();
+        if (!RD)
+          continue;
+        auto It = Visited.find(BaseType.getTypePtr());
+        if (It == Visited.end()) {
+          // Try to find the associated user-defined mapper.
+          CXXScopeSpec MapperIdScopeSpec;
+          ExprResult ER = buildUserDefinedMapperRef(
+              S, Stack->getCurScope(), MapperIdScopeSpec, DefaultMapperId,
+              BaseType, /*UnresolvedMapper=*/nullptr);
+          if (ER.isInvalid())
+            continue;
+          It = Visited.try_emplace(BaseType.getTypePtr(), ER.get()).first;
+        }
+        // Found default mapper.
+        if (It->second) {
+          auto *OE = new (S.Context) OpaqueValueExpr(E->getExprLoc(), CanonType,
+                                                     VK_LValue, OK_Ordinary, E);
+          OE->setIsUnique(/*V=*/true);
+          Expr *BaseExpr = OE;
+          for (const auto &P : ParentChain) {
+            if (P.first) {
+              BaseExpr = S.BuildMemberExpr(
+                  BaseExpr, /*IsArrow=*/false, E->getExprLoc(),
+                  NestedNameSpecifierLoc(), SourceLocation(), P.first,
+                  DeclAccessPair::make(P.first, P.first->getAccess()),
+                  /*HadMultipleCandidates=*/false, DeclarationNameInfo(),
+                  P.first->getType(), VK_LValue, OK_Ordinary);
+              BaseExpr = S.DefaultLvalueConversion(BaseExpr).get();
+            }
+          }
+          if (CurFD)
+            BaseExpr = S.BuildMemberExpr(
+                BaseExpr, /*IsArrow=*/false, E->getExprLoc(),
+                NestedNameSpecifierLoc(), SourceLocation(), CurFD,
+                DeclAccessPair::make(CurFD, CurFD->getAccess()),
+                /*HadMultipleCandidates=*/false, DeclarationNameInfo(),
+                CurFD->getType(), VK_LValue, OK_Ordinary);
+          SubExprs.push_back(BaseExpr);
+          continue;
+        }
+        // Check for the "default" mapper for data memebers.
+        bool FirstIter = true;
+        for (FieldDecl *FD : RD->fields()) {
+          if (!FD)
+            continue;
+          QualType FieldTy = FD->getType();
+          if (FieldTy.isNull() ||
+              !(FieldTy->isStructureOrClassType() || FieldTy->isUnionType()))
+            continue;
+          if (FirstIter) {
+            FirstIter = false;
+            ParentChain.emplace_back(CurFD, 1);
+          } else {
+            ++ParentChain.back().second;
+          }
+          Types.emplace_back(FieldTy, FD);
+        }
+      }
+    }
+    if (SubExprs.empty())
+      continue;
+    CXXScopeSpec MapperIdScopeSpec;
+    DeclarationNameInfo MapperId;
+    if (OMPClause *NewClause = S.ActOnOpenMPMapClause(
+            C->getMapTypeModifiers(), C->getMapTypeModifiersLoc(),
+            MapperIdScopeSpec, MapperId, C->getMapType(),
+            /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
+            SubExprs, OMPVarListLocTy()))
+      Clauses.push_back(NewClause);
+  }
+}
+
 StmtResult Sema::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
@@ -5271,6 +5411,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         }
       }
     }
+    // Build expressions for implicit maps of data members with 'default'
+    // mappers.
+    if (LangOpts.OpenMP >= 50)
+      processImplicitMapsWithDefaultMappers(*this, DSAStack,
+                                            ClausesWithImplicit);
   }
 
   llvm::SmallVector<OpenMPDirectiveKind, 4> AllowedNameModifiers;
@@ -17502,6 +17647,14 @@ public:
     Components.emplace_back(COCE, nullptr, IsNonContiguous);
     return true;
   }
+  bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+    Expr *Source = E->getSourceExpr();
+    if (!Source) {
+      emitErrorMsg();
+      return false;
+    }
+    return Visit(Source);
+  }
   bool VisitStmt(Stmt *) {
     emitErrorMsg();
     return false;
@@ -18622,8 +18775,15 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareMapperDirective(
     Diag(I->second, diag::note_previous_definition);
     Invalid = true;
   }
-  auto *DMD = OMPDeclareMapperDecl::Create(Context, DC, StartLoc, Name,
-                                           MapperType, VN, Clauses, PrevDMD);
+  // Build expressions for implicit maps of data members with 'default'
+  // mappers.
+  SmallVector<OMPClause *, 4> ClausesWithImplicit(Clauses.begin(),
+                                                  Clauses.end());
+  if (LangOpts.OpenMP >= 50)
+    processImplicitMapsWithDefaultMappers(*this, DSAStack, ClausesWithImplicit);
+  auto *DMD =
+      OMPDeclareMapperDecl::Create(Context, DC, StartLoc, Name, MapperType, VN,
+                                   ClausesWithImplicit, PrevDMD);
   if (S)
     PushOnScopeChains(DMD, S);
   else
