@@ -115,11 +115,6 @@ fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<fir::ComplexType>(parser);
 }
 
-// `shapeshift` `<` rank `>`
-ShapeShiftType parseShapeShift(mlir::DialectAsmParser &parser) {
-  return parseRankSingleton<ShapeShiftType>(parser);
-}
-
 // `slice` `<` rank `>`
 SliceType parseSlice(mlir::DialectAsmParser &parser) {
   return parseRankSingleton<SliceType>(parser);
@@ -386,10 +381,9 @@ mlir::Type fir::parseFirType(FIROpsDialect *dialect,
   if (typeNameLit == "ref")
     return parseReference(parser, loc);
   if (typeNameLit == "shape")
-    // TODO move to generatedTypeParser when all types have been moved
-    return ShapeType::parse(dialect->getContext(), parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "shapeshift")
-    return parseShapeShift(parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "slice")
     return parseSlice(parser);
   if (typeNameLit == "tdesc")
@@ -441,29 +435,6 @@ private:
   CharacterTypeStorage() = delete;
   explicit CharacterTypeStorage(KindTy kind, CharacterType::LenType len)
       : kind{kind}, len{len} {}
-};
-
-struct ShapeShiftTypeStorage : public mlir::TypeStorage {
-  using KeyTy = unsigned;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getRank(); }
-
-  static ShapeShiftTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                          unsigned rank) {
-    auto *storage = allocator.allocate<ShapeShiftTypeStorage>();
-    return new (storage) ShapeShiftTypeStorage{rank};
-  }
-
-  unsigned getRank() const { return rank; }
-
-protected:
-  unsigned rank;
-
-private:
-  ShapeShiftTypeStorage() = delete;
-  explicit ShapeShiftTypeStorage(unsigned rank) : rank{rank} {}
 };
 
 struct SliceTypeStorage : public mlir::TypeStorage {
@@ -1249,15 +1220,6 @@ llvm::hash_code fir::hash_value(const SequenceType::Shape &sh) {
   return llvm::hash_combine(0);
 }
 
-// Shapeshift
-
-ShapeShiftType fir::ShapeShiftType::get(mlir::MLIRContext *ctxt,
-                                        unsigned rank) {
-  return Base::get(ctxt, rank);
-}
-
-unsigned fir::ShapeShiftType::getRank() const { return getImpl()->getRank(); }
-
 // Slice
 
 SliceType fir::SliceType::get(mlir::MLIRContext *ctxt, unsigned rank) {
@@ -1446,16 +1408,6 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
-  if (auto type = ty.dyn_cast<ShapeType>()) {
-    // TODO when all type are moved to TableGen can be replaced by
-    // generatedTypePrinter
-    type.print(p);
-    return;
-  }
-  if (auto type = ty.dyn_cast<ShapeShiftType>()) {
-    os << "shapeshift<" << type.getRank() << '>';
-    return;
-  }
   if (auto type = ty.dyn_cast<SliceType>()) {
     os << "slice<" << type.getRank() << '>';
     return;
@@ -1527,6 +1479,10 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << "vector<" << type.getLen() << ':';
     p.printType(type.getEleTy());
     os << '>';
+    return;
+  }
+
+  if (mlir::succeeded(generatedTypePrinter(ty, p))) {
     return;
   }
 }
