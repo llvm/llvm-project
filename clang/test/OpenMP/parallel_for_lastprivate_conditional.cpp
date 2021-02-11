@@ -45,7 +45,7 @@ int main() {
 // CHECK: br label %[[DONE]]
 // CHECK: [[DONE]]:
 // CHECK: call void @__kmpc_end_critical(%struct.ident_t* @{{.+}}, i32 %{{.+}}, [8 x i32]* @{{.+}})
-// CHECK: atomicrmw add i32*
+// CHECK: atomicrmw add i32* {{.*}}, align 4
 // CHECK: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 %{{.+}}, [8 x i32]* @{{.+}})
 // CHECK: [[LAST_IV_VAL:%.+]] = load i32, i32* [[LAST_IV:@.+]],
 // CHECK: [[RES:%.+]] = icmp sle i32 [[LAST_IV_VAL]], [[IV:%.+]]
@@ -92,10 +92,10 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTLINED2]](i32* {{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
-// CHECK: atomicrmw add i32* [[A_SHARED:%.+]], i32 %{{.+}} monotonic
+// CHECK: atomicrmw add i32* [[A_SHARED:%.+]], i32 %{{.+}} monotonic, align 4
 // CHECK: [[BASE:%.+]] = bitcast i32* [[A_SHARED]] to [[STRUCT:%struct[.].+]]*
 // CHECK: [[FIRED:%.+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[BASE]], i{{.+}} 0, i{{.+}} 1
-// CHECK: store atomic volatile i8 1, i8* [[FIRED]] unordered,
+// CHECK: store atomic volatile i8 1, i8* [[FIRED]] unordered, align 1
 // CHECK: ret void
 
 #endif // HEADER

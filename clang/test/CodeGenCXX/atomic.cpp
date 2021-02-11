@@ -9,7 +9,7 @@ namespace PR11411 {
   // CHECK-NOT: ret
   template<typename _Tp> inline void Ptr<_Tp>::f() {
     int* _refcount;
-    // CHECK: atomicrmw add i32*
+    // CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
     __sync_fetch_and_add(_refcount, 1);
     // CHECK-NEXT: ret void
   }

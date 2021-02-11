@@ -265,7 +265,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[ATOMIC_VAL64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_VAL]] to i64*
   // CHECK:   [[ATOMIC_RES64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_RES]] to i64*
   // CHECK:   [[VAL64:%.*]] = load i64, i64* [[ATOMIC_VAL64]], align 8
-  // CHECK:   [[RES:%.*]] = atomicrmw xchg i64* [[ADDR64]], i64 [[VAL64]] seq_cst
+  // CHECK:   [[RES:%.*]] = atomicrmw xchg i64* [[ADDR64]], i64 [[VAL64]] seq_cst, align 8
   // CHECK:   store i64 [[RES]], i64* [[ATOMIC_RES64]], align 8
   // CHECK:   [[ATOMIC_RES_STRUCT:%.*]] = bitcast i64* [[ATOMIC_RES64]] to %struct.PS*
   // CHECK:   [[AGG_RESULT8:%.*]] = bitcast %struct.PS* %agg.result to i8*
@@ -303,7 +303,7 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   [[ATOMIC_NEW64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_NEW]] to i64*
   // CHECK:   [[ATOMIC_DESIRED_VAL64:%.*]] = load i64, i64* [[ATOMIC_DESIRED64]], align 8
   // CHECK:   [[ATOMIC_NEW_VAL64:%.*]] = load i64, i64* [[ATOMIC_NEW64]], align 8
-  // CHECK:   [[RES:%.*]] = cmpxchg i64* [[ADDR64]], i64 [[ATOMIC_DESIRED_VAL64]], i64 [[ATOMIC_NEW_VAL64]] seq_cst seq_cst
+  // CHECK:   [[RES:%.*]] = cmpxchg i64* [[ADDR64]], i64 [[ATOMIC_DESIRED_VAL64]], i64 [[ATOMIC_NEW_VAL64]] seq_cst seq_cst, align 8
   // CHECK:   [[RES_VAL64:%.*]] = extractvalue { i64, i1 } [[RES]], 0
   // CHECK:   [[RES_BOOL:%.*]] = extractvalue { i64, i1 } [[RES]], 1
   // CHECK:   br i1 [[RES_BOOL]], label {{%.*}}, label {{%.*}}
