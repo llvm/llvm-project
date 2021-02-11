@@ -22,7 +22,7 @@ void initializeForwardOpTreeWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
 namespace polly {
-Pass *createForwardOpTreeWrapperPass();
+llvm::Pass *createForwardOpTreeWrapperPass();
 
 struct ForwardOpTreePass : llvm::PassInfoMixin<ForwardOpTreePass> {
   ForwardOpTreePass() {}

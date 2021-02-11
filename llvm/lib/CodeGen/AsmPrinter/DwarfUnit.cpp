@@ -100,10 +100,10 @@ DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
 }
 
 DwarfUnit::~DwarfUnit() {
-  for (unsigned j = 0, M = DIEBlocks.size(); j < M; ++j)
-    DIEBlocks[j]->~DIEBlock();
-  for (unsigned j = 0, M = DIELocs.size(); j < M; ++j)
-    DIELocs[j]->~DIELoc();
+  for (DIEBlock *B : DIEBlocks)
+    B->~DIEBlock();
+  for (DIELoc *L : DIELocs)
+    L->~DIELoc();
 }
 
 int64_t DwarfUnit::getDefaultLowerBound() const {
@@ -1489,9 +1489,9 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
   // Add subranges to array type.
   DINodeArray Elements = CTy->getElements();
-  for (unsigned i = 0, N = Elements.size(); i < N; ++i) {
+  for (DINode *E : Elements) {
     // FIXME: Should this really be such a loose cast?
-    if (auto *Element = dyn_cast_or_null<DINode>(Elements[i])) {
+    if (auto *Element = dyn_cast_or_null<DINode>(E)) {
       if (Element->getTag() == dwarf::DW_TAG_subrange_type)
         constructSubrangeDIE(Buffer, cast<DISubrange>(Element), IdxTy);
       else if (Element->getTag() == dwarf::DW_TAG_generic_subrange)
@@ -1517,8 +1517,8 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   DINodeArray Elements = CTy->getElements();
 
   // Add enumerators to enumeration type.
-  for (unsigned i = 0, N = Elements.size(); i < N; ++i) {
-    auto *Enum = dyn_cast_or_null<DIEnumerator>(Elements[i]);
+  for (const DINode *E : Elements) {
+    auto *Enum = dyn_cast_or_null<DIEnumerator>(E);
     if (Enum) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
