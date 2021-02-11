@@ -50,9 +50,7 @@ struct ParallelLoopToGpuPass
     OwningRewritePatternList patterns;
     populateParallelLoopToGPUPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<AffineDialect, complex::ComplexDialect,
-                           gpu::GPUDialect, scf::SCFDialect,
-                           StandardOpsDialect>();
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     configureParallelLoopToGPULegality(target);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
