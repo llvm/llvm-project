@@ -3435,3 +3435,57 @@ define void @urem_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
   store <4 x i64> %c, <4 x i64>* %x
   ret void
 }
+
+define void @extract_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
+; LMULMAX2-LABEL: extract_v4i64:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    addi a2, zero, 4
+; LMULMAX2-NEXT:    vsetvli a3, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vle64.v v26, (a0)
+; LMULMAX2-NEXT:    vle64.v v28, (a1)
+; LMULMAX2-NEXT:    vsetvli a1, a2, e64,m2,ta,mu
+; LMULMAX2-NEXT:    vadd.vv v26, v26, v28
+; LMULMAX2-NEXT:    vse64.v v26, (a0)
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-RV32-LABEL: extract_v4i64:
+; LMULMAX1-RV32:       # %bb.0:
+; LMULMAX1-RV32-NEXT:    addi a2, zero, 2
+; LMULMAX1-RV32-NEXT:    vsetvli a3, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vle64.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    addi a3, a0, 16
+; LMULMAX1-RV32-NEXT:    vle64.v v26, (a3)
+; LMULMAX1-RV32-NEXT:    vle64.v v27, (a1)
+; LMULMAX1-RV32-NEXT:    addi a1, a1, 16
+; LMULMAX1-RV32-NEXT:    vle64.v v28, (a1)
+; LMULMAX1-RV32-NEXT:    vsetvli a1, a2, e64,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vadd.vv v26, v26, v28
+; LMULMAX1-RV32-NEXT:    vadd.vv v25, v25, v27
+; LMULMAX1-RV32-NEXT:    vse64.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    vse64.v v26, (a3)
+; LMULMAX1-RV32-NEXT:    ret
+;
+; LMULMAX1-RV64-LABEL: extract_v4i64:
+; LMULMAX1-RV64:       # %bb.0:
+; LMULMAX1-RV64-NEXT:    addi a2, zero, 2
+; LMULMAX1-RV64-NEXT:    vsetvli a3, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vle64.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    addi a3, a0, 16
+; LMULMAX1-RV64-NEXT:    vle64.v v26, (a3)
+; LMULMAX1-RV64-NEXT:    vle64.v v27, (a1)
+; LMULMAX1-RV64-NEXT:    addi a1, a1, 16
+; LMULMAX1-RV64-NEXT:    vle64.v v28, (a1)
+; LMULMAX1-RV64-NEXT:    vsetvli a1, a2, e64,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vadd.vv v26, v26, v28
+; LMULMAX1-RV64-NEXT:    vadd.vv v25, v25, v27
+; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    vse64.v v26, (a3)
+; LMULMAX1-RV64-NEXT:    ret
+  %a = load <4 x i64>, <4 x i64>* %x
+  %b = load <4 x i64>, <4 x i64>* %y
+  br label %"compute"
+"compute":
+  %c = add <4 x i64> %a, %b
+  store <4 x i64> %c, <4 x i64>* %x
+  ret void
+}
