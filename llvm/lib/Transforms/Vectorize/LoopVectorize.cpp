@@ -5812,7 +5812,8 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
         break;
       }
     }
-    if (auto MinVF = ElementCount::getFixed(TTI.getMinimumVF(SmallestType))) {
+    if (ElementCount MinVF =
+            TTI.getMinimumVF(SmallestType, /*IsScalable=*/false)) {
       if (ElementCount::isKnownLT(MaxVF, MinVF)) {
         LLVM_DEBUG(dbgs() << "LV: Overriding calculated MaxVF(" << MaxVF
                           << ") with target's minimum: " << MinVF << '\n');
