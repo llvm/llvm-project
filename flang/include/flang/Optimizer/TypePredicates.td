@@ -39,9 +39,6 @@ def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
 def fir_LenType : Type<CPred<"$_self.isa<fir::LenType>()">,
     "LEN parameter type">;
 
-// A descriptor tuple (captures a reference to an entity and other information)
-def fir_BoxType : Type<CPred<"$_self.isa<fir::BoxType>()">, "box type">;
-
 def AnyCoordinateLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
     Index.predicate, fir_IntegerType.predicate, fir_FieldType.predicate,
     fir_LenType.predicate]>, "any coordinate index">;
