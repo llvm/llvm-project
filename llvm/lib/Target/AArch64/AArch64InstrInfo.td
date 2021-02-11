@@ -198,6 +198,8 @@ def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
                        AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
 def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
                        AssemblerPredicate<(all_of FeatureSPE_EEF), "spe-eef">;
+def HasHBC            : Predicate<"Subtarget->hasHBC()">,
+                       AssemblerPredicate<(all_of FeatureHBC), "hbc">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -2362,7 +2364,12 @@ def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
 //===----------------------------------------------------------------------===//
-def Bcc : BranchCond;
+def Bcc : BranchCond<0, "b">;
+
+// Armv8.8-A variant form which hints to the branch predictor that
+// this branch is very likely to go the same way nearly all the time
+// (even though it is not known at compile time _which_ way that is).
+def BCcc : BranchCond<1, "bc">, Requires<[HasHBC]>;
 
 //===----------------------------------------------------------------------===//
 // Compare-and-branch instructions.
