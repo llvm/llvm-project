@@ -24,7 +24,6 @@ define void @DCT_mve1(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    mov r4, r5
 ; CHECK-NEXT:    dlstp.32 lr, r5
 ; CHECK-NEXT:  .LBB0_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
@@ -127,7 +126,6 @@ define void @DCT_mve2(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB1_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB1_2 Depth=1
@@ -272,7 +270,6 @@ define void @DCT_mve3(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    mov r4, r10
 ; CHECK-NEXT:    vmov q2, q0
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    mov r8, r7
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB2_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB2_2 Depth=1
@@ -448,7 +445,6 @@ define void @DCT_mve4(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vmov q2, q0
 ; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    mov r10, r7
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB3_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB3_2 Depth=1
@@ -645,7 +641,6 @@ define void @DCT_mve5(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vmov q2, q1
 ; CHECK-NEXT:    vmov q4, q1
-; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB4_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_2 Depth=1
@@ -864,7 +859,6 @@ define void @DCT_mve6(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vmov q2, q1
-; CHECK-NEXT:    mov r9, r7
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB5_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB5_2 Depth=1
