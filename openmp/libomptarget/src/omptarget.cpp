@@ -258,7 +258,7 @@ int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
   for (unsigned I = 0, E = MapperComponents.Components.size(); I < E; ++I) {
     auto &C =
         MapperComponents
-            .Components[target_data_function == targetDataEnd ? I : E - I - 1];
+            .Components[target_data_function == targetDataEnd ? E - I - 1 : I];
     MapperArgsBase[I] = C.Base;
     MapperArgs[I] = C.Begin;
     MapperArgSizes[I] = C.Size;
