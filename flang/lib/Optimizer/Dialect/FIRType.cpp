@@ -58,6 +58,27 @@ TYPE parseTypeSingleton(mlir::DialectAsmParser &parser, mlir::Location) {
   return TYPE::get(ty);
 }
 
+// `box` `<` type (',' affine-map)? `>`
+BoxType parseBox(mlir::DialectAsmParser &parser, mlir::Location loc) {
+  mlir::Type ofTy;
+  if (parser.parseLess() || parser.parseType(ofTy)) {
+    parser.emitError(parser.getCurrentLocation(), "expected type parameter");
+    return {};
+  }
+
+  mlir::AffineMapAttr map;
+  if (!parser.parseOptionalComma())
+    if (parser.parseAttribute(map)) {
+      parser.emitError(parser.getCurrentLocation(), "expected affine map");
+      return {};
+    }
+  if (parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(), "expected '>'");
+    return {};
+  }
+  return BoxType::get(ofTy, map);
+}
+
 // `boxchar` `<` kind `>`
 BoxCharType parseBoxChar(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<BoxCharType>(parser);
@@ -334,7 +355,7 @@ mlir::Type fir::parseFirType(FIROpsDialect *dialect,
   if (typeNameLit == "array")
     return parseSequence(parser, loc);
   if (typeNameLit == "box")
-    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
+    return parseBox(parser, loc);
   if (typeNameLit == "boxchar")
     return parseBoxChar(parser);
   if (typeNameLit == "boxproc")
@@ -571,6 +592,41 @@ protected:
 private:
   RealTypeStorage() = delete;
   explicit RealTypeStorage(KindTy kind) : kind{kind} {}
+};
+
+/// Boxed object (a Fortran descriptor)
+struct BoxTypeStorage : public mlir::TypeStorage {
+  using KeyTy = std::tuple<mlir::Type, mlir::AffineMapAttr>;
+
+  static unsigned hashKey(const KeyTy &key) {
+    auto hashVal{llvm::hash_combine(std::get<mlir::Type>(key))};
+    return llvm::hash_combine(
+        hashVal, llvm::hash_combine(std::get<mlir::AffineMapAttr>(key)));
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return std::get<mlir::Type>(key) == getElementType() &&
+           std::get<mlir::AffineMapAttr>(key) == getLayoutMap();
+  }
+
+  static BoxTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                   const KeyTy &key) {
+    auto *storage = allocator.allocate<BoxTypeStorage>();
+    return new (storage) BoxTypeStorage{std::get<mlir::Type>(key),
+                                        std::get<mlir::AffineMapAttr>(key)};
+  }
+
+  mlir::Type getElementType() const { return eleTy; }
+  mlir::AffineMapAttr getLayoutMap() const { return map; }
+
+protected:
+  mlir::Type eleTy;
+  mlir::AffineMapAttr map;
+
+private:
+  BoxTypeStorage() = delete;
+  explicit BoxTypeStorage(mlir::Type eleTy, mlir::AffineMapAttr map)
+      : eleTy{eleTy}, map{map} {}
 };
 
 /// Boxed CHARACTER object type
@@ -957,6 +1013,20 @@ RealType fir::RealType::get(mlir::MLIRContext *ctxt, KindTy kind) {
 
 KindTy fir::RealType::getFKind() const { return getImpl()->getFKind(); }
 
+// Box<T>
+
+BoxType fir::BoxType::get(mlir::Type elementType, mlir::AffineMapAttr map) {
+  return Base::get(elementType.getContext(), elementType, map);
+}
+
+mlir::Type fir::BoxType::getEleTy() const {
+  return getImpl()->getElementType();
+}
+
+mlir::AffineMapAttr fir::BoxType::getLayoutMap() const {
+  return getImpl()->getLayoutMap();
+}
+
 mlir::LogicalResult
 fir::BoxType::verifyConstructionInvariants(mlir::Location, mlir::Type eleTy,
                                            mlir::AffineMapAttr map) {
@@ -1270,6 +1340,16 @@ void fir::verifyIntegralType(mlir::Type type) {
 void fir::printFirType(FIROpsDialect *, mlir::Type ty,
                        mlir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
+  if (auto type = ty.dyn_cast<BoxType>()) {
+    os << "box<";
+    p.printType(type.getEleTy());
+    if (auto map = type.getLayoutMap()) {
+      os << ", ";
+      p.printAttribute(map);
+    }
+    os << '>';
+    return;
+  }
   if (auto type = ty.dyn_cast<BoxCharType>()) {
     os << "boxchar<" << type.getEleTy().cast<fir::CharacterType>().getFKind()
        << '>';
@@ -1420,44 +1500,3 @@ bool fir::isa_unknown_size_box(mlir::Type t) {
   }
   return false;
 }
-
-namespace fir {
-
-//===----------------------------------------------------------------------===//
-// BoxType
-//===----------------------------------------------------------------------===//
-
-// `box` `<` type (',' affine-map)? `>`
-mlir::Type BoxType::parse(mlir::MLIRContext *context,
-                          mlir::DialectAsmParser &parser) {
-  mlir::Type ofTy;
-  if (parser.parseLess() || parser.parseType(ofTy)) {
-    parser.emitError(parser.getCurrentLocation(), "expected type parameter");
-    return Type();
-  }
-
-  mlir::AffineMapAttr map;
-  if (!parser.parseOptionalComma()) {
-    if (parser.parseAttribute(map)) {
-      parser.emitError(parser.getCurrentLocation(), "expected affine map");
-      return Type();
-    }
-  }
-  if (parser.parseGreater()) {
-    parser.emitError(parser.getCurrentLocation(), "expected '>'");
-    return Type();
-  }
-  return get(ofTy, map);
-}
-
-void BoxType::print(::mlir::DialectAsmPrinter &printer) const {
-  printer << "box<";
-  printer.printType(getEleTy());
-  if (auto map = getLayoutMap()) {
-    printer << ", ";
-    printer.printAttribute(map);
-  }
-  printer << '>';
-}
-
-} // namespace fir

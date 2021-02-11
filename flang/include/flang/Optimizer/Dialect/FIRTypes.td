@@ -21,29 +21,6 @@ class FIR_Type<string name, string typeMnemonic> : TypeDef<fir_Dialect, name> {
   let mnemonic = typeMnemonic;
 }
 
-def BoxType : FIR_Type<"Box", "box"> {
-  let summary = "The type of a Fortran descriptor";
-
-  let description = [{
-    Descriptors are tuples of information that describe an entity being passed
-    from a calling context. This information might include (but is not limited
-    to) whether the entity is an array, its size, or what type it has.
-  }];
-
-  let parameters = (ins "mlir::Type":$eleTy, "mlir::AffineMapAttr":$map);
-
-  let extraClassDeclaration = [{
-    mlir::Type getElementType() const { return getEleTy(); }
-    mlir::AffineMapAttr getLayoutMap() const { return getMap(); }
-    static BoxType get(mlir::Type eleTy, mlir::AffineMapAttr map = {}) {
-      return get(eleTy, map);
-    }
-  }];
-
-  let genAccessors = 1;
-  let genVerifyInvariantsDecl = 1;
-}
-
 def ShapeType : FIR_Type<"Shape", "shape"> {
   let summary = "shape of a multidimensional array object";
 

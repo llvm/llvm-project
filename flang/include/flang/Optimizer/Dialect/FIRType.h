@@ -42,6 +42,7 @@ class FIROpsDialect;
 using KindTy = unsigned;
 
 namespace detail {
+struct BoxTypeStorage;
 struct BoxCharTypeStorage;
 struct BoxProcTypeStorage;
 struct CharacterTypeStorage;
@@ -176,6 +177,23 @@ public:
 };
 
 // FIR support types
+
+/// The type of a Fortran descriptor. Descriptors are tuples of information that
+/// describe an entity being passed from a calling context. This information
+/// might include (but is not limited to) whether the entity is an array, its
+/// size, or what type it has.
+class BoxType
+    : public mlir::Type::TypeBase<BoxType, mlir::Type, detail::BoxTypeStorage> {
+public:
+  using Base::Base;
+  static BoxType get(mlir::Type eleTy, mlir::AffineMapAttr map = {});
+  mlir::Type getEleTy() const;
+  mlir::AffineMapAttr getLayoutMap() const;
+
+  static mlir::LogicalResult
+  verifyConstructionInvariants(mlir::Location, mlir::Type eleTy,
+                               mlir::AffineMapAttr map);
+};
 
 /// The type of a pair that describes a CHARACTER variable. Specifically, a
 /// CHARACTER consists of a reference to a buffer (the string value) and a LEN
