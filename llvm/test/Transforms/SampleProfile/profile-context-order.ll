@@ -16,7 +16,6 @@
 ;; considered, thus the order becomes (_Z5funcAi, _Z3fibi) which leads to
 ;; _Z3fibi inlined into _Z5funcAi.
 ; RUN: opt < %s -passes=sample-profile -use-profile-indirect-call-edges=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=ICALL-INLINE
-; RUN: opt < %s -passes=sample-profile -use-profile-indirect-call-edges=0 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=ICALL-NOINLINE
 
 @factor = dso_local global i32 3, align 4, !dbg !0
 @fp = dso_local global i32 (i32)* null, align 8
@@ -48,9 +47,6 @@ for.body:                                         ; preds = %for.body, %entry
 ; NOINLINE: call i32 @_Z8funcLeafi
 ; ICALL-INLINE: define dso_local i32 @_Z5funcAi
 ; ICALL-INLINE: call i32 @_Z3foo
-; ICALL-NOINLINE: define dso_local i32 @_Z5funcAi
-; ICALL-NOINLINE-NO: call i32 @_Z3foo
-; ICALL-NOINLINE-NO: call i32 @_Z3fibi
 define dso_local i32 @_Z5funcAi(i32 %x) local_unnamed_addr #0 !dbg !40 {
 entry:
   %add = add nsw i32 %x, 100000, !dbg !44
