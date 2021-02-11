@@ -51,7 +51,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
 // Tracks end-to-end latency of high level lsp calls. Measurements are in
 // seconds.
 constexpr trace::Metric LSPLatency("lsp_latency", trace::Metric::Distribution,
@@ -71,6 +70,9 @@ llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   return llvm::None;
 }
 
+const llvm::StringLiteral APPLY_FIX_COMMAND = "clangd.applyFix";
+const llvm::StringLiteral APPLY_TWEAK_COMMAND = "clangd.applyTweak";
+
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
 CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
@@ -85,11 +87,12 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
   //        directly.
   CA.command.emplace();
   CA.command->title = T.Title;
-  CA.command->command = std::string(Command::CLANGD_APPLY_TWEAK);
-  CA.command->tweakArgs.emplace();
-  CA.command->tweakArgs->file = File;
-  CA.command->tweakArgs->tweakID = T.ID;
-  CA.command->tweakArgs->selection = Selection;
+  CA.command->command = std::string(APPLY_TWEAK_COMMAND);
+  TweakArgs Args;
+  Args.file = File;
+  Args.tweakID = T.ID;
+  Args.selection = Selection;
+  CA.command->argument = std::move(Args);
   return CA;
 }
 
@@ -582,6 +585,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
          {CodeAction::QUICKFIX_KIND, CodeAction::REFACTOR_KIND,
           CodeAction::INFO_KIND}}};
 
+  std::vector<llvm::StringRef> Commands;
+  llvm::append_range(Commands, CommandHandlers.keys());
+  llvm::sort(Commands);
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{{"name", "clangd"},
@@ -641,11 +648,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"referencesProvider", true},
             {"astProvider", true}, // clangd extension
             {"executeCommandProvider",
-             llvm::json::Object{
-                 {"commands",
-                  {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND,
-                   ExecuteCommandParams::CLANGD_APPLY_TWEAK}},
-             }},
+             llvm::json::Object{{"commands", Commands}}},
             {"typeHierarchyProvider", true},
             {"memoryUsageProvider", true}, // clangd extension
             {"compilationDatabase",        // clangd extension
@@ -730,85 +733,86 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
                                 Callback<llvm::json::Value> Reply) {
-  auto ApplyEdit = [this](WorkspaceEdit WE, std::string SuccessMessage,
-                          decltype(Reply) Reply) {
-    ApplyWorkspaceEditParams Edit;
-    Edit.edit = std::move(WE);
-    call<ApplyWorkspaceEditResponse>(
-        "workspace/applyEdit", std::move(Edit),
-        [Reply = std::move(Reply), SuccessMessage = std::move(SuccessMessage)](
-            llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
-          if (!Response)
-            return Reply(Response.takeError());
-          if (!Response->applied) {
-            std::string Reason = Response->failureReason
-                                     ? *Response->failureReason
-                                     : "unknown reason";
-            return Reply(error("edits were not applied: {0}", Reason));
-          }
-          return Reply(SuccessMessage);
-        });
-  };
-
-  if (Params.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND &&
-      Params.workspaceEdit) {
-    // The flow for "apply-fix" :
-    // 1. We publish a diagnostic, including fixits
-    // 2. The user clicks on the diagnostic, the editor asks us for code actions
-    // 3. We send code actions, with the fixit embedded as context
-    // 4. The user selects the fixit, the editor asks us to apply it
-    // 5. We unwrap the changes and send them back to the editor
-    // 6. The editor applies the changes (applyEdit), and sends us a reply
-    // 7. We unwrap the reply and send a reply to the editor.
-    ApplyEdit(*Params.workspaceEdit, "Fix applied.", std::move(Reply));
-  } else if (Params.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK &&
-             Params.tweakArgs) {
-    auto Code = DraftMgr.getDraft(Params.tweakArgs->file.file());
-    if (!Code)
-      return Reply(error("trying to apply a code action for a non-added file"));
-
-    auto Action = [this, ApplyEdit, Reply = std::move(Reply),
-                   File = Params.tweakArgs->file, Code = std::move(*Code)](
-                      llvm::Expected<Tweak::Effect> R) mutable {
-      if (!R)
-        return Reply(R.takeError());
-
-      assert(R->ShowMessage ||
-             (!R->ApplyEdits.empty() && "tweak has no effect"));
-
-      if (R->ShowMessage) {
-        ShowMessageParams Msg;
-        Msg.message = *R->ShowMessage;
-        Msg.type = MessageType::Info;
-        notify("window/showMessage", Msg);
-      }
-      // When no edit is specified, make sure we Reply().
-      if (R->ApplyEdits.empty())
-        return Reply("Tweak applied.");
-
-      if (auto Err = validateEdits(DraftMgr, R->ApplyEdits))
-        return Reply(std::move(Err));
-
-      WorkspaceEdit WE;
-      WE.changes.emplace();
-      for (const auto &It : R->ApplyEdits) {
-        (*WE.changes)[URI::createFile(It.first()).toString()] =
-            It.second.asTextEdits();
-      }
-      // ApplyEdit will take care of calling Reply().
-      return ApplyEdit(std::move(WE), "Tweak applied.", std::move(Reply));
-    };
-    Server->applyTweak(Params.tweakArgs->file.file(),
-                       Params.tweakArgs->selection, Params.tweakArgs->tweakID,
-                       std::move(Action));
-  } else {
-    // We should not get here because ExecuteCommandParams would not have
-    // parsed in the first place and this handler should not be called. But if
-    // more commands are added, this will be here has a safe guard.
-    Reply(llvm::make_error<LSPError>(
+  auto It = CommandHandlers.find(Params.command);
+  if (It == CommandHandlers.end()) {
+    return Reply(llvm::make_error<LSPError>(
         llvm::formatv("Unsupported command \"{0}\".", Params.command).str(),
         ErrorCode::InvalidParams));
   }
+  It->second(Params.argument, std::move(Reply));
+}
+
+void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
+                                         Callback<llvm::json::Value> Reply) {
+  // The flow for "apply-fix" :
+  // 1. We publish a diagnostic, including fixits
+  // 2. The user clicks on the diagnostic, the editor asks us for code actions
+  // 3. We send code actions, with the fixit embedded as context
+  // 4. The user selects the fixit, the editor asks us to apply it
+  // 5. We unwrap the changes and send them back to the editor
+  // 6. The editor applies the changes (applyEdit), and sends us a reply
+  // 7. We unwrap the reply and send a reply to the editor.
+  applyEdit(WE, "Fix applied.", std::move(Reply));
+}
+
+void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
+                                          Callback<llvm::json::Value> Reply) {
+  auto Code = DraftMgr.getDraft(Args.file.file());
+  if (!Code)
+    return Reply(error("trying to apply a code action for a non-added file"));
+
+  auto Action = [this, Reply = std::move(Reply), File = Args.file,
+                 Code = std::move(*Code)](
+                    llvm::Expected<Tweak::Effect> R) mutable {
+    if (!R)
+      return Reply(R.takeError());
+
+    assert(R->ShowMessage || (!R->ApplyEdits.empty() && "tweak has no effect"));
+
+    if (R->ShowMessage) {
+      ShowMessageParams Msg;
+      Msg.message = *R->ShowMessage;
+      Msg.type = MessageType::Info;
+      notify("window/showMessage", Msg);
+    }
+    // When no edit is specified, make sure we Reply().
+    if (R->ApplyEdits.empty())
+      return Reply("Tweak applied.");
+
+    if (auto Err = validateEdits(DraftMgr, R->ApplyEdits))
+      return Reply(std::move(Err));
+
+    WorkspaceEdit WE;
+    WE.changes.emplace();
+    for (const auto &It : R->ApplyEdits) {
+      (*WE.changes)[URI::createFile(It.first()).toString()] =
+          It.second.asTextEdits();
+    }
+    // ApplyEdit will take care of calling Reply().
+    return applyEdit(std::move(WE), "Tweak applied.", std::move(Reply));
+  };
+  Server->applyTweak(Args.file.file(), Args.selection, Args.tweakID,
+                     std::move(Action));
+}
+
+void ClangdLSPServer::applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
+                                Callback<llvm::json::Value> Reply) {
+  ApplyWorkspaceEditParams Edit;
+  Edit.edit = std::move(WE);
+  call<ApplyWorkspaceEditResponse>(
+      "workspace/applyEdit", std::move(Edit),
+      [Reply = std::move(Reply), SuccessMessage = std::move(Success)](
+          llvm::Expected<ApplyWorkspaceEditResponse> Response) mutable {
+        if (!Response)
+          return Reply(Response.takeError());
+        if (!Response->applied) {
+          std::string Reason = Response->failureReason
+                                   ? *Response->failureReason
+                                   : "unknown reason";
+          return Reply(error("edits were not applied: {0}", Reason));
+        }
+        return Reply(SuccessMessage);
+      });
 }
 
 void ClangdLSPServer::onWorkspaceSymbol(
@@ -998,8 +1002,8 @@ static llvm::Optional<Command> asCommand(const CodeAction &Action) {
   if (Action.command) {
     Cmd = *Action.command;
   } else if (Action.edit) {
-    Cmd.command = std::string(Command::CLANGD_APPLY_FIX_COMMAND);
-    Cmd.workspaceEdit = *Action.edit;
+    Cmd.command = std::string(APPLY_FIX_COMMAND);
+    Cmd.argument = *Action.edit;
   } else {
     return None;
   }
@@ -1530,6 +1534,8 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("$/memoryUsage", &ClangdLSPServer::onMemoryUsage);
   if (Opts.FoldingRanges)
     MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
+  bindCommand(APPLY_FIX_COMMAND, &ClangdLSPServer::onCommandApplyEdit);
+  bindCommand(APPLY_TWEAK_COMMAND, &ClangdLSPServer::onCommandApplyTweak);
   // clang-format on
 }
 
