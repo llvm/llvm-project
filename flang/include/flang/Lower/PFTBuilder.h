@@ -292,14 +292,13 @@ struct Evaluation : EvaluationVariant {
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
 
-  // FIR generation looks primarily at PFT statement (leaf) nodes.  So members
-  // such as lexicalSuccessor and the various block fields are only applicable
-  // to statement nodes.  One exception is that an internal construct node is
-  // a convenient place for a constructExit link that applies to exits from any
-  // statement within the construct.  The controlSuccessor member is used for
-  // nonlexical successors, such as linking to a GOTO target.  For multiway
-  // branches, controlSuccessor is set to one of the targets (might as well be
-  // the first target).  Successor and exit links always target statements.
+  // FIR generation looks primarily at PFT ActionStmt and ConstructStmt leaf
+  // nodes.  Members such as lexicalSuccessor and block are applicable only
+  // to these nodes.  The controlSuccessor member is used for nonlexical
+  // successors, such as linking to a GOTO target.  For multiway branches,
+  // it is set to the first target.  Successor and exit links always target
+  // statements.  An internal Construct node has a constructExit link that
+  // applies to exits from anywhere within the construct.
   //
   // An unstructured construct is one that contains some form of goto.  This
   // is indicated by the isUnstructured member flag, which may be set on a
@@ -308,23 +307,19 @@ struct Evaluation : EvaluationVariant {
   // FIR operations.  An unstructured statement is materialized as mlir
   // operation sequences that include explicit branches.
   //
-  // There are two mlir::Block members.  The block member is set for statements
-  // that begin a new block.  If a statement may have more than one associated
-  // block, this member must be the block that would be the target of a branch
-  // to the statement.  The prime example of a statement that may have multiple
-  // associated blocks is NonLabelDoStmt, which may have a loop preheader block
-  // for loop initialization code, and always has a header block that is the
-  // target of the loop back edge.  If the NonLabelDoStmt is a concurrent loop,
-  // there may be an arbitrary number of nested preheader, header, and mask
-  // blocks.  Any such additional blocks in the localBlocks member are local
-  // to a construct and cannot be the target of an unstructured branch.  For
-  // NonLabelDoStmt, the block member designates the preheader block, which may
-  // be absent if loop initialization code may be appended to a predecessor
-  // block.  The primary loop header block is localBlocks[0], with additional
-  // DO CONCURRENT blocks at localBlocks[1], etc.
+  // The block member is set for statements that begin a new block.  This
+  // block is the target of any branch to the statement.  Statements may have
+  // additional (unstructured) "local" blocks, but such blocks cannot be the
+  // target of any explicit branch.  The primary example of an (unstructured)
+  // statement that may have multiple associated blocks is NonLabelDoStmt,
+  // which may have a loop preheader block for loop initialization code (the
+  // block member), and always has a "local" header block that is the target
+  // of the loop back edge.  If the NonLabelDoStmt is a concurrent loop, it
+  // may be associated with an arbitrary number of nested preheader, header,
+  // and mask blocks.
   //
   // The printIndex member is only set for statements.  It is used for dumps
-  // and does not affect FIR generation.  It may also be helpful for debugging.
+  // (and debugging) and does not affect FIR generation.
 
   PftNode parent;
   parser::CharBlock position{};
@@ -337,8 +332,7 @@ struct Evaluation : EvaluationVariant {
   bool isNewBlock{false};                // evaluation begins a new basic block
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
-  mlir::Block *block{nullptr}; // isNewBlock block
-  llvm::SmallVector<mlir::Block *, 1> localBlocks{}; // construct local blocks
+  mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
 

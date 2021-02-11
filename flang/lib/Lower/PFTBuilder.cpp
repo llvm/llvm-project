@@ -698,12 +698,6 @@ private:
             markBranchTarget(eval, std::get<1>(s.t));
             markBranchTarget(eval, std::get<2>(s.t));
             markBranchTarget(eval, std::get<3>(s.t));
-            if (semantics::ExprHasTypeCategory(
-                    *semantics::GetExpr(std::get<parser::Expr>(s.t)),
-                    common::TypeCategory::Real)) {
-              // Real expression evaluation uses an additional local block.
-              eval.localBlocks.emplace_back(nullptr);
-            }
           },
           [&](const parser::AssignStmt &s) { // legacy label assignment
             auto &label = std::get<parser::Label>(s.t);
@@ -760,18 +754,21 @@ private:
           [&](const parser::NonLabelDoStmt &s) {
             insertConstructName(s, parentConstruct);
             doConstructStack.push_back(parentConstruct);
-            const auto &loopControl = std::get<1>(s.t);
+            const auto &loopControl =
+                std::get<std::optional<parser::LoopControl>>(s.t);
             if (!loopControl.has_value()) {
               eval.isUnstructured = true; // infinite loop
               return;
             }
             eval.nonNopSuccessor().isNewBlock = true;
             eval.controlSuccessor = &evaluationList.back();
-            if (const auto *bounds = std::get_if<0>(&loopControl->u)) {
+            if (const auto *bounds =
+                    std::get_if<parser::LoopControl::Bounds>(&loopControl->u)) {
               if (bounds->name.thing.symbol->GetType()->IsNumeric(
                       common::TypeCategory::Real))
                 eval.isUnstructured = true; // real-valued loop control
-            } else if (std::get_if<1>(&loopControl->u)) {
+            } else if (std::get_if<parser::ScalarLogicalExpr>(
+                           &loopControl->u)) {
               eval.isUnstructured = true; // while loop
             }
           },
@@ -782,34 +779,23 @@ private:
             if (parentConstruct->lowerAsStructured())
               return;
             // The loop is unstructured, which wasn't known for all cases when
-            // visiting the NonLabelDoStmt.  doEval.block is the loop preheader
-            // block, which will be set elsewhere if the NonLabelDoStmt is
-            // itself a target.  doEval.localBlocks[0] is the loop header block.
-            doEval.localBlocks.emplace_back(nullptr);
+            // visiting the NonLabelDoStmt.
             parentConstruct->constructExit->isNewBlock = true;
-            const auto &doStmt = doEval.getIf<parser::NonLabelDoStmt>();
-            const auto &loopControl = std::get<1>(doStmt->t);
+            const auto &doStmt = *doEval.getIf<parser::NonLabelDoStmt>();
+            const auto &loopControl =
+                std::get<std::optional<parser::LoopControl>>(doStmt.t);
             if (!loopControl.has_value())
               return; // infinite loop
-            const auto *concurrent = std::get_if<2>(&loopControl->u);
-            if (!concurrent)
-              return;
-            // Unstructured concurrent loop.  Reserve header, body, and latch
-            // blocks for each loop dimension, and one block for a mask.
-            // The original loop body provides the body and latch blocks of
-            // the innermost dimension, so adjust for those.  The (first) body
-            // block of a non-innermost dimension is the preheader block of
-            // the immediately enclosed dimension.  The latch block of a
-            // non-innermost dimension is the exit block of the immediately
-            // enclosed dimension.  Reserving these blocks in advance, while
-            // not strictly required, allows "in order" code generation, which
-            // is much easier to read and debug.
-            const auto &header = std::get<0>(concurrent->t);
-            const auto dims = std::get<1>(header.t).size();
-            const bool hasMask = std::get<2>(header.t).has_value();
-            doEval.localBlocks.resize(2 * dims + hasMask - 1); // header, body
-            eval.localBlocks.resize(dims - 1);                 // latch blocks
-            eval.isNewBlock |= hasMask;
+            if (const auto *concurrent =
+                    std::get_if<parser::LoopControl::Concurrent>(
+                        &loopControl->u)) {
+              // If there is a mask, the EndDoStmt starts a new block.
+              const auto &header =
+                  std::get<parser::ConcurrentHeader>(concurrent->t);
+              eval.isNewBlock |=
+                  std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)
+                      .has_value();
+            }
           },
           [&](const parser::IfThenStmt &s) {
             insertConstructName(s, parentConstruct);
@@ -1013,8 +999,6 @@ public:
       outputStream << eval.printIndex << ' ';
     if (eval.isNewBlock)
       outputStream << '^';
-    if (eval.localBlocks.size())
-      outputStream << '*';
     outputStream << name << bang;
     if (eval.isActionStmt() || eval.isConstructStmt()) {
       if (eval.negateCondition)
