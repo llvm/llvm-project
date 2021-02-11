@@ -360,6 +360,7 @@ kmpc_set_defaults                           224
         __kmpc_team_static_init_4u          256
         __kmpc_team_static_init_8           257
         __kmpc_team_static_init_8u          258
+        __kmpc_push_num_teams_51            284
 %endif
 
 %ifndef stub

@@ -455,6 +455,7 @@ AffHWSubsetManyDies          "KMP_HW_SUBSET ignored: too many Dies requested."
 AffUseGlobCpuidL             "%1$s: Affinity capable, using global cpuid leaf %2$d info"
 AffNotCapableUseLocCpuidL    "%1$s: Affinity not capable, using local cpuid leaf %2$d info"
 AffNotUsingHwloc             "%1$s: Affinity not capable, using hwloc."
+FailedToCreateTeam           "Failed to create teams between lower bound (%1$d) and upper bound (%2$d)."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-
@@ -512,7 +513,7 @@ BadExeFormat                 "System error #193 is \"Bad format of EXE or DLL fi
                              "a file for another architecture. "
                              "Check whether \"%1$s\" is a file for %2$s architecture."
 SystemLimitOnThreads         "System-related limit on the number of threads."
-
+SetNewBound                  "Try setting new bounds (preferably less than or equal to %1$d) for num_teams clause."
 
 
 # --------------------------------------------------------------------------------------------------

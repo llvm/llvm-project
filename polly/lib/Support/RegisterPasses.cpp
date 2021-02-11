@@ -535,8 +535,9 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
     case CODEGEN_NONE:
       break;
     }
+  }
 #ifdef GPU_CODEGEN
-  } else
+  else
     report_fatal_error("Option -polly-target=gpu not supported for NPM", false);
 #endif
 
@@ -615,7 +616,10 @@ createScopAnalyses(FunctionAnalysisManager &FAM,
                    PassInstrumentationCallbacks *PIC) {
   OwningScopAnalysisManagerFunctionProxy Proxy;
 #define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  Proxy.getManager().registerPass([PIC] { return CREATE_PASS; });
+  Proxy.getManager().registerPass([PIC] {                                      \
+    (void)PIC;                                                                 \
+    return CREATE_PASS;                                                        \
+  });
 #include "PollyPasses.def"
 
   Proxy.getManager().registerPass(

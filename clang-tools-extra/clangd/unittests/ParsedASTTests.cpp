@@ -184,9 +184,6 @@ TEST(ParsedASTTest,
     template <>
     int foo<bool> = 0;
   )cpp";
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
 
   auto AST = TU.build();
   EXPECT_THAT(

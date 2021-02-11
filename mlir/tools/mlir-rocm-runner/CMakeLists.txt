@@ -65,10 +65,8 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     ${ROCM_RUNTIME_LIBRARY}
   )
 
-  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
-    ${dialect_libs}
     ${conversion_libs}
     lldCommon
     lldDriver
@@ -77,9 +75,12 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
+    MLIRGPU
     MLIRIR
+    MLIRLLVMIR
     MLIRParser
     MLIRROCDLIR
+    MLIRStandard
     MLIRSupport
     MLIRTargetLLVMIR
     MLIRTargetROCDLIR

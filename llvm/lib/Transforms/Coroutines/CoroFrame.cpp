@@ -2180,6 +2180,8 @@ void coro::salvageDebugInfo(
     } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
       Expr = llvm::salvageDebugInfoImpl(*GEPInst, Expr,
                                         /*WithStackValue=*/false);
+      if (!Expr)
+        return;
       Storage = GEPInst->getOperand(0);
     } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
       Storage = BCInst->getOperand(0);

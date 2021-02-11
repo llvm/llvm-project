@@ -251,9 +251,19 @@ bool SIFormMemoryClauses::checkPressure(const MachineInstr &MI,
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+
+  // Don't push over half the register budget. We don't want to introduce
+  // spilling just to form a soft clause.
+  //
+  // FIXME: This pressure check is fundamentally broken. First, this is checking
+  // the global pressure, not the pressure at this specific point in the
+  // program. Second, it's not accounting for the increased liveness of the use
+  // operands due to the early clobber we will introduce. Third, the pressure
+  // tracking does not account for the alignment requirements for SGPRs, or the
+  // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum() <= MaxVGPRs &&
-      MaxPressure.getSGPRNum() <= MaxSGPRs) {
+      MaxPressure.getVGPRNum() <= MaxVGPRs / 2 &&
+      MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
     return true;
   }

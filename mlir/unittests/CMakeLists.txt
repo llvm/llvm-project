@@ -1,4 +1,3 @@
-add_custom_target(MLIRUnitTests)
 set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR Tests")
 
 function(add_mlir_unittest test_dirname)

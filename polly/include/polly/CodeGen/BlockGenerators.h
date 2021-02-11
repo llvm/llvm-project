@@ -21,7 +21,32 @@
 #include "isl/isl-noexceptions.h"
 
 namespace polly {
-using namespace llvm;
+using llvm::AllocaInst;
+using llvm::ArrayRef;
+using llvm::AssertingVH;
+using llvm::BasicBlock;
+using llvm::BinaryOperator;
+using llvm::CmpInst;
+using llvm::DataLayout;
+using llvm::DenseMap;
+using llvm::DominatorTree;
+using llvm::Function;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::Loop;
+using llvm::LoopInfo;
+using llvm::LoopToScevMapT;
+using llvm::MapVector;
+using llvm::PHINode;
+using llvm::ScalarEvolution;
+using llvm::SetVector;
+using llvm::SmallVector;
+using llvm::StoreInst;
+using llvm::StringRef;
+using llvm::Type;
+using llvm::UnaryInstruction;
+using llvm::Value;
+
 class MemoryAccess;
 class ScopArrayInfo;
 class IslExprBuilder;

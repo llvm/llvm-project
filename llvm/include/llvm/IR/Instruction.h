@@ -650,6 +650,9 @@ public:
   /// llvm.lifetime.end marker.
   bool isLifetimeStartOrEnd() const;
 
+  /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
+  bool isDebugOrPseudoInst() const;
+
   /// Return a pointer to the next non-debug instruction in the same basic
   /// block as 'this', or nullptr if no such instruction exists. Skip any pseudo
   /// operations if \c SkipPseudoOp is true.

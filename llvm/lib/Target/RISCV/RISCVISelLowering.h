@@ -167,6 +167,9 @@ enum NodeType : unsigned {
   VMCLR_VL,
   VMSET_VL,
 
+  // Matches the semantics of vrgather.vx with an extra operand for VL.
+  VRGATHER_VX_VL,
+
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
   VSE_VL,
@@ -405,7 +408,7 @@ private:
 namespace RISCV {
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
-}; // namespace RISCV
+} // namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
 

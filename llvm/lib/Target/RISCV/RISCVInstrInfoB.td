@@ -47,20 +47,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   }];
 }
 
-// Checks if this mask has a single 0 bit and cannot be used with ANDI.
-def BCLRMask : ImmLeaf<XLenVT, [{
-  if (Subtarget->is64Bit())
-    return !isInt<12>(Imm) && isPowerOf2_64(~Imm);
-  return !isInt<12>(Imm) && isPowerOf2_32(~Imm);
-}]>;
-
-// Checks if this mask has a single 1 bit and cannot be used with ORI/XORI.
-def BSETINVMask : ImmLeaf<XLenVT, [{
-  if (Subtarget->is64Bit())
-    return !isInt<12>(Imm) && isPowerOf2_64(Imm);
-  return !isInt<12>(Imm) && isPowerOf2_32(Imm);
-}]>;
-
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
   return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingOnes(),
@@ -72,6 +58,20 @@ def BSETINVXForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
                                    SDLoc(N), N->getValueType(0));
 }]>;
+
+// Checks if this mask has a single 0 bit and cannot be used with ANDI.
+def BCLRMask : ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return !isInt<12>(Imm) && isPowerOf2_64(~Imm);
+  return !isInt<12>(Imm) && isPowerOf2_32(~Imm);
+}], BCLRXForm>;
+
+// Checks if this mask has a single 1 bit and cannot be used with ORI/XORI.
+def BSETINVMask : ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return !isInt<12>(Imm) && isPowerOf2_64(Imm);
+  return !isInt<12>(Imm) && isPowerOf2_32(Imm);
+}], BSETINVXForm>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -648,11 +648,11 @@ def : Pat<(shiftop<shl> 1, GPR:$rs2),
           (BSET X0, GPR:$rs2)>;
 
 def : Pat<(and GPR:$rs1, BCLRMask:$mask),
-          (BCLRI GPR:$rs1, (BCLRXForm imm:$mask))>;
+          (BCLRI GPR:$rs1, BCLRMask:$mask)>;
 def : Pat<(or GPR:$rs1, BSETINVMask:$mask),
-          (BSETI GPR:$rs1, (BSETINVXForm imm:$mask))>;
+          (BSETI GPR:$rs1, BSETINVMask:$mask)>;
 def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
-          (BINVI GPR:$rs1, (BSETINVXForm imm:$mask))>;
+          (BINVI GPR:$rs1, BSETINVMask:$mask)>;
 
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
           (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;

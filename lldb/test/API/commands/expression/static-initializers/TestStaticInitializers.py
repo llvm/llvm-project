@@ -31,3 +31,8 @@ class StaticInitializers(TestBase):
         # FIXME: This error message is not even remotely helpful.
         self.expect("expr -p -- struct Foo2 { Foo2() { do_abort(); } }; Foo2 f;", error=True,
                     substrs=["error: couldn't run static initializer:"])
+
+    def test_without_process(self):
+        """ Test a static initializer without a running process. """
+        self.expect("expr -p -- int i = 0; struct Foo3 { Foo3() { ++i; } }; Foo3 f;", error=True,
+                    substrs=["Top-level code needs to be inserted into a runnable target"])

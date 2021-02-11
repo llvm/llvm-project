@@ -92,11 +92,6 @@ cpy z0.b, p0/z, #0, lsl #8      // #0, lsl #8 is not valid for .b
 // CHECK-NEXT: cpy z0.b, p0/z, #0, lsl #8
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-cpy z0.b, p0/z, #-129
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 255]
-// CHECK-NEXT: cpy z0.b, p0/z, #-129
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 cpy z0.b, p0/z, #-1, lsl #8
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 255]
 // CHECK-NEXT: cpy z0.b, p0/z, #-1, lsl #8
@@ -112,19 +107,9 @@ cpy z0.b, p0/z, #1, lsl #8
 // CHECK-NEXT: cpy z0.b, p0/z, #1, lsl #8
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-cpy z0.h, p0/z, #-33024
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 127] or a multiple of 256 in range [-32768, 65280]
-// CHECK-NEXT: cpy z0.h, p0/z, #-33024
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 cpy z0.h, p0/z, #-32769
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 127] or a multiple of 256 in range [-32768, 65280]
 // CHECK-NEXT: cpy z0.h, p0/z, #-32769
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-cpy z0.h, p0/z, #-129, lsl #8
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-128, 127] or a multiple of 256 in range [-32768, 65280]
-// CHECK-NEXT: cpy z0.h, p0/z, #-129, lsl #8
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 cpy z0.h, p0/z, #32513

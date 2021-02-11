@@ -44,18 +44,17 @@ private:
   bool shouldSkip(const MachineBasicBlock &From,
                   const MachineBasicBlock &To) const;
 
-  bool dominatesAllReachable(MachineBasicBlock &MBB);
   void ensureEarlyExitBlock(MachineBasicBlock &MBB, bool ClearExec);
-  void skipIfDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  DebugLoc DL);
 
-  bool kill(MachineInstr &MI);
   void earlyTerm(MachineInstr &MI);
 
   bool skipMaskBranch(MachineInstr &MI, MachineBasicBlock &MBB);
 
 public:
   static char ID;
+
+  unsigned MovOpc;
+  Register ExecReg;
 
   SIInsertSkips() : MachineFunctionPass(ID) {}
 
@@ -138,15 +137,6 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
   return false;
 }
 
-/// Check whether \p MBB dominates all blocks that are reachable from it.
-bool SIInsertSkips::dominatesAllReachable(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock *Other : depth_first(&MBB)) {
-    if (!MDT->dominates(&MBB, Other))
-      return false;
-  }
-  return true;
-}
-
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
                            const SIInstrInfo *TII, bool IsPS) {
@@ -181,11 +171,8 @@ void SIInsertSkips::ensureEarlyExitBlock(MachineBasicBlock &MBB,
   }
 
   if (ClearExec && !EarlyExitClearsExec) {
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    unsigned Mov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    Register Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     auto ExitI = EarlyExitBlock->getFirstNonPHI();
-    BuildMI(*EarlyExitBlock, ExitI, DL, TII->get(Mov), Exec).addImm(0);
+    BuildMI(*EarlyExitBlock, ExitI, DL, TII->get(MovOpc), ExecReg).addImm(0);
     EarlyExitClearsExec = true;
   }
 }
@@ -203,175 +190,6 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   }
   DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
   MDT->getBase().applyUpdates(DTUpdates);
-}
-
-/// Insert an "if exec=0 { null export; s_endpgm }" sequence before the given
-/// iterator. Only applies to pixel shaders.
-void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator I, DebugLoc DL) {
-  MachineFunction *MF = MBB.getParent();
-  (void)MF;
-  assert(MF->getFunction().getCallingConv() == CallingConv::AMDGPU_PS);
-
-  // It is possible for an SI_KILL_*_TERMINATOR to sit at the bottom of a
-  // basic block that has no further successors (e.g., there was an
-  // `unreachable` there in IR). This can happen with original source of the
-  // form:
-  //
-  //   if (uniform_condition) {
-  //     write_to_memory();
-  //     discard;
-  //   }
-  //
-  // In this case, we write the "null_export; s_endpgm" skip code in the
-  // already-existing basic block.
-  auto NextBBI = std::next(MBB.getIterator());
-  bool NoSuccessor =
-      I == MBB.end() && !llvm::is_contained(MBB.successors(), &*NextBBI);
-
-  if (NoSuccessor) {
-    generateEndPgm(MBB, I, DL, TII, true);
-  } else {
-    ensureEarlyExitBlock(MBB, false);
-
-    MachineInstr *BranchMI =
-        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
-            .addMBB(EarlyExitBlock);
-
-    // Split the block if the branch will not come at the end.
-    auto Next = std::next(BranchMI->getIterator());
-    if (Next != MBB.end() && !Next->isTerminator())
-      splitBlock(MBB, *BranchMI, MDT);
-
-    MBB.addSuccessor(EarlyExitBlock);
-    MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
-  }
-}
-
-/// Translate a SI_KILL_*_TERMINATOR into exec-manipulating instructions.
-/// Return true unless the terminator is a no-op.
-bool SIInsertSkips::kill(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
-  switch (MI.getOpcode()) {
-  case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR: {
-    unsigned Opcode = 0;
-
-    // The opcodes are inverted because the inline immediate has to be
-    // the first operand, e.g. from "x < imm" to "imm > x"
-    switch (MI.getOperand(2).getImm()) {
-    case ISD::SETOEQ:
-    case ISD::SETEQ:
-      Opcode = AMDGPU::V_CMPX_EQ_F32_e64;
-      break;
-    case ISD::SETOGT:
-    case ISD::SETGT:
-      Opcode = AMDGPU::V_CMPX_LT_F32_e64;
-      break;
-    case ISD::SETOGE:
-    case ISD::SETGE:
-      Opcode = AMDGPU::V_CMPX_LE_F32_e64;
-      break;
-    case ISD::SETOLT:
-    case ISD::SETLT:
-      Opcode = AMDGPU::V_CMPX_GT_F32_e64;
-      break;
-    case ISD::SETOLE:
-    case ISD::SETLE:
-      Opcode = AMDGPU::V_CMPX_GE_F32_e64;
-      break;
-    case ISD::SETONE:
-    case ISD::SETNE:
-      Opcode = AMDGPU::V_CMPX_LG_F32_e64;
-      break;
-    case ISD::SETO:
-      Opcode = AMDGPU::V_CMPX_O_F32_e64;
-      break;
-    case ISD::SETUO:
-      Opcode = AMDGPU::V_CMPX_U_F32_e64;
-      break;
-    case ISD::SETUEQ:
-      Opcode = AMDGPU::V_CMPX_NLG_F32_e64;
-      break;
-    case ISD::SETUGT:
-      Opcode = AMDGPU::V_CMPX_NGE_F32_e64;
-      break;
-    case ISD::SETUGE:
-      Opcode = AMDGPU::V_CMPX_NGT_F32_e64;
-      break;
-    case ISD::SETULT:
-      Opcode = AMDGPU::V_CMPX_NLE_F32_e64;
-      break;
-    case ISD::SETULE:
-      Opcode = AMDGPU::V_CMPX_NLT_F32_e64;
-      break;
-    case ISD::SETUNE:
-      Opcode = AMDGPU::V_CMPX_NEQ_F32_e64;
-      break;
-    default:
-      llvm_unreachable("invalid ISD:SET cond code");
-    }
-
-    const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
-    if (ST.hasNoSdstCMPX())
-      Opcode = AMDGPU::getVCMPXNoSDstOp(Opcode);
-
-    assert(MI.getOperand(0).isReg());
-
-    if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
-                    MI.getOperand(0).getReg())) {
-      Opcode = AMDGPU::getVOPe32(Opcode);
-      BuildMI(MBB, &MI, DL, TII->get(Opcode))
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(0));
-    } else {
-      auto I = BuildMI(MBB, &MI, DL, TII->get(Opcode));
-      if (!ST.hasNoSdstCMPX())
-        I.addReg(AMDGPU::VCC, RegState::Define);
-
-      I.addImm(0)  // src0 modifiers
-        .add(MI.getOperand(1))
-        .addImm(0)  // src1 modifiers
-        .add(MI.getOperand(0));
-
-      I.addImm(0);  // omod
-    }
-    return true;
-  }
-  case AMDGPU::SI_KILL_I1_TERMINATOR: {
-    const MachineFunction *MF = MI.getParent()->getParent();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    const MachineOperand &Op = MI.getOperand(0);
-    int64_t KillVal = MI.getOperand(1).getImm();
-    assert(KillVal == 0 || KillVal == -1);
-
-    // Kill all threads if Op0 is an immediate and equal to the Kill value.
-    if (Op.isImm()) {
-      int64_t Imm = Op.getImm();
-      assert(Imm == 0 || Imm == -1);
-
-      if (Imm == KillVal) {
-        BuildMI(MBB, &MI, DL, TII->get(ST.isWave32() ? AMDGPU::S_MOV_B32
-                                                     : AMDGPU::S_MOV_B64), Exec)
-          .addImm(0);
-        return true;
-      }
-      return false;
-    }
-
-    unsigned Opcode = KillVal ? AMDGPU::S_ANDN2_B64 : AMDGPU::S_AND_B64;
-    if (ST.isWave32())
-      Opcode = KillVal ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_AND_B32;
-    BuildMI(MBB, &MI, DL, TII->get(Opcode), Exec)
-        .addReg(Exec)
-        .add(Op);
-    return true;
-  }
-  default:
-    llvm_unreachable("invalid opcode, expected SI_KILL_*_TERMINATOR");
-  }
 }
 
 void SIInsertSkips::earlyTerm(MachineInstr &MI) {
@@ -415,7 +233,9 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
   MDT = &getAnalysis<MachineDominatorTree>();
   SkipThreshold = SkipThresholdFlag;
 
-  SmallVector<MachineInstr *, 4> KillInstrs;
+  MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+
   SmallVector<MachineInstr *, 4> EarlyTermInstrs;
   bool MadeChange = false;
 
@@ -440,41 +260,6 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
 
-      case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
-      case AMDGPU::SI_KILL_I1_TERMINATOR: {
-        MadeChange = true;
-        bool CanKill = kill(MI);
-
-        // Check if we can add an early "if exec=0 { end shader }".
-        //
-        // Note that we _always_ do this if it is correct, even if the kill
-        // happens fairly late in the shader, because the null export should
-        // generally still be cheaper than normal export(s).
-        //
-        // TODO: The dominatesAllReachable check is conservative: if the
-        //       dominance is only missing due to _uniform_ branches, we could
-        //       in fact insert the early-exit as well.
-        if (CanKill &&
-            MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS &&
-            dominatesAllReachable(MBB)) {
-          // Mark the instruction for kill-if-dead insertion. We delay this
-          // change because it modifies the CFG.
-          KillInstrs.push_back(&MI);
-        } else {
-          MI.eraseFromParent();
-        }
-        break;
-      }
-
-      case AMDGPU::SI_KILL_CLEANUP:
-        if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS &&
-            dominatesAllReachable(MBB)) {
-          KillInstrs.push_back(&MI);
-        } else {
-          MI.eraseFromParent();
-        }
-        break;
-
       case AMDGPU::SI_EARLY_TERMINATE_SCC0:
         EarlyTermInstrs.push_back(&MI);
         break;
@@ -491,12 +276,6 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
       earlyTerm(*Instr);
     Instr->eraseFromParent();
   }
-  for (MachineInstr *Kill : KillInstrs) {
-    skipIfDead(*Kill->getParent(), std::next(Kill->getIterator()),
-               Kill->getDebugLoc());
-    Kill->eraseFromParent();
-  }
-  KillInstrs.clear();
   EarlyTermInstrs.clear();
   EarlyExitBlock = nullptr;
 

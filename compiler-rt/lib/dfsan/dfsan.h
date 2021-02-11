@@ -15,6 +15,8 @@
 #define DFSAN_H
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
+
+#include "dfsan_flags.h"
 #include "dfsan_platform.h"
 
 using __sanitizer::uptr;
@@ -56,19 +58,6 @@ inline dfsan_label *shadow_for(void *ptr) {
 
 inline const dfsan_label *shadow_for(const void *ptr) {
   return shadow_for(const_cast<void *>(ptr));
-}
-
-struct Flags {
-#define DFSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
-#include "dfsan_flags.inc"
-#undef DFSAN_FLAG
-
-  void SetDefaults();
-};
-
-extern Flags flags_data;
-inline Flags &flags() {
-  return flags_data;
 }
 
 }  // namespace __dfsan

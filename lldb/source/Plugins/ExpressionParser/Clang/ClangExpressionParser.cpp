@@ -343,6 +343,7 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
   const std::vector<const char *> groupsToIgnore = {
       "unused-value",
       "odr",
+      "unused-getter-return-value",
   };
   for (const char *group : groupsToIgnore) {
     compiler.getDiagnostics().setSeverityForGroup(

@@ -725,6 +725,16 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
   return NewFormatInfo->Format;
 }
 
+// Return the value in the inclusive range [Lo,Hi] that is aligned to the
+// highest power of two. Note that the result is well defined for all inputs
+// including corner cases like:
+// - if Lo == Hi, return that value
+// - if Lo == 0, return 0 (even though the "- 1" below underflows
+// - if Lo > Hi, return 0 (as if the range wrapped around)
+static uint32_t mostAlignedValueInRange(uint32_t Lo, uint32_t Hi) {
+  return Hi & maskLeadingOnes<uint32_t>(countLeadingZeros((Lo - 1) ^ Hi) + 1);
+}
+
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
                                                 const GCNSubtarget &STI,
                                                 CombineInfo &Paired,
@@ -764,12 +774,12 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
       return false;
   }
 
-  unsigned EltOffset0 = CI.Offset / CI.EltSize;
-  unsigned EltOffset1 = Paired.Offset / CI.EltSize;
+  uint32_t EltOffset0 = CI.Offset / CI.EltSize;
+  uint32_t EltOffset1 = Paired.Offset / CI.EltSize;
   CI.UseST64 = false;
   CI.BaseOff = 0;
 
-  // Handle DS instructions.
+  // Handle all non-DS instructions.
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     return (EltOffset0 + CI.Width == EltOffset1 ||
             EltOffset1 + Paired.Width == EltOffset0) &&
@@ -777,7 +787,6 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
            (CI.InstClass == S_BUFFER_LOAD_IMM || CI.SLC == Paired.SLC);
   }
 
-  // Handle SMEM and VMEM instructions.
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
   // the stride 64 versions.
   if ((EltOffset0 % 64 == 0) && (EltOffset1 % 64) == 0 &&
@@ -800,22 +809,36 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   }
 
   // Try to shift base address to decrease offsets.
-  unsigned OffsetDiff = std::abs((int)EltOffset1 - (int)EltOffset0);
-  CI.BaseOff = std::min(CI.Offset, Paired.Offset);
+  uint32_t Min = std::min(EltOffset0, EltOffset1);
+  uint32_t Max = std::max(EltOffset0, EltOffset1);
 
-  if ((OffsetDiff % 64 == 0) && isUInt<8>(OffsetDiff / 64)) {
+  const uint32_t Mask = maskTrailingOnes<uint32_t>(8) * 64;
+  if (((Max - Min) & ~Mask) == 0) {
     if (Modify) {
-      CI.Offset = (EltOffset0 - CI.BaseOff / CI.EltSize) / 64;
-      Paired.Offset = (EltOffset1 - CI.BaseOff / CI.EltSize) / 64;
+      // From the range of values we could use for BaseOff, choose the one that
+      // is aligned to the highest power of two, to maximise the chance that
+      // the same offset can be reused for other load/store pairs.
+      uint32_t BaseOff = mostAlignedValueInRange(Max - 0xff * 64, Min);
+      // Copy the low bits of the offsets, so that when we adjust them by
+      // subtracting BaseOff they will be multiples of 64.
+      BaseOff |= Min & maskTrailingOnes<uint32_t>(6);
+      CI.BaseOff = BaseOff * CI.EltSize;
+      CI.Offset = (EltOffset0 - BaseOff) / 64;
+      Paired.Offset = (EltOffset1 - BaseOff) / 64;
       CI.UseST64 = true;
     }
     return true;
   }
 
-  if (isUInt<8>(OffsetDiff)) {
+  if (isUInt<8>(Max - Min)) {
     if (Modify) {
-      CI.Offset = EltOffset0 - CI.BaseOff / CI.EltSize;
-      Paired.Offset = EltOffset1 - CI.BaseOff / CI.EltSize;
+      // From the range of values we could use for BaseOff, choose the one that
+      // is aligned to the highest power of two, to maximise the chance that
+      // the same offset can be reused for other load/store pairs.
+      uint32_t BaseOff = mostAlignedValueInRange(Max - 0xff, Min);
+      CI.BaseOff = BaseOff * CI.EltSize;
+      CI.Offset = EltOffset0 - BaseOff;
+      Paired.Offset = EltOffset1 - BaseOff;
     }
     return true;
   }

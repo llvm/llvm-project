@@ -576,7 +576,7 @@ END:
 ;CHECK: image_sample
 ;CHECK: buffer_store_dword
 ;CHECK: s_wqm_b64 exec, exec
-;CHECK: v_cmpx_
+;CHECK: v_cmp_
 ;CHECK: image_sample
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK: image_sample
@@ -611,9 +611,9 @@ main_body:
 ; CHECK: image_sample
 ; CHECK: s_and_b64 exec, exec, [[ORIG]]
 ; CHECK: image_sample
-; CHECK: buffer_store_dword
 ; CHECK-NOT: wqm
-; CHECK: v_cmpx_
+; CHECK-DAG: buffer_store_dword
+; CHECK-DAG: v_cmp_
 define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0

@@ -276,3 +276,7 @@ TEST(DWARFExpression, DW_OP_unknown) {
       llvm::FailedWithMessage(
           "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
 }
+
+TEST(DWARFExpression, DW_OP_deref) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
+}

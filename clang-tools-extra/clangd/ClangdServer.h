@@ -68,12 +68,6 @@ public:
     /// May be called concurrently for separate files, not for a single file.
     virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
 
-    /// Called by ClangdServer when some \p Highlightings for \p File are ready.
-    /// May be called concurrently for separate files, not for a single file.
-    virtual void
-    onHighlightingsReady(PathRef File, llvm::StringRef Version,
-                         std::vector<HighlightingToken> Highlightings) {}
-
     /// Called when background indexing tasks are enqueued/started/completed.
     /// Not called concurrently.
     virtual void
@@ -144,9 +138,6 @@ public:
     /// Clangd will execute compiler drivers matching one of these globs to
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
-
-    /// Enable notification-based semantic highlighting.
-    bool TheiaSemanticHighlighting = false;
 
     /// Enable preview of FoldingRanges feature.
     bool FoldingRanges = false;

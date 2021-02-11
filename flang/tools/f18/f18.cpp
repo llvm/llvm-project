@@ -109,6 +109,7 @@ struct DriverOptions {
   bool getDefinition{false};
   GetDefinitionArgs getDefinitionArgs{0, 0, 0};
   bool getSymbolsSources{false};
+  std::optional<bool> forcePreprocessing; // -cpp & -nocpp
 };
 
 void Exec(std::vector<llvm::StringRef> &argv, bool verbose = false) {
@@ -410,19 +411,18 @@ int main(int argc, char *const argv[]) {
   driver.prefix = prefix.data();
 
   Fortran::parser::Options options;
-  options.predefinitions.emplace_back("__F18", "1");
-  options.predefinitions.emplace_back("__F18_MAJOR__", "1");
-  options.predefinitions.emplace_back("__F18_MINOR__", "1");
-  options.predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
-  options.predefinitions.emplace_back("__flang__", FLANG_VERSION_STRING);
-  options.predefinitions.emplace_back(
-      "__flang_major__", FLANG_VERSION_MAJOR_STRING);
-  options.predefinitions.emplace_back(
-      "__flang_minor__", FLANG_VERSION_MINOR_STRING);
-  options.predefinitions.emplace_back(
+  std::vector<Fortran::parser::Options::Predefinition> predefinitions;
+  predefinitions.emplace_back("__F18", "1");
+  predefinitions.emplace_back("__F18_MAJOR__", "1");
+  predefinitions.emplace_back("__F18_MINOR__", "1");
+  predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
+  predefinitions.emplace_back("__flang__", FLANG_VERSION_STRING);
+  predefinitions.emplace_back("__flang_major__", FLANG_VERSION_MAJOR_STRING);
+  predefinitions.emplace_back("__flang_minor__", FLANG_VERSION_MINOR_STRING);
+  predefinitions.emplace_back(
       "__flang_patchlevel__", FLANG_VERSION_PATCHLEVEL_STRING);
 #if __x86_64__
-  options.predefinitions.emplace_back("__x86_64__", "1");
+  predefinitions.emplace_back("__x86_64__", "1");
 #endif
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
@@ -490,10 +490,10 @@ int main(int argc, char *const argv[]) {
       driver.warnOnNonstandardUsage = true;
     } else if (arg == "-fopenacc") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
-      options.predefinitions.emplace_back("_OPENACC", "202011");
+      predefinitions.emplace_back("_OPENACC", "202011");
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
-      options.predefinitions.emplace_back("_OPENMP", "201511");
+      predefinitions.emplace_back("_OPENMP", "201511");
     } else if (arg == "-Werror") {
       driver.warningsAreErrors = true;
     } else if (arg == "-ed") {
@@ -554,14 +554,12 @@ int main(int argc, char *const argv[]) {
     } else if (arg.substr(0, 2) == "-D") {
       auto eq{arg.find('=')};
       if (eq == std::string::npos) {
-        options.predefinitions.emplace_back(arg.substr(2), "1");
+        predefinitions.emplace_back(arg.substr(2), "1");
       } else {
-        options.predefinitions.emplace_back(
-            arg.substr(2, eq - 2), arg.substr(eq + 1));
+        predefinitions.emplace_back(arg.substr(2, eq - 2), arg.substr(eq + 1));
       }
     } else if (arg.substr(0, 2) == "-U") {
-      options.predefinitions.emplace_back(
-          arg.substr(2), std::optional<std::string>{});
+      predefinitions.emplace_back(arg.substr(2), std::optional<std::string>{});
     } else if (arg == "-fdefault-double-8") {
       defaultKinds.set_defaultRealKind(4);
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
@@ -616,6 +614,10 @@ int main(int argc, char *const argv[]) {
       driver.getSymbolsSources = true;
     } else if (arg == "-byteswapio") {
       driver.byteswapio = true; // TODO: Pass to lowering, generate call
+    } else if (arg == "-cpp") {
+      driver.forcePreprocessing = true;
+    } else if (arg == "-nocpp") {
+      driver.forcePreprocessing = false;
     } else if (arg == "-h" || arg == "-help" || arg == "--help" ||
         arg == "-?") {
       llvm::errs()
@@ -662,6 +664,7 @@ int main(int argc, char *const argv[]) {
           << "  -fget-definition\n"
           << "  -fget-symbols-sources\n"
           << "  -v -c -o -I -D -U    have their usual meanings\n"
+          << "  -cpp / -nocpp        force / inhibit macro replacement\n"
           << "  -help                print this again\n"
           << "Unrecognised options are passed through to the external "
              "compiler\n"
@@ -724,6 +727,21 @@ int main(int argc, char *const argv[]) {
     return exitStatus;
   }
   for (const auto &path : fortranSources) {
+    options.predefinitions.clear();
+    if (driver.forcePreprocessing) {
+      if (*driver.forcePreprocessing) {
+        options.predefinitions = predefinitions;
+      }
+    } else {
+      auto dot{path.rfind(".")};
+      if (dot != std::string::npos) {
+        std::string suffix{path.substr(dot + 1)};
+        if (suffix == "F" || suffix == "F90" || suffix == "F95" ||
+            suffix == "CUF" || suffix == "F18") {
+          options.predefinitions = predefinitions;
+        }
+      }
+    }
     std::string relo{CompileFortran(path, options, driver, defaultKinds)};
     if (!driver.compileOnly && !relo.empty()) {
       objlist.push_back(relo);

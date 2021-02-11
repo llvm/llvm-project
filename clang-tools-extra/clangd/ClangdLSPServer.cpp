@@ -117,18 +117,6 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
   return Defaults;
 }
 
-// Build a lookup table (HighlightingKind => {TextMate Scopes}), which is sent
-// to the LSP client.
-std::vector<std::vector<std::string>> buildHighlightScopeLookupTable() {
-  std::vector<std::vector<std::string>> LookupTable;
-  // HighlightingKind is using as the index.
-  for (int KindValue = 0; KindValue <= (int)HighlightingKind::LastKind;
-       ++KindValue)
-    LookupTable.push_back(
-        {std::string(toTextMateScope((HighlightingKind)(KindValue)))});
-  return LookupTable;
-}
-
 // Makes sure edits in \p FE are applicable to latest file contents reported by
 // editor. If not generates an error message containing information about files
 // that needs to be saved.
@@ -511,18 +499,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       }
   }
 
-  Opts.TheiaSemanticHighlighting =
-      Params.capabilities.TheiaSemanticHighlighting;
   if (Params.capabilities.TheiaSemanticHighlighting &&
-      Params.capabilities.SemanticTokens) {
-    log("Client supports legacy semanticHighlights notification and standard "
-        "semanticTokens request, choosing the latter (no notifications).");
-    Opts.TheiaSemanticHighlighting = false;
-  }
-  if (Opts.TheiaSemanticHighlighting) {
-    log("Using legacy semanticHighlights notification, which will be removed "
-        "in clangd 13. Clients should use the standard semanticTokens "
-        "request instead.");
+      !Params.capabilities.SemanticTokens) {
+    elog("Client requested legacy semanticHighlights notification, which is "
+         "no longer supported. Migrate to standard semanticTokens request");
   }
 
   if (Params.rootUri && *Params.rootUri)
@@ -674,11 +654,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         }}}};
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
-  if (Opts.TheiaSemanticHighlighting)
-    Result.getObject("capabilities")
-        ->insert(
-            {"semanticHighlighting",
-             llvm::json::Object{{"scopes", buildHighlightScopeLookupTable()}}});
   if (Opts.FoldingRanges)
     Result.getObject("capabilities")->insert({"foldingRangeProvider", true});
   Reply(std::move(Result));
@@ -897,10 +872,6 @@ void ClangdLSPServer::onDocumentDidClose(
   {
     std::lock_guard<std::mutex> Lock(FixItsMutex);
     FixItsMap.erase(File);
-  }
-  {
-    std::lock_guard<std::mutex> HLock(HighlightingsMutex);
-    FileToHighlightings.erase(File);
   }
   {
     std::lock_guard<std::mutex> HLock(SemanticTokensMutex);
@@ -1313,11 +1284,6 @@ void ClangdLSPServer::applyConfiguration(
       [&](llvm::StringRef File) { return ModifiedFiles.count(File) != 0; });
 }
 
-void ClangdLSPServer::publishTheiaSemanticHighlighting(
-    const TheiaSemanticHighlightingParams &Params) {
-  notify("textDocument/semanticHighlighting", Params);
-}
-
 void ClangdLSPServer::publishDiagnostics(
     const PublishDiagnosticsParams &Params) {
   notify("textDocument/publishDiagnostics", Params);
@@ -1626,27 +1592,6 @@ bool ClangdLSPServer::shouldRunCompletion(
     return true;
   }
   return allowImplicitCompletion(Code->Contents, *Offset);
-}
-
-void ClangdLSPServer::onHighlightingsReady(
-    PathRef File, llvm::StringRef Version,
-    std::vector<HighlightingToken> Highlightings) {
-  std::vector<HighlightingToken> Old;
-  std::vector<HighlightingToken> HighlightingsCopy = Highlightings;
-  {
-    std::lock_guard<std::mutex> Lock(HighlightingsMutex);
-    Old = std::move(FileToHighlightings[File]);
-    FileToHighlightings[File] = std::move(HighlightingsCopy);
-  }
-  // LSP allows us to send incremental edits of highlightings. Also need to diff
-  // to remove highlightings from tokens that should no longer have them.
-  std::vector<LineHighlightings> Diffed = diffHighlightings(Highlightings, Old);
-  TheiaSemanticHighlightingParams Notification;
-  Notification.TextDocument.uri =
-      URIForFile::canonicalize(File, /*TUPath=*/File);
-  Notification.TextDocument.version = decodeVersion(Version);
-  Notification.Lines = toTheiaSemanticHighlightingInformation(Diffed);
-  publishTheiaSemanticHighlighting(Notification);
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,

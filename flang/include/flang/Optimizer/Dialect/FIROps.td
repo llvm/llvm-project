@@ -24,6 +24,8 @@ def fir_Dialect : Dialect {
   let cppNamespace = "::fir";
 }
 
+include "flang/Optimizer/Dialect/FIRTypes.td"
+
 // Types and predicates
 
 def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
@@ -99,11 +101,8 @@ def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
     "any reference or box">;
 
-def fir_ShapeType : Type<CPred<"$_self.isa<fir::ShapeType>()">, "shape type">;
-def fir_ShapeShiftType : Type<CPred<"$_self.isa<fir::ShapeShiftType>()">,
-    "shape shift type">;
-def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
-    fir_ShapeShiftType.predicate]>, "any legal shape type">;
+def AnyShapeLike : TypeConstraint<Or<[ShapeType.predicate,
+    ShapeShiftType.predicate]>, "any legal shape type">;
 def AnyShapeType : Type<AnyShapeLike.predicate, "any legal shape type">;
 def fir_SliceType : Type<CPred<"$_self.isa<fir::SliceType>()">, "slice type">;
 
@@ -1819,7 +1818,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 
 def fir_ResultOp : fir_Op<"result",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WhereOp", "DoLoopOp", "IterWhileOp"]>]> {
+     ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -1936,7 +1935,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
   }];
 }
 
-def fir_WhereOp : region_Op<"if", [NoRegionArguments]> {
+def fir_IfOp : region_Op<"if", [NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{
     Used to conditionally execute operations. This operation is the FIR

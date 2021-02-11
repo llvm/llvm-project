@@ -294,11 +294,12 @@ static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
                                       SourceRange Initializer) {
   SourceLocation Start = GetStartLoc().Visit(T);
   SourceLocation End = T.getEndLoc();
-  assert(End.isValid());
   if (Name.isValid()) {
     if (Start.isInvalid())
       Start = Name;
-    if (SM.isBeforeInTranslationUnit(End, Name))
+    // End of TypeLoc could be invalid if the type is invalid, fallback to the
+    // NameLoc.
+    if (End.isInvalid() || SM.isBeforeInTranslationUnit(End, Name))
       End = Name;
   }
   if (Initializer.isValid()) {

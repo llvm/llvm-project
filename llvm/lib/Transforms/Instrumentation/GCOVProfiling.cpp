@@ -207,7 +207,7 @@ struct BBInfo {
   uint32_t Rank = 0;
 
   BBInfo(unsigned Index) : Group(this), Index(Index) {}
-  const std::string infoString() const {
+  std::string infoString() const {
     return (Twine("Index=") + Twine(Index)).str();
   }
 };
@@ -228,7 +228,7 @@ struct Edge {
       : SrcBB(Src), DestBB(Dest), Weight(W) {}
 
   // Return the information string of an edge.
-  const std::string infoString() const {
+  std::string infoString() const {
     return (Twine(Removed ? "-" : " ") + (InMST ? " " : "*") +
             (IsCritical ? "c" : " ") + "  W=" + Twine(Weight))
         .str();

@@ -74,9 +74,6 @@ TEST_F(ExpandAutoTypeTest, Test) {
   // expanding types in structured bindings is syntactically invalid.
   EXPECT_UNAVAILABLE("const ^auto &[x,y] = (int[]){1,2};");
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   // unknown types in a template should not be replaced
   EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
               StartsWith("fail: Could not deduce type for 'auto' type"));

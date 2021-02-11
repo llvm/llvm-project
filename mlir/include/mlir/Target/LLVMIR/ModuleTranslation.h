@@ -77,6 +77,63 @@ public:
   /// module requirements.
   static Block &getModuleBody(Operation *m) { return m->getRegion(0).front(); }
 
+  /// Stores the mapping between a function name and its LLVM IR representation.
+  void mapFunction(StringRef name, llvm::Function *func) {
+    auto result = functionMapping.try_emplace(name, func);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a function that is already mapped");
+  }
+
+  /// Finds an LLVM IR function by its name.
+  llvm::Function *lookupFunction(StringRef name) const {
+    return functionMapping.lookup(name);
+  }
+
+  /// Stores the mapping between an MLIR value and its LLVM IR counterpart.
+  void mapValue(Value mlir, llvm::Value *llvm) { mapValue(mlir) = llvm; }
+
+  /// Provides write-once access to store the LLVM IR value corresponding to the
+  /// given MLIR value.
+  llvm::Value *&mapValue(Value value) {
+    llvm::Value *&llvm = valueMapping[value];
+    assert(llvm == nullptr &&
+           "attempting to map a value that is already mapped");
+    return llvm;
+  }
+
+  /// Finds an LLVM IR value corresponding to the given MLIR value.
+  llvm::Value *lookupValue(Value value) const {
+    return valueMapping.lookup(value);
+  }
+
+  /// Stores the mapping between an MLIR block and LLVM IR basic block.
+  void mapBlock(Block *mlir, llvm::BasicBlock *llvm) {
+    auto result = blockMapping.try_emplace(mlir, llvm);
+    (void)result;
+    assert(result.second && "attempting to map a block that is already mapped");
+  }
+
+  /// Finds an LLVM IR basic block that corresponds to the given MLIR block.
+  llvm::BasicBlock *lookupBlock(Block *block) const {
+    return blockMapping.lookup(block);
+  }
+
+  /// Stores the mapping between an MLIR operation with successors and a
+  /// corresponding LLVM IR instruction.
+  void mapBranch(Operation *mlir, llvm::Instruction *llvm) {
+    auto result = branchMapping.try_emplace(mlir, llvm);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a branch that is already mapped");
+  }
+
+  /// Finds an LLVM IR instruction that corresponds to the given MLIR operation
+  /// with successors.
+  llvm::Instruction *lookupBranch(Operation *op) const {
+    return branchMapping.lookup(op);
+  }
+
 protected:
   /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
   /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
@@ -94,8 +151,6 @@ protected:
   virtual LogicalResult convertOmpMaster(Operation &op,
                                          llvm::IRBuilder<> &builder);
   void convertOmpOpRegions(Region &region, StringRef blockName,
-                           DenseMap<Value, llvm::Value *> &valueMapping,
-                           DenseMap<Block *, llvm::BasicBlock *> &blockMapping,
                            llvm::BasicBlock &sourceBlock,
                            llvm::BasicBlock &continuationBlock,
                            llvm::IRBuilder<> &builder,
@@ -147,7 +202,7 @@ private:
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
 
-protected:
+private:
   /// Mappings between original and translated values, used for lookups.
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
