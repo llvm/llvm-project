@@ -115,11 +115,6 @@ fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<fir::ComplexType>(parser);
 }
 
-// `shapeshift` `<` rank `>`
-ShapeShiftType parseShapeShift(mlir::DialectAsmParser &parser) {
-  return parseRankSingleton<ShapeShiftType>(parser);
-}
-
 // `slice` `<` rank `>`
 SliceType parseSlice(mlir::DialectAsmParser &parser) {
   return parseRankSingleton<SliceType>(parser);
@@ -386,10 +381,9 @@ mlir::Type fir::parseFirType(FIROpsDialect *dialect,
   if (typeNameLit == "ref")
     return parseReference(parser, loc);
   if (typeNameLit == "shape")
-    // TODO move to generatedTypeParser when all types have been moved
-    return ShapeType::parse(dialect->getContext(), parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "shapeshift")
-    return ShapeShiftType::parse(dialect->getContext(), parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "slice")
     return parseSlice(parser);
   if (typeNameLit == "tdesc")
@@ -1414,16 +1408,6 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
-  if (auto type = ty.dyn_cast<ShapeType>()) {
-    // TODO when all type are moved to TableGen can be replaced by
-    // generatedTypePrinter
-    type.print(p);
-    return;
-  }
-  if (auto type = ty.dyn_cast<ShapeShiftType>()) {
-    type.print(p);
-    return;
-  }
   if (auto type = ty.dyn_cast<SliceType>()) {
     os << "slice<" << type.getRank() << '>';
     return;
@@ -1495,6 +1479,10 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << "vector<" << type.getLen() << ':';
     p.printType(type.getEleTy());
     os << '>';
+    return;
+  }
+
+  if (mlir::succeeded(generatedTypePrinter(ty, p))) {
     return;
   }
 }
