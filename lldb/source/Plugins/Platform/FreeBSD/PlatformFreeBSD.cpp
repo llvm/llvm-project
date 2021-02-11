@@ -214,58 +214,9 @@ void PlatformFreeBSD::GetStatus(Stream &strm) {
 #endif
 }
 
-size_t
-PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
-                                                 BreakpointSite *bp_site) {
-  switch (target.GetArchitecture().GetMachine()) {
-  case llvm::Triple::arm: {
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = AddressClass::eUnknown;
-
-    if (bp_loc_sp) {
-      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
-
-    if (addr_class == AddressClass::eCodeAlternateISA) {
-      // TODO: Enable when FreeBSD supports thumb breakpoints.
-      // FreeBSD kernel as of 10.x, does not support thumb breakpoints
-      return 0;
-    }
-
-    static const uint8_t g_arm_breakpoint_opcode[] = {0xFE, 0xDE, 0xFF, 0xE7};
-    size_t trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
-    assert(bp_site);
-    if (bp_site->SetTrapOpcode(g_arm_breakpoint_opcode, trap_opcode_size))
-      return trap_opcode_size;
-  }
-    LLVM_FALLTHROUGH;
-  default:
-    return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
-  }
-}
-
 bool PlatformFreeBSD::CanDebugProcess() {
   if (IsHost()) {
-    llvm::Triple host_triple{llvm::sys::getProcessTriple()};
-    bool use_legacy_plugin;
-
-    switch (host_triple.getArch()) {
-      case llvm::Triple::aarch64:
-      case llvm::Triple::arm:
-      case llvm::Triple::mips64:
-      case llvm::Triple::ppc:
-      case llvm::Triple::x86:
-      case llvm::Triple::x86_64:
-        use_legacy_plugin = !!getenv("FREEBSD_LEGACY_PLUGIN");
-        break;
-      default:
-        use_legacy_plugin = true;
-    }
-
-    return !use_legacy_plugin;
+    return true;
   } else {
     // If we're connected, we can debug.
     return IsConnected();
