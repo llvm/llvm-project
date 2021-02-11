@@ -1891,7 +1891,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI0],
 // ASIMD duplicate, gen reg
 // ASIMD duplicate, element
 def : InstRW<[A64FXWrite_DUPGENERAL], (instregex "^DUPv")>;
-def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^CPY")>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^CPY[^PMEF]")>;
 def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^DUPv.+gpr")>;
 
 // ASIMD extract

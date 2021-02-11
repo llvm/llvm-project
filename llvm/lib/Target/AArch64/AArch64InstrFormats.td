@@ -11430,6 +11430,123 @@ class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
   let Inst{20-16} = Rs;
 }
 
+class MOPSMemoryCopyMoveBase<bit isMove, bits<2> opcode, bits<2> op1,
+                             bits<2> op2, string asm>
+  : I<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+      asm, "\t[$Rd]!, [$Rs]!, $Rn!",
+      "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb", []>,
+    Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rs;
+  bits<5> Rn;
+  let Inst{31-27} = 0b00011;
+  let Inst{26} = isMove;
+  let Inst{25-24} = 0b01;
+  let Inst{23-22} = opcode;
+  let Inst{21} = 0b0;
+  let Inst{20-16} = Rs;
+  let Inst{15-14} = op2;
+  let Inst{13-12} = op1;
+  let Inst{11-10} = 0b01;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rd;
+
+  let DecoderMethod = "DecodeCPYMemOpInstruction";
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+class MOPSMemoryCopy<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
+  : MOPSMemoryCopyMoveBase<0, opcode, op1, op2, asm>;
+
+class MOPSMemoryMove<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
+  : MOPSMemoryCopyMoveBase<1, opcode, op1, op2, asm>;
+
+class MOPSMemorySetBase<bit isTagging, bits<2> opcode, bit op1, bit op2,
+                        string asm>
+  : I<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+      asm, "\t[$Rd]!, $Rn!, $Rm",
+      "$Rd = $Rd_wb,$Rn = $Rn_wb", []>,
+    Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-27} = 0b00011;
+  let Inst{26} = isTagging;
+  let Inst{25-21} = 0b01110;
+  let Inst{20-16} = Rm;
+  let Inst{15-14} = opcode;
+  let Inst{13} = op2;
+  let Inst{12} = op1;
+  let Inst{11-10} = 0b01;
+  let Inst{9-5} = Rn;
+  let Inst{4-0} = Rd;
+
+  let DecoderMethod = "DecodeSETMemOpInstruction";
+  let mayLoad = 0;
+  let mayStore = 1;
+}
+
+class MOPSMemorySet<bits<2> opcode, bit op1, bit op2, string asm>
+  : MOPSMemorySetBase<0, opcode, op1, op2, asm>;
+
+class MOPSMemorySetTagging<bits<2> opcode, bit op1, bit op2, string asm>
+  : MOPSMemorySetBase<1, opcode, op1, op2, asm>;
+
+multiclass MOPSMemoryCopyInsns<bits<2> opcode, string asm> {
+  def ""   : MOPSMemoryCopy<opcode, 0b00, 0b00, asm>;
+  def WN   : MOPSMemoryCopy<opcode, 0b00, 0b01, asm # "wn">;
+  def RN   : MOPSMemoryCopy<opcode, 0b00, 0b10, asm # "rn">;
+  def N    : MOPSMemoryCopy<opcode, 0b00, 0b11, asm # "n">;
+  def WT   : MOPSMemoryCopy<opcode, 0b01, 0b00, asm # "wt">;
+  def WTWN : MOPSMemoryCopy<opcode, 0b01, 0b01, asm # "wtwn">;
+  def WTRN : MOPSMemoryCopy<opcode, 0b01, 0b10, asm # "wtrn">;
+  def WTN  : MOPSMemoryCopy<opcode, 0b01, 0b11, asm # "wtn">;
+  def RT   : MOPSMemoryCopy<opcode, 0b10, 0b00, asm # "rt">;
+  def RTWN : MOPSMemoryCopy<opcode, 0b10, 0b01, asm # "rtwn">;
+  def RTRN : MOPSMemoryCopy<opcode, 0b10, 0b10, asm # "rtrn">;
+  def RTN  : MOPSMemoryCopy<opcode, 0b10, 0b11, asm # "rtn">;
+  def T    : MOPSMemoryCopy<opcode, 0b11, 0b00, asm # "t">;
+  def TWN  : MOPSMemoryCopy<opcode, 0b11, 0b01, asm # "twn">;
+  def TRN  : MOPSMemoryCopy<opcode, 0b11, 0b10, asm # "trn">;
+  def TN   : MOPSMemoryCopy<opcode, 0b11, 0b11, asm # "tn">;
+}
+
+multiclass MOPSMemoryMoveInsns<bits<2> opcode, string asm> {
+  def ""   : MOPSMemoryMove<opcode, 0b00, 0b00, asm>;
+  def WN   : MOPSMemoryMove<opcode, 0b00, 0b01, asm # "wn">;
+  def RN   : MOPSMemoryMove<opcode, 0b00, 0b10, asm # "rn">;
+  def N    : MOPSMemoryMove<opcode, 0b00, 0b11, asm # "n">;
+  def WT   : MOPSMemoryMove<opcode, 0b01, 0b00, asm # "wt">;
+  def WTWN : MOPSMemoryMove<opcode, 0b01, 0b01, asm # "wtwn">;
+  def WTRN : MOPSMemoryMove<opcode, 0b01, 0b10, asm # "wtrn">;
+  def WTN  : MOPSMemoryMove<opcode, 0b01, 0b11, asm # "wtn">;
+  def RT   : MOPSMemoryMove<opcode, 0b10, 0b00, asm # "rt">;
+  def RTWN : MOPSMemoryMove<opcode, 0b10, 0b01, asm # "rtwn">;
+  def RTRN : MOPSMemoryMove<opcode, 0b10, 0b10, asm # "rtrn">;
+  def RTN  : MOPSMemoryMove<opcode, 0b10, 0b11, asm # "rtn">;
+  def T    : MOPSMemoryMove<opcode, 0b11, 0b00, asm # "t">;
+  def TWN  : MOPSMemoryMove<opcode, 0b11, 0b01, asm # "twn">;
+  def TRN  : MOPSMemoryMove<opcode, 0b11, 0b10, asm # "trn">;
+  def TN   : MOPSMemoryMove<opcode, 0b11, 0b11, asm # "tn">;
+}
+
+multiclass MOPSMemorySetInsns<bits<2> opcode, string asm> {
+  def "" : MOPSMemorySet<opcode, 0, 0, asm>;
+  def T  : MOPSMemorySet<opcode, 1, 0, asm # "t">;
+  def N  : MOPSMemorySet<opcode, 0, 1, asm # "n">;
+  def TN : MOPSMemorySet<opcode, 1, 1, asm # "tn">;
+}
+
+multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
+  def "" : MOPSMemorySetTagging<opcode, 0, 0, asm>;
+  def T  : MOPSMemorySetTagging<opcode, 1, 0, asm # "t">;
+  def N  : MOPSMemorySetTagging<opcode, 0, 1, asm # "n">;
+  def TN : MOPSMemorySetTagging<opcode, 1, 1, asm # "tn">;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product

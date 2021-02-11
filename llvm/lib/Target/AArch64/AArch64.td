@@ -419,6 +419,9 @@ def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
 def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
     "true", "Enable Armv8.8-A Hinted Conditional Branches Extension">;
 
+def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
+    "true", "Enable Armv8.8-A memcpy and memset acceleration instructions">;
+
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension">;
 
@@ -502,7 +505,7 @@ def HasV8_7aOps : SubtargetFeature<
 
 def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps, FeatureHBC]>;
+  [HasV8_7aOps, FeatureHBC, FeatureMOPS]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
