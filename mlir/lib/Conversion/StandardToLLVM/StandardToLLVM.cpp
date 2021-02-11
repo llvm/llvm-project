@@ -14,6 +14,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
@@ -1793,31 +1794,6 @@ protected:
     return rewriter.create<LLVM::SubOp>(loc, bumped, mod);
   }
 
-  // Creates a call to an allocation function with params and casts the
-  // resulting void pointer to ptrType.
-  Value createAllocCall(Location loc, StringRef name, Type ptrType,
-                        ArrayRef<Value> params, ModuleOp module,
-                        ConversionPatternRewriter &rewriter) const {
-    SmallVector<Type, 2> paramTypes;
-    auto allocFuncOp = module.lookupSymbol<LLVM::LLVMFuncOp>(name);
-    if (!allocFuncOp) {
-      for (Value param : params)
-        paramTypes.push_back(param.getType());
-      auto allocFuncType =
-          LLVM::LLVMFunctionType::get(getVoidPtrType(), paramTypes);
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module.getBody());
-      allocFuncOp = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                      name, allocFuncType);
-    }
-    auto allocFuncSymbol = rewriter.getSymbolRefAttr(allocFuncOp);
-    auto allocatedPtr = rewriter
-                            .create<LLVM::CallOp>(loc, getVoidPtrType(),
-                                                  allocFuncSymbol, params)
-                            .getResult(0);
-    return rewriter.create<LLVM::BitcastOp>(loc, ptrType, allocatedPtr);
-  }
-
   /// Allocates the underlying buffer. Returns the allocated pointer and the
   /// aligned pointer.
   virtual std::tuple<Value, Value>
@@ -1909,9 +1885,12 @@ struct AllocOpLowering : public AllocLikeOpLowering {
     // Allocate the underlying buffer and store a pointer to it in the MemRef
     // descriptor.
     Type elementPtrType = this->getElementPtrType(memRefType);
+    auto allocFuncOp = LLVM::lookupOrCreateMallocFn(
+        allocOp->getParentOfType<ModuleOp>(), getIndexType());
+    auto results = createLLVMCall(rewriter, loc, allocFuncOp, {sizeBytes},
+                                  getVoidPtrType());
     Value allocatedPtr =
-        createAllocCall(loc, "malloc", elementPtrType, {sizeBytes},
-                        allocOp->getParentOfType<ModuleOp>(), rewriter);
+        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, results[0]);
 
     Value alignedPtr = allocatedPtr;
     if (alignment) {
@@ -1991,9 +1970,13 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
       sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
     Type elementPtrType = this->getElementPtrType(memRefType);
-    Value allocatedPtr = createAllocCall(
-        loc, "aligned_alloc", elementPtrType, {allocAlignment, sizeBytes},
-        allocOp->getParentOfType<ModuleOp>(), rewriter);
+    auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
+        allocOp->getParentOfType<ModuleOp>(), getIndexType());
+    auto results =
+        createLLVMCall(rewriter, loc, allocFuncOp, {allocAlignment, sizeBytes},
+                       getVoidPtrType());
+    Value allocatedPtr =
+        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, results[0]);
 
     return std::make_tuple(allocatedPtr, allocatedPtr);
   }
@@ -2056,31 +2039,17 @@ static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
 
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
-  auto voidType = LLVM::LLVMVoidType::get(context);
   Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   auto i1Type = IntegerType::get(context, 1);
   Type indexType = typeConverter.getIndexType();
 
   // Find the malloc and free, or declare them if necessary.
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
-  auto mallocFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("malloc");
-  if (!mallocFunc && toDynamic) {
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(module.getBody());
-    mallocFunc = builder.create<LLVM::LLVMFuncOp>(
-        builder.getUnknownLoc(), "malloc",
-        LLVM::LLVMFunctionType::get(voidPtrType, llvm::makeArrayRef(indexType),
-                                    /*isVarArg=*/false));
-  }
-  auto freeFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("free");
-  if (!freeFunc && !toDynamic) {
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(module.getBody());
-    freeFunc = builder.create<LLVM::LLVMFuncOp>(
-        builder.getUnknownLoc(), "free",
-        LLVM::LLVMFunctionType::get(voidType, llvm::makeArrayRef(voidPtrType),
-                                    /*isVarArg=*/false));
-  }
+  LLVM::LLVMFuncOp freeFunc, mallocFunc;
+  if (toDynamic)
+    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+  if (!toDynamic)
+    freeFunc = LLVM::lookupOrCreateFreeFn(module);
 
   // Initialize shared constants.
   Value zero =
@@ -2217,17 +2186,7 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
     DeallocOp::Adaptor transformed(operands);
 
     // Insert the `free` declaration if it is not already present.
-    auto freeFunc =
-        op->getParentOfType<ModuleOp>().lookupSymbol<LLVM::LLVMFuncOp>("free");
-    if (!freeFunc) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(
-          op->getParentOfType<ModuleOp>().getBody());
-      freeFunc = rewriter.create<LLVM::LLVMFuncOp>(
-          rewriter.getUnknownLoc(), "free",
-          LLVM::LLVMFunctionType::get(getVoidType(), getVoidPtrType()));
-    }
-
+    auto freeFunc = LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
     MemRefDescriptor memref(transformed.memref());
     Value casted = rewriter.create<LLVM::BitcastOp>(
         op.getLoc(), getVoidPtrType(),
