@@ -27,6 +27,7 @@
 #include "isl/ctx.h"
 
 namespace polly {
+using llvm::SmallPtrSet;
 
 struct Dependences;
 
