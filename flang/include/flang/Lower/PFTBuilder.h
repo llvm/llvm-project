@@ -83,10 +83,10 @@ using ReferenceVariant = ReferenceVariantBase<true, A...>;
 template <typename... A>
 using MutableReferenceVariant = ReferenceVariantBase<false, A...>;
 
-/// ParentVariant is used to provide a reference to the unit a parse-tree node
+/// PftNode is used to provide a reference to the unit a parse-tree node
 /// belongs to. It is a variant of non-nullable pointers.
-using ParentVariant = MutableReferenceVariant<Program, ModuleLikeUnit,
-                                              FunctionLikeUnit, Evaluation>;
+using PftNode = MutableReferenceVariant<Program, ModuleLikeUnit,
+                                        FunctionLikeUnit, Evaluation>;
 
 /// Classify the parse-tree nodes from ExecutablePartConstruct
 
@@ -198,16 +198,16 @@ struct Evaluation : EvaluationVariant {
 
   /// General ctor
   template <typename A>
-  Evaluation(const A &a, const ParentVariant &parentVariant,
+  Evaluation(const A &a, const PftNode &parent,
              const parser::CharBlock &position,
              const std::optional<parser::Label> &label)
-      : EvaluationVariant{a},
-        parentVariant{parentVariant}, position{position}, label{label} {}
+      : EvaluationVariant{a}, parent{parent}, position{position}, label{label} {
+  }
 
   /// Construct and Directive ctor
   template <typename A>
-  Evaluation(const A &a, const ParentVariant &parentVariant)
-      : EvaluationVariant{a}, parentVariant{parentVariant} {
+  Evaluation(const A &a, const PftNode &parent)
+      : EvaluationVariant{a}, parent{parent} {
     static_assert(pft::isConstruct<A> || pft::isDirective<A>,
                   "must be a construct or directive");
   }
@@ -326,7 +326,7 @@ struct Evaluation : EvaluationVariant {
   // The printIndex member is only set for statements.  It is used for dumps
   // and does not affect FIR generation.  It may also be helpful for debugging.
 
-  ParentVariant parentVariant;
+  PftNode parent;
   parser::CharBlock position{};
   std::optional<parser::Label> label{};
   std::unique_ptr<EvaluationList> evaluationList; // nested evaluations
@@ -351,12 +351,12 @@ using ProgramVariant =
 /// These units can be function like, module like, or block data.
 struct ProgramUnit : ProgramVariant {
   template <typename A>
-  ProgramUnit(const A &p, const ParentVariant &parentVariant)
-      : ProgramVariant{p}, parentVariant{parentVariant} {}
+  ProgramUnit(const A &p, const PftNode &parent)
+      : ProgramVariant{p}, parent{parent} {}
   ProgramUnit(ProgramUnit &&) = default;
   ProgramUnit(const ProgramUnit &) = delete;
 
-  ParentVariant parentVariant;
+  PftNode parent;
 };
 
 /// A variable captures an object to be created per the declaration part of a
@@ -558,17 +558,16 @@ struct FunctionLikeUnit : public ProgramUnit {
                        parser::Statement<parser::EndMpSubprogramStmt>>;
 
   FunctionLikeUnit(
-      const parser::MainProgram &f, const ParentVariant &parentVariant,
+      const parser::MainProgram &f, const PftNode &parent,
       const Fortran::semantics::SemanticsContext &semanticsContext);
   FunctionLikeUnit(
-      const parser::FunctionSubprogram &f, const ParentVariant &parentVariant,
+      const parser::FunctionSubprogram &f, const PftNode &parent,
       const Fortran::semantics::SemanticsContext &semanticsContext);
   FunctionLikeUnit(
-      const parser::SubroutineSubprogram &f, const ParentVariant &parentVariant,
+      const parser::SubroutineSubprogram &f, const PftNode &parent,
       const Fortran::semantics::SemanticsContext &semanticsContext);
   FunctionLikeUnit(
-      const parser::SeparateModuleSubprogram &f,
-      const ParentVariant &parentVariant,
+      const parser::SeparateModuleSubprogram &f, const PftNode &parent,
       const Fortran::semantics::SemanticsContext &semanticsContext);
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
@@ -660,9 +659,8 @@ struct ModuleLikeUnit : public ProgramUnit {
                        parser::Statement<parser::SubmoduleStmt>,
                        parser::Statement<parser::EndSubmoduleStmt>>;
 
-  ModuleLikeUnit(const parser::Module &m, const ParentVariant &parentVariant);
-  ModuleLikeUnit(const parser::Submodule &m,
-                 const ParentVariant &parentVariant);
+  ModuleLikeUnit(const parser::Module &m, const PftNode &parent);
+  ModuleLikeUnit(const parser::Submodule &m, const PftNode &parent);
   ~ModuleLikeUnit() = default;
   ModuleLikeUnit(ModuleLikeUnit &&) = default;
   ModuleLikeUnit(const ModuleLikeUnit &) = delete;
@@ -680,7 +678,7 @@ struct ModuleLikeUnit : public ProgramUnit {
 /// Block data units contain the variables and data initializers for common
 /// blocks, etc.
 struct BlockDataUnit : public ProgramUnit {
-  BlockDataUnit(const parser::BlockData &bd, const ParentVariant &parentVariant,
+  BlockDataUnit(const parser::BlockData &bd, const PftNode &parent,
                 const Fortran::semantics::SemanticsContext &semanticsContext);
   BlockDataUnit(BlockDataUnit &&) = default;
   BlockDataUnit(const BlockDataUnit &) = delete;
@@ -693,8 +691,8 @@ struct BlockDataUnit : public ProgramUnit {
 // Top level compiler directives
 struct CompilerDirectiveUnit : public ProgramUnit {
   CompilerDirectiveUnit(const parser::CompilerDirective &directive,
-                        const ParentVariant &parentVariant)
-      : ProgramUnit{directive, parentVariant} {};
+                        const PftNode &parent)
+      : ProgramUnit{directive, parent} {};
   CompilerDirectiveUnit(CompilerDirectiveUnit &&) = default;
   CompilerDirectiveUnit(const CompilerDirectiveUnit &) = delete;
 };

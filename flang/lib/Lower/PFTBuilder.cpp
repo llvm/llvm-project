@@ -77,8 +77,8 @@ public:
   PFTBuilder(const semantics::SemanticsContext &semanticsContext)
       : pgm{std::make_unique<lower::pft::Program>()}, semanticsContext{
                                                           semanticsContext} {
-    lower::pft::ParentVariant parent{*pgm.get()};
-    parentVariantStack.push_back(parent);
+    lower::pft::PftNode pftRoot{*pgm.get()};
+    pftParentStack.push_back(pftRoot);
   }
 
   /// Get the result
@@ -99,9 +99,8 @@ public:
       auto stmt{UnwrapStmt<A>(a)};
       if constexpr (lower::pft::isConstructStmt<T> ||
                     lower::pft::isOtherStmt<T>) {
-        addEvaluation(lower::pft::Evaluation{stmt.unwrapped,
-                                             parentVariantStack.back(),
-                                             stmt.position, stmt.label});
+        addEvaluation(lower::pft::Evaluation{
+            stmt.unwrapped, pftParentStack.back(), stmt.position, stmt.label});
         return false;
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
         return std::visit(
@@ -112,7 +111,7 @@ public:
                 },
                 [&](const auto &x) {
                   addEvaluation(lower::pft::Evaluation{
-                      removeIndirection(x), parentVariantStack.back(),
+                      removeIndirection(x), pftParentStack.back(),
                       stmt.position, stmt.label});
                   return true;
                 },
@@ -145,12 +144,12 @@ public:
         parser::Statement<parser::EndIfStmt>{std::nullopt,
                                              parser::EndIfStmt{std::nullopt}}};
     enterConstructOrDirective(ifConstruct);
-    addEvaluation(lower::pft::Evaluation{ifStmt, parentVariantStack.back(),
-                                         position, label});
+    addEvaluation(
+        lower::pft::Evaluation{ifStmt, pftParentStack.back(), position, label});
     Pre(std::get<parser::UnlabeledStatement<parser::ActionStmt>>(ifStmt.t));
     static const auto endIfStmt = parser::EndIfStmt{std::nullopt};
     addEvaluation(
-        lower::pft::Evaluation{endIfStmt, parentVariantStack.back(), {}, {}});
+        lower::pft::Evaluation{endIfStmt, pftParentStack.back(), {}, {}});
     exitConstructOrDirective();
   }
 
@@ -173,7 +172,7 @@ public:
 
   // Block data
   bool Pre(const parser::BlockData &node) {
-    addUnit(lower::pft::BlockDataUnit{node, parentVariantStack.back(),
+    addUnit(lower::pft::BlockDataUnit{node, pftParentStack.back(),
                                       semanticsContext});
     return false;
   }
@@ -182,7 +181,7 @@ public:
   bool Pre(const parser::Statement<parser::ForallAssignmentStmt> &statement) {
     addEvaluation(std::visit(
         [&](const auto &x) {
-          return lower::pft::Evaluation{x, parentVariantStack.back(),
+          return lower::pft::Evaluation{x, pftParentStack.back(),
                                         statement.source, statement.label};
         },
         statement.statement.u));
@@ -195,7 +194,7 @@ public:
               // Not caught as other AssignmentStmt because it is not
               // wrapped in a parser::ActionStmt.
               addEvaluation(lower::pft::Evaluation{stmt.statement,
-                                                   parentVariantStack.back(),
+                                                   pftParentStack.back(),
                                                    stmt.source, stmt.label});
               return false;
             },
@@ -207,11 +206,11 @@ public:
   // CompilerDirective have special handling in case they are top level
   // directives (i.e. they do not belong to a ProgramUnit).
   bool Pre(const parser::CompilerDirective &directive) {
-    assert(parentVariantStack.size() > 0 &&
+    assert(pftParentStack.size() > 0 &&
            "At least the Program must be a parent");
-    if (parentVariantStack.back().isA<lower::pft::Program>()) {
-      addUnit(lower::pft::CompilerDirectiveUnit(directive,
-                                                parentVariantStack.back()));
+    if (pftParentStack.back().isA<lower::pft::Program>()) {
+      addUnit(
+          lower::pft::CompilerDirectiveUnit(directive, pftParentStack.back()));
       return false;
     }
     return enterConstructOrDirective(directive);
@@ -222,14 +221,14 @@ private:
   template <typename A>
   bool enterModule(const A &func) {
     auto &unit =
-        addUnit(lower::pft::ModuleLikeUnit{func, parentVariantStack.back()});
+        addUnit(lower::pft::ModuleLikeUnit{func, pftParentStack.back()});
     functionList = &unit.nestedFunctions;
-    parentVariantStack.emplace_back(unit);
+    pftParentStack.emplace_back(unit);
     return true;
   }
 
   void exitModule() {
-    parentVariantStack.pop_back();
+    pftParentStack.pop_back();
     resetFunctionState();
   }
 
@@ -242,23 +241,23 @@ private:
     auto evaluationList = evaluationListStack.back();
     if (evaluationList->empty() || !evaluationList->back().isEndStmt()) {
       const auto &endStmt =
-          parentVariantStack.back().get<lower::pft::FunctionLikeUnit>().endStmt;
+          pftParentStack.back().get<lower::pft::FunctionLikeUnit>().endStmt;
       endStmt.visit(common::visitors{
           [&](const parser::Statement<parser::EndProgramStmt> &s) {
             addEvaluation(lower::pft::Evaluation{
-                s.statement, parentVariantStack.back(), s.source, s.label});
+                s.statement, pftParentStack.back(), s.source, s.label});
           },
           [&](const parser::Statement<parser::EndFunctionStmt> &s) {
             addEvaluation(lower::pft::Evaluation{
-                s.statement, parentVariantStack.back(), s.source, s.label});
+                s.statement, pftParentStack.back(), s.source, s.label});
           },
           [&](const parser::Statement<parser::EndSubroutineStmt> &s) {
             addEvaluation(lower::pft::Evaluation{
-                s.statement, parentVariantStack.back(), s.source, s.label});
+                s.statement, pftParentStack.back(), s.source, s.label});
           },
           [&](const parser::Statement<parser::EndMpSubprogramStmt> &s) {
             addEvaluation(lower::pft::Evaluation{
-                s.statement, parentVariantStack.back(), s.source, s.label});
+                s.statement, pftParentStack.back(), s.source, s.label});
           },
           [&](const auto &s) {
             llvm::report_fatal_error("missing end statement or unexpected "
@@ -275,12 +274,12 @@ private:
                      const semantics::SemanticsContext &semanticsContext) {
     endFunctionBody(); // enclosing host subprogram body, if any
     auto &unit = addFunction(lower::pft::FunctionLikeUnit{
-        func, parentVariantStack.back(), semanticsContext});
+        func, pftParentStack.back(), semanticsContext});
     labelEvaluationMap = &unit.labelEvaluationMap;
     assignSymbolLabelMap = &unit.assignSymbolLabelMap;
     functionList = &unit.nestedFunctions;
     pushEvaluationList(&unit.evaluationList);
-    parentVariantStack.emplace_back(unit);
+    pftParentStack.emplace_back(unit);
     return true;
   }
 
@@ -292,18 +291,18 @@ private:
     popEvaluationList();
     labelEvaluationMap = nullptr;
     assignSymbolLabelMap = nullptr;
-    parentVariantStack.pop_back();
+    pftParentStack.pop_back();
     resetFunctionState();
   }
 
   /// Initialize a new construct and make it the builder's focus.
   template <typename A>
   bool enterConstructOrDirective(const A &construct) {
-    auto &eval = addEvaluation(
-        lower::pft::Evaluation{construct, parentVariantStack.back()});
+    auto &eval =
+        addEvaluation(lower::pft::Evaluation{construct, pftParentStack.back()});
     eval.evaluationList.reset(new lower::pft::EvaluationList);
     pushEvaluationList(eval.evaluationList.get());
-    parentVariantStack.emplace_back(eval);
+    pftParentStack.emplace_back(eval);
     constructAndDirectiveStack.emplace_back(&eval);
     return true;
   }
@@ -311,14 +310,14 @@ private:
   void exitConstructOrDirective() {
     rewriteIfGotos();
     popEvaluationList();
-    parentVariantStack.pop_back();
+    pftParentStack.pop_back();
     constructAndDirectiveStack.pop_back();
   }
 
   /// Reset function state to that of an enclosing host function.
   void resetFunctionState() {
-    if (!parentVariantStack.empty()) {
-      parentVariantStack.back().visit(common::visitors{
+    if (!pftParentStack.empty()) {
+      pftParentStack.back().visit(common::visitors{
           [&](lower::pft::FunctionLikeUnit &p) {
             functionList = &p.nestedFunctions;
             labelEvaluationMap = &p.labelEvaluationMap;
@@ -356,9 +355,8 @@ private:
     return std::visit(
         common::visitors{
             [&](const auto &x) {
-              return lower::pft::Evaluation{removeIndirection(x),
-                                            parentVariantStack.back(), position,
-                                            label};
+              return lower::pft::Evaluation{
+                  removeIndirection(x), pftParentStack.back(), position, label};
             },
         },
         statement.u);
@@ -388,9 +386,6 @@ private:
         entryPointList[entryIndex].second->lexicalSuccessor = p;
     } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
       const auto *sym = std::get<parser::Name>(entryStmt->t).symbol;
-      if (sym->IsFuncResult())
-        // Switch to the function sym.
-        sym = sym->owner().parent().FindSymbol(sym->name());
       assert(sym->has<semantics::SubprogramDetails>() &&
              "entry must be a subprogram");
       entryPointList.push_back(std::pair{sym, p});
@@ -401,10 +396,11 @@ private:
   }
 
   /// push a new list on the stack of Evaluation lists
-  void pushEvaluationList(lower::pft::EvaluationList *eval) {
+  void pushEvaluationList(lower::pft::EvaluationList *evaluationList) {
     assert(functionList && "not in a function");
-    assert(eval && eval->empty() && "evaluation list isn't correct");
-    evaluationListStack.emplace_back(eval);
+    assert(evaluationList && evaluationList->empty() &&
+           "evaluation list isn't correct");
+    evaluationListStack.emplace_back(evaluationList);
   }
 
   /// pop the current list and return to the last Evaluation list
@@ -951,7 +947,7 @@ private:
   }
 
   std::unique_ptr<lower::pft::Program> pgm;
-  std::vector<lower::pft::ParentVariant> parentVariantStack;
+  std::vector<lower::pft::PftNode> pftParentStack;
   const semantics::SemanticsContext &semanticsContext;
 
   /// functionList points to the internal or module procedure function list
@@ -1187,7 +1183,7 @@ bool Fortran::lower::pft::Evaluation::lowerAsUnstructured() const {
 
 lower::pft::FunctionLikeUnit *
 Fortran::lower::pft::Evaluation::getOwningProcedure() const {
-  return parentVariant.visit(common::visitors{
+  return parent.visit(common::visitors{
       [](lower::pft::FunctionLikeUnit &c) { return &c; },
       [&](lower::pft::Evaluation &c) { return c.getOwningProcedure(); },
       [](auto &) -> lower::pft::FunctionLikeUnit * { return nullptr; },
@@ -1457,7 +1453,7 @@ static void processSymbolTable(
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
-    const parser::MainProgram &func, const lower::pft::ParentVariant &parent,
+    const parser::MainProgram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &semanticsContext)
     : ProgramUnit{func, parent}, endStmt{
                                      getFunctionStmt<parser::EndProgramStmt>(
@@ -1478,8 +1474,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
-    const parser::FunctionSubprogram &func,
-    const lower::pft::ParentVariant &parent,
+    const parser::FunctionSubprogram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::FunctionStmt>(func)},
@@ -1490,8 +1485,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
-    const parser::SubroutineSubprogram &func,
-    const lower::pft::ParentVariant &parent,
+    const parser::SubroutineSubprogram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::SubroutineStmt>(func)},
@@ -1503,8 +1497,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::SeparateModuleSubprogram &func,
-    const lower::pft::ParentVariant &parent,
-    const semantics::SemanticsContext &)
+    const lower::pft::PftNode &parent, const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::MpSubprogramStmt>(func)},
       endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)} {
@@ -1514,7 +1507,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
 }
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
-    const parser::Module &m, const lower::pft::ParentVariant &parent)
+    const parser::Module &m, const lower::pft::PftNode &parent)
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::ModuleStmt>(m)},
       endStmt{getModuleStmt<parser::EndModuleStmt>(m)} {
   auto symbol = getSymbol(beginStmt);
@@ -1522,7 +1515,7 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
 }
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
-    const parser::Submodule &m, const lower::pft::ParentVariant &parent)
+    const parser::Submodule &m, const lower::pft::PftNode &parent)
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::SubmoduleStmt>(
                                   m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {
@@ -1531,7 +1524,7 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
 }
 
 Fortran::lower::pft::BlockDataUnit::BlockDataUnit(
-    const parser::BlockData &bd, const lower::pft::ParentVariant &parent,
+    const parser::BlockData &bd, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &semanticsContext)
     : ProgramUnit{bd, parent},
       symTab{semanticsContext.FindScope(
