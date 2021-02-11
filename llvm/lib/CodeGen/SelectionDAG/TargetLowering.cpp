@@ -5083,11 +5083,25 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
   unsigned EltBits = VT.getScalarSizeInBits();
+  EVT MulVT;
 
   // Check to see if we can do this.
   // FIXME: We should be more aggressive here.
-  if (!isTypeLegal(VT))
-    return SDValue();
+  if (!isTypeLegal(VT)) {
+    // Limit this to simple scalars for now.
+    if (VT.isVector() || !VT.isSimple())
+      return SDValue();
+
+    // If this type will be promoted to a large enough type with a legal
+    // multiply operation, we can go ahead and do this transform.
+    if (getTypeAction(VT.getSimpleVT()) != TypePromoteInteger)
+      return SDValue();
+
+    MulVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    if (MulVT.getSizeInBits() < (2 * EltBits) ||
+        !isOperationLegal(ISD::MUL, MulVT))
+      return SDValue();
+  }
 
   // If the sdiv has an 'exact' bit we can use a simpler lowering.
   if (N->getFlags().hasExact())
@@ -5156,15 +5170,32 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
 
   // Multiply the numerator (operand 0) by the magic value.
   // FIXME: We should support doing a MUL in a wider type.
-  SDValue Q;
-  if (isOperationLegalOrCustom(ISD::MULHS, VT, IsAfterLegalization))
-    Q = DAG.getNode(ISD::MULHS, dl, VT, N0, MagicFactor);
-  else if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT, IsAfterLegalization)) {
-    SDValue LoHi =
-        DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), N0, MagicFactor);
-    Q = SDValue(LoHi.getNode(), 1);
-  } else
-    return SDValue(); // No mulhs or equivalent.
+  auto GetMULHS = [&](SDValue X, SDValue Y) {
+    // If the type isn't legal, use a wider mul of the the type calculated
+    // earlier.
+    if (!isTypeLegal(VT)) {
+      X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
+      Y = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, Y);
+      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
+    }
+
+    if (isOperationLegalOrCustom(ISD::MULHS, VT, IsAfterLegalization))
+      return DAG.getNode(ISD::MULHS, dl, VT, X, Y);
+    if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT, IsAfterLegalization)) {
+      SDValue LoHi =
+          DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), X, Y);
+      return SDValue(LoHi.getNode(), 1);
+    }
+    return SDValue();
+  };
+
+  SDValue Q = GetMULHS(N0, MagicFactor);
+  if (!Q)
+    return SDValue();
+
   Created.push_back(Q.getNode());
 
   // (Optionally) Add/subtract the numerator using Factor.
@@ -5199,11 +5230,25 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
   unsigned EltBits = VT.getScalarSizeInBits();
+  EVT MulVT;
 
   // Check to see if we can do this.
   // FIXME: We should be more aggressive here.
-  if (!isTypeLegal(VT))
-    return SDValue();
+  if (!isTypeLegal(VT)) {
+    // Limit this to simple scalars for now.
+    if (VT.isVector() || !VT.isSimple())
+      return SDValue();
+
+    // If this type will be promoted to a large enough type with a legal
+    // multiply operation, we can go ahead and do this transform.
+    if (getTypeAction(VT.getSimpleVT()) != TypePromoteInteger)
+      return SDValue();
+
+    MulVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    if (MulVT.getSizeInBits() < (2 * EltBits) ||
+        !isOperationLegal(ISD::MUL, MulVT))
+      return SDValue();
+  }
 
   bool UseNPQ = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
@@ -5283,6 +5328,17 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
   // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHU = [&](SDValue X, SDValue Y) {
+    // If the type isn't legal, use a wider mul of the the type calculated
+    // earlier.
+    if (!isTypeLegal(VT)) {
+      X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);
+      Y = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, Y);
+      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
+    }
+
     if (isOperationLegalOrCustom(ISD::MULHU, VT, IsAfterLegalization))
       return DAG.getNode(ISD::MULHU, dl, VT, X, Y);
     if (isOperationLegalOrCustom(ISD::UMUL_LOHI, VT, IsAfterLegalization)) {
