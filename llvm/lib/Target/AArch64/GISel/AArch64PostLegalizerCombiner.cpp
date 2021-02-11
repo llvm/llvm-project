@@ -155,8 +155,9 @@ bool matchAArch64MulConstCombine(
     // folded into madd or msub.
     if (MRI.hasOneNonDBGUse(Dst)) {
       MachineInstr &UseMI = *MRI.use_instr_begin(Dst);
-      if (UseMI.getOpcode() == TargetOpcode::G_ADD ||
-          UseMI.getOpcode() == TargetOpcode::G_SUB)
+      unsigned UseOpc = UseMI.getOpcode();
+      if (UseOpc == TargetOpcode::G_ADD || UseOpc == TargetOpcode::G_PTR_ADD ||
+          UseOpc == TargetOpcode::G_SUB)
         return false;
     }
   }
