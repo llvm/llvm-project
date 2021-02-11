@@ -26,13 +26,6 @@ public:
                         LazyBool step_in_avoids_code_without_debug_info,
                         LazyBool step_out_avoids_code_without_debug_info);
 
-  ThreadPlanStepInRange(Thread &thread, const AddressRange &range,
-                        const SymbolContext &addr_context,
-                        const char *step_into_function_name,
-                        lldb::RunMode stop_others,
-                        LazyBool step_in_avoids_code_without_debug_info,
-                        LazyBool step_out_avoids_code_without_debug_info);
-
   ~ThreadPlanStepInRange() override;
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
