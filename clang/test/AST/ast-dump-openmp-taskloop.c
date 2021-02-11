@@ -129,6 +129,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPTaskLoopDirective {{.*}} <line:17:1, col:33>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:22, col:32>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:31> 'int'
+// CHECK-NEXT: |     | |-value: Int 1
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:31> 'int' 1
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:18:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -183,6 +184,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |   `-OMPTaskLoopDirective {{.*}} <line:24:1, col:33>
 // CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:22, col:32>
 // CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:31> 'int'
+// CHECK-NEXT: |     | |-value: Int 2
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:31> 'int' 2
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:25:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
@@ -238,6 +240,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:     `-OMPTaskLoopDirective {{.*}} <line:31:1, col:33>
 // CHECK-NEXT:       |-OMPCollapseClause {{.*}} <col:22, col:32>
 // CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:31> 'int'
+// CHECK-NEXT:       | |-value: Int 2
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:31> 'int' 2
 // CHECK-NEXT:       |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
 // CHECK-NEXT:       | |-DeclRefExpr {{.*}} <line:32:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'

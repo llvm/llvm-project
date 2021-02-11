@@ -422,6 +422,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-OMPTeamsDistributeSimdDirective {{.*}} <col:1, col:46>
 // CHECK-NEXT: |       | | | | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT: |       | | | | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT: |       | | | | | |-value: Int 1
 // CHECK-NEXT: |       | | | | |   `-IntegerLiteral {{.*}} <col:44> 'int' 1
 // CHECK-NEXT: |       | | | | `-CapturedStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -534,6 +535,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:20:1, col:46>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT: |       |   | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT: |       |   | | |-value: Int 1
 // CHECK-NEXT: |       |   | |   `-IntegerLiteral {{.*}} <col:44> 'int' 1
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -644,6 +646,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-OMPTeamsDistributeSimdDirective {{.*}} <col:1, col:46>
 // CHECK-NEXT: |       | | | | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT: |       | | | | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT: |       | | | | | |-value: Int 2
 // CHECK-NEXT: |       | | | | |   `-IntegerLiteral {{.*}} <col:44> 'int' 2
 // CHECK-NEXT: |       | | | | `-CapturedStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -775,6 +778,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:28:1, col:46>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT: |       |   | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT: |       |   | | |-value: Int 2
 // CHECK-NEXT: |       |   | |   `-IntegerLiteral {{.*}} <col:44> 'int' 2
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -906,6 +910,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |-OMPTeamsDistributeSimdDirective {{.*}} <col:1, col:46>
 // CHECK-NEXT:         | | | | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT:         | | | | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT:         | | | | | |-value: Int 2
 // CHECK-NEXT:         | | | | |   `-IntegerLiteral {{.*}} <col:44> 'int' 2
 // CHECK-NEXT:         | | | | `-CapturedStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -1070,6 +1075,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:36:1, col:46>
 // CHECK-NEXT:         |   | |-OMPCollapseClause {{.*}} <col:35, col:45>
 // CHECK-NEXT:         |   | | `-ConstantExpr {{.*}} <col:44> 'int'
+// CHECK-NEXT:         |   | | |-value: Int 2
 // CHECK-NEXT:         |   | |   `-IntegerLiteral {{.*}} <col:44> 'int' 2
 // CHECK-NEXT:         |   | `-CapturedStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
