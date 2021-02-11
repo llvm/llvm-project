@@ -26,7 +26,7 @@ class MCSubtargetInfo;
 class WebAssemblyInstPrinter final : public MCInstPrinter {
   uint64_t ControlFlowCounter = 0;
   SmallVector<std::pair<uint64_t, bool>, 4> ControlFlowStack;
-  SmallVector<uint64_t, 4> EHPadStack;
+  SmallVector<uint64_t, 4> TryStack;
 
   enum EHInstKind { TRY, CATCH, CATCH_ALL };
   SmallVector<EHInstKind, 4> EHInstStack;
