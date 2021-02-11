@@ -78,7 +78,6 @@ define void @nested(i32* nocapture readonly %x, i32* nocapture readnone %y, i32*
 ; CHECK-NEXT:  @ %bb.5: @ %do.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    bic r9, r7, #3
-; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    add.w r8, r0, r9, lsl #2
 ; CHECK-NEXT:    dlstp.32 lr, r5
