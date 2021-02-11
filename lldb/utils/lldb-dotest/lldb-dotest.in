@@ -8,7 +8,6 @@ arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
-server = '@LLDB_TEST_SERVER_CONFIGURED@'
 lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
@@ -28,8 +27,6 @@ if __name__ == '__main__':
     cmd.extend(['--dsymutil', dsymutil])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
     cmd.extend(['--llvm-tools-dir', llvm_tools_dir])
-    if server:
-        cmd.extend(['--server', server])
     if lldb_framework_dir:
         cmd.extend(['--framework', lldb_framework_dir])
     if lldb_build_intel_pt == "1":

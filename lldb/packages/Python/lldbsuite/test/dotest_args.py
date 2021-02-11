@@ -101,10 +101,6 @@ def create_parser():
         metavar='executable-path',
         help='The path to the lldb executable')
     group.add_argument(
-        '--server',
-        metavar='server-path',
-        help='The path to the debug server executable to use')
-    group.add_argument(
         '--out-of-tree-debugserver',
         dest='out_of_tree_debugserver',
         action='store_true',

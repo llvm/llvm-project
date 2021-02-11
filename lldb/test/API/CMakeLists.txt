@@ -108,18 +108,8 @@ if(CMAKE_HOST_APPLE)
     message(STATUS "LLDB tests use out-of-tree debugserver: ${system_debugserver_path}")
     list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
     add_lldb_test_dependency(debugserver)
-  elseif(TARGET debugserver)
-    set(debugserver_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/debugserver)
-    message(STATUS "LLDB Tests use just-built debugserver: ${debugserver_path}")
-    set(LLDB_TEST_SERVER ${debugserver_path})
-    add_lldb_test_dependency(debugserver)
-  elseif(TARGET lldb-server)
-    set(lldb_server_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-server)
-    message(STATUS "LLDB Tests use just-built lldb-server: ${lldb_server_path}")
-    set(LLDB_TEST_SERVER ${lldb_server_path})
-    add_lldb_test_dependency(lldb-server)
   else()
-    message(WARNING "LLDB Tests enabled, but no server available")
+    message(STATUS "LLDB Tests use just-built debug server")
   endif()
 endif()
 
@@ -136,7 +126,6 @@ if(LLDB_BUILT_STANDALONE)
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
-  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_SERVER "${LLDB_TEST_SERVER}")
 
   # Remaining ones must be paths to the provided LLVM build-tree.
   if(LLVM_CONFIGURATION_TYPES)
@@ -163,7 +152,6 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_BUILD_DI
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
-string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_SERVER "${LLDB_TEST_SERVER}")
 
 # Configure the API test suite.
 configure_lit_site_cfg(
