@@ -438,9 +438,9 @@ multiclass VOP3P_Real_MAI<bits<7> op> {
             VOP3Pe_MAI <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
     let AssemblerPredicate = HasMAIInsts;
     let DecoderNamespace = "GFX8";
-    let Inst{14} = 1; // op_sel_hi(2) default value
-    let Inst{59} = 1; // op_sel_hi(0) default value
-    let Inst{60} = 1; // op_sel_hi(1) default value
+    let Inst{14} = ?; // op_sel_hi(2)
+    let Inst{59} = ?; // op_sel_hi(0)
+    let Inst{60} = ?; // op_sel_hi(1)
   }
 }
 
