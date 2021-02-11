@@ -1265,10 +1265,11 @@ private:
           auto &sym = *std::get<Fortran::parser::Name>(assoc.t).symbol;
           const auto &selector =
               *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
-          if (Fortran::evaluate::IsVariable(selector) &&
+          if (Fortran::evaluate::IsVariable(selector) && selector.Rank() &&
               !Fortran::evaluate::UnwrapWholeSymbolDataRef(selector) &&
               !Fortran::evaluate::HasVectorSubscript(selector)) {
-            TODO("subobject association selector");
+            TODO("array section association selector");
+            continue;
           }
           genExprAddr(selector, stmtCtx)
               .match(
