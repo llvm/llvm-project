@@ -5131,29 +5131,55 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_ATOMICRMW: {
-      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid]
+      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid, align?]
+      const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
-      Value *Ptr, *Val;
-      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy) ||
-          !isa<PointerType>(Ptr->getType()) ||
-          popValue(Record, OpNum, NextValueNo,
-                   getPointerElementFlatType(FullTy), Val) ||
-          OpNum + 4 != Record.size())
+
+      Value *Ptr = nullptr;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
         return error("Invalid record");
-      AtomicRMWInst::BinOp Operation = getDecodedRMWOperation(Record[OpNum]);
+
+      if (!isa<PointerType>(Ptr->getType()))
+        return error("Invalid record");
+
+      Value *Val = nullptr;
+      if (popValue(Record, OpNum, NextValueNo,
+                   getPointerElementFlatType(FullTy), Val))
+        return error("Invalid record");
+
+      if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
+        return error("Invalid record");
+
+      const AtomicRMWInst::BinOp Operation =
+          getDecodedRMWOperation(Record[OpNum]);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid record");
-      AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
+
+      const bool IsVol = Record[OpNum + 1];
+
+      const AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
       if (Ordering == AtomicOrdering::NotAtomic ||
           Ordering == AtomicOrdering::Unordered)
         return error("Invalid record");
-      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
-      Align Alignment(
-          TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
-      I = new AtomicRMWInst(Operation, Ptr, Val, Alignment, Ordering, SSID);
+
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+
+      MaybeAlign Alignment;
+
+      if (NumRecords == (OpNum + 5)) {
+        if (Error Err = parseAlignmentValue(Record[6], Alignment))
+          return Err;
+      }
+
+      if (!Alignment)
+        Alignment =
+            Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
+
+      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
       FullTy = getPointerElementFlatType(FullTy);
-      cast<AtomicRMWInst>(I)->setVolatile(Record[OpNum+1]);
+      cast<AtomicRMWInst>(I)->setVolatile(IsVol);
+
       InstructionList.push_back(I);
       break;
     }

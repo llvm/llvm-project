@@ -4327,6 +4327,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   } else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
     writeAtomic(RMWI->getContext(), RMWI->getOrdering(),
                 RMWI->getSyncScopeID());
+    Out << ", align " << RMWI->getAlign().value();
   } else if (const FenceInst *FI = dyn_cast<FenceInst>(&I)) {
     writeAtomic(FI->getContext(), FI->getOrdering(), FI->getSyncScopeID());
   } else if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(&I)) {
