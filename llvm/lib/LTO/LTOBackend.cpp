@@ -289,17 +289,15 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 }
 
 static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
-                                 TargetMachine *TM, std::string PipelineDesc,
-                                 std::string AAPipelineDesc,
-                                 bool DisableVerify) {
+                                 TargetMachine *TM) {
   PassBuilder PB(Conf.DebugPassManager, TM);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.
-  if (!AAPipelineDesc.empty())
-    if (auto Err = PB.parseAAPipeline(AA, AAPipelineDesc))
+  if (!Conf.AAPipeline.empty())
+    if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline))
       report_fatal_error("unable to parse AA pipeline description '" +
-                         AAPipelineDesc + "': " + toString(std::move(Err)));
+                         Conf.AAPipeline + "': " + toString(std::move(Err)));
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
@@ -330,11 +328,11 @@ static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
   MPM.addPass(VerifierPass());
 
   // Now, add all the passes we've been requested to.
-  if (auto Err = PB.parsePassPipeline(MPM, PipelineDesc))
+  if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline))
     report_fatal_error("unable to parse pass pipeline description '" +
-                       PipelineDesc + "': " + toString(std::move(Err)));
+                       Conf.OptPipeline + "': " + toString(std::move(Err)));
 
-  if (!DisableVerify)
+  if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
   MPM.run(Mod, MAM);
 }
@@ -395,8 +393,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   }
   // FIXME: Plumb the combined index into the new pass manager.
   if (!Conf.OptPipeline.empty())
-    runNewPMCustomPasses(Conf, Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
-                         Conf.DisableVerify);
+    runNewPMCustomPasses(Conf, Mod, TM);
   else if (Conf.UseNewPM)
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
                    ImportSummary);

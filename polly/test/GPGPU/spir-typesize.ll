@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -O3 -polly -polly-target=gpu \
+; RUN: opt %loadPolly -polly-codegen-ppcg \
 ; RUN: -polly-gpu-arch=spir64 \
 ; RUN: -polly-acc-dump-kernel-ir -polly-process-unprofitable -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=I64 %s
 
-; RUN: opt %loadPolly -O3 -polly -polly-target=gpu \
+; RUN: opt %loadPolly -polly-codegen-ppcg \
 ; RUN: -polly-gpu-arch=spir32 \
 ; RUN: -polly-acc-dump-kernel-ir -polly-process-unprofitable -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=I32 %s

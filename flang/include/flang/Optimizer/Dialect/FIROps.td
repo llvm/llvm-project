@@ -24,6 +24,8 @@ def fir_Dialect : Dialect {
   let cppNamespace = "::fir";
 }
 
+include "flang/Optimizer/Dialect/FIRTypes.td"
+
 // Types and predicates
 
 def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
@@ -99,7 +101,11 @@ def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate, fir_BoxType.predicate]>,
     "any reference or box">;
 
-// A vector of Fortran triple notation describing a multidimensional array
+def AnyShapeLike : TypeConstraint<Or<[ShapeType.predicate,
+    ShapeShiftType.predicate]>, "any legal shape type">;
+def AnyShapeType : Type<AnyShapeLike.predicate, "any legal shape type">;
+def fir_SliceType : Type<CPred<"$_self.isa<fir::SliceType>()">, "slice type">;
+
 def AnyEmboxLike : TypeConstraint<Or<[AnySignlessInteger.predicate,
     Index.predicate, fir_IntegerType.predicate]>,
     "any legal embox argument type">;

@@ -331,6 +331,12 @@ public:
   /// host code generation.
   std::string OMPHostIRFile;
 
+  /// The user provided compilation unit ID, if non-empty. This is used to
+  /// externalize static variables which is needed to support accessing static
+  /// device variables in host code for single source offloading languages
+  /// like CUDA/HIP.
+  std::string CUID;
+
   /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
   bool IsHeaderFile = false;

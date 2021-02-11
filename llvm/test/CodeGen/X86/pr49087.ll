@@ -1,4 +1,4 @@
-; RUN: llc -o - -global-isel < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -o - -global-isel < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ; XFAIL: *
 

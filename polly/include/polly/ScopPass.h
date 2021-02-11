@@ -20,12 +20,24 @@
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerImpl.h"
 
-using namespace llvm;
-
 namespace polly {
+using llvm::AllAnalysesOn;
+using llvm::AnalysisManager;
+using llvm::DominatorTreeAnalysis;
+using llvm::InnerAnalysisManagerProxy;
+using llvm::LoopAnalysis;
+using llvm::OuterAnalysisManagerProxy;
+using llvm::PassManager;
+using llvm::RegionInfoAnalysis;
+using llvm::ScalarEvolutionAnalysis;
+using llvm::SmallPriorityWorklist;
+using llvm::TargetIRAnalysis;
+using llvm::TargetTransformInfo;
+
 class Scop;
 class SPMUpdater;
 struct ScopStandardAnalysisResults;
@@ -176,6 +188,7 @@ struct ScopStandardAnalysisResults {
   ScalarEvolution &SE;
   LoopInfo &LI;
   RegionInfo &RI;
+  TargetTransformInfo &TTI;
 };
 
 class SPMUpdater {
@@ -224,7 +237,8 @@ public:
                                       AM.getResult<ScopInfoAnalysis>(F),
                                       AM.getResult<ScalarEvolutionAnalysis>(F),
                                       AM.getResult<LoopAnalysis>(F),
-                                      AM.getResult<RegionInfoAnalysis>(F)};
+                                      AM.getResult<RegionInfoAnalysis>(F),
+                                      AM.getResult<TargetIRAnalysis>(F)};
 
     ScopAnalysisManager &SAM =
         AM.getResult<ScopAnalysisManagerFunctionProxy>(F).getManager();

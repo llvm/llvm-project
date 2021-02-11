@@ -170,6 +170,11 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     Flags.setByValAlign(FrameAlign);
   }
   Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
+
+  // Don't try to use the returned attribute if the argument is marked as
+  // swiftself, since it won't be passed in x0.
+  if (Flags.isSwiftSelf())
+    Flags.setReturned(false);
 }
 
 template void
@@ -225,19 +230,24 @@ void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
 
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      SmallVectorImpl<ArgInfo> &Args,
-                                     ValueHandler &Handler) const {
+                                     ValueHandler &Handler,
+                                     CallingConv::ID CallConv, bool IsVarArg,
+                                     Register ThisReturnReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
-  return handleAssignments(CCInfo, ArgLocs, MIRBuilder, Args, Handler);
+
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, F.getContext());
+  return handleAssignments(CCInfo, ArgLocs, MIRBuilder, Args, Handler,
+                           ThisReturnReg);
 }
 
 bool CallLowering::handleAssignments(CCState &CCInfo,
                                      SmallVectorImpl<CCValAssign> &ArgLocs,
                                      MachineIRBuilder &MIRBuilder,
                                      SmallVectorImpl<ArgInfo> &Args,
-                                     ValueHandler &Handler) const {
+                                     ValueHandler &Handler,
+                                     Register ThisReturnReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getParent()->getDataLayout();
@@ -252,12 +262,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       continue;
 
     MVT NewVT = TLI->getRegisterTypeForCallingConv(
-        F.getContext(), F.getCallingConv(), EVT(CurVT));
+        F.getContext(), CCInfo.getCallingConv(), EVT(CurVT));
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
     unsigned NumParts = TLI->getNumRegistersForCallingConv(
-        F.getContext(), F.getCallingConv(), CurVT);
+        F.getContext(), CCInfo.getCallingConv(), CurVT);
 
     if (NumParts == 1) {
       // Try to use the register type if we couldn't assign the VT.
@@ -330,6 +340,15 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           if (PartIdx == NumParts - 1)
             Flags.setSplitEnd();
         }
+
+        // TODO: Also check if there is a valid extension that preserves the
+        // bits. However currently this call lowering doesn't support non-exact
+        // split parts, so that can't be tested.
+        if (OrigFlags.isReturned() &&
+            (NumParts * NewVT.getSizeInBits() != CurVT.getSizeInBits())) {
+          Flags.setReturned(false);
+        }
+
         Args[i].Regs.push_back(Unmerge.getReg(PartIdx));
         Args[i].Flags.push_back(Flags);
         if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full,
@@ -393,6 +412,13 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       }
 
       assert(VA.isRegLoc() && "custom loc should have been handled already");
+
+      if (i == 0 && ThisReturnReg.isValid() &&
+          Handler.isIncomingArgumentHandler() &&
+          isTypeIsValidForThisReturn(VAVT)) {
+        Handler.assignValueToReg(Args[i].Regs[i], ThisReturnReg, VA);
+        continue;
+      }
 
       // GlobalISel does not currently work for scalable vectors.
       if (OrigVT.getFixedSizeInBits() >= VAVT.getFixedSizeInBits() ||

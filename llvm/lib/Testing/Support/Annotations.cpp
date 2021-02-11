@@ -53,7 +53,8 @@ Annotations::Annotations(llvm::StringRef Text) {
       continue;
     }
     if (Text.consume_front("$")) {
-      Name = Text.take_while(llvm::isAlnum);
+      Name =
+          Text.take_while([](char C) { return llvm::isAlnum(C) || C == '_'; });
       Text = Text.drop_front(Name->size());
       continue;
     }

@@ -663,10 +663,40 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
   return Payload ? Payload->Build : nullptr;
 }
 
+static std::unique_ptr<IslAstInfo> runIslAst(
+    Scop &Scop,
+    function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps) {
+  // Skip SCoPs in case they're already handled by PPCGCodeGeneration.
+  if (Scop.isToBeSkipped())
+    return {};
+
+  ScopsProcessed++;
+
+  const Dependences &D = GetDeps(Dependences::AL_Statement);
+
+  if (D.getSharedIslCtx() != Scop.getSharedIslCtx()) {
+    LLVM_DEBUG(
+        dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
+    return {};
+  }
+
+  std::unique_ptr<IslAstInfo> Ast = std::make_unique<IslAstInfo>(Scop, D);
+
+  LLVM_DEBUG({
+    if (Ast)
+      Ast->print(dbgs());
+  });
+
+  return Ast;
+}
+
 IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &SAR) {
-  return {S, SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
-                 Dependences::AL_Statement)};
+  auto GetDeps = [&](Dependences::AnalysisLevel Lvl) -> const Dependences & {
+    return SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(Lvl);
+  };
+
+  return std::move(*runIslAst(S, GetDeps).release());
 }
 
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
@@ -785,25 +815,12 @@ PreservedAnalyses IslAstPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
 void IslAstInfoWrapperPass::releaseMemory() { Ast.reset(); }
 
 bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
-  // Skip SCoPs in case they're already handled by PPCGCodeGeneration.
-  if (Scop.isToBeSkipped())
-    return false;
+  auto GetDeps = [this](Dependences::AnalysisLevel Lvl) -> const Dependences & {
+    return getAnalysis<DependenceInfo>().getDependences(Lvl);
+  };
 
-  ScopsProcessed++;
+  Ast = runIslAst(Scop, GetDeps);
 
-  const Dependences &D =
-      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
-
-  if (D.getSharedIslCtx() != Scop.getSharedIslCtx()) {
-    LLVM_DEBUG(
-        dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
-    Ast.reset();
-    return false;
-  }
-
-  Ast.reset(new IslAstInfo(Scop, D));
-
-  LLVM_DEBUG(printScop(dbgs(), Scop));
   return false;
 }
 
@@ -817,6 +834,8 @@ void IslAstInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void IslAstInfoWrapperPass::printScop(raw_ostream &OS, Scop &S) const {
+  OS << "Printing analysis 'Polly - Generate an AST of the SCoP (isl)'"
+     << S.getName() << "' in function '" << S.getFunction().getName() << "':\n";
   if (Ast)
     Ast->print(OS);
 }

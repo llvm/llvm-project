@@ -20,6 +20,9 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIROpsTypes.cpp.inc"
+
 using namespace fir;
 
 namespace {
@@ -110,6 +113,11 @@ CharacterType parseCharacter(mlir::DialectAsmParser &parser) {
 // `complex` `<` kind `>`
 fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<fir::ComplexType>(parser);
+}
+
+// `slice` `<` rank `>`
+SliceType parseSlice(mlir::DialectAsmParser &parser) {
+  return parseRankSingleton<SliceType>(parser);
 }
 
 // `field`
@@ -215,7 +223,9 @@ static bool isaIntegerType(mlir::Type ty) {
 
 bool verifyRecordMemberType(mlir::Type ty) {
   return !(ty.isa<BoxType>() || ty.isa<BoxCharType>() ||
-           ty.isa<BoxProcType>() || ty.isa<FieldType>() || ty.isa<LenType>() ||
+           ty.isa<BoxProcType>() || ty.isa<ShapeType>() ||
+           ty.isa<ShapeShiftType>() || ty.isa<SliceType>() ||
+           ty.isa<FieldType>() || ty.isa<LenType>() ||
            ty.isa<ReferenceType>() || ty.isa<TypeDescType>());
 }
 
@@ -335,7 +345,8 @@ inline bool singleIndirectionLevel(mlir::Type ty) {
 
 // Implementation of the thin interface from dialect to type parser
 
-mlir::Type fir::parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser) {
+mlir::Type fir::parseFirType(FIROpsDialect *dialect,
+                             mlir::DialectAsmParser &parser) {
   llvm::StringRef typeNameLit;
   if (mlir::failed(parser.parseKeyword(&typeNameLit)))
     return {};
@@ -369,6 +380,12 @@ mlir::Type fir::parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser) {
     return parseReal(parser);
   if (typeNameLit == "ref")
     return parseReference(parser, loc);
+  if (typeNameLit == "shape")
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
+  if (typeNameLit == "shapeshift")
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
+  if (typeNameLit == "slice")
+    return parseSlice(parser);
   if (typeNameLit == "tdesc")
     return parseTypeDesc(parser, loc);
   if (typeNameLit == "type")
@@ -418,6 +435,29 @@ private:
   CharacterTypeStorage() = delete;
   explicit CharacterTypeStorage(KindTy kind, CharacterType::LenType len)
       : kind{kind}, len{len} {}
+};
+
+struct SliceTypeStorage : public mlir::TypeStorage {
+  using KeyTy = unsigned;
+
+  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
+
+  bool operator==(const KeyTy &key) const { return key == getRank(); }
+
+  static SliceTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                     unsigned rank) {
+    auto *storage = allocator.allocate<SliceTypeStorage>();
+    return new (storage) SliceTypeStorage{rank};
+  }
+
+  unsigned getRank() const { return rank; }
+
+protected:
+  unsigned rank;
+
+private:
+  SliceTypeStorage() = delete;
+  explicit SliceTypeStorage(unsigned rank) : rank{rank} {}
 };
 
 /// The type of a derived type part reference
@@ -894,11 +934,13 @@ bool isa_box_type(mlir::Type t) {
 }
 
 bool isa_passbyref_type(mlir::Type t) {
-  return t.isa<ReferenceType>() || isa_box_type(t);
+  return t.isa<ReferenceType>() || isa_box_type(t) ||
+         t.isa<mlir::FunctionType>();
 }
 
 bool isa_aggregate(mlir::Type t) {
-  return t.isa<SequenceType>() || t.isa<RecordType>();
+  return t.isa<SequenceType>() || t.isa<RecordType>() ||
+         t.isa<mlir::TupleType>();
 }
 
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
@@ -1036,8 +1078,10 @@ mlir::Type fir::ReferenceType::getEleTy() const {
 mlir::LogicalResult
 fir::ReferenceType::verifyConstructionInvariants(mlir::Location loc,
                                                  mlir::Type eleTy) {
-  if (eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
-      eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>())
+  if (eleTy.isa<ShapeType>() || eleTy.isa<ShapeShiftType>() ||
+      eleTy.isa<SliceType>() || eleTy.isa<FieldType>() ||
+      eleTy.isa<LenType>() || eleTy.isa<ReferenceType>() ||
+      eleTy.isa<TypeDescType>())
     return mlir::emitError(loc, "cannot build a reference to type: ")
            << eleTy << '\n';
   return mlir::success();
@@ -1056,10 +1100,11 @@ mlir::Type fir::PointerType::getEleTy() const {
 
 static bool canBePointerOrHeapElementType(mlir::Type eleTy) {
   return eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-         eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
-         eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
-         eleTy.isa<PointerType>() || eleTy.isa<ReferenceType>() ||
-         eleTy.isa<TypeDescType>();
+         eleTy.isa<BoxProcType>() || eleTy.isa<ShapeType>() ||
+         eleTy.isa<ShapeShiftType>() || eleTy.isa<SliceType>() ||
+         eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
+         eleTy.isa<HeapType>() || eleTy.isa<PointerType>() ||
+         eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>();
 }
 
 mlir::LogicalResult
@@ -1144,33 +1189,13 @@ mlir::LogicalResult fir::SequenceType::verifyConstructionInvariants(
     mlir::AffineMapAttr map) {
   // DIMENSION attribute can only be applied to an intrinsic or record type
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-      eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
-      eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
+      eleTy.isa<BoxProcType>() || eleTy.isa<ShapeType>() ||
+      eleTy.isa<ShapeShiftType>() || eleTy.isa<SliceType>() ||
+      eleTy.isa<FieldType>() || eleTy.isa<LenType>() || eleTy.isa<HeapType>() ||
       eleTy.isa<PointerType>() || eleTy.isa<ReferenceType>() ||
       eleTy.isa<TypeDescType>() || eleTy.isa<fir::VectorType>() ||
       eleTy.isa<SequenceType>())
     return mlir::emitError(loc, "cannot build an array of this element type: ")
-           << eleTy << '\n';
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// Vector type
-//===----------------------------------------------------------------------===//
-
-fir::VectorType fir::VectorType::get(uint64_t len, mlir::Type eleTy) {
-  return Base::get(eleTy.getContext(), len, eleTy);
-}
-
-mlir::Type fir::VectorType::getEleTy() const { return getImpl()->getEleTy(); }
-
-uint64_t fir::VectorType::getLen() const { return getImpl()->getLen(); }
-
-mlir::LogicalResult
-fir::VectorType::verifyConstructionInvariants(mlir::Location loc, uint64_t len,
-                                              mlir::Type eleTy) {
-  if (!(fir::isa_real(eleTy) || fir::isa_integer(eleTy)))
-    return mlir::emitError(loc, "cannot build a vector of type ")
            << eleTy << '\n';
   return mlir::success();
 }
@@ -1194,6 +1219,14 @@ llvm::hash_code fir::hash_value(const SequenceType::Shape &sh) {
   }
   return llvm::hash_combine(0);
 }
+
+// Slice
+
+SliceType fir::SliceType::get(mlir::MLIRContext *ctxt, unsigned rank) {
+  return Base::get(ctxt, rank);
+}
+
+unsigned fir::SliceType::getRank() const { return getImpl()->getRank(); }
 
 /// RecordType
 ///
@@ -1237,9 +1270,9 @@ mlir::Type fir::RecordType::getType(llvm::StringRef ident) {
   return {};
 }
 
-/// Type descriptor type
-///
-/// This is the type of a type descriptor object (similar to a class instance)
+//===----------------------------------------------------------------------===//
+// Type descriptor type
+//===----------------------------------------------------------------------===//
 
 TypeDescType fir::TypeDescType::get(mlir::Type ofType) {
   assert(!ofType.isa<ReferenceType>());
@@ -1252,10 +1285,32 @@ mlir::LogicalResult
 fir::TypeDescType::verifyConstructionInvariants(mlir::Location loc,
                                                 mlir::Type eleTy) {
   if (eleTy.isa<BoxType>() || eleTy.isa<BoxCharType>() ||
-      eleTy.isa<BoxProcType>() || eleTy.isa<FieldType>() ||
-      eleTy.isa<LenType>() || eleTy.isa<ReferenceType>() ||
-      eleTy.isa<TypeDescType>())
+      eleTy.isa<BoxProcType>() || eleTy.isa<ShapeType>() ||
+      eleTy.isa<ShapeShiftType>() || eleTy.isa<SliceType>() ||
+      eleTy.isa<FieldType>() || eleTy.isa<LenType>() ||
+      eleTy.isa<ReferenceType>() || eleTy.isa<TypeDescType>())
     return mlir::emitError(loc, "cannot build a type descriptor of type: ")
+           << eleTy << '\n';
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// Vector type
+//===----------------------------------------------------------------------===//
+
+fir::VectorType fir::VectorType::get(uint64_t len, mlir::Type eleTy) {
+  return Base::get(eleTy.getContext(), len, eleTy);
+}
+
+mlir::Type fir::VectorType::getEleTy() const { return getImpl()->getEleTy(); }
+
+uint64_t fir::VectorType::getLen() const { return getImpl()->getLen(); }
+
+mlir::LogicalResult
+fir::VectorType::verifyConstructionInvariants(mlir::Location loc, uint64_t len,
+                                              mlir::Type eleTy) {
+  if (!(fir::isa_real(eleTy) || fir::isa_integer(eleTy)))
+    return mlir::emitError(loc, "cannot build a vector of type ")
            << eleTy << '\n';
   return mlir::success();
 }
@@ -1321,10 +1376,12 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     return;
   }
   if (auto type = ty.dyn_cast<fir::ComplexType>()) {
+    // Fortran intrinsic type COMPLEX
     os << "complex<" << type.getFKind() << '>';
     return;
   }
   if (auto type = ty.dyn_cast<RecordType>()) {
+    // Fortran derived type
     os << "type<" << type.getName();
     if (!recordTypeVisited.count(type.uniqueKey())) {
       recordTypeVisited.insert(type.uniqueKey());
@@ -1351,6 +1408,10 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << '>';
     return;
   }
+  if (auto type = ty.dyn_cast<SliceType>()) {
+    os << "slice<" << type.getRank() << '>';
+    return;
+  }
   if (ty.isa<FieldType>()) {
     os << "field";
     return;
@@ -1362,6 +1423,7 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     return;
   }
   if (auto type = ty.dyn_cast<fir::IntegerType>()) {
+    // Fortran intrinsic type INTEGER
     os << "int<" << type.getFKind() << '>';
     return;
   }
@@ -1370,6 +1432,7 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     return;
   }
   if (auto type = ty.dyn_cast<LogicalType>()) {
+    // Fortran intrinsic type LOGICAL
     os << "logical<" << type.getFKind() << '>';
     return;
   }
@@ -1380,6 +1443,7 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     return;
   }
   if (auto type = ty.dyn_cast<fir::RealType>()) {
+    // Fortran intrinsic types REAL and DOUBLE PRECISION
     os << "real<" << type.getFKind() << '>';
     return;
   }
@@ -1415,6 +1479,10 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     os << "vector<" << type.getLen() << ':';
     p.printType(type.getEleTy());
     os << '>';
+    return;
+  }
+
+  if (mlir::succeeded(generatedTypePrinter(ty, p))) {
     return;
   }
 }

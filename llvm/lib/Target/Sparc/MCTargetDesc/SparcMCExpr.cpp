@@ -50,6 +50,7 @@ bool SparcMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind)
   case VK_Sparc_L44:      OS << "%l44("; return true;
   case VK_Sparc_HH:       OS << "%hh(";  return true;
   case VK_Sparc_HM:       OS << "%hm(";  return true;
+  case VK_Sparc_LM:       OS << "%lm(";  return true;
     // FIXME: use %pc22/%pc10, if system assembler supports them.
   case VK_Sparc_PC22:     OS << "%hi("; return true;
   case VK_Sparc_PC10:     OS << "%lo("; return true;
@@ -93,6 +94,7 @@ SparcMCExpr::VariantKind SparcMCExpr::parseVariantKind(StringRef name)
     .Case("l44", VK_Sparc_L44)
     .Case("hh",  VK_Sparc_HH)
     .Case("hm",  VK_Sparc_HM)
+    .Case("lm",  VK_Sparc_LM)
     .Case("pc22",  VK_Sparc_PC22)
     .Case("pc10",  VK_Sparc_PC10)
     .Case("got22", VK_Sparc_GOT22)
@@ -130,6 +132,7 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
   case VK_Sparc_L44:      return Sparc::fixup_sparc_l44;
   case VK_Sparc_HH:       return Sparc::fixup_sparc_hh;
   case VK_Sparc_HM:       return Sparc::fixup_sparc_hm;
+  case VK_Sparc_LM:       return Sparc::fixup_sparc_lm;
   case VK_Sparc_PC22:     return Sparc::fixup_sparc_pc22;
   case VK_Sparc_PC10:     return Sparc::fixup_sparc_pc10;
   case VK_Sparc_GOT22:    return Sparc::fixup_sparc_got22;

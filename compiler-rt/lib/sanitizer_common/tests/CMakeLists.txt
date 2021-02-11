@@ -13,6 +13,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
+  sanitizer_chained_origin_depot_test.cpp
   sanitizer_common_test.cpp
   sanitizer_deadlock_detector_test.cpp
   sanitizer_flags_test.cpp

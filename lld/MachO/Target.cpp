@@ -32,8 +32,8 @@ bool TargetInfo::validateSymbolRelocation(const Symbol *sym,
         .str();
   };
 
-  if (relocAttrs.hasAttr(RelocAttrBits::TLV | RelocAttrBits::LOAD) !=
-      sym->isTlv())
+  if ((relocAttrs.hasAttr(RelocAttrBits::TLV) &&
+       !relocAttrs.hasAttr(RelocAttrBits::BYTE8)) != sym->isTlv())
     error(message(Twine("requires that variable ") +
                   (sym->isTlv() ? "not " : "") + "be thread-local"));
   if (relocAttrs.hasAttr(RelocAttrBits::DYSYM8) && isa<DylibSymbol>(sym) &&

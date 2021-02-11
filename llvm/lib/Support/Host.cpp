@@ -43,6 +43,9 @@
 #include <mach/mach_host.h>
 #include <mach/machine.h>
 #endif
+#ifdef _AIX
+#include <sys/systemcfg.h>
+#endif
 
 #define DEBUG_TYPE "host-detection"
 
@@ -1216,6 +1219,38 @@ StringRef sys::getHostCPUName() {
     }
 
   return "generic";
+}
+#elif defined(_AIX)
+StringRef sys::getHostCPUName() {
+  switch (_system_configuration.implementation) {
+  case POWER_4:
+    if (_system_configuration.version == PV_4_3)
+      return "970";
+    return "pwr4";
+  case POWER_5:
+    if (_system_configuration.version == PV_5)
+      return "pwr5";
+    return "pwr5x";
+  case POWER_6:
+    if (_system_configuration.version == PV_6_Compat)
+      return "pwr6";
+    return "pwr6x";
+  case POWER_7:
+    return "pwr7";
+  case POWER_8:
+    return "pwr8";
+  case POWER_9:
+    return "pwr9";
+// TODO: simplify this once the macro is available in all OS levels.
+#ifdef POWER_10
+  case POWER_10:
+#else
+  case 0x40000:
+#endif
+    return "pwr10";
+  default:
+    return "generic";
+  }
 }
 #else
 StringRef sys::getHostCPUName() { return "generic"; }

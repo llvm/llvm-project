@@ -23,13 +23,11 @@
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
-using namespace llvm;
-using namespace polly;
-
 namespace polly {
+using llvm::LoopInfo;
+using llvm::SmallSet;
 
 struct InvariantEquivClassTy;
-} // namespace polly
 
 struct SubtreeReferences {
   LoopInfo &LI;
@@ -428,5 +426,7 @@ private:
   /// See [Code generation of induction variables of loops outside Scops]
   Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
+
+} // namespace polly
 
 #endif // POLLY_ISLNODEBUILDER_H

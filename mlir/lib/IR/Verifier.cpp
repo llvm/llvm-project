@@ -145,9 +145,10 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
   }
 
   // Verify the terminator.
-  if (failed(verifyOperation(block.back())))
+  Operation &terminator = block.back();
+  if (failed(verifyOperation(terminator)))
     return failure();
-  if (block.back().isKnownNonTerminator())
+  if (!terminator.mightHaveTrait<OpTrait::IsTerminator>())
     return block.back().emitError("block with no terminator");
 
   // Verify that this block is not branching to a block of a different

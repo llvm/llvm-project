@@ -9,11 +9,13 @@
 #ifndef POLLY_SCHEDULEOPTIMIZER_H
 #define POLLY_SCHEDULEOPTIMIZER_H
 
+#include "polly/ScopPass.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "isl/isl-noexceptions.h"
 
 namespace llvm {
-
+class Pass;
+class PassRegistry;
 class TargetTransformInfo;
 } // namespace llvm
 
@@ -39,7 +41,6 @@ struct MacroKernelParamsTy {
 };
 
 namespace polly {
-
 struct Dependences;
 class MemoryAccess;
 class Scop;
@@ -68,7 +69,33 @@ struct MatMulInfoTy {
 };
 
 extern bool DisablePollyTiling;
+
+llvm::Pass *createIslScheduleOptimizerWrapperPass();
+
+struct IslScheduleOptimizerPass
+    : llvm::PassInfoMixin<IslScheduleOptimizerPass> {
+  IslScheduleOptimizerPass() {}
+
+  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
+                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
+};
+
+struct IslScheduleOptimizerPrinterPass
+    : llvm::PassInfoMixin<IslScheduleOptimizerPrinterPass> {
+  IslScheduleOptimizerPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
+                        ScopStandardAnalysisResults &SAR, SPMUpdater &);
+
+private:
+  llvm::raw_ostream &OS;
+};
+
 } // namespace polly
+
+namespace llvm {
+void initializeIslScheduleOptimizerWrapperPassPass(llvm::PassRegistry &);
+}
 
 class ScheduleTreeOptimizer {
 public:

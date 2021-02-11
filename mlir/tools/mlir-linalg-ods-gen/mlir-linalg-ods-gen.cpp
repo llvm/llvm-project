@@ -1126,6 +1126,15 @@ public:
   void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
                                ComprehensionParsingState &state);
 
+  /// Print methods related to indexing map required attributes.
+  ///
+  /// Specifically, this prints the definitions for the following methods:
+  ///   bool hasDynamicIndexingMaps();
+  ///   LogicalResult verifyIndexingMapRequiredAttributes();
+  void printIndexingMapRequiredAttrMethods(llvm::raw_ostream &os,
+                                           StringRef cppOpName,
+                                           ComprehensionParsingState &state);
+
   /// Print the C++ StructuredOpsInterface impl of `indexing_maps`.
   void printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state);
@@ -1770,6 +1779,7 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
     std::string extraMethods;
     llvm::raw_string_ostream ss(extraMethods);
     printReferenceIterators(ss, cppOpName, state);
+    printIndexingMapRequiredAttrMethods(ss, cppOpName, state);
     printReferenceIndexingMaps(ss, cppOpName, state);
     printRegionBuilder(ss, cppOpName, state);
     printCanonicalizersAndFolders(ss, cppOpName);
@@ -1827,6 +1837,15 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   if (!attrList.empty())
     attrList = ",\n" + attrList;
 
+  // Template for Linalg named ops' ODS definitions. Parameters:
+  // {0}: ODS/C++ op name
+  // {1}: assembly op mnemonic
+  // {2}: op interface list
+  // {3}: documentation (summary + description)
+  // {4}: op attribute list
+  // {5}: the number of arguments for the op region
+  // {6}: builder methods taking standalone attribute parameters
+  // {7}: additional methods for attributes used by indexing maps
   const char *header = R"FMT(  def {0} : LinalgStructuredBase_Op<"{1}", [
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -1906,6 +1925,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
+
+        {7}
       }];
   })FMT";
 
@@ -1971,9 +1992,18 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         llvm::formatv(builderFmt, cppOpName, attrParamsList, attrStmtsList);
   }
 
+  std::string attrMethods;
+  if (!registeredAttrs.empty()) {
+    attrMethods = R"(
+      bool hasDynamicIndexingMaps();
+      LogicalResult verifyIndexingMapRequiredAttributes();
+    )";
+  }
+
   // Finally put everything together.
   os << llvm::formatv(header, cppOpName, linalgOpName, interfaceNameList, doc,
-                      attrList, state.orderedTensorArgs.size(), attrBuilder);
+                      attrList, state.orderedTensorArgs.size(), attrBuilder,
+                      attrMethods);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -2030,6 +2060,111 @@ void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
         getOperation()->getResults(), getInputBuffers(), getOutputBuffers());
     })FMT";
   os << llvm::formatv(canonicalizersAndFoldersFmt, cppOpName);
+}
+
+// Prints methods for querying whether the current named op has attributes that
+// are used by its indexing maps and for verifying those attributes have the
+// expected type.
+void TCParser::printIndexingMapRequiredAttrMethods(
+    llvm::raw_ostream &os, StringRef cppOpName,
+    ComprehensionParsingState &state) {
+  // If there are no attribute used by the whole definition, then we are done.
+  if (registeredAttrs.empty())
+    return;
+
+  // Otherwise, go through each attribute and generate code to verify it's
+  // valid per the spec.
+  SmallVector<std::string, 4> attributes;
+  for (const auto &attr : registeredAttrs) {
+    if (attr.second.isOptional)
+      continue;
+
+    llvm::StringRef name = attr.first;
+    llvm::StringRef elementType = attr.second.elementType;
+    const auto &dims = attr.second.vectorDims;
+
+    // Get the method call to check the element type is of the expected kind.
+    std::string elemTypeCheck = llvm::StringSwitch<std::string>(elementType)
+                                    .Case("f32", "isF32()")
+                                    .Case("i32", "isInteger(32)")
+                                    .Case("i64", "isInteger(64)")
+                                    .Default("");
+    if (elemTypeCheck.empty()) {
+      (void)parser.emitError(
+          "unimplemented support for attribute element type: " + elementType);
+      return;
+    }
+
+    // Scalar case.
+    if (dims.empty() && !attr.second.isArray) {
+      const char *attrFmt = R"FMT(
+        if (auto attr = op->getAttr("{0}")) {{
+          if (!attr.getType().{1}) return op->emitError(
+            "incorrect type for indexing map required attribute '{0}'");
+        } else {{
+          return op->emitError(
+            "missing indexing map required attribute '{0}'");
+        }
+      )FMT";
+
+      attributes.push_back(llvm::formatv(attrFmt, name, elemTypeCheck));
+      continue;
+    }
+
+    // Vector case.
+    if (!dims.empty()) {
+      SmallVector<std::string, 4> dimStrs;
+      for (uint64_t dim : dims)
+        dimStrs.push_back(std::to_string(dim));
+
+      const char *attrFmt = R"FMT(
+        if (auto attr = op->getAttrOfType<DenseElementsAttr>("{0}")) {{
+          if (!attr.getType().getElementType().{1}) return op->emitError(
+            "incorrect element type for indexing map required attribute '{0}'");
+          if (attr.getType().getShape() != ArrayRef<int64_t>{{ {2} })
+            return op->emitError(
+              "incorrect shape for indexing map required attribute '{0}'");
+        } else {
+          return op->emitError(
+            "missing indexing map required attribute '{0}'");
+        }
+      )FMT";
+
+      attributes.push_back(llvm::formatv(attrFmt, name, elemTypeCheck,
+                                         llvm::join(dimStrs, ", ")));
+      continue;
+    }
+
+    // Array case.
+    {
+      const char *attrFmt = R"FMT(
+        if (auto attr = op->getAttrOfType<ArrayAttr>("{0}")) {{
+          for (Attribute element : attr) {{
+            if (!element.getType().{1}) return emitError(
+              "incorrect element type for indexing map required attribute '{0}'");
+          }
+        } else {{
+          return op->emitError(
+            "missing indexing map required attribute '{0}'");
+        }
+      )FMT";
+
+      attributes.push_back(llvm::formatv(attrFmt, name, elemTypeCheck));
+    }
+  }
+
+  const char *methodFmt = R"FMT(
+  bool {0}::hasDynamicIndexingMaps() {{ return true; }
+
+  LogicalResult {0}::verifyIndexingMapRequiredAttributes() {{
+    Operation *op = getOperation();
+    {1}
+    return success();
+  }
+  )FMT";
+
+  // Print everything out.
+  os << llvm::formatv(methodFmt, cppOpName, llvm::join(attributes, "\n"));
 }
 
 /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.

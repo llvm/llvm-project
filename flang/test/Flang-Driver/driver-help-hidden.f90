@@ -28,6 +28,8 @@
 ! CHECK-NEXT: Use <value> as character line width in fixed mode
 ! CHECK-NEXT: -ffree-form            Process source files in free form
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
+! CHECK-NEXT: -fopenacc              Enable OpenACC
+! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>

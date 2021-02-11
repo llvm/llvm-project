@@ -1348,7 +1348,7 @@ def CopySignOp : FloatArithmeticOp<"copysign"> {
     Syntax:
 
     ```
-    operation ::= ssa-id `=` `std.copysign` ssa-use `:` type
+    operation ::= ssa-id `=` `std.copysign` ssa-use `,` ssa-use `:` type
     ```
 
     The `copysign` returns a value with the magnitude of the first operand and
@@ -1361,13 +1361,13 @@ def CopySignOp : FloatArithmeticOp<"copysign"> {
 
     ```mlir
     // Scalar copysign value.
-    %a = copysign %b %c : f64
+    %a = copysign %b, %c : f64
 
     // SIMD vector element-wise copysign value.
-    %f = copysign %g %h : vector<4xf32>
+    %f = copysign %g, %h : vector<4xf32>
 
     // Tensor element-wise copysign value.
-    %x = copysign %y %z : tensor<4x?xf8>
+    %x = copysign %y, %z : tensor<4x?xf8>
     ```
   }];
 }
@@ -3001,6 +3001,10 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
                                 ArrayRef<int64_t> staticOffsets,
                                 ArrayRef<int64_t> staticSizes,
                                 ArrayRef<int64_t> staticStrides);
+    static Type inferResultType(MemRefType sourceMemRefType,
+                                ArrayRef<OpFoldResult> staticOffsets,
+                                ArrayRef<OpFoldResult> staticSizes,
+                                ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -3123,6 +3127,10 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
                                 ArrayRef<int64_t> staticOffsets,
                                 ArrayRef<int64_t> staticSizes,
                                 ArrayRef<int64_t> staticStrides);
+    static Type inferResultType(RankedTensorType sourceRankedTensorType,
+                                ArrayRef<OpFoldResult> staticOffsets,
+                                ArrayRef<OpFoldResult> staticSizes,
+                                ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.

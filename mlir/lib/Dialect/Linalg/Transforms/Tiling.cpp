@@ -472,6 +472,9 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   b.setInsertionPoint(op);
   ScopedContext scope(b, op.getLoc());
 
+  if (!options.tileSizeComputationFunction)
+    return llvm::None;
+  
   // Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
   // adjusting affine maps to account for missing dimensions.

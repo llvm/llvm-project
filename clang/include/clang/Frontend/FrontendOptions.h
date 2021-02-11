@@ -374,6 +374,10 @@ public:
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
 
+  /// The input kind, either specified via -x argument or deduced from the input
+  /// file name.
+  InputKind DashX;
+
   /// The input files and their types.
   SmallVector<FrontendInputFile, 0> Inputs;
 

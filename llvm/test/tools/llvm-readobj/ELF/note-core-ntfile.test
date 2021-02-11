@@ -60,7 +60,7 @@ ProgramHeaders:
 # GNU-NEXT:         /path/to/libc.so
 # GNU-NEXT:     0x0000000000007000  0x0000000000008000  0x0000000000009000
 # GNU-NEXT:         [stack]
-# GNU-NOT:  {{.}}
+# GNU-EMPTY:
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
