@@ -1273,19 +1273,6 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   return ResTy;
 }
 
-static bool
-shouldUseUndefinedBehaviorReturnOptimization(const FunctionDecl *FD,
-                                             const ASTContext &Context) {
-  QualType T = FD->getReturnType();
-  // Avoid the optimization for functions that return a record type with a
-  // trivial destructor or another trivially copyable type.
-  if (const RecordType *RT = T.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-      return !ClassDecl->hasTrivialDestructor();
-  }
-  return !T.isTriviallyCopyableType(Context);
-}
-
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
@@ -1366,7 +1353,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       !FD->getReturnType()->isVoidType() && Builder.GetInsertBlock()) {
     bool ShouldEmitUnreachable =
         CGM.getCodeGenOpts().StrictReturn ||
-        shouldUseUndefinedBehaviorReturnOptimization(FD, getContext());
+        !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
     if (SanOpts.has(SanitizerKind::Return)) {
       SanitizerScope SanScope(this);
       llvm::Value *IsFalse = Builder.getFalse();

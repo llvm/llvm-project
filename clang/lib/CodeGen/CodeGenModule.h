@@ -1374,6 +1374,10 @@ public:
   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
+  /// Whether this function's return type has no side effects, and thus may
+  /// be trivially discarded if it is unused.
+  bool MayDropFunctionReturn(const ASTContext &Context, QualType ReturnType);
+
   /// Returns whether this module needs the "all-vtables" type identifier.
   bool NeedAllVtablesTypeId() const;
 

@@ -1732,6 +1732,18 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
 }
 
+bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
+                                          QualType ReturnType) {
+  // We can't just discard the return value for a record type with a
+  // complex destructor or a non-trivially copyable type.
+  if (const RecordType *RT =
+          ReturnType.getCanonicalType()->getAs<RecordType>()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+      return ClassDecl->hasTrivialDestructor();
+  }
+  return ReturnType.isTriviallyCopyableType(Context);
+}
+
 void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
                                                  bool HasOptnone,
                                                  bool AttrOnCallSite,
@@ -1903,6 +1915,55 @@ static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
 
   // And last, add the rest of the builtin names.
   llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
+}
+
+static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
+                             const llvm::DataLayout &DL, const ABIArgInfo &AI,
+                             bool CheckCoerce = true) {
+  llvm::Type *Ty = Types.ConvertTypeForMem(QTy);
+  if (AI.getKind() == ABIArgInfo::Indirect)
+    return true;
+  if (AI.getKind() == ABIArgInfo::Extend)
+    return true;
+  if (!DL.typeSizeEqualsStoreSize(Ty))
+    // TODO: This will result in a modest amount of values not marked noundef
+    // when they could be. We care about values that *invisibly* contain undef
+    // bits from the perspective of LLVM IR.
+    return false;
+  if (CheckCoerce && AI.canHaveCoerceToType()) {
+    llvm::Type *CoerceTy = AI.getCoerceToType();
+    if (llvm::TypeSize::isKnownGT(DL.getTypeSizeInBits(CoerceTy),
+                                  DL.getTypeSizeInBits(Ty)))
+      // If we're coercing to a type with a greater size than the canonical one,
+      // we're introducing new undef bits.
+      // Coercing to a type of smaller or equal size is ok, as we know that
+      // there's no internal padding (typeSizeEqualsStoreSize).
+      return false;
+  }
+  if (QTy->isExtIntType())
+    return true;
+  if (QTy->isReferenceType())
+    return true;
+  if (QTy->isNullPtrType())
+    return false;
+  if (QTy->isMemberPointerType())
+    // TODO: Some member pointers are `noundef`, but it depends on the ABI. For
+    // now, never mark them.
+    return false;
+  if (QTy->isScalarType()) {
+    if (const ComplexType *Complex = dyn_cast<ComplexType>(QTy))
+      return DetermineNoUndef(Complex->getElementType(), Types, DL, AI, false);
+    return true;
+  }
+  if (const VectorType *Vector = dyn_cast<VectorType>(QTy))
+    return DetermineNoUndef(Vector->getElementType(), Types, DL, AI, false);
+  if (const MatrixType *Matrix = dyn_cast<MatrixType>(QTy))
+    return DetermineNoUndef(Matrix->getElementType(), Types, DL, AI, false);
+  if (const ArrayType *Array = dyn_cast<ArrayType>(QTy))
+    return DetermineNoUndef(Array->getElementType(), Types, DL, AI, false);
+
+  // TODO: Some structs may be `noundef`, in specific situations.
+  return false;
 }
 
 /// Construct the IR attribute list of a function or call.
@@ -2129,6 +2190,34 @@ void CodeGenModule::ConstructAttributeList(
 
   QualType RetTy = FI.getReturnType();
   const ABIArgInfo &RetAI = FI.getReturnInfo();
+  const llvm::DataLayout &DL = getDataLayout();
+
+  // C++ explicitly makes returning undefined values UB. C's rule only applies
+  // to used values, so we never mark them noundef for now.
+  bool HasStrictReturn = getLangOpts().CPlusPlus;
+  if (TargetDecl) {
+    if (const FunctionDecl *FDecl = dyn_cast<FunctionDecl>(TargetDecl))
+      HasStrictReturn &= !FDecl->isExternC();
+    else if (const VarDecl *VDecl = dyn_cast<VarDecl>(TargetDecl))
+      // Function pointer
+      HasStrictReturn &= !VDecl->isExternC();
+  }
+
+  // We don't want to be too aggressive with the return checking, unless
+  // it's explicit in the code opts or we're using an appropriate sanitizer.
+  // Try to respect what the programmer intended.
+  HasStrictReturn &= getCodeGenOpts().StrictReturn ||
+                     !MayDropFunctionReturn(getContext(), RetTy) ||
+                     getLangOpts().Sanitize.has(SanitizerKind::Memory) ||
+                     getLangOpts().Sanitize.has(SanitizerKind::Return);
+
+  // Determine if the return type could be partially undef
+  if (CodeGenOpts.EnableNoundefAttrs && HasStrictReturn) {
+    if (!RetTy->isVoidType() && RetAI.getKind() != ABIArgInfo::Indirect &&
+        DetermineNoUndef(RetTy, getTypes(), DL, RetAI))
+      RetAttrs.addAttribute(llvm::Attribute::NoUndef);
+  }
+
   switch (RetAI.getKind()) {
   case ABIArgInfo::Extend:
     if (RetAI.isSignExt())
@@ -2244,6 +2333,11 @@ void CodeGenModule::ConstructAttributeList(
                 llvm::AttrBuilder().addAttribute(llvm::Attribute::InReg));
       }
     }
+
+    // Decide whether the argument we're handling could be partially undef
+    bool ArgNoUndef = DetermineNoUndef(ParamType, getTypes(), DL, AI);
+    if (CodeGenOpts.EnableNoundefAttrs && ArgNoUndef)
+      Attrs.addAttribute(llvm::Attribute::NoUndef);
 
     // 'restrict' -> 'noalias' is done in EmitFunctionProlog when we
     // have the corresponding parameter variable.  It doesn't make
