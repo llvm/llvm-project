@@ -238,7 +238,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   fir::NameUniquer nameUniquer;
   mlir::MLIRContext ctx;
-  fir::support::registerAndLoadDialects(ctx);
+  fir::support::registerDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
