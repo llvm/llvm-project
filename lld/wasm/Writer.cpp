@@ -9,9 +9,7 @@
 #include "Writer.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputEvent.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
+#include "InputElement.h"
 #include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
@@ -212,13 +210,7 @@ void Writer::writeSections() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  if (config->is64.getValueOr(false)) {
-    assert(g->global->global.InitExpr.Opcode == WASM_OPCODE_I64_CONST);
-    g->global->global.InitExpr.Value.Int64 = memoryPtr;
-  } else {
-    assert(g->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
-    g->global->global.InitExpr.Value.Int32 = memoryPtr;
-  }
+  g->global->setPointerValue(memoryPtr);
 }
 
 // Fix the memory layout of the output binary.  This assigns memory offsets
@@ -246,17 +238,7 @@ void Writer::layoutMemory() {
     log("mem: stack size  = " + Twine(config->zStackSize));
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
-    auto *sp = cast<DefinedGlobal>(WasmSym::stackPointer);
-    switch (sp->global->global.InitExpr.Opcode) {
-    case WASM_OPCODE_I32_CONST:
-      sp->global->global.InitExpr.Value.Int32 = memoryPtr;
-      break;
-    case WASM_OPCODE_I64_CONST:
-      sp->global->global.InitExpr.Value.Int64 = memoryPtr;
-      break;
-    default:
-      llvm_unreachable("init expr must be i32/i64.const");
-    }
+    setGlobalPtr(cast<DefinedGlobal>(WasmSym::stackPointer), memoryPtr);
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 

@@ -9,10 +9,8 @@
 #include "Symbols.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputEvent.h"
+#include "InputElement.h"
 #include "InputFiles.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "lld/Common/ErrorHandler.h"
@@ -303,7 +301,7 @@ uint64_t DefinedData::getOutputSegmentIndex() const {
 
 uint32_t GlobalSymbol::getGlobalIndex() const {
   if (auto *f = dyn_cast<DefinedGlobal>(this))
-    return f->global->getGlobalIndex();
+    return f->global->getAssignedIndex();
   assert(globalIndex != INVALID_INDEX);
   return globalIndex;
 }
@@ -316,7 +314,7 @@ void GlobalSymbol::setGlobalIndex(uint32_t index) {
 
 bool GlobalSymbol::hasGlobalIndex() const {
   if (auto *f = dyn_cast<DefinedGlobal>(this))
-    return f->global->hasGlobalIndex();
+    return f->global->hasAssignedIndex();
   return globalIndex != INVALID_INDEX;
 }
 
@@ -328,7 +326,7 @@ DefinedGlobal::DefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
 
 uint32_t EventSymbol::getEventIndex() const {
   if (auto *f = dyn_cast<DefinedEvent>(this))
-    return f->event->getEventIndex();
+    return f->event->getAssignedIndex();
   assert(eventIndex != INVALID_INDEX);
   return eventIndex;
 }
@@ -341,7 +339,7 @@ void EventSymbol::setEventIndex(uint32_t index) {
 
 bool EventSymbol::hasEventIndex() const {
   if (auto *f = dyn_cast<DefinedEvent>(this))
-    return f->event->hasEventIndex();
+    return f->event->hasAssignedIndex();
   return eventIndex != INVALID_INDEX;
 }
 
@@ -362,7 +360,7 @@ void TableSymbol::setLimits(const WasmLimits &limits) {
 
 uint32_t TableSymbol::getTableNumber() const {
   if (const auto *t = dyn_cast<DefinedTable>(this))
-    return t->table->getTableNumber();
+    return t->table->getAssignedIndex();
   assert(tableNumber != INVALID_INDEX);
   return tableNumber;
 }
@@ -375,7 +373,7 @@ void TableSymbol::setTableNumber(uint32_t number) {
 
 bool TableSymbol::hasTableNumber() const {
   if (const auto *t = dyn_cast<DefinedTable>(this))
-    return t->table->hasTableNumber();
+    return t->table->hasAssignedIndex();
   return tableNumber != INVALID_INDEX;
 }
 
