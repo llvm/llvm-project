@@ -12,6 +12,8 @@
 #include "isl/val.h"
 
 using namespace isl;
+using namespace polly;
+
 namespace {
 
 TEST(ScheduleOptimizer, getPartialTilePrefixes) {
