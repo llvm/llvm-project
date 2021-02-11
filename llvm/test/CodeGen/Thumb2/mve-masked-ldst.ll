@@ -175,16 +175,16 @@ define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    bfi r3, lr, #0, #1
 ; CHECK-BE-NEXT:    @ implicit-def: $q2
 ; CHECK-BE-NEXT:    and r1, r3, #3
-; CHECK-BE-NEXT:    lsls r3, r3, #31
-; CHECK-BE-NEXT:    beq .LBB5_2
+; CHECK-BE-NEXT:    lsls r3, r3, #30
+; CHECK-BE-NEXT:    bpl .LBB5_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    ldr r3, [r2]
 ; CHECK-BE-NEXT:    vmov.32 q1[1], r3
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:  .LBB5_2: @ %else
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bpl .LBB5_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB5_4
 ; CHECK-BE-NEXT:  @ %bb.3: @ %cond.load1
 ; CHECK-BE-NEXT:    ldr r1, [r2, #4]
 ; CHECK-BE-NEXT:    vrev64.32 q0, q2
@@ -217,12 +217,12 @@ define void @foo_sext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    mvnne r4, #1
 ; CHECK-BE-NEXT:    bfi r4, r1, #0, #1
 ; CHECK-BE-NEXT:    and r1, r4, #3
-; CHECK-BE-NEXT:    lsls r2, r4, #31
-; CHECK-BE-NEXT:    it ne
-; CHECK-BE-NEXT:    vstrne d0, [r0]
-; CHECK-BE-NEXT:    lsls r1, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r4, #30
 ; CHECK-BE-NEXT:    it mi
-; CHECK-BE-NEXT:    vstrmi d1, [r0, #8]
+; CHECK-BE-NEXT:    vstrmi d0, [r0]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    it ne
+; CHECK-BE-NEXT:    vstrne d1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -325,16 +325,16 @@ define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    bfi r3, lr, #0, #1
 ; CHECK-BE-NEXT:    @ implicit-def: $q2
 ; CHECK-BE-NEXT:    and r1, r3, #3
-; CHECK-BE-NEXT:    lsls r3, r3, #31
-; CHECK-BE-NEXT:    beq .LBB6_2
+; CHECK-BE-NEXT:    lsls r3, r3, #30
+; CHECK-BE-NEXT:    bpl .LBB6_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    ldr r3, [r2]
 ; CHECK-BE-NEXT:    vmov.32 q1[1], r3
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:  .LBB6_2: @ %else
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bpl .LBB6_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB6_4
 ; CHECK-BE-NEXT:  @ %bb.3: @ %cond.load1
 ; CHECK-BE-NEXT:    ldr r1, [r2, #4]
 ; CHECK-BE-NEXT:    vrev64.32 q0, q2
@@ -367,14 +367,14 @@ define void @foo_sext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    mvnne r4, #1
 ; CHECK-BE-NEXT:    bfi r4, r1, #0, #1
 ; CHECK-BE-NEXT:    and r1, r4, #3
-; CHECK-BE-NEXT:    lsls r2, r4, #31
-; CHECK-BE-NEXT:    itt ne
-; CHECK-BE-NEXT:    vmovne r2, r3, d0
-; CHECK-BE-NEXT:    strdne r3, r2, [r0]
-; CHECK-BE-NEXT:    lsls r1, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r4, #30
 ; CHECK-BE-NEXT:    itt mi
-; CHECK-BE-NEXT:    vmovmi r1, r2, d1
-; CHECK-BE-NEXT:    strdmi r2, r1, [r0, #8]
+; CHECK-BE-NEXT:    vmovmi r2, r3, d0
+; CHECK-BE-NEXT:    strdmi r3, r2, [r0]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    itt ne
+; CHECK-BE-NEXT:    vmovne r1, r2, d1
+; CHECK-BE-NEXT:    strdne r2, r1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -471,16 +471,16 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    bfi r3, lr, #0, #1
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
 ; CHECK-BE-NEXT:    and r1, r3, #3
-; CHECK-BE-NEXT:    lsls r3, r3, #31
-; CHECK-BE-NEXT:    beq .LBB7_2
+; CHECK-BE-NEXT:    lsls r3, r3, #30
+; CHECK-BE-NEXT:    bpl .LBB7_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    ldr r3, [r2]
 ; CHECK-BE-NEXT:    vmov.32 q2[1], r3
 ; CHECK-BE-NEXT:    vrev64.32 q1, q2
 ; CHECK-BE-NEXT:  .LBB7_2: @ %else
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bpl .LBB7_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB7_4
 ; CHECK-BE-NEXT:  @ %bb.3: @ %cond.load1
 ; CHECK-BE-NEXT:    ldr r1, [r2, #4]
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
@@ -507,12 +507,12 @@ define void @foo_zext_v2i64_v2i32(<2 x i64> *%dest, <2 x i32> *%mask, <2 x i32> 
 ; CHECK-BE-NEXT:    mvnne r2, #1
 ; CHECK-BE-NEXT:    bfi r2, r12, #0, #1
 ; CHECK-BE-NEXT:    and r1, r2, #3
-; CHECK-BE-NEXT:    lsls r2, r2, #31
-; CHECK-BE-NEXT:    it ne
-; CHECK-BE-NEXT:    vstrne d0, [r0]
-; CHECK-BE-NEXT:    lsls r1, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r2, #30
 ; CHECK-BE-NEXT:    it mi
-; CHECK-BE-NEXT:    vstrmi d1, [r0, #8]
+; CHECK-BE-NEXT:    vstrmi d0, [r0]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    it ne
+; CHECK-BE-NEXT:    vstrne d1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
@@ -611,16 +611,16 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    bfi r3, lr, #0, #1
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
 ; CHECK-BE-NEXT:    and r1, r3, #3
-; CHECK-BE-NEXT:    lsls r3, r3, #31
-; CHECK-BE-NEXT:    beq .LBB8_2
+; CHECK-BE-NEXT:    lsls r3, r3, #30
+; CHECK-BE-NEXT:    bpl .LBB8_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    ldr r3, [r2]
 ; CHECK-BE-NEXT:    vmov.32 q2[1], r3
 ; CHECK-BE-NEXT:    vrev64.32 q1, q2
 ; CHECK-BE-NEXT:  .LBB8_2: @ %else
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bpl .LBB8_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB8_4
 ; CHECK-BE-NEXT:  @ %bb.3: @ %cond.load1
 ; CHECK-BE-NEXT:    ldr r1, [r2, #4]
 ; CHECK-BE-NEXT:    vrev64.32 q0, q1
@@ -647,14 +647,14 @@ define void @foo_zext_v2i64_v2i32_unaligned(<2 x i64> *%dest, <2 x i32> *%mask, 
 ; CHECK-BE-NEXT:    mvnne r2, #1
 ; CHECK-BE-NEXT:    bfi r2, r12, #0, #1
 ; CHECK-BE-NEXT:    and r1, r2, #3
-; CHECK-BE-NEXT:    lsls r2, r2, #31
-; CHECK-BE-NEXT:    itt ne
-; CHECK-BE-NEXT:    vmovne r2, r3, d0
-; CHECK-BE-NEXT:    strdne r3, r2, [r0]
-; CHECK-BE-NEXT:    lsls r1, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r2, #30
 ; CHECK-BE-NEXT:    itt mi
-; CHECK-BE-NEXT:    vmovmi r1, r2, d1
-; CHECK-BE-NEXT:    strdmi r2, r1, [r0, #8]
+; CHECK-BE-NEXT:    vmovmi r2, r3, d0
+; CHECK-BE-NEXT:    strdmi r3, r2, [r0]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    itt ne
+; CHECK-BE-NEXT:    vmovne r1, r2, d1
+; CHECK-BE-NEXT:    strdne r2, r1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
@@ -936,17 +936,17 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-BE-NEXT:    and r3, lr, #1
 ; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    bfi r1, r3, #3, #1
-; CHECK-BE-NEXT:    lsls r3, r1, #31
-; CHECK-BE-NEXT:    bne .LBB18_6
+; CHECK-BE-NEXT:    lsls r3, r1, #28
+; CHECK-BE-NEXT:    bmi .LBB18_6
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
-; CHECK-BE-NEXT:    lsls r3, r1, #30
+; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bmi .LBB18_7
 ; CHECK-BE-NEXT:  .LBB18_2: @ %else2
-; CHECK-BE-NEXT:    lsls r3, r1, #29
+; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bmi .LBB18_8
 ; CHECK-BE-NEXT:  .LBB18_3: @ %else5
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    bpl .LBB18_5
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB18_5
 ; CHECK-BE-NEXT:  .LBB18_4: @ %cond.load7
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-BE-NEXT:    vins.f16 s0, s4
@@ -971,34 +971,34 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
 ; CHECK-BE-NEXT:    rsbs r2, r2, #0
 ; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
-; CHECK-BE-NEXT:    lsls r2, r1, #31
-; CHECK-BE-NEXT:    itt ne
-; CHECK-BE-NEXT:    vmovne r2, s4
-; CHECK-BE-NEXT:    strne r2, [r0]
-; CHECK-BE-NEXT:    lsls r2, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r1, #28
+; CHECK-BE-NEXT:    itt mi
+; CHECK-BE-NEXT:    vmovmi r2, s4
+; CHECK-BE-NEXT:    strmi r2, [r0]
+; CHECK-BE-NEXT:    lsls r2, r1, #29
 ; CHECK-BE-NEXT:    itt mi
 ; CHECK-BE-NEXT:    vmovmi r2, s5
 ; CHECK-BE-NEXT:    strmi r2, [r0, #4]
-; CHECK-BE-NEXT:    lsls r2, r1, #29
+; CHECK-BE-NEXT:    lsls r2, r1, #30
 ; CHECK-BE-NEXT:    itt mi
 ; CHECK-BE-NEXT:    vmovmi r2, s6
 ; CHECK-BE-NEXT:    strmi r2, [r0, #8]
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    itt mi
-; CHECK-BE-NEXT:    vmovmi r1, s7
-; CHECK-BE-NEXT:    strmi r1, [r0, #12]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    itt ne
+; CHECK-BE-NEXT:    vmovne r1, s7
+; CHECK-BE-NEXT:    strne r1, [r0, #12]
 ; CHECK-BE-NEXT:    add sp, #8
 ; CHECK-BE-NEXT:    pop {r7, pc}
 ; CHECK-BE-NEXT:  .LBB18_6: @ %cond.load
 ; CHECK-BE-NEXT:    vldr.16 s0, [r2]
-; CHECK-BE-NEXT:    lsls r3, r1, #30
+; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bpl .LBB18_2
 ; CHECK-BE-NEXT:  .LBB18_7: @ %cond.load1
 ; CHECK-BE-NEXT:    vldr.16 s4, [r2, #2]
 ; CHECK-BE-NEXT:    vins.f16 s0, s4
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-BE-NEXT:    vins.f16 s1, s4
-; CHECK-BE-NEXT:    lsls r3, r1, #29
+; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB18_3
 ; CHECK-BE-NEXT:  .LBB18_8: @ %cond.load4
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s0
@@ -1006,8 +1006,8 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-BE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-BE-NEXT:    vins.f16 s1, s4
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    bmi .LBB18_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    bne .LBB18_4
 ; CHECK-BE-NEXT:    b .LBB18_5
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
@@ -1139,17 +1139,17 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-BE-NEXT:    and r3, lr, #1
 ; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    bfi r1, r3, #3, #1
-; CHECK-BE-NEXT:    lsls r3, r1, #31
-; CHECK-BE-NEXT:    bne .LBB19_6
+; CHECK-BE-NEXT:    lsls r3, r1, #28
+; CHECK-BE-NEXT:    bmi .LBB19_6
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
-; CHECK-BE-NEXT:    lsls r3, r1, #30
+; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bmi .LBB19_7
 ; CHECK-BE-NEXT:  .LBB19_2: @ %else2
-; CHECK-BE-NEXT:    lsls r3, r1, #29
+; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bmi .LBB19_8
 ; CHECK-BE-NEXT:  .LBB19_3: @ %else5
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    bpl .LBB19_5
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    beq .LBB19_5
 ; CHECK-BE-NEXT:  .LBB19_4: @ %cond.load7
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s0
 ; CHECK-BE-NEXT:    vins.f16 s0, s4
@@ -1174,34 +1174,34 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
 ; CHECK-BE-NEXT:    rsbs r2, r2, #0
 ; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
-; CHECK-BE-NEXT:    lsls r2, r1, #31
-; CHECK-BE-NEXT:    itt ne
-; CHECK-BE-NEXT:    vmovne r2, s4
-; CHECK-BE-NEXT:    strne r2, [r0]
-; CHECK-BE-NEXT:    lsls r2, r1, #30
+; CHECK-BE-NEXT:    lsls r2, r1, #28
+; CHECK-BE-NEXT:    itt mi
+; CHECK-BE-NEXT:    vmovmi r2, s4
+; CHECK-BE-NEXT:    strmi r2, [r0]
+; CHECK-BE-NEXT:    lsls r2, r1, #29
 ; CHECK-BE-NEXT:    itt mi
 ; CHECK-BE-NEXT:    vmovmi r2, s5
 ; CHECK-BE-NEXT:    strmi r2, [r0, #4]
-; CHECK-BE-NEXT:    lsls r2, r1, #29
+; CHECK-BE-NEXT:    lsls r2, r1, #30
 ; CHECK-BE-NEXT:    itt mi
 ; CHECK-BE-NEXT:    vmovmi r2, s6
 ; CHECK-BE-NEXT:    strmi r2, [r0, #8]
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    itt mi
-; CHECK-BE-NEXT:    vmovmi r1, s7
-; CHECK-BE-NEXT:    strmi r1, [r0, #12]
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    itt ne
+; CHECK-BE-NEXT:    vmovne r1, s7
+; CHECK-BE-NEXT:    strne r1, [r0, #12]
 ; CHECK-BE-NEXT:    add sp, #8
 ; CHECK-BE-NEXT:    pop {r7, pc}
 ; CHECK-BE-NEXT:  .LBB19_6: @ %cond.load
 ; CHECK-BE-NEXT:    vldr.16 s0, [r2]
-; CHECK-BE-NEXT:    lsls r3, r1, #30
+; CHECK-BE-NEXT:    lsls r3, r1, #29
 ; CHECK-BE-NEXT:    bpl .LBB19_2
 ; CHECK-BE-NEXT:  .LBB19_7: @ %cond.load1
 ; CHECK-BE-NEXT:    vldr.16 s4, [r2, #2]
 ; CHECK-BE-NEXT:    vins.f16 s0, s4
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-BE-NEXT:    vins.f16 s1, s4
-; CHECK-BE-NEXT:    lsls r3, r1, #29
+; CHECK-BE-NEXT:    lsls r3, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB19_3
 ; CHECK-BE-NEXT:  .LBB19_8: @ %cond.load4
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s0
@@ -1209,8 +1209,8 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-BE-NEXT:    vmovx.f16 s4, s1
 ; CHECK-BE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-BE-NEXT:    vins.f16 s1, s4
-; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    bmi .LBB19_4
+; CHECK-BE-NEXT:    lsls r1, r1, #31
+; CHECK-BE-NEXT:    bne .LBB19_4
 ; CHECK-BE-NEXT:    b .LBB19_5
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
