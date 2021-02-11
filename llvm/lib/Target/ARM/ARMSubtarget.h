@@ -117,6 +117,7 @@ protected:
     ARMv84a,
     ARMv85a,
     ARMv86a,
+    ARMv87a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
