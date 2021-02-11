@@ -17,6 +17,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallVector.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIROpsTypes.h.inc"
+
 namespace llvm {
 class raw_ostream;
 class StringRef;
@@ -54,7 +57,6 @@ struct RealTypeStorage;
 struct RecordTypeStorage;
 struct ReferenceTypeStorage;
 struct SequenceTypeStorage;
-struct ShapeTypeStorage;
 struct ShapeShiftTypeStorage;
 struct SliceTypeStorage;
 struct TypeDescTypeStorage;
@@ -219,16 +221,6 @@ public:
                                                           mlir::Type eleTy);
 };
 
-/// Type of a vector of runtime values that define the shape of a
-/// multidimensional array object. The vector is the extents of each array
-/// dimension. The rank of a ShapeType must be at least 1.
-class ShapeType : public mlir::Type::TypeBase<ShapeType, mlir::Type,
-                                              detail::ShapeTypeStorage> {
-public:
-  using Base::Base;
-  static ShapeType get(mlir::MLIRContext *ctx, unsigned rank);
-  unsigned getRank() const;
-};
 
 /// Type of a vector of runtime values that define the shape and the origin of a
 /// multidimensional array object. The vector is of pairs, origin offset and

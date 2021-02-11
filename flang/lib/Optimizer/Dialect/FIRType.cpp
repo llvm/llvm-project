@@ -20,6 +20,9 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#define GET_TYPEDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIROpsTypes.cpp.inc"
+
 using namespace fir;
 
 namespace {
@@ -110,11 +113,6 @@ CharacterType parseCharacter(mlir::DialectAsmParser &parser) {
 // `complex` `<` kind `>`
 fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
   return parseKindSingleton<fir::ComplexType>(parser);
-}
-
-// `shape` `<` rank `>`
-ShapeType parseShape(mlir::DialectAsmParser &parser) {
-  return parseRankSingleton<ShapeType>(parser);
 }
 
 // `shapeshift` `<` rank `>`
@@ -352,7 +350,8 @@ inline bool singleIndirectionLevel(mlir::Type ty) {
 
 // Implementation of the thin interface from dialect to type parser
 
-mlir::Type fir::parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser) {
+mlir::Type fir::parseFirType(FIROpsDialect *dialect,
+                             mlir::DialectAsmParser &parser) {
   llvm::StringRef typeNameLit;
   if (mlir::failed(parser.parseKeyword(&typeNameLit)))
     return {};
@@ -387,7 +386,8 @@ mlir::Type fir::parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser) {
   if (typeNameLit == "ref")
     return parseReference(parser, loc);
   if (typeNameLit == "shape")
-    return parseShape(parser);
+    // TODO move to generatedTypeParser when all types have been moved
+    return ShapeType::parse(dialect->getContext(), parser);
   if (typeNameLit == "shapeshift")
     return parseShapeShift(parser);
   if (typeNameLit == "slice")
@@ -441,29 +441,6 @@ private:
   CharacterTypeStorage() = delete;
   explicit CharacterTypeStorage(KindTy kind, CharacterType::LenType len)
       : kind{kind}, len{len} {}
-};
-
-struct ShapeTypeStorage : public mlir::TypeStorage {
-  using KeyTy = unsigned;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getRank(); }
-
-  static ShapeTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                     unsigned rank) {
-    auto *storage = allocator.allocate<ShapeTypeStorage>();
-    return new (storage) ShapeTypeStorage{rank};
-  }
-
-  unsigned getRank() const { return rank; }
-
-protected:
-  unsigned rank;
-
-private:
-  ShapeTypeStorage() = delete;
-  explicit ShapeTypeStorage(unsigned rank) : rank{rank} {}
 };
 
 struct ShapeShiftTypeStorage : public mlir::TypeStorage {
@@ -1272,14 +1249,6 @@ llvm::hash_code fir::hash_value(const SequenceType::Shape &sh) {
   return llvm::hash_combine(0);
 }
 
-// Shape
-
-ShapeType fir::ShapeType::get(mlir::MLIRContext *ctxt, unsigned rank) {
-  return Base::get(ctxt, rank);
-}
-
-unsigned fir::ShapeType::getRank() const { return getImpl()->getRank(); }
-
 // Shapeshift
 
 ShapeShiftType fir::ShapeShiftType::get(mlir::MLIRContext *ctxt,
@@ -1478,7 +1447,9 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
     return;
   }
   if (auto type = ty.dyn_cast<ShapeType>()) {
-    os << "shape<" << type.getRank() << '>';
+    // TODO when all type are moved to TableGen can be replaced by
+    // generatedTypePrinter
+    type.print(p);
     return;
   }
   if (auto type = ty.dyn_cast<ShapeShiftType>()) {
