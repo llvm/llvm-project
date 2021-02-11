@@ -647,6 +647,7 @@ private:
                       Fortran::semantics::GetExpr(
                           std::get<Fortran::parser::ScalarIntExpr>(stmt.t)),
                       stmtCtx);
+    stmtCtx.finalize();
     llvm::SmallVector<int64_t, 8> indexList;
     llvm::SmallVector<mlir::Block *, 8> blockList;
     int64_t index = 0;
@@ -655,7 +656,6 @@ private:
       blockList.push_back(blockOfLabel(eval, label));
     }
     blockList.push_back(eval.nonNopSuccessor().block); // default
-    stmtCtx.finalize();
     builder->create<fir::SelectOp>(toLocation(), selectExpr, indexList,
                                    blockList);
   }
@@ -667,6 +667,7 @@ private:
         toLocation(),
         Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t)),
         stmtCtx);
+    stmtCtx.finalize();
     auto exprType = expr.getType();
     auto loc = toLocation();
     if (exprType.isSignlessInteger()) {
@@ -684,7 +685,6 @@ private:
       blockList.push_back(blockOfLabel(eval, std::get<3>(stmt.t)));
       attrList.push_back(mlir::UnitAttr::get(context)); // 0 is the "default"
       blockList.push_back(blockOfLabel(eval, std::get<2>(stmt.t)));
-      stmtCtx.finalize();
       builder->create<fir::SelectCaseOp>(loc, expr, attrList, valueList,
                                          blockList);
       return;
@@ -692,16 +692,16 @@ private:
     // Arithmetic expression has Real type.  Generate
     //   sum = expr + expr  [ raise an exception if expr is a NaN ]
     //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
-    assert(eval.localBlocks.size() == 1 && "missing arithmetic if block");
-    stmtCtx.finalize();
     auto sum = builder->create<fir::AddfOp>(loc, expr, expr);
     auto zero = builder->create<mlir::ConstantOp>(
         loc, exprType, builder->getFloatAttr(exprType, 0.0));
     auto cond1 =
         builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OLT, sum, zero);
+    auto *elseIfBlock =
+        builder->getBlock()->splitBlock(builder->getInsertionPoint());
     genFIRConditionalBranch(cond1, blockOfLabel(eval, std::get<1>(stmt.t)),
-                            eval.localBlocks[0]);
-    startBlock(eval.localBlocks[0]);
+                            elseIfBlock);
+    startBlock(elseIfBlock);
     auto cond2 =
         builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OGT, sum, zero);
     genFIRConditionalBranch(cond2, blockOfLabel(eval, std::get<3>(stmt.t)),
@@ -786,7 +786,7 @@ private:
   ///  - structured and unstructured increment loops
   ///  - structured and unstructured concurrent loops
   void genFIR(const Fortran::parser::DoConstruct &) {
-    // Collect loop information.
+    // Collect loop nest information.
     // Generate begin loop code directly for infinite and while loops.
     auto &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
@@ -795,8 +795,13 @@ private:
     const auto &loopControl =
         std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
     auto *preheaderBlock = doStmtEval.block;
-    auto *headerBlock =
-        unstructuredContext ? doStmtEval.localBlocks[0] : nullptr;
+    auto *beginBlock = preheaderBlock ? preheaderBlock : builder->getBlock();
+    auto createNextBeginBlock = [&]() {
+      // Step beginBlock through unstructured preheader, header, and mask
+      // blocks, created in outermost to innermost order.
+      return beginBlock = beginBlock->splitBlock(beginBlock->end());
+    };
+    auto *headerBlock = unstructuredContext ? createNextBeginBlock() : nullptr;
     auto *bodyBlock = doStmtEval.lexicalSuccessor->block;
     auto *exitBlock = doStmtEval.parentConstruct->constructExit->block;
     IncrementLoopNestInfo incrementLoopNestInfo;
@@ -836,39 +841,33 @@ private:
           std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
-        auto &endDoStmtEval = *doStmtEval.controlSuccessor;
-        auto beginBlocks = doStmtEval.localBlocks.begin();
-        auto endBlocks = endDoStmtEval.localBlocks.end();
         for (auto &info : incrementLoopNestInfo) {
           // The original loop body provides the body and latch blocks of the
           // innermost dimension.  The (first) body block of a non-innermost
           // dimension is the preheader block of the immediately enclosed
           // dimension.  The latch block of a non-innermost dimension is the
-          // exit block of the immediately enclosed dimension.  Blocks are
-          // generated "in order".
+          // exit block of the immediately enclosed dimension.
+          auto createNextExitBlock = [&]() {
+            // Create unstructured loop exit blocks, outermost to innermost.
+            auto insertPt = builder->saveInsertionPoint();
+            exitBlock = builder->createBlock(exitBlock);
+            builder->restoreInsertionPoint(insertPt);
+            return exitBlock;
+          };
           auto isInnermost = &info == &incrementLoopNestInfo.back();
           auto isOutermost = &info == &incrementLoopNestInfo.front();
-          info.headerBlock = *beginBlocks++;
-          info.bodyBlock = isInnermost ? bodyBlock : *beginBlocks++;
-          info.exitBlock = isOutermost ? exitBlock : *--endBlocks;
-          if (info.maskExpr) {
-            assert(endDoStmtEval.block &&
-                   "missing masked concurrent loop latch block");
-            info.maskBlock = *beginBlocks++;
-          }
+          info.headerBlock = isOutermost ? headerBlock : createNextBeginBlock();
+          info.bodyBlock = isInnermost ? bodyBlock : createNextBeginBlock();
+          info.exitBlock = isOutermost ? exitBlock : createNextExitBlock();
+          if (info.maskExpr)
+            info.maskBlock = createNextBeginBlock();
         }
-        assert(beginBlocks == doStmtEval.localBlocks.end() &&
-               "concurrent header+body+mask block count mismatch");
-        assert(endBlocks == endDoStmtEval.localBlocks.begin() &&
-               "concurrent latch block count mismatch");
       }
     }
 
     // Increment loop begin code.  (Infinite/while code was already generated.)
-    if (!infiniteLoop && !whileCondition) {
-      Fortran::lower::StatementContext stmtCtx;
-      genFIRIncrementLoopBegin(incrementLoopNestInfo, stmtCtx);
-    }
+    if (!infiniteLoop && !whileCondition)
+      genFIRIncrementLoopBegin(incrementLoopNestInfo);
 
     // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
     // Their genFIR calls are nops except for block management in some cases.
@@ -883,8 +882,7 @@ private:
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
-  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo,
-                                Fortran::lower::StatementContext &stmtCtx) {
+  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     auto loc = toLocation();
     auto controlType = incrementLoopNestInfo[0].isStructured()
@@ -892,6 +890,7 @@ private:
                            : genType(incrementLoopNestInfo[0].loopVariableSym);
     auto hasRealControl = incrementLoopNestInfo[0].hasRealControl;
     auto genControlValue = [&](const Fortran::semantics::SomeExpr *expr) {
+      Fortran::lower::StatementContext stmtCtx;
       if (expr)
         return builder->createConvert(loc, controlType,
                                       createFIRExpr(loc, expr, stmtCtx));
@@ -927,9 +926,11 @@ private:
                                             info.doLoop.getInductionVar());
         builder->create<fir::StoreOp>(loc, value, info.loopVariable);
         if (info.maskExpr) {
-          auto ifOp = builder->create<fir::IfOp>(
-              loc, createFIRExpr(loc, info.maskExpr, stmtCtx),
-              /*withElseRegion=*/false);
+          Fortran::lower::StatementContext stmtCtx;
+          auto maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+          stmtCtx.finalize();
+          auto ifOp = builder->create<fir::IfOp>(loc, maskCond,
+                                                 /*withElseRegion=*/false);
           builder->setInsertionPointToStart(&ifOp.thenRegion().front());
         }
         genLocalInitAssignments(info);
@@ -972,8 +973,10 @@ private:
         startBlock(info.maskBlock);
         auto latchBlock = getEval().getLastNestedEvaluation().block;
         assert(latchBlock && "missing masked concurrent loop latch block");
-        genFIRConditionalBranch(createFIRExpr(loc, info.maskExpr, stmtCtx),
-                                info.bodyBlock, latchBlock);
+        Fortran::lower::StatementContext stmtCtx;
+        auto maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+        stmtCtx.finalize();
+        genFIRConditionalBranch(maskCond, info.bodyBlock, latchBlock);
       } else {
         genFIRConditionalBranch(cond, info.bodyBlock, info.exitBlock);
         if (&info != &incrementLoopNestInfo.back()) // not innermost
@@ -1149,9 +1152,7 @@ private:
   /// Generate FIR for a FORALL assignment statement.
   void genFIR(IncrementLoopNestInfo &incrementLoopNestInfo,
               const Fortran::parser::ForallAssignmentStmt &s) {
-    Fortran::lower::StatementContext stmtCtx;
-    genFIRIncrementLoopBegin(incrementLoopNestInfo, stmtCtx);
-    stmtCtx.finalize();
+    genFIRIncrementLoopBegin(incrementLoopNestInfo);
     mlir::emitWarning(toLocation(), "Forall assignments are not temporized, "
                                     "so may be invalid\n");
     std::visit([&](auto &b) { genFIR(b); }, s.u);
@@ -1756,7 +1757,7 @@ private:
   void genFIR(const Fortran::parser::NonLabelDoStmt &) {}         // nop
   void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {} // nop
 
-  /// Generate the FIR for the Evaluation `eval`.
+  /// Generate FIR for the Evaluation `eval`.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               bool unstructuredContext = true) {
     if (unstructuredContext) {
@@ -3084,8 +3085,6 @@ private:
     for (auto &eval : evaluationList) {
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
-      for (auto &block : eval.localBlocks)
-        block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
         if (eval.lowerAsUnstructured()) {
           createEmptyBlocks(eval.getNestedEvaluations());
