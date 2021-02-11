@@ -622,26 +622,38 @@ void mlir::linalg::populateConvVectorizationPatterns(
 
   populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
                                               tileSizes, context);
+  populateVectorizationPatterns<ConvInputNWCFilterWCFOp, 3>(
+      tiling, promotion, vectorization, tileSizes, context);
 
   populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
                                               tileSizes, context);
+  populateVectorizationPatterns<ConvInputNCWFilterWCFOp, 3>(
+      tiling, promotion, vectorization, tileSizes, context);
 
   populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
                                              tileSizes, context);
 
   populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
                                                tileSizes, context);
+  populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
+      tiling, promotion, vectorization, tileSizes, context);
 
   populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
                                                tileSizes, context);
+  populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
+      tiling, promotion, vectorization, tileSizes, context);
 
   populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
                                               tileSizes, context);
 
   populateVectorizationPatterns<ConvNDHWCOp, 5>(
       tiling, promotion, vectorization, tileSizes, context);
+  populateVectorizationPatterns<ConvInputNDHWCFilterDHWCFOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
 
   populateVectorizationPatterns<ConvNCDHWOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
+  populateVectorizationPatterns<ConvInputNCDHWFilterDHWCFOp, 5>(
       tiling, promotion, vectorization, tileSizes, context);
 
   patterns.push_back(std::move(tiling));
