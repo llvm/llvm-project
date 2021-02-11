@@ -448,13 +448,14 @@ private:
            cat == Fortran::common::TypeCategory::Complex ||
            cat == Fortran::common::TypeCategory::Logical;
   }
-
   bool isLogicalCategory(Fortran::common::TypeCategory cat) {
     return cat == Fortran::common::TypeCategory::Logical;
   }
-
   bool isCharacterCategory(Fortran::common::TypeCategory cat) {
     return cat == Fortran::common::TypeCategory::Character;
+  }
+  bool isDerivedCategory(Fortran::common::TypeCategory cat) {
+    return cat == Fortran::common::TypeCategory::Derived;
   }
 
   mlir::Block *blockOfLabel(Fortran::lower::pft::Evaluation &eval,
@@ -1177,19 +1178,13 @@ private:
     builder->restoreInsertionPoint(insertPt);
   }
 
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {
-    // `OmpEndLoopDirective` can be captured as part of `OpenMPLoopConstruct`
-    // so For now Lower this as a NOP.
-  }
-
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     auto &eval = getEval();
     auto *context = builder->getContext();
     auto loc = toLocation();
     Fortran::lower::StatementContext stmtCtx;
-    const auto *expr = 
-        Fortran::semantics::GetExpr(
-            std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    const auto *expr = Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
     auto exprType = expr->GetType();
     mlir::Value selectExpr;
     if (isCharacterCategory(exprType->category())) {
@@ -1318,27 +1313,6 @@ private:
       }
     }
   }
-
-  // Nop statements - No code, or code is generated elsewhere.
-  void genFIR(const Fortran::parser::AssociateStmt &) {}         // nop
-  void genFIR(const Fortran::parser::CaseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::ContinueStmt &) {}          // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {}            // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}             // nop
-  void genFIR(const Fortran::parser::EndForallStmt &) {}         // nop
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {}       // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}             // nop
-  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}   // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}         // nop
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}     // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}             // nop
-  void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {} // nop
-  void genFIR(const Fortran::parser::ForallConstructStmt &) {}   // nop
-  void genFIR(const Fortran::parser::IfStmt &stmt) {}            // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}            // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}        // nop
 
   void genFIR(const Fortran::parser::BlockConstruct &) { TODO(""); }
   void genFIR(const Fortran::parser::BlockStmt &) { TODO(""); }
@@ -1629,8 +1603,7 @@ private:
                     lhs, rhs);
                 return;
               }
-              if (lhsType->category() ==
-                  Fortran::common::TypeCategory::Derived) {
+              if (isDerivedCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p12 and p13
                 TODO("");
               }
@@ -1761,6 +1734,28 @@ private:
     genFIRBranch(getEval().controlSuccessor->block);
   }
 
+  // Nop statements - No code, or code is generated at the construct level.
+  void genFIR(const Fortran::parser::AssociateStmt &) {}          // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}               // nop
+  void genFIR(const Fortran::parser::ContinueStmt &) {}           // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}             // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}               // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}       // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}              // nop
+  void genFIR(const Fortran::parser::EndForallStmt &) {}          // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}              // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}    // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}          // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}              // nop
+  void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {}  // nop
+  void genFIR(const Fortran::parser::ForallConstructStmt &) {}    // nop
+  void genFIR(const Fortran::parser::IfStmt &stmt) {}             // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}             // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}         // nop
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {} // nop
+
   /// Generate the FIR for the Evaluation `eval`.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
               bool unstructuredContext = true) {
@@ -1789,6 +1784,7 @@ private:
         genFIRBranch(successor->block);
     }
   }
+
   //===----------------------------------------------------------------===//
   // Variable instantiation
   //===----------------------------------------------------------------===//
@@ -3011,7 +3007,7 @@ private:
     // instantiate all module variables here if this is a module procedure.
     // It is likely that the front-end behaviour should change here.
     if (auto *module =
-            funit.parentVariant.getIf<Fortran::lower::pft::ModuleLikeUnit>())
+            funit.parent.getIf<Fortran::lower::pft::ModuleLikeUnit>())
       for (const auto &var : module->getOrderedSymbolTable())
         instantiateVar(var, storeMap);
 
