@@ -31,8 +31,8 @@
 !-----------------------------------------
 ! EXPECTED OUTPUT FOR MISSING MODULE FILE
 !-----------------------------------------
-! SINGLEINCLUDE:Error reading module file for module 'basictestmoduletwo'
-! SINGLEINCLUDE-NOT:Error reading module file for module 'basictestmoduletwo'
+! SINGLEINCLUDE:error: Cannot read module file for module 'basictestmoduletwo'
+! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduletwo'
 ! SINGLEINCLUDE-NOT:error: Derived type 't1' not found
 ! SINGLEINCLUDE:error: Derived type 't2' not found
 
@@ -44,7 +44,7 @@
 !---------------------------------------
 ! EXPECTED OUTPUT FOR ALL MODULES FOUND
 !---------------------------------------
-! INCLUDED-NOT:Error reading module file
+! INCLUDED-NOT:error: Cannot read module file
 ! INCLUDED-NOT:error: Derived type 't1' not found
 ! INCLUDED:error: Derived type 't2' not found
 
