@@ -718,22 +718,41 @@ normal:
 
 ;; Atomic Memory Ordering Constraints
 define void @atomics(i32* %word) {
-  %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
-  ; CHECK: %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
-  %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
-  ; CHECK: %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
-  %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
-  ; CHECK: %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
-  %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
-  ; CHECK: %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
-  %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
-  ; CHECK: %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
-  %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
-  ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
-  %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
-  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ;; Atomic Compare And Exchange w/o alignment
+  %cmpxchg_no_align.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
+  ; CHECK: %cmpxchg_no_align.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
+  %cmpxchg_no_align.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
+  ; CHECK: %cmpxchg_no_align.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
+  %cmpxchg_no_align.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
+  ; CHECK: %cmpxchg_no_align.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
+  %cmpxchg_no_align.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
+  ; CHECK: %cmpxchg_no_align.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
+  %cmpxchg_no_align.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
+  %cmpxchg_no_align.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
+  %cmpxchg_no_align.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
+  %cmpxchg_no_align.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+
+  ;; Atomic Compare And Exchange w/ alignment
+  %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic, align 16
+  ; CHECK: %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic, align 16
+  %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic, align 16
+  ; CHECK: %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic, align 16
+  %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic, align 16
+  ; CHECK: %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic, align 16
+  %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic, align 16
+  ; CHECK: %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic, align 16
+  %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic, align 16
+  %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic, align 16
+  %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic, align 16
+  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 16
 
   ;; Atomic w/o alignment
   %atomicrmw_no_align.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
@@ -782,7 +801,7 @@ define void @atomics(i32* %word) {
   ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic, align 16
   %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
   ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
-  
+
   fence acquire
   ; CHECK: fence acquire
   fence release
