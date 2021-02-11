@@ -109,10 +109,11 @@ enum NodeType : unsigned {
   VLEFF,
   VLEFF_MASK,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
-  // pass-thru operand, the second is the source vector, and the third is the
-  // XLenVT index (either constant or non-constant).
-  VSLIDEUP,
-  VSLIDEDOWN,
+  // pass-thru operand, the second is the source vector, the third is the
+  // XLenVT index (either constant or non-constant), the fourth is the mask
+  // and the fifth the VL.
+  VSLIDEUP_VL,
+  VSLIDEDOWN_VL,
   // Matches the semantics of the vid.v instruction, with a mask and VL
   // operand.
   VID_VL,
