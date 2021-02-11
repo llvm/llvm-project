@@ -1,4 +1,6 @@
-# Debug Info tests.  These tests invoke clang to generate programs with
+# Cross project tests, for tests that require access to multiple projects across
+# LLVM (e.g. clang, lld and lldb).
+# The subset inside debuginfo-tests invoke clang to generate programs with
 # various types of debug info, and then run those programs under a debugger
 # such as GDB or LLDB to verify the results.
 
@@ -9,10 +11,10 @@ add_llvm_executable(check-gdb-llvm-support
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
-set(DEBUGINFO_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(DEBUGINFO_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-set(DEBUGINFO_TEST_DEPS
+set(CROSS_PROJECT_TEST_DEPS
   clang
   FileCheck
   count
@@ -30,28 +32,28 @@ if ("mlir" IN_LIST LLVM_ENABLE_PROJECTS)
                                ${LLVM_EXTERNAL_MLIR_SOURCE_DIR}/include
                                ${LLVM_BINARY_DIR}/tools/mlir/include)
   target_link_libraries(check-gdb-mlir-support PRIVATE MLIRIR)
-  list(APPEND DEBUGINFO_TEST_DEPS check-gdb-mlir-support)
+  list(APPEND CROSS_PROJECT_TEST_DEPS check-gdb-mlir-support)
   set(MLIR_SOURCE_DIR  ${LLVM_EXTERNAL_MLIR_SOURCE_DIR})
 endif()
 
 if("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
   # llgdb-tests/asan.c and other asan* files.
   if(TARGET asan)
-    list(APPEND DEBUGINFO_TEST_DEPS asan)
+    list(APPEND CROSS_PROJECT_TEST_DEPS asan)
   endif()
   # llgdb-tests/safestack.c
   if(TARGET safestack)
-    list(APPEND DEBUGINFO_TEST_DEPS safestack)
+    list(APPEND CROSS_PROJECT_TEST_DEPS safestack)
   endif()
 endif()
 # Many dexter tests depend on lldb.
 if("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
-  list(APPEND DEBUGINFO_TEST_DEPS lldb lldb-server)
+  list(APPEND CROSS_PROJECT_TEST_DEPS lldb lldb-server)
 endif()
 
 # The Windows builder scripts pass -fuse-ld=lld.
 if (WIN32)
-  set(DEBUGINFO_TEST_DEPS ${DEBUGINFO_TEST_DEPS} lld)
+  list(APPEND CROSS_PROJECT_TEST_DEPS lld)
 endif()
 
 configure_lit_site_cfg(
@@ -63,12 +65,12 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-debuginfo "Running cross-project tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${DEBUGINFO_TEST_DEPS}
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
 # Add check-debuginfo-* targets.
-add_lit_testsuites(DEBUGINFO ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${DEBUGINFO_TEST_DEPS}
+add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
 set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
