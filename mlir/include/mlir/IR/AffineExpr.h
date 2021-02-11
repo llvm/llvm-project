@@ -127,6 +127,12 @@ public:
   AffineExpr replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
                                    ArrayRef<AffineExpr> symReplacements) const;
 
+  /// Dim-only version of replaceDimsAndSymbols.
+  AffineExpr replaceDims(ArrayRef<AffineExpr> dimReplacements) const;
+
+  /// Symbol-only version of replaceDimsAndSymbols.
+  AffineExpr replaceSymbols(ArrayRef<AffineExpr> symReplacements) const;
+
   /// Sparse replace method. Replace `expr` by `replacement` and return the
   /// modified expression tree.
   AffineExpr replace(AffineExpr expr, AffineExpr replacement) const;
