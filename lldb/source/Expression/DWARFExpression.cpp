@@ -1100,7 +1100,9 @@ bool DWARFExpression::Evaluate(
         break;
 
       default:
-        break;
+        if (error_ptr)
+          error_ptr->SetErrorString("Unhandled value type for DW_OP_deref.\n");
+        return false;
       }
 
     } break;
