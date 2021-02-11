@@ -945,7 +945,8 @@ public:
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
   /// applies when shouldMaximizeVectorBandwidth returns true.
-  unsigned getMinimumVF(unsigned ElemWidth) const;
+  /// If IsScalable is true, the returned ElementCount must be a scalable VF.
+  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 
   /// \return The maximum vectorization factor for types of given element
   /// bit width and opcode, or 0 if there is no maximum VF.
@@ -1523,7 +1524,8 @@ public:
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
   virtual bool shouldMaximizeVectorBandwidth(bool OptSize) const = 0;
-  virtual unsigned getMinimumVF(unsigned ElemWidth) const = 0;
+  virtual ElementCount getMinimumVF(unsigned ElemWidth,
+                                    bool IsScalable) const = 0;
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const = 0;
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
@@ -1951,8 +1953,9 @@ public:
   bool shouldMaximizeVectorBandwidth(bool OptSize) const override {
     return Impl.shouldMaximizeVectorBandwidth(OptSize);
   }
-  unsigned getMinimumVF(unsigned ElemWidth) const override {
-    return Impl.getMinimumVF(ElemWidth);
+  ElementCount getMinimumVF(unsigned ElemWidth,
+                            bool IsScalable) const override {
+    return Impl.getMinimumVF(ElemWidth, IsScalable);
   }
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override {
     return Impl.getMaximumVF(ElemWidth, Opcode);
