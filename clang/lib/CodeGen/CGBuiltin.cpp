@@ -5832,6 +5832,15 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vshr_n_v),
   NEONMAP0(vshrn_n_v),
   NEONMAP0(vshrq_n_v),
+  NEONMAP1(vsm3partw1q_v, aarch64_crypto_sm3partw1, 0),
+  NEONMAP1(vsm3partw2q_v, aarch64_crypto_sm3partw2, 0),
+  NEONMAP1(vsm3ss1q_v, aarch64_crypto_sm3ss1, 0),
+  NEONMAP1(vsm3tt1aq_v, aarch64_crypto_sm3tt1a, 0),
+  NEONMAP1(vsm3tt1bq_v, aarch64_crypto_sm3tt1b, 0),
+  NEONMAP1(vsm3tt2aq_v, aarch64_crypto_sm3tt2a, 0),
+  NEONMAP1(vsm3tt2bq_v, aarch64_crypto_sm3tt2b, 0),
+  NEONMAP1(vsm4ekeyq_v, aarch64_crypto_sm4ekey, 0),
+  NEONMAP1(vsm4eq_v, aarch64_crypto_sm4e, 0),
   NEONMAP1(vst1_x2_v, aarch64_neon_st1x2, 0),
   NEONMAP1(vst1_x3_v, aarch64_neon_st1x3, 0),
   NEONMAP1(vst1_x4_v, aarch64_neon_st1x4, 0),
@@ -6709,6 +6718,22 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[] = {Int8PtrTy, Ty};
     Ops.push_back(getAlignmentValue32(PtrOp0));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "");
+  }
+  case NEON::BI__builtin_neon_vsm3partw1q_v:
+  case NEON::BI__builtin_neon_vsm3partw2q_v:
+  case NEON::BI__builtin_neon_vsm3ss1q_v:
+  case NEON::BI__builtin_neon_vsm4ekeyq_v:
+  case NEON::BI__builtin_neon_vsm4eq_v: {
+    Function *F = CGM.getIntrinsic(Int);
+    return EmitNeonCall(F, Ops, "");
+  }
+  case NEON::BI__builtin_neon_vsm3tt1aq_v:
+  case NEON::BI__builtin_neon_vsm3tt1bq_v:
+  case NEON::BI__builtin_neon_vsm3tt2aq_v:
+  case NEON::BI__builtin_neon_vsm3tt2bq_v: {
+    Function *F = CGM.getIntrinsic(Int);
+    Ops[3] = Builder.CreateZExt(Ops[3], Int64Ty);
+    return EmitNeonCall(F, Ops, "");
   }
   case NEON::BI__builtin_neon_vst1_x2_v:
   case NEON::BI__builtin_neon_vst1q_x2_v:

@@ -10912,8 +10912,8 @@ class BaseCryptoV82<dag oops, dag iops, string asm, string asmops, string cst,
 }
 
 class CryptoRRTied<bits<1>op0, bits<2>op1, string asm, string asmops>
-  : BaseCryptoV82<(outs V128:$Vd), (ins V128:$Vn, V128:$Vm), asm, asmops,
-                  "$Vm = $Vd", []> {
+  : BaseCryptoV82<(outs V128:$Vdst), (ins V128:$Vd, V128:$Vn), asm, asmops,
+                  "$Vd = $Vdst", []> {
   let Inst{31-25} = 0b1100111;
   let Inst{24-21} = 0b0110;
   let Inst{20-15} = 0b000001;
