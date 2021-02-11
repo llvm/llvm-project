@@ -199,7 +199,7 @@ fuseTensorOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
                        consumerOperands.end());
 
   // Compute indexing_maps for the fused operation. The indexing_maps for the
-  // operands of the consumers that arent fused are the same. The
+  // operands of the consumers that aren't fused are the same. The
   // indexing_maps for the producers need to be computed based on the
   // indexing_map of the operand at consumerIdx in the consumer.
   SmallVector<Attribute, 4> fusedIndexMaps;
