@@ -374,7 +374,9 @@ public:
 
   bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
 
-  unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }
+  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const {
+    return ElementCount::get(0, IsScalable);
+  }
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const { return 0; }
 

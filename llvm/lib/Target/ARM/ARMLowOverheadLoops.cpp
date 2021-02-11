@@ -796,6 +796,20 @@ bool LowOverheadLoop::ValidateTailPredicate() {
       ToRemove.insert(ElementChain.begin(), ElementChain.end());
     }
   }
+
+  // If we converted the LoopStart to a t2DoLoopStartTP, we can also remove any
+  // extra instructions in the preheader, which often includes a now unused MOV.
+  if (Start->getOpcode() == ARM::t2DoLoopStartTP && Preheader &&
+      !Preheader->empty() &&
+      !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
+    if (auto *Def = RDA.getUniqueReachingMIDef(
+            &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
+      SmallPtrSet<MachineInstr*, 2> Ignore;
+      Ignore.insert(VCTPs.begin(), VCTPs.end());
+      TryRemove(Def, RDA, ToRemove, Ignore);
+    }
+  }
+
   return true;
 }
 
