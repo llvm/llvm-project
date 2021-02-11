@@ -2223,8 +2223,22 @@ defm VPCMPGTQ : avx512_icmp_packed_rmb_vl<0x37, "vpcmpgtq",
                 T8PD, VEX_W, EVEX_CD8<64, CD8VF>;
 }
 
+def X86pcmpm_imm : SDNodeXForm<setcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  uint8_t SSECC = X86::getVPCMPImmForCond(CC);
+  return getI8Imm(SSECC, SDLoc(N));
+}]>;
+
+// Swapped operand version of the above.
+def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  uint8_t SSECC = X86::getVPCMPImmForCond(CC);
+  SSECC = X86::getSwappedVPCMPImm(SSECC);
+  return getI8Imm(SSECC, SDLoc(N));
+}]>;
+
 multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
-                          PatFrag Frag_su, PatFrag CommFrag, PatFrag CommFrag_su,
+                          PatFrag Frag_su,
                           X86FoldableSchedWrite sched,
                           X86VectorVTInfo _, string Name> {
   let isCommutable = 1 in
@@ -2272,25 +2286,23 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
                                        cond))))]>,
               EVEX_4V, EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
-  def : Pat<(_.KVT (CommFrag:$cc (_.LdFrag addr:$src2),
-                                 (_.VT _.RC:$src1), cond)),
+  def : Pat<(_.KVT (Frag:$cc (_.LdFrag addr:$src2),
+                             (_.VT _.RC:$src1), cond)),
             (!cast<Instruction>(Name#_.ZSuffix#"rmi")
-             _.RC:$src1, addr:$src2, (CommFrag.OperandTransform $cc))>;
+             _.RC:$src1, addr:$src2, (X86pcmpm_imm_commute $cc))>;
 
   def : Pat<(and _.KRCWM:$mask,
-                 (_.KVT (CommFrag_su:$cc (_.LdFrag addr:$src2),
-                                      (_.VT _.RC:$src1), cond))),
+                 (_.KVT (Frag_su:$cc (_.LdFrag addr:$src2),
+                                     (_.VT _.RC:$src1), cond))),
             (!cast<Instruction>(Name#_.ZSuffix#"rmik")
              _.KRCWM:$mask, _.RC:$src1, addr:$src2,
-             (CommFrag.OperandTransform $cc))>;
+             (X86pcmpm_imm_commute $cc))>;
 }
 
 multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
-                              PatFrag Frag_su, PatFrag CommFrag,
-                              PatFrag CommFrag_su, X86FoldableSchedWrite sched,
+                              PatFrag Frag_su, X86FoldableSchedWrite sched,
                               X86VectorVTInfo _, string Name> :
-           avx512_icmp_cc<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
-                          sched, _, Name> {
+           avx512_icmp_cc<opc, Suffix, Frag, Frag_su, sched, _, Name> {
   def rmib : AVX512AIi8<opc, MRMSrcMem,
              (outs _.KRC:$dst), (ins _.RC:$src1, _.ScalarMemOp:$src2,
                                      u8imm:$cc),
@@ -2315,64 +2327,48 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                                              cond))))]>,
               EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
-  def : Pat<(_.KVT (CommFrag:$cc (_.BroadcastLdFrag addr:$src2),
+  def : Pat<(_.KVT (Frag:$cc (_.BroadcastLdFrag addr:$src2),
                     (_.VT _.RC:$src1), cond)),
             (!cast<Instruction>(Name#_.ZSuffix#"rmib")
-             _.RC:$src1, addr:$src2, (CommFrag.OperandTransform $cc))>;
+             _.RC:$src1, addr:$src2, (X86pcmpm_imm_commute $cc))>;
 
   def : Pat<(and _.KRCWM:$mask,
-                 (_.KVT (CommFrag_su:$cc (_.BroadcastLdFrag addr:$src2),
-                                      (_.VT _.RC:$src1), cond))),
+                 (_.KVT (Frag_su:$cc (_.BroadcastLdFrag addr:$src2),
+                                     (_.VT _.RC:$src1), cond))),
             (!cast<Instruction>(Name#_.ZSuffix#"rmibk")
              _.KRCWM:$mask, _.RC:$src1, addr:$src2,
-             (CommFrag_su.OperandTransform $cc))>;
+             (X86pcmpm_imm_commute $cc))>;
 }
 
 multiclass avx512_icmp_cc_vl<bits<8> opc, string Suffix, PatFrag Frag,
-                             PatFrag Frag_su, PatFrag CommFrag,
-                             PatFrag CommFrag_su, X86SchedWriteWidths sched,
+                             PatFrag Frag_su, X86SchedWriteWidths sched,
                              AVX512VLVectorVTInfo VTInfo, Predicate prd> {
   let Predicates = [prd] in
-  defm Z : avx512_icmp_cc<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+  defm Z : avx512_icmp_cc<opc, Suffix, Frag, Frag_su,
                           sched.ZMM, VTInfo.info512, NAME>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-    defm Z256 : avx512_icmp_cc<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+    defm Z256 : avx512_icmp_cc<opc, Suffix, Frag, Frag_su,
                                sched.YMM, VTInfo.info256, NAME>, EVEX_V256;
-    defm Z128 : avx512_icmp_cc<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+    defm Z128 : avx512_icmp_cc<opc, Suffix, Frag, Frag_su,
                                sched.XMM, VTInfo.info128, NAME>, EVEX_V128;
   }
 }
 
 multiclass avx512_icmp_cc_rmb_vl<bits<8> opc, string Suffix, PatFrag Frag,
-                                 PatFrag Frag_su, PatFrag CommFrag,
-                                 PatFrag CommFrag_su, X86SchedWriteWidths sched,
+                                 PatFrag Frag_su, X86SchedWriteWidths sched,
                                  AVX512VLVectorVTInfo VTInfo, Predicate prd> {
   let Predicates = [prd] in
-  defm Z : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+  defm Z : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su,
                               sched.ZMM, VTInfo.info512, NAME>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
-    defm Z256 : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+    defm Z256 : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su,
                                    sched.YMM, VTInfo.info256, NAME>, EVEX_V256;
-    defm Z128 : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su, CommFrag, CommFrag_su,
+    defm Z128 : avx512_icmp_cc_rmb<opc, Suffix, Frag, Frag_su,
                                    sched.XMM, VTInfo.info128, NAME>, EVEX_V128;
   }
 }
-
-def X86pcmpm_imm : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  uint8_t SSECC = X86::getVPCMPImmForCond(CC);
-  return getI8Imm(SSECC, SDLoc(N));
-}]>;
-
-// Swapped operand version of the above.
-def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  uint8_t SSECC = X86::getVPCMPImmForCond(CC);
-  SSECC = X86::getSwappedVPCMPImm(SSECC);
-  return getI8Imm(SSECC, SDLoc(N));
-}]>;
 
 def X86pcmpm : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                        (setcc node:$src1, node:$src2, node:$cc), [{
@@ -2386,19 +2382,6 @@ def X86pcmpm_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
   return N->hasOneUse() && !ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
-// Same as above, but commutes immediate. Use for load folding.
-def X86pcmpm_commute : PatFrag<(ops node:$src1, node:$src2, node:$cc),
-                               (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  return !ISD::isUnsignedIntSetCC(CC);
-}], X86pcmpm_imm_commute>;
-
-def X86pcmpm_commute_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
-                                  (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  return N->hasOneUse() && !ISD::isUnsignedIntSetCC(CC);
-}], X86pcmpm_imm_commute>;
-
 def X86pcmpum : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                         (setcc node:$src1, node:$src2, node:$cc), [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -2411,53 +2394,32 @@ def X86pcmpum_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
   return N->hasOneUse() && ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
-// Same as above, but commutes immediate. Use for load folding.
-def X86pcmpum_commute : PatFrag<(ops node:$src1, node:$src2, node:$cc),
-                                (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  return ISD::isUnsignedIntSetCC(CC);
-}], X86pcmpm_imm_commute>;
-
-def X86pcmpum_commute_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
-                                   (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  return N->hasOneUse() && ISD::isUnsignedIntSetCC(CC);
-}], X86pcmpm_imm_commute>;
-
 // FIXME: Is there a better scheduler class for VPCMP/VPCMPU?
 defm VPCMPB : avx512_icmp_cc_vl<0x3F, "b", X86pcmpm, X86pcmpm_su,
-                                X86pcmpm_commute, X86pcmpm_commute_su,
                                 SchedWriteVecALU, avx512vl_i8_info, HasBWI>,
                                 EVEX_CD8<8, CD8VF>;
 defm VPCMPUB : avx512_icmp_cc_vl<0x3E, "ub", X86pcmpum, X86pcmpum_su,
-                                 X86pcmpum_commute, X86pcmpum_commute_su,
                                  SchedWriteVecALU, avx512vl_i8_info, HasBWI>,
                                  EVEX_CD8<8, CD8VF>;
 
 defm VPCMPW : avx512_icmp_cc_vl<0x3F, "w", X86pcmpm, X86pcmpm_su,
-                                X86pcmpm_commute, X86pcmpm_commute_su,
                                 SchedWriteVecALU, avx512vl_i16_info, HasBWI>,
                                 VEX_W, EVEX_CD8<16, CD8VF>;
 defm VPCMPUW : avx512_icmp_cc_vl<0x3E, "uw", X86pcmpum, X86pcmpum_su,
-                                 X86pcmpum_commute, X86pcmpum_commute_su,
                                  SchedWriteVecALU, avx512vl_i16_info, HasBWI>,
                                  VEX_W, EVEX_CD8<16, CD8VF>;
 
 defm VPCMPD : avx512_icmp_cc_rmb_vl<0x1F, "d", X86pcmpm, X86pcmpm_su,
-                                    X86pcmpm_commute, X86pcmpm_commute_su,
                                     SchedWriteVecALU, avx512vl_i32_info,
                                     HasAVX512>, EVEX_CD8<32, CD8VF>;
 defm VPCMPUD : avx512_icmp_cc_rmb_vl<0x1E, "ud", X86pcmpum, X86pcmpum_su,
-                                     X86pcmpum_commute, X86pcmpum_commute_su,
                                      SchedWriteVecALU, avx512vl_i32_info,
                                      HasAVX512>, EVEX_CD8<32, CD8VF>;
 
 defm VPCMPQ : avx512_icmp_cc_rmb_vl<0x1F, "q", X86pcmpm, X86pcmpm_su,
-                                    X86pcmpm_commute, X86pcmpm_commute_su,
                                     SchedWriteVecALU, avx512vl_i64_info,
                                     HasAVX512>, VEX_W, EVEX_CD8<64, CD8VF>;
 defm VPCMPUQ : avx512_icmp_cc_rmb_vl<0x1E, "uq", X86pcmpum, X86pcmpum_su,
-                                     X86pcmpum_commute, X86pcmpum_commute_su,
                                      SchedWriteVecALU, avx512vl_i64_info,
                                      HasAVX512>, VEX_W, EVEX_CD8<64, CD8VF>;
 
@@ -3141,7 +3103,7 @@ def : Pat<(Narrow.KVT (Frag:$cc (Narrow.VT Narrow.RC:$src1),
            (!cast<Instruction>(InstStr#"Zrri")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx)),
-            (Frag.OperandTransform $cc)), Narrow.KRC)>;
+            (X86pcmpm_imm $cc)), Narrow.KRC)>;
 
 def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
                            (Narrow.KVT (Frag_su:$cc (Narrow.VT Narrow.RC:$src1),
@@ -3151,11 +3113,10 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx)),
-           (Frag_su.OperandTransform $cc)), Narrow.KRC)>;
+           (X86pcmpm_imm $cc)), Narrow.KRC)>;
 }
 
 multiclass axv512_icmp_packed_cc_rmb_no_vlx_lowering<PatFrag Frag, PatFrag Frag_su,
-                                                     PatFrag CommFrag, PatFrag CommFrag_su,
                                                      string InstStr,
                                                      X86VectorVTInfo Narrow,
                                                      X86VectorVTInfo Wide> {
@@ -3165,7 +3126,7 @@ def : Pat<(Narrow.KVT (Frag:$cc (Narrow.VT Narrow.RC:$src1),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr#"Zrmib")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
-            addr:$src2, (Frag.OperandTransform $cc)), Narrow.KRC)>;
+            addr:$src2, (X86pcmpm_imm $cc)), Narrow.KRC)>;
 
 def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
                            (Narrow.KVT
@@ -3175,26 +3136,26 @@ def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
           (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmibk")
            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
-           addr:$src2, (Frag_su.OperandTransform $cc)), Narrow.KRC)>;
+           addr:$src2, (X86pcmpm_imm $cc)), Narrow.KRC)>;
 
 // Commuted with broadcast load.
-def : Pat<(Narrow.KVT (CommFrag:$cc (Narrow.BroadcastLdFrag addr:$src2),
-                                    (Narrow.VT Narrow.RC:$src1),
-                                    cond)),
+def : Pat<(Narrow.KVT (Frag:$cc (Narrow.BroadcastLdFrag addr:$src2),
+                                (Narrow.VT Narrow.RC:$src1),
+                                cond)),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr#"Zrmib")
             (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
-            addr:$src2, (CommFrag.OperandTransform $cc)), Narrow.KRC)>;
+            addr:$src2, (X86pcmpm_imm_commute $cc)), Narrow.KRC)>;
 
 def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
                            (Narrow.KVT
-                            (CommFrag_su:$cc (Narrow.BroadcastLdFrag addr:$src2),
-                                             (Narrow.VT Narrow.RC:$src1), 
-                                             cond)))),
+                            (Frag_su:$cc (Narrow.BroadcastLdFrag addr:$src2),
+                                         (Narrow.VT Narrow.RC:$src1),
+                                         cond)))),
           (COPY_TO_REGCLASS (!cast<Instruction>(InstStr#"Zrmibk")
            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
-           addr:$src2, (CommFrag_su.OperandTransform $cc)), Narrow.KRC)>;
+           addr:$src2, (X86pcmpm_imm_commute $cc)), Narrow.KRC)>;
 }
 
 // Same as above, but for fp types which don't use PatFrags.
@@ -3264,17 +3225,17 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPQ", v2i64x_info, v8i64_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUQ", v2i64x_info, v8i64_info>;
 
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, X86pcmpm_commute, X86pcmpm_commute_su, "VPCMPD", v8i32x_info, v16i32_info>;
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, X86pcmpum_commute, X86pcmpum_commute_su, "VPCMPUD", v8i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPD", v8i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUD", v8i32x_info, v16i32_info>;
 
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, X86pcmpm_commute, X86pcmpm_commute_su, "VPCMPD", v4i32x_info, v16i32_info>;
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, X86pcmpum_commute, X86pcmpum_commute_su, "VPCMPUD", v4i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPD", v4i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUD", v4i32x_info, v16i32_info>;
 
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, X86pcmpm_commute, X86pcmpm_commute_su, "VPCMPQ", v4i64x_info, v8i64_info>;
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, X86pcmpum_commute, X86pcmpum_commute_su, "VPCMPUQ", v4i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPQ", v4i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUQ", v4i64x_info, v8i64_info>;
 
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, X86pcmpm_commute, X86pcmpm_commute_su, "VPCMPQ", v2i64x_info, v8i64_info>;
-  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, X86pcmpum_commute, X86pcmpum_commute_su, "VPCMPUQ", v2i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPQ", v2i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_rmb_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUQ", v2i64x_info, v8i64_info>;
 
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPS", v8f32x_info, v16f32_info>;
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPS", v4f32x_info, v16f32_info>;
