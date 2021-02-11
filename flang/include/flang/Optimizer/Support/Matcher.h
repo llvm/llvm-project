@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_SUPPORT_MATCHER_H
-#define OPTIMIZER_SUPPORT_MATCHER_H
+#ifndef FORTRAN_OPTIMIZER_SUPPORT_MATCHER_H
+#define FORTRAN_OPTIMIZER_SUPPORT_MATCHER_H
 
 #include <variant>
 
@@ -32,4 +32,4 @@ template<typename N> struct matcher {
 // clang-format on
 } // namespace fir::details
 
-#endif // OPTIMIZER_SUPPORT_MATCHER_H
+#endif // FORTRAN_OPTIMIZER_SUPPORT_MATCHER_H

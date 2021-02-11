@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FIR_OPTIMIZER_TYPEPREDICATES
-#define FIR_OPTIMIZER_TYPEPREDICATES
+#ifndef FORTRAN_FIR_OPTIMIZER_TYPEPREDICATES
+#define FORTRAN_FIR_OPTIMIZER_TYPEPREDICATES
 
 def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
     "FIR integer type">;

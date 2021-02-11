@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FIR_DIALECT_CG_OPS
-#define FIR_DIALECT_CG_OPS
+#ifndef FORTRAN_DIALECT_FIRCG_OPS
+#define FORTRAN_DIALECT_FIRCG_OPS
 
 include "mlir/IR/SymbolInterfaces.td"
 include "flang/Optimizer/TypePredicates.td"

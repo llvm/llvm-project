@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LOWER_SUPPORT_VERIFIER_H
-#define LOWER_SUPPORT_VERIFIER_H
+#ifndef FORTRAN_LOWER_SUPPORT_VERIFIER_H
+#define FORTRAN_LOWER_SUPPORT_VERIFIER_H
 
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
@@ -31,4 +31,4 @@ class VerifierPass
 
 } // namespace Fortran::lower
 
-#endif // LOWER_SUPPORT_VERIFIER_H
+#endif // FORTRAN_LOWER_SUPPORT_VERIFIER_H

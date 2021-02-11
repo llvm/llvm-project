@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FIR_REWRITE_PATTERNS
-#define FIR_REWRITE_PATTERNS
+#ifndef FORTRAN_FIR_REWRITE_PATTERNS
+#define FORTRAN_FIR_REWRITE_PATTERNS
 
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/StandardOps/IR/Ops.td"
@@ -56,4 +56,4 @@ def ForwardConstantConvertPattern
           [(IndexTypePred $res)
           ,(IntegerTypePred $cnt)]>;
 
-#endif // FIR_REWRITE_PATTERNS
+#endif // FORTRAN_FIR_REWRITE_PATTERNS

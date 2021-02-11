@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LOWER_SUPPORT_BOXVALUE_H
-#define LOWER_SUPPORT_BOXVALUE_H
+#ifndef FORTRAN_LOWER_SUPPORT_BOXVALUE_H
+#define FORTRAN_LOWER_SUPPORT_BOXVALUE_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/Matcher.h"
@@ -404,4 +404,4 @@ private:
 };
 } // namespace fir
 
-#endif // LOWER_SUPPORT_BOXVALUE_H
+#endif // FORTRAN_LOWER_SUPPORT_BOXVALUE_H
