@@ -26,7 +26,6 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 /// Implementation of fusion of generic ops and indexed_generic ops.
-// struct FuseGenericOpsOnTensors {
 static bool areTensorOpsFusable(LinalgOp producer, LinalgOp consumer,
                                 unsigned consumerIdx) {
   // Producer and consumer must have tensor semantics.
