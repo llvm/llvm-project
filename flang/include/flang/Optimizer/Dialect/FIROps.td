@@ -1818,7 +1818,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 
 def fir_ResultOp : fir_Op<"result",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WhereOp", "DoLoopOp", "IterWhileOp"]>]> {
+     ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -1935,7 +1935,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
   }];
 }
 
-def fir_WhereOp : region_Op<"if", [NoRegionArguments]> {
+def fir_IfOp : region_Op<"if", [NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{
     Used to conditionally execute operations. This operation is the FIR
