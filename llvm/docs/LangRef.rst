@@ -1988,7 +1988,7 @@ example:
     terminating loops without side-effects can be removed. If a `mustprogress`
     function does not satisfy this contract, the behavior is undefined.  This
     attribute does not apply transitively to callees, but does apply to call
-    sites within the function. Note that `willreturn` implies `mustprogress`. 
+    sites within the function. Note that `willreturn` implies `mustprogress`.
 
 Call Site Attributes
 ----------------------
@@ -4410,7 +4410,7 @@ PowerPC:
 - ``r``: A 32 or 64-bit integer register.
 - ``b``: A 32 or 64-bit integer register, excluding ``R0`` (that is:
   ``R1-R31``).
-- ``f``: A 32 or 64-bit float register (``F0-F31``), 
+- ``f``: A 32 or 64-bit float register (``F0-F31``),
 - ``v``: For ``4 x f32`` or ``4 x f64`` types, a 128-bit altivec vector
    register (``V0-V31``).
 
@@ -9652,9 +9652,9 @@ A ``cmpxchg`` instruction can also take an optional
 The instruction can take an optional ``align`` attribute.
 The alignment must be a power of two greater or equal to the size of the
 `<value>` type. If unspecified, the alignment is assumed to be equal to the
- size of the '<value>' type. Note that this default alignment assumption is
- different from the alignment used for the load/store instructions when align
- isn't specified.
+size of the '<value>' type. Note that this default alignment assumption is
+different from the alignment used for the load/store instructions when align
+isn't specified.
 
 The pointer passed into cmpxchg must have alignment greater than or
 equal to the size in memory of the operand.
@@ -19674,7 +19674,7 @@ was only valid within a single iteration.
   entry:
     ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 1: noalias decl outside loop
     br label %loop
-  
+
   loop:
     %a = phi i8* [ %a.base, %entry ], [ %a.inc, %loop ]
     %b = phi i8* [ %b.base, %entry ], [ %b.inc, %loop ]
@@ -19685,11 +19685,11 @@ was only valid within a single iteration.
     %b.inc = getelementptr inbounds i8, i8* %b, i64 1
     %cond = call i1 @cond()
     br i1 %cond, label %loop, label %exit
-  
+
   exit:
     ret void
   }
-  
+
   !0 = !{!0} ; domain
   !1 = !{!1, !0} ; scope
   !2 = !{!1} ; scope list
