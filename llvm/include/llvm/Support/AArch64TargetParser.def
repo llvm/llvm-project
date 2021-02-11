@@ -58,6 +58,13 @@ AARCH64_ARCH("armv8.7-a", ARMV8_7A, "8.7-A", "v8.7a",
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
+AARCH64_ARCH("armv8.8-a", ARMV8_8A, "8.8-A", "v8.8a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
+              AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
 AARCH64_ARCH("armv9-a",   ARMV9A, "9-A", "v9a",
              ARMBuildAttrs::CPUArch::v8_A, FK_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_FP |

@@ -77,6 +77,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8_5A:
   case ArchKind::ARMV8_6A:
   case ArchKind::ARMV8_7A:
+  case ArchKind::ARMV8_8A:
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
@@ -117,6 +118,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ArchKind::ARMV8_5A:
   case ArchKind::ARMV8_6A:
   case ArchKind::ARMV8_7A:
+  case ArchKind::ARMV8_8A:
   case ArchKind::ARMV9A:
   case ArchKind::ARMV9_1A:
   case ArchKind::ARMV9_2A:
@@ -164,6 +166,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v8.5a", "v8.5-a")
       .Case("v8.6a", "v8.6-a")
       .Case("v8.7a", "v8.7-a")
+      .Case("v8.8a", "v8.8-a")
       .Case("v8r", "v8-r")
       .Cases("v9", "v9a", "v9-a")
       .Case("v9.1a", "v9.1-a")

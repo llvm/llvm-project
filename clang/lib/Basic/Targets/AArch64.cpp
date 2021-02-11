@@ -223,6 +223,12 @@ void AArch64TargetInfo::getTargetDefinesARMV87A(const LangOptions &Opts,
   getTargetDefinesARMV86A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV88A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Also include the Armv8.7 defines
+  getTargetDefinesARMV87A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefinesARMV9A(const LangOptions &Opts,
                                                MacroBuilder &Builder) const {
   // Armv9-A maps to Armv8.5-A
@@ -446,6 +452,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::AArch64::ArchKind::ARMV8_7A:
     getTargetDefinesARMV87A(Opts, Builder);
     break;
+  case llvm::AArch64::ArchKind::ARMV8_8A:
+    getTargetDefinesARMV88A(Opts, Builder);
+    break;
   case llvm::AArch64::ArchKind::ARMV9A:
     getTargetDefinesARMV9A(Opts, Builder);
     break;
@@ -603,6 +612,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
     if (Feature == "+v8.7a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_7A;
+    if (Feature == "+v8.8a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_8A;
     if (Feature == "+v9a")
       ArchKind = llvm::AArch64::ArchKind::ARMV9A;
     if (Feature == "+v9.1a")

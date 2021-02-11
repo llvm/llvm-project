@@ -94,6 +94,7 @@ protected:
   bool HasV8_5aOps = false;
   bool HasV8_6aOps = false;
   bool HasV8_7aOps = false;
+  bool HasV8_8aOps = false;
   bool HasV9_0aOps = false;
   bool HasV9_1aOps = false;
   bool HasV9_2aOps = false;
