@@ -479,7 +479,7 @@ def C_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp]>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                         (ins GPRNoX0:$rd, uimmlog2xlennonzero:$imm),
-                        "c.slli" ,"$rd, $imm">,
+                        "c.slli", "$rd, $imm">,
              Sched<[WriteShift, ReadShift]> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};
@@ -652,7 +652,7 @@ def C_ADD_HINT : RVInst16CR<0b1001, 0b10, (outs GPRX0:$rs1_wb),
 
 def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
                              (ins GPRX0:$rd, uimmlog2xlennonzero:$imm),
-                             "c.slli" ,"$rd, $imm">,
+                             "c.slli", "$rd, $imm">,
                   Sched<[WriteShift, ReadShift]> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};
@@ -661,7 +661,7 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
 }
 
 def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
-                               "c.slli64" ,"$rd">,
+                               "c.slli64", "$rd">,
                     Sched<[WriteShift, ReadShift]> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = 0;
@@ -792,7 +792,7 @@ def : CompressPat<(SW GPRC:$rs2, GPRC:$rs1, uimm7_lsb00:$imm),
 } // Predicates = [HasStdExtC]
 
 let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : CompressPat<(FSW FPR32C:$rs2, GPRC:$rs1,uimm7_lsb00:$imm),
+def : CompressPat<(FSW FPR32C:$rs2, GPRC:$rs1, uimm7_lsb00:$imm),
                   (C_FSW FPR32C:$rs2, GPRC:$rs1, uimm7_lsb00:$imm)>;
 } // Predicate = [HasStdExtC, HasStdExtF, IsRV32]
 
