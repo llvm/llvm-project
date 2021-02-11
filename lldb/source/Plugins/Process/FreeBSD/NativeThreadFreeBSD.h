@@ -11,7 +11,7 @@
 
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
-#include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 
 #include <csignal>
 #include <map>

@@ -10,7 +10,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessFreeBSDRemote)
+  list(APPEND LLDB_PLUGINS lldbPluginProcessFreeBSD)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
