@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -57,7 +58,8 @@ void registerArmNeonToLLVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<LLVM::LLVMArmNeonDialect, LLVM::LLVMDialect>();
+        registry.insert<LLVM::LLVMArmNeonDialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir

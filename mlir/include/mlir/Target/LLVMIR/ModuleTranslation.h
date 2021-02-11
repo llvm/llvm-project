@@ -19,6 +19,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -134,6 +135,31 @@ public:
     return branchMapping.lookup(op);
   }
 
+  /// Converts the type from MLIR LLVM dialect to LLVM.
+  llvm::Type *convertType(Type type);
+
+  /// Looks up remapped a list of remapped values.
+  SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
+
+  /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
+  /// This currently supports integer, floating point, splat and dense element
+  /// attributes and combinations thereof.  In case of error, report it to `loc`
+  /// and return nullptr.
+  llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
+                                  Location loc);
+
+  /// Returns the MLIR context of the module being translated.
+  MLIRContext &getContext() { return *mlirModule->getContext(); }
+
+  /// Returns the LLVM context in which the IR is being constructed.
+  llvm::LLVMContext &getLLVMContext() { return llvmModule->getContext(); }
+
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining a global value.
+  llvm::GlobalValue *lookupGlobal(Operation *op) {
+    return globalsMapping.lookup(op);
+  }
+
 protected:
   /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
   /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
@@ -158,15 +184,9 @@ protected:
   virtual LogicalResult convertOmpWsLoop(Operation &opInst,
                                          llvm::IRBuilder<> &builder);
 
-  /// Converts the type from MLIR LLVM dialect to LLVM.
-  llvm::Type *convertType(Type type);
-
   static std::unique_ptr<llvm::Module>
   prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                     StringRef name);
-
-  /// A helper to look up remapped operands in the value remapping table.
-  SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
 
 private:
   /// Check whether the module contains only supported ops directly in its body.
@@ -178,9 +198,6 @@ private:
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlock(Block &bb, bool ignoreArguments,
                              llvm::IRBuilder<> &builder);
-
-  llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
-                                  Location loc);
 
   /// Original and translated module.
   Operation *mlirModule;
@@ -202,7 +219,8 @@ private:
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
 
-private:
+  LLVMTranslationInterface iface;
+
   /// Mappings between original and translated values, used for lookups.
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
