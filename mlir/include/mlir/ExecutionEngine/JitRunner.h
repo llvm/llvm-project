@@ -32,6 +32,7 @@ class MangleAndInterner;
 
 namespace mlir {
 
+class DialectRegistry;
 class ModuleOp;
 struct LogicalResult;
 
@@ -51,9 +52,12 @@ struct JitRunnerConfig {
       runtimesymbolMap = nullptr;
 };
 
-// Entry point for all CPU runners. Expects the common argc/argv arguments for
-// standard C++ main functions.
-int JitRunnerMain(int argc, char **argv, JitRunnerConfig config = {});
+/// Entry point for all CPU runners. Expects the common argc/argv arguments for
+/// standard C++ main functions. The supplied dialect registry is expected to
+/// contain any registers that appear in the input IR, they will be loaded
+/// on-demand by the parser.
+int JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
+                  JitRunnerConfig config = {});
 
 } // namespace mlir
 

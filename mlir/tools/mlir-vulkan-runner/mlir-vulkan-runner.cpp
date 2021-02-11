@@ -16,12 +16,15 @@
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/InitLLVM.h"
@@ -61,5 +64,9 @@ int main(int argc, char **argv) {
   mlir::JitRunnerConfig jitRunnerConfig;
   jitRunnerConfig.mlirTransformer = runMLIRPasses;
 
-  return mlir::JitRunnerMain(argc, argv, jitRunnerConfig);
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::LLVM::LLVMDialect, mlir::gpu::GPUDialect,
+                  mlir::spirv::SPIRVDialect, mlir::StandardOpsDialect>();
+
+  return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);
 }
