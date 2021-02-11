@@ -8,9 +8,6 @@
 // RUN: %env_lsan_opts=$LSAN_BASE:use_tls=1 %run %t
 // RUN: %env_lsan_opts=$LSAN_BASE:use_tls=0 not %run %t 2>&1 | FileCheck %s
 
-// Investigate why it does not fail with use_stack=0
-// UNSUPPORTED: arm-linux || armhf-linux
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
