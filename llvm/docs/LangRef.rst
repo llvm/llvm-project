@@ -9749,9 +9749,9 @@ allowed to modify the number or order of execution of this
 The instruction can take an optional ``align`` attribute.
 The alignment must be a power of two greater or equal to the size of the
 `<value>` type. If unspecified, the alignment is assumed to be equal to the
- size of the '<value>' type. Note that this default alignment assumption is
- different from the alignment used for the load/store instructions when align
- isn't specified.
+size of the '<value>' type. Note that this default alignment assumption is
+different from the alignment used for the load/store instructions when align
+isn't specified.
 
 A ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
