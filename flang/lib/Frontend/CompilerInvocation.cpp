@@ -328,12 +328,16 @@ void CompilerInvocation::SetDefaultFortranOpts() {
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
   fortranOptions.isFixedForm = false;
+}
+
+// TODO: When expanding this method, consider creating a dedicated API for
+// this. Also at some point we will need to differentiate between different
+// targets and add dedicated predefines for each.
+void CompilerInvocation::setDefaultPredefinitions() {
+  auto &fortranOptions = fortranOpts();
+  const auto &frontendOptions = frontendOpts();
 
   // Populate the macro list with version numbers and other predefinitions.
-  // TODO: When expanding this list of standard predefinitions, consider
-  // creating a dedicated API for this. Also at some point we will need to
-  // differentiate between different targets.
-  // TODO: Move to setDefaultPredefinitions
   fortranOptions.predefinitions.emplace_back("__flang__", "1");
   fortranOptions.predefinitions.emplace_back(
       "__flang_major__", FLANG_VERSION_MAJOR_STRING);
@@ -341,11 +345,6 @@ void CompilerInvocation::SetDefaultFortranOpts() {
       "__flang_minor__", FLANG_VERSION_MINOR_STRING);
   fortranOptions.predefinitions.emplace_back(
       "__flang_patchlevel__", FLANG_VERSION_PATCHLEVEL_STRING);
-}
-
-void CompilerInvocation::setDefaultPredefinitions() {
-  auto &fortranOptions = fortranOpts();
-  const auto &frontendOptions = frontendOpts();
 
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features_.IsEnabled(
