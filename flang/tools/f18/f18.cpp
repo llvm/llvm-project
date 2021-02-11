@@ -526,10 +526,12 @@ int main(int argc, char *const argv[]) {
       options.needProvenanceRangeToCharBlockMappings = true;
     } else if (arg == "-fdebug-dump-parse-tree") {
       driver.dumpParseTree = true;
+      driver.syntaxOnly = true;
     } else if (arg == "-fdebug-pre-fir-tree") {
       driver.dumpPreFirTree = true;
     } else if (arg == "-fdebug-dump-symbols") {
       driver.dumpSymbols = true;
+      driver.syntaxOnly = true;
     } else if (arg == "-fdebug-module-writer") {
       driver.debugModuleWriter = true;
     } else if (arg == "-fdebug-measure-parse-tree") {
