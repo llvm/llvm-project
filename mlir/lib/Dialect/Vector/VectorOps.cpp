@@ -19,6 +19,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -27,6 +28,9 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/bit.h"
 #include <numeric>
+
+// Pull in all enum type and utility function definitions.
+#include "mlir/Dialect/Vector/VectorOpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -77,11 +81,30 @@ static MaskFormat get1DMaskFormat(Value mask) {
   return MaskFormat::Unknown;
 }
 
+// Helper for verifying combining kinds in contractions and reductions.
+static bool isSupportedCombiningKind(CombiningKind combiningKind,
+                                     Type elementType) {
+  switch (combiningKind) {
+  case CombiningKind::ADD:
+  case CombiningKind::MUL:
+  case CombiningKind::MIN:
+  case CombiningKind::MAX:
+    return elementType.isIntOrIndexOrFloat();
+  case CombiningKind::AND:
+  case CombiningKind::OR:
+  case CombiningKind::XOR:
+    return elementType.isIntOrIndex();
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // VectorDialect
 //===----------------------------------------------------------------------===//
 
 void VectorDialect::initialize() {
+  addAttributes<CombiningKindAttr>();
+
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
@@ -103,6 +126,106 @@ IntegerType vector::getVectorSubscriptType(Builder &builder) {
 ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
                                          ArrayRef<int64_t> values) {
   return builder.getI64ArrayAttr(values);
+}
+
+//===----------------------------------------------------------------------===//
+// CombiningKindAttr
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+namespace vector {
+namespace detail {
+struct BitmaskEnumStorage : public AttributeStorage {
+  using KeyTy = uint64_t;
+
+  BitmaskEnumStorage(KeyTy val) : value(val) {}
+
+  bool operator==(const KeyTy &key) const { return value == key; }
+
+  static BitmaskEnumStorage *construct(AttributeStorageAllocator &allocator,
+                                       const KeyTy &key) {
+    return new (allocator.allocate<BitmaskEnumStorage>())
+        BitmaskEnumStorage(key);
+  }
+
+  KeyTy value = 0;
+};
+} // namespace detail
+} // namespace vector
+} // namespace mlir
+
+CombiningKindAttr CombiningKindAttr::get(CombiningKind kind,
+                                         MLIRContext *context) {
+  return Base::get(context, static_cast<uint64_t>(kind));
+}
+
+CombiningKind CombiningKindAttr::getKind() const {
+  return static_cast<CombiningKind>(getImpl()->value);
+}
+
+static constexpr const CombiningKind combiningKindsList[] = {
+    // clang-format off
+    CombiningKind::ADD,
+    CombiningKind::MUL,
+    CombiningKind::MIN,
+    CombiningKind::MAX,
+    CombiningKind::AND,
+    CombiningKind::OR,
+    CombiningKind::XOR,
+    // clang-format on
+};
+
+void CombiningKindAttr::print(DialectAsmPrinter &printer) const {
+  printer << "kind<";
+  auto kinds = llvm::make_filter_range(combiningKindsList, [&](auto kind) {
+    return bitEnumContains(this->getKind(), kind);
+  });
+  llvm::interleaveComma(kinds, printer,
+                        [&](auto kind) { printer << stringifyEnum(kind); });
+  printer << ">";
+}
+
+Attribute CombiningKindAttr::parse(DialectAsmParser &parser) {
+  if (failed(parser.parseLess()))
+    return {};
+
+  StringRef elemName;
+  if (failed(parser.parseKeyword(&elemName)))
+    return {};
+
+  auto kind = symbolizeCombiningKind(elemName);
+  if (!kind) {
+    parser.emitError(parser.getNameLoc(), "Unknown combining kind: ")
+        << elemName;
+    return {};
+  }
+
+  if (failed(parser.parseGreater()))
+    return {};
+
+  return CombiningKindAttr::get(kind.getValue(),
+                                parser.getBuilder().getContext());
+}
+
+Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
+                                        Type type) const {
+  StringRef attrKind;
+  if (parser.parseKeyword(&attrKind))
+    return {};
+
+  if (attrKind == "kind")
+    return CombiningKindAttr::parse(parser);
+
+  parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
+  return {};
+}
+
+void VectorDialect::printAttribute(Attribute attr,
+                                   DialectAsmPrinter &os) const {
+  if (auto ck = attr.dyn_cast<CombiningKindAttr>())
+    ck.print(os);
+  else
+    llvm_unreachable("Unknown attribute type");
 }
 
 //===----------------------------------------------------------------------===//
@@ -193,6 +316,9 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
+  result.addAttribute(ContractionOp::getKindAttrName(),
+                      CombiningKindAttr::get(ContractionOp::getDefaultKind(),
+                                             builder.getContext()));
 }
 
 static ParseResult parseContractionOp(OpAsmParser &parser,
@@ -221,6 +347,11 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
+  if (!result.attributes.get(ContractionOp::getKindAttrName())) {
+    result.addAttribute(ContractionOp::getKindAttrName(),
+                        CombiningKindAttr::get(ContractionOp::getDefaultKind(),
+                                               result.getContext()));
+  }
   if (masksInfo.empty())
     return success();
   if (masksInfo.size() != 2)
@@ -421,12 +552,20 @@ static LogicalResult verify(ContractionOp op) {
         rhsMaskType.getShape().size() != rhsType.getShape().size())
       return op.emitOpError("invalid vector mask rank");
   }
+
+  // Verify supported combining kind.
+  auto vectorType = resType.dyn_cast<VectorType>();
+  auto elementType = vectorType ? vectorType.getElementType() : resType;
+  if (!isSupportedCombiningKind(op.kind(), elementType))
+    return op.emitOpError("unsupported contraction type");
+
   return success();
 }
 
 ArrayRef<StringRef> ContractionOp::getTraitAttrNames() {
-  static constexpr StringRef names[2] = {getIndexingMapsAttrName(),
-                                         getIteratorTypesAttrName()};
+  static constexpr StringRef names[3] = {getIndexingMapsAttrName(),
+                                         getIteratorTypesAttrName(),
+                                         ContractionOp::getKindAttrName()};
   return llvm::makeArrayRef(names);
 }
 
@@ -1497,8 +1636,10 @@ void OuterProductOp::build(OpBuilder &builder, OperationState &result,
 
 static void print(OpAsmPrinter &p, OuterProductOp op) {
   p << op.getOperationName() << " " << op.lhs() << ", " << op.rhs();
-  if (!op.acc().empty())
+  if (!op.acc().empty()) {
     p << ", " << op.acc();
+    p.printOptionalAttrDict(op.getAttrs());
+  }
   p << " : " << op.lhs().getType() << ", " << op.rhs().getType();
 }
 
@@ -1506,8 +1647,10 @@ static ParseResult parseOuterProductOp(OpAsmParser &parser,
                                        OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 3> operandsInfo;
   Type tLHS, tRHS;
-  if (parser.parseOperandList(operandsInfo) || parser.parseColonType(tLHS) ||
-      parser.parseComma() || parser.parseType(tRHS))
+  if (parser.parseOperandList(operandsInfo) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(tLHS) || parser.parseComma() ||
+      parser.parseType(tRHS))
     return failure();
   if (operandsInfo.size() < 2)
     return parser.emitError(parser.getNameLoc(),
@@ -1521,6 +1664,14 @@ static ParseResult parseOuterProductOp(OpAsmParser &parser,
       vRHS ? VectorType::get({vLHS.getDimSize(0), vRHS.getDimSize(0)},
                              vLHS.getElementType())
            : VectorType::get({vLHS.getDimSize(0)}, vLHS.getElementType());
+
+  if (!result.attributes.get(OuterProductOp::getKindAttrName())) {
+    result.attributes.append(
+        OuterProductOp::getKindAttrName(),
+        CombiningKindAttr::get(OuterProductOp::getDefaultKind(),
+                               result.getContext()));
+  }
+
   return failure(
       parser.resolveOperand(operandsInfo[0], tLHS, result.operands) ||
       parser.resolveOperand(operandsInfo[1], tRHS, result.operands) ||
@@ -1558,6 +1709,11 @@ static LogicalResult verify(OuterProductOp op) {
 
   if (vACC && vACC != vRES)
     return op.emitOpError("expected operand #3 of same type as result type");
+
+  // Verify supported combining kind.
+  if (!isSupportedCombiningKind(op.kind(), vRES.getElementType()))
+    return op.emitOpError("unsupported outerproduct type");
+
   return success();
 }
 
