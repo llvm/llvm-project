@@ -825,6 +825,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       AsanInvalidPointerSub = true;
     }
 
+    if (TC.getTriple().isOSDarwin() &&
+        (Args.hasArg(options::OPT_mkernel) ||
+         Args.hasArg(options::OPT_fapple_kext))) {
+      AsanDtorKind = llvm::AsanDtorKind::None;
+    }
+
     if (const auto *Arg =
             Args.getLastArg(options::OPT_sanitize_address_destructor_kind_EQ)) {
       auto parsedAsanDtorKind = AsanDtorKindFromString(Arg->getValue());
