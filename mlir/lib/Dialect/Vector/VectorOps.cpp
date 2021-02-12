@@ -2374,13 +2374,74 @@ void TransferWriteOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 MemRefType memRefTy) {
+  auto affineMaps = memRefTy.getAffineMaps();
+  if (!affineMaps.empty())
+    return op->emitOpError("base memref should have a default identity layout");
+  return success();
+}
+
+static LogicalResult verify(vector::LoadOp op) {
+  VectorType resVecTy = op.getVectorType();
+  MemRefType memRefTy = op.getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(op, memRefTy)))
+    return failure();
+
+  // Checks for vector memrefs.
+  Type memElemTy = memRefTy.getElementType();
+  if (auto memVecTy = memElemTy.dyn_cast<VectorType>()) {
+    if (memVecTy != resVecTy)
+      return op.emitOpError("base memref and result vector types should match");
+    memElemTy = memVecTy.getElementType();
+  }
+
+  if (resVecTy.getElementType() != memElemTy)
+    return op.emitOpError("base and result element types should match");
+  if (llvm::size(op.indices()) != memRefTy.getRank())
+    return op.emitOpError("requires ") << memRefTy.getRank() << " indices";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(vector::StoreOp op) {
+  VectorType valueVecTy = op.getVectorType();
+  MemRefType memRefTy = op.getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(op, memRefTy)))
+    return failure();
+
+  // Checks for vector memrefs.
+  Type memElemTy = memRefTy.getElementType();
+  if (auto memVecTy = memElemTy.dyn_cast<VectorType>()) {
+    if (memVecTy != valueVecTy)
+      return op.emitOpError(
+          "base memref and valueToStore vector types should match");
+    memElemTy = memVecTy.getElementType();
+  }
+
+  if (valueVecTy.getElementType() != memElemTy)
+    return op.emitOpError("base and valueToStore element type should match");
+  if (llvm::size(op.indices()) != memRefTy.getRank())
+    return op.emitOpError("requires ") << memRefTy.getRank() << " indices";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MaskedLoadOp
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(MaskedLoadOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType passVType = op.getPassThruVectorType();
-  VectorType resVType = op.getResultVectorType();
+  VectorType resVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (resVType.getElementType() != memType.getElementType())
@@ -2427,15 +2488,15 @@ void MaskedLoadOp::getCanonicalizationPatterns(
 
 static LogicalResult verify(MaskedStoreOp op) {
   VectorType maskVType = op.getMaskVectorType();
-  VectorType valueVType = op.getValueVectorType();
+  VectorType valueVType = op.getVectorType();
   MemRefType memType = op.getMemRefType();
 
   if (valueVType.getElementType() != memType.getElementType())
-    return op.emitOpError("base and value element type should match");
+    return op.emitOpError("base and valueToStore element type should match");
   if (llvm::size(op.indices()) != memType.getRank())
     return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return op.emitOpError("expected value dim to match mask dim");
+    return op.emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
 
@@ -2448,7 +2509,7 @@ public:
     switch (get1DMaskFormat(store.mask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-          store, store.value(), store.base(), store.indices(), false);
+          store, store.valueToStore(), store.base(), store.indices(), false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(store);
