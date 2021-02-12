@@ -42,6 +42,7 @@ all_categories = {
     'pyapi': 'Tests related to the Python API',
     'std-module': 'Tests related to importing the std module',
     'stresstest': 'Tests related to stressing lldb limits',
+    'swiftmaccatalyst': 'Tests which require swift maccatalyst stdlib support',
     'watchpoint': 'Watchpoint-related tests',
 }
 
