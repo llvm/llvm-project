@@ -34,13 +34,13 @@ func @assert(%arg : i1) {
 
 // CHECK-LABEL: @atan
 func @atan(%arg : f32) -> f32 {
-  %result = atan %arg : f32
+  %result = math.atan %arg : f32
   return %result : f32
 }
 
 // CHECK-LABEL: @atan2
 func @atan2(%arg0 : f32, %arg1 : f32) -> f32 {
-  %result = atan2 %arg0, %arg1 : f32
+  %result = math.atan2 %arg0, %arg1 : f32
   return %result : f32
 }
 

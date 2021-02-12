@@ -16,6 +16,7 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -1656,19 +1657,20 @@ using AndOpLowering = VectorConvertToLLVMPattern<AndOp, LLVM::AndOp>;
 using CeilFOpLowering = VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp>;
-using CosOpLowering = VectorConvertToLLVMPattern<CosOp, LLVM::CosOp>;
+using CosOpLowering = VectorConvertToLLVMPattern<math::CosOp, LLVM::CosOp>;
 using DivFOpLowering = VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp>;
-using ExpOpLowering = VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp>;
-using Exp2OpLowering = VectorConvertToLLVMPattern<Exp2Op, LLVM::Exp2Op>;
+using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
+using Exp2OpLowering = VectorConvertToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
 using FloorFOpLowering = VectorConvertToLLVMPattern<FloorFOp, LLVM::FFloorOp>;
-using Log10OpLowering = VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op>;
-using Log2OpLowering = VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op>;
-using LogOpLowering = VectorConvertToLLVMPattern<LogOp, LLVM::LogOp>;
+using Log10OpLowering =
+    VectorConvertToLLVMPattern<math::Log10Op, LLVM::Log10Op>;
+using Log2OpLowering = VectorConvertToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
+using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using MulFOpLowering = VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp>;
 using MulIOpLowering = VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp>;
 using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
 using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
-using PowFOpLowering = VectorConvertToLLVMPattern<PowFOp, LLVM::PowOp>;
+using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
 using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
 using SignExtendIOpLowering =
@@ -1681,8 +1683,8 @@ using SignedRemIOpLowering =
     VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp>;
 using SignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp>;
-using SinOpLowering = VectorConvertToLLVMPattern<SinOp, LLVM::SinOp>;
-using SqrtOpLowering = VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp>;
+using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using SubFOpLowering = VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp>;
 using SubIOpLowering = VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp>;
 using UnsignedDivIOpLowering =
@@ -2294,13 +2296,13 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
 };
 
 // A `rsqrt` is converted into `1 / sqrt`.
-struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
-  using ConvertOpToLLVMPattern<RsqrtOp>::ConvertOpToLLVMPattern;
+struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
+  using ConvertOpToLLVMPattern<math::RsqrtOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(RsqrtOp op, ArrayRef<Value> operands,
+  matchAndRewrite(math::RsqrtOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    RsqrtOp::Adaptor transformed(operands);
+    math::RsqrtOp::Adaptor transformed(operands);
     auto operandType = transformed.operand().getType();
 
     if (!operandType || !LLVM::isCompatibleType(operandType))
@@ -3984,7 +3986,7 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
     : ConversionTarget(ctx) {
   this->addLegalDialect<LLVM::LLVMDialect>();
   this->addIllegalOp<LLVM::DialectCastOp>();
-  this->addIllegalOp<TanhOp>();
+  this->addIllegalOp<math::TanhOp>();
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
