@@ -925,7 +925,7 @@ defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-over
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">,
-  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "256">,
+  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "1024">,
   ShouldParseIf<hip.KeyPath>;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
