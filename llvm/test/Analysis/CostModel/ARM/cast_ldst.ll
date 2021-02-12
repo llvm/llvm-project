@@ -45,8 +45,8 @@ define i32 @load_extends() {
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
@@ -313,8 +313,8 @@ define i32 @load_extends() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
@@ -581,8 +581,8 @@ define i32 @load_extends() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
