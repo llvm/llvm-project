@@ -586,7 +586,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           CodeAction::INFO_KIND}}};
 
   std::vector<llvm::StringRef> Commands;
-  llvm::append_range(Commands, CommandHandlers.keys());
+  for (llvm::StringRef Command : CommandHandlers.keys())
+    Commands.push_back(Command);
   llvm::sort(Commands);
 
   llvm::json::Object Result{
