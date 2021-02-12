@@ -338,8 +338,6 @@ struct MatMulInfoTy {
   int k = -1;
 };
 
-extern bool DisablePollyTiling;
-
 class ScheduleTreeOptimizer {
 public:
   /// Apply schedule tree transformations.
