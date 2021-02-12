@@ -371,9 +371,7 @@ public:
   explicit PromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc)
       : isSmallAlloc(std::move(isSmallAlloc)) {}
 
-  void runOnFunction() override {
-    // Move all allocation nodes and convert candidates into allocas.
-    BufferPlacementPromotion optimizer(getFunction());
+  LogicalResult initialize(MLIRContext* context) override {
     if (isSmallAlloc == nullptr) {
       isSmallAlloc = [=](Value alloc) {
         return defaultIsSmallAlloc(alloc, maxAllocSizeInBytes,
@@ -381,6 +379,12 @@ public:
                                    maxRankOfAllocatedMemRef);
       };
     }
+    return success();
+  }
+
+  void runOnFunction() override {
+    // Move all allocation nodes and convert candidates into allocas.
+    BufferPlacementPromotion optimizer(getFunction());
     optimizer.promote(isSmallAlloc);
   }
 
