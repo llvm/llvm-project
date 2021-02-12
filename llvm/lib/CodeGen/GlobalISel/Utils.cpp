@@ -499,6 +499,29 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
     return true;
   }
 
+  switch (DefMI->getOpcode()) {
+  default:
+    break;
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE: {
+    if (SNaN)
+      return true;
+    // This can return a NaN if either operand is an sNaN, or if both operands
+    // are NaN.
+    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
+            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
+           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
+            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
+  }
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM: {
+    // Only one needs to be known not-nan, since it will be returned if the
+    // other ends up being one.
+    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
+           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
+  }
+  }
+
   if (SNaN) {
     // FP operations quiet. For now, just handle the ones inserted during
     // legalization.
