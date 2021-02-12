@@ -22,7 +22,9 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
     Fuse specific subgraphs into single Ops for code generation.
   }];
   let constructor = "fir::createFirCodeGenRewritePass()";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+  ];
 }
 
 def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
@@ -31,7 +33,9 @@ def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
                 "to reflect representations that may differ based on the "
                 "target machine.";
   let constructor = "fir::createFirTargetRewritePass()";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+  ];
   let options = [
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",

@@ -15,8 +15,8 @@
 #include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -54,7 +54,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     //   - Result Types
     //   - Operands
     unsigned hashOps;
-    if (op->isCommutative()) {
+    if (op->hasTrait<mlir::OpTrait::IsCommutative>()) {
       std::vector<void *> vec;
       for (auto i = op->operand_begin(), e = op->operand_end(); i != e; ++i)
         vec.push_back((*i).getAsOpaquePointer());
@@ -90,7 +90,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     if (lhs->getAttrs() != rhs->getAttrs())
       return false;
     // Compare operands.
-    if (lhs->isCommutative()) {
+    if (lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
       SmallVector<void *, 8> lops;
       for (auto lod : lhs->getOperands())
         lops.push_back(lod.getAsOpaquePointer());
@@ -171,7 +171,7 @@ private:
 /// Attempt to eliminate a redundant operation.
 LogicalResult BasicCSE::simplifyOperation(ScopedMapTy &knownValues,
                                           Operation *op) {
-  if (op->isKnownTerminator())
+  if (op->hasTrait<mlir::OpTrait::IsTerminator>())
     return failure();
 
   if (isOpTriviallyDead(op)) {
@@ -194,7 +194,7 @@ LogicalResult BasicCSE::simplifyOperation(ScopedMapTy &knownValues,
     // If we find one then replace all uses of the current operation with the
     // existing one and mark it for deletion.
     op->replaceAllUsesWith(existing);
-    if (op->isKnownNonTerminator())
+    if (!op->hasTrait<mlir::OpTrait::IsTerminator>())
       opsToErase.push_back(op);
 
     // If the existing operation has an unknown location and the current
@@ -231,7 +231,8 @@ void BasicCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
     // captures in explicit capture only regions.
-    if (!inst.isRegistered() || inst.isKnownIsolatedFromAbove()) {
+    if (!inst.isRegistered() ||
+        inst.hasTrait<mlir::OpTrait::IsIsolatedFromAbove>()) {
       ScopedMapTy nestedKnownValues;
       for (auto &region : inst.getRegions())
         simplifyRegion(nestedKnownValues, domInfo, region);

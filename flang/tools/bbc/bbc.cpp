@@ -237,8 +237,10 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // translate to FIR dialect of MLIR
   llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   fir::NameUniquer nameUniquer;
-  mlir::MLIRContext ctx;
-  fir::support::registerDialects(ctx);
+  mlir::DialectRegistry registry;
+  fir::support::registerDialects(registry);
+  mlir::MLIRContext ctx(registry);
+  fir::support::loadDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
@@ -263,7 +265,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
     // run the command-line specified pipeline
-    passPipeline.addToPipeline(pm, [&](const llvm::Twine &msg) {
+    (void)passPipeline.addToPipeline(pm, [&](const llvm::Twine &msg) {
       mlir::emitError(mlir::UnknownLoc::get(&ctx)) << msg;
       return mlir::failure();
     });

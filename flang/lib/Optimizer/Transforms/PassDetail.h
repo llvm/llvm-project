@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTMIZER_TRANSFORMS_PASSDETAIL_H_
-#define OPTMIZER_TRANSFORMS_PASSDETAIL_H_
+#ifndef FORTRAN_OPTMIZER_TRANSFORMS_PASSDETAIL_H
+#define FORTRAN_OPTMIZER_TRANSFORMS_PASSDETAIL_H
 
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 
@@ -19,4 +23,4 @@ namespace fir {
 
 } // namespace fir
 
-#endif // OPTMIZER_TRANSFORMS_PASSDETAIL_H_
+#endif // FORTRAN_OPTMIZER_TRANSFORMS_PASSDETAIL_H
