@@ -53,7 +53,7 @@ enum {
 // bound on how many compute units are available. Some values in this
 // range may never be returned if there are fewer than 2^CU_ID_SIZE CUs.
 
-DEVICE uint32_t __kmpc_impl_smid() {
+EXTERN uint32_t __kmpc_impl_smid() {
   uint32_t cu_id = __builtin_amdgcn_s_getreg(
       ENCODE_HWREG(HW_ID_CU_ID_SIZE, HW_ID_CU_ID_OFFSET, HW_ID));
   uint32_t se_id = __builtin_amdgcn_s_getreg(
