@@ -79,6 +79,14 @@ public:
   /// Get character length type
   mlir::Type getCharacterLengthType() { return getIndexType(); }
 
+  /// Get the integer type whose bit width corresponds to the width of pointer
+  /// types, or is bigger.
+  mlir::Type getIntPtrType() {
+    // TODO: Delay the need of such type until codegen or find a way to use
+    // llvm::DataLayout::getPointerSizeInBits here.
+    return getI64Type();
+  }
+
   /// Create a null constant memory reference of type \p ptrType.
   /// If \p ptrType is not provided, !fir.ref<none> type will be used.
   mlir::Value createNullConstant(mlir::Location loc, mlir::Type ptrType = {});

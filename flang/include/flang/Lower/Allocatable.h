@@ -84,4 +84,10 @@ mlir::Value getMutableIRBox(Fortran::lower::FirOpBuilder &, mlir::Location,
 void syncMutableBoxFromIRBox(Fortran::lower::FirOpBuilder &, mlir::Location,
                              const fir::MutableBoxValue &);
 
+/// Generate allocation or association status test and returns the resulting
+/// i1. This is testing this for a valid/non-null base address value.
+mlir::Value genIsAllocatedOrAssociatedTest(Fortran::lower::FirOpBuilder &,
+                                           mlir::Location,
+                                           const fir::MutableBoxValue &);
+
 } // namespace Fortran::lower

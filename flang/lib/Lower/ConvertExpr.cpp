@@ -1401,10 +1401,15 @@ public:
 
     llvm::SmallVector<fir::MutableBoxValue, 1> mutableModifiedByCall;
 
+    auto callSiteType = caller.genFunctionType();
     for (const auto &arg : caller.getPassedArguments()) {
       const auto *actual = arg.entity;
-      if (!actual)
-        TODO("optional argument lowering");
+      auto argTy = callSiteType.getInput(arg.firArgument);
+      if (!actual) {
+        // Optional dummy argument for which there is no actual argument.
+        caller.placeInput(arg, builder.create<fir::AbsentOp>(loc, argTy));
+        continue;
+      }
       const auto *expr = actual->UnwrapExpr();
       if (!expr)
         TODO("assumed type actual argument lowering");
@@ -1452,7 +1457,30 @@ public:
             });
         caller.placeInput(arg, boxChar);
       } else if (arg.passBy == PassBy::Box) {
-        caller.placeInput(arg, builder.createBox(getLoc(), argRef));
+        auto box = builder.createBox(loc, argRef);
+        // Before lowering to an address, handle the allocatable/pointer actual
+        // argument to optional fir.box dummy. It is legal to pass
+        // unallocated/disassociated entity to an optional. In this case, an
+        // absent fir.box must be created instead of a fir.box with a null value
+        // (Fortran 2018 15.5.2.12 point 1).
+        const auto *sym = Fortran::evaluate::UnwrapWholeSymbolDataRef(*expr);
+        if (arg.isOptional && sym &&
+            Fortran::semantics::IsAllocatableOrPointer(*sym)) {
+          // Note that passing an absent allocatable to a non-allocatable
+          // optional dummy argument is illegal (15.5.2.12 point 3 (8)). So
+          // nothing has to be done to generate an absent argument in this case,
+          // and it is OK to unconditionally read the mutable box here.
+          auto mutableBox = genMutableBoxValue(*expr);
+          auto isAllocated = Fortran::lower::genIsAllocatedOrAssociatedTest(
+              builder, loc, mutableBox);
+          auto absent = builder.create<fir::AbsentOp>(loc, argTy);
+          // Need the box types to be exactly similar for the selectOp.
+          auto convertedBox = builder.createConvert(loc, argTy, box);
+          caller.placeInput(arg, builder.create<mlir::SelectOp>(
+                                     loc, isAllocated, convertedBox, absent));
+        } else {
+          caller.placeInput(arg, box);
+        }
       } else if (arg.passBy == PassBy::AddressAndLength) {
         caller.placeAddressAndLengthInput(arg, fir::getBase(argRef),
                                           fir::getLen(argRef));
@@ -1499,7 +1527,6 @@ public:
              "dummy procedure or procedure pointer not in symbol map");
     } else {
       auto funcOpType = caller.getFuncOp().getType();
-      auto callSiteType = caller.genFunctionType();
       // Deal with argument number mismatch by making a function pointer so that
       // function type cast can be inserted.
       auto symbolAttr = builder.getSymbolRefAttr(caller.getMangledName());
@@ -1526,8 +1553,7 @@ public:
         funcSymbolAttr = symbolAttr;
       }
     }
-    auto funcType =
-        funcPointer ? caller.genFunctionType() : caller.getFuncOp().getType();
+    auto funcType = funcPointer ? callSiteType : caller.getFuncOp().getType();
     llvm::SmallVector<mlir::Value, 8> operands;
     // First operand of indirect call is the function pointer. Cast it to
     // required function type for the call to handle procedures that have a

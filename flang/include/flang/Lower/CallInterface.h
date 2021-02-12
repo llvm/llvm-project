@@ -154,6 +154,8 @@ public:
     FortranEntity entity;
     FirValue firArgument;
     FirValue firLength; /* only for AddressAndLength */
+    /// Is the dummy argument optional ?
+    bool isOptional = false;
   };
 
   /// Return the mlir::FuncOp. Note that front block is added by this
