@@ -10270,64 +10270,108 @@ void Sema::CheckStrncatArguments(const CallExpr *CE,
 
 namespace {
 void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
-                                const UnaryOperator *UnaryExpr,
-                                const VarDecl *Var) {
-  StorageClass Class = Var->getStorageClass();
-  if (Class == StorageClass::SC_Extern ||
-      Class == StorageClass::SC_PrivateExtern ||
-      Var->getType()->isReferenceType())
-    return;
-
-  S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
-      << CalleeName << Var;
-}
-
-void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
                                 const UnaryOperator *UnaryExpr, const Decl *D) {
-  if (const auto *Field = dyn_cast<FieldDecl>(D))
+  if (isa<FieldDecl, FunctionDecl, VarDecl>(D)) {
     S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
-        << CalleeName << Field;
+        << CalleeName << 0 /*object: */ << cast<NamedDecl>(D);
+    return;
+  }
 }
 
 void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
-  if (UnaryExpr->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
-    return;
-
-  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr()))
-    if (const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl()))
-      return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, Var);
+  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
+    const Decl *D = Lvalue->getDecl();
+    if (isa<VarDecl, FunctionDecl>(D))
+      return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
+  }
 
   if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
     return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr,
                                       Lvalue->getMemberDecl());
 }
 
-void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,
-                                  const DeclRefExpr *Lvalue) {
-  if (!Lvalue->getType()->isArrayType())
+void CheckFreeArgumentsPlus(Sema &S, const std::string &CalleeName,
+                            const UnaryOperator *UnaryExpr) {
+  const auto *Lambda = dyn_cast<LambdaExpr>(
+      UnaryExpr->getSubExpr()->IgnoreImplicitAsWritten()->IgnoreParens());
+  if (!Lambda)
     return;
 
+  S.Diag(Lambda->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << 2 /*object: lambda expression*/;
+}
+
+void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,
+                                  const DeclRefExpr *Lvalue) {
   const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl());
   if (Var == nullptr)
     return;
 
   S.Diag(Lvalue->getBeginLoc(), diag::warn_free_nonheap_object)
-      << CalleeName << Var;
+      << CalleeName << 0 /*object: */ << Var;
+}
+
+void CheckFreeArgumentsCast(Sema &S, const std::string &CalleeName,
+                            const CastExpr *Cast) {
+  SmallString<128> SizeString;
+  llvm::raw_svector_ostream OS(SizeString);
+  switch (Cast->getCastKind()) {
+  case clang::CK_BitCast:
+    if (!Cast->getSubExpr()->getType()->isFunctionPointerType())
+      return;
+    [[clang::fallthrough]];
+  case clang::CK_IntegralToPointer:
+  case clang::CK_FunctionToPointerDecay:
+    OS << '\'';
+    Cast->printPretty(OS, nullptr, S.getPrintingPolicy());
+    OS << '\'';
+    break;
+  default:
+    return;
+  }
+
+  S.Diag(Cast->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << 0 /*object: */ << OS.str();
 }
 } // namespace
 
 /// Alerts the user that they are attempting to free a non-malloc'd object.
 void Sema::CheckFreeArguments(const CallExpr *E) {
-  const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
   const std::string CalleeName =
       dyn_cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
 
-  if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
-    return CheckFreeArgumentsAddressof(*this, CalleeName, UnaryExpr);
+  { // Prefer something that doesn't involve a cast to make things simpler.
+    const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
+    if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
+      switch (UnaryExpr->getOpcode()) {
+      case UnaryOperator::Opcode::UO_AddrOf:
+        return CheckFreeArgumentsAddressof(*this, CalleeName, UnaryExpr);
+      case UnaryOperator::Opcode::UO_Plus:
+        return CheckFreeArgumentsPlus(*this, CalleeName, UnaryExpr);
+      default:
+        break;
+      }
 
-  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(Arg))
-    return CheckFreeArgumentsStackArray(*this, CalleeName, Lvalue);
+    if (const auto *Lvalue = dyn_cast<DeclRefExpr>(Arg))
+      if (Lvalue->getType()->isArrayType())
+        return CheckFreeArgumentsStackArray(*this, CalleeName, Lvalue);
+
+    if (const auto *Label = dyn_cast<AddrLabelExpr>(Arg)) {
+      Diag(Label->getBeginLoc(), diag::warn_free_nonheap_object)
+          << CalleeName << 0 /*object: */ << Label->getLabel()->getIdentifier();
+      return;
+    }
+
+    if (isa<BlockExpr>(Arg)) {
+      Diag(Arg->getBeginLoc(), diag::warn_free_nonheap_object)
+          << CalleeName << 1 /*object: block*/;
+      return;
+    }
+  }
+  // Maybe the cast was important, check after the other cases.
+  if (const auto *Cast = dyn_cast<CastExpr>(E->getArg(0)))
+    return CheckFreeArgumentsCast(*this, CalleeName, Cast);
 }
 
 void
