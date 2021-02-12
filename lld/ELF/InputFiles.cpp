@@ -609,27 +609,20 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       StringRef signature = getShtGroupSignature(objSections, sec);
       this->sections[i] = &InputSection::discarded;
 
-
       ArrayRef<Elf_Word> entries =
           CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
       if (entries.empty())
         fatal(toString(this) + ": empty SHT_GROUP");
 
-      // The first word of a SHT_GROUP section contains flags. Currently,
-      // the standard defines only "GRP_COMDAT" flag for the COMDAT group.
-      // An group with the empty flag doesn't define anything; such sections
-      // are just skipped.
-      if (entries[0] == 0)
-        continue;
-
-      if (entries[0] != GRP_COMDAT)
+      Elf_Word flag = entries[0];
+      if (flag && flag != GRP_COMDAT)
         fatal(toString(this) + ": unsupported SHT_GROUP format");
 
-      bool isNew =
-          ignoreComdats ||
+      bool keepGroup =
+          (flag & GRP_COMDAT) == 0 || ignoreComdats ||
           symtab->comdatGroups.try_emplace(CachedHashStringRef(signature), this)
               .second;
-      if (isNew) {
+      if (keepGroup) {
         if (config->relocatable)
           this->sections[i] = createInputSection(sec);
         selectedGroups.push_back(entries);
