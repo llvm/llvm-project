@@ -27,6 +27,8 @@ Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<StructuredIndexed> outputs, TypeRange resultTensorTypes,
     function_ref<void(ValueRange)> regionBuilder, ArrayRef<Value> otherValues,
     ArrayRef<Attribute> otherAttributes) {
+  OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
+
   // Build maps
   SmallVector<SmallVector<AffineExpr, 4>, 4> exprsList;
   exprsList.reserve(inputs.size() + outputs.size());
@@ -52,10 +54,13 @@ Operation *mlir::edsc::makeGenericLinalgOp(
               resultTensorTypes,
               inputValues,
               outputValues,
-              maps,
-              iteratorStrTypes,
-              ""/*doc*/,
-              ""/*library_call*/)
+              builder.getAffineMapArrayAttr(maps),
+              builder.getStrArrayAttr(iteratorStrTypes),
+              StringAttr() /*doc*/,
+              StringAttr() /*library_call*/,
+              ArrayAttr() /*sparse*/
+              /* TODO: other attributes in op */
+              )
           .getOperation();
   // clang-format on
 
