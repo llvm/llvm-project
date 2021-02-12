@@ -346,21 +346,6 @@ let SubtargetPredicate = isGFX11Plus in {
       "$sdst, $src0", [(set i64:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
   }
-
-  // ASIC_SCALAR_FLOAT
-  // TODO-GFX11 scalar float
-  /*def S_CEIL_F32           : SOP1_32<"s_ceil_f32">;*/
-  /*def S_FLOOR_F32          : SOP1_32<"s_floor_f32">;*/
-  /*def S_TRUNC_F32          : SOP1_32<"s_trunc_f32">;*/
-  /*def S_RNDNE_F32          : SOP1_32<"s_rndne_f32">;*/
-  /*def S_CVT_F32_I32        : SOP1_32<"s_cvt_f32_i32">;*/
-  /*def S_CVT_F32_U32        : SOP1_32<"s_cvt_f32_u32">;*/
-  /*def S_CVT_I32_F32        : SOP1_32<"s_cvt_i32_f32">;*/
-  /*def S_CVT_U32_F32        : SOP1_32<"s_cvt_u32_f32">;*/
-  /*def S_CVT_F16_F32        : SOP1_32<"s_cvt_f16_f32">;*/
-  /*def S_CVT_PK_RTZ_F16_F32 : SOP1_32<"s_cvt_pk_rtz_f16_f32">;*/
-  /*def S_CVT_F32_F16        : SOP1_32<"s_cvt_f32_f16">;*/
-  /*def S_CVT_HI_F32_F16     : SOP1_32<"s_cvt_hi_f32_f16">;*/
 } // End SubtargetPredicate = isGFX11Plus
 
 //===----------------------------------------------------------------------===//
@@ -699,16 +684,6 @@ let SubtargetPredicate = isGFX9Plus in {
 
 let SubtargetPredicate = isGFX11Plus in {
   def S_PACK_HL_B32_B16 : SOP2_32<"s_pack_hl_b32_b16">;
-  // TODO-GFX11 ASIC_SCALAR_FLOAT
-  /*def S_SUB_F32         : SOP2_32<"s_sub_f32">;*/
-  /*let isCommutable = 1 in {*/
-    /*def S_ADD_F32         : SOP2_32<"s_add_f32">;*/
-    /*def S_MIN_F32         : SOP2_32<"s_min_f32">;*/
-    /*def S_MAX_F32         : SOP2_32<"s_max_f32">;*/
-    /*def S_MUL_F32         : SOP2_32<"s_mul_f32">;*/
-    /*def S_FMAAK_F32       : SOP2_32<"s_fmaak_f32">; // spec say FIXME*/
-    /*def S_FMAMK_F32       : SOP2_32<"s_fmamk_f32">; // spec say FIXME*/
-  /*}*/
 } // End SubtargetPredicate = isGFX11Plus
 
 //===----------------------------------------------------------------------===//
@@ -2108,7 +2083,6 @@ defm S_BITCMP0_B64    : SOPC_Real_gfx11<0x0e>;
 defm S_BITCMP1_B64    : SOPC_Real_gfx11<0x0f>;
 defm S_CMP_EQ_U64     : SOPC_Real_gfx11<0x10>;
 defm S_CMP_LG_U64     : SOPC_Real_gfx11<0x11>;
-// TODO-GFX11 scalar float
 
 //===----------------------------------------------------------------------===//
 // SOPC - GFX6, GFX7, GFX8, GFX9, GFX10
