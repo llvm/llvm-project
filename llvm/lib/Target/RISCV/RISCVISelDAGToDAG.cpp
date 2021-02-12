@@ -925,19 +925,35 @@ bool RISCVDAGToDAGISel::SelectRVVBaseAddr(SDValue Addr, SDValue &Base) {
   return true;
 }
 
-// Helper to detect unneeded and instructions on shift amounts. Called
-// from PatFrags in tablegen.
-bool RISCVDAGToDAGISel::isUnneededShiftMask(SDNode *N, unsigned Width) const {
-  assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
-  assert(Width >= 5 && N->getValueSizeInBits(0) >= (1ULL << Width) &&
-         "Unexpected width");
-  const APInt &Val = N->getConstantOperandAPInt(1);
+bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
+                                        SDValue &ShAmt) {
+  // Shift instructions on RISCV only read the lower 5 or 6 bits of the shift
+  // amount. If there is an AND on the shift amount, we can bypass it if it
+  // doesn't affect any of those bits.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1))) {
+    const APInt &AndMask = N->getConstantOperandAPInt(1);
 
-  if (Val.countTrailingOnes() >= Width)
-    return true;
+    // Since the max shift amount is a power of 2 we can subtract 1 to make a
+    // mask that covers the bits needed to represent all shift amounts.
+    assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
 
-  APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
-  return Mask.countTrailingOnes() >= Width;
+    if (ShMask.isSubsetOf(AndMask)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
+    if (ShMask.isSubsetOf(AndMask | Known.Zero)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+
+  ShAmt = N;
+  return true;
 }
 
 // Match (srl (and val, mask), imm) where the result would be a
