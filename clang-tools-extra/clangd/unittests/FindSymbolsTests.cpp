@@ -912,6 +912,42 @@ TEST(DocumentSymbolsTest, DependentType) {
                     WithDetail("<dependent type>"))))));
 }
 
+TEST(DocumentSymbolsTest, ObjCCategoriesAndClassExtensions) {
+  TestTU TU;
+  TU.ExtraArgs = {"-xobjective-c++", "-Wno-objc-root-class"};
+  Annotations Main(R"cpp(
+      $Cat[[@interface Cat
+      + (id)sharedCat;
+      @end]]
+      $SneakyCat[[@interface Cat (Sneaky)
+      - (id)sneak:(id)behavior;
+      @end]]
+
+      $MeowCat[[@interface Cat ()
+      - (void)meow;
+      @end]]
+      $PurCat[[@interface Cat ()
+      - (void)pur;
+      @end]]
+    )cpp");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      ElementsAre(
+          AllOf(WithName("Cat"), SymRange(Main.range("Cat")),
+                Children(AllOf(WithName("+sharedCat"),
+                               WithKind(SymbolKind::Method)))),
+          AllOf(WithName("Cat(Sneaky)"), SymRange(Main.range("SneakyCat")),
+                Children(
+                    AllOf(WithName("-sneak:"), WithKind(SymbolKind::Method)))),
+          AllOf(
+              WithName("Cat()"), SymRange(Main.range("MeowCat")),
+              Children(AllOf(WithName("-meow"), WithKind(SymbolKind::Method)))),
+          AllOf(WithName("Cat()"), SymRange(Main.range("PurCat")),
+                Children(
+                    AllOf(WithName("-pur"), WithKind(SymbolKind::Method))))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
