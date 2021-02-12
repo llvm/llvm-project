@@ -569,6 +569,8 @@ void Writer::calculateImports() {
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isUndefined())
       continue;
+    if (sym->isWeak() && !config->relocatable)
+      continue;
     if (!sym->isLive())
       continue;
     if (!sym->isUsedInRegularObj)
