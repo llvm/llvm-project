@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_CODEGEN_TYPECONVERTER_H
-#define OPTIMIZER_CODEGEN_TYPECONVERTER_H
+#ifndef FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
+#define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
 namespace fir {
 
@@ -17,7 +17,7 @@ class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module)
       : mlir::LLVMTypeConverter(module.getContext()),
-        kindMapping(*getKindMapping(module)), uniquer(*getNameUniquer(module)),
+        kindMapping(*getKindMapping(module)),
         specifics(CodeGenSpecifics::get(module.getContext(),
                                         *getTargetTriple(module),
                                         *getKindMapping(module))) {
@@ -367,17 +367,14 @@ public:
     return false;
   }
 
-  NameUniquer &getUniquer() { return uniquer; }
-
   KindMapping &getKindMap() { return kindMapping; }
 
 private:
   KindMapping kindMapping;
-  NameUniquer &uniquer;
   std::unique_ptr<CodeGenSpecifics> specifics;
   static StringMap<mlir::Type> identStructCache;
 };
 
 } // namespace fir
 
-#endif // OPTIMIZER_CODEGEN_TYPECONVERTER_H
+#endif // FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H

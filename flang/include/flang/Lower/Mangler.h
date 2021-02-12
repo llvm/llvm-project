@@ -18,7 +18,6 @@
 #include <string>
 
 namespace fir {
-struct NameUniquer;
 
 /// Returns a name suitable to define mlir functions for Fortran intrinsic
 /// Procedure. These names are guaranteed to not conflict with user defined
@@ -42,16 +41,14 @@ namespace semantics {
 class Symbol;
 }
 
-namespace lower {
-namespace mangle {
+namespace lower::mangle {
 
 /// Convert a front-end Symbol to an internal name
-std::string mangleName(fir::NameUniquer &uniquer, const semantics::Symbol &);
+std::string mangleName(const semantics::Symbol &);
 
 std::string demangleName(llvm::StringRef name);
 
-} // namespace mangle
-} // namespace lower
+} // namespace lower::mangle
 } // namespace Fortran
 
 #endif // FORTRAN_LOWER_MANGLER_H

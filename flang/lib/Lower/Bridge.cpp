@@ -153,10 +153,8 @@ namespace {
 /// and lowers it to the FIR executable representation.
 class FirConverter : public Fortran::lower::AbstractConverter {
 public:
-  explicit FirConverter(Fortran::lower::LoweringBridge &bridge,
-                        fir::NameUniquer &uniquer)
-      : bridge{bridge}, uniquer{uniquer}, foldingContext{
-                                              bridge.createFoldingContext()} {}
+  explicit FirConverter(Fortran::lower::LoweringBridge &bridge)
+      : bridge{bridge}, foldingContext{bridge.createFoldingContext()} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR
@@ -365,7 +363,7 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(uniquer, symbol);
+    return Fortran::lower::mangle::mangleName(symbol);
   }
 
   std::string uniqueCGIdent(llvm::StringRef prefix,
@@ -380,11 +378,12 @@ public:
       llvm::MD5::stringifyResult(result, str);
       std::string hashName = prefix.str();
       hashName.append(".").append(str.c_str());
-      return uniquer.doGenerated(hashName);
+      return fir::NameUniquer::doGenerated(hashName);
     }
     // "Short" identifiers use a reversible hex string
     std::string nm = prefix.str();
-    return uniquer.doGenerated(nm.append(".").append(llvm::toHex(name)));
+    return fir::NameUniquer::doGenerated(
+        nm.append(".").append(llvm::toHex(name)));
   }
 
 private:
@@ -3143,7 +3142,7 @@ private:
     auto *context = &getMLIRContext();
     auto func = Fortran::lower::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
-        uniquer.doGenerated("Sham"),
+        fir::NameUniquer::doGenerated("Sham"),
         mlir::FunctionType::get(context, llvm::None, llvm::None));
 
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
@@ -3183,7 +3182,7 @@ private:
     auto *context = &getMLIRContext();
     auto func = Fortran::lower::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
-        uniquer.doGenerated("ModuleSham"),
+        fir::NameUniquer::doGenerated("ModuleSham"),
         mlir::FunctionType::get(context, llvm::None, llvm::None));
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     // linkOnce linkage allows the definition to be kept by LLVM
@@ -3264,7 +3263,6 @@ private:
   }
 
   Fortran::lower::LoweringBridge &bridge;
-  fir::NameUniquer &uniquer;
   Fortran::evaluate::FoldingContext foldingContext;
   Fortran::lower::FirOpBuilder *builder = nullptr;
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
@@ -3285,7 +3283,7 @@ void Fortran::lower::LoweringBridge::lower(
   auto pft = Fortran::lower::createPFT(prg, semanticsContext);
   if (dumpBeforeFir)
     Fortran::lower::dumpPFT(llvm::errs(), *pft);
-  FirConverter converter{*this, *fir::getNameUniquer(getModule())};
+  FirConverter converter{*this};
   converter.run(*pft);
 }
 
@@ -3300,7 +3298,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
     const Fortran::parser::AllCookedSources &cooked, llvm::Triple &triple,
-    fir::NameUniquer &uniquer, fir::KindMapping &kindMap)
+    fir::KindMapping &kindMap)
     : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
       context{context}, kindMap{kindMap} {
   // Register the diagnostic handler.
@@ -3331,6 +3329,5 @@ Fortran::lower::LoweringBridge::LoweringBridge(
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
-  fir::setNameUniquer(*module.get(), uniquer);
   fir::setKindMapping(*module.get(), kindMap);
 }

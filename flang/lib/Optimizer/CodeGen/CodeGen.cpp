@@ -1917,7 +1917,7 @@ struct GenTypeDescOpConversion : public FIROpConversion<fir::GenTypeDescOp> {
     if (auto d = type.dyn_cast<fir::RecordType>()) {
       auto name = d.getName();
       auto pair = fir::NameUniquer::deconstruct(name);
-      return lowerTy().getUniquer().doTypeDescriptor(
+      return fir::NameUniquer::doTypeDescriptor(
           pair.second.modules, pair.second.host, pair.second.name,
           pair.second.kinds);
     }
@@ -2637,7 +2637,7 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
 struct FIRToLLVMLoweringPass
     : public mlir::PassWrapper<FIRToLLVMLoweringPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
-  FIRToLLVMLoweringPass(fir::NameUniquer &) {}
+  FIRToLLVMLoweringPass() {}
 
   mlir::ModuleOp getModule() { return getOperation(); }
 
@@ -2733,9 +2733,8 @@ private:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass>
-fir::createFIRToLLVMPass(fir::NameUniquer &nameUniquer) {
-  return std::make_unique<FIRToLLVMLoweringPass>(nameUniquer);
+std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
+  return std::make_unique<FIRToLLVMLoweringPass>();
 }
 
 std::unique_ptr<mlir::Pass>
@@ -2746,7 +2745,5 @@ fir::createLLVMDialectToLLVMPass(raw_ostream &output) {
 // Register the FIR to LLVM-IR pass
 static mlir::PassRegistration<FIRToLLVMLoweringPass>
     passLowFIR("fir-to-llvmir",
-               "Conversion of the FIR dialect to the LLVM-IR dialect", [] {
-                 fir::NameUniquer dummy;
-                 return std::make_unique<FIRToLLVMLoweringPass>(dummy);
-               });
+               "Conversion of the FIR dialect to the LLVM-IR dialect",
+               [] { return std::make_unique<FIRToLLVMLoweringPass>(); });
