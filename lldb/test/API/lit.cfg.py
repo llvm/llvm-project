@@ -210,8 +210,14 @@ if is_configured('lldb_executable'):
 if is_configured('test_compiler'):
   dotest_cmd += ['--compiler', config.test_compiler]
 
+# swift_stdlibs_dir is where the built swift standard libraries live, e.g. in a
+# x86 build: ../Ninja-RelWithDebInfoAssert/swift-macosx-x86_64/lib/swift/
+swift_stdlibs_dir = None
+
 if is_configured('test_swift_compiler'):
   dotest_cmd += ['--swift-compiler', config.test_swift_compiler]
+  swift_stdlibs_dir = os.path.join(os.path.dirname(config.test_swift_compiler),
+          '..', 'lib', 'swift')
 
 if is_configured('dsymutil'):
   dotest_cmd += ['--dsymutil', config.dsymutil]
@@ -231,6 +237,11 @@ if is_configured('lldb_framework_dir'):
 if 'lldb-repro-capture' in config.available_features or \
     'lldb-repro-replay' in config.available_features:
   dotest_cmd += ['--skip-category=lldb-vscode', '--skip-category=std-module']
+
+# Skip the swiftmaccatalyst category if its stdlib support is missing.
+if swift_stdlibs_dir and \
+        not os.path.isdir(os.path.join(swift_stdlibs_dir, 'maccatalyst')):
+  dotest_cmd += ['--skip-category=swiftmaccatalyst']
 
 if 'lldb-simulator-ios' in config.available_features:
   dotest_cmd += ['--apple-sdk', 'iphonesimulator',
