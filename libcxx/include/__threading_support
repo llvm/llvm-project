@@ -500,7 +500,7 @@ bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 
 // Thread
 bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
-  return *__t == __libcpp_thread_t();
+  return __libcpp_thread_get_id(__t) == 0;
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
