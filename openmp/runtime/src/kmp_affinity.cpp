@@ -5059,6 +5059,7 @@ int __kmp_aux_get_affinity(void **mask) {
   return retval;
 
 #else
+  (void)retval;
 
   KMP_CPU_COPY((kmp_affin_mask_t *)(*mask), th->th.th_affin_mask);
   return 0;
