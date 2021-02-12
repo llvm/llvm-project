@@ -6,11 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_sum(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
@@ -41,11 +37,7 @@ define i32 @reduction_sum(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: mul <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_prod(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
@@ -76,11 +68,7 @@ define i32 @reduction_prod(i32 %n, i32* noalias nocapture %A, i32* noalias nocap
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: mul nsw <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_mix(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
@@ -109,11 +97,7 @@ define i32 @reduction_mix(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 
 ;CHECK-LABEL: @reduction_mul(
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: mul <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_mul(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
@@ -143,11 +127,7 @@ define i32 @reduction_mul(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK-LABEL: @start_at_non_zero(
 ;CHECK: phi <4 x i32>
 ;CHECK: <i32 120, i32 0, i32 0, i32 0>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @start_at_non_zero(i32* nocapture %in, i32* nocapture %coeff, i32* nocapture %out, i32 %n) nounwind uwtable readonly ssp {
 entry:
@@ -176,11 +156,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @reduction_and(
 ;CHECK: <i32 -1, i32 -1, i32 -1, i32 -1>
 ;CHECK: and <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: and <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: and <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.and.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_and(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
 entry:
@@ -208,11 +184,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ;CHECK-LABEL: @reduction_or(
 ;CHECK: or <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: or <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: or <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.or.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_or(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
 entry:
@@ -240,11 +212,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ;CHECK-LABEL: @reduction_xor(
 ;CHECK: xor <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: xor <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: xor <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32>
 ;CHECK: ret i32
 define i32 @reduction_xor(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
 entry:
@@ -498,11 +466,7 @@ exit:
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-;CHECK: add <4 x i32>
-;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: %sum.copy = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
 ;CHECK: ret i32
 define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) {
@@ -577,3 +541,6 @@ entry:
   store i32 %.0.lcssa, i32* %c10, align 4
   ret void
 }
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare
