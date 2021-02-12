@@ -87,7 +87,7 @@ mlir::translateModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
   for (auto func :
        ModuleTranslation::getModuleBody(m).getOps<LLVM::LLVMFuncOp>()) {
     if (!func->getAttrOfType<UnitAttr>(
-            gpu::GPUDialect::getKernelFuncAttrName()))
+            ROCDL::ROCDLDialect::getKernelFuncAttrName()))
       continue;
 
     auto *llvmFunc = llvmModule->getFunction(func.getName());
