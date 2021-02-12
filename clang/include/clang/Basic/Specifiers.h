@@ -251,23 +251,24 @@ namespace clang {
 
   /// CallingConv - Specifies the calling convention that a function uses.
   enum CallingConv {
-    CC_C,           // __attribute__((cdecl))
-    CC_X86StdCall,  // __attribute__((stdcall))
-    CC_X86FastCall, // __attribute__((fastcall))
-    CC_X86ThisCall, // __attribute__((thiscall))
-    CC_X86VectorCall, // __attribute__((vectorcall))
-    CC_X86Pascal,   // __attribute__((pascal))
-    CC_Win64,       // __attribute__((ms_abi))
-    CC_X86_64SysV,  // __attribute__((sysv_abi))
-    CC_X86RegCall, // __attribute__((regcall))
-    CC_AAPCS,       // __attribute__((pcs("aapcs")))
-    CC_AAPCS_VFP,   // __attribute__((pcs("aapcs-vfp")))
-    CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
-    CC_SpirFunction, // default for OpenCL functions on SPIR target
-    CC_OpenCLKernel, // inferred for OpenCL kernels
-    CC_Swift,        // __attribute__((swiftcall))
-    CC_PreserveMost, // __attribute__((preserve_most))
-    CC_PreserveAll,  // __attribute__((preserve_all))
+    CC_C,                 // __attribute__((cdecl))
+    CC_X86StdCall,        // __attribute__((stdcall))
+    CC_X86FastCall,       // __attribute__((fastcall))
+    CC_X86ThisCall,       // __attribute__((thiscall))
+    CC_X86VectorCall,     // __attribute__((vectorcall))
+    CC_X86Pascal,         // __attribute__((pascal))
+    CC_Win64,             // __attribute__((ms_abi))
+    CC_X86_64SysV,        // __attribute__((sysv_abi))
+    CC_X86RegCall,        // __attribute__((regcall))
+    CC_AAPCS,             // __attribute__((pcs("aapcs")))
+    CC_AAPCS_VFP,         // __attribute__((pcs("aapcs-vfp")))
+    CC_IntelOclBicc,      // __attribute__((intel_ocl_bicc))
+    CC_SpirFunction,      // default for OpenCL functions on SPIR target
+    CC_OpenCLKernel,      // inferred for OpenCL kernels
+    CC_Swift,             // __attribute__((swiftcall))
+    CC_SwiftAsync,        // __attribute__((swiftasynccall))
+    CC_PreserveMost,      // __attribute__((preserve_most))
+    CC_PreserveAll,       // __attribute__((preserve_all))
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
   };
 
@@ -284,6 +285,7 @@ namespace clang {
     case CC_SpirFunction:
     case CC_OpenCLKernel:
     case CC_Swift:
+    case CC_SwiftAsync:
       return false;
     default:
       return true;

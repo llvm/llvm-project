@@ -450,6 +450,7 @@ public:
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
     case CC_Swift:
+    case CC_SwiftAsync:
       return CCCR_OK;
     default:
       return CCCR_Warning;
