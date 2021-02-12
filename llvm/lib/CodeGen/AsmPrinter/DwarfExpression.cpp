@@ -285,20 +285,21 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // a call site parameter expression and if that expression is just a register
   // location, emit it with addBReg and offset 0, because we should emit a DWARF
   // expression representing a value, rather than a location.
-  if (!isMemoryLocation() && !HasComplexExpression &&
-      (!isParameterValue() || isEntryValue())) {
+  if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
+      isEntryValue()) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
       addOpPiece(Reg.SubRegSize);
     }
 
-    if (isEntryValue())
+    if (isEntryValue()) {
       finalizeEntryValue();
 
-    if (isEntryValue() && !isIndirect() && !isParameterValue() &&
-        DwarfVersion >= 4)
-      emitOp(dwarf::DW_OP_stack_value);
+      if (!isIndirect() && !isParameterValue() && !HasComplexExpression &&
+          DwarfVersion >= 4)
+        emitOp(dwarf::DW_OP_stack_value);
+    }
 
     DwarfRegs.clear();
     return true;
