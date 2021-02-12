@@ -126,15 +126,17 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     // Then, rewrite the name based on its kind.
     bool isVariadicOperand = isVariadicOperandName(op, name);
     if (isOperandName(op, name)) {
-      auto result = isVariadicOperand ? formatv("lookupValues(op.{0}())", name)
-                                      : formatv("lookupValue(op.{0}())", name);
+      auto result =
+          isVariadicOperand
+              ? formatv("moduleTranslation.lookupValues(op.{0}())", name)
+              : formatv("moduleTranslation.lookupValue(op.{0}())", name);
       bs << result;
     } else if (isAttributeName(op, name)) {
       bs << formatv("op.{0}()", name);
     } else if (isResultName(op, name)) {
-      bs << formatv("mapValue(op.{0}())", name);
+      bs << formatv("moduleTranslation.mapValue(op.{0}())", name);
     } else if (name == "_resultType") {
-      bs << "convertType(op.getResult().getType())";
+      bs << "moduleTranslation.convertType(op.getResult().getType())";
     } else if (name == "_hasResult") {
       bs << "opInst.getNumResults() == 1";
     } else if (name == "_location") {

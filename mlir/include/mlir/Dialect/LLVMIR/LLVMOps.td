@@ -1083,7 +1083,8 @@ def LLVM_UndefOp : LLVM_Op<"mlir.undef", [NoSideEffect]>,
 
 def LLVM_ConstantOp
     : LLVM_Op<"mlir.constant", [NoSideEffect]>,
-      LLVM_Builder<"$res = getLLVMConstant($_resultType, $value, $_location);">
+      LLVM_Builder<[{$res = getLLVMConstant($_resultType, $value, $_location,
+                                            moduleTranslation);}]>
 {
   let summary = "Defines a constant of LLVM type.";
   let description = [{

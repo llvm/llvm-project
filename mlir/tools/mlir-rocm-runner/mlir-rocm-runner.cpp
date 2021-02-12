@@ -31,6 +31,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/ROCDLIR.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -341,6 +342,8 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::LLVM::LLVMDialect, mlir::gpu::GPUDialect,
                   mlir::ROCDL::ROCDLDialect, mlir::StandardOpsDialect>();
+  registry.addDialectInterface<ROCDL::ROCDLDialect,
+                               ROCDLDialectLLVMIRTranslationInterface>();
   mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);

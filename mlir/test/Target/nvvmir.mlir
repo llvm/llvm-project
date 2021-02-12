@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-nvvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 llvm.func @nvvm_special_regs() -> i32 {
   // CHECK: %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
