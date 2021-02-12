@@ -1,6 +1,6 @@
-! RUN: bbc -emit-llvm -o - %s | tco | llc --filetype=obj -o %t
-! RUN: cc %t %S/array-init-driver.c
-! RUN: ./a.out | FileCheck %s
+! RUN: bbc -emit-llvm -o - %s | tco | llc --filetype=obj -o %t.o
+! RUN: %CC %t.o %S/array-init-driver.c -o %t.out
+! RUN: %t.out | FileCheck %s
 
 subroutine setall(a, x)
   real :: a(10,20)
