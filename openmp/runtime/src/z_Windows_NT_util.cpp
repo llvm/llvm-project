@@ -24,7 +24,9 @@
 #include <ntsecapi.h> // UNICODE_STRING
 #include <ntstatus.h>
 #include <psapi.h>
+#ifdef _MSC_VER
 #pragma comment(lib, "psapi.lib")
+#endif
 
 enum SYSTEM_INFORMATION_CLASS {
   SystemProcessInformation = 5
