@@ -165,19 +165,17 @@ public:
     log("<-- {0}", Method);
     if (Method == "exit")
       return false;
-    if (!Server.Server) {
+    auto Handler = Server.Handlers.NotificationHandlers.find(Method);
+    if (Handler != Server.Handlers.NotificationHandlers.end()) {
+      Handler->second(std::move(Params));
+      Server.maybeExportMemoryProfile();
+      Server.maybeCleanupMemory();
+    } else if (!Server.Server) {
       elog("Notification {0} before initialization", Method);
     } else if (Method == "$/cancelRequest") {
       onCancel(std::move(Params));
     } else {
-      auto Handler = Server.Handlers.NotificationHandlers.find(Method);
-      if (Handler != Server.Handlers.NotificationHandlers.end()) {
-        Handler->second(std::move(Params));
-        Server.maybeExportMemoryProfile();
-        Server.maybeCleanupMemory();
-      } else {
-        log("unhandled notification {0}", Method);
-      }
+      log("unhandled notification {0}", Method);
     }
     return true;
   }
@@ -191,18 +189,16 @@ public:
     SPAN_ATTACH(Tracer, "Params", Params);
     ReplyOnce Reply(ID, Method, &Server, Tracer.Args);
     log("<-- {0}({1})", Method, ID);
-    if (!Server.Server && Method != "initialize") {
+    auto Handler = Server.Handlers.MethodHandlers.find(Method);
+    if (Handler != Server.Handlers.MethodHandlers.end()) {
+      Handler->second(std::move(Params), std::move(Reply));
+    } else if (!Server.Server) {
       elog("Call {0} before initialization.", Method);
       Reply(llvm::make_error<LSPError>("server not initialized",
                                        ErrorCode::ServerNotInitialized));
     } else {
-      auto Handler = Server.Handlers.MethodHandlers.find(Method);
-      if (Handler != Server.Handlers.MethodHandlers.end()) {
-        Handler->second(std::move(Params), std::move(Reply));
-      } else {
-        Reply(llvm::make_error<LSPError>("method not found",
-                                         ErrorCode::MethodNotFound));
-      }
+      Reply(llvm::make_error<LSPError>("method not found",
+                                       ErrorCode::MethodNotFound));
     }
     return true;
   }
@@ -583,6 +579,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   {
     LSPBinder Binder(Handlers);
+    bindMethods(Binder);
     if (Opts.Modules)
       for (auto &Mod : *Opts.Modules)
         Mod.initializeLSP(Binder, Params.capabilities, ServerCaps);
@@ -1457,10 +1454,12 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
     this->Opts.ContextProvider = ClangdServer::createConfiguredContextProvider(
         Opts.ConfigProvider, this);
   }
-
-  // clang-format off
   LSPBinder Bind(this->Handlers);
   Bind.method("initialize", this, &ClangdLSPServer::onInitialize);
+}
+
+void ClangdLSPServer::bindMethods(LSPBinder &Bind) {
+  // clang-format off
   Bind.notification("initialized", this, &ClangdLSPServer::onInitialized);
   Bind.method("shutdown", this, &ClangdLSPServer::onShutdown);
   Bind.method("sync", this, &ClangdLSPServer::onSync);
