@@ -96,6 +96,7 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::LLVM::LLVMDialect, mlir::gpu::GPUDialect,
                   mlir::spirv::SPIRVDialect, mlir::StandardOpsDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);
 }

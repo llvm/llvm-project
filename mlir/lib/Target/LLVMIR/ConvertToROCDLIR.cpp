@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
@@ -77,11 +78,16 @@ protected:
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
                                StringRef name) {
-  // lower MLIR (with RODL Dialect) to LLVM IR (with ROCDL intrinsics)
+  // Register the translation to LLVM IR if nobody else did before. This may
+  // happen if this translation is called inside a pass pipeline that converts
+  // GPU dialects to binary blobs without translating the rest of the code.
+  registerLLVMDialectTranslation(*m->getContext());
+
+  // Lower MLIR (with RODL Dialect) to LLVM IR (with ROCDL intrinsics).
   auto llvmModule = LLVM::ModuleTranslation::translateModule<ModuleTranslation>(
       m, llvmContext, name);
 
-  // foreach GPU kernel
+  // Foreach GPU kernel:
   // 1. Insert AMDGPU_KERNEL calling convention.
   // 2. Insert amdgpu-flat-workgroup-size(1, 1024) attribute.
   for (auto func :
@@ -114,7 +120,8 @@ void registerToROCDLIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<ROCDL::ROCDLDialect, LLVM::LLVMDialect>();
+        registry.insert<ROCDL::ROCDLDialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir

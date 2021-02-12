@@ -25,6 +25,7 @@ class Module;
 
 namespace mlir {
 
+class DialectRegistry;
 class OwningModuleRef;
 class MLIRContext;
 class ModuleOp;
@@ -44,6 +45,15 @@ translateModuleToLLVMIR(ModuleOp m, llvm::LLVMContext &llvmContext,
 OwningModuleRef
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context);
+
+/// Register the LLVM dialect and the translation from it to the LLVM IR in the
+/// given registry;
+void registerLLVMDialectTranslation(DialectRegistry &registry);
+
+/// Register the LLVM dialect and the translation from it in the registry
+/// associated with the given context. This checks if the interface is already
+/// registered and avoids double registation.
+void registerLLVMDialectTranslation(MLIRContext &context);
 
 } // namespace mlir
 
