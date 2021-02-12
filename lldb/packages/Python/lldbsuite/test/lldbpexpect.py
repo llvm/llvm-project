@@ -53,11 +53,12 @@ class PExpectTest(TestBase):
 
     def expect(self, cmd, substrs=None):
         self.assertNotIn('\n', cmd)
-        self.child.sendline(cmd)
         # If 'substrs' is a string then this code would just check that every
         # character of the string is in the output.
         assert not isinstance(substrs, six.string_types), \
             "substrs must be a collection of strings"
+
+        self.child.sendline(cmd)
         if substrs is not None:
             for s in substrs:
                 self.child.expect_exact(s)
