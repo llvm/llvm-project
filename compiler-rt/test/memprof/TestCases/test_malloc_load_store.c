@@ -17,8 +17,8 @@
 // CHECK-NEXT:  lifetime (ave/min/max): [[AVELIFETIME:[0-9]+]].00 / [[AVELIFETIME]] / [[AVELIFETIME]]
 // CHECK-NEXT:  num migrated: 0, num lifetime overlaps: 0, num same alloc cpu: 0, num same dealloc_cpu: 0
 // CHECK: Stack for id [[STACKID]]:
-// check-next: #0 {{.*}} in malloc
-// check-next: #1 {{.*}} in main {{.*}}:[[@LINE+6]]
+// CHECK-NEXT: #0 {{.*}} in {{.*}}malloc
+// CHECK-NEXT: #1 {{.*}} in main {{.*}}:[[@LINE+6]]
 
 #include <stdio.h>
 #include <stdlib.h>

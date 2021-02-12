@@ -996,13 +996,15 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
 // libomptarget, if loaded, provides this function in api.cpp.
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
-#if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
   return 0;
 #else
   int (*fptr)();
-  if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "_Offload_number_of_devices"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM("__tgt_get_num_devices"))) {
     return (*fptr)();
-  } else if ((*(void **)(&fptr) = dlsym(RTLD_NEXT, "omp_get_num_devices"))) {
+  } else if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_num_devices"))) {
+    return (*fptr)();
+  } else if ((*(void **)(&fptr) = KMP_DLSYM("_Offload_number_of_devices"))) {
     return (*fptr)();
   } else { // liboffload & libomptarget don't exist
     return 0;
@@ -1018,20 +1020,11 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) {
 }
 
 // libomptarget, if loaded, provides this function
-int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
-int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) {
-#if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void)
+    KMP_WEAK_ATTRIBUTE_EXTERNAL;
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)(void) {
   // same as omp_get_num_devices()
-  return 0;
-#else
-  int (*fptr)();
-  if ((*(void **)(&fptr) = dlsym(RTLD_NEXT, "omp_get_initial_device"))) {
-    return (*fptr)();
-  } else { // liboffload & libomptarget don't exist
-    // same as omp_get_num_devices()
-    return 0;
-  }
-#endif
+  return KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)();
 }
 
 #if defined(KMP_STUB)
@@ -1376,22 +1369,22 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 // loaded, we assume we are on the host and return KMP_HOST_DEVICE.
 // Compiler/libomptarget will handle this if called inside target.
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
-int FTN_STDCALL FTN_GET_DEVICE_NUM(void) { return FTN_GET_INITIAL_DEVICE(); }
+int FTN_STDCALL FTN_GET_DEVICE_NUM(void) {
+  return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+}
 
 // Compiler will ensure that this is only called from host in sequential region
 int FTN_STDCALL FTN_PAUSE_RESOURCE(kmp_pause_status_t kind, int device_num) {
 #ifdef KMP_STUB
   return 1; // just fail
 #else
-  if (device_num == FTN_GET_INITIAL_DEVICE())
+  if (device_num == KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)())
     return __kmpc_pause_resource(kind);
   else {
-#if !KMP_OS_WINDOWS
     int (*fptr)(kmp_pause_status_t, int);
-    if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "tgt_pause_resource")))
+    if ((*(void **)(&fptr) = KMP_DLSYM("tgt_pause_resource")))
       return (*fptr)(kind, device_num);
     else
-#endif
       return 1; // just fail if there is no libomptarget
   }
 #endif
@@ -1403,11 +1396,9 @@ int FTN_STDCALL FTN_PAUSE_RESOURCE_ALL(kmp_pause_status_t kind) {
   return 1; // just fail
 #else
   int fails = 0;
-#if !KMP_OS_WINDOWS
   int (*fptr)(kmp_pause_status_t, int);
-  if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "tgt_pause_resource")))
+  if ((*(void **)(&fptr) = KMP_DLSYM("tgt_pause_resource")))
     fails = (*fptr)(kind, KMP_DEVICE_ALL); // pause devices
-#endif
   fails += __kmpc_pause_resource(kind); // pause host
   return fails;
 #endif
@@ -1578,6 +1569,7 @@ KMP_VERSION_SYMBOL(FTN_GET_SMID, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_IS_SPMD_MODE, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_MASTER_THREAD_ID, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_ACTIVE_THREAD_MASK, 45, "OMP_4.5");
+KMP_VERSION_SYMBOL(FTN_GET_INITIAL_DEVICE, 45, "OMP_4.5");
 
 // OMP_5.0 versioned symbols
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");

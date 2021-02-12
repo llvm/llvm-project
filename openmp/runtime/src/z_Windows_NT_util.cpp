@@ -23,6 +23,8 @@
 
 #include <ntsecapi.h> // UNICODE_STRING
 #include <ntstatus.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
 
 enum SYSTEM_INFORMATION_CLASS {
   SystemProcessInformation = 5
@@ -1631,6 +1633,29 @@ finish: // Clean up and exit.
 
   return running_threads;
 } //__kmp_get_load_balance()
+
+// Find symbol from the loaded modules
+void *__kmp_lookup_symbol(const char *name) {
+  HANDLE process = GetCurrentProcess();
+  DWORD needed;
+  HMODULE *modules = nullptr;
+  if (!EnumProcessModules(process, modules, 0, &needed))
+    return nullptr;
+  DWORD num_modules = needed / sizeof(HMODULE);
+  modules = (HMODULE *)malloc(num_modules * sizeof(HMODULE));
+  if (!EnumProcessModules(process, modules, needed, &needed)) {
+    free(modules);
+    return nullptr;
+  }
+  void *proc = nullptr;
+  for (uint32_t i = 0; i < num_modules; i++) {
+    proc = (void *)GetProcAddress(modules[i], name);
+    if (proc)
+      break;
+  }
+  free(modules);
+  return proc;
+}
 
 // Functions for hidden helper task
 void __kmp_hidden_helper_worker_thread_wait() {

@@ -17,7 +17,7 @@
 // CHECK-SAME:      ins(%[[MEMREF]] : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT_MEMREF]] : memref<4xf32>) {
 // CHECK:           ^bb0(%[[RESULT1:.*]]: f32, %[[UNUSED:.*]]: f32):
-// CHECK:             %[[DIM1:.*]] = exp %[[RESULT1]] : f32
+// CHECK:             %[[DIM1:.*]] = math.exp %[[RESULT1]] : f32
 // CHECK:             linalg.yield %[[DIM1]] : f32
 // CHECK:           }
 // CHECK:           %[[RESULT:.*]] = tensor_load %[[RESULT_MEMREF]] : memref<4xf32>
@@ -29,7 +29,7 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
     } ins(%arg0 : tensor<4xf32>)
       outs(%arg0 : tensor<4xf32>) {
       ^bb0(%gen_arg1: f32, %out: f32):
-        %tmp1 = exp %gen_arg1 : f32
+        %tmp1 = math.exp %gen_arg1 : f32
         linalg.yield %tmp1 : f32
     } -> tensor<4xf32>
     return %0 : tensor<4xf32>
@@ -58,7 +58,7 @@ func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
   } ins(%in : tensor<?xf32>)
     outs(%init : tensor<?xf32>) {
     ^bb0(%gen_arg1: f32, %out: f32):
-      %tmp1 = exp %gen_arg1 : f32
+      %tmp1 = math.exp %gen_arg1 : f32
       linalg.yield %tmp1 : f32
   } -> tensor<?xf32>
   return %0 : tensor<?xf32>
@@ -83,7 +83,7 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
     } ins(%arg0 : tensor<4xf32>)
       outs (%arg0, %arg0 : tensor<4xf32>, tensor<4xf32>) {
       ^bb0(%gen_arg1: f32, %out1: f32, %out2: f32):
-        %tmp1 = exp %gen_arg1 : f32
+        %tmp1 = math.exp %gen_arg1 : f32
         linalg.yield %tmp1, %tmp1 : f32, f32
     } -> tensor<4xf32>, tensor<4xf32>
     return %0, %1 : tensor<4xf32>, tensor<4xf32>
@@ -142,7 +142,7 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
     } ins(%arg0 : tensor<?x?xf32>)
       outs (%arg0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>) {
       ^bb0(%gen_arg1: f32, %out1: f32, %out2: f32):
-        %tmp1 = exp %gen_arg1 : f32
+        %tmp1 = math.exp %gen_arg1 : f32
         linalg.yield %tmp1, %tmp1 : f32, f32
     } -> tensor<?x?xf32>, tensor<?x?xf32>
     return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>

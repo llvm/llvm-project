@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,7 +14,7 @@ void *Thread2(void *p) {
   return 0;
 }
 
-void *alloc() {
+void *alloc() __attribute__((noinline)) {
   return malloc(99);
 }
 

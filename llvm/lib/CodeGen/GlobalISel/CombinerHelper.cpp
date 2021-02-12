@@ -730,7 +730,7 @@ bool CombinerHelper::applySextInRegOfLoad(
   // %ld = G_SEXTLOAD %ptr (load 1)
 
   auto &MMO = **LoadDef->memoperands_begin();
-  Builder.setInstrAndDebugLoc(MI);
+  Builder.setInstrAndDebugLoc(*LoadDef);
   auto &MF = Builder.getMF();
   auto PtrInfo = MMO.getPointerInfo();
   auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, ScalarSizeBits / 8);

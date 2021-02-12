@@ -1362,6 +1362,51 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (!LU)
           continue;
         unsigned Opcode = LU->getOpcode();
+
+
+        // If this is a shift recurrence, we know the bits being shifted in.
+        // We can combine that with information about the start value of the
+        // recurrence to conclude facts about the result.
+        if (Opcode == Instruction::LShr ||
+            Opcode == Instruction::AShr ||
+            Opcode == Instruction::Shl) {
+          Value *LL = LU->getOperand(0);
+          Value *LR = LU->getOperand(1);
+          // Find a recurrence.
+          if (LL == I)
+            L = LR;
+          else
+            continue; // Check for recurrence with L and R flipped.
+
+          // We have matched a recurrence of the form:
+          // %iv = [R, %entry], [%iv.next, %backedge]
+          // %iv.next = shift_op %iv, L
+
+          // Recurse with the phi context to avoid concern about whether facts
+          // inferred hold at original context instruction.  TODO: It may be
+          // correct to use the original context.  IF warranted, explore and
+          // add sufficient tests to cover.
+          Query RecQ = Q;
+          RecQ.CxtI = P;
+          computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
+          switch (Opcode) {
+          case Instruction::Shl:
+            // A shl recurrence will only increase the tailing zeros
+            Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+            break;
+          case Instruction::LShr:
+            // A lshr recurrence will preserve the leading zeros of the
+            // start value
+            Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+            break;
+          case Instruction::AShr:
+            // An ashr recurrence will extend the initial sign bit
+            Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+            Known.One.setHighBits(Known2.countMinLeadingOnes());
+            break;
+          };
+        }
+
         // Check for operations that have the property that if
         // both their operands have low zero bits, the result
         // will have low zero bits.

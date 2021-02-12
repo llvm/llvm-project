@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -1131,6 +1132,15 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns) {
   patterns.insert<
+      // Math dialect operations.
+      // TODO: Move to separate pass.
+      UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
+      UnaryAndBinaryOpPattern<math::ExpOp, spirv::GLSLExpOp>,
+      UnaryAndBinaryOpPattern<math::LogOp, spirv::GLSLLogOp>,
+      UnaryAndBinaryOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
+      UnaryAndBinaryOpPattern<math::SinOp, spirv::GLSLSinOp>,
+      UnaryAndBinaryOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
+      UnaryAndBinaryOpPattern<math::TanhOp, spirv::GLSLTanhOp>,
       // Unary and binary patterns
       BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
       BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
@@ -1138,25 +1148,18 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<AddFOp, spirv::FAddOp>,
       UnaryAndBinaryOpPattern<AddIOp, spirv::IAddOp>,
       UnaryAndBinaryOpPattern<CeilFOp, spirv::GLSLCeilOp>,
-      UnaryAndBinaryOpPattern<CosOp, spirv::GLSLCosOp>,
       UnaryAndBinaryOpPattern<DivFOp, spirv::FDivOp>,
-      UnaryAndBinaryOpPattern<ExpOp, spirv::GLSLExpOp>,
       UnaryAndBinaryOpPattern<FloorFOp, spirv::GLSLFloorOp>,
-      UnaryAndBinaryOpPattern<LogOp, spirv::GLSLLogOp>,
       UnaryAndBinaryOpPattern<MulFOp, spirv::FMulOp>,
       UnaryAndBinaryOpPattern<MulIOp, spirv::IMulOp>,
       UnaryAndBinaryOpPattern<NegFOp, spirv::FNegateOp>,
       UnaryAndBinaryOpPattern<RemFOp, spirv::FRemOp>,
-      UnaryAndBinaryOpPattern<RsqrtOp, spirv::GLSLInverseSqrtOp>,
       UnaryAndBinaryOpPattern<ShiftLeftOp, spirv::ShiftLeftLogicalOp>,
       UnaryAndBinaryOpPattern<SignedDivIOp, spirv::SDivOp>,
       UnaryAndBinaryOpPattern<SignedShiftRightOp,
                               spirv::ShiftRightArithmeticOp>,
-      UnaryAndBinaryOpPattern<SinOp, spirv::GLSLSinOp>,
-      UnaryAndBinaryOpPattern<SqrtOp, spirv::GLSLSqrtOp>,
-      UnaryAndBinaryOpPattern<SubFOp, spirv::FSubOp>,
       UnaryAndBinaryOpPattern<SubIOp, spirv::ISubOp>,
-      UnaryAndBinaryOpPattern<TanhOp, spirv::GLSLTanhOp>,
+      UnaryAndBinaryOpPattern<SubFOp, spirv::FSubOp>,
       UnaryAndBinaryOpPattern<UnsignedDivIOp, spirv::UDivOp>,
       UnaryAndBinaryOpPattern<UnsignedRemIOp, spirv::UModOp>,
       UnaryAndBinaryOpPattern<UnsignedShiftRightOp, spirv::ShiftRightLogicalOp>,

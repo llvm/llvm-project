@@ -529,7 +529,7 @@ struct PGOEdge {
       : SrcBB(Src), DestBB(Dest), Weight(W) {}
 
   // Return the information string of an edge.
-  const std::string infoString() const {
+  std::string infoString() const {
     return (Twine(Removed ? "-" : " ") + (InMST ? " " : "*") +
             (IsCritical ? "c" : " ") + "  W=" + Twine(Weight)).str();
   }
@@ -544,7 +544,7 @@ struct BBInfo {
   BBInfo(unsigned IX) : Group(this), Index(IX) {}
 
   // Return the information string of this object.
-  const std::string infoString() const {
+  std::string infoString() const {
     return (Twine("Index=") + Twine(Index)).str();
   }
 
@@ -987,7 +987,7 @@ struct PGOUseEdge : public PGOEdge {
   }
 
   // Return the information string for this object.
-  const std::string infoString() const {
+  std::string infoString() const {
     if (!CountValid)
       return PGOEdge::infoString();
     return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
@@ -1018,7 +1018,7 @@ struct UseBBInfo : public BBInfo {
   }
 
   // Return the information string of this object.
-  const std::string infoString() const {
+  std::string infoString() const {
     if (!CountValid)
       return BBInfo::infoString();
     return (Twine(BBInfo::infoString()) + "  Count=" + Twine(CountValue)).str();
@@ -1147,7 +1147,7 @@ private:
   void setEdgeCount(DirectEdges &Edges, uint64_t Value);
 
   // Return FuncName string;
-  const std::string getFuncName() const { return FuncInfo.FuncName; }
+  std::string getFuncName() const { return FuncInfo.FuncName; }
 
   // Set the hot/cold inline hints based on the count values.
   // FIXME: This function should be removed once the functionality in

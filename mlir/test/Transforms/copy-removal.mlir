@@ -174,7 +174,7 @@ func @test_with_temp_usage_after_copy() -> memref<5xf32> {
     ins(%temp : memref<5xf32>)
    outs(%res : memref<5xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
   }
   dealloc %ret : memref<5xf32>
@@ -253,7 +253,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>)
     ins(%arg0 : memref<2xf32>)
    outs(%temp : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
+    %tmp2 = math.exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
   }
   "linalg.copy"(%temp, %result) : (memref<2xf32>, memref<2xf32>) -> ()
@@ -279,7 +279,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
     ins(%arg0 : memref<2xf32>)
    outs(%temp : memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
   }
   linalg.generic {
@@ -288,7 +288,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
     ins(%arg0 : memref<2xf32>)
    outs(%to : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
+    %tmp2 = math.exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
   }
   // CHECK: linalg.copy

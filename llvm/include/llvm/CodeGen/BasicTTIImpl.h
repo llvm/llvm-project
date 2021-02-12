@@ -785,13 +785,14 @@ public:
         return 0;
 
       // If this is a zext/sext of a load, return 0 if the corresponding
-      // extending load exists on target.
+      // extending load exists on target and the result type is legal.
       if (CCH == TTI::CastContextHint::Normal) {
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
           ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
-        if (TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
+        if (DstLT.first == SrcLT.first &&
+            TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
           return 0;
       }
       break;
@@ -851,9 +852,8 @@ public:
       bool SplitDst =
           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
           TargetLowering::TypeSplitVector;
-      if ((SplitSrc || SplitDst) &&
-          cast<FixedVectorType>(SrcVTy)->getNumElements() > 1 &&
-          cast<FixedVectorType>(DstVTy)->getNumElements() > 1) {
+      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
+          DstVTy->getElementCount().isVector()) {
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         T *TTI = static_cast<T *>(this);

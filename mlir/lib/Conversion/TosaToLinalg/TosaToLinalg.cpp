@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -64,15 +65,15 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::PowOp
   if (isa<tosa::PowOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<mlir::PowFOp>(loc, resultTypes, args);
+    return rewriter.create<mlir::math::PowFOp>(loc, resultTypes, args);
 
   // tosa::LogOp
   if (isa<tosa::LogOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<mlir::LogOp>(loc, resultTypes, args);
+    return rewriter.create<mlir::math::LogOp>(loc, resultTypes, args);
 
   // tosa::ExpOp
   if (isa<tosa::ExpOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<mlir::ExpOp>(loc, resultTypes, args);
+    return rewriter.create<mlir::math::ExpOp>(loc, resultTypes, args);
 
   // tosa::SubOp
   if (isa<tosa::SubOp>(op) && elementTy.isa<FloatType>())
@@ -83,7 +84,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::TanhOp
   if (isa<tosa::TanhOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<mlir::TanhOp>(loc, resultTypes, args);
+    return rewriter.create<mlir::math::TanhOp>(loc, resultTypes, args);
 
   // tosa::GreaterOp
   if (isa<tosa::GreaterOp>(op) && elementTy.isa<FloatType>())

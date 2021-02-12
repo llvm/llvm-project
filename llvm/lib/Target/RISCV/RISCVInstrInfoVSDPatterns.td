@@ -566,6 +566,11 @@ foreach mti = AllMasks in {
   def : Pat<(mti.Mask (or VR:$rs1, (vnot VR:$rs2))),
             (!cast<Instruction>("PseudoVMORNOT_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, mti.AVL, mti.SEW)>;
+
+  // Handle vnot the same as the vnot.mm pseudoinstruction.
+  def : Pat<(mti.Mask (vnot VR:$rs)),
+            (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
+                 VR:$rs, VR:$rs, mti.AVL, mti.SEW)>;
 }
 
 } // Predicates = [HasStdExtV]

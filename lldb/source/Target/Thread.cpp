@@ -1289,16 +1289,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
-  ThreadPlanSP thread_plan_sp(
-      new ThreadPlanStepInRange(*this, range, addr_context, stop_other_threads,
-                                step_in_avoids_code_without_debug_info,
-                                step_out_avoids_code_without_debug_info));
-  ThreadPlanStepInRange *plan =
-      static_cast<ThreadPlanStepInRange *>(thread_plan_sp.get());
-
-  if (step_in_target)
-    plan->SetStepInTarget(step_in_target);
-
+  ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
+      *this, range, addr_context, step_in_target, stop_other_threads,
+      step_in_avoids_code_without_debug_info,
+      step_out_avoids_code_without_debug_info));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }

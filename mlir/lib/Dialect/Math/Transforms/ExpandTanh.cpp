@@ -10,27 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/TypeUtilities.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
 namespace {
-
 /// Expands tanh op into
 ///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
 ///   2) exp^{2x}-1 / exp^{2x}+1  , if x < 0
-struct TanhOpConverter : public OpRewritePattern<TanhOp> {
+struct TanhOpConverter : public OpRewritePattern<math::TanhOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TanhOp op,
+  LogicalResult matchAndRewrite(math::TanhOp op,
                                 PatternRewriter &rewriter) const final {
     auto floatType = op.operand().getType();
     Location loc = op.getLoc();
@@ -42,13 +38,13 @@ public:
 
     // Case 1: tanh(x) = 1-exp^{-2x} / 1+exp^{-2x}
     Value negDoubledX = rewriter.create<NegFOp>(loc, doubledX);
-    Value exp2x = rewriter.create<ExpOp>(loc, negDoubledX);
+    Value exp2x = rewriter.create<math::ExpOp>(loc, negDoubledX);
     Value dividend = rewriter.create<SubFOp>(loc, one, exp2x);
     Value divisor = rewriter.create<AddFOp>(loc, one, exp2x);
     Value positiveRes = rewriter.create<DivFOp>(loc, dividend, divisor);
 
     // Case 2: tanh(x) = exp^{2x}-1 / exp^{2x}+1
-    exp2x = rewriter.create<ExpOp>(loc, doubledX);
+    exp2x = rewriter.create<math::ExpOp>(loc, doubledX);
     dividend = rewriter.create<SubFOp>(loc, exp2x, one);
     divisor = rewriter.create<AddFOp>(loc, exp2x, one);
     Value negativeRes = rewriter.create<DivFOp>(loc, dividend, divisor);

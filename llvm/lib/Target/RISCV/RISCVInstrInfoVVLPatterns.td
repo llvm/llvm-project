@@ -64,6 +64,10 @@ def riscv_urem_vl : SDNode<"RISCVISD::UREM_VL", SDT_RISCVIntBinOp_VL>;
 def riscv_shl_vl  : SDNode<"RISCVISD::SHL_VL",  SDT_RISCVIntBinOp_VL>;
 def riscv_sra_vl  : SDNode<"RISCVISD::SRA_VL",  SDT_RISCVIntBinOp_VL>;
 def riscv_srl_vl  : SDNode<"RISCVISD::SRL_VL",  SDT_RISCVIntBinOp_VL>;
+def riscv_smin_vl : SDNode<"RISCVISD::SMIN_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_smax_vl : SDNode<"RISCVISD::SMAX_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_umin_vl : SDNode<"RISCVISD::UMIN_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_umax_vl : SDNode<"RISCVISD::UMAX_VL", SDT_RISCVIntBinOp_VL>;
 def riscv_fadd_vl : SDNode<"RISCVISD::FADD_VL", SDT_RISCVFPBinOp_VL, [SDNPCommutative]>;
 def riscv_fsub_vl : SDNode<"RISCVISD::FSUB_VL", SDT_RISCVFPBinOp_VL>;
 def riscv_fmul_vl : SDNode<"RISCVISD::FMUL_VL", SDT_RISCVFPBinOp_VL, [SDNPCommutative]>;
@@ -220,6 +224,12 @@ defm "" : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
+
+// 12.9. Vector Integer Min/Max Instructions
+defm "" : VPatBinaryVL_VV_VX<riscv_umin_vl, "PseudoVMINU">;
+defm "" : VPatBinaryVL_VV_VX<riscv_smin_vl, "PseudoVMIN">;
+defm "" : VPatBinaryVL_VV_VX<riscv_umax_vl, "PseudoVMAXU">;
+defm "" : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
 
 // 12.10. Vector Single-Width Integer Multiply Instructions
 defm "" : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;

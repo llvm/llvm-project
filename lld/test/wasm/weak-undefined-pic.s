@@ -22,6 +22,7 @@ get_foo_addr:
 _start:
   .functype _start () -> ()
   call get_foo_addr
+  call foo
   end_function
 
 .weak foo
@@ -68,11 +69,15 @@ _start:
 # CHECK-NEXT:      - Index:           1
 # CHECK-NEXT:        Name:            'GOT.func.internal.undefined_weak:foo'
 
-# With `-pie` or `-shared` the resolution should be deferred to the dynamic
-# linker and the function address should be imported as GOT.func.foo.
+# With `-pie + + --unresolved-symbols=import-functions` or `-shared` the
+# resolution should be deferred to the dynamic linker and the function address
+# should be imported as GOT.func.foo.
 #
-# RUN: wasm-ld --experimental-pic -pie %t.o -o %t3.wasm
+# RUN: wasm-ld --experimental-pic -shared %t.o -o %t3.wasm
 # RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=IMPORT
+#
+# RUN: wasm-ld --experimental-pic -pie --unresolved-symbols=import-functions %t.o -o %t4.wasm
+# RUN: obj2yaml %t4.wasm | FileCheck %s --check-prefix=IMPORT
 
 #      IMPORT:  - Type:            IMPORT
 #      IMPORT:      - Module:          GOT.func
@@ -88,3 +93,12 @@ _start:
 # IMPORT-NEXT:         Name:            __table_base
 # IMPORT-NEXT:       - Index:           2
 # IMPORT-NEXT:         Name:            foo
+
+# With just `-pie` (which does not default to import-functions) there shoule be
+# no import at all.
+#
+# RUN: wasm-ld --experimental-pic -pie %t.o -o %t5.wasm
+# RUN: obj2yaml %t5.wasm | FileCheck %s --check-prefix=NO-IMPORT
+
+# NO-IMPORT:      Name:            'undefined_weak:foo'
+# NO-IMPORT-NOT:  Name: foo

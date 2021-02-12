@@ -2957,35 +2957,44 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return source(); }
 
-llvm::Optional<SmallVector<bool, 4>>
+/// Given an `originalShape` and a `reducedShape` assumed to be a subset of
+/// `originalShape` with some `1` entries erased, return the set of indices
+/// that specifies which of the entries of `originalShape` are dropped to obtain
+/// `reducedShape`. The returned mask can be applied as a projection to
+/// `originalShape` to obtain the `reducedShape`. This mask is useful to track
+/// which dimensions must be kept when e.g. compute MemRef strides under
+/// rank-reducing operations. Return None if reducedShape cannot be obtained
+/// by dropping only `1` entries in `originalShape`.
+llvm::Optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
                                ArrayRef<int64_t> reducedShape) {
   size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();
-  SmallVector<bool, 4> mask(originalRank);
+  llvm::SmallDenseSet<unsigned> unusedDims;
   unsigned reducedIdx = 0;
   for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
-    // Skip matching dims greedily.
-    mask[originalIdx] =
-        (reducedIdx < reducedRank) &&
-        (originalShape[originalIdx] == reducedShape[reducedIdx]);
-    if (mask[originalIdx])
+    // Greedily insert `originalIdx` if no match.
+    if (reducedIdx < reducedRank &&
+        originalShape[originalIdx] == reducedShape[reducedIdx]) {
       reducedIdx++;
-    // 1 is the only non-matching allowed.
-    else if (originalShape[originalIdx] != 1)
-      return {};
+      continue;
+    }
+
+    unusedDims.insert(originalIdx);
+    // If no match on `originalIdx`, the `originalShape` at this dimension
+    // must be 1, otherwise we bail.
+    if (originalShape[originalIdx] != 1)
+      return llvm::None;
   }
-
+  // The whole reducedShape must be scanned, otherwise we bail.
   if (reducedIdx != reducedRank)
-    return {};
-
-  return mask;
+    return llvm::None;
+  return unusedDims;
 }
 
 enum SubViewVerificationResult {
   Success,
   RankTooLarge,
   SizeMismatch,
-  StrideMismatch,
   ElemTypeMismatch,
   MemSpaceMismatch,
   AffineMapMismatch
@@ -2994,8 +3003,9 @@ enum SubViewVerificationResult {
 /// Checks if `original` Type type can be rank reduced to `reduced` type.
 /// This function is slight variant of `is subsequence` algorithm where
 /// not matching dimension must be 1.
-static SubViewVerificationResult isRankReducedType(Type originalType,
-                                                   Type candidateReducedType) {
+static SubViewVerificationResult
+isRankReducedType(Type originalType, Type candidateReducedType,
+                  std::string *errMsg = nullptr) {
   if (originalType == candidateReducedType)
     return SubViewVerificationResult::Success;
   if (!originalType.isa<RankedTensorType>() && !originalType.isa<MemRefType>())
@@ -3019,12 +3029,16 @@ static SubViewVerificationResult isRankReducedType(Type originalType,
   if (candidateReducedRank > originalRank)
     return SubViewVerificationResult::RankTooLarge;
 
-  auto optionalMask =
+  auto optionalUnusedDimsMask =
       computeRankReductionMask(originalShape, candidateReducedShape);
 
   // Sizes cannot be matched in case empty vector is returned.
-  if (!optionalMask.hasValue())
+  if (!optionalUnusedDimsMask.hasValue())
     return SubViewVerificationResult::SizeMismatch;
+
+  if (originalShapedType.getElementType() !=
+      candidateReducedShapedType.getElementType())
+    return SubViewVerificationResult::ElemTypeMismatch;
 
   // We are done for the tensor case.
   if (originalType.isa<RankedTensorType>())
@@ -3033,74 +3047,54 @@ static SubViewVerificationResult isRankReducedType(Type originalType,
   // Strided layout logic is relevant for MemRefType only.
   MemRefType original = originalType.cast<MemRefType>();
   MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
-  MLIRContext *c = original.getContext();
-  int64_t originalOffset, candidateReducedOffset;
-  SmallVector<int64_t, 4> originalStrides, candidateReducedStrides, keepStrides;
-  SmallVector<bool, 4> keepMask = optionalMask.getValue();
-  (void)getStridesAndOffset(original, originalStrides, originalOffset);
-  (void)getStridesAndOffset(candidateReduced, candidateReducedStrides,
-                            candidateReducedOffset);
-
-  // Filter strides based on the mask and check that they are the same
-  // as candidateReduced ones.
-  unsigned candidateReducedIdx = 0;
-  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
-    if (keepMask[originalIdx]) {
-      if (originalStrides[originalIdx] !=
-          candidateReducedStrides[candidateReducedIdx++])
-        return SubViewVerificationResult::StrideMismatch;
-      keepStrides.push_back(originalStrides[originalIdx]);
-    }
-  }
-
-  if (original.getElementType() != candidateReduced.getElementType())
-    return SubViewVerificationResult::ElemTypeMismatch;
-
   if (original.getMemorySpace() != candidateReduced.getMemorySpace())
     return SubViewVerificationResult::MemSpaceMismatch;
 
-  // reducedMap is obtained by projecting away the dimensions inferred from
-  // matching the 1's positions in candidateReducedType.
-  auto reducedMap = makeStridedLinearLayoutMap(keepStrides, originalOffset, c);
-
-  MemRefType expectedReducedType = MemRefType::get(
-      candidateReduced.getShape(), candidateReduced.getElementType(),
-      reducedMap, candidateReduced.getMemorySpace());
-  expectedReducedType = canonicalizeStridedLayout(expectedReducedType);
-
-  if (expectedReducedType != canonicalizeStridedLayout(candidateReduced))
+  llvm::SmallDenseSet<unsigned> unusedDims = optionalUnusedDimsMask.getValue();
+  auto inferredType =
+      getProjectedMap(getStridedLinearLayoutMap(original), unusedDims);
+  AffineMap candidateLayout;
+  if (candidateReduced.getAffineMaps().empty())
+    candidateLayout = getStridedLinearLayoutMap(candidateReduced);
+  else
+    candidateLayout = candidateReduced.getAffineMaps().front();
+  if (inferredType != candidateLayout) {
+    if (errMsg) {
+      llvm::raw_string_ostream os(*errMsg);
+      os << "inferred type: " << inferredType;
+    }
     return SubViewVerificationResult::AffineMapMismatch;
-
+  }
   return SubViewVerificationResult::Success;
 }
 
 template <typename OpTy>
 static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
-                                            OpTy op, Type expectedType) {
+                                            OpTy op, Type expectedType,
+                                            StringRef errMsg = "") {
   auto memrefType = expectedType.cast<ShapedType>();
   switch (result) {
   case SubViewVerificationResult::Success:
     return success();
   case SubViewVerificationResult::RankTooLarge:
     return op.emitError("expected result rank to be smaller or equal to ")
-           << "the source rank.";
+           << "the source rank. " << errMsg;
   case SubViewVerificationResult::SizeMismatch:
     return op.emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes)";
-  case SubViewVerificationResult::StrideMismatch:
-    return op.emitError("expected result type to be ")
-           << expectedType
-           << " or a rank-reduced version. (mismatch of result strides)";
+           << " or a rank-reduced version. (mismatch of result sizes) "
+           << errMsg;
   case SubViewVerificationResult::ElemTypeMismatch:
     return op.emitError("expected result element type to be ")
-           << memrefType.getElementType();
+           << memrefType.getElementType() << errMsg;
   case SubViewVerificationResult::MemSpaceMismatch:
-    return op.emitError("expected result and source memory spaces to match.");
+    return op.emitError("expected result and source memory spaces to match.")
+           << errMsg;
   case SubViewVerificationResult::AffineMapMismatch:
     return op.emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result affine map)";
+           << " or a rank-reduced version. (mismatch of result affine map) "
+           << errMsg;
   }
   llvm_unreachable("unexpected subview verification result");
 }
@@ -3126,8 +3120,9 @@ static LogicalResult verify(SubViewOp op) {
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
 
-  auto result = isRankReducedType(expectedType, subViewType);
-  return produceSubViewErrorMsg(result, op, expectedType);
+  std::string errMsg;
+  auto result = isRankReducedType(expectedType, subViewType, &errMsg);
+  return produceSubViewErrorMsg(result, op, expectedType, errMsg);
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {

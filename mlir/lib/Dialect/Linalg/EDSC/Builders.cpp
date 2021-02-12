@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Math/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -113,7 +114,7 @@ Operation *mlir::edsc::ops::linalg_generic_pointwise(
 
 Operation *mlir::edsc::ops::linalg_generic_pointwise_tanh(StructuredIndexed I,
                                                           StructuredIndexed O) {
-  UnaryPointwiseOpBuilder unOp([](Value a) -> Value { return std_tanh(a); });
+  UnaryPointwiseOpBuilder unOp([](Value a) -> Value { return math_tanh(a); });
   return linalg_generic_pointwise(unOp, I, O);
 }
 

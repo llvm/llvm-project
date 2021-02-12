@@ -28,11 +28,9 @@ public:
   create(const BinarySampleCounterMap &BinarySampleCounters,
          enum PerfScriptType SampleType);
   virtual void generateProfile() = 0;
-  // Merge and trim profile with cold context before serialization,
-  // only eligible for CS profile
-  virtual void
-  mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap){};
   // Use SampleProfileWriter to serialize profile map
+  virtual void write(std::unique_ptr<SampleProfileWriter> Writer,
+                     StringMap<FunctionSamples> &ProfileMap);
   void write();
 
 protected:
@@ -68,8 +66,6 @@ public:
 
 public:
   void generateProfile() override {
-    // Enable context-sensitive functionalities in SampleProf
-    FunctionSamples::ProfileIsCS = true;
     for (const auto &BI : BinarySampleCounters) {
       ProfiledBinary *Binary = BI.first;
       for (const auto &CI : BI.second) {
@@ -205,7 +201,9 @@ protected:
   FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
   // Merge cold context profile whose total sample is below threshold
   // into base profile.
-  void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap) override;
+  void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap);
+  void write(std::unique_ptr<SampleProfileWriter> Writer,
+             StringMap<FunctionSamples> &ProfileMap) override;
 
 private:
   // Helper function for updating body sample for a leaf location in

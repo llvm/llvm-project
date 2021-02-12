@@ -27,7 +27,7 @@ void parallel_atomic_ewc() {
   {
       // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
       // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
-      // CHECK: [[SCALAR_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic
+      // CHECK: [[SCALAR_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic, align 4
       // CHECK: store i32 [[SCALAR_VAL]], i32* @b
       // CHECK98: invoke void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK11: call void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
@@ -36,21 +36,21 @@ void parallel_atomic_ewc() {
       // CHECK-DAG: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
       // CHECK-DAG: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK-DAG: [[B_VAL:%.+]] = load i32, i32* @b
-      // CHECK: store atomic i32 [[B_VAL]], i32* [[SCALAR_ADDR]] monotonic
+      // CHECK: store atomic i32 [[B_VAL]], i32* [[SCALAR_ADDR]] monotonic, align 4
       // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic write
       St().get() = b;
       // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
       // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK: [[B_VAL:%.+]] = load i32, i32* @b
-      // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic,
+      // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic, align 4
       // CHECK: br label %[[OMP_UPDATE:.+]]
       // CHECK: [[OMP_UPDATE]]
       // CHECK: [[OLD_PHI_VAL:%.+]] = phi i32 [ [[OLD_VAL]], %{{.+}} ], [ [[NEW_OLD_VAL:%.+]], %[[OMP_UPDATE]] ]
       // CHECK: [[NEW_VAL:%.+]] = srem i32 [[OLD_PHI_VAL]], [[B_VAL]]
       // CHECK: store i32 [[NEW_VAL]], i32* [[TEMP:%.+]],
       // CHECK: [[NEW_VAL:%.+]] = load i32, i32* [[TEMP]],
-      // CHECK: [[RES:%.+]] = cmpxchg i32* [[SCALAR_ADDR]], i32 [[OLD_PHI_VAL]], i32 [[NEW_VAL]] monotonic monotonic
+      // CHECK: [[RES:%.+]] = cmpxchg i32* [[SCALAR_ADDR]], i32 [[OLD_PHI_VAL]], i32 [[NEW_VAL]] monotonic monotonic, align 4
       // CHECK: [[NEW_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
       // CHECK: [[COND:%.+]] = extractvalue { i32, i1 } [[RES]], 1
       // CHECK: br i1 [[COND]], label %[[OMP_DONE:.+]], label %[[OMP_UPDATE]]
@@ -63,14 +63,14 @@ void parallel_atomic_ewc() {
       // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
       // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
       // CHECK: [[B_VAL:%.+]] = load i32, i32* @b
-      // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic,
+      // CHECK: [[OLD_VAL:%.+]] = load atomic i32, i32* [[SCALAR_ADDR]] monotonic, align 4
       // CHECK: br label %[[OMP_UPDATE:.+]]
       // CHECK: [[OMP_UPDATE]]
       // CHECK: [[OLD_PHI_VAL:%.+]] = phi i32 [ [[OLD_VAL]], %{{.+}} ], [ [[NEW_OLD_VAL:%.+]], %[[OMP_UPDATE]] ]
       // CHECK: [[NEW_CALC_VAL:%.+]] = srem i32 [[OLD_PHI_VAL]], [[B_VAL]]
       // CHECK: store i32 [[NEW_CALC_VAL]], i32* [[TEMP:%.+]],
       // CHECK: [[NEW_VAL:%.+]] = load i32, i32* [[TEMP]],
-      // CHECK: [[RES:%.+]] = cmpxchg i32* [[SCALAR_ADDR]], i32 [[OLD_PHI_VAL]], i32 [[NEW_VAL]] monotonic monotonic
+      // CHECK: [[RES:%.+]] = cmpxchg i32* [[SCALAR_ADDR]], i32 [[OLD_PHI_VAL]], i32 [[NEW_VAL]] monotonic monotonic, align 4
       // CHECK: [[NEW_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
       // CHECK: [[COND:%.+]] = extractvalue { i32, i1 } [[RES]], 1
       // CHECK: br i1 [[COND]], label %[[OMP_DONE:.+]], label %[[OMP_UPDATE]]
@@ -92,28 +92,28 @@ void parallel_atomic() {
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
     // TERM_DEBUG:     invoke {{.*}}foo{{.*}}()
     // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
-    // TERM_DEBUG:     load atomic i32, i32* @{{.+}} monotonic, {{.*}}!dbg [[READ_LOC:![0-9]+]]
+    // TERM_DEBUG:     load atomic i32, i32* @{{.+}} monotonic, align 4, !dbg [[READ_LOC:![0-9]+]]
     foo() = a;
 #pragma omp atomic write
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
     // TERM_DEBUG:     invoke {{.*}}foo{{.*}}()
     // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
-    // TERM_DEBUG:     store atomic i32 {{%.+}}, i32* @{{.+}} monotonic, {{.*}}!dbg [[WRITE_LOC:![0-9]+]]
+    // TERM_DEBUG:     store atomic i32 {{%.+}}, i32* @{{.+}} monotonic, align 4, !dbg [[WRITE_LOC:![0-9]+]]
     a = foo();
 #pragma omp atomic update
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
     // TERM_DEBUG:     invoke {{.*}}foo{{.*}}()
     // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
-    // TERM_DEBUG:     atomicrmw add i32* @{{.+}}, i32 %{{.+}} monotonic, {{.*}}!dbg [[UPDATE_LOC:![0-9]+]]
+    // TERM_DEBUG:     atomicrmw add i32* @{{.+}}, i32 %{{.+}} monotonic, align 4, !dbg [[UPDATE_LOC:![0-9]+]]
     a += foo();
 #pragma omp atomic capture
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
     // TERM_DEBUG:     invoke {{.*}}foo{{.*}}()
     // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
     // TERM_DEBUG-NOT: __kmpc_global_thread_num
-    // TERM_DEBUG:     [[OLD_VAL:%.+]] = atomicrmw add i32* @{{.+}}, i32 %{{.+}} monotonic, {{.*}}!dbg [[CAPTURE_LOC:![0-9]+]]
+    // TERM_DEBUG:     [[OLD_VAL:%.+]] = atomicrmw add i32* @{{.+}}, i32 %{{.+}} monotonic, align 4, !dbg [[CAPTURE_LOC:![0-9]+]]
     // TERM_DEBUG:     store i32 [[OLD_VAL]], i32* @b,
     {b = a; a += foo(); }
   }
