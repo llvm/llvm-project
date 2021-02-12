@@ -239,11 +239,12 @@ static Value getPHISourceValue(Block *current, Block *pred,
 }
 
 /// Connect the PHI nodes to the results of preceding blocks.
-template <typename T>
-static void connectPHINodes(T &func, const ModuleTranslation &state) {
+void mlir::LLVM::detail::connectPHINodes(Region &region,
+                                         const ModuleTranslation &state) {
   // Skip the first block, it cannot be branched to and its arguments correspond
   // to the arguments of the LLVM function.
-  for (auto it = std::next(func.begin()), eit = func.end(); it != eit; ++it) {
+  for (auto it = std::next(region.begin()), eit = region.end(); it != eit;
+       ++it) {
     Block *bb = &*it;
     llvm::BasicBlock *llvmBB = state.lookupBlock(bb);
     auto phis = llvmBB->phis();
@@ -270,277 +271,21 @@ static void connectPHINodes(T &func, const ModuleTranslation &state) {
 }
 
 /// Sort function blocks topologically.
-template <typename T>
-static llvm::SetVector<Block *> topologicalSort(T &f) {
+llvm::SetVector<Block *>
+mlir::LLVM::detail::getTopologicallySortedBlocks(Region &region) {
   // For each block that has not been visited yet (i.e. that has no
   // predecessors), add it to the list as well as its successors.
   llvm::SetVector<Block *> blocks;
-  for (Block &b : f) {
+  for (Block &b : region) {
     if (blocks.count(&b) == 0) {
       llvm::ReversePostOrderTraversal<Block *> traversal(&b);
       blocks.insert(traversal.begin(), traversal.end());
     }
   }
-  assert(blocks.size() == f.getBlocks().size() && "some blocks are not sorted");
+  assert(blocks.size() == region.getBlocks().size() &&
+         "some blocks are not sorted");
 
   return blocks;
-}
-
-/// Convert the OpenMP parallel Operation to LLVM IR.
-LogicalResult
-ModuleTranslation::convertOmpParallel(Operation &opInst,
-                                      llvm::IRBuilder<> &builder) {
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
-  // relying on captured variables.
-  LogicalResult bodyGenStatus = success();
-
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
-    // ParallelOp has only one region associated with it.
-    auto &region = cast<omp::ParallelOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.par.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, bodyGenStatus);
-  };
-
-  // TODO: Perform appropriate actions according to the data-sharing
-  // attribute (shared, private, firstprivate, ...) of variables.
-  // Currently defaults to shared.
-  auto privCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                    llvm::Value &, llvm::Value &vPtr,
-                    llvm::Value *&replacementValue) -> InsertPointTy {
-    replacementValue = &vPtr;
-
-    return codeGenIP;
-  };
-
-  // TODO: Perform finalization actions for variables. This has to be
-  // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
-
-  llvm::Value *ifCond = nullptr;
-  if (auto ifExprVar = cast<omp::ParallelOp>(opInst).if_expr_var())
-    ifCond = lookupValue(ifExprVar);
-  llvm::Value *numThreads = nullptr;
-  if (auto numThreadsVar = cast<omp::ParallelOp>(opInst).num_threads_var())
-    numThreads = lookupValue(numThreadsVar);
-  llvm::omp::ProcBindKind pbKind = llvm::omp::OMP_PROC_BIND_default;
-  if (auto bind = cast<omp::ParallelOp>(opInst).proc_bind_val())
-    pbKind = llvm::omp::getProcBindKind(bind.getValue());
-  // TODO: Is the Parallel construct cancellable?
-  bool isCancellable = false;
-  // TODO: Determine the actual alloca insertion point, e.g., the function
-  // entry or the alloca insertion point as provided by the body callback
-  // above.
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
-  if (failed(bodyGenStatus))
-    return failure();
-  builder.restoreIP(
-      ompBuilder->createParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
-                                 ifCond, numThreads, pbKind, isCancellable));
-  return success();
-}
-
-void ModuleTranslation::convertOmpOpRegions(
-    Region &region, StringRef blockName,
-    llvm::BasicBlock &sourceBlock, llvm::BasicBlock &continuationBlock,
-    llvm::IRBuilder<> &builder, LogicalResult &bodyGenStatus) {
-  llvm::LLVMContext &llvmContext = builder.getContext();
-  for (Block &bb : region) {
-    llvm::BasicBlock *llvmBB = llvm::BasicBlock::Create(
-        llvmContext, blockName, builder.GetInsertBlock()->getParent());
-    mapBlock(&bb, llvmBB);
-  }
-
-  llvm::Instruction *sourceTerminator = sourceBlock.getTerminator();
-
-  // Convert blocks one by one in topological order to ensure
-  // defs are converted before uses.
-  llvm::SetVector<Block *> blocks = topologicalSort(region);
-  for (Block *bb : blocks) {
-    llvm::BasicBlock *llvmBB = lookupBlock(bb);
-    // Retarget the branch of the entry block to the entry block of the
-    // converted region (regions are single-entry).
-    if (bb->isEntryBlock()) {
-      assert(sourceTerminator->getNumSuccessors() == 1 &&
-             "provided entry block has multiple successors");
-      assert(sourceTerminator->getSuccessor(0) == &continuationBlock &&
-             "ContinuationBlock is not the successor of the entry block");
-      sourceTerminator->setSuccessor(0, llvmBB);
-    }
-
-    llvm::IRBuilder<>::InsertPointGuard guard(builder);
-    if (failed(convertBlock(*bb, bb->isEntryBlock(), builder))) {
-      bodyGenStatus = failure();
-      return;
-    }
-
-    // Special handling for `omp.yield` and `omp.terminator` (we may have more
-    // than one): they return the control to the parent OpenMP dialect operation
-    // so replace them with the branch to the continuation block. We handle this
-    // here to avoid relying inter-function communication through the
-    // ModuleTranslation class to set up the correct insertion point. This is
-    // also consistent with MLIR's idiom of handling special region terminators
-    // in the same code that handles the region-owning operation.
-    if (isa<omp::TerminatorOp, omp::YieldOp>(bb->getTerminator()))
-      builder.CreateBr(&continuationBlock);
-  }
-  // Finally, after all blocks have been traversed and values mapped,
-  // connect the PHI nodes to the results of preceding blocks.
-  connectPHINodes(region, *this);
-}
-
-LogicalResult ModuleTranslation::convertOmpMaster(Operation &opInst,
-                                                  llvm::IRBuilder<> &builder) {
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
-  // relying on captured variables.
-  LogicalResult bodyGenStatus = success();
-
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
-    // MasterOp has only one region associated with it.
-    auto &region = cast<omp::MasterOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.master.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, bodyGenStatus);
-  };
-
-  // TODO: Perform finalization actions for variables. This has to be
-  // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
-
-  builder.restoreIP(ompBuilder->createMaster(builder, bodyGenCB, finiCB));
-  return success();
-}
-
-/// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
-LogicalResult ModuleTranslation::convertOmpWsLoop(Operation &opInst,
-                                                  llvm::IRBuilder<> &builder) {
-  auto loop = cast<omp::WsLoopOp>(opInst);
-  // TODO: this should be in the op verifier instead.
-  if (loop.lowerBound().empty())
-    return failure();
-
-  if (loop.getNumLoops() != 1)
-    return opInst.emitOpError("collapsed loops not yet supported");
-
-  if (loop.schedule_val().hasValue() &&
-      omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue()) !=
-          omp::ClauseScheduleKind::Static)
-    return opInst.emitOpError(
-        "only static (default) loop schedule is currently supported");
-
-  // Find the loop configuration.
-  llvm::Value *lowerBound = lookupValue(loop.lowerBound()[0]);
-  llvm::Value *upperBound = lookupValue(loop.upperBound()[0]);
-  llvm::Value *step = lookupValue(loop.step()[0]);
-  llvm::Type *ivType = step->getType();
-  llvm::Value *chunk = loop.schedule_chunk_var()
-                           ? lookupValue(loop.schedule_chunk_var())
-                           : llvm::ConstantInt::get(ivType, 1);
-
-  // Set up the source location value for OpenMP runtime.
-  llvm::DISubprogram *subprogram =
-      builder.GetInsertBlock()->getParent()->getSubprogram();
-  const llvm::DILocation *diLoc =
-      debugTranslation->translateLoc(opInst.getLoc(), subprogram);
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
-                                                    llvm::DebugLoc(diLoc));
-
-  // Generator of the canonical loop body. Produces an SESE region of basic
-  // blocks.
-  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
-  // relying on captured variables.
-  LogicalResult bodyGenStatus = success();
-  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
-    llvm::IRBuilder<>::InsertPointGuard guard(builder);
-
-    // Make sure further conversions know about the induction variable.
-    mapValue(loop.getRegion().front().getArgument(0), iv);
-
-    llvm::BasicBlock *entryBlock = ip.getBlock();
-    llvm::BasicBlock *exitBlock =
-        entryBlock->splitBasicBlock(ip.getPoint(), "omp.wsloop.exit");
-
-    // Convert the body of the loop.
-    convertOmpOpRegions(loop.region(), "omp.wsloop.region", *entryBlock,
-                        *exitBlock, builder, bodyGenStatus);
-  };
-
-  // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes WsLoop is semantically similar to SCF loop,
-  // i.e. it has a positive step, uses signed integer semantics. Reconsider
-  // this code when WsLoop clearly supports more cases.
-  llvm::BasicBlock *insertBlock = builder.GetInsertBlock();
-  llvm::CanonicalLoopInfo *loopInfo = ompBuilder->createCanonicalLoop(
-      ompLoc, bodyGen, lowerBound, upperBound, step, /*IsSigned=*/true,
-      /*InclusiveStop=*/loop.inclusive());
-  if (failed(bodyGenStatus))
-    return failure();
-
-  // TODO: get the alloca insertion point from the parallel operation builder.
-  // If we insert the at the top of the current function, they will be passed as
-  // extra arguments into the function the parallel operation builder outlines.
-  // Put them at the start of the current block for now.
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
-      insertBlock, insertBlock->getFirstInsertionPt());
-  loopInfo = ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
-                                                   !loop.nowait(), chunk);
-
-  // Continue building IR after the loop.
-  builder.restoreIP(loopInfo->getAfterIP());
-  return success();
-}
-
-/// Given an OpenMP MLIR operation, create the corresponding LLVM IR
-/// (including OpenMP runtime calls).
-LogicalResult
-ModuleTranslation::convertOmpOperation(Operation &opInst,
-                                       llvm::IRBuilder<> &builder) {
-  if (!ompBuilder) {
-    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-    ompBuilder->initialize();
-  }
-  return llvm::TypeSwitch<Operation *, LogicalResult>(&opInst)
-      .Case([&](omp::BarrierOp) {
-        ompBuilder->createBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
-        return success();
-      })
-      .Case([&](omp::TaskwaitOp) {
-        ompBuilder->createTaskwait(builder.saveIP());
-        return success();
-      })
-      .Case([&](omp::TaskyieldOp) {
-        ompBuilder->createTaskyield(builder.saveIP());
-        return success();
-      })
-      .Case([&](omp::FlushOp) {
-        // No support in Openmp runtime function (__kmpc_flush) to accept
-        // the argument list.
-        // OpenMP standard states the following:
-        //  "An implementation may implement a flush with a list by ignoring
-        //   the list, and treating it the same as a flush without a list."
-        //
-        // The argument list is discarded so that, flush with a list is treated
-        // same as a flush without a list.
-        ompBuilder->createFlush(builder.saveIP());
-        return success();
-      })
-      .Case(
-          [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
-      .Case([&](omp::MasterOp) { return convertOmpMaster(opInst, builder); })
-      .Case([&](omp::WsLoopOp) { return convertOmpWsLoop(opInst, builder); })
-      .Case<omp::YieldOp, omp::TerminatorOp>([](auto op) {
-        // `yield` and `terminator` can be just omitted. The block structure was
-        // created in the function that handles their parent operation.
-        assert(op->getNumOperands() == 0 &&
-               "unexpected OpenMP terminator with operands");
-        return success();
-      })
-      .Default([&](Operation *inst) {
-        return inst->emitError("unsupported OpenMP operation: ")
-               << inst->getName();
-      });
 }
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
@@ -549,14 +294,8 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
 /// different number of arguments.
 LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
                                                   llvm::IRBuilder<> &builder) {
-
-  // TODO(zinenko): this should be the "main" conversion here, remove the
-  // dispatch below.
   if (succeeded(iface.convertOperation(&opInst, builder, *this)))
     return success();
-
-  if (ompDialect && opInst.getDialect() == ompDialect)
-    return convertOmpOperation(opInst, builder);
 
   return opInst.emitError("unsupported or non-LLVM operation: ")
          << opInst.getName();
@@ -812,7 +551,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Then, convert blocks one by one in topological order to ensure defs are
   // converted before uses.
-  auto blocks = topologicalSort(func);
+  auto blocks = detail::getTopologicallySortedBlocks(func.getBody());
   for (Block *bb : blocks) {
     llvm::IRBuilder<> builder(llvmContext);
     if (failed(convertBlock(*bb, bb->isEntryBlock(), builder)))
@@ -821,7 +560,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Finally, after all blocks have been traversed and values mapped, connect
   // the PHI nodes to the results of preceding blocks.
-  connectPHINodes(func, *this);
+  detail::connectPHINodes(func.getBody(), *this);
   return success();
 }
 
@@ -879,6 +618,11 @@ ModuleTranslation::lookupValues(ValueRange values) {
   for (Value v : values)
     remapped.push_back(lookupValue(v));
   return remapped;
+}
+
+const llvm::DILocation *
+ModuleTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
+  return debugTranslation->translateLoc(loc, scope);
 }
 
 std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(

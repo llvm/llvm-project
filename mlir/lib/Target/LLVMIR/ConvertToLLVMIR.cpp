@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
@@ -70,6 +71,8 @@ void registerToLLVMIRTranslation() {
       },
       [](DialectRegistry &registry) {
         registry.insert<omp::OpenMPDialect>();
+        registry.addDialectInterface<omp::OpenMPDialect,
+                                     OpenMPDialectLLVMIRTranslationInterface>();
         registerLLVMDialectTranslation(registry);
       });
 }

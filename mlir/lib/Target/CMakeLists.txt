@@ -57,6 +57,7 @@ add_mlir_translation_library(MLIRTargetLLVMIR
 
   LINK_LIBS PUBLIC
   MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPToLLVMIRTranslation
   MLIRTargetLLVMIRModuleTranslation
   )
 
