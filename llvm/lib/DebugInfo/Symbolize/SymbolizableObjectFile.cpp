@@ -70,23 +70,19 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
         return std::move(E);
   }
 
-  std::vector<SymbolDesc> &Fs = res->Functions, &Os = res->Objects;
-  auto Uniquify = [](std::vector<SymbolDesc> &S) {
-    // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
-    // pick the one with the largest Size. This helps us avoid symbols with no
-    // size information (Size=0).
-    llvm::sort(S);
-    auto I = S.begin(), E = S.end(), J = S.begin();
-    while (I != E) {
-      auto OI = I;
-      while (++I != E && OI->Addr == I->Addr) {
-      }
-      *J++ = I[-1];
+  std::vector<SymbolDesc> &SS = res->Symbols;
+  // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
+  // pick the one with the largest Size. This helps us avoid symbols with no
+  // size information (Size=0).
+  llvm::sort(SS);
+  auto I = SS.begin(), E = SS.end(), J = SS.begin();
+  while (I != E) {
+    auto OI = I;
+    while (++I != E && OI->Addr == I->Addr) {
     }
-    S.erase(J, S.end());
-  };
-  Uniquify(Fs);
-  Uniquify(Os);
+    *J++ = I[-1];
+  }
+  SS.erase(J, SS.end());
 
   return std::move(res);
 }
@@ -138,7 +134,7 @@ Error SymbolizableObjectFile::addCoffExportSymbols(
     uint32_t NextOffset = I != E ? I->Offset : Export.Offset + 1;
     uint64_t SymbolStart = ImageBase + Export.Offset;
     uint64_t SymbolSize = NextOffset - Export.Offset;
-    Functions.push_back({SymbolStart, SymbolSize, Export.Name, 0});
+    Symbols.push_back({SymbolStart, SymbolSize, Export.Name, 0});
   }
   return Error::success();
 }
@@ -209,15 +205,7 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
 
   if (Obj.isELF() && ELFSymbolRef(Symbol).getBinding() != ELF::STB_LOCAL)
     ELFSymIdx = 0;
-  SymbolDesc SD = {SymbolAddress, SymbolSize, SymbolName, ELFSymIdx};
-  // DATA command symbolizes just ST_Data (ELF STT_OBJECT) symbols as an
-  // optimization. Treat everything else (e.g. ELF STT_NOTYPE, STT_FUNC and
-  // STT_GNU_IFUNC) as function symbols which can be used to symbolize
-  // addresses.
-  if (SymbolType == SymbolRef::ST_Data)
-    Objects.push_back(SD);
-  else
-    Functions.push_back(SD);
+  Symbols.push_back({SymbolAddress, SymbolSize, SymbolName, ELFSymIdx});
   return Error::success();
 }
 
@@ -234,9 +222,8 @@ uint64_t SymbolizableObjectFile::getModulePreferredBase() const {
 }
 
 bool SymbolizableObjectFile::getNameFromSymbolTable(
-    SymbolRef::Type Type, uint64_t Address, std::string &Name, uint64_t &Addr,
-    uint64_t &Size, std::string &FileName) const {
-  const auto &Symbols = Type == SymbolRef::ST_Function ? Functions : Objects;
+    uint64_t Address, std::string &Name, uint64_t &Addr, uint64_t &Size,
+    std::string &FileName) const {
   SymbolDesc SD{Address, UINT64_C(-1), StringRef(), 0};
   auto SymbolIterator = llvm::upper_bound(Symbols, SD);
   if (SymbolIterator == Symbols.begin())
@@ -287,8 +274,8 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
     std::string FunctionName, FileName;
     uint64_t Start, Size;
-    if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset.Address,
-                               FunctionName, Start, Size, FileName)) {
+    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
+                               FileName)) {
       LineInfo.FunctionName = FunctionName;
       if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty())
         LineInfo.FileName = FileName;
@@ -314,8 +301,8 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
     std::string FunctionName, FileName;
     uint64_t Start, Size;
-    if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset.Address,
-                               FunctionName, Start, Size, FileName)) {
+    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
+                               FileName)) {
       DILineInfo *LI = InlinedContext.getMutableFrame(
           InlinedContext.getNumberOfFrames() - 1);
       LI->FunctionName = FunctionName;
@@ -331,8 +318,8 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
     object::SectionedAddress ModuleOffset) const {
   DIGlobal Res;
   std::string FileName;
-  getNameFromSymbolTable(SymbolRef::ST_Data, ModuleOffset.Address, Res.Name,
-                         Res.Start, Res.Size, FileName);
+  getNameFromSymbolTable(ModuleOffset.Address, Res.Name, Res.Start, Res.Size,
+                         FileName);
   return Res;
 }
 
