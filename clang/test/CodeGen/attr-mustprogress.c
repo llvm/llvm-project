@@ -2,6 +2,9 @@
 // RUN: %clang_cc1 -std=c11 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
 // RUN: %clang_cc1 -std=c18 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
 // RUN: %clang_cc1 -std=c2x -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+//
+// RUN: %clang_cc1 -std=c11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
 
 int a = 0;
 int b = 0;
@@ -13,7 +16,7 @@ int b = 0;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
 // CHECK:       for.cond:
-// CHECK-NOT:    br {{.*}}!llvm.loop
+// CHECK-NOT:     br {{.*}}!llvm.loop
 //
 void f0() {
   for (; ;) ;
@@ -45,8 +48,9 @@ void f1() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    br i1 [[CMP]], label %for.body, label %for.end
 // CHECK:       for.body:
-// C99-NOT:      br {{.*}} !llvm.loop
-// C11:          br label %for.cond, !llvm.loop [[LOOP1:!.*]]
+// C99-NOT:       br {{.*}} !llvm.loop
+// C11:           br label %for.cond, !llvm.loop [[LOOP1:!.*]]
+// FINITE:        br label %for.cond, !llvm.loop [[LOOP1:!.*]]
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
@@ -73,6 +77,7 @@ void f2() {
 // CHECK:       for.body2:
 // C99-NOT:       br {{.*}}, !llvm.loop
 // C11:           br label %for.cond1, !llvm.loop [[LOOP2:!.*]]
+// FINITE:        br label %for.cond1, !llvm.loop [[LOOP2:!.*]]
 // CHECK:       for.end3:
 // CHECK-NEXT:    ret void
 //
@@ -88,7 +93,8 @@ void F() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %while.body
 // CHECK:       while.body:
-// CHECK-NOT:    br {{.*}}, !llvm.loop
+// CHECK-NOT:     br {{.*}}, !llvm.loop
+//
 void w1() {
   while (1) {
   }
@@ -104,8 +110,9 @@ void w1() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    br i1 [[CMP]], label %while.body, label %while.end
 // CHECK:       while.body:
-// C11:           br label %while.cond, [[LOOP5:!llvm.loop !.*]]
 // C99-NOT:       br {{.*}}, !llvm.loop
+// C11:           br label %while.cond, !llvm.loop [[LOOP3:!.*]]
+// FINITE:        br label %while.cond, !llvm.loop [[LOOP3:!.*]]
 // CHECK:       while.end:
 // CHECK-NEXT:    ret void
 //
@@ -125,7 +132,8 @@ void w2() {
 // CHECK-NEXT:    br i1 [[CMP]], label %while.body, label %while.end
 // CHECK:       while.body:
 // C99-NOT:       br {{.*}} !llvm.loop
-// C11:           br label %while.cond, !llvm.loop [[LOOP3:!.*]]
+// C11:           br label %while.cond, !llvm.loop [[LOOP4:!.*]]
+// FINITE:        br label %while.cond, !llvm.loop [[LOOP4:!.*]]
 // CHECK:       while.end:
 // CHECK-NEXT:    br label %while.body2
 // CHECK:       while.body2:
@@ -165,7 +173,8 @@ void d1() {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 // C99-NOT:       br {{.*}}, !llvm.loop
-// C11:           br i1 [[CMP]], label %do.body, label %do.end, !llvm.loop [[LOOP4:!.*]]
+// C11:           br i1 [[CMP]], label %do.body, label %do.end, !llvm.loop [[LOOP5:!.*]]
+// FINITE:        br i1 [[CMP]], label %do.body, label %do.end, !llvm.loop [[LOOP5:!.*]]
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
@@ -191,7 +200,8 @@ void d2() {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 // C99-NOT:       br {{.*}}, !llvm.loop
-// C11:           br i1 [[CMP]], label %do.body1, label %do.end3, !llvm.loop [[LOOP5:!.*]]
+// C11:           br i1 [[CMP]], label %do.body1, label %do.end3, !llvm.loop [[LOOP6:!.*]]
+// FINITE:        br i1 [[CMP]], label %do.body1, label %do.end3, !llvm.loop [[LOOP6:!.*]]
 // CHECK:       do.end3:
 // CHECK-NEXT:    ret void
 //
@@ -208,3 +218,4 @@ void D() {
 // C11: [[LOOP3]] = distinct !{[[LOOP3]], [[MP]]}
 // C11: [[LOOP4]] = distinct !{[[LOOP4]], [[MP]]}
 // C11: [[LOOP5]] = distinct !{[[LOOP5]], [[MP]]}
+// C11: [[LOOP6]] = distinct !{[[LOOP6]], [[MP]]}

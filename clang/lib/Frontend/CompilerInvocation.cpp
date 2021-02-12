@@ -1389,6 +1389,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Success &=
       parsePointerAuthOptions(Opts.PointerAuth, Args, LangOpts, Triple, Diags);
+  if (Args.hasArg(options::OPT_ffinite_loops))
+    Opts.setFiniteLoops(CodeGenOptions::FiniteLoopsKind::Always);
+  else if (Args.hasArg(options::OPT_fno_finite_loops))
+    Opts.setFiniteLoops(CodeGenOptions::FiniteLoopsKind::Never);
 
   // -f[no-]split-cold-code
   // This may only be enabled when optimizing, and when small code size
