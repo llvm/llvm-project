@@ -205,11 +205,9 @@ void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
   array_pod_sort(Types.begin(), Types.end());
 
   OS << '[';
-  for (unsigned i = 0, e = Types.size(); i != e; ++i) {
-    OS << ValueTypeByHwMode::getMVTName(Types[i]);
-    if (i != e-1)
-      OS << ' ';
-  }
+  ListSeparator LS(" ");
+  for (const MVT &T : Types)
+    OS << LS << ValueTypeByHwMode::getMVTName(T);
   OS << ']';
 }
 
@@ -3032,9 +3030,10 @@ InferAllTypes(const StringMap<SmallVector<TreePatternNode*,1> > *InNamedTypes) {
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
   if (!Args.empty()) {
-    OS << "(" << Args[0];
-    for (unsigned i = 1, e = Args.size(); i != e; ++i)
-      OS << ", " << Args[i];
+    OS << "(";
+    ListSeparator LS;
+    for (const std::string &Arg : Args)
+      OS << LS << Arg;
     OS << ")";
   }
   OS << ": ";
