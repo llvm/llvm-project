@@ -15,7 +15,7 @@
 #define FORTRAN_DIALECT_FIRCG_OPS
 
 include "mlir/IR/SymbolInterfaces.td"
-include "flang/Optimizer/TypePredicates.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";
