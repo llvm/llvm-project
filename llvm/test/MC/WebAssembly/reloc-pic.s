@@ -1,4 +1,5 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entryes result in R_WASM_GLOBAL_INDEX_LEB against
 # against the corrsponding function or data symbol and that the corresponding
@@ -190,6 +191,11 @@ hidden_func:
 # CHECK-NEXT:         Name:            hidden_func
 # CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 # CHECK-NEXT:         Function:        5
+# REF:              - Index:           10
+# REF-NEXT:           Kind:            TABLE
+# REF-NEXT:           Name:            __indirect_function_table
+# REF-NEXT:           Flags:           [ UNDEFINED, NO_STRIP ]
+# REF-NEXT:           Table:           0
 # CHECK-NEXT:     SegmentInfo:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Name:            .rodata.hidden_data
