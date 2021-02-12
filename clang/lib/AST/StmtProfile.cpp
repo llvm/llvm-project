@@ -462,6 +462,12 @@ void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
     Profiler->VisitStmt(C->getSimdlen());
 }
 
+void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
+  for (auto E : C->getSizesRefs())
+    if (E)
+      Profiler->VisitExpr(E);
+}
+
 void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   if (C->getAllocator())
     Profiler->VisitStmt(C->getAllocator());
@@ -848,8 +854,12 @@ StmtProfiler::VisitOMPExecutableDirective(const OMPExecutableDirective *S) {
       P.Visit(*I);
 }
 
-void StmtProfiler::VisitOMPLoopDirective(const OMPLoopDirective *S) {
+void StmtProfiler::VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *S) {
   VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPLoopDirective(const OMPLoopDirective *S) {
+  VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
@@ -858,6 +868,10 @@ void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
 
 void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
   VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+  VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
