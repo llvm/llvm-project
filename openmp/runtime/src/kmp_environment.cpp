@@ -376,6 +376,7 @@ static void ___kmp_env_blk_parse_windows(
         { "HOME=/home/lev", "TERM=xterm", NULL }
 */
 
+#if KMP_OS_UNIX
 static void
 ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
                           char **env // I: Unix environment to parse.
@@ -423,6 +424,7 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
   block->vars = vars;
   block->count = count;
 }
+#endif
 
 void __kmp_env_blk_init(kmp_env_blk_t *block, // M: Block to initialize.
                         char const *bulk // I: Initialization string, or NULL.
