@@ -19,11 +19,9 @@ body: |
 
    ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
    ; CHECK: instruction: %assert_zext_3:_(<2 x s32>) = G_ASSERT_ZEXT
-   ; CHECK: *** Bad machine code: operand types must be all-vector or all-scalar ***
-   ; CHECK: instruction: %assert_zext_3:_(<2 x s32>) = G_ASSERT_ZEXT
    %assert_zext_3:_(<2 x s32>) = G_ASSERT_ZEXT %0, 8
 
-   ; CHECK: *** Bad machine code: operand types must preserve number of vector elements ***
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
    ; CHECK: instruction: %assert_zext_4:_(<2 x s32>) = G_ASSERT_ZEXT
    %assert_zext_4:_(<2 x s32>) = G_ASSERT_ZEXT %1, 8
 
