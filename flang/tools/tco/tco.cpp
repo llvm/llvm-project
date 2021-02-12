@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -62,7 +62,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   mlir::DialectRegistry registry;
-  fir::registerFIRDialects(registry);
+  fir::support::registerDialects(registry);
   mlir::MLIRContext context(registry);
   auto owningRef = mlir::parseSourceFile(sourceMgr, &context);
 
@@ -106,7 +106,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
-  fir::registerFIRPasses();
+  fir::support::registerFIRPasses();
   [[maybe_unused]] InitLLVM y(argc, argv);
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
