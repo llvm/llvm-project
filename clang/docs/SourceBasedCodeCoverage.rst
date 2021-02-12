@@ -251,7 +251,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are four statistics tracked in a coverage summary:
+There are five statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -260,7 +260,8 @@ There are four statistics tracked in a coverage summary:
 * Instantiation coverage is the percentage of function instantiations which
   have been executed at least once. Template functions and static inline
   functions from headers are two kinds of functions which may have multiple
-  instantiations.
+  instantiations. This statistic is hidden by default in reports, but can be
+  enabled via the ``-show-instantiation-summary`` option.
 
 * Line coverage is the percentage of code lines which have been executed at
   least once. Only executable lines within function bodies are considered to be
