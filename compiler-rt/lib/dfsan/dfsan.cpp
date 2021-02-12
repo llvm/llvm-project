@@ -551,7 +551,7 @@ static void dfsan_fini() {
 }
 
 extern "C" void dfsan_flush() {
-  if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+  if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
     Die();
 }
 
@@ -560,8 +560,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
   ::InitializePlatformEarly();
 
-  if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
-    Die();
+  dfsan_flush();
   if (common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(ShadowAddr(), UnusedAddr() - ShadowAddr());
 
