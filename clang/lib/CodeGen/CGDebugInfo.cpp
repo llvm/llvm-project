@@ -2344,10 +2344,6 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (!CXXDecl)
     return false;
 
-  // Don't omit definition if marked with attribute.
-  if (RD->hasAttr<DebugTypeInfoAsNeededAttr>())
-    return false;
-
   // Only emit complete debug info for a dynamic class when its vtable is
   // emitted.  However, Microsoft debuggers don't resolve type information
   // across DLL boundaries, so skip this optimization if the class or any of its
