@@ -510,9 +510,6 @@ public:
     if (CGM.getCodeGenOpts().getFiniteLoops() ==
         CodeGenOptions::FiniteLoopsKind::Never)
       return false;
-    if (CGM.getCodeGenOpts().getFiniteLoops() ==
-        CodeGenOptions::FiniteLoopsKind::Never)
-      return false;
 
     return getLangOpts().CPlusPlus11 || getLangOpts().CPlusPlus14 ||
            getLangOpts().CPlusPlus17 || getLangOpts().CPlusPlus20;
