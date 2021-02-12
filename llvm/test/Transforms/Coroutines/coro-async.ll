@@ -445,6 +445,60 @@ entry:
 ; CHECK: bitcast i8* %3 to %async.task*
 ; CHECK: }
 
+@no_coro_suspend_fp = constant <{ i32, i32 }>
+  <{ i32 trunc ( ; Relative pointer to async function
+       i64 sub (
+         i64 ptrtoint (void (i8*)* @no_coro_suspend to i64),
+         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @no_coro_suspend_fp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 128    ; Initial async context size without space for frame
+}>
+
+define swiftcc void @no_coro_suspend(i8* %async.ctx) {
+entry:
+  %some_alloca = alloca i64
+  %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
+          i8* bitcast (<{i32, i32}>* @no_coro_suspend_fp to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  call void @some_may_write(i64* %some_alloca)
+  call i1 (i8*, i1, ...) @llvm.coro.end.async(i8* %hdl, i1 0)
+  unreachable
+}
+
+; CHECK-LABEL: define swiftcc void @no_coro_suspend
+; CHECK:   [[ALLOCA:%.*]] = alloca i64
+; CHECK:   call void @some_may_write(i64* {{.*}}[[ALLOCA]])
+
+@no_coro_suspend_swifterror_fp = constant <{ i32, i32 }>
+  <{ i32 trunc ( ; Relative pointer to async function
+       i64 sub (
+         i64 ptrtoint (void (i8*)* @no_coro_suspend_swifterror to i64),
+         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @no_coro_suspend_swifterror_fp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 128    ; Initial async context size without space for frame
+}>
+
+declare void @do_with_swifterror(i64** swifterror)
+
+define swiftcc void @no_coro_suspend_swifterror(i8* %async.ctx) {
+entry:
+  %some_alloca = alloca swifterror i64*
+  %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
+          i8* bitcast (<{i32, i32}>* @no_coro_suspend_swifterror_fp to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  store i64* null, i64** %some_alloca, align 8
+  call void @do_with_swifterror(i64** swifterror %some_alloca)
+  call i1 (i8*, i1, ...) @llvm.coro.end.async(i8* %hdl, i1 0)
+  unreachable
+}
+
+ ; CHECK-LABEL: define swiftcc void @no_coro_suspend_swifterror
+ ; CHECK:  [[ALLOCA:%.*]] = alloca swifterror i64*
+ ; CHECK:   store i64* null, i64** [[ALLOCA]]
+ ; CHECK:   call void @do_with_swifterror(i64** {{.*}}swifterror{{.*}} [[ALLOCA]])
+
 declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)
 declare token @llvm.coro.id.async(i32, i32, i32, i8*)
