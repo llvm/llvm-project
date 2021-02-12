@@ -33,3 +33,20 @@ func @bar2() -> i1 {
   %1 = fir.call @foo2(%0) : (!fir.ref<i64>) -> i1
   return %1 : i1
 }
+
+// CHECK-LABEL: @foo3
+func @foo3(%arg0: !fir.boxchar<1>) -> i1 {
+  // CHECK: %[[extract:.*]] = extractvalue { i8*, i64 } %{{.*}}, 0
+  // CHECK: %[[ptr:.*]] = ptrtoint i8* %[[extract]] to i64
+  // CHECK: icmp ne i64 %[[ptr]], 0
+  %0 = fir.is_present %arg0 : (!fir.boxchar<1>) -> i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @bar3
+func @bar3() -> i1 {
+  %0 = fir.absent !fir.boxchar<1>
+  // CHECK: call i1 @foo3(i8* null, i64 undef)
+  %1 = fir.call @foo3(%0) : (!fir.boxchar<1>) -> i1
+  return %1 : i1
+}
