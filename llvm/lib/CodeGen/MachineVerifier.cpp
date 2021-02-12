@@ -949,9 +949,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     Register Dst = MI->getOperand(0).getReg();
     Register Src = MI->getOperand(1).getReg();
-    LLT DstTy = MRI->getType(Dst);
     LLT SrcTy = MRI->getType(Src);
-    verifyVectorElementMatch(DstTy, SrcTy, MI);
     int64_t Imm = MI->getOperand(2).getImm();
     if (Imm <= 0) {
       report("G_ASSERT_ZEXT size must be >= 1", MI);
@@ -1398,10 +1396,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    verifyVectorElementMatch(DstTy, SrcTy, MI);
-
     int64_t Imm = MI->getOperand(2).getImm();
     if (Imm <= 0)
       report("G_SEXT_INREG size must be >= 1", MI);
