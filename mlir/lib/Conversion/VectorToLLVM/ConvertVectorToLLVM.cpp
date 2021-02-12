@@ -446,7 +446,7 @@ public:
       return failure();
 
     // Get index ptrs.
-    VectorType vType = gather.getResultVectorType();
+    VectorType vType = gather.getVectorType();
     Type iType = gather.getIndicesVectorType().getElementType();
     Value ptrs;
     if (failed(getIndexedPtrs(rewriter, loc, adaptor.base(), adaptor.indices(),
@@ -480,7 +480,7 @@ public:
       return failure();
 
     // Get index ptrs.
-    VectorType vType = scatter.getValueVectorType();
+    VectorType vType = scatter.getVectorType();
     Type iType = scatter.getIndicesVectorType().getElementType();
     Value ptrs;
     if (failed(getIndexedPtrs(rewriter, loc, adaptor.base(), adaptor.indices(),
@@ -489,7 +489,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.value(), ptrs, adaptor.mask(),
+        scatter, adaptor.valueToStore(), ptrs, adaptor.mask(),
         rewriter.getI32IntegerAttr(align));
     return success();
   }
@@ -509,7 +509,7 @@ public:
     MemRefType memRefType = expand.getMemRefType();
 
     // Resolve address.
-    auto vtype = typeConverter->convertType(expand.getResultVectorType());
+    auto vtype = typeConverter->convertType(expand.getVectorType());
     Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
                                            adaptor.indices(), rewriter);
 
@@ -537,7 +537,7 @@ public:
                                            adaptor.indices(), rewriter);
 
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
-        compress, adaptor.value(), ptr, adaptor.mask());
+        compress, adaptor.valueToStore(), ptr, adaptor.mask());
     return success();
   }
 };
