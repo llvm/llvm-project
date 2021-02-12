@@ -2385,9 +2385,18 @@ struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
   matchAndRewrite(fir::IsPresentOp isPresent, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto idxTy = lowerTy().indexType();
+    auto loc = isPresent.getLoc();
+    auto ptr = operands[0];
+    if (isPresent.val().getType().isa<fir::BoxCharType>()) {
+      auto structTy = ptr.getType().cast<mlir::LLVM::LLVMStructType>();
+      assert(!structTy.isOpaque() && !structTy.getBody().empty());
+      auto ty = structTy.getBody()[0];
+      auto ctx = isPresent.getContext();
+      auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+      ptr = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, ptr, c0);
+    }
     auto c0 = genConstantIndex(isPresent.getLoc(), idxTy, rewriter, 0);
-    auto addr = rewriter.create<mlir::LLVM::PtrToIntOp>(isPresent.getLoc(),
-                                                        idxTy, operands[0]);
+    auto addr = rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, ptr);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         isPresent, mlir::LLVM::ICmpPredicate::ne, addr, c0);
     return success();
@@ -2402,7 +2411,20 @@ struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
   matchAndRewrite(fir::AbsentOp absent, OperandTy,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto ty = convertType(absent.getType());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+    auto loc = absent.getLoc();
+    if (absent.getType().isa<fir::BoxCharType>()) {
+      auto structTy = ty.cast<mlir::LLVM::LLVMStructType>();
+      assert(!structTy.isOpaque() && !structTy.getBody().empty());
+      auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+      auto nullField =
+          rewriter.create<mlir::LLVM::NullOp>(loc, structTy.getBody()[0]);
+      auto ctx = absent.getContext();
+      auto c0 = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+          absent, ty, undefStruct, nullField, c0);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+    }
     return success();
   }
 };
