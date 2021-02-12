@@ -36,6 +36,9 @@ def AffineDialectPromotion : FunctionPass<"promote-to-affine"> {
     because the affine dialect presently only understands the `memref` type.
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"    
+  ];
 }
 
 def AffineDialectDemotion : FunctionPass<"demote-affine"> {
@@ -47,6 +50,9 @@ def AffineDialectDemotion : FunctionPass<"demote-affine"> {
     `fir.load` and `fir.store` with `!fir.ref<?>` types is required.
   }];
   let constructor = "::fir::createAffineDemotionPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+  ];
 }
 
 def FirLoopResultOpt : FunctionPass<"fir-loop-result-opt"> {
@@ -55,6 +61,9 @@ def FirLoopResultOpt : FunctionPass<"fir-loop-result-opt"> {
     TODO - do we need this if we overhaul fir.do_loop a bit?
   }];
   let constructor = "::fir::createFirLoopResultOptPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+  ];
 }
 
 def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
@@ -64,6 +73,9 @@ def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
     potentially the entire allocation if all the accesses are forwarded.
   }];
   let constructor = "::fir::createMemDataFlowOptPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect", "mlir::AffineDialect"
+  ];
 }
 
 def BasicCSE : FunctionPass<"basic-cse"> {
@@ -73,6 +85,9 @@ def BasicCSE : FunctionPass<"basic-cse"> {
      differs from the MLIR CSE pass in that it is FIR/Fortran semantics aware.
   }];
   let constructor = "::fir::createCSEPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
 }
 
 def ControlFlowLowering : FunctionPass<"lower-control-flow"> {
@@ -85,6 +100,9 @@ def ControlFlowLowering : FunctionPass<"lower-control-flow"> {
     TODO: Should the affine rewriting by moved to AffineDialectDemotion?
   }];
   let constructor = "::fir::createControlFlowLoweringPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
 }
 
 def CFGConversion : FunctionPass<"cfg-conversion"> {
@@ -97,6 +115,9 @@ def CFGConversion : FunctionPass<"cfg-conversion"> {
     This pass is required before code gen to the LLVM IR dialect.
   }];
   let constructor = "::fir::createFirToCfgPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
 }
 
 def ArrayValueCopy : FunctionPass<"array-value-copy"> {
@@ -116,6 +137,9 @@ def ArrayValueCopy : FunctionPass<"array-value-copy"> {
     This pass is required before code gen to the LLVM IR dialect.
   }];
   let constructor = "::fir::createArrayValueCopyPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::StandardOpsDialect"
+  ];
 }
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_FIR_PASSES

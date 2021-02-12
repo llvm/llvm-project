@@ -267,7 +267,7 @@ public:
     llvm::SmallVector<mlir::Type, 8> members;
     for (auto mem : derived.getTypeList())
       members.push_back(convertType(mem.second).cast<mlir::Type>());
-    st.setBody(members, /*isPacked=*/false);
+    (void)st.setBody(members, /*isPacked=*/false);
     return st;
   }
 

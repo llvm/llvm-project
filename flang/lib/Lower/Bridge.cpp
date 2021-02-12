@@ -3102,7 +3102,8 @@ private:
   /// Return the predicate: "current block does not have a terminator branch".
   bool blockIsUnterminated() {
     auto *currentBlock = builder->getBlock();
-    return currentBlock->empty() || currentBlock->back().isKnownNonTerminator();
+    return currentBlock->empty() ||
+           !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
   }
 
   /// Unconditionally switch code insertion to a new block.
@@ -3128,7 +3129,8 @@ private:
     else
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     funit.finalBlock = nullptr;
-    mlir::simplifyRegions({builder->getRegion()}); // remove dead code
+    // FIXME: Simplification should happen in a normal pass, not here.
+    (void)mlir::simplifyRegions({builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
     localSymbols.clear();

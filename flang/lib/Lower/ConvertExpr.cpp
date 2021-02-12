@@ -651,7 +651,7 @@ public:
       mlir::Attribute strAttr;
       if constexpr (std::is_same_v<std::decay_t<decltype(value)>,
                                    std::string>) {
-        strAttr = mlir::StringAttr::get(value, context);
+        strAttr = mlir::StringAttr::get(context, value);
       } else {
         using ET = typename std::decay_t<decltype(value)>::value_type;
         std::int64_t size = static_cast<std::int64_t>(value.size());

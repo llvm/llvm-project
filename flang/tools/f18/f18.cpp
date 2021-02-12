@@ -97,6 +97,7 @@ struct DriverOptions {
   bool dumpUnparse{false};
   bool dumpUnparseWithSymbols{false};
   bool dumpParseTree{false};
+  bool dumpPreFirTree{false};
   bool dumpSymbols{false};
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
