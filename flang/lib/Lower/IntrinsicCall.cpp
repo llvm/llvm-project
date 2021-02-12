@@ -23,6 +23,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -145,6 +146,7 @@ struct IntrinsicLibrary {
   mlir::Value genMerge(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
@@ -208,6 +210,17 @@ struct IntrinsicLibrary {
   mlir::Location loc;
 };
 
+struct IntrinsicDummyArgument {
+  const char *name = nullptr;
+  Fortran::lower::LowerIntrinsicArgAs lowerAs =
+      Fortran::lower::LowerIntrinsicArgAs::Value;
+};
+struct Fortran::lower::IntrinsicArgumentLoweringRules {
+  /// There is no more than 7 non repeated arguments in Fortran intrinsics.
+  IntrinsicDummyArgument args[7];
+  constexpr bool hasDefaultRules() const { return args[0].name == nullptr; }
+};
+
 /// Table that drives the fir generation depending on the intrinsic.
 /// one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
@@ -215,12 +228,15 @@ struct IntrinsicLibrary {
 struct IntrinsicHandler {
   const char *name;
   IntrinsicLibrary::Generator generator;
+  Fortran::lower::IntrinsicArgumentLoweringRules argLoweringRules = {};
   bool isElemental = true;
   /// Code heavy intrinsic can be outlined to make FIR
   /// more readable.
   bool outline = false;
 };
 
+constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
+constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
 using I = IntrinsicLibrary;
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
@@ -231,7 +247,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"conjg", &I::genConjg},
-    {"date_and_time", &I::genDateAndTime},
+    {"date_and_time",
+     &I::genDateAndTime,
+     {{{"date", asAddr},
+       {"time", asAddr},
+       {"zone", asAddr},
+       {"values", asAddr}}},
+     /*isElemental*/ false},
     {"dim", &I::genDim},
     {"dble", &I::genConversion},
     {"dprod", &I::genDprod},
@@ -247,6 +269,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"merge", &I::genMerge},
     {"mod", &I::genMod},
     {"nint", &I::genNint},
+    {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"sign", &I::genSign},
 };
 
@@ -756,7 +779,7 @@ fir::ExtendedValue
 IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name,
                                    llvm::Optional<mlir::Type> resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
-  for (auto &handler : handlers)
+  for (const auto &handler : handlers)
     if (name == handler.name) {
       bool outline = handler.outline || outlineAllIntrinsics;
       return std::visit(
@@ -979,7 +1002,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   // this before calling the code generators.
   bool loadRefArguments = true;
   mlir::FuncOp funcOp;
-  for (auto &handler : handlers)
+  for (const auto &handler : handlers)
     if (name == handler.name)
       funcOp = std::visit(
           [&](auto generator) {
@@ -1279,9 +1302,7 @@ IntrinsicLibrary::genLenTrim(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genMerge(mlir::Type,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 3);
-
-  auto i1Type = mlir::IntegerType::get(builder.getContext(), 1);
-  auto mask = builder.createConvert(loc, i1Type, args[2]);
+  auto mask = builder.createConvert(loc, builder.getI1Type(), args[2]);
   return builder.create<mlir::SelectOp>(loc, mask, args[0], args[1]);
 }
 
@@ -1306,6 +1327,15 @@ mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
   // Skip optional kind argument to search the runtime; it is already reflected
   // in result type.
   return genRuntimeCall("nint", resultType, {args[0]});
+}
+
+// PRESENT
+fir::ExtendedValue
+IntrinsicLibrary::genPresent(mlir::Type,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
+                                          fir::getBase(args[0]));
 }
 
 // SIGN
@@ -1397,6 +1427,33 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
     result = builder.create<mlir::SelectOp>(loc, mask, result, arg);
   }
   return result;
+}
+
+//===----------------------------------------------------------------------===//
+// Argument lowering rules interface
+//===----------------------------------------------------------------------===//
+
+const Fortran::lower::IntrinsicArgumentLoweringRules *
+Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef intrinsicName) {
+  for (const auto &handler : handlers)
+    if (intrinsicName == handler.name)
+      if (!handler.argLoweringRules.hasDefaultRules())
+        return &handler.argLoweringRules;
+  return nullptr;
+}
+
+/// Return how argument \p argName should be lowered given the rules for the
+/// intrinsic function.
+Fortran::lower::LowerIntrinsicArgAs Fortran::lower::lowerIntrinsicArgumentAs(
+    mlir::Location loc, const IntrinsicArgumentLoweringRules &rules,
+    llvm::StringRef argName) {
+  for (const auto &arg : rules.args) {
+    if (arg.name && arg.name == argName)
+      return arg.lowerAs;
+  }
+  fir::emitFatalError(
+      loc, "internal: unknown intrinsic argument name in lowering '" + argName +
+               "'");
 }
 
 //===----------------------------------------------------------------------===//

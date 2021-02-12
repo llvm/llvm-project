@@ -18,16 +18,8 @@ class ExtendedValue;
 
 namespace Fortran::lower {
 
-// TODO: Expose interface to get specific intrinsic function address.
-// TODO: Handle intrinsic subroutine.
-// TODO: Intrinsics that do not require their arguments to be defined
-//   (e.g shape inquiries) might not fit in the current interface that
-//   requires mlir::Value to be provided.
 // TODO: Error handling interface ?
 // TODO: Implementation is incomplete. Many intrinsics to tbd.
-
-/// Helper for building calls to intrinsic functions in the runtime support
-/// libraries.
 
 /// Generate the FIR+MLIR operations for the generic intrinsic \p name
 /// with arguments \p args and expected result type \p resultType.
@@ -36,6 +28,35 @@ fir::ExtendedValue genIntrinsicCall(FirOpBuilder &, mlir::Location,
                                     llvm::StringRef name,
                                     llvm::Optional<mlir::Type> resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args);
+
+/// Enum specifying how intrinsic argument evaluate::Expr should be
+/// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
+enum class LowerIntrinsicArgAs {
+  /// Lower argument to a value. Mainly intended for scalar arguments.
+  Value,
+  /// Lower argument to an address. Only valid when the argument properties are
+  /// fully
+  /// defined (e.g. allocatable is allocated...).
+  Addr,
+  /// Lower argument without assuming that the argument is fully defined.
+  /// It can be used on unallocated allocatable, disassociated pointer,
+  /// or absent optional. This is meant for inquiry intrinsic arguments.
+  Inquired
+};
+
+/// Opaque class defining the argument lowering rules for an intrinsic.
+struct IntrinsicArgumentLoweringRules;
+
+/// Return argument lowering rules for an intrinsic.
+/// Returns a nullptr if all the intrinsic arguments should be lowered by value.
+const IntrinsicArgumentLoweringRules *
+getIntrinsicArgumentLowering(llvm::StringRef intrinsicName);
+
+/// Return how argument \p argName should be lowered given the rules for the
+/// intrinsic function. The argument names are the one defined by the standard.
+LowerIntrinsicArgAs
+lowerIntrinsicArgumentAs(mlir::Location, const IntrinsicArgumentLoweringRules &,
+                         llvm::StringRef argName);
 
 /// Get SymbolRefAttr of runtime (or wrapper function containing inlined
 // implementation) of an unrestricted intrinsic (defined by its signature

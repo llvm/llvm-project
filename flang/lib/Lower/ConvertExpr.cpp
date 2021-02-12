@@ -1308,6 +1308,15 @@ public:
     return fir::substBase(retVal, mem.getResult());
   }
 
+  /// Helper to lower intrinsic arguments for inquiry intrinsic.
+  fir::ExtendedValue
+  lowerIntrinsicArgumentAsInquired(const Fortran::lower::SomeExpr &expr) {
+    const auto *sym = Fortran::evaluate::UnwrapWholeSymbolDataRef(expr);
+    if (sym && Fortran::semantics::IsAllocatableOrPointer(*sym))
+      return genMutableBoxValue(expr).getAddr();
+    return genExtAddr(expr);
+  }
+
   /// Generate a call to an intrinsic function.
   fir::ExtendedValue
   genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
@@ -1317,22 +1326,43 @@ public:
     if (resultTypes.size() == 1)
       resultType = resultTypes[0];
 
-    llvm::SmallVector<fir::ExtendedValue, 2> operands;
-    // Lower arguments
-    // For now, logical arguments for intrinsic are lowered to `fir.logical`
-    // so that TRANSFER can work. For some arguments, it could lead to useless
-    // conversions (e.g scalar MASK of MERGE will be converted to `i1`), but
-    // the generated code is at least correct. To improve this, the intrinsic
-    // lowering facility should control argument lowering.
-    for (const auto &arg : procRef.arguments()) {
-      if (auto *expr = Fortran::evaluate::UnwrapExpr<
-              Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg))
+    llvm::SmallVector<fir::ExtendedValue, 4> operands;
+
+    llvm::StringRef name = intrinsic.name;
+    const auto *argLowering =
+        Fortran::lower::getIntrinsicArgumentLowering(name);
+    for (const auto &[arg, dummy] :
+         llvm::zip(procRef.arguments(),
+                   intrinsic.characteristics.value().dummyArguments)) {
+      auto *expr = Fortran::evaluate::UnwrapExpr<
+          Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg);
+      if (!expr) {
+        // Absent optional.
+        operands.emplace_back(fir::UnboxedValue{});
+        continue;
+      }
+      if (!argLowering) {
+        // No argument lowering instruction, lower by value.
         operands.emplace_back(genval(*expr));
-      else
-        operands.emplace_back(fir::UnboxedValue{}); // absent optional
+        continue;
+      }
+      // Ad-hoc argument lowering handling.
+      auto lowerAs = Fortran::lower::lowerIntrinsicArgumentAs(
+          getLoc(), *argLowering, dummy.name);
+      switch (lowerAs) {
+      case Fortran::lower::LowerIntrinsicArgAs::Value:
+        operands.emplace_back(genval(*expr));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Addr:
+        operands.emplace_back(genExtAddr(*expr));
+        continue;
+      case Fortran::lower::LowerIntrinsicArgAs::Inquired:
+        operands.emplace_back(lowerIntrinsicArgumentAsInquired(*expr));
+        continue;
+      }
+      llvm_unreachable("bad switch");
     }
     // Let the intrinsic library lower the intrinsic procedure call
-    llvm::StringRef name = intrinsic.name;
     return Fortran::lower::genIntrinsicCall(builder, getLoc(), name, resultType,
                                             operands);
   }
