@@ -1332,7 +1332,7 @@ func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector<16xi
 
 func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                  %mask: vector<16xi1>, %value: vector<16xf32>) {
-  // expected-error@+1 {{'vector.scatter' op base and value element type should match}}
+  // expected-error@+1 {{'vector.scatter' op base and valueToStore element type should match}}
   vector.scatter %base[%indices], %mask, %value
     : memref<?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
@@ -1350,7 +1350,7 @@ func @scatter_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
 
 func @scatter_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32>,
                                    %mask: vector<16xi1>, %value: vector<16xf32>) {
-  // expected-error@+1 {{'vector.scatter' op expected value dim to match indices dim}}
+  // expected-error@+1 {{'vector.scatter' op expected valueToStore dim to match indices dim}}
   vector.scatter %base[%indices], %mask, %value
     : memref<?xf32>, vector<17xi32>, vector<16xi1>, vector<16xf32>
 }
@@ -1359,7 +1359,7 @@ func @scatter_dim_indices_mismatch(%base: memref<?xf32>, %indices: vector<17xi32
 
 func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<17xi1>, %value: vector<16xf32>) {
-  // expected-error@+1 {{'vector.scatter' op expected value dim to match mask dim}}
+  // expected-error@+1 {{'vector.scatter' op expected valueToStore dim to match mask dim}}
   vector.scatter %base[%indices], %mask, %value
     : memref<?xf32>, vector<16xi32>, vector<17xi1>, vector<16xf32>
 }
@@ -1400,7 +1400,7 @@ func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass
 
 func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op base and value element type should match}}
+  // expected-error@+1 {{'vector.compressstore' op base and valueToStore element type should match}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1408,7 +1408,7 @@ func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %v
 
 func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op expected value dim to match mask dim}}
+  // expected-error@+1 {{'vector.compressstore' op expected valueToStore dim to match mask dim}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
 }
 
