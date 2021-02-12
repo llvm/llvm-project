@@ -252,7 +252,10 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   }
 
   std::error_code EC;
-  raw_fd_ostream OS(Options.NoOutput ? "-" : Path.str(), EC, sys::fs::OF_None);
+  raw_fd_ostream OS(Options.NoOutput ? "-" : Path.str(), EC,
+                    Options.RemarksFormat == remarks::Format::Bitstream
+                        ? sys::fs::OF_None
+                        : sys::fs::OF_Text);
   if (EC)
     return errorCodeToError(EC);
 
