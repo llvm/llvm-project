@@ -15,8 +15,7 @@ extern "C" void foo() {
   // LIBCALL-LABEL: @foo
   // LIBCALL: call void @__atomic_store
   // NATIVE-LABEL: @foo
-  // NATIVE: store atomic i32
+  // NATIVE: store atomic i32 {{.*}} seq_cst, align 4
 
   a = s3{1, 2, 3};
 }
-

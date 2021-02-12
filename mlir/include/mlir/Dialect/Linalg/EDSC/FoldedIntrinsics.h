@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 #include "mlir/Transforms/FoldUtils.h"
@@ -33,6 +34,7 @@ struct FoldedValueBuilder {
   Value value;
 };
 
+using folded_math_tanh = FoldedValueBuilder<math::TanhOp>;
 using folded_std_constant_index = FoldedValueBuilder<ConstantIndexOp>;
 using folded_std_constant_float = FoldedValueBuilder<ConstantFloatOp>;
 using folded_std_constant_int = FoldedValueBuilder<ConstantIntOp>;
@@ -55,7 +57,6 @@ using folded_std_select = FoldedValueBuilder<SelectOp>;
 using folded_std_load = FoldedValueBuilder<LoadOp>;
 using folded_std_subi = FoldedValueBuilder<SubIOp>;
 using folded_std_sub_view = FoldedValueBuilder<SubViewOp>;
-using folded_std_tanh = FoldedValueBuilder<TanhOp>;
 using folded_std_tensor_load = FoldedValueBuilder<TensorLoadOp>;
 using folded_std_view = FoldedValueBuilder<ViewOp>;
 using folded_std_zero_extendi = FoldedValueBuilder<ZeroExtendIOp>;

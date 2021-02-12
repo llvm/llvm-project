@@ -90,9 +90,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %[[I6:.*]] = muli %[[I2]], %[[I2]] : i32
   %i6 = muli %i2, %i2 : i32
 
-  // CHECK: %[[F7:.*]] = powf %[[F2]], %[[F2]] : f32
-  %f7 = powf %f2, %f2 : f32
-
   // CHECK: %c42_i32 = constant 42 : i32
   %x = "std.constant"(){value = 42 : i32} : () -> i32
 
@@ -372,18 +369,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: = fptrunc {{.*}} : f32 to f16
   %95 = fptrunc %f : f32 to f16
 
-  // CHECK: %{{[0-9]+}} = exp %arg1 : f32
-  %96 = "std.exp"(%f) : (f32) -> f32
-
-  // CHECK: %{{[0-9]+}} = exp %arg1 : f32
-  %97 = exp %f : f32
-
-  // CHECK: %{{[0-9]+}} = exp %cst_8 : vector<4xf32>
-  %98 = exp %vcf32 : vector<4xf32>
-
-  // CHECK: %{{[0-9]+}} = exp %arg0 : tensor<4x4x?xf32>
-  %99 = exp %t : tensor<4x4x?xf32>
-
   // CHECK: %{{[0-9]+}} = absf %arg1 : f32
   %100 = "std.absf"(%f) : (f32) -> f32
 
@@ -408,18 +393,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = ceilf %arg0 : tensor<4x4x?xf32>
   %107 = ceilf %t : tensor<4x4x?xf32>
 
-  // CHECK: %{{[0-9]+}} = cos %arg1 : f32
-  %108 = "std.cos"(%f) : (f32) -> f32
-
-  // CHECK: %{{[0-9]+}} = cos %arg1 : f32
-  %109 = cos %f : f32
-
-  // CHECK: %{{[0-9]+}} = cos %cst_8 : vector<4xf32>
-  %110 = cos %vcf32 : vector<4xf32>
-
-  // CHECK: %{{[0-9]+}} = cos %arg0 : tensor<4x4x?xf32>
-  %111 = cos %t : tensor<4x4x?xf32>
-
   // CHECK: %{{[0-9]+}} = negf %arg1 : f32
   %112 = "std.negf"(%f) : (f32) -> f32
 
@@ -443,18 +416,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 
   // CHECK: %{{[0-9]+}} = copysign %arg0, %arg0 : tensor<4x4x?xf32>
   %119 = copysign %t, %t : tensor<4x4x?xf32>
-
-  // CHECK: %{{[0-9]+}} = tanh %arg1 : f32
-  %120 = "std.tanh"(%f) : (f32) -> f32
-
-  // CHECK: %{{[0-9]+}} = tanh %arg1 : f32
-  %121 = tanh %f : f32
-
-  // CHECK: %{{[0-9]+}} = tanh %cst_8 : vector<4xf32>
-  %122 = tanh %vcf32 : vector<4xf32>
-
-  // CHECK: %{{[0-9]+}} = tanh %arg0 : tensor<4x4x?xf32>
-  %123 = tanh %t : tensor<4x4x?xf32>
 
   // CHECK: %{{[0-9]+}} = shift_left %arg2, %arg2 : i32
   %124 = "std.shift_left"(%i, %i) : (i32, i32) -> i32
@@ -501,38 +462,14 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = shift_right_unsigned %cst_4, %cst_4 : tensor<42xi32>
   %138 = shift_right_unsigned %tci32, %tci32 : tensor<42 x i32>
 
-  // CHECK: %{{[0-9]+}} = sqrt %arg1 : f32
-  %139 = "std.sqrt"(%f) : (f32) -> f32
-
-  // CHECK: %{{[0-9]+}} = sqrt %arg1 : f32
-  %140 = sqrt %f : f32
-
-  // CHECK: %{{[0-9]+}} = sqrt %cst_8 : vector<4xf32>
-  %141 = sqrt %vcf32 : vector<4xf32>
-
-  // CHECK: %{{[0-9]+}} = sqrt %arg0 : tensor<4x4x?xf32>
-  %142 = sqrt %t : tensor<4x4x?xf32>
-
   // CHECK: = fpext {{.*}} : vector<4xf32> to vector<4xf64>
   %143 = fpext %vcf32 : vector<4xf32> to vector<4xf64>
 
   // CHECK: = fptrunc {{.*}} : vector<4xf32> to vector<4xf16>
   %144 = fptrunc %vcf32 : vector<4xf32> to vector<4xf16>
 
-  // CHECK: %{{[0-9]+}} = rsqrt %arg1 : f32
-  %145 = rsqrt %f : f32
-
-  // CHECK: %{{[0-9]+}} = sin %arg1 : f32
-  %146 = "std.sin"(%f) : (f32) -> f32
-
-  // CHECK: %{{[0-9]+}} = sin %arg1 : f32
-  %147 = sin %f : f32
-
-  // CHECK: %{{[0-9]+}} = sin %cst_8 : vector<4xf32>
-  %148 = sin %vcf32 : vector<4xf32>
-
-  // CHECK: %{{[0-9]+}} = sin %arg0 : tensor<4x4x?xf32>
-  %149 = sin %t : tensor<4x4x?xf32>
+  // CHECK: %{{[0-9]+}} = math.rsqrt %arg1 : f32
+  %145 = math.rsqrt %f : f32
 
   // CHECK: = fptosi {{.*}} : f32 to i32
   %159 = fptosi %f : f32 to i32
@@ -581,9 +518,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 
   // CHECK: %{{[0-9]+}} = ceildivi_signed %cst_4, %cst_4 : tensor<42xi32>
   %174 = ceildivi_signed %tci32, %tci32 : tensor<42 x i32>
-
-  // CHECK: %{{[0-9]+}} = log1p %arg1 : f32
-  %175 = log1p %f : f32
 
   return
 }
@@ -811,6 +745,10 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   // CHECK: subview %{{.*}}[%{{.*}}, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, #[[$SUBVIEW_MAP12]]>
   %28 = subview %24[%arg0, 1] [1, 1] [1, 1] : memref<5x3xf32> to memref<f32, affine_map<()[s0] -> (s0)>>
+
+  // CHECK: subview %{{.*}}[0, %{{.*}}] [%{{.*}}, 1] [1, 1] : memref<?x?xf32> to memref<?xf32, #[[$SUBVIEW_MAP1]]>
+  %a30 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %30 = subview %a30[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>>
 
   return
 }

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
@@ -42,6 +43,7 @@ static MLIRContext &globalContext() {
     context.loadDialect<AffineDialect,
                         scf::SCFDialect,
                         linalg::LinalgDialect,
+                        math::MathDialect,
                         StandardOpsDialect,
                         vector::VectorDialect>();
     // clang-format on

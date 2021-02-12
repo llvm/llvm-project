@@ -1300,10 +1300,14 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 
 std::string VFABI::mangleTLIVectorName(StringRef VectorName,
                                        StringRef ScalarName, unsigned numArgs,
-                                       unsigned VF) {
+                                       ElementCount VF) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << "N" << VF;
+  Out << "_ZGV" << VFABI::_LLVM_ << "N";
+  if (VF.isScalable())
+    Out << 'x';
+  else
+    Out << VF.getFixedValue();
   for (unsigned I = 0; I < numArgs; ++I)
     Out << "v";
   Out << "_" << ScalarName << "(" << VectorName << ")";

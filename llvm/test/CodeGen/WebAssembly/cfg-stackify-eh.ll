@@ -658,7 +658,7 @@ try.cont:                                         ; preds = %catch.start0
 ; --- try-delegate starts (call unwind mismatch)
 ; NOSORT:       try
 ; NOSORT:         call  __cxa_end_catch
-; NOSORT:       delegate    2            # label/catch{{[0-9]+}}: to caller
+; NOSORT:       delegate    3            # label/catch{{[0-9]+}}: to caller
 ; --- try-delegate ends (call unwind mismatch)
 ; NOSORT:     end_try
 ; NOSORT:   delegate    1                # label/catch{{[0-9]+}}: to caller

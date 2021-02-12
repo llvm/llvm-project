@@ -711,6 +711,17 @@ let TargetPrefix = "aarch64" in {
   class Crypto_SHA_8Hash4Schedule_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
                 [IntrNoMem]>;
+
+  class Crypto_SM3_3Vector_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
+                [IntrNoMem]>;
+
+  class Crypto_SM3_3VectorIndexed_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty, llvm_i64_ty],
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+  class Crypto_SM4_2Vector_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty], [IntrNoMem]>;
 }
 
 // AES
@@ -733,6 +744,17 @@ def int_aarch64_crypto_sha256h   : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256h2  : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su0 : Crypto_SHA_8Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su1 : Crypto_SHA_12Schedule_Intrinsic;
+
+//SM3 & SM4
+def int_aarch64_crypto_sm3partw1 : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3partw2 : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3ss1    : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3tt1a   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt1b   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt2a   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt2b   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm4e      : Crypto_SM4_2Vector_Intrinsic;
+def int_aarch64_crypto_sm4ekey   : Crypto_SM4_2Vector_Intrinsic;
 
 //===----------------------------------------------------------------------===//
 // CRC32

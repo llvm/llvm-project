@@ -53,7 +53,7 @@ func @f(%arg0: f32) {
 func @f(%arg0: f32) {
   br ^loop(%arg0: f32)
 ^loop(%0: f32):
-  %1 = "std.exp"(%0) : (f32) -> f32
+  %1 = "math.exp"(%0) : (f32) -> f32
   br ^loop(%1: f32)
 }
 
@@ -65,7 +65,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   return
 
 func @f(%arg0: f32, %pred: i1) {
-  %exp = "std.exp"(%arg0) : (f32) -> f32
+  %exp = "math.exp"(%arg0) : (f32) -> f32
   cond_br %pred, ^true(%exp: f32), ^false(%exp: f32)
 ^true(%0: f32):
   return
@@ -124,9 +124,9 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:     "foo.return"
 
 func @f(%arg0: f32) {
-  %0 = "std.exp"(%arg0) : (f32) -> f32
+  %0 = "math.exp"(%arg0) : (f32) -> f32
   "foo.has_region"() ({
-    %1 = "std.exp"(%0) : (f32) -> f32
+    %1 = "math.exp"(%0) : (f32) -> f32
     "foo.return"() : () -> ()
   }) : () -> ()
   return

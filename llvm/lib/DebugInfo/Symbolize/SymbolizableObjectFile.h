@@ -55,8 +55,8 @@ private:
   bool shouldOverrideWithSymbolTable(FunctionNameKind FNKind,
                                      bool UseSymbolTable) const;
 
-  bool getNameFromSymbolTable(object::SymbolRef::Type Type, uint64_t Address,
-                              std::string &Name, uint64_t &Addr, uint64_t &Size,
+  bool getNameFromSymbolTable(uint64_t Address, std::string &Name,
+                              uint64_t &Addr, uint64_t &Size,
                               std::string &FileName) const;
   // For big-endian PowerPC64 ELF, OpdAddress is the address of the .opd
   // (function descriptor) section and OpdExtractor refers to its contents.
@@ -87,8 +87,7 @@ private:
       return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
     }
   };
-  std::vector<SymbolDesc> Functions;
-  std::vector<SymbolDesc> Objects;
+  std::vector<SymbolDesc> Symbols;
   // (index, filename) pairs of ELF STT_FILE symbols.
   std::vector<std::pair<uint32_t, StringRef>> FileSymbols;
 

@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace mlir {
 
@@ -311,6 +312,20 @@ private:
 /// Simplifies an affine map by simplifying its underlying AffineExpr results.
 AffineMap simplifyAffineMap(AffineMap map);
 
+/// Drop the dims that are not used.
+AffineMap compressUnusedDims(AffineMap map);
+
+/// Drop the dims that are not listed in `unusedDims`.
+AffineMap compressDims(AffineMap map,
+                       const llvm::SmallDenseSet<unsigned> &unusedDims);
+
+/// Drop the symbols that are not used.
+AffineMap compressUnusedSymbols(AffineMap map);
+
+/// Drop the symbols that are not listed in `unusedSymbols`.
+AffineMap compressSymbols(AffineMap map,
+                          const llvm::SmallDenseSet<unsigned> &unusedSymbols);
+
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.
 AffineMap removeDuplicateExprs(AffineMap map);
@@ -390,8 +405,11 @@ AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 /// 3) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
 ///    projected_dimensions : {1}
 ///    result               : affine_map<(d0, d1) -> (d0, 0)>
-AffineMap getProjectedMap(AffineMap map,
-                          ArrayRef<unsigned> projectedDimensions);
+///
+/// This function also compresses unused symbols away.
+AffineMap
+getProjectedMap(AffineMap map,
+                const llvm::SmallDenseSet<unsigned> &projectedDimensions);
 
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
@@ -402,7 +420,8 @@ inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
 namespace llvm {
 
 // AffineExpr hash just like pointers
-template <> struct DenseMapInfo<mlir::AffineMap> {
+template <>
+struct DenseMapInfo<mlir::AffineMap> {
   static mlir::AffineMap getEmptyKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));

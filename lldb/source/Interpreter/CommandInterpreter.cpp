@@ -417,24 +417,20 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("process launch");
   if (cmd_obj_sp) {
     alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
+#if defined(__APPLE__)
+#if defined(TARGET_OS_IPHONE)
     AddAlias("r", cmd_obj_sp, "--");
     AddAlias("run", cmd_obj_sp, "--");
 #else
-#if defined(__APPLE__)
-    std::string shell_option;
-    shell_option.append("--shell-expand-args");
-    shell_option.append(" true");
-    shell_option.append(" --");
     AddAlias("r", cmd_obj_sp, "--shell-expand-args true --");
     AddAlias("run", cmd_obj_sp, "--shell-expand-args true --");
+#endif
 #else
     StreamString defaultshell;
     defaultshell.Printf("--shell=%s --",
                         HostInfo::GetDefaultShell().GetPath().c_str());
     AddAlias("r", cmd_obj_sp, defaultshell.GetString());
     AddAlias("run", cmd_obj_sp, defaultshell.GetString());
-#endif
 #endif
   }
 

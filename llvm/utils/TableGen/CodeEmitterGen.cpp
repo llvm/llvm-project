@@ -272,7 +272,7 @@ std::string CodeEmitterGen::getInstructionCase(Record *R,
       EncodingInfoByHwMode EBM(DI->getDef(), HWM);
       Case += "      switch (HwMode) {\n";
       Case += "      default: llvm_unreachable(\"Unhandled HwMode\");\n";
-      for (auto &KV : EBM.Map) {
+      for (auto &KV : EBM) {
         Case += "      case " + itostr(KV.first) + ": {\n";
         Case += getInstructionCaseForEncoding(R, KV.second, Target);
         Case += "      break;\n";
@@ -409,7 +409,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     if (const RecordVal *RV = R->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &KV : EBM.Map) {
+        for (auto &KV : EBM) {
           BitsInit *BI = KV.second->getValueAsBitsInit("Inst");
           BitWidth = std::max(BitWidth, BI->getNumBits());
           HwModes.insert(KV.first);

@@ -29,9 +29,9 @@ static bool isKnownControlFlowInterface(Operation *op) {
 /// Check if the size of the allocation is less than the given size. The
 /// transformation is only applied to small buffers since large buffers could
 /// exceed the stack space.
-static bool isSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
-                         unsigned bitwidthOfIndexType,
-                         unsigned maxRankOfAllocatedMemRef) {
+static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
+                                unsigned bitwidthOfIndexType,
+                                unsigned maxRankOfAllocatedMemRef) {
   auto type = alloc.getType().dyn_cast<ShapedType>();
   if (!type || !alloc.getDefiningOp<AllocOp>())
     return false;
@@ -299,8 +299,7 @@ public:
       : BufferPlacementTransformationBase(op) {}
 
   /// Promote buffers to stack-based allocations.
-  void promote(unsigned maximumSize, unsigned bitwidthOfIndexType,
-               unsigned maxRankOfAllocatedMemRef) {
+  void promote(function_ref<bool(Value)> isSmallAlloc) {
     for (BufferPlacementAllocs::AllocEntry &entry : allocs) {
       Value alloc = std::get<0>(entry);
       Operation *dealloc = std::get<1>(entry);
@@ -308,9 +307,8 @@ public:
       // The transformation is done if the allocation is limited to a given
       // size. Furthermore, a deallocation must not be defined for this
       // allocation entry and a parent allocation scope must exist.
-      if (!isSmallAlloc(alloc, maximumSize, bitwidthOfIndexType,
-                        maxRankOfAllocatedMemRef) ||
-          dealloc || !hasAllocationScope(alloc, aliases))
+      if (!isSmallAlloc(alloc) || dealloc ||
+          !hasAllocationScope(alloc, aliases))
         continue;
 
       Operation *startOperation = BufferPlacementAllocs::getStartOperation(
@@ -359,9 +357,9 @@ struct BufferLoopHoistingPass : BufferLoopHoistingBase<BufferLoopHoistingPass> {
 
 /// The promote buffer to stack pass that tries to convert alloc nodes into
 /// alloca nodes.
-struct PromoteBuffersToStackPass
-    : PromoteBuffersToStackBase<PromoteBuffersToStackPass> {
-
+class PromoteBuffersToStackPass
+    : public PromoteBuffersToStackBase<PromoteBuffersToStackPass> {
+public:
   PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
                             unsigned bitwidthOfIndexType,
                             unsigned maxRankOfAllocatedMemRef) {
@@ -370,12 +368,28 @@ struct PromoteBuffersToStackPass
     this->maxRankOfAllocatedMemRef = maxRankOfAllocatedMemRef;
   }
 
+  explicit PromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc)
+      : isSmallAlloc(std::move(isSmallAlloc)) {}
+
+  LogicalResult initialize(MLIRContext* context) override {
+    if (isSmallAlloc == nullptr) {
+      isSmallAlloc = [=](Value alloc) {
+        return defaultIsSmallAlloc(alloc, maxAllocSizeInBytes,
+                                   bitwidthOfIndexType,
+                                   maxRankOfAllocatedMemRef);
+      };
+    }
+    return success();
+  }
+
   void runOnFunction() override {
     // Move all allocation nodes and convert candidates into allocas.
     BufferPlacementPromotion optimizer(getFunction());
-    optimizer.promote(this->maxAllocSizeInBytes, this->bitwidthOfIndexType,
-                      this->maxRankOfAllocatedMemRef);
+    optimizer.promote(isSmallAlloc);
   }
+
+private:
+  std::function<bool(Value)> isSmallAlloc;
 };
 
 } // end anonymous namespace
@@ -394,4 +408,9 @@ mlir::createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
                                       unsigned maxRankOfAllocatedMemRef) {
   return std::make_unique<PromoteBuffersToStackPass>(
       maxAllocSizeInBytes, bitwidthOfIndexType, maxRankOfAllocatedMemRef);
+}
+
+std::unique_ptr<Pass>
+mlir::createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc) {
+  return std::make_unique<PromoteBuffersToStackPass>(std::move(isSmallAlloc));
 }

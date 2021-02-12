@@ -18,7 +18,6 @@
 
 #include "interface.h"
 #include "amdgcn_interface.h"
-#include "amdgcn_intrinsics.h"
 
 #include <inttypes.h>
 #include <stddef.h>

@@ -12,9 +12,8 @@
 #pragma omp declare target
 
 #include "common/omptarget.h"
-#include "target_interface.h"
-#include "common/allocator.h"
 #include "target_impl.h"
+#include "target_interface.h"
 
 // Implementations initially derived from hcc
 
@@ -70,6 +69,9 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 
+// Use of these will hand smoke reduction_teams test
+static uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
+#pragma allocate(__kmpc_L1_Barrier) allocator(omp_pteam_mem_alloc)
 
 // static doesn't work for openmp + shared, the variable is discarded by llc
 // and lld then fails to link. Unclear why the variable hasn't been associated
@@ -107,8 +109,8 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   bool isLowest = GetLaneId() == lowestActiveThread;
 
   if (isLowest) {
-    uint32_t load =
-        __atomic_fetch_add(&L1_Barrier, 1, __ATOMIC_RELAXED); // commutative
+    uint32_t load = __atomic_fetch_add(&L1_Barrier, 1,
+                                       __ATOMIC_RELAXED); // commutative
 
     // Record the number of times the barrier has been passed
     uint32_t generation = load & 0xffff0000u;

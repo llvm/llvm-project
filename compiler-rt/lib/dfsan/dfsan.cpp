@@ -65,9 +65,11 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 // |                    |
 // |       unused       |
 // |                    |
-// +--------------------+ 0x200200000000 (kUnusedAddr)
+// +--------------------+ 0x300200000000 (kUnusedAddr)
 // |    union table     |
-// +--------------------+ 0x200000000000 (kUnionTableAddr)
+// +--------------------+ 0x300000000000 (kUnionTableAddr)
+// |       origin       |
+// +--------------------+ 0x200000000000 (kOriginAddr)
 // |   shadow memory    |
 // +--------------------+ 0x000000010000 (kShadowAddr)
 // | reserved by kernel |

@@ -4,9 +4,6 @@
 // RUN: %clang %s -target x86_64-unknown-linux-gnu -emit-llvm -S -fsanitize=memory     -fsanitize-coverage=trace-pc,trace-cmp -o - | FileCheck %s --check-prefixes=CHECK,MSAN
 // RUN: %clang %s -target x86_64-unknown-linux-gnu -emit-llvm -S -fsanitize=thread     -fsanitize-coverage=trace-pc,trace-cmp -o - | FileCheck %s --check-prefixes=CHECK,TSAN
 // RUN: %clang %s -target x86_64-unknown-linux-gnu -emit-llvm -S -fsanitize=undefined  -fsanitize-coverage=trace-pc,trace-cmp -o - | FileCheck %s --check-prefixes=CHECK,UBSAN
-//
-// Host armv7 is currently unsupported: https://bugs.llvm.org/show_bug.cgi?id=46117
-// XFAIL: armv7, thumbv7
 
 int x[10];
 

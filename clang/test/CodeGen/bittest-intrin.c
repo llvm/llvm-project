@@ -107,7 +107,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[IDXLO:[^ ]*]] = and i8 %[[IDX8]], 7
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
 // ARM: %[[NOTMASK:[^ ]*]] = xor i8 %[[MASK]], -1
-// ARM: %[[BYTE:[^ ]*]] = atomicrmw and i8* %[[BYTEADDR]], i8 %[[NOTMASK]] seq_cst
+// ARM: %[[BYTE:[^ ]*]] = atomicrmw and i8* %[[BYTEADDR]], i8 %[[NOTMASK]] seq_cst, align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -118,7 +118,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[IDX8:[^ ]*]] = trunc i32 %{{.*}} to i8
 // ARM: %[[IDXLO:[^ ]*]] = and i8 %[[IDX8]], 7
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
-// ARM: %[[BYTE:[^ ]*]] = atomicrmw or i8* %[[BYTEADDR]], i8 %[[MASK]] seq_cst
+// ARM: %[[BYTE:[^ ]*]] = atomicrmw or i8* %[[BYTEADDR]], i8 %[[MASK]] seq_cst, align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -127,9 +127,9 @@ void test_arm(long *base, long idx) {
 // Just look for the atomicrmw instructions.
 
 // ARM-LABEL: define dso_local {{.*}}void @test_arm(i32* %base, i32 %idx)
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} acquire
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} release
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} monotonic
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire, align 1
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release, align 1
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} acquire, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} release, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} monotonic, align 1
