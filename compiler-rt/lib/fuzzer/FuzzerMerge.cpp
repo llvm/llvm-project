@@ -137,6 +137,8 @@ size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
                      const Set<uint32_t> &InitialCov, Set<uint32_t> *NewCov,
                      Vector<std::string> *NewFiles) {
   NewFiles->clear();
+  NewFeatures->clear();
+  NewCov->clear();
   assert(NumFilesInFirstCorpus <= Files.size());
   Set<uint32_t> AllFeatures = InitialFeatures;
 

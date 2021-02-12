@@ -545,6 +545,15 @@ void Writer::populateTargetFeatures() {
 }
 
 static bool shouldImport(Symbol *sym) {
+  if (!sym->isUndefined())
+    return false;
+  if (sym->isWeak() && !config->relocatable)
+    return false;
+  if (!sym->isLive())
+    return false;
+  if (!sym->isUsedInRegularObj)
+    return false;
+
   // We don't generate imports for data symbols. They however can be imported
   // as GOT entries.
   if (isa<DataSymbol>(sym))
@@ -566,19 +575,20 @@ static bool shouldImport(Symbol *sym) {
 }
 
 void Writer::calculateImports() {
+  // Some inputs require that the indirect function table be assigned to table
+  // number 0, so if it is present and is an import, allocate it before any
+  // other tables.
+  if (WasmSym::indirectFunctionTable &&
+      shouldImport(WasmSym::indirectFunctionTable))
+    out.importSec->addImport(WasmSym::indirectFunctionTable);
+
   for (Symbol *sym : symtab->getSymbols()) {
-    if (!sym->isUndefined())
+    if (!shouldImport(sym))
       continue;
-    if (sym->isWeak() && !config->relocatable)
+    if (sym == WasmSym::indirectFunctionTable)
       continue;
-    if (!sym->isLive())
-      continue;
-    if (!sym->isUsedInRegularObj)
-      continue;
-    if (shouldImport(sym)) {
-      LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
-      out.importSec->addImport(sym);
-    }
+    LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
+    out.importSec->addImport(sym);
   }
 }
 
@@ -789,6 +799,7 @@ void Writer::assignIndexes() {
     out.tableSec->addTable(table);
 
   out.globalSec->assignIndexes();
+  out.tableSec->assignIndexes();
 }
 
 static StringRef getOutputDataSegmentName(StringRef name) {

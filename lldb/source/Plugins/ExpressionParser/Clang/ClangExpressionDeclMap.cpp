@@ -350,7 +350,7 @@ bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
   if (!var)
     return false;
 
-  LLDB_LOG(log, "Adding value for (NamedDecl*)%p [%s - %s] to the structure",
+  LLDB_LOG(log, "Adding value for (NamedDecl*){0} [{1} - {2}] to the structure",
            decl, name, var->GetName());
 
   // We know entity->m_parser_vars is valid because we used a parser variable
@@ -752,7 +752,7 @@ void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
     MaybeRegisterFunctionBody(parser_function_decl);
   }
 
-  LLDB_LOG(log, "  CEDM::FEVD Found persistent decl %s", name);
+  LLDB_LOG(log, "  CEDM::FEVD Found persistent decl {0}", name);
 
   context.AddNamedDecl(parser_named_decl);
 }

@@ -357,64 +357,72 @@ public:
   }
 };
 
-/// Conversion pattern for a vector.maskedload.
-class VectorMaskedLoadOpConversion
-    : public ConvertOpToLLVMPattern<vector::MaskedLoadOp> {
+/// Overloaded utility that replaces a vector.load, vector.store,
+/// vector.maskedload and vector.maskedstore with their respective LLVM
+/// couterparts.
+static void replaceLoadOrStoreOp(vector::LoadOp loadOp,
+                                 vector::LoadOpAdaptor adaptor,
+                                 VectorType vectorTy, Value ptr, unsigned align,
+                                 ConversionPatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, ptr, align);
+}
+
+static void replaceLoadOrStoreOp(vector::MaskedLoadOp loadOp,
+                                 vector::MaskedLoadOpAdaptor adaptor,
+                                 VectorType vectorTy, Value ptr, unsigned align,
+                                 ConversionPatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+      loadOp, vectorTy, ptr, adaptor.mask(), adaptor.pass_thru(), align);
+}
+
+static void replaceLoadOrStoreOp(vector::StoreOp storeOp,
+                                 vector::StoreOpAdaptor adaptor,
+                                 VectorType vectorTy, Value ptr, unsigned align,
+                                 ConversionPatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, adaptor.valueToStore(),
+                                             ptr, align);
+}
+
+static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
+                                 vector::MaskedStoreOpAdaptor adaptor,
+                                 VectorType vectorTy, Value ptr, unsigned align,
+                                 ConversionPatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
+      storeOp, adaptor.valueToStore(), ptr, adaptor.mask(), align);
+}
+
+/// Conversion pattern for a vector.load, vector.store, vector.maskedload, and
+/// vector.maskedstore.
+template <class LoadOrStoreOp, class LoadOrStoreOpAdaptor>
+class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
-  using ConvertOpToLLVMPattern<vector::MaskedLoadOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(vector::MaskedLoadOp load, ArrayRef<Value> operands,
+  matchAndRewrite(LoadOrStoreOp loadOrStoreOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = load->getLoc();
-    auto adaptor = vector::MaskedLoadOpAdaptor(operands);
-    MemRefType memRefType = load.getMemRefType();
+    // Only 1-D vectors can be lowered to LLVM.
+    VectorType vectorTy = loadOrStoreOp.getVectorType();
+    if (vectorTy.getRank() > 1)
+      return failure();
+
+    auto loc = loadOrStoreOp->getLoc();
+    auto adaptor = LoadOrStoreOpAdaptor(operands);
+    MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
+    if (failed(getMemRefAlignment(*this->getTypeConverter(), memRefTy, align)))
       return failure();
 
     // Resolve address.
-    auto vtype = typeConverter->convertType(load.getResultVectorType());
-    Value dataPtr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
+    auto vtype = this->typeConverter->convertType(loadOrStoreOp.getVectorType())
+                     .template cast<VectorType>();
+    Value dataPtr = this->getStridedElementPtr(loc, memRefTy, adaptor.base(),
                                                adaptor.indices(), rewriter);
-    Value ptr = castDataPtr(rewriter, loc, dataPtr, memRefType, vtype);
+    Value ptr = castDataPtr(rewriter, loc, dataPtr, memRefTy, vtype);
 
-    rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-        load, vtype, ptr, adaptor.mask(), adaptor.pass_thru(),
-        rewriter.getI32IntegerAttr(align));
-    return success();
-  }
-};
-
-/// Conversion pattern for a vector.maskedstore.
-class VectorMaskedStoreOpConversion
-    : public ConvertOpToLLVMPattern<vector::MaskedStoreOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::MaskedStoreOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::MaskedStoreOp store, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = store->getLoc();
-    auto adaptor = vector::MaskedStoreOpAdaptor(operands);
-    MemRefType memRefType = store.getMemRefType();
-
-    // Resolve alignment.
-    unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
-      return failure();
-
-    // Resolve address.
-    auto vtype = typeConverter->convertType(store.getValueVectorType());
-    Value dataPtr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
-                                               adaptor.indices(), rewriter);
-    Value ptr = castDataPtr(rewriter, loc, dataPtr, memRefType, vtype);
-
-    rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
-        store, adaptor.value(), ptr, adaptor.mask(),
-        rewriter.getI32IntegerAttr(align));
+    replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, ptr, align, rewriter);
     return success();
   }
 };
@@ -438,7 +446,7 @@ public:
       return failure();
 
     // Get index ptrs.
-    VectorType vType = gather.getResultVectorType();
+    VectorType vType = gather.getVectorType();
     Type iType = gather.getIndicesVectorType().getElementType();
     Value ptrs;
     if (failed(getIndexedPtrs(rewriter, loc, adaptor.base(), adaptor.indices(),
@@ -472,7 +480,7 @@ public:
       return failure();
 
     // Get index ptrs.
-    VectorType vType = scatter.getValueVectorType();
+    VectorType vType = scatter.getVectorType();
     Type iType = scatter.getIndicesVectorType().getElementType();
     Value ptrs;
     if (failed(getIndexedPtrs(rewriter, loc, adaptor.base(), adaptor.indices(),
@@ -481,7 +489,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.value(), ptrs, adaptor.mask(),
+        scatter, adaptor.valueToStore(), ptrs, adaptor.mask(),
         rewriter.getI32IntegerAttr(align));
     return success();
   }
@@ -501,7 +509,7 @@ public:
     MemRefType memRefType = expand.getMemRefType();
 
     // Resolve address.
-    auto vtype = typeConverter->convertType(expand.getResultVectorType());
+    auto vtype = typeConverter->convertType(expand.getVectorType());
     Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
                                            adaptor.indices(), rewriter);
 
@@ -529,7 +537,7 @@ public:
                                            adaptor.indices(), rewriter);
 
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
-        compress, adaptor.value(), ptr, adaptor.mask());
+        compress, adaptor.valueToStore(), ptr, adaptor.mask());
     return success();
   }
 };
@@ -1511,8 +1519,14 @@ void mlir::populateVectorToLLVMConversionPatterns(
               VectorInsertOpConversion,
               VectorPrintOpConversion,
               VectorTypeCastOpConversion,
-              VectorMaskedLoadOpConversion,
-              VectorMaskedStoreOpConversion,
+              VectorLoadStoreConversion<vector::LoadOp,
+                                        vector::LoadOpAdaptor>,
+              VectorLoadStoreConversion<vector::MaskedLoadOp,
+                                        vector::MaskedLoadOpAdaptor>,
+              VectorLoadStoreConversion<vector::StoreOp,
+                                        vector::StoreOpAdaptor>,
+              VectorLoadStoreConversion<vector::MaskedStoreOp,
+                                        vector::MaskedStoreOpAdaptor>,
               VectorGatherOpConversion,
               VectorScatterOpConversion,
               VectorExpandLoadOpConversion,
