@@ -66,10 +66,9 @@ define arm_aapcs_vfpcc <8 x half> @extret1_v8f16_hf(<8 x half> %a, <8 x half> %b
 ; CHECK-LABEL: extret1_v8f16_hf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vstr.16 s4, [r0]
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    vmov.u16 r1, q0[1]
+; CHECK-NEXT:    vdup.16 q0, r1
+; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
   %c = fadd <8 x half> %a, %b
   %e = extractelement <8 x half> %c, i32 1
@@ -83,9 +82,9 @@ define arm_aapcs_vfpcc <8 x half> @extret4_v8f16_hf(<8 x half> %a, <8 x half> %b
 ; CHECK-LABEL: extret4_v8f16_hf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-NEXT:    vstr.16 s2, [r0]
-; CHECK-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    vmov.u16 r1, q0[4]
+; CHECK-NEXT:    vdup.16 q0, r1
+; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
   %c = fadd <8 x half> %a, %b
   %e = extractelement <8 x half> %c, i32 4

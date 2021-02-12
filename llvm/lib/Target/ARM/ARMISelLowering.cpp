@@ -14916,6 +14916,42 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Stores);
 }
 
+// Given a floating point store from an extracted vector, with an integer
+// VGETLANE that already exists, store the existing VGETLANEu directly. This can
+// help reduce fp register pressure, doesn't require the fp extract and allows
+// use of more integer post-inc stores not available with vstr.
+static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
+  if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
+    return SDValue();
+  SDValue Extract = St->getValue();
+  EVT VT = Extract.getValueType();
+  // For now only uses f16. This may be useful for f32 too, but that will
+  // be bitcast(extract), not the VGETLANEu we currently check here.
+  if (VT != MVT::f16 || Extract->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDNode *GetLane =
+      DAG.getNodeIfExists(ARMISD::VGETLANEu, DAG.getVTList(MVT::i32),
+                          {Extract.getOperand(0), Extract.getOperand(1)});
+  if (!GetLane)
+    return SDValue();
+
+  LLVMContext &C = *DAG.getContext();
+  SDLoc DL(St);
+  // Create a new integer store to replace the existing floating point version.
+  SDValue Ch = St->getChain();
+  SDValue BasePtr = St->getBasePtr();
+  Align Alignment = St->getOriginalAlign();
+  MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = St->getAAInfo();
+  EVT NewToVT = EVT::getIntegerVT(C, VT.getSizeInBits());
+  SDValue Store = DAG.getTruncStore(Ch, DL, SDValue(GetLane, 0), BasePtr,
+                                    St->getPointerInfo(), NewToVT,
+                                    Alignment.value(), MMOFlags, AAInfo);
+
+  return Store;
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -14931,9 +14967,12 @@ static SDValue PerformSTORECombine(SDNode *N,
     if (SDValue Store = PerformTruncatingStoreCombine(St, DCI.DAG))
       return Store;
 
-  if (Subtarget->hasMVEIntegerOps())
+  if (Subtarget->hasMVEIntegerOps()) {
     if (SDValue NewToken = PerformSplittingToNarrowingStores(St, DCI.DAG))
       return NewToken;
+    if (SDValue NewChain = PerformExtractFpToIntStores(St, DCI.DAG))
+      return NewChain;
+  }
 
   if (!ISD::isNormalStore(St))
     return SDValue();
