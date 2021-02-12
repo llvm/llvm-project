@@ -638,13 +638,15 @@ public:
                   DominatorTree *DT, AssumptionCache *AC,
                   TargetLibraryInfo *LibInfo) const;
 
-  /// \return True is LSR should make efforts to create/preserve post-inc
-  /// addressing mode expressions.
-  bool shouldFavorPostInc() const;
+  enum AddressingModeKind {
+    AMK_PreIndexed,
+    AMK_PostIndexed,
+    AMK_None
+  };
 
-  /// Return true if LSR should make efforts to generate indexed addressing
-  /// modes that operate across loop iterations.
-  bool shouldFavorBackedgeIndex(const Loop *L) const;
+  /// Return the preferred addressing mode LSR should make efforts to generate.
+  AddressingModeKind getPreferredAddressingMode(const Loop *L,
+                                                ScalarEvolution *SE) const;
 
   /// Return true if the target supports masked store.
   bool isLegalMaskedStore(Type *DataType, Align Alignment) const;
@@ -1454,8 +1456,8 @@ public:
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                           LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                           TargetLibraryInfo *LibInfo) = 0;
-  virtual bool shouldFavorPostInc() const = 0;
-  virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
+  virtual AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const = 0;
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
@@ -1796,9 +1798,10 @@ public:
                   TargetLibraryInfo *LibInfo) override {
     return Impl.canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
   }
-  bool shouldFavorPostInc() const override { return Impl.shouldFavorPostInc(); }
-  bool shouldFavorBackedgeIndex(const Loop *L) const override {
-    return Impl.shouldFavorBackedgeIndex(L);
+  AddressingModeKind
+    getPreferredAddressingMode(const Loop *L,
+                               ScalarEvolution *SE) const override {
+    return Impl.getPreferredAddressingMode(L, SE);
   }
   bool isLegalMaskedStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedStore(DataType, Alignment);
