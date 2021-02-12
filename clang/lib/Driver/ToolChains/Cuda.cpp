@@ -749,56 +749,10 @@ void CudaToolChain::addClangTargetOptions(
         CudaVersionToString(CudaInstallation.version())));
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
-    SmallVector<StringRef, 8> LibraryPaths;
-    // Add user defined library paths from LIBRARY_PATH.
-    llvm::Optional<std::string> LibPath =
-        llvm::sys::Process::GetEnv("LIBRARY_PATH");
-    if (LibPath) {
-      SmallVector<StringRef, 8> Frags;
-      const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
-      llvm::SplitString(*LibPath, Frags, EnvPathSeparatorStr);
-      for (StringRef Path : Frags)
-        LibraryPaths.emplace_back(Path.trim());
-    }
-
-    // Add path to lib / lib64 folder.
-    SmallString<256> DefaultLibPath =
-        llvm::sys::path::parent_path(getDriver().Dir);
-    llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
-    LibraryPaths.emplace_back(DefaultLibPath.c_str());
-
-    // First check whether user specifies bc library
-    if (const Arg *A =
-            DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_bc_path_EQ)) {
-      std::string LibOmpTargetName(A->getValue());
-      if (llvm::sys::fs::exists(LibOmpTargetName)) {
-        CC1Args.push_back("-mlink-builtin-bitcode");
-        CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetName));
-      } else {
-        getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
-            << LibOmpTargetName;
-      }
-    } else {
-      bool FoundBCLibrary = false;
-
-      std::string LibOmpTargetName = "libomptarget-nvptx-cuda_" +
-                                     CudaVersionStr + "-" + GpuArch.str() +
-                                     ".bc";
-
-      for (StringRef LibraryPath : LibraryPaths) {
-        SmallString<128> LibOmpTargetFile(LibraryPath);
-        llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
-        if (llvm::sys::fs::exists(LibOmpTargetFile)) {
-          CC1Args.push_back("-mlink-builtin-bitcode");
-          CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
-          FoundBCLibrary = true;
-          break;
-        }
-      }
-      if (!FoundBCLibrary)
-        getDriver().Diag(diag::err_drv_omp_offload_target_missingbcruntime)
-            << LibOmpTargetName;
-    }
+    std::string BitcodeSuffix =
+        "nvptx-cuda_" + CudaVersionStr + "-" + GpuArch.str();
+    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+                       getTriple());
   }
 }
 
