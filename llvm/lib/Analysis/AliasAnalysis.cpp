@@ -118,15 +118,15 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI) {
   AliasResult Result = MayAlias;
 
-  Depth++;
+  AAQI.Depth++;
   for (const auto &AA : AAs) {
     Result = AA->alias(LocA, LocB, AAQI);
     if (Result != MayAlias)
       break;
   }
-  Depth--;
+  AAQI.Depth--;
 
-  if (Depth == 0) {
+  if (AAQI.Depth == 0) {
     if (Result == NoAlias)
       ++NumNoAlias;
     else if (Result == MustAlias)

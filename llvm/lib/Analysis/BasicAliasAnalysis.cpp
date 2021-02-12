@@ -1456,7 +1456,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // If we inserted a block into VisitedPhiBBs, alias analysis results that
   // have been cached earlier may no longer be valid. Perform recursive queries
   // with a new AAQueryInfo.
-  AAQueryInfo NewAAQI;
+  AAQueryInfo NewAAQI = AAQI.withEmptyCache();
   AAQueryInfo *UseAAQI = BlockInserted ? &NewAAQI : &AAQI;
 
   AliasResult Alias = getBestAAResults().alias(
