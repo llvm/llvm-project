@@ -36,7 +36,7 @@ from collections import defaultdict
 from copy import copy
 from enum import Enum
 from typing import (Any, DefaultDict, Dict, List, NamedTuple, Optional,
-                    Sequence, TextIO, TypeVar, Tuple, Union)
+                    Sequence, Set, TextIO, TypeVar, Tuple, Union)
 
 
 Number = Union[int, float]
@@ -374,8 +374,9 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
 
         # Quadratic algorithms in this part are fine because 'old' and 'new'
         # are most commonly of size 1.
-        for a in copy(old):
-            for b in copy(new):
+        common: Set[AnalysisDiagnostic] = set()
+        for a in old:
+            for b in new:
                 if a.get_issue_identifier() == b.get_issue_identifier():
                     a_path_len = a.get_path_length()
                     b_path_len = b.get_path_length()
@@ -394,16 +395,22 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
                             path_difference_data.append(
                                 a_path_len - b_path_len)
 
-                    res.add_common(a)
-                    old.remove(a)
-                    new.remove(b)
+                    res.add_common(b)
+                    common.add(a)
 
-        for a in copy(old):
-            for b in copy(new):
+        old = filter_issues(old, common)
+        new = filter_issues(new, common)
+        common = set()
+
+        for a in old:
+            for b in new:
                 if a.is_similar_to(b):
                     res.add_changed(a, b)
-                    old.remove(a)
-                    new.remove(b)
+                    common.add(a)
+                    common.add(b)
+
+        old = filter_issues(old, common)
+        new = filter_issues(new, common)
 
         # Whatever is left in 'old' doesn't have a corresponding diagnostic
         # in 'new', so we need to mark it as 'removed'.
@@ -441,6 +448,12 @@ def compare_results(results_old: AnalysisRun, results_new: AnalysisRun,
         pyplot.show()
 
     return res
+
+
+def filter_issues(origin: List[AnalysisDiagnostic],
+                  to_remove: Set[AnalysisDiagnostic]) \
+                  -> List[AnalysisDiagnostic]:
+    return [diag for diag in origin if diag not in to_remove]
 
 
 def compute_percentile(values: Sequence[T], percentile: float) -> T:
