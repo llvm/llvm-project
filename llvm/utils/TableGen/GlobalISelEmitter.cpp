@@ -5595,9 +5595,17 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
   llvm::sort(ComplexPredicates, orderByName);
 
-  std::vector<Record *> CustomRendererFns =
-      RK.getAllDerivedDefinitions("GICustomOperandRenderer");
-  llvm::sort(CustomRendererFns, orderByName);
+  std::vector<StringRef> CustomRendererFns;
+  transform(RK.getAllDerivedDefinitions("GICustomOperandRenderer"),
+            std::back_inserter(CustomRendererFns), [](const auto &Record) {
+              return Record->getValueAsString("RendererFn");
+            });
+  // Sort and remove duplicates to get a list of unique renderer functions, in
+  // case some were mentioned more than once.
+  llvm::sort(CustomRendererFns);
+  CustomRendererFns.erase(
+      std::unique(CustomRendererFns.begin(), CustomRendererFns.end()),
+      CustomRendererFns.end());
 
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
@@ -5791,17 +5799,15 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "// Custom renderers.\n"
      << "enum {\n"
      << "  GICR_Invalid,\n";
-  for (const auto &Record : CustomRendererFns)
-    OS << "  GICR_" << Record->getValueAsString("RendererFn") << ",\n";
+  for (const auto &Fn : CustomRendererFns)
+    OS << "  GICR_" << Fn << ",\n";
   OS << "};\n";
 
   OS << Target.getName() << "InstructionSelector::CustomRendererFn\n"
      << Target.getName() << "InstructionSelector::CustomRenderers[] = {\n"
      << "  nullptr, // GICR_Invalid\n";
-  for (const auto &Record : CustomRendererFns)
-    OS << "  &" << Target.getName()
-       << "InstructionSelector::" << Record->getValueAsString("RendererFn")
-       << ", // " << Record->getName() << "\n";
+  for (const auto &Fn : CustomRendererFns)
+    OS << "  &" << Target.getName() << "InstructionSelector::" << Fn << ",\n";
   OS << "};\n\n";
 
   llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {

@@ -305,16 +305,16 @@ foreach Ty = [i64, p0, p1, p4] in {
   defm : SMRD_Pattern <"S_LOAD_DWORDX2",  Ty>;
 }
 
-def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm32">,
+def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i32timm>;
 
-def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm16">,
+def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i16timm>;
 
-def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm8">,
+def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i8timm>;
 
-def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm1">,
+def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
