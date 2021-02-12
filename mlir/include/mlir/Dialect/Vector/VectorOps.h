@@ -21,11 +21,21 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/StringExtras.h"
+
+// Pull in all enum type definitions and utility function declarations.
+#include "mlir/Dialect/Vector/VectorOpsEnums.h.inc"
 
 namespace mlir {
 class MLIRContext;
 class OwningRewritePatternList;
+
 namespace vector {
+class VectorDialect;
+
+namespace detail {
+struct BitmaskEnumStorage;
+} // namespace detail
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
@@ -62,6 +72,22 @@ void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns,
 /// "leak" coming in, however, some tuple related ops will remain.
 void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
                                           MLIRContext *context);
+
+/// An attribute that specifies the combining function for `vector.contract`,
+/// and `vector.reduction`.
+class CombiningKindAttr
+    : public Attribute::AttrBase<CombiningKindAttr, Attribute,
+                                 detail::BitmaskEnumStorage> {
+public:
+  using Base::Base;
+
+  static CombiningKindAttr get(CombiningKind kind, MLIRContext *context);
+
+  CombiningKind getKind() const;
+
+  void print(DialectAsmPrinter &p) const;
+  static Attribute parse(DialectAsmParser &parser);
+};
 
 /// Enum to control the lowering of `vector.contract` operations.
 enum class VectorContractLowering {

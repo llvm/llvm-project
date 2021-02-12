@@ -1131,9 +1131,9 @@ class I64EnumAttrCase<string sym, int val, string str = sym>
 // A bit enum case stored with 32-bit IntegerAttr. `val` here is *not* the
 // ordinal number of the bit that is set. It is the 32-bit integer with only
 // one bit set.
-class BitEnumAttrCase<string sym, int val> :
-    EnumAttrCaseInfo<sym, val, sym>,
-    SignlessIntegerAttrBase<I32, "case " # sym> {
+class BitEnumAttrCase<string sym, int val, string str = sym> :
+    EnumAttrCaseInfo<sym, val, str>,
+    SignlessIntegerAttrBase<I32, "case " # str> {
   let predicate = CPred<
     "$_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & "
     # val # "u">;
