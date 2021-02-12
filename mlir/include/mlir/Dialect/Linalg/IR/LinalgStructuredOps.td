@@ -110,14 +110,13 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
     AnyStridedMemRef:$output,
     OptionalAttr<AffineMapAttr>:$inputPermutation,
     OptionalAttr<AffineMapAttr>:$outputPermutation);
+  let regions = (region AnyRegion:$region);
 
-  // TODO: this should go away once the usage of OptionalAttr triggers emission
-  // of builders with default arguments left unspecified.
-  let builders = [OpBuilderDAG<(ins "Value":$input, "Value":$output),
-    [{
-      return build(
-        $_builder, $_state, input, output, AffineMapAttr(), AffineMapAttr());
-    }]>];
+  let builders = [
+    OpBuilderDAG<(ins "Value":$input, "Value":$output,
+      CArg<"AffineMap", "AffineMap()">:$inputPermutation,
+      CArg<"AffineMap", "AffineMap()">:$outputPermutation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
   let extraClassDeclaration = structuredOpsDecls # [{
     ValueRange inputs() { return getOperands().take_front(); }
@@ -146,24 +145,31 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
     Value getSource() { return input();}
     Value getTarget() { return output(); }
 
-    static std::function<void(Block &)> getRegionBuilder() {
-      return nullptr;
+    static void regionBuilder(Block &block, ValueRange captures);
+    static std::function<void(Block &block, ValueRange captures)>
+    getRegionBuilder() {
+      return &regionBuilder;
     }
+    static unsigned getNumRegionArgs() { return 2; }
   }];
   let verifier = [{ return ::verify(*this); }];
 
   let assemblyFormat = [{
-    `(` operands `)` attr-dict `:` type(operands)
+    `(` $input `,` $output `)` attr-dict `:`
+        type($input) `,` type($output)
+      custom<CopyOpRegion>($region, ref(type($input)), ref(type($input)))
   }];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let skipDefaultBuilders = 1;
 }
 
 def FillOp : LinalgStructured_Op<"fill", []> {
   let arguments = (ins AnyShaped:$output,
                    AnyTypeOf<[AnyFloat, AnySignlessInteger, AnyVector]>:$value);
   let results = (outs Optional<AnyRankedTensor>:$result);
+  let regions = (region AnyRegion:$region);
   let extraClassDeclaration = structuredOpsDecls # [{
     ValueRange inputs() { return {}; }
     ValueRange outputs() { return getOperands().take_front(); }
@@ -183,13 +189,18 @@ def FillOp : LinalgStructured_Op<"fill", []> {
           extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
     }
 
-    static std::function<void(Block &)> getRegionBuilder() {
-      return nullptr;
+    static void regionBuilder(Block &block, ValueRange captures);
+    static std::function<void(Block &block, ValueRange captures)>
+    getRegionBuilder() {
+      return &regionBuilder;
     }
+    static unsigned getNumRegionArgs() { return 1; }
   }];
 
   let assemblyFormat = [{
-    `(` operands `)` attr-dict `:` type(operands) (`->` type($result)^)?
+    `(` $output `,` $value `)` attr-dict `:`
+        type($output) `,` type($value) (`->` type($result)^)?
+      custom<FillOpRegion>($region, ref(type($output)), ref($value))
   }];
 
   let builders = [
@@ -268,7 +279,8 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
       return padding().getValue().getValue<int64_t>({i, 1});
     }
 
-    static std::function<void(Block &)> getRegionBuilder() {
+    static std::function<void(Block &, ValueRange captures)> getRegionBuilder()
+    {
       return nullptr;
     }
   }];
@@ -519,7 +531,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
         library_call()->str() : "op_has_no_registered_library_name";
     }
 
-    static std::function<void(Block &)> getRegionBuilder() {
+    static std::function<void(Block &, ValueRange)> getRegionBuilder() {
       return nullptr;
     }
   }];
