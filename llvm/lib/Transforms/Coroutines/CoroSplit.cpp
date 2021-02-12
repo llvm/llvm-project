@@ -584,6 +584,8 @@ void CoroCloner::replaceCoroEnds() {
 
 static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
                                  ValueToValueMapTy *VMap) {
+  if (Shape.ABI == coro::ABI::Async && Shape.CoroSuspends.empty())
+    return;
   Value *CachedSlot = nullptr;
   auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
     if (CachedSlot) {
@@ -1811,7 +1813,8 @@ static void updateCallGraphAfterCoroutineSplit(
     case coro::ABI::RetconOnce:
       // Each clone in the Async/Retcon lowering references of the other clones.
       // Let the LazyCallGraph know about all of them at once.
-      CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
+      if (!Clones.empty())
+        CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
       break;
     }
 
