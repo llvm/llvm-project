@@ -423,3 +423,15 @@ gpu.module @test_module {
     std.return %result32, %result64 : f32, f64
   }
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: @kernel_func
+  // CHECK: attributes
+  // CHECK: gpu.kernel
+  // CHECK: nvvm.kernel
+  gpu.func @kernel_func() kernel {
+    gpu.return
+  }
+}

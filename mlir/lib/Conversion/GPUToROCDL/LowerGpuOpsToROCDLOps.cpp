@@ -103,7 +103,11 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                   ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
       GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
                                   ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
-      GPUFuncOpLowering<5>, GPUReturnOpLowering>(converter);
+      GPUReturnOpLowering>(converter);
+  patterns.insert<GPUFuncOpLowering>(
+      converter, /*allocaAddrSpace=*/5,
+      Identifier::get(ROCDL::ROCDLDialect::getKernelFuncAttrName(),
+                      &converter.getContext()));
   patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__ocml_fabs_f32",
                                                 "__ocml_fabs_f64");
   patterns.insert<OpToFuncCallLowering<math::AtanOp>>(
