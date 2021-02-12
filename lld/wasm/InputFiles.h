@@ -157,7 +157,7 @@ private:
   Symbol *createUndefined(const WasmSymbol &sym, bool isCalledDirectly);
 
   bool isExcludedByComdat(InputChunk *chunk) const;
-  void synthesizeTableSymbols();
+  void addLegacyIndirectFunctionTableIfNeeded(uint32_t tableSymbolCount);
 
   std::unique_ptr<WasmObjectFile> wasmObj;
 };
