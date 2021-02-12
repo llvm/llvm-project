@@ -6,9 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__MVS__)
+// As part of monotonic clock support on z/OS we need macro _LARGE_TIME_API
+// to be defined before any system header to include definition of struct timespec64.
+#define _LARGE_TIME_API
+#endif
+
 #include "chrono"
 #include "cerrno"        // errno
 #include "system_error"  // __throw_system_error
+
+#if defined(__MVS__)
+#include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
+#endif
+
 #include <time.h>        // clock_gettime and CLOCK_{MONOTONIC,REALTIME,MONOTONIC_RAW}
 #include "include/apple_availability.h"
 
@@ -216,6 +227,16 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   auto fractions = counter.QuadPart % freq.QuadPart;
   auto dur = seconds * nano::den + fractions * nano::den / freq.QuadPart;
   return steady_clock::time_point(steady_clock::duration(dur));
+}
+
+#elif defined(__MVS__)
+
+static steady_clock::time_point __libcpp_steady_clock_now() {
+  struct timespec64 ts;
+  if (0 != gettimeofdayMonotonic(&ts))
+    __throw_system_error(errno, "failed to obtain time of day");
+
+  return steady_clock::time_point(seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
 }
 
 #elif defined(CLOCK_MONOTONIC)
