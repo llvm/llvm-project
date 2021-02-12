@@ -1887,6 +1887,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   }
 
   Opts.IndexStorePath = std::string(Args.getLastArgValue(OPT_index_store_path));
+  Opts.IndexUnitOutputPath = std::string(Args.getLastArgValue(OPT_index_unit_output_path));
   Opts.IndexIgnoreSystemSymbols = Args.hasArg(OPT_index_ignore_system_symbols);
   Opts.IndexRecordCodegenName = Args.hasArg(OPT_index_record_codegen_name);
 

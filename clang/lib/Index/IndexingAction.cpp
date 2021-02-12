@@ -639,7 +639,9 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
     return;
   }
 
-  std::string OutputFile = CI.getFrontendOpts().OutputFile;
+  std::string OutputFile = CI.getFrontendOpts().IndexUnitOutputPath;
+  if (OutputFile.empty())
+    OutputFile = CI.getFrontendOpts().OutputFile;
   if (OutputFile.empty()) {
     OutputFile = std::string(CI.getFrontendOpts().Inputs[0].getFile());
     OutputFile += ".o";
