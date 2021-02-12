@@ -53,7 +53,8 @@ cl::OptionCategory PollyCategory("Polly Options",
                                  "Configure the polly loop optimizer");
 
 static cl::opt<bool>
-    PollyEnabled("polly", cl::desc("Enable the polly optimizer (only at -O3)"),
+    PollyEnabled("polly",
+                 cl::desc("Enable the polly optimizer (with -O1, -O2 or -O3)"),
                  cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyDetectOnly(
@@ -297,7 +298,8 @@ void initializePollyPasses(PassRegistry &Registry) {
 /// scheduling optimizer.
 ///
 /// Polly supports the isl internal code generator.
-void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
+static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
+                                bool EnableForOpt) {
   if (DumpBefore)
     PM.add(polly::createDumpModulePass("-before", true));
   for (auto &Filename : DumpBeforeFile)
@@ -360,6 +362,9 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (ExportJScop)
     PM.add(polly::createJSONExporterPass());
 
+  if (!EnableForOpt)
+    return;
+
   if (Target == TARGET_CPU || Target == TARGET_HYBRID)
     switch (CodeGeneration) {
     case CODEGEN_AST:
@@ -399,62 +404,74 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(llvm::createCFGPrinterLegacyPassPass());
 }
 
-static bool shouldEnablePolly() {
+static bool shouldEnablePollyForOptimization() { return PollyEnabled; }
+
+static bool shouldEnablePollyForDiagnostic() {
+  // FIXME: PollyTrackFailures is user-controlled, should not be set
+  // programmatically.
   if (PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer)
     PollyTrackFailures = true;
 
-  if (PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer ||
-      ExportJScop || ImportJScop)
-    PollyEnabled = true;
-
-  return PollyEnabled;
+  return PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer ||
+         ExportJScop;
 }
 
 static void
 registerPollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder,
                                    llvm::legacy::PassManagerBase &PM) {
-  if (!polly::shouldEnablePolly())
-    return;
-
   if (PassPosition != POSITION_EARLY)
     return;
 
+  bool EnableForOpt = shouldEnablePollyForOptimization() &&
+                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
+    return;
+
   registerCanonicalicationPasses(PM);
-  polly::registerPollyPasses(PM);
+  registerPollyPasses(PM, EnableForOpt);
 }
 
 static void
 registerPollyLoopOptimizerEndPasses(const llvm::PassManagerBuilder &Builder,
                                     llvm::legacy::PassManagerBase &PM) {
-  if (!polly::shouldEnablePolly())
-    return;
-
   if (PassPosition != POSITION_AFTER_LOOPOPT)
     return;
 
+  bool EnableForOpt = shouldEnablePollyForOptimization() &&
+                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
+    return;
+
   PM.add(polly::createCodePreparationPass());
-  polly::registerPollyPasses(PM);
-  PM.add(createCodegenCleanupPass());
+  registerPollyPasses(PM, EnableForOpt);
+  if (EnableForOpt)
+    PM.add(createCodegenCleanupPass());
 }
 
 static void
 registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
                                        llvm::legacy::PassManagerBase &PM) {
-  if (!polly::shouldEnablePolly())
-    return;
-
   if (PassPosition != POSITION_BEFORE_VECTORIZER)
     return;
 
+  bool EnableForOpt = shouldEnablePollyForOptimization() &&
+                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
+    return;
+
   PM.add(polly::createCodePreparationPass());
-  polly::registerPollyPasses(PM);
-  PM.add(createCodegenCleanupPass());
+  polly::registerPollyPasses(PM, EnableForOpt);
+  if (EnableForOpt)
+    PM.add(createCodegenCleanupPass());
 }
 
 static void buildDefaultPollyPipeline(FunctionPassManager &PM,
                                       PassBuilder::OptimizationLevel Level) {
-  if (!polly::shouldEnablePolly())
+  bool EnableForOpt =
+      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
+
   PassBuilder PB;
   ScopPassManager SPM;
 
@@ -521,6 +538,9 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
 
   if (ExportJScop)
     report_fatal_error("Option -polly-export not supported with NPM", false);
+
+  if (!EnableForOpt)
+    return;
 
   if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
     switch (CodeGeneration) {
