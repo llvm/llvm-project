@@ -486,6 +486,19 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
 
+  // If the value is a constant, we can obviously see if it is a NaN or not.
+  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
+    return !FPVal->getValueAPF().isNaN() ||
+           (SNaN && !FPVal->getValueAPF().isSignaling());
+  }
+
+  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+    for (const auto &Op : DefMI->uses())
+      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
+        return false;
+    return true;
+  }
+
   if (SNaN) {
     // FP operations quiet. For now, just handle the ones inserted during
     // legalization.
