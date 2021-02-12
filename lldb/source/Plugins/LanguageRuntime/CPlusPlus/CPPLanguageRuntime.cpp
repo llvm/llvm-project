@@ -397,8 +397,8 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       // We create a ThreadPlan to keep stepping through using the address range
       // of the current function.
       ret_plan_sp = std::make_shared<ThreadPlanStepInRange>(
-          thread, range_of_curr_func, sc, eOnlyThisThread, eLazyBoolYes,
-          eLazyBoolYes);
+          thread, range_of_curr_func, sc, nullptr, eOnlyThisThread,
+          eLazyBoolYes, eLazyBoolYes);
       return ret_plan_sp;
     }
   }
