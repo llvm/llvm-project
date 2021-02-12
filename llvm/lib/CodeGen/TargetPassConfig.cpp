@@ -858,6 +858,9 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createReplaceWithVeclibLegacyPass());
+
   if (getOptLevel() != CodeGenOpt::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
