@@ -278,11 +278,13 @@ check_c_source_compiles("int main(int argc, char** argv) {
 check_c_source_compiles("__attribute__ ((weak)) int foo(int a) { return a*a; }
   int main(int argc, char** argv) {
   return foo(argc);}" LIBOMP_HAVE_WEAK_ATTRIBUTE)
-check_include_files("windows.h;psapi.h" LIBOMP_HAVE_PSAPI_H)
-check_library_exists(psapi EnumProcessModules "" LIBOMP_HAVE_LIBPSAPI)
-if(LIBOMP_HAVE_PSAPI_H AND LIBOMP_HAVE_LIBPSAPI)
-  set(LIBOMP_HAVE_PSAPI TRUE)
-endif()
+set(CMAKE_REQUIRED_LIBRARIES psapi)
+check_c_source_compiles("#include <windows.h>
+  #include <psapi.h>
+  int main(int artc, char** argv) {
+    return EnumProcessModules(NULL, NULL, 0, NULL);
+  }" LIBOMP_HAVE_PSAPI)
+set(CMAKE_REQUIRED_LIBRARIES)
 if(NOT LIBOMP_HAVE___BUILTIN_FRAME_ADDRESS)
   set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
 else()
