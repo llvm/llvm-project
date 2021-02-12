@@ -284,6 +284,20 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   unsigned bytes = Desc.getSize();
 
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_ACCVGPR_READ_B32_vi:
+  case AMDGPU::V_ACCVGPR_WRITE_B32_vi:
+    // Set unused op_sel_hi bits to 1.
+    // FIXME: This shall be done for all VOP3P but not MAI instructions with
+    // unused op_sel_hi bits if corresponding operands do not exist.
+    // accvgpr_read/write are different, however. These are VOP3P, MAI, have
+    // src0, but do not use op_sel.
+    Encoding |= (1ul << 14) | (1ul << 59) | (1ul << 60);
+    break;
+  default:
+    break;
+  }
+
   for (unsigned i = 0; i < bytes; i++) {
     OS.write((uint8_t) ((Encoding >> (8 * i)) & 0xff));
   }
