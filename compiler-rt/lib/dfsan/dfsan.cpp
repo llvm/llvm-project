@@ -304,6 +304,7 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
     stack.Print();                      \
   }
 
+/*
 static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   // StackDepot is not async signal safe. Do not create new chains in a signal
   // handler.
@@ -326,6 +327,7 @@ static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   Origin chained = Origin::CreateChainedOrigin(o, stack);
   return chained.raw_id();
 }
+*/
 
 static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
                                    uptr size) {
