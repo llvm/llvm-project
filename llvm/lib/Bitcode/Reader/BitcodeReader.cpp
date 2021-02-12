@@ -5181,7 +5181,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Alignment;
 
       if (NumRecords == (OpNum + 5)) {
-        if (Error Err = parseAlignmentValue(Record[6], Alignment))
+        if (Error Err = parseAlignmentValue(Record[OpNum + 4], Alignment))
           return Err;
       }
 
