@@ -4593,12 +4593,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       break;
     auto *GV = dyn_cast<GlobalVariable>(InfoArg);
     Assert(GV && GV->isConstant() && GV->hasDefinitiveInitializer(),
-      "info argument of llvm.coro.begin must refer to an initialized "
-      "constant");
+           "info argument of llvm.coro.id must refer to an initialized "
+           "constant");
     Constant *Init = GV->getInitializer();
     Assert(isa<ConstantStruct>(Init) || isa<ConstantArray>(Init),
-      "info argument of llvm.coro.begin must refer to either a struct or "
-      "an array");
+           "info argument of llvm.coro.id must refer to either a struct or "
+           "an array");
     break;
   }
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
