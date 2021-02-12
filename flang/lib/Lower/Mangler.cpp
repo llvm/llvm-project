@@ -66,8 +66,7 @@ findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
 // Mangle the name of `symbol` to make it unique within FIR's symbol table using
 // the FIR name mangler, `mangler`
 std::string
-Fortran::lower::mangle::mangleName(fir::NameUniquer &uniquer,
-                                   const Fortran::semantics::Symbol &symbol) {
+Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
   // Resolve host and module association before mangling
   const auto &ultimateSymbol = symbol.GetUltimate();
   auto symbolName = toStringRef(ultimateSymbol.name());
@@ -75,12 +74,13 @@ Fortran::lower::mangle::mangleName(fir::NameUniquer &uniquer,
   return std::visit(
       Fortran::common::visitors{
           [&](const Fortran::semantics::MainProgramDetails &) {
-            return uniquer.doProgramEntry().str();
+            return fir::NameUniquer::doProgramEntry().str();
           },
           [&](const Fortran::semantics::SubprogramDetails &) {
             // Mangle external procedure without any scope prefix.
             if (Fortran::semantics::IsExternal(ultimateSymbol))
-              return uniquer.doProcedure(llvm::None, llvm::None, symbolName);
+              return fir::NameUniquer::doProcedure(llvm::None, llvm::None,
+                                                   symbolName);
             // Separate module subprograms must be mangled according to the
             // scope where they were declared (the symbol we have is the
             // definition).
@@ -88,29 +88,32 @@ Fortran::lower::mangle::mangleName(fir::NameUniquer &uniquer,
             if (const auto *mpIface = findInterfaceIfSeperateMP(ultimateSymbol))
               interface = mpIface;
             auto modNames = moduleNames(*interface);
-            return uniquer.doProcedure(modNames, hostName(*interface),
-                                       symbolName);
+            return fir::NameUniquer::doProcedure(modNames, hostName(*interface),
+                                                 symbolName);
           },
           [&](const Fortran::semantics::ProcEntityDetails &) {
             // Mangle procedure pointers and dummy procedures as variables
             if (Fortran::semantics::IsPointer(ultimateSymbol) ||
                 Fortran::semantics::IsDummy(ultimateSymbol))
-              return uniquer.doVariable(moduleNames(ultimateSymbol),
-                                        hostName(ultimateSymbol), symbolName);
+              return fir::NameUniquer::doVariable(moduleNames(ultimateSymbol),
+                                                  hostName(ultimateSymbol),
+                                                  symbolName);
             // Otherwise, this is an external procedure, even if it does not
             // have an explicit EXTERNAL attribute. Mangle it without any
             // prefix.
-            return uniquer.doProcedure(llvm::None, llvm::None, symbolName);
+            return fir::NameUniquer::doProcedure(llvm::None, llvm::None,
+                                                 symbolName);
           },
           [&](const Fortran::semantics::ObjectEntityDetails &) {
             auto modNames = moduleNames(ultimateSymbol);
             auto optHost = hostName(ultimateSymbol);
             if (Fortran::semantics::IsNamedConstant(ultimateSymbol))
-              return uniquer.doConstant(modNames, optHost, symbolName);
-            return uniquer.doVariable(modNames, optHost, symbolName);
+              return fir::NameUniquer::doConstant(modNames, optHost,
+                                                  symbolName);
+            return fir::NameUniquer::doVariable(modNames, optHost, symbolName);
           },
           [&](const Fortran::semantics::CommonBlockDetails &) {
-            return uniquer.doCommonBlock(symbolName);
+            return fir::NameUniquer::doCommonBlock(symbolName);
           },
           [](const auto &) -> std::string { TODO(""); },
       },

@@ -236,7 +236,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // translate to FIR dialect of MLIR
   llvm::Triple triple(fir::determineTargetTriple(targetTriple));
-  fir::NameUniquer nameUniquer;
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
   mlir::MLIRContext ctx(registry);
@@ -246,7 +245,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(), triple,
-      nameUniquer, kindMap);
+      kindMap);
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   std::error_code ec;
@@ -305,7 +304,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
     pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
-    pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
+    pm.addPass(fir::createFIRToLLVMPass());
 
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
