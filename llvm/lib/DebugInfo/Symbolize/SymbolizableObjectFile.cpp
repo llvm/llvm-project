@@ -74,7 +74,7 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
   // Sort by (Addr,Size,Name). If several SymbolDescs share the same Addr,
   // pick the one with the largest Size. This helps us avoid symbols with no
   // size information (Size=0).
-  llvm::sort(SS);
+  llvm::stable_sort(SS);
   auto I = SS.begin(), E = SS.end(), J = SS.begin();
   while (I != E) {
     auto OI = I;
