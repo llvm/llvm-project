@@ -513,11 +513,14 @@ private:
       const FortranEntity &entity) {
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
+    bool isOptional = false;
     llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
-    if (obj.attrs.test(Attrs::Optional))
+    if (obj.attrs.test(Attrs::Optional)) {
       attrs.emplace_back(
           mlir::Identifier::get(fir::getOptionalAttrName(), &mlirContext),
           UnitAttr::get(&mlirContext));
+      isOptional = true;
+    }
     if (obj.attrs.test(Attrs::Asynchronous))
       TODO("Asynchronous in procedure interface");
     if (obj.attrs.test(Attrs::Contiguous))
@@ -559,23 +562,23 @@ private:
       auto boxRefType = fir::ReferenceType::get(boxType);
       addFirInput(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                   attrs);
-      addPassedArg(PassEntityBy::MutableBox, entity);
+      addPassedArg(PassEntityBy::MutableBox, entity, isOptional);
     } else if (dummyRequiresBox(obj)) {
       // Pass as fir.box
       addFirInput(boxType, nextPassedArgPosition(), Property::Box, attrs);
-      addPassedArg(PassEntityBy::Box, entity);
+      addPassedArg(PassEntityBy::Box, entity, isOptional);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
       // Pass as fir.box_char
       auto boxCharTy = fir::BoxCharType::get(&mlirContext, dynamicType.kind());
       addFirInput(boxCharTy, nextPassedArgPosition(), Property::BoxChar, attrs);
-      addPassedArg(PassEntityBy::BoxChar, entity);
+      addPassedArg(PassEntityBy::BoxChar, entity, isOptional);
     } else {
       // Pass as fir.ref
       auto refType = fir::ReferenceType::get(type);
       addFirInput(refType, nextPassedArgPosition(), Property::BaseAddress,
                   attrs);
-      addPassedArg(PassEntityBy::BaseAddress, entity);
+      addPassedArg(PassEntityBy::BaseAddress, entity, isOptional);
     }
   }
 
@@ -636,9 +639,9 @@ private:
     interface.outputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
-  void addPassedArg(PassEntityBy p, FortranEntity entity) {
+  void addPassedArg(PassEntityBy p, FortranEntity entity, bool isOptional = false) {
     interface.passedArguments.emplace_back(
-        PassedEntity{p, entity, emptyValue(), emptyValue()});
+        PassedEntity{p, entity, emptyValue(), emptyValue(), isOptional});
   }
   void setPassedResult(PassEntityBy p, FortranEntity entity) {
     interface.passedResult =

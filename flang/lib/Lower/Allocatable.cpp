@@ -935,6 +935,17 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
   return fir::AbstractBox{addr};
 }
 
+mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box) {
+  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+  auto intPtrTy = builder.getIntPtrType();
+  auto ptrToInt = builder.createConvert(loc, intPtrTy, addr);
+  auto c0 = builder.createIntegerConstant(loc, intPtrTy, 0);
+  return builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::ne, ptrToInt,
+                                      c0);
+}
+
 //===----------------------------------------------------------------------===//
 // MutableBoxValue syncing implementation
 //===----------------------------------------------------------------------===//
