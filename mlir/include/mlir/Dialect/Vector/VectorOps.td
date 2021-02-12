@@ -1320,6 +1320,156 @@ def Vector_TransferWriteOp :
   let hasFolder = 1;
 }
 
+def Vector_LoadOp : Vector_Op<"load"> {
+  let summary = "reads an n-D slice of memory into an n-D vector";
+  let description = [{
+    The 'vector.load' operation reads an n-D slice of memory into an n-D
+    vector. It takes a 'base' memref, an index for each memref dimension and a
+    result vector type as arguments. It returns a value of the result vector
+    type. The 'base' memref and indices determine the start memory address from
+    which to read. Each index provides an offset for each memref dimension
+    based on the element type of the memref. The shape of the result vector
+    type determines the shape of the slice read from the start memory address.
+    The elements along each dimension of the slice are strided by the memref
+    strides. Only memref with default strides are allowed. These constraints
+    guarantee that elements read along the first dimension of the slice are
+    contiguous in memory.
+
+    The memref element type can be a scalar or a vector type. If the memref
+    element type is a scalar, it should match the element type of the result
+    vector. If the memref element type is vector, it should match the result
+    vector type.
+
+    Example 1: 1-D vector load on a scalar memref.
+    ```mlir
+    %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<8xf32>
+    ```
+
+    Example 2: 1-D vector load on a vector memref.
+    ```mlir
+    %result = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+    ```
+
+    Example 3:  2-D vector load on a scalar memref.
+    ```mlir
+    %result = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
+    ```
+
+    Example 4:  2-D vector load on a vector memref.
+    ```mlir
+    %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+    ```
+
+    Representation-wise, the 'vector.load' operation permits out-of-bounds
+    reads. Support and implementation of out-of-bounds vector loads is
+    target-specific. No assumptions should be made on the value of elements
+    loaded out of bounds. Not all targets may support out-of-bounds vector
+    loads.
+
+    Example 5:  Potential out-of-bound vector load.
+    ```mlir
+    %result = vector.load %memref[%index] : memref<?xf32>, vector<8xf32>
+    ```
+
+    Example 6:  Explicit out-of-bound vector load.
+    ```mlir
+    %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+      [MemRead]>:$base,
+      Variadic<Index>:$indices);
+  let results = (outs AnyVector:$result);
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+
+    VectorType getVectorType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+
+  let assemblyFormat =
+      "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
+}
+
+def Vector_StoreOp : Vector_Op<"store"> {
+  let summary = "writes an n-D vector to an n-D slice of memory";
+  let description = [{
+    The 'vector.store' operation writes an n-D vector to an n-D slice of memory.
+    It takes the vector value to be stored, a 'base' memref and an index for
+    each memref dimension. The 'base' memref and indices determine the start
+    memory address from which to write. Each index provides an offset for each
+    memref dimension based on the element type of the memref. The shape of the
+    vector value to store determines the shape of the slice written from the
+    start memory address. The elements along each dimension of the slice are
+    strided by the memref strides. Only memref with default strides are allowed.
+    These constraints guarantee that elements written along the first dimension
+    of the slice are contiguous in memory.
+
+    The memref element type can be a scalar or a vector type. If the memref
+    element type is a scalar, it should match the element type of the value
+    to store. If the memref element type is vector, it should match the type
+    of the value to store.
+
+    Example 1: 1-D vector store on a scalar memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
+    ```
+
+    Example 2: 1-D vector store on a vector memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+    ```
+
+    Example 3:  2-D vector store on a scalar memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
+    ```
+
+    Example 4:  2-D vector store on a vector memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+    ```
+
+    Representation-wise, the 'vector.store' operation permits out-of-bounds
+    writes. Support and implementation of out-of-bounds vector stores are
+    target-specific. No assumptions should be made on the memory written out of
+    bounds. Not all targets may support out-of-bounds vector stores.
+
+    Example 5:  Potential out-of-bounds vector store.
+    ```mlir
+    vector.store %valueToStore, %memref[%index] : memref<?xf32>, vector<8xf32>
+    ```
+
+    Example 6:  Explicit out-of-bounds vector store.
+    ```mlir
+    vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyVector:$valueToStore,
+      Arg<AnyMemRef, "the reference to store to",
+      [MemWrite]>:$base,
+      Variadic<Index>:$indices);
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+
+    VectorType getVectorType() {
+      return valueToStore().getType().cast<VectorType>();
+    }
+  }];
+
+  let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
+                       "`:` type($base) `,` type($valueToStore)";
+}
+
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
@@ -1363,7 +1513,7 @@ def Vector_MaskedLoadOp :
     VectorType getPassThruVectorType() {
       return pass_thru().getType().cast<VectorType>();
     }
-    VectorType getResultVectorType() {
+    VectorType getVectorType() {
       return result().getType().cast<VectorType>();
     }
   }];
@@ -1377,7 +1527,7 @@ def Vector_MaskedStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$value)> {
+               VectorOfRank<[1]>:$valueToStore)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -1411,12 +1561,13 @@ def Vector_MaskedStoreOp :
     VectorType getMaskVectorType() {
       return mask().getType().cast<VectorType>();
     }
-    VectorType getValueVectorType() {
-      return value().getType().cast<VectorType>();
+    VectorType getVectorType() {
+      return valueToStore().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $value attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($value)";
+  let assemblyFormat =
+      "$base `[` $indices `]` `,` $mask `,` $valueToStore "
+      "attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
 }
 

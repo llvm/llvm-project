@@ -1198,6 +1198,38 @@ func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] ->
 
 // -----
 
+func @store_unsupported_layout(%memref : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+                               %i : index, %j : index, %value : vector<8xf32>) {
+  // expected-error@+1 {{'vector.store' op base memref should have a default identity layout}}
+  vector.store %value, %memref[%i, %j] : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+                                         vector<8xf32>
+}
+
+// -----
+
+func @vector_memref_mismatch(%memref : memref<200x100xvector<4xf32>>, %i : index,
+                             %j : index, %value : vector<8xf32>) {
+  // expected-error@+1 {{'vector.store' op base memref and valueToStore vector types should match}}
+  vector.store %value, %memref[%i, %j] : memref<200x100xvector<4xf32>>, vector<8xf32>
+}
+
+// -----
+
+func @store_base_type_mismatch(%base : memref<?xf64>, %value : vector<16xf32>) {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{'vector.store' op base and valueToStore element type should match}}
+  vector.store %value, %base[%c0] : memref<?xf64>, vector<16xf32>
+}
+
+// -----
+
+func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16xf32>) {
+  // expected-error@+1 {{'vector.store' op requires 1 indices}}
+  vector.store %value, %base[] : memref<?xf32>, vector<16xf32>
+}
+
+// -----
+
 func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
   %c0 = constant 0 : index
   // expected-error@+1 {{'vector.maskedload' op base and result element type should match}}
@@ -1231,7 +1263,7 @@ func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pa
 
 func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op base and value element type should match}}
+  // expected-error@+1 {{'vector.maskedstore' op base and valueToStore element type should match}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1239,7 +1271,7 @@ func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>,
 
 func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op expected value dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore dim to match mask dim}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
 }
 
