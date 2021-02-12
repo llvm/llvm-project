@@ -336,7 +336,7 @@ public:
   }
 
   /// Returns false iff the sequence type has a shape and the shape is constant.
-  static bool unknownShape(SequenceType::Shape shape) {
+  static bool unknownShape(SequenceType::ShapeRef shape) {
     // does the shape even exist?
     auto size = shape.size();
     if (size == 0)
