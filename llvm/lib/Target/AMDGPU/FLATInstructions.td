@@ -345,6 +345,7 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
     let dlcValue = 0;
     let has_vdst = 0;
     let maybeAtomic = 1;
+    let IsAtomicNoRet = 1;
 }
 
 class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
@@ -354,6 +355,8 @@ class FLAT_AtomicRet_Pseudo<string opName, dag outs, dag ins,
   let has_vdst = 1;
   let glcValue = 1;
   let dlcValue = 0;
+  let IsAtomicNoRet = 0;
+  let IsAtomicRet = 1;
   let PseudoInstr = NAME # "_RTN";
 }
 
