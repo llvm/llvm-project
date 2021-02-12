@@ -44,9 +44,9 @@ func @exp(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK-SAME:  ins(%[[ARG0]]
   // CHECK-SAME: outs(%[[ARG0]]
   // CHECK: ^bb0(%[[SCALAR:.*]]: f32, %{{.*}}: f32):
-  // CHECK:   %[[YIELD:.*]] = exp %[[SCALAR]] : f32
+  // CHECK:   %[[YIELD:.*]] = math.exp %[[SCALAR]] : f32
   // CHECK:   linalg.yield %[[YIELD]] : f32
-  %0 = exp %arg0 : tensor<f32>
+  %0 = math.exp %arg0 : tensor<f32>
   return %0 : tensor<f32>
 }
 

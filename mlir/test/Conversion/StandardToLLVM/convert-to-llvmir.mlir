@@ -490,9 +490,9 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK-NEXT: %12 = llvm.xor %arg2, %arg3 : i32
   %12 = xor %arg2, %arg3 : i32
 // CHECK-NEXT: %13 = "llvm.intr.exp"(%arg0) : (f32) -> f32
-  %13 = std.exp %arg0 : f32
+  %13 = math.exp %arg0 : f32
 // CHECK-NEXT: %14 = "llvm.intr.exp2"(%arg0) : (f32) -> f32
-  %14 = std.exp2 %arg0 : f32
+  %14 = math.exp2 %arg0 : f32
 // CHECK-NEXT: %15 = llvm.mlir.constant(7.900000e-01 : f64) : f64
   %15 = constant 7.9e-01 : f64
 // CHECK-NEXT: %16 = llvm.shl %arg2, %arg3 : i32
@@ -502,9 +502,9 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK-NEXT: %18 = llvm.lshr %arg2, %arg3 : i32
   %18 = shift_right_unsigned %arg2, %arg3 : i32
 // CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg0) : (f32) -> f32
-  %19 = std.sqrt %arg0 : f32
+  %19 = math.sqrt %arg0 : f32
 // CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg4) : (f64) -> f64
-  %20 = std.sqrt %arg4 : f64
+  %20 = math.sqrt %arg4 : f64
   return %0, %4 : f32, i32
 }
 

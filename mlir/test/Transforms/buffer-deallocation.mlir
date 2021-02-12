@@ -535,7 +535,7 @@ func @nested_regions_and_cond_branch(
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloc() : memref<2xf32>
     test.buffer_based in(%arg1: memref<2xf32>) out(%1: memref<2xf32>)
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
   }
   br ^bb3(%0 : memref<2xf32>)
@@ -553,7 +553,7 @@ func @nested_regions_and_cond_branch(
 //      CHECK:     %[[ALLOC2:.*]] = alloc()
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC2]]
 //      CHECK:     dealloc %[[ALLOC2]]
-// CHECK-NEXT:     %{{.*}} = exp
+// CHECK-NEXT:     %{{.*}} = math.exp
 //      CHECK:   %[[ALLOC3:.*]] = alloc()
 // CHECK-NEXT:   linalg.copy(%[[ALLOC1]], %[[ALLOC3]])
 // CHECK-NEXT:   dealloc %[[ALLOC1]]
@@ -812,7 +812,7 @@ func @nestedRegionsAndCondBranchAlloca(
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloca() : memref<2xf32>
     test.buffer_based in(%arg1: memref<2xf32>) out(%1: memref<2xf32>)
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
   }
   br ^bb3(%0 : memref<2xf32>)
@@ -830,7 +830,7 @@ func @nestedRegionsAndCondBranchAlloca(
 // CHECK-NEXT:   test.region_buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC1]]
 //      CHECK:     %[[ALLOCA:.*]] = alloca()
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOCA]]
-//      CHECK:     %{{.*}} = exp
+//      CHECK:     %{{.*}} = math.exp
 //      CHECK:  %[[ALLOC2:.*]] = alloc()
 // CHECK-NEXT:  linalg.copy
 // CHECK-NEXT:  dealloc %[[ALLOC1]]

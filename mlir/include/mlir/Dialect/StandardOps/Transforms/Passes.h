@@ -1,4 +1,3 @@
-
 //===- Passes.h - Pass Entrypoints ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -21,9 +20,6 @@
 namespace mlir {
 
 class OwningRewritePatternList;
-
-void populateExpandTanhPattern(OwningRewritePatternList &patterns,
-                               MLIRContext *ctx);
 
 void populateStdBufferizePatterns(MLIRContext *context,
                                   BufferizeTypeConverter &typeConverter,
