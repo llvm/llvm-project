@@ -361,7 +361,6 @@ void __kmp_unlock_suspend_mx(kmp_info_t *th) {
 template <class C>
 static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   kmp_info_t *th = __kmp_threads[th_gtid];
-  int status;
   typename C::flag_t old_spin;
 
   KF_TRACE(30, ("__kmp_suspend_template: T#%d enter for flag's loc(%p)\n",
@@ -467,7 +466,6 @@ template void __kmp_suspend_64<true, false>(int, kmp_flag_64<true, false> *);
 template <class C>
 static inline void __kmp_resume_template(int target_gtid, C *flag) {
   kmp_info_t *th = __kmp_threads[target_gtid];
-  int status;
 
 #ifdef KMP_DEBUG
   int gtid = TCR_4(__kmp_init_gtid) ? __kmp_get_gtid() : -1;
