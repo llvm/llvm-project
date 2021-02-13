@@ -14,15 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
-                              SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
-                                                   SDTCisVT<1, XLenVT>,
-                                                   SDTCisVT<2, XLenVT>]>>;
-def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
-                               SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
-                                                    SDTCisEltOfVec<1, 0>,
-                                                    SDTCisVT<2, XLenVT>]>>;
-
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
@@ -4203,24 +4194,6 @@ foreach fvti = AllFloatVectors in {
                                             (fvti.Scalar (fpimm0)),
                                             (fvti.Mask V0), (XLenVT (VLOp GPR:$vl)))),
             (instr fvti.RegClass:$rs2, 0, (fvti.Mask V0), GPR:$vl, fvti.SEW)>;
-}
-
-//===----------------------------------------------------------------------===//
-// 14.16. Vector Floating-Point Move Instruction
-//===----------------------------------------------------------------------===//
-foreach fvti = AllFloatVectors in {
-  // If we're splatting fpimm0, use vmv.v.x vd, x0.
-  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                         (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
-             0, GPR:$vl, fvti.SEW)>;
-
-  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                         (fvti.Scalar fvti.ScalarRegClass:$rs2), (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
-                                fvti.LMul.MX)
-             (fvti.Scalar fvti.ScalarRegClass:$rs2),
-             GPR:$vl, fvti.SEW)>;
 }
 
 //===----------------------------------------------------------------------===//
