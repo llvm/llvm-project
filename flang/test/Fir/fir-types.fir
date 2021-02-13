@@ -1,6 +1,6 @@
 // Test the FIR types
-// Parse types and check that we can reparse what we print.
-// RUN: fir-opt %s | fir-opt | FileCheck %s
+
+// RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
 
 // Fortran Intrinsic types
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
