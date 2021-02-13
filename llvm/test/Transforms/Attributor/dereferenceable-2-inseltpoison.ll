@@ -10,7 +10,7 @@
 define <4 x double> @PR21780(double* %ptr) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@PR21780
-; IS__TUNIT____-SAME: (double* nocapture nofree nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT____-SAME: (double* nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 1
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 2
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 3
@@ -27,7 +27,7 @@ define <4 x double> @PR21780(double* %ptr) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@PR21780
-; IS__CGSCC____-SAME: (double* nocapture nofree nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC____-SAME: (double* nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 1
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 2
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[PTR]], i64 3
@@ -106,14 +106,14 @@ define double @PR21780_only_access3_without_inbounds(double* %ptr) {
 define double @PR21780_without_inbounds(double* %ptr) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@PR21780_without_inbounds
-; IS__TUNIT____-SAME: (double* nocapture nofree nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-SAME: (double* nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0]] {
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr double, double* [[PTR]], i64 3
 ; IS__TUNIT____-NEXT:    [[T3:%.*]] = load double, double* [[ARRAYIDX3]], align 8
 ; IS__TUNIT____-NEXT:    ret double [[T3]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@PR21780_without_inbounds
-; IS__CGSCC____-SAME: (double* nocapture nofree nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (double* nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr double, double* [[PTR]], i64 3
 ; IS__CGSCC____-NEXT:    [[T3:%.*]] = load double, double* [[ARRAYIDX3]], align 8
 ; IS__CGSCC____-NEXT:    ret double [[T3]]
@@ -136,7 +136,7 @@ define double @PR21780_without_inbounds(double* %ptr) {
 define void @gep0(i8* %unused, i8* %other, i8* %ptr) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@gep0
-; IS__TUNIT____-SAME: (i8* nocapture nofree readnone [[UNUSED:%.*]], i8* nocapture nofree nonnull writeonly dereferenceable(1) [[OTHER:%.*]], i8* nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]]) [[ATTR1:#.*]] {
+; IS__TUNIT____-SAME: (i8* nocapture nofree readnone [[UNUSED:%.*]], i8* nocapture nofree noundef nonnull writeonly dereferenceable(1) [[OTHER:%.*]], i8* nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]]) [[ATTR1:#.*]] {
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, i8* [[PTR]], i64 2
 ; IS__TUNIT____-NEXT:    [[T2:%.*]] = load i8, i8* [[ARRAYIDX2]], align 1
 ; IS__TUNIT____-NEXT:    store i8 [[T2]], i8* [[OTHER]], align 1
@@ -144,7 +144,7 @@ define void @gep0(i8* %unused, i8* %other, i8* %ptr) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@gep0
-; IS__CGSCC____-SAME: (i8* nocapture nofree readnone [[UNUSED:%.*]], i8* nocapture nofree nonnull writeonly dereferenceable(1) [[OTHER:%.*]], i8* nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC____-SAME: (i8* nocapture nofree readnone [[UNUSED:%.*]], i8* nocapture nofree noundef nonnull writeonly dereferenceable(1) [[OTHER:%.*]], i8* nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]]) [[ATTR1:#.*]] {
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, i8* [[PTR]], i64 2
 ; IS__CGSCC____-NEXT:    [[T2:%.*]] = load i8, i8* [[ARRAYIDX2]], align 1
 ; IS__CGSCC____-NEXT:    store i8 [[T2]], i8* [[OTHER]], align 1
@@ -653,7 +653,7 @@ define void @load_store(i32* %arg) {
 define void @different_size1(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@different_size1
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
 ; IS__TUNIT____-NEXT:    [[ARG_CAST:%.*]] = bitcast i32* [[ARG]] to double*
 ; IS__TUNIT____-NEXT:    store double 0.000000e+00, double* [[ARG_CAST]], align 8
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[ARG]], align 8
@@ -661,7 +661,7 @@ define void @different_size1(i32* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@different_size1
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:    [[ARG_CAST:%.*]] = bitcast i32* [[ARG]] to double*
 ; IS__CGSCC____-NEXT:    store double 0.000000e+00, double* [[ARG_CAST]], align 8
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[ARG]], align 8
@@ -676,7 +676,7 @@ define void @different_size1(i32* %arg) {
 define void @different_size2(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@different_size2
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[ARG]], align 8
 ; IS__TUNIT____-NEXT:    [[ARG_CAST:%.*]] = bitcast i32* [[ARG]] to double*
 ; IS__TUNIT____-NEXT:    store double 0.000000e+00, double* [[ARG_CAST]], align 8
@@ -684,7 +684,7 @@ define void @different_size2(i32* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@different_size2
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[ARG]], align 8
 ; IS__CGSCC____-NEXT:    [[ARG_CAST:%.*]] = bitcast i32* [[ARG]] to double*
 ; IS__CGSCC____-NEXT:    store double 0.000000e+00, double* [[ARG_CAST]], align 8
