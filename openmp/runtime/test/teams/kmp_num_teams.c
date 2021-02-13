@@ -33,7 +33,7 @@ void check_num_teams(int num_teams_lb, int num_teams_ub, int thread_limit) {
   __kmpc_push_num_teams_51(NULL, gtid, num_teams_lb, num_teams_ub,
                            thread_limit);
 
-#pragma omp target teams
+#pragma omp target teams map(tofrom: a) map(from: nteams, nthreads)
   {
     int priv_nteams;
     int team_num = omp_get_team_num();
