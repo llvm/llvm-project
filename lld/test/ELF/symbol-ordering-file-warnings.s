@@ -97,13 +97,13 @@
 # WARN-NOT:    warning:
 # SAMESYM:     warning: {{.*}}.txt: duplicate ordered symbol: _start
 # WARN-NOT:    warning:
-# SYNTHETIC:   warning: <internal>: unable to order synthetic symbol: _GLOBAL_OFFSET_TABLE_
+# SHARED:      warning: {{.*}}.so: unable to order shared symbol: shared
 # WARN-NOT:    warning:
 # DISCARD:     warning: {{.*}}1.o: unable to order discarded symbol: discard
 # WARN-NOT:    warning:
 # GC:          warning: {{.*}}1.o: unable to order discarded symbol: gc
 # WARN-NOT:    warning:
-# SHARED:      warning: {{.*}}.so: unable to order shared symbol: shared
+# SYNTHETIC:   warning: <internal>: unable to order synthetic symbol: _GLOBAL_OFFSET_TABLE_
 # WARN-NOT:    warning:
 # UNDEFINED:   warning: {{.*}}3.o: unable to order undefined symbol: undefined
 # WARN-NOT:    warning:

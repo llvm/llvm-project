@@ -31,16 +31,16 @@ movabsq	$set_data, %rax
 // CHECK-NEXT:   0x203420 R_X86_64_JUMP_SLOT set_data 0x0
 // CHECK-NEXT: }
 
-// CHECK:      Name: foo
-// CHECK-NEXT: Value: 0x0
+// CHECK:      Name:    set_data
+// CHECK-NEXT: Value:   0x2012F0
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Function
 // CHECK-NEXT: Other: 0
 // CHECK-NEXT: Section: Undefined
 
-// CHECK:      Name:    set_data
-// CHECK-NEXT: Value:   0x2012F0
+// CHECK:      Name: foo
+// CHECK-NEXT: Value: 0x0
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Function
