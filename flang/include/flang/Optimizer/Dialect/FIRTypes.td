@@ -44,6 +44,25 @@ def BoxType : FIR_Type<"Box", "box"> {
   let genVerifyInvariantsDecl = 1;
 }
 
+def fir_FieldType : FIR_Type<"Field", "field"> {
+  let summary = "A field (in a RecordType) argument's type";
+
+  let description = [{
+    The type of a field name. Implementations may defer the layout of a Fortran
+    derived type until runtime. This implies that the runtime must be able to
+    determine the offset of fields within the entity.
+  }];
+
+  let printer = [{
+    $_printer << "field";
+  }];
+
+  let parser = [{
+    return get(context);
+  }];
+
+}
+
 def ShapeType : FIR_Type<"Shape", "shape"> {
   let summary = "shape of a multidimensional array object";
 
