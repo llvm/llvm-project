@@ -1242,6 +1242,9 @@ Currently, only the following parameter attributes are defined:
     array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
     ``addrspace(0)`` (which is the default address space), except if the
     ``null_pointer_is_valid`` function attribute is present.
+    ``n`` should be a positive number. The pointer should be well defined,
+    otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
+    implies ``noundef``.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -9449,12 +9452,7 @@ written using a store of the same type.
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
-
-If the pointer is not a well-defined value, all of its possible representations
-should be dereferenceable. For example, loading a byte from a pointer to an
-array of type ``[16 x i8]`` with offset ``undef & 31`` is undefined behavior.
-Loading a byte at offset ``undef & 15`` nondeterministically reads one of the
-bytes.
+If ``<pointer>`` is not a well-defined value, the behavior is undefined.
 
 Examples:
 """""""""
@@ -9548,12 +9546,7 @@ of bytes, it is unspecified what happens to the extra bits that do not
 belong to the type, but they will typically be overwritten.
 If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
-
-If ``<pointer>`` is not a well-defined value, all of its possible
-representations should be dereferenceable. For example, storing a byte to a
-pointer to an array of type ``[16 x i8]`` with offset ``undef & 31`` is
-undefined behavior. Storing a byte to an offset ``undef & 15``
-nondeterministically stores to one of offsets from 0 to 15.
+If ``<pointer>`` is not a well-defined value, the behavior is undefined.
 
 Example:
 """"""""
@@ -12730,11 +12723,11 @@ non-overlapping. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on the
 argument.
 
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memcpy`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 .. _int_memcpy_inline:
 
@@ -12789,11 +12782,9 @@ source location to the destination location, which are not allowed to
 overlap. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on
 the argument.
-
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-
-The generated code is guaranteed not to call any external functions.
+The behavior of '``llvm.memcpy.inline.*``' is equivalent to the behavior of
+'``llvm.memcpy.*``', but the generated code is guaranteed not to call any
+external functions.
 
 .. _int_memmove:
 
@@ -12850,11 +12841,11 @@ copies "len" bytes of memory over. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memmove`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 .. _int_memset:
 
@@ -12908,11 +12899,11 @@ at the destination location. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointer may be NULL, dangling, ``undef``, or ``poison``
-pointer. However, it must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memset`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
