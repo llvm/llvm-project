@@ -1,9 +1,29 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readelf -s - | FileCheck %s
 
 // This is a long test that checks that the aliases created by weakref are
 // never in the symbol table and that the only case it causes a symbol to
 // be output as a weak undefined symbol is if that variable is not defined
 // in this file and all the references to it are done via the alias.
+
+# CHECK:      Num:    Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-NEXT:   0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# CHECK-NEXT:   1: 0000000000000000     0 SECTION LOCAL  DEFAULT     2 .text
+# CHECK-NEXT:   2: 0000000000000018     0 NOTYPE  LOCAL  DEFAULT     2 bar6
+# CHECK-NEXT:   3: 0000000000000018     0 NOTYPE  LOCAL  DEFAULT     2 bar7
+# CHECK-NEXT:   4: 000000000000001c     0 NOTYPE  LOCAL  DEFAULT     2 bar8
+# CHECK-NEXT:   5: 0000000000000020     0 NOTYPE  LOCAL  DEFAULT     2 bar9
+# CHECK-NEXT:   6: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar1
+# CHECK-NEXT:   7: 0000000000000028     0 NOTYPE  GLOBAL DEFAULT     2 bar10
+# CHECK-NEXT:   8: 0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar11
+# CHECK-NEXT:   9: 0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar12
+# CHECK-NEXT:  10: 0000000000000034     0 NOTYPE  GLOBAL DEFAULT     2 bar13
+# CHECK-NEXT:  11: 0000000000000038     0 NOTYPE  GLOBAL DEFAULT     2 bar14
+# CHECK-NEXT:  12: 0000000000000040     0 NOTYPE  GLOBAL DEFAULT     2 bar15
+# CHECK-NEXT:  13: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar2
+# CHECK-NEXT:  14: 0000000000000000     0 NOTYPE  WEAK   DEFAULT   UND bar3
+# CHECK-NEXT:  15: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar4
+# CHECK-NEXT:  16: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar5
+
 
         .weakref foo1, bar1
 
@@ -68,159 +88,3 @@ bar15:
         .weakref foo15, bar15
         .long bar15
         .long foo15
-
-// CHECK:      Symbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:  (0)
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local (0x0)
-// CHECK-NEXT:     Type: None (0x0)
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: .text (0)
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: Section
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar6
-// CHECK-NEXT:     Value: 0x18
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar7
-// CHECK-NEXT:     Value: 0x18
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar8
-// CHECK-NEXT:     Value: 0x1C
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar9
-// CHECK-NEXT:     Value: 0x20
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar1
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar10
-// CHECK-NEXT:     Value: 0x28
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar11
-// CHECK-NEXT:     Value: 0x30
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar12
-// CHECK-NEXT:     Value: 0x30
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar13
-// CHECK-NEXT:     Value: 0x34
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar14
-// CHECK-NEXT:     Value: 0x38
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar15
-// CHECK-NEXT:     Value: 0x40
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar2
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar3
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Weak
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar4
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar5
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined (0x0)
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]

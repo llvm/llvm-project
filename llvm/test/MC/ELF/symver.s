@@ -1,4 +1,6 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -r --symbols - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
+# RUN: llvm-readobj -r %t | FileCheck %s
+# RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
 defined1:
 defined2:
@@ -31,93 +33,16 @@ global1:
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// CHECK:          Name: .text (0)
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: Section
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: defined1
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: defined2
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK:        Symbol {
-// CHECK:          Name: bar1@zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar3@@zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar5@@zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar2@zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: bar6@zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: g1@@zed
-// CHECK-NEXT:     Value: 0x14
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: global1
-// CHECK-NEXT:     Value: 0x14
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+# SYM:      Symbol table '.symtab' contains 11 entries:
+# SYM-NEXT: Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYM-NEXT:   0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# SYM-NEXT:   1: 0000000000000000     0 SECTION LOCAL  DEFAULT     2 .text
+# SYM-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 defined1
+# SYM-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 defined2
+# SYM-NEXT:   4: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 bar1@zed
+# SYM-NEXT:   5: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 bar3@@zed
+# SYM-NEXT:   6: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2 bar5@@zed
+# SYM-NEXT:   7: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar2@zed
+# SYM-NEXT:   8: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar6@zed
+# SYM-NEXT:   9: 0000000000000014     0 NOTYPE  GLOBAL DEFAULT     2 g1@@zed
+# SYM-NEXT:  10: 0000000000000014     0 NOTYPE  GLOBAL DEFAULT     2 global1
