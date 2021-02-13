@@ -28,12 +28,15 @@ namespace llvm {
 class FileOutputBuffer {
 public:
   enum {
-    /// set the 'x' bit on the resulting file
+    /// Set the 'x' bit on the resulting file.
     F_executable = 1,
 
     /// Don't use mmap and instead write an in-memory buffer to a file when this
     /// buffer is closed.
     F_no_mmap = 2,
+
+    /// Preserve ownership if the file already exists.
+    F_keep_ownership = 4,
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write
@@ -46,7 +49,8 @@ public:
   /// \p Size.  It is an error to specify F_modify and Size=-1 if \p FilePath
   /// does not exist.
   static Expected<std::unique_ptr<FileOutputBuffer>>
-  create(StringRef FilePath, size_t Size, unsigned Flags = 0);
+  create(StringRef FilePath, size_t Size, unsigned Flags = 0,
+         unsigned UserID = 0, unsigned GroupID = 0);
 
   /// Returns a pointer to the start of the buffer.
   virtual uint8_t *getBufferStart() const = 0;
