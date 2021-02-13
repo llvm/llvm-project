@@ -12,8 +12,8 @@
 # RUN: llvm-readobj --dyn-relocations %t.so | FileCheck %s
 
 # CHECK:      Dynamic Relocations {
-# CHECK-NEXT:   R_X86_64_64 bar 0x0
 # CHECK-NEXT:   R_X86_64_GLOB_DAT foo 0x0
+# CHECK-NEXT:   R_X86_64_64 bar 0x0
 # CHECK-NEXT: }
 
 .data

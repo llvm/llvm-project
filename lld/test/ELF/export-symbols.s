@@ -26,10 +26,10 @@
 # EXPORT:      Symbol table '.dynsym' contains 8 entries:
 # EXPORT:      GLOBAL DEFAULT   {{.*}} shared
 # EXPORT-NEXT: WEAK   DEFAULT   {{.*}} undef_weak
-# EXPORT-NEXT: GLOBAL PROTECTED {{.*}} _start
-# EXPORT-NEXT: GLOBAL DEFAULT   ABS    abs
-# EXPORT-NEXT: GLOBAL DEFAULT   {{.*}} common
 # EXPORT-NEXT: WEAK   DEFAULT   {{.*}} weak_default
+# EXPORT-NEXT: GLOBAL DEFAULT   {{.*}} common
+# EXPORT-NEXT: GLOBAL DEFAULT   ABS    abs
+# EXPORT-NEXT: GLOBAL PROTECTED {{.*}} _start
 # EXPORT-NEXT: GLOBAL DEFAULT   {{.*}} defsym
 
 .weak undef_weak

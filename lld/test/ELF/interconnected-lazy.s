@@ -9,11 +9,11 @@
 ## Test we resolve both to the same file.
 # RUN: ld.lld -y a -y foo -y __foo %t/main.o --start-lib %t/a.o %t/b.o --end-lib -o /dev/null | FileCheck %s
 
-# CHECK:      a.o: lazy definition of __foo
-# CHECK-NEXT: a.o: lazy definition of a
+# CHECK:      a.o: lazy definition of a
 # CHECK-NEXT: a.o: lazy definition of foo
-# CHECK-NEXT: b.o: definition of __foo
+# CHECK-NEXT: a.o: lazy definition of __foo
 # CHECK-NEXT: b.o: definition of foo
+# CHECK-NEXT: b.o: definition of __foo
 # CHECK-NEXT: b.o: reference to a
 # CHECK-NEXT: a.o: definition of a
 

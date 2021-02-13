@@ -12,9 +12,9 @@
 ; ELF-NEXT: ]
 
 ; ELF:      Symbol {
-; ELF:        Name: lds.defined
-; ELF-NEXT:   Value: 0x8
-; ELF-NEXT:   Size: 32
+; ELF:        Name: lds.external
+; ELF-NEXT:   Value: 0x4
+; ELF-NEXT:   Size: 0
 ; ELF-NEXT:   Binding: Global (0x1)
 ; ELF-NEXT:   Type: Object (0x1)
 ; ELF-NEXT:   Other: 0
@@ -22,9 +22,9 @@
 ; ELF-NEXT: }
 
 ; ELF:      Symbol {
-; ELF:        Name: lds.external
-; ELF-NEXT:   Value: 0x4
-; ELF-NEXT:   Size: 0
+; ELF:        Name: lds.defined
+; ELF-NEXT:   Value: 0x8
+; ELF-NEXT:   Size: 32
 ; ELF-NEXT:   Binding: Global (0x1)
 ; ELF-NEXT:   Type: Object (0x1)
 ; ELF-NEXT:   Other: 0

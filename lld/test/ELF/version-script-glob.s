@@ -11,8 +11,8 @@ bar1:
 zed1:
 local:
 
-# CHECK:      bar1{{$}}
-# CHECK-NEXT: foo1{{$}}
+# CHECK:      foo1{{$}}
+# CHECK-NEXT: bar1{{$}}
 # CHECK-NOT:  {{.}}
 
 # RUN: echo "{ global : local; local: *; };" > %t1.script
