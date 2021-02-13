@@ -577,6 +577,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FMUL, VT, Custom);
         setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FNEG, VT, Custom);
+        setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
       }
     }
@@ -1209,6 +1210,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::FDIV_VL);
   case ISD::FNEG:
     return lowerToScalableOp(Op, DAG, RISCVISD::FNEG_VL);
+  case ISD::FSQRT:
+    return lowerToScalableOp(Op, DAG, RISCVISD::FSQRT_VL);
   case ISD::FMA:
     return lowerToScalableOp(Op, DAG, RISCVISD::FMA_VL);
   case ISD::SMIN:
@@ -4739,6 +4742,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMUL_VL)
   NODE_NAME_CASE(FDIV_VL)
   NODE_NAME_CASE(FNEG_VL)
+  NODE_NAME_CASE(FSQRT_VL)
   NODE_NAME_CASE(FMA_VL)
   NODE_NAME_CASE(SMIN_VL)
   NODE_NAME_CASE(SMAX_VL)
