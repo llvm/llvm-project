@@ -11,10 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FIR_DIALECT_FIR_OPS
-#define FIR_DIALECT_FIR_OPS
+#ifndef FORTRAN_DIALECT_FIR_OPS
+#define FORTRAN_DIALECT_FIR_OPS
 
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -144,10 +145,11 @@ class fir_SimpleOp<string mnemonic, list<OpTrait> traits>
 }
 
 // Base builder for allocate operations
-def fir_AllocateOpBuilder :
-  OpBuilderDAG<(ins "Type":$inType, CArg<"ValueRange", "{}">:$lenParams,
-    CArg<"ValueRange", "{}">:$sizes,
-    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+def fir_AllocateOpBuilder : OpBuilderDAG<(ins
+    "mlir::Type":$inType,
+    CArg<"mlir::ValueRange", "{}">:$lenParams,
+    CArg<"mlir::ValueRange", "{}">:$sizes,
+    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
   [{
     $_state.addTypes(getRefTy(inType));
     $_state.addAttribute("in_type", TypeAttr::get(inType));
@@ -155,9 +157,11 @@ def fir_AllocateOpBuilder :
     $_state.addAttributes(attributes);
   }]>;
 
-def fir_NamedAllocateOpBuilder :
-  OpBuilderDAG<(ins "Type":$inType, "StringRef":$name,
-    CArg<"ValueRange", "{}">:$lenParams, CArg<"ValueRange", "{}">:$sizes,
+def fir_NamedAllocateOpBuilder : OpBuilderDAG<(ins
+    "Type":$inType,
+    "StringRef":$name,
+    CArg<"ValueRange", "{}">:$lenParams,
+    CArg<"ValueRange", "{}">:$sizes,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     $_state.addTypes(getRefTy(inType));
@@ -167,8 +171,9 @@ def fir_NamedAllocateOpBuilder :
     $_state.addAttributes(attributes);
   }]>;
 
-def fir_OneResultOpBuilder :
-  OpBuilderDAG<(ins "Type":$resultType, "ValueRange":$operands,
+def fir_OneResultOpBuilder : OpBuilderDAG<(ins
+    "Type":$resultType,
+    "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
     if (resultType)
@@ -340,6 +345,39 @@ def fir_AllocaOp : fir_AllocatableOp<"alloca"> {
     (`len1`, `len2`) to the type `PT`.
 
     Finally, the operation is undefined if the ssa-value `%c` is negative.
+
+    Fortran Semantics:
+    There is no language mechanism in Fortran to allocate space on the stack
+    like C's `alloca()` function. Therefore fir.alloca is not control-flow
+    dependent. However, the lifetime of a stack allocation is often limited to
+    a small region and a legal implementation may reuse stack storage in other
+    regions when there is no conflict. For example, take the following code
+    fragment.
+
+    ```fortran
+      CALL foo(1)
+      CALL foo(2)
+      CALL foo(3)
+    ```
+
+    A legal implementation can allocate a stack slot and initialize it with the
+    constant `1`, then pass that by reference to foo. Likewise for the second
+    and third calls to foo, each stack slot being initialized accordingly. It is
+    also a conforming implementation to reuse the same stack slot for all three
+    calls, just initializing each in turn. This is possible  as the lifetime of
+    the copy of each constant need not exceed that of the CALL statement.
+    Indeed, a user would likely expect a good Fortran compiler to perform such
+    an optimization.
+
+    Until Fortran 2018, procedures defaulted to non-recursive. A legal
+    implementation could therefore convert stack allocations to global
+    allocations. Such a conversion effectively adds the SAVE attribute to all
+    variables.
+
+    Some temporary entities (large arrays) probably should not be stack
+    allocated as stack space can often be limited. A legal implementation can
+    convert these large stack allocations to heap allocations regardless of
+    whether the procedure is recursive or not.
   }];
 
   let results = (outs fir_ReferenceType);
