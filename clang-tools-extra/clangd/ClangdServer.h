@@ -339,7 +339,6 @@ private:
 
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
-  ModuleSet *Modules = nullptr;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:
