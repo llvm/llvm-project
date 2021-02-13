@@ -1029,9 +1029,10 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     ArrayRef<const CodeGenRegister*> Roots = RegBank.getRegUnit(i).getRoots();
     assert(!Roots.empty() && "All regunits must have a root register.");
     assert(Roots.size() <= 2 && "More than two roots not supported yet.");
-    OS << "  { " << getQualifiedName(Roots.front()->TheDef);
-    for (unsigned r = 1; r != Roots.size(); ++r)
-      OS << ", " << getQualifiedName(Roots[r]->TheDef);
+    OS << "  { ";
+    ListSeparator LS;
+    for (const CodeGenRegister *R : Roots)
+      OS << LS << getQualifiedName(R->TheDef);
     OS << " },\n";
   }
   OS << "};\n\n";
