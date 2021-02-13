@@ -1500,11 +1500,16 @@ defm sanitize_address_use_odr_indicator : BoolOption<"f", "sanitize-address-use-
             " reports in partially sanitized programs at the cost of an increase in binary size">,
   NegFlag<SetFalse, [], "Disable ODR indicator globals">>,
   Group<f_clang_Group>;
-def sanitize_address_destructor_kind_EQ : Joined<["-"], "fsanitize-address-destructor-kind=">,
-  MetaVarName<"<kind>">,
-  Flags<[CC1Option]>,
-  HelpText<"Set destructor type used in ASan instrumentation">,
-  Group<f_clang_Group>;
+def sanitize_address_destructor_kind_EQ
+    : Joined<["-"], "fsanitize-address-destructor-kind=">,
+      MetaVarName<"<kind>">,
+      Flags<[CC1Option]>,
+      HelpText<"Set destructor type used in ASan instrumentation">,
+      Group<f_clang_Group>,
+      Values<"none,global">,
+      NormalizedValuesScope<"llvm::AsanDtorKind">,
+      NormalizedValues<["None", "Global"]>,
+      MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtorKind">, "Global">;
 // Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.
