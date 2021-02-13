@@ -11019,13 +11019,15 @@ This instruction requires several arguments:
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.
    - The ret instruction must return the (possibly bitcasted) value
-     produced by the call or void.
-   - The caller and callee prototypes must match. Pointer types of
-     parameters or return types may differ in pointee type, but not
-     in address space.
+     produced by the call, undef, or void.
+   - The caller and callee prototypes must match if the calling convention is
+     not swifttailcc. Pointer types of parameters or return types may differ
+     in pointee type, but not in address space.
    - The calling conventions of the caller and callee must match.
    - All ABI-impacting function attributes, such as sret, byval, inreg,
-     returned, and inalloca, must match.
+     returned, and inalloca, must match. Matching isn't relevant for swifttailcc
+     calls, instead only a limited set of these attributes is allowed: sret, 
+     byval, swiftself, and swiftasync
    - The callee must be varargs iff the caller is varargs. Bitcasting a
      non-varargs function to the appropriate varargs type is legal so
      long as the non-varargs prefixes obey the other rules.
