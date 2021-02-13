@@ -73,6 +73,7 @@ def riscv_fsub_vl  : SDNode<"RISCVISD::FSUB_VL",  SDT_RISCVFPBinOp_VL>;
 def riscv_fmul_vl  : SDNode<"RISCVISD::FMUL_VL",  SDT_RISCVFPBinOp_VL, [SDNPCommutative]>;
 def riscv_fdiv_vl  : SDNode<"RISCVISD::FDIV_VL",  SDT_RISCVFPBinOp_VL>;
 def riscv_fneg_vl  : SDNode<"RISCVISD::FNEG_VL",  SDT_RISCVFPUnOp_VL>;
+def riscv_fabs_vl  : SDNode<"RISCVISD::FABS_VL",  SDT_RISCVFPUnOp_VL>;
 def riscv_fsqrt_vl : SDNode<"RISCVISD::FSQRT_VL", SDT_RISCVFPUnOp_VL>;
 
 def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
@@ -449,6 +450,10 @@ foreach vti = AllFloatVectors in {
                  vti.RegClass:$rs2, GPR:$vl, vti.SEW)>;
 
   // 14.12. Vector Floating-Point Sign-Injection Instructions
+  def : Pat<(riscv_fabs_vl (vti.Vector vti.RegClass:$rs), (vti.Mask true_mask),
+                           (XLenVT (VLOp GPR:$vl))),
+            (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs, vti.RegClass:$rs, GPR:$vl, vti.SEW)>;
   // Handle fneg with VFSGNJN using the same input for both operands.
   def : Pat<(riscv_fneg_vl (vti.Vector vti.RegClass:$rs), (vti.Mask true_mask),
                            (XLenVT (VLOp GPR:$vl))),

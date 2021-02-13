@@ -253,6 +253,54 @@ define void @fneg_v2f64(<2 x double>* %x) {
   ret void
 }
 
+define void @fabs_v8f16(<8 x half>* %x) {
+; CHECK-LABEL: fabs_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, 8
+; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
+; CHECK-NEXT:    vse16.v v25, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  store <8 x half> %b, <8 x half>* %x
+  ret void
+}
+declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
+
+define void @fabs_v4f32(<4 x float>* %x) {
+; CHECK-LABEL: fabs_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, 4
+; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vle32.v v25, (a0)
+; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
+; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  store <4 x float> %b, <4 x float>* %x
+  ret void
+}
+declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
+
+define void @fabs_v2f64(<2 x double>* %x) {
+; CHECK-LABEL: fabs_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, 2
+; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vfsgnjx.vv v25, v25, v25
+; CHECK-NEXT:    vse64.v v25, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  store <2 x double> %b, <2 x double>* %x
+  ret void
+}
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
+
 define void @sqrt_v8f16(<8 x half>* %x) {
 ; CHECK-LABEL: sqrt_v8f16:
 ; CHECK:       # %bb.0:
