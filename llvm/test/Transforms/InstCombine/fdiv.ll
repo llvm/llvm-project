@@ -2,6 +2,8 @@
 ; RUN: opt -S -instcombine < %s | FileCheck %s
 
 declare float @llvm.fabs.f32(float) nounwind readnone
+declare float @llvm.pow.f32(float, float) nounwind readnone
+declare <2 x half> @llvm.pow.v2f16(<2 x half>, <2 x half>) nounwind readnone
 
 define float @exact_inverse(float %x) {
 ; CHECK-LABEL: @exact_inverse(
@@ -655,4 +657,61 @@ define float @fabs_fabs_extra_use3(float %x, float %y) {
   call void @use_f32(float %y.fabs)
   %r = fdiv float %x.fabs, %y.fabs
   ret float %r
+}
+
+define float @pow_divisor(float %x, float %y, float %z) {
+; CHECK-LABEL: @pow_divisor(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.pow.f32(float %x, float %y)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+define float @pow_divisor_extra_use(float %x, float %y, float %z) {
+; CHECK-LABEL: @pow_divisor_extra_use(
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    call void @use_f32(float [[P]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.pow.f32(float %x, float %y)
+  call void @use_f32(float %p)
+  %r = fdiv reassoc arcp float %z, %p
+  ret float %r
+}
+
+define float @pow_divisor_not_enough_fmf(float %x, float %y, float %z) {
+; CHECK-LABEL: @pow_divisor_not_enough_fmf(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.pow.f32(float %x, float %y)
+  %r = fdiv reassoc float %z, %p
+  ret float %r
+}
+
+define float @pow_divisor_not_enough_fmf2(float %x, float %y, float %z) {
+; CHECK-LABEL: @pow_divisor_not_enough_fmf2(
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv arcp float [[Z:%.*]], [[P]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call fast float @llvm.pow.f32(float %x, float %y)
+  %r = fdiv arcp float %z, %p
+  ret float %r
+}
+
+define <2 x half> @pow_recip(<2 x half> %x, <2 x half> %y) {
+; CHECK-LABEL: @pow_recip(
+; CHECK-NEXT:    [[P:%.*]] = call <2 x half> @llvm.pow.v2f16(<2 x half> [[X:%.*]], <2 x half> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x half> <half 0xH3C00, half 0xH3C00>, [[P]]
+; CHECK-NEXT:    ret <2 x half> [[R]]
+;
+  %p = call <2 x half> @llvm.pow.v2f16(<2 x half> %x, <2 x half> %y)
+  %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
+  ret <2 x half> %r
 }
