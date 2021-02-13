@@ -653,6 +653,7 @@ struct FunCloner {
         LLVMAtomicOrdering Ord = LLVMGetOrdering(Src);
         LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
         Dst = LLVMBuildAtomicRMW(Builder, BinOp, Ptr, Val, Ord, SingleThread);
+        LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetValueName2(Dst, Name, NameLen);
         break;
@@ -667,6 +668,7 @@ struct FunCloner {
 
         Dst = LLVMBuildAtomicCmpXchg(Builder, Ptr, Cmp, New, Succ, Fail,
                                      SingleThread);
+        LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetWeak(Dst, LLVMGetWeak(Src));
         LLVMSetValueName2(Dst, Name, NameLen);
