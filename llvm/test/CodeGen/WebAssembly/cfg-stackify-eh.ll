@@ -119,7 +119,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:               rethrow   0                     # down to catch[[C0:[0-9]+]]
 ; CHECK:             end_try
 ; CHECK:           end_block                           # label[[L2]]:
-; CHECK:           rethrow   0                         # down to catch[[C0]]
+; CHECK:           rethrow   1                         # down to catch[[C0]]
 ; CHECK:         catch_all                             # catch[[C0]]:
 ; CHECK:           call      __cxa_end_catch
 ; CHECK:           rethrow   0                         # to caller
@@ -128,7 +128,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:         br        2                           # 2: down to label[[L1]]
 ; CHECK:       end_try
 ; CHECK:     end_block                                 # label[[L0]]:
-; CHECK:     rethrow   0                               # to caller
+; CHECK:     rethrow   1                               # to caller
 ; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try

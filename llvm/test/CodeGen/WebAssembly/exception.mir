@@ -12,6 +12,9 @@
   define void @unreachable_ehpad_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
     ret void
   }
+  define void @rethrow_arg_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    ret void
+  }
 ...
 
 ---
@@ -24,6 +27,7 @@ liveins:
 body: |
   bb.0:
     ; TRY should be before EH_LABEL wrappers of throwing calls
+    ; CHECK:      bb.0
     ; CHECK:      TRY
     ; CHECK-NEXT: EH_LABEL
     ; CHECK-NEXT: CALL @foo
@@ -38,15 +42,17 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.2
     ; CATCH_ALL should be after an EH_LABEL at the beginning of an EH pad
+    ; CHECK:      bb.1
     ; CHECK:      EH_LABEL
     ; CHECK-NEXT: CATCH_ALL
     EH_LABEL <mcsymbol .Ltmp2>
-    CATCHRET %bb.2, %bb.0, implicit-def dead $arguments
+    CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
 
   bb.2:
   ; predecessors: %bb.0, %bb.1
     RETURN implicit-def dead $arguments
 ...
+
 ---
 # Unreachable EH pads should be removed by LateEHPrepare.
 # CHECK-LABEL: name: unreachable_ehpad_test
@@ -64,10 +70,63 @@ body: |
   bb.1 (landing-pad):
     successors: %bb.2
     EH_LABEL <mcsymbol .Ltmp2>
-    CATCHRET %bb.2, %bb.0, implicit-def dead $arguments
+    CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
 
   ; CHECK: bb.2
   bb.2:
   ; predecessors: %bb.0, %bb.1
     RETURN implicit-def dead $arguments
 ...
+
+---
+# CHECK-LABEL: name: rethrow_arg_test
+name: rethrow_arg_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.4
+    ; CHECK: bb.0
+    ; CHECK: TRY
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.4, implicit-def dead $arguments
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2
+    ; CHECK: bb.1
+    ; CHECK: CATCH
+    ; CHECK: TRY
+    ; This RETHROW rethrows the exception caught by this BB's CATCH, but after
+    ; CFGStackify a TRY is placed between the CATCH and this RETHROW, so after
+    ; CFGStackify its immediate argument should become not 0, but 1.
+    ; CHECK: RETHROW 1
+    EH_LABEL <mcsymbol .Ltmp2>
+    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    RETHROW 0, implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+  ; predecessors: %bb.1
+    successors: %bb.3
+    ; CHECK: bb.2
+    ; CHECK: CATCH
+    ; CHECK: RETHROW 0
+    EH_LABEL <mcsymbol .Ltmp5>
+    %1:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    RETHROW 0, implicit-def dead $arguments
+    CATCHRET %bb.3, %bb.2, implicit-def dead $arguments
+
+  bb.3:
+  ; predecessors: %bb.2
+    successors: %bb.4
+    CATCHRET %bb.4, %bb.1, implicit-def dead $arguments
+
+  bb.4:
+  ; predecessors: %bb.0, %bb.3
+    ; CHECK: bb.4
+    ; CHECK: END_TRY
+    ; CHECK: END_TRY
+    RETURN implicit-def dead $arguments
+
