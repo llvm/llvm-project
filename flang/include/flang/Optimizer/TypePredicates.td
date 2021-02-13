@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "flang/Optimizer/Dialect/FIRTypes.td"
+
 #ifndef FORTRAN_FIR_OPTIMIZER_TYPEPREDICATES
 #define FORTRAN_FIR_OPTIMIZER_TYPEPREDICATES
 
@@ -32,9 +34,6 @@ def fir_PointerType : Type<CPred<"$_self.isa<fir::PointerType>()">,
 // Reference types
 def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
-
-// A field (in a RecordType) argument's type
-def fir_FieldType : Type<CPred<"$_self.isa<fir::FieldType>()">, "field type">;
 
 // A LEN parameter (in a RecordType) argument's type
 def fir_LenType : Type<CPred<"$_self.isa<fir::LenType>()">,

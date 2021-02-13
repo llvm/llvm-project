@@ -20,6 +20,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
+include "flang/Optimizer/TypePredicates.td"
 
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
