@@ -283,9 +283,10 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     InsertReverseInsertPt(&*InsertAfter);
 
     // Don't insert anything between a call/invoke with operand bundle
-    // "clang.arc.rv" and the retainRV/claimRV call that uses the call result.
+    // "clang.arc.attachedcall" and the retainRV/claimRV call that uses the call
+    // result.
     if (auto *CB = dyn_cast<CallBase>(Inst))
-      if (objcarc::hasRVOpBundle(CB))
+      if (objcarc::hasAttachedCallOpBundle(CB))
         SetCFGHazardAfflicted(true);
   };
 
@@ -403,7 +404,8 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(
     InsertReverseInsertPt(Inst);
 
     // Don't insert anything between a call/invoke with operand bundle
-    // "clang.arc.rv" and the retainRV/claimRV call that uses the call result.
+    // "clang.arc.attachedcall" and the retainRV/claimRV call that uses the call
+    // result.
     if (BundledRVs.contains(Inst))
       SetCFGHazardAfflicted(true);
 

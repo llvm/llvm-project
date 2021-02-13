@@ -2080,7 +2080,7 @@ void CodeGenFunction::EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values) {
 }
 
 /// Emit a call to "clang.arc.noop.use", which consumes the result of a call
-/// that has operand bundle "clang.arc.rv".
+/// that has operand bundle "clang.arc.attachedcall".
 void CodeGenFunction::EmitARCNoopIntrinsicUse(ArrayRef<llvm::Value *> values) {
   llvm::Function *&fn = CGM.getObjCEntrypoints().clang_arc_noop_use;
   if (!fn)
@@ -2333,20 +2333,21 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
                                                CodeGenFunction &CGF) {
   emitAutoreleasedReturnValueMarker(CGF);
 
-  // Add operand bundle "clang.arc.rv" to the call instead of emitting retainRV
-  // or claimRV calls in the IR. We currently do this only when the optimization
-  // level isn't -O0 since global-isel, which is currently run at -O0, doesn't
-  // know about the operand bundle.
+  // Add operand bundle "clang.arc.attachedcall" to the call instead of emitting
+  // retainRV or claimRV calls in the IR. We currently do this only when the
+  // optimization level isn't -O0 since global-isel, which is currently run at
+  // -O0, doesn't know about the operand bundle.
 
   // FIXME: Do this when the target isn't aarch64.
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGF.CGM.getTarget().getTriple().isAArch64()) {
     llvm::Value *bundleArgs[] = {llvm::ConstantInt::get(
-        CGF.Int64Ty, llvm::objcarc::getRVOperandBundleEnum(IsRetainRV))};
-    SmallVector<llvm::OperandBundleDef, 1> bundles;
-    bundles.emplace_back("clang.arc.rv", bundleArgs);
+        CGF.Int64Ty,
+        llvm::objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
+    llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
-    llvm::CallBase *newCall = llvm::CallBase::Create(oldCall, bundles, oldCall);
+    llvm::CallBase *newCall = llvm::CallBase::addOperandBundle(
+        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB, oldCall);
     newCall->copyMetadata(*oldCall);
     oldCall->replaceAllUsesWith(newCall);
     oldCall->eraseFromParent();

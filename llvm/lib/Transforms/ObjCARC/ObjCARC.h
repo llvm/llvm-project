@@ -110,8 +110,8 @@ public:
   ~BundledRetainClaimRVs();
 
   /// Insert a retainRV/claimRV call to the normal destination blocks of invokes
-  /// with operand bundle "clang.arc.rv". If the edge to the normal destination
-  /// block is a critical edge, split it.
+  /// with operand bundle "clang.arc.attachedcall". If the edge to the normal
+  /// destination block is a critical edge, split it.
   std::pair<bool, bool> insertAfterInvokes(Function &F, DominatorTree *DT);
 
   /// Insert a retainRV/claimRV call.
@@ -133,8 +133,16 @@ public:
   void eraseInst(CallInst *CI) {
     auto It = RVCalls.find(CI);
     if (It != RVCalls.end()) {
+      // Remove call to @llvm.objc.clang.arc.noop.use.
+      for (auto U = It->second->user_begin(), E = It->second->user_end(); U != E; ++U)
+        if (auto *CI = dyn_cast<CallInst>(*U))
+          if (CI->getIntrinsicID() == Intrinsic::objc_clang_arc_noop_use) {
+            CI->eraseFromParent();
+            break;
+          }
+
       auto *NewCall = CallBase::removeOperandBundle(
-          It->second, LLVMContext::OB_clang_arc_rv, It->second);
+          It->second, LLVMContext::OB_clang_arc_attachedcall, It->second);
       NewCall->copyMetadata(*It->second);
       It->second->replaceAllUsesWith(NewCall);
       It->second->eraseFromParent();

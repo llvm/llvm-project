@@ -851,7 +851,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
     Instruction *Inst = &*I++;
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
-      if (objcarc::hasRVOpBundle(CI)) {
+      if (objcarc::hasAttachedCallOpBundle(CI)) {
         BundledInsts->insertRVCall(&*I, CI);
         Changed = true;
       }

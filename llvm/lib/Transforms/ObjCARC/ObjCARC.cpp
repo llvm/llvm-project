@@ -72,7 +72,7 @@ BundledRetainClaimRVs::insertAfterInvokes(Function &F, DominatorTree *DT) {
     if (!I)
       continue;
 
-    if (!objcarc::hasRVOpBundle(I))
+    if (!objcarc::hasAttachedCallOpBundle(I))
       continue;
 
     BasicBlock *DestBB = I->getNormalDest();
@@ -103,7 +103,7 @@ CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
     Instruction *InsertPt, CallBase *AnnotatedCall,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   IRBuilder<> Builder(InsertPt);
-  bool IsRetainRV = objcarc::hasRVOpBundle(AnnotatedCall, true);
+  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(AnnotatedCall, true);
   Function *Func = EP.get(IsRetainRV ? ARCRuntimeEntryPointKind::RetainRV
                                      : ARCRuntimeEntryPointKind::ClaimRV);
   Type *ParamTy = Func->getArg(0)->getType();

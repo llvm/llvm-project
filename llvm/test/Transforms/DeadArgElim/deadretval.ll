@@ -32,10 +32,10 @@ define internal i8* @callee4(i8* %a0) {
 declare void @llvm.objc.clang.arc.noop.use(...)
 
 ; CHECK-LABEL: define i8* @test4(
-; CHECK: tail call i8* @callee4() [ "clang.arc.rv"(i64 0) ]
+; CHECK: tail call i8* @callee4() [ "clang.arc.attachedcall"(i64 0) ]
 
 define i8* @test4() {
-  %call = tail call i8* @callee4(i8* @g0) [ "clang.arc.rv"(i64 0) ]
+  %call = tail call i8* @callee4(i8* @g0) [ "clang.arc.attachedcall"(i64 0) ]
   call void (...) @llvm.objc.clang.arc.noop.use(i8* %call)
   ret i8* @g0
 }

@@ -5602,11 +5602,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned Opc = IsTailCall ? AArch64ISD::TC_RETURN : AArch64ISD::CALL;
 
-  // Calls with operand bundle "clang.arc.rv" are special. They should be
-  // expanded to the call, directly followed by a special marker sequence. Use
-  // the CALL_RVMARKER to do that.
-  if (CLI.CB && objcarc::hasRVOpBundle(CLI.CB)) {
-    assert(!IsTailCall && "tail calls cannot be marked with rv_marker");
+  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
+  // be expanded to the call, directly followed by a special marker sequence.
+  // Use the CALL_RVMARKER to do that.
+  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
+    assert(!IsTailCall &&
+           "tail calls cannot be marked with clang.arc.attachedcall");
     Opc = AArch64ISD::CALL_RVMARKER;
   }
 
