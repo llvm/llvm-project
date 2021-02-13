@@ -298,6 +298,7 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
 // Extract least significant 12 bits from an immediate value and sign extend
 // them.
@@ -1110,12 +1111,9 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 multiclass LdPat<PatFrag LoadOp, RVInst Inst> {
-  def : Pat<(LoadOp GPR:$rs1), (Inst GPR:$rs1, 0)>;
-  def : Pat<(LoadOp AddrFI:$rs1), (Inst AddrFI:$rs1, 0)>;
-  def : Pat<(LoadOp (add GPR:$rs1, simm12:$imm12)),
-            (Inst GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(LoadOp (add AddrFI:$rs1, simm12:$imm12)),
-            (Inst AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(LoadOp BaseAddr:$rs1), (Inst BaseAddr:$rs1, 0)>;
+  def : Pat<(LoadOp (add BaseAddr:$rs1, simm12:$imm12)),
+            (Inst BaseAddr:$rs1, simm12:$imm12)>;
   def : Pat<(LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
             (Inst AddrFI:$rs1, simm12:$imm12)>;
 }
@@ -1131,12 +1129,9 @@ defm : LdPat<zextloadi16, LHU>;
 /// Stores
 
 multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
-  def : Pat<(StoreOp StTy:$rs2, GPR:$rs1), (Inst StTy:$rs2, GPR:$rs1, 0)>;
-  def : Pat<(StoreOp StTy:$rs2, AddrFI:$rs1), (Inst StTy:$rs2, AddrFI:$rs1, 0)>;
-  def : Pat<(StoreOp StTy:$rs2, (add GPR:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp StTy:$rs2, (add AddrFI:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp StTy:$rs2, BaseAddr:$rs1), (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
+  def : Pat<(StoreOp StTy:$rs2, (add BaseAddr:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
   def : Pat<(StoreOp StTy:$rs2, (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
             (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
 }
