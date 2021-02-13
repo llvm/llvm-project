@@ -982,7 +982,8 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC) {
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetZeroCntValue) {
   MDNode *MD = Inst.getMetadata(LLVMContext::MD_prof);
   if (!MD)
     return false;
@@ -1009,7 +1010,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
 
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
-  if (!TotalCInt)
+  if (!TotalCInt && !GetZeroCntValue)
     return false;
   TotalC = TotalCInt->getZExtValue();
 
@@ -1021,7 +1022,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
     ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
     ConstantInt *Count =
         mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
-    if (!Value || !Count)
+    if (!Value || (!Count && !GetZeroCntValue))
       return false;
     ValueData[ActualNumValueData].Value = Value->getZExtValue();
     ValueData[ActualNumValueData].Count = Count->getZExtValue();

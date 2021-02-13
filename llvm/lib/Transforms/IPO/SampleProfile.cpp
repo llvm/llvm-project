@@ -218,6 +218,8 @@ static cl::opt<std::string> ProfileInlineReplayFile(
         "by inlining from sample profile loader."),
     cl::Hidden);
 
+extern cl::opt<unsigned> MaxNumPromotions;
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -361,8 +363,7 @@ protected:
   // Attempt to promote indirect call and also inline the promoted call
   bool tryPromoteAndInlineCandidate(
       Function &F, InlineCandidate &Candidate, uint64_t SumOrigin,
-      uint64_t &Sum, DenseSet<Instruction *> &PromotedInsns,
-      SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
+      uint64_t &Sum, SmallVector<CallBase *, 8> *InlinedCallSites = nullptr);
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   InlineCost shouldInlineCandidate(InlineCandidate &Candidate);
@@ -688,18 +689,97 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
+/// If the profile count for the promotion candidate \p Candidate is 0,
+/// it means \p Candidate has already been promoted for \p Inst.
+static bool isPromotedBefore(const Instruction &Inst, StringRef Candidate) {
+  uint32_t NumVals = 0;
+  uint64_t TotalCount = 0;
+  std::unique_ptr<InstrProfValueData[]> ValueData =
+      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
+  bool Valid =
+      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
+                               ValueData.get(), NumVals, TotalCount, true);
+  if (Valid) {
+    for (uint32_t I = 0; I < NumVals; I++) {
+      // If the promotion candidate has 0 count in the metadata, it
+      // means the candidate has been promoted for this indirect call.
+      if (ValueData[I].Value == Function::getGUID(Candidate))
+        return ValueData[I].Count == 0;
+    }
+  }
+  return false;
+}
+
+/// Update indirect call target profile metadata for \p Inst. If \p Total
+/// is given, set TotalCount of call targets counts to \p Total, otherwise
+/// keep the original value in metadata.
+static void
+updateIDTMetaData(Instruction &Inst,
+                  const SmallVectorImpl<InstrProfValueData> &CallTargets,
+                  uint64_t Total = 0) {
+  DenseMap<uint64_t, uint64_t> ValueCountMap;
+
+  uint32_t NumVals = 0;
+  uint64_t TotalCount = 0;
+  std::unique_ptr<InstrProfValueData[]> ValueData =
+      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
+  bool Valid =
+      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
+                               ValueData.get(), NumVals, TotalCount, true);
+  if (Valid) {
+    for (uint32_t I = 0; I < NumVals; I++)
+      ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
+  }
+
+  for (const auto &Data : CallTargets) {
+    auto Pair = ValueCountMap.try_emplace(Data.Value, Data.Count);
+    if (Pair.second)
+      continue;
+    // Update existing profile count of the call target if it is not 0.
+    // If it is 0, the call target has been promoted so keep it as 0.
+    if (Pair.first->second != 0)
+      Pair.first->second = Data.Count;
+    else {
+      assert(Total >= Data.Count && "Total should be >= Data.Count");
+      Total -= Data.Count;
+    }
+  }
+
+  SmallVector<InstrProfValueData, 8> NewCallTargets;
+  for (const auto &ValueCount : ValueCountMap) {
+    NewCallTargets.emplace_back(
+        InstrProfValueData{ValueCount.first, ValueCount.second});
+  }
+  llvm::sort(NewCallTargets,
+             [](const InstrProfValueData &L, const InstrProfValueData &R) {
+               if (L.Count != R.Count)
+                 return L.Count > R.Count;
+               return L.Value > R.Value;
+             });
+  annotateValueSite(*Inst.getParent()->getParent()->getParent(), Inst,
+                    NewCallTargets, Total ? Total : TotalCount,
+                    IPVK_IndirectCallTarget, NewCallTargets.size());
+}
+
 /// Attempt to promote indirect call and also inline the promoted call.
 ///
 /// \param F  Caller function.
 /// \param Candidate  ICP and inline candidate.
 /// \param Sum  Sum of target counts for indirect call.
-/// \param PromotedInsns  Map to keep track of indirect call already processed.
 /// \param InlinedCallSite  Output vector for new call sites exposed after
 /// inlining.
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
-    DenseSet<Instruction *> &PromotedInsns,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
+  auto CalleeFunctionName = Candidate.CalleeSamples->getFuncName();
+  auto R = SymbolMap.find(CalleeFunctionName);
+  if (R == SymbolMap.end() || !R->getValue())
+    return false;
+
+  auto &CI = *Candidate.CallInstr;
+  if (isPromotedBefore(CI, R->getValue()->getName()))
+    return false;
+
   const char *Reason = "Callee function not available";
   // R->getValue() != &F is to prevent promoting a recursive call.
   // If it is a recursive call, we do not inline it as it could bloat
@@ -707,15 +787,17 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   // clone the caller first, and inline the cloned caller if it is
   // recursive. As llvm does not inline recursive calls, we will
   // simply ignore it instead of handling it explicitly.
-  auto R = SymbolMap.find(Candidate.CalleeSamples->getFuncName());
-  if (R != SymbolMap.end() && R->getValue() &&
-      !R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
+  if (!R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
       R->getValue()->hasFnAttribute("use-sample-profile") &&
-      R->getValue() != &F &&
-      isLegalToPromote(*Candidate.CallInstr, R->getValue(), &Reason)) {
-    auto *DI =
-        &pgo::promoteIndirectCall(*Candidate.CallInstr, R->getValue(),
-                                  Candidate.CallsiteCount, Sum, false, ORE);
+      R->getValue() != &F && isLegalToPromote(CI, R->getValue(), &Reason)) {
+    // For promoted target, save 0 count in the value profile metadata so
+    // the target won't be promoted again.
+    SmallVector<InstrProfValueData, 1> SortedCallTargets = {
+        InstrProfValueData{Function::getGUID(R->getValue()->getName()), 0}};
+    updateIDTMetaData(CI, SortedCallTargets);
+
+    auto *DI = &pgo::promoteIndirectCall(
+        CI, R->getValue(), Candidate.CallsiteCount, Sum, false, ORE);
     if (DI) {
       Sum -= Candidate.CallsiteCount;
       // Prorate the indirect callsite distribution.
@@ -724,10 +806,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
       // profile will be used to prorate callsites from the callee if
       // inlined. Once not inlined, the direct callsite distribution should
       // be prorated so that the it will reflect the real callsite counts.
-      setProbeDistributionFactor(*Candidate.CallInstr,
-                                 Candidate.CallsiteDistribution * Sum /
-                                     SumOrigin);
-      PromotedInsns.insert(Candidate.CallInstr);
+      setProbeDistributionFactor(CI, Candidate.CallsiteDistribution * Sum /
+                                         SumOrigin);
       Candidate.CallInstr = DI;
       if (isa<CallInst>(DI) || isa<InvokeInst>(DI)) {
         bool Inlined = tryInlineCandidate(Candidate, InlinedCallSite);
@@ -800,8 +880,6 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  DenseSet<Instruction *> PromotedInsns;
-
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
@@ -855,8 +933,6 @@ bool SampleProfileLoader::inlineHotFunctions(
       if (CalledFunction == &F)
         continue;
       if (I->isIndirectCall()) {
-        if (PromotedInsns.count(I))
-          continue;
         uint64_t Sum;
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           uint64_t SumOrigin = Sum;
@@ -869,8 +945,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             continue;
 
           Candidate = {I, FS, FS->getEntrySamples(), 1.0};
-          if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
-                                           PromotedInsns)) {
+          if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum)) {
             LocalNotInlinedCallSites.erase(I);
             LocalChanged = true;
           }
@@ -1079,7 +1154,6 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
 
 bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  DenseSet<Instruction *> PromotedInsns;
   assert(ProfileIsCS && "Prioritiy based inliner only works with CSSPGO now");
 
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
@@ -1128,8 +1202,6 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     if (CalledFunction == &F)
       continue;
     if (I->isIndirectCall()) {
-      if (PromotedInsns.count(I))
-        continue;
       uint64_t Sum;
       auto CalleeSamples = findIndirectCallFunctionSamples(*I, Sum);
       uint64_t SumOrigin = Sum;
@@ -1164,7 +1236,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         Candidate = {I, FS, EntryCountDistributed,
                      Candidate.CallsiteDistribution};
         if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum,
-                                         PromotedInsns, &InlinedCallSites)) {
+                                         &InlinedCallSites)) {
           for (auto *CB : InlinedCallSites) {
             if (getInlineCandidate(&NewCandidate, CB))
               CQueue.emplace(NewCandidate);
@@ -1261,9 +1333,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
                 Sum += NameFS.second.getEntrySamples();
             }
           }
-          annotateValueSite(*I.getParent()->getParent()->getParent(), I,
-                            SortedCallTargets, Sum, IPVK_IndirectCallTarget,
-                            SortedCallTargets.size());
+          updateIDTMetaData(I, SortedCallTargets, Sum);
         } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
                         MDB.createBranchWeights(
