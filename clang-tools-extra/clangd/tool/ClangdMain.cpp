@@ -172,14 +172,6 @@ opt<bool> EnableClangTidy{
     init(true),
 };
 
-opt<std::string> ClangTidyChecks{
-    "clang-tidy-checks",
-    cat(Features),
-    desc("List of clang-tidy checks to run (this will override "
-         ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
-    init(""),
-};
-
 opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
     "completion-parse",
     cat(Features),
@@ -287,6 +279,7 @@ RetiredFlag<bool> RecoveryASTType("recovery-ast-type");
 RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
+RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 
 opt<int> LimitResults{
     "limit-results",
@@ -826,10 +819,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Providers.push_back(provideClangTidyFiles(TFS));
     if (EnableConfig)
       Providers.push_back(provideClangdConfig());
-    if (!ClangTidyChecks.empty())
-      Providers.push_back(addTidyChecks(ClangTidyChecks));
-    else
-      Providers.push_back(provideDefaultChecks());
+    Providers.push_back(provideDefaultChecks());
     Providers.push_back(disableUnusableChecks());
     ClangTidyOptProvider = combine(std::move(Providers));
     Opts.ClangTidyProvider = ClangTidyOptProvider;
