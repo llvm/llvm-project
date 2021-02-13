@@ -2540,6 +2540,10 @@ SDValue DAGCombiner::visitADDSAT(SDNode *N) {
   if (isNullConstant(N1))
     return N0;
 
+  // fold (add_sat x, y) -> (or x, y) for bool types.
+  if (VT.getScalarType() == MVT::i1)
+    return DAG.getNode(ISD::OR, DL, VT, N0, N1);
+
   // If it cannot overflow, transform into an add.
   if (Opcode == ISD::UADDSAT)
     if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
