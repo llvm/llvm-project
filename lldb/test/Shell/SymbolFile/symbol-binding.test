@@ -18,5 +18,5 @@ image dump symtab
 # CHECK-NEXT:[    4]      5     Code            0x0000000000000005                    0x0000000000000001 0x00000000 case2_local
 # CHECK-NEXT:[    5]      6   X Code            0x0000000000000004                    0x0000000000000001 0x00000010 case1_global
 # CHECK-NEXT:[    6]      7     Code            0x0000000000000005                    0x0000000000000001 0x00000020 case2_weak
-# CHECK-NEXT:[    7]      8   X Code            0x0000000000000006                    0x0000000000000001 0x00000010 case3_global
-# CHECK-NEXT:[    8]      9     Code            0x0000000000000006                    0x0000000000000001 0x00000020 case3_weak
+# CHECK-NEXT:[    7]      8     Code            0x0000000000000006                    0x0000000000000001 0x00000020 case3_weak
+# CHECK-NEXT:[    8]      9   X Code            0x0000000000000006                    0x0000000000000001 0x00000010 case3_global
