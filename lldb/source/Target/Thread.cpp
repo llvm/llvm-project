@@ -1180,14 +1180,6 @@ Status Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
   return status;
 }
 
-void Thread::EnableTracer(bool value, bool single_stepping) {
-  GetPlans().EnableTracer(value, single_stepping);
-}
-
-void Thread::SetTracer(lldb::ThreadPlanTracerSP &tracer_sp) {
-  GetPlans().SetTracer(tracer_sp);
-}
-
 bool Thread::DiscardUserThreadPlansUpToIndex(uint32_t plan_index) {
   // Count the user thread plans from the back end to get the number of the one
   // we want to discard:
