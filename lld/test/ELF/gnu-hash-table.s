@@ -247,10 +247,10 @@
 # PPC64-NEXT:   Values: [0xB8860BA, 0xB887389]
 # PPC64-NEXT: }
 
-.globl foo,bar,baz
+.globl bar,baz,foo
 foo:
 bar:
-.weak zed
 .global xyz
+.weak zed
 .data
   .dc.a baz

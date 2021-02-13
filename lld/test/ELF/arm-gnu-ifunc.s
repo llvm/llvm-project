@@ -5,13 +5,12 @@
 // RUN: llvm-readobj -r --symbols --sections %t | FileCheck %s
  .syntax unified
  .text
+ .globl bar, foo
  .type foo STT_GNU_IFUNC
- .globl foo
 foo:
  bx lr
 
  .type bar STT_GNU_IFUNC
- .globl bar
 bar:
  bx lr
 
