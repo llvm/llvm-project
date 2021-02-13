@@ -160,7 +160,7 @@ class GCNDownwardRPTracker : public GCNRPTracker {
 public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
-  const MachineBasicBlock::const_iterator getNext() const { return NextMI; }
+  MachineBasicBlock::const_iterator getNext() const { return NextMI; }
 
   // Reset tracker to the point before the MI
   // filling live regs upon this point using LIS.
