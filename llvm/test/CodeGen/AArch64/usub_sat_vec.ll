@@ -275,9 +275,8 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.16b, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    uqsub v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i1> @llvm.usub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
