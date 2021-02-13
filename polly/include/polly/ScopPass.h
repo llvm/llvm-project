@@ -247,7 +247,7 @@ public:
 
     while (!Worklist.empty()) {
       Region *R = Worklist.pop_back_val();
-      if (!SD.isMaxRegionInScop(*R))
+      if (!SD.isMaxRegionInScop(*R, /*Verifying=*/false))
         continue;
       Scop *scop = SI.getScop(R);
       if (!scop)
