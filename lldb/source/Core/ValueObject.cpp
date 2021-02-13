@@ -336,8 +336,11 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
       Value::ValueType value_type = value.GetValueType();
 
       switch (value_type) {
-      case Value::eValueTypeScalar:
-        if (value.GetContextType() == Value::eContextTypeRegisterInfo) {
+      case Value::ValueType::Invalid:
+        m_location_str = "invalid";
+        break;
+      case Value::ValueType::Scalar:
+        if (value.GetContextType() == Value::ContextType::RegisterInfo) {
           RegisterInfo *reg_info = value.GetRegisterInfo();
           if (reg_info) {
             if (reg_info->name)
@@ -354,9 +357,9 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
           m_location_str = "scalar";
         break;
 
-      case Value::eValueTypeLoadAddress:
-      case Value::eValueTypeFileAddress:
-      case Value::eValueTypeHostAddress: {
+      case Value::ValueType::LoadAddress:
+      case Value::ValueType::FileAddress:
+      case Value::ValueType::HostAddress: {
         uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
         sstr.Printf("0x%*.*llx", addr_nibble_size, addr_nibble_size,
                     value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
@@ -852,7 +855,10 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   Value::ValueType value_type = m_value.GetValueType();
 
   switch (value_type) {
-  case Value::eValueTypeScalar: {
+  case Value::ValueType::Invalid:
+    error.SetErrorString("invalid location");
+    return false;
+  case Value::ValueType::Scalar: {
     Status set_error =
         m_value.GetScalar().SetValueFromData(data, encoding, byte_size);
 
@@ -862,7 +868,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
       return false;
     }
   } break;
-  case Value::eValueTypeLoadAddress: {
+  case Value::ValueType::LoadAddress: {
     // If it is a load address, then the scalar value is the storage location
     // of the data, and we have to shove this value down to that load location.
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -879,7 +885,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
       }
     }
   } break;
-  case Value::eValueTypeHostAddress: {
+  case Value::ValueType::HostAddress: {
     // If it is a host address, then we stuff the scalar as a DataBuffer into
     // the Value's data.
     DataBufferSP buffer_sp(new DataBufferHeap(byte_size, 0));
@@ -889,7 +895,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
                              byte_size, m_data.GetByteOrder());
     m_value.GetScalar() = (uintptr_t)m_data.GetDataStart();
   } break;
-  case Value::eValueTypeFileAddress:
+  case Value::ValueType::FileAddress:
     break;
   }
 
@@ -1107,7 +1113,7 @@ const char *ValueObject::GetValueAsCString() {
         if (m_is_bitfield_for_scalar)
           my_format = eFormatUnsigned;
         else {
-          if (m_value.GetContextType() == Value::eContextTypeRegisterInfo) {
+          if (m_value.GetContextType() == Value::ContextType::RegisterInfo) {
             const RegisterInfo *reg_info = m_value.GetRegisterInfo();
             if (reg_info)
               my_format = reg_info->format;
@@ -1455,7 +1461,9 @@ addr_t ValueObject::GetAddressOf(bool scalar_is_load_address,
     return LLDB_INVALID_ADDRESS;
 
   switch (m_value.GetValueType()) {
-  case Value::eValueTypeScalar:
+  case Value::ValueType::Invalid:
+    return LLDB_INVALID_ADDRESS;
+  case Value::ValueType::Scalar:
     if (scalar_is_load_address) {
       if (address_type)
         *address_type = eAddressTypeLoad;
@@ -1463,13 +1471,13 @@ addr_t ValueObject::GetAddressOf(bool scalar_is_load_address,
     }
     break;
 
-  case Value::eValueTypeLoadAddress:
-  case Value::eValueTypeFileAddress: {
+  case Value::ValueType::LoadAddress:
+  case Value::ValueType::FileAddress: {
     if (address_type)
       *address_type = m_value.GetValueAddressType();
     return m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   } break;
-  case Value::eValueTypeHostAddress: {
+  case Value::ValueType::HostAddress: {
     if (address_type)
       *address_type = m_value.GetValueAddressType();
     return LLDB_INVALID_ADDRESS;
@@ -1489,13 +1497,15 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
     return address;
 
   switch (m_value.GetValueType()) {
-  case Value::eValueTypeScalar:
+  case Value::ValueType::Invalid:
+    return LLDB_INVALID_ADDRESS;
+  case Value::ValueType::Scalar:
     address = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
     break;
 
-  case Value::eValueTypeHostAddress:
-  case Value::eValueTypeLoadAddress:
-  case Value::eValueTypeFileAddress: {
+  case Value::ValueType::HostAddress:
+  case Value::ValueType::LoadAddress:
+  case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
     address = m_data.GetAddress(&data_offset);
   } break;
@@ -1523,7 +1533,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
 
   Value::ValueType value_type = m_value.GetValueType();
 
-  if (value_type == Value::eValueTypeScalar) {
+  if (value_type == Value::ValueType::Scalar) {
     // If the value is already a scalar, then let the scalar change itself:
     m_value.GetScalar().SetValueFromCString(value_str, encoding, byte_size);
   } else if (byte_size <= 16) {
@@ -1534,7 +1544,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     error = new_scalar.SetValueFromCString(value_str, encoding, byte_size);
     if (error.Success()) {
       switch (value_type) {
-      case Value::eValueTypeLoadAddress: {
+      case Value::ValueType::LoadAddress: {
         // If it is a load address, then the scalar value is the storage
         // location of the data, and we have to shove this value down to that
         // load location.
@@ -1553,7 +1563,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
           }
         }
       } break;
-      case Value::eValueTypeHostAddress: {
+      case Value::ValueType::HostAddress: {
         // If it is a host address, then we stuff the scalar as a DataBuffer
         // into the Value's data.
         DataExtractor new_data;
@@ -1570,8 +1580,11 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
         m_value.GetScalar() = (uintptr_t)m_data.GetDataStart();
 
       } break;
-      case Value::eValueTypeFileAddress:
-      case Value::eValueTypeScalar:
+      case Value::ValueType::Invalid:
+        error.SetErrorString("invalid location");
+        return false;
+      case Value::ValueType::FileAddress:
+      case Value::ValueType::Scalar:
         break;
       }
     } else {
@@ -1980,7 +1993,7 @@ void ValueObject::GetExpressionPath(Stream &s,
   if (m_is_synthetic_children_generated) {
     UpdateValueIfNeeded();
 
-    if (m_value.GetValueType() == Value::eValueTypeLoadAddress) {
+    if (m_value.GetValueType() == Value::ValueType::LoadAddress) {
       if (IsPointerOrReferenceType()) {
         s.Printf("((%s)0x%" PRIx64 ")", GetTypeName().AsCString("void"),
                  GetValueAsUnsigned(0));
@@ -3093,7 +3106,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
           exe_ctx.GetAddressByteSize()));
       if (ptr_result_valobj_sp) {
         ptr_result_valobj_sp->GetValue().SetValueType(
-            Value::eValueTypeLoadAddress);
+            Value::ValueType::LoadAddress);
         Status err;
         ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
         if (ptr_result_valobj_sp && !name.empty())
