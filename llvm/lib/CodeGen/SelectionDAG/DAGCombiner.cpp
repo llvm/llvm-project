@@ -3560,6 +3560,10 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
   if (isNullConstant(N1))
     return N0;
 
+  // fold (sub_sat x, y) -> (and x, ~y) for bool types.
+  if (VT.getScalarType() == MVT::i1)
+    return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getNOT(DL, N1, VT));
+
   return SDValue();
 }
 
