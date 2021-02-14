@@ -88,7 +88,8 @@ NativeRegisterContextFreeBSD_powerpc::NativeRegisterContextFreeBSD_powerpc(
 
 RegisterContextFreeBSD_powerpc &
 NativeRegisterContextFreeBSD_powerpc::GetRegisterInfo() const {
-  return static_cast<RegisterContextFreeBSD_powerpc &>(*m_register_info_interface_up);
+  return static_cast<RegisterContextFreeBSD_powerpc &>(
+      *m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextFreeBSD_powerpc::GetRegisterSetCount() const {
@@ -122,7 +123,6 @@ NativeRegisterContextFreeBSD_powerpc::GetSetForNativeRegNum(
   llvm_unreachable("Register does not belong to any register set");
 }
 
-
 uint32_t NativeRegisterContextFreeBSD_powerpc::GetUserRegisterCount() const {
   uint32_t count = 0;
   for (uint32_t set_index = 0; set_index < GetRegisterSetCount(); ++set_index)
@@ -136,8 +136,8 @@ Status NativeRegisterContextFreeBSD_powerpc::ReadRegisterSet(RegSetKind set) {
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
                                                m_reg_data.data());
   case FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_GETFPREGS, m_thread.GetID(), m_reg_data.data() + sizeof(reg));
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
+                                               m_reg_data.data() + sizeof(reg));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_powerpc::ReadRegisterSet");
 }
@@ -148,15 +148,15 @@ Status NativeRegisterContextFreeBSD_powerpc::WriteRegisterSet(RegSetKind set) {
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
                                                m_reg_data.data());
   case FPRegSet:
-    return NativeProcessFreeBSD::PtraceWrapper(
-        PT_SETFPREGS, m_thread.GetID(), m_reg_data.data() + sizeof(reg));
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
+                                               m_reg_data.data() + sizeof(reg));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_powerpc::WriteRegisterSet");
 }
 
 Status
 NativeRegisterContextFreeBSD_powerpc::ReadRegister(const RegisterInfo *reg_info,
-                                               RegisterValue &reg_value) {
+                                                   RegisterValue &reg_value) {
   Status error;
 
   if (!reg_info) {
