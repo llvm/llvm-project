@@ -3199,10 +3199,10 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
   // Compute mappings of block <=> RPO order.
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   unsigned int RPONumber = 0;
-  for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-    OrderToBB[RPONumber] = *RI;
-    BBToOrder[*RI] = RPONumber;
-    BBNumToRPO[(*RI)->getNumber()] = RPONumber;
+  for (MachineBasicBlock *MBB : RPOT) {
+    OrderToBB[RPONumber] = MBB;
+    BBToOrder[MBB] = RPONumber;
+    BBNumToRPO[MBB->getNumber()] = RPONumber;
     ++RPONumber;
   }
 }
