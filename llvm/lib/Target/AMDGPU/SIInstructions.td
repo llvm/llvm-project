@@ -378,6 +378,18 @@ def SI_PS_LIVE : PseudoInstSI <
   let SALU = 1;
 }
 
+let Uses = [EXEC] in {
+def SI_LIVE_MASK : PseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_live_mask))]> {
+  let SALU = 1;
+}
+let Defs = [EXEC,SCC] in {
+// Demote: Turn a pixel shader thread into a helper lane.
+def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>;
+} // End Defs = [EXEC,SCC]
+} // End Uses = [EXEC]
+
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
   "; divergent unreachable"> {
@@ -749,6 +761,16 @@ def : Pat <
 def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote i1:$src),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote (i1 (not i1:$src))),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals
