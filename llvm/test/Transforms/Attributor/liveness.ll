@@ -2265,7 +2265,7 @@ define i32 @switch_default_dead_caller() {
 
 define void @call_via_pointer_with_dead_args(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
 ; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args
-; CHECK-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]]) {
+; CHECK-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]]) {
 ; CHECK-NEXT:    call void [[FP]](i32* [[A]], i32* [[B]], i32* [[A]], i64 -1, i32** null)
 ; CHECK-NEXT:    ret void
 ;

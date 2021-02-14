@@ -340,7 +340,7 @@ define void @nc2(i32* %p, i32* %q) {
 
 define void @nc3(void ()* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@nc3
-; CHECK-SAME: (void ()* nocapture nofree nonnull [[P:%.*]]) {
+; CHECK-SAME: (void ()* nocapture nofree noundef nonnull [[P:%.*]]) {
 ; CHECK-NEXT:    call void [[P]]()
 ; CHECK-NEXT:    ret void
 ;
@@ -370,7 +370,7 @@ define void @nc4(i8* %p) {
 
 define void @nc5(void (i8*)* %f, i8* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@nc5
-; CHECK-SAME: (void (i8*)* nocapture nofree nonnull [[F:%.*]], i8* nocapture [[P:%.*]]) {
+; CHECK-SAME: (void (i8*)* nocapture nofree noundef nonnull [[F:%.*]], i8* nocapture [[P:%.*]]) {
 ; CHECK-NEXT:    call void [[F]](i8* nocapture [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -533,14 +533,14 @@ define void @test6_2(i8* %x6_2, i8* %y6_2, i8* %z6_2) {
 define void @test_cmpxchg(i32* %p) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_cmpxchg
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9:#.*]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[P]], i32 0, i32 1 acquire monotonic
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9:#.*]] {
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_cmpxchg
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9:#.*]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[P]], i32 0, i32 1 acquire monotonic
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9:#.*]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
   cmpxchg i32* %p, i32 0, i32 1 acquire monotonic
@@ -550,14 +550,14 @@ define void @test_cmpxchg(i32* %p) {
 define void @test_cmpxchg_ptr(i32** %p, i32* %q) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_cmpxchg_ptr
-; IS__TUNIT____-SAME: (i32** nocapture nofree nonnull dereferenceable(8) [[P:%.*]], i32* nofree [[Q:%.*]]) [[ATTR9]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = cmpxchg i32** [[P]], i32* null, i32* [[Q]] acquire monotonic
+; IS__TUNIT____-SAME: (i32** nocapture nofree noundef nonnull dereferenceable(8) [[P:%.*]], i32* nofree [[Q:%.*]]) [[ATTR9]] {
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = cmpxchg i32** [[P]], i32* null, i32* [[Q]] acquire monotonic, align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_cmpxchg_ptr
-; IS__CGSCC____-SAME: (i32** nocapture nofree nonnull dereferenceable(8) [[P:%.*]], i32* nofree [[Q:%.*]]) [[ATTR9]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = cmpxchg i32** [[P]], i32* null, i32* [[Q]] acquire monotonic
+; IS__CGSCC____-SAME: (i32** nocapture nofree noundef nonnull dereferenceable(8) [[P:%.*]], i32* nofree [[Q:%.*]]) [[ATTR9]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = cmpxchg i32** [[P]], i32* null, i32* [[Q]] acquire monotonic, align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
   cmpxchg i32** %p, i32* null, i32* %q acquire monotonic
@@ -567,14 +567,14 @@ define void @test_cmpxchg_ptr(i32** %p, i32* %q) {
 define void @test_atomicrmw(i32* %p) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_atomicrmw
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = atomicrmw add i32* [[P]], i32 1 seq_cst
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9]] {
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = atomicrmw add i32* [[P]], i32 1 seq_cst, align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_atomicrmw
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = atomicrmw add i32* [[P]], i32 1 seq_cst
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull dereferenceable(4) [[P:%.*]]) [[ATTR9]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = atomicrmw add i32* [[P]], i32 1 seq_cst, align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
   atomicrmw add i32* %p, i32 1 seq_cst
@@ -848,7 +848,7 @@ declare void @val_use(i8 %ptr) readonly nounwind willreturn
 define void @ptr_uses(i8* %ptr, i8* %wptr) {
 ; CHECK: Function Attrs: nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@ptr_uses
-; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) [[ATTR14:#.*]] {
+; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) [[ATTR14:#.*]] {
 ; CHECK-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; CHECK-NEXT:    ret void
 ;

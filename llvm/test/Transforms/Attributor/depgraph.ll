@@ -16,7 +16,7 @@
 define i32* @checkAndAdvance(i32* align 16 %0) {
 ; CHECK: Function Attrs: argmemonly nofree nosync nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@checkAndAdvance
-; CHECK-SAME: (i32* nofree nonnull readonly align 16 dereferenceable(4) [[TMP0:%.*]]) [[ATTR0:#.*]] {
+; CHECK-SAME: (i32* nofree noundef nonnull readonly align 16 dereferenceable(4) [[TMP0:%.*]]) [[ATTR0:#.*]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
@@ -144,7 +144,7 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed-live
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state may-undef-or-poison
+; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state noundef
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nonnull
 ; GRAPH-EMPTY:

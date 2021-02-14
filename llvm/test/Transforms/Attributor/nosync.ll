@@ -58,7 +58,7 @@ entry:
 define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@load_monotonic
-; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR1:#.*]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR1:#.*]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -76,7 +76,7 @@ define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtabl
 define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@store_monotonic
-; CHECK-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR1]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR1]] {
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0]] monotonic, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -94,7 +94,7 @@ define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
 define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@load_acquire
-; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR2:#.*]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[TMP0:%.*]]) [[ATTR2:#.*]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -111,7 +111,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@load_release
-; CHECK-SAME: (i32* nocapture nofree writeonly align 4 [[TMP0:%.*]]) [[ATTR2]] {
+; CHECK-SAME: (i32* nocapture nofree noundef writeonly align 4 [[TMP0:%.*]]) [[ATTR2]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -124,7 +124,7 @@ define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
 define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@load_volatile_release
-; CHECK-SAME: (i32* nocapture nofree writeonly align 4 [[TMP0:%.*]]) [[ATTR2]] {
+; CHECK-SAME: (i32* nocapture nofree noundef writeonly align 4 [[TMP0:%.*]]) [[ATTR2]] {
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -141,7 +141,7 @@ define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable
 define void @volatile_store(i32* %0) norecurse nounwind uwtable {
 ; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
 ; CHECK-LABEL: define {{[^@]+}}@volatile_store
-; CHECK-SAME: (i32* nofree align 4 [[TMP0:%.*]]) [[ATTR2]] {
+; CHECK-SAME: (i32* nofree noundef align 4 [[TMP0:%.*]]) [[ATTR2]] {
 ; CHECK-NEXT:    store volatile i32 14, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -257,7 +257,7 @@ define void @scc2(i32* %0) noinline nounwind uwtable {
 define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
 ; IS__TUNIT____: Function Attrs: nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@foo1
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR6:#.*]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR6:#.*]] {
 ; IS__TUNIT____-NEXT:    store i32 100, i32* [[TMP0]], align 4
 ; IS__TUNIT____-NEXT:    fence release
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
@@ -266,7 +266,7 @@ define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo1
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR6:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR6:#.*]] {
 ; IS__CGSCC____-NEXT:    store i32 100, i32* [[TMP0]], align 4
 ; IS__CGSCC____-NEXT:    fence release
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
@@ -327,7 +327,7 @@ define void @bar(i32* %0, %"struct.std::atomic"* %1) {
 define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@foo1_singlethread
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR8:#.*]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR8:#.*]] {
 ; IS__TUNIT____-NEXT:    store i32 100, i32* [[TMP0]], align 4
 ; IS__TUNIT____-NEXT:    fence syncscope("singlethread") release
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0
@@ -336,7 +336,7 @@ define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo1_singlethread
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR8:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]], %"struct.std::atomic"* nocapture nofree nonnull writeonly dereferenceable(1) [[TMP1:%.*]]) [[ATTR8:#.*]] {
 ; IS__CGSCC____-NEXT:    store i32 100, i32* [[TMP0]], align 4
 ; IS__CGSCC____-NEXT:    fence syncscope("singlethread") release
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* [[TMP1]], i64 0, i32 0, i32 0

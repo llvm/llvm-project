@@ -536,7 +536,7 @@ define i32 @i2p(i32* %arg) {
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @p2i(i32* noalias nofree readnone [[ARG]]) [[ATTR10:#.*]]
 ; IS__CGSCC____-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to i8*
 ; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* [[I2P]] to i32*
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[BC]]) [[ATTR11:#.*]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @ret(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[BC]]) [[ATTR11:#.*]]
 ; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
 ;
   %c = call i32 @p2i(i32* %arg)
@@ -548,13 +548,13 @@ define i32 @i2p(i32* %arg) {
 define internal i32 @ret(i32* %arg) {
 ; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@ret
-; NOT_CGSCC_NPM-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR5:#.*]] {
+; NOT_CGSCC_NPM-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR5:#.*]] {
 ; NOT_CGSCC_NPM-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
 ; NOT_CGSCC_NPM-NEXT:    ret i32 [[L]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR5:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR5:#.*]] {
 ; IS__CGSCC____-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
 ; IS__CGSCC____-NEXT:    ret i32 [[L]]
 ;
@@ -649,13 +649,13 @@ define void @make_alias(i32* %p) {
 define void @only_store(i32* %p) {
 ; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@only_store
-; NOT_CGSCC_NPM-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR8:#.*]] {
+; NOT_CGSCC_NPM-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR8:#.*]] {
 ; NOT_CGSCC_NPM-NEXT:    store i32 0, i32* [[P]], align 4
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@only_store
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR8:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR8:#.*]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[P]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -682,7 +682,7 @@ define void @test15_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12:#.*]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12:#.*]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) [[ATTR12]]
@@ -745,14 +745,14 @@ define internal void @test16_sub(i32* noalias %p, i32 %c1, i32 %c2) {
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; IS__CGSCC____:       if.then2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    br label [[IF_END3]]
 ; IS__CGSCC____:       if.end3:
 ; IS__CGSCC____-NEXT:    ret void
@@ -839,7 +839,7 @@ define void @test17_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    br label [[L3:%.*]]
 ; IS__CGSCC____:       l2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    br label [[L3]]
 ; IS__CGSCC____:       l3:
 ; IS__CGSCC____-NEXT:    ret void
@@ -910,7 +910,7 @@ define void @test18_caller(i32* noalias %p, i32 %c) {
 ; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       l2:
-; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) [[ATTR12]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
