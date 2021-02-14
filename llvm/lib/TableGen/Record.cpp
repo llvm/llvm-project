@@ -2715,10 +2715,8 @@ Init *RecordResolver::resolve(Init *VarName) {
   if (Val)
     return Val;
 
-  for (Init *S : Stack) {
-    if (S == VarName)
-      return nullptr; // prevent infinite recursion
-  }
+  if (llvm::is_contained(Stack, VarName))
+    return nullptr; // prevent infinite recursion
 
   if (RecordVal *RV = getCurrentRecord()->getValue(VarName)) {
     if (!isa<UnsetInit>(RV->getValue())) {

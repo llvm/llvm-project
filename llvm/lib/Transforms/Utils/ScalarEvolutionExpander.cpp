@@ -2675,9 +2675,8 @@ bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
     if (InsertionPoint->getParent()->getTerminator() == InsertionPoint)
       return true;
     if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S))
-      for (const Value *V : InsertionPoint->operand_values())
-        if (V == U->getValue())
-          return true;
+      if (llvm::is_contained(InsertionPoint->operand_values(), U->getValue()))
+        return true;
   }
   return false;
 }
