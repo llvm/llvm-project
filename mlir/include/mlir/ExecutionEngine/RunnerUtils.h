@@ -31,6 +31,7 @@
 #endif // _WIN32
 
 #include <assert.h>
+#include <cmath>
 #include <iostream>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
@@ -73,11 +74,13 @@ namespace impl {
 template <typename T, int M, int... Dims>
 std::ostream &operator<<(std::ostream &os, const Vector<T, M, Dims...> &v);
 
-template <int... Dims> struct StaticSizeMult {
+template <int... Dims>
+struct StaticSizeMult {
   static constexpr int value = 1;
 };
 
-template <int N, int... Dims> struct StaticSizeMult<N, Dims...> {
+template <int N, int... Dims>
+struct StaticSizeMult<N, Dims...> {
   static constexpr int value = N * StaticSizeMult<Dims...>::value;
 };
 
@@ -87,7 +90,8 @@ static inline void printSpace(std::ostream &os, int count) {
   }
 }
 
-template <typename T, int M, int... Dims> struct VectorDataPrinter {
+template <typename T, int M, int... Dims>
+struct VectorDataPrinter {
   static void print(std::ostream &os, const Vector<T, M, Dims...> &val);
 };
 
@@ -211,6 +215,113 @@ void printMemRef(UnrankedMemRefType<T> &M) {
   std::cout << "Unranked Memref ";
   printMemRef(DynamicMemRefType<T>(M));
 }
+
+/// Verify the result of two computations are equivalent up to a small
+/// numerical error and return the number of errors.
+template <typename T>
+struct MemRefDataVerifier {
+  /// Maximum number of errors printed by the verifier.
+  static constexpr int printLimit = 10;
+
+  /// Verify the relative difference of the values is smaller than epsilon.
+  static bool verifyRelErrorSmallerThan(T actual, T expected, T epsilon);
+
+  /// Verify the values are equivalent (integers) or are close (floating-point).
+  static bool verifyElem(T actual, T expected);
+
+  /// Verify the data element-by-element and return the number of errors.
+  static int64_t verify(std::ostream &os, T *actualBasePtr, T *expectedBasePtr,
+                        int64_t dim, int64_t offset, const int64_t *sizes,
+                        const int64_t *strides, int64_t &printCounter);
+};
+
+template <typename T>
+bool MemRefDataVerifier<T>::verifyRelErrorSmallerThan(T actual, T expected,
+                                                      T epsilon) {
+  // Return an error if one of the values is infinite or NaN.
+  if (!std::isfinite(actual) || !std::isfinite(expected))
+    return false;
+  // Return true if the relative error is smaller than epsilon.
+  T delta = std::abs(actual - expected);
+  return (delta <= epsilon * std::abs(expected));
+}
+
+template <typename T>
+bool MemRefDataVerifier<T>::verifyElem(T actual, T expected) {
+  return actual == expected;
+}
+
+template <>
+inline bool MemRefDataVerifier<double>::verifyElem(double actual,
+                                                   double expected) {
+  return verifyRelErrorSmallerThan(actual, expected, 1e-12);
+}
+
+template <>
+inline bool MemRefDataVerifier<float>::verifyElem(float actual,
+                                                  float expected) {
+  return verifyRelErrorSmallerThan(actual, expected, 1e-6f);
+}
+
+template <typename T>
+int64_t MemRefDataVerifier<T>::verify(std::ostream &os, T *actualBasePtr,
+                                      T *expectedBasePtr, int64_t dim,
+                                      int64_t offset, const int64_t *sizes,
+                                      const int64_t *strides,
+                                      int64_t &printCounter) {
+  int64_t errors = 0;
+  // Verify the elements at the current offset.
+  if (dim == 0) {
+    if (!verifyElem(actualBasePtr[offset], expectedBasePtr[offset])) {
+      if (printCounter < printLimit) {
+        os << actualBasePtr[offset] << " != " << expectedBasePtr[offset]
+           << " offset = " << offset << "\n";
+        printCounter++;
+      }
+      errors++;
+    }
+  } else {
+    // Iterate the current dimension and verify recursively.
+    for (int64_t i = 0; i < sizes[0]; ++i) {
+      errors +=
+          verify(os, actualBasePtr, expectedBasePtr, dim - 1,
+                 offset + i * strides[0], sizes + 1, strides + 1, printCounter);
+    }
+  }
+  return errors;
+}
+
+/// Verify the equivalence of two dynamic memrefs and return the number of
+/// errors or -1 if the shape of the memrefs do not match.
+template <typename T>
+int64_t verifyMemRef(const DynamicMemRefType<T> &actual,
+                     const DynamicMemRefType<T> &expected) {
+  // Check if the memref shapes match.
+  for (int64_t i = 0; i < actual.rank; ++i) {
+    if (expected.rank != actual.rank || actual.offset != expected.offset ||
+        actual.sizes[i] != expected.sizes[i] ||
+        actual.strides[i] != expected.strides[i]) {
+      printMemRefMetaData(std::cerr, actual);
+      printMemRefMetaData(std::cerr, expected);
+      return -1;
+    }
+  }
+  // Return the number of errors.
+  int64_t printCounter = 0;
+  return MemRefDataVerifier<T>::verify(
+      std::cerr, actual.basePtr, expected.basePtr, actual.rank, actual.offset,
+      actual.sizes, actual.strides, printCounter);
+}
+
+/// Verify the equivalence of two unranked memrefs and return the number of
+/// errors or -1 if the shape of the memrefs do not match.
+template <typename T>
+int64_t verifyMemRef(UnrankedMemRefType<T> &actual,
+                     UnrankedMemRefType<T> &expected) {
+  return verifyMemRef(DynamicMemRefType<T>(actual),
+                      DynamicMemRefType<T>(expected));
+}
+
 } // namespace impl
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -246,5 +357,22 @@ _mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_vector_4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
+
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefI32(
+    UnrankedMemRefType<int32_t> *actual, UnrankedMemRefType<int32_t> *expected);
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefF32(
+    UnrankedMemRefType<float> *actual, UnrankedMemRefType<float> *expected);
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefF64(
+    UnrankedMemRefType<double> *actual, UnrankedMemRefType<double> *expected);
+
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefI32(int64_t rank,
+                                                           void *actualPtr,
+                                                           void *expectedPtr);
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefF32(int64_t rank,
+                                                           void *actualPtr,
+                                                           void *expectedPtr);
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefF64(int64_t rank,
+                                                           void *actualPtr,
+                                                           void *expectedPtr);
 
 #endif // EXECUTIONENGINE_RUNNERUTILS_H_
