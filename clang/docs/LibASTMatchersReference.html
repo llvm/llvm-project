@@ -508,7 +508,7 @@ void func() {
 <pre>
 binaryOperator(
   hasOperatorName("&lt;"),
-  hasRHS(integerLiteral(equals(0)))
+  hasRHS(hasDescendant(integerLiteral(equals(0))))
   )
 </pre>
 given:
@@ -529,6 +529,12 @@ bool isLess(const HasSpaceship& a, const HasSpaceship& b) {
 </td>
 <td>
 1 match found.
+
+<pre>
+   return a < b;
+          ^~~~~
+</pre>
+
 </td>
 <td>
 No match found.
