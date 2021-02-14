@@ -260,10 +260,7 @@ public:
   ///
   /// The width is specified in bits.
   bool isLegalInteger(uint64_t Width) const {
-    for (unsigned LegalIntWidth : LegalIntWidths)
-      if (LegalIntWidth == Width)
-        return true;
-    return false;
+    return llvm::is_contained(LegalIntWidths, Width);
   }
 
   bool isIllegalInteger(uint64_t Width) const { return !isLegalInteger(Width); }
