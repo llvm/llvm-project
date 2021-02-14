@@ -26,7 +26,7 @@ XRay consists of three main parts:
 
 - Compiler-inserted instrumentation points.
 - A runtime library for enabling/disabling tracing at runtime.
-- A suite of tools for analysing the traces.
+- A suite of tools for analyzing the traces.
 
   **NOTE:** As of July 25, 2018 , XRay is only available for the following
   architectures running Linux: x86_64, arm7 (no thumb), aarch64, powerpc64le,
@@ -47,7 +47,7 @@ You can use XRay in a couple of ways:
 - Instrumenting your C/C++/Objective-C/Objective-C++ application.
 - Generating LLVM IR with the correct function attributes.
 
-The rest of this section covers these main ways and later on how to customise
+The rest of this section covers these main ways and later on how to customize
 what XRay does in an XRay-instrumented binary.
 
 Instrumenting your C/C++/Objective-C Application
@@ -316,7 +316,7 @@ Minimizing Binary Size
 
 XRay supports several different instrumentation points including ``function-entry``,
 ``function-exit``, ``custom``, and ``typed`` points. These can be enabled individually
-using the ``-fxray-instrumentaton-bundle=`` flag. For example if you only wanted to
+using the ``-fxray-instrumentation-bundle=`` flag. For example if you only wanted to
 instrument function entry and custom points you could specify:
 
 ::
