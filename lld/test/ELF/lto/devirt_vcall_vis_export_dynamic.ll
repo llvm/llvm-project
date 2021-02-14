@@ -98,19 +98,19 @@
 ;; preemption, even without any options.
 
 ;; Index based WPD
-; RUN: opt -relocation-model=pic -o %t5.o %s
-; RUN: ld.lld %t5.o -o %t5.so -shared
-; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
-; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
-
-;; Hybrid WPD
 ; RUN: opt -relocation-model=pic --thinlto-bc -o %t5.o %s
 ; RUN: ld.lld %t5.o -o %t5.so -shared
 ; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
-;; Regular LTO WPD
+;; Hybrid WPD
 ; RUN: opt -relocation-model=pic --thinlto-bc --thinlto-split-lto-unit -o %t5.o %s
+; RUN: ld.lld %t5.o -o %t5.so -shared
+; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
+; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+
+;; Regular LTO WPD
+; RUN: opt -relocation-model=pic -o %t5.o %s
 ; RUN: ld.lld %t5.o -o %t5.so -shared
 ; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
