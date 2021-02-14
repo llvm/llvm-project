@@ -859,44 +859,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
   case TargetOpcode::G_FREEZE:
     return reduceOperationWidth(MI, TypeIdx, NarrowTy);
-
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_SUB: {
-    // FIXME: add support for when SizeOp0 isn't an exact multiple of
-    // NarrowSize.
-    if (SizeOp0 % NarrowSize != 0)
-      return UnableToLegalize;
-    // Expand in terms of carry-setting/consuming G_ADDE instructions.
-    int NumParts = SizeOp0 / NarrowTy.getSizeInBits();
-
-    bool IsAdd = MI.getOpcode() == TargetOpcode::G_ADD;
-    auto Opo = IsAdd ? TargetOpcode::G_UADDO : TargetOpcode::G_USUBO;
-    auto Ope = IsAdd ? TargetOpcode::G_UADDE : TargetOpcode::G_USUBE;
-
-    SmallVector<Register, 2> Src1Regs, Src2Regs, DstRegs;
-    extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
-    extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
-
-    Register BitIn;
-    for (int i = 0; i < NumParts; ++i) {
-      Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
-      Register BitOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-      if (i == 0)
-        MIRBuilder.buildInstr(Opo, {DstReg, BitOut},
-                              {Src1Regs[i], Src2Regs[i]});
-      else {
-        MIRBuilder.buildInstr(Ope, {DstReg, BitOut},
-                              {Src1Regs[i], Src2Regs[i], BitIn});
-      }
-
-      DstRegs.push_back(DstReg);
-      BitIn = BitOut;
-    }
-    MIRBuilder.buildMerge(MI.getOperand(0), DstRegs);
-    MI.eraseFromParent();
-    return Legalized;
-  }
+  case TargetOpcode::G_SUB:
+    return narrowScalarAddSub(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_UMULH:
     return narrowScalarMul(MI, NarrowTy);
@@ -4474,6 +4439,67 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
     DstRegs[DstIdx] = FactorSum;
     Factors.clear();
   }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
+                                    LLT NarrowTy) {
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  uint64_t NarrowSize = NarrowTy.getSizeInBits();
+
+  // FIXME: add support for when SizeOp0 isn't an exact multiple of
+  // NarrowSize.
+  if (SizeOp0 % NarrowSize != 0)
+    return UnableToLegalize;
+
+  // Expand in terms of carry-setting/consuming G_<Op>E instructions.
+  int NumParts = SizeOp0 / NarrowTy.getSizeInBits();
+
+  unsigned OpO, OpE;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ADD:
+    OpO = TargetOpcode::G_UADDO;
+    OpE = TargetOpcode::G_UADDE;
+    break;
+  case TargetOpcode::G_SUB:
+    OpO = TargetOpcode::G_USUBO;
+    OpE = TargetOpcode::G_USUBE;
+    break;
+  default:
+    llvm_unreachable("Unexpected add/sub opcode!");
+  }
+
+  SmallVector<Register, 2> Src1Regs, Src2Regs, DstRegs;
+  extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
+  extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
+
+  Register CarryIn;
+  for (int i = 0; i < NumParts; ++i) {
+    Register DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+    Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+    if (i == 0)
+      MIRBuilder.buildInstr(OpO, {DstReg, CarryOut},
+                            {Src1Regs[i], Src2Regs[i]});
+    else {
+      MIRBuilder.buildInstr(OpE, {DstReg, CarryOut},
+                            {Src1Regs[i], Src2Regs[i], CarryIn});
+    }
+
+    DstRegs.push_back(DstReg);
+    CarryIn = CarryOut;
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (MRI.getType(DstReg).isVector())
+    MIRBuilder.buildBuildVector(DstReg, DstRegs);
+  else
+    MIRBuilder.buildMerge(DstReg, DstRegs);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult
