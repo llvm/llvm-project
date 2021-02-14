@@ -4447,7 +4447,13 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   if (TypeIdx != 0)
     return UnableToLegalize;
 
-  uint64_t SizeOp0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstType = MRI.getType(DstReg);
+  // FIXME: add support for vector types
+  if (DstType.isVector())
+    return UnableToLegalize;
+
+  uint64_t SizeOp0 = DstType.getSizeInBits();
   uint64_t NarrowSize = NarrowTy.getSizeInBits();
 
   // FIXME: add support for when SizeOp0 isn't an exact multiple of
@@ -4492,12 +4498,7 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
     DstRegs.push_back(DstReg);
     CarryIn = CarryOut;
   }
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (MRI.getType(DstReg).isVector())
-    MIRBuilder.buildBuildVector(DstReg, DstRegs);
-  else
-    MIRBuilder.buildMerge(DstReg, DstRegs);
+  MIRBuilder.buildMerge(DstReg, DstRegs);
   MI.eraseFromParent();
   return Legalized;
 }
