@@ -222,11 +222,17 @@ public:
   explicit FunctionToScopPassAdaptor(ScopPassT Pass) : Pass(std::move(Pass)) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-    PreservedAnalyses PA = PreservedAnalyses::all();
-    auto &SD = AM.getResult<ScopAnalysis>(F);
-    auto &SI = AM.getResult<ScopInfoAnalysis>(F);
-    if (SI.empty())
-      return PA;
+    ScopDetection &SD = AM.getResult<ScopAnalysis>(F);
+    ScopInfo &SI = AM.getResult<ScopInfoAnalysis>(F);
+    if (SI.empty()) {
+      // With no scops having been detected, no IR changes have been made and
+      // therefore all analyses are preserved. However, we must still free the
+      // Scop analysis results which may hold AssertingVH that cause an error
+      // if its value is destroyed.
+      AM.invalidate<ScopInfoAnalysis>(F);
+      AM.invalidate<ScopAnalysis>(F);
+      return PreservedAnalyses::all();
+    }
 
     SmallPriorityWorklist<Region *, 4> Worklist;
     for (auto &S : SI)
@@ -257,20 +263,18 @@ public:
       PreservedAnalyses PassPA = Pass.run(*scop, SAM, AR, Updater);
 
       SAM.invalidate(*scop, PassPA);
-      PA.intersect(std::move(PassPA));
       if (Updater.invalidateCurrentScop())
         SI.recompute();
     };
 
-    PA.preserveSet<AllAnalysesOn<Scop>>();
-    PA.preserve<ScopAnalysisManagerFunctionProxy>();
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<ScopAnalysis>();
-    PA.preserve<ScopInfoAnalysis>();
-    PA.preserve<ScalarEvolutionAnalysis>();
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<RegionInfoAnalysis>();
-    return PA;
+    // FIXME: For the same reason as we add a BarrierNoopPass in the legacy pass
+    // manager, do not preserve any analyses. While CodeGeneration may preserve
+    // IR analyses sufficiently to process another Scop in the same function (it
+    // has to, otherwise the ScopDetection result itself would need to be
+    // invalidated), it is not sufficient for other purposes. For instance,
+    // CodeGeneration does not inform LoopInfo about new loops in the
+    // Polly-generated IR.
+    return PreservedAnalyses::none();
   }
 
 private:
