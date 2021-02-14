@@ -176,9 +176,7 @@ void LocalStackSlotPass::AssignProtectedObjSet(
     const StackObjSet &UnassignedObjs, SmallSet<int, 16> &ProtectedObjs,
     MachineFrameInfo &MFI, bool StackGrowsDown, int64_t &Offset,
     Align &MaxAlign) {
-  for (StackObjSet::const_iterator I = UnassignedObjs.begin(),
-        E = UnassignedObjs.end(); I != E; ++I) {
-    int i = *I;
+  for (int i : UnassignedObjs) {
     AdjustStackOffset(MFI, i, Offset, StackGrowsDown, MaxAlign);
     ProtectedObjs.insert(i);
   }
