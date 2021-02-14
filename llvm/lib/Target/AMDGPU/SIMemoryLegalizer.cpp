@@ -129,12 +129,43 @@ private:
       IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
       IsVolatile(IsVolatile),
       IsNonTemporal(IsNonTemporal) {
+
+    if (Ordering == AtomicOrdering::NotAtomic) {
+      assert(Scope == SIAtomicScope::NONE &&
+             OrderingAddrSpace == SIAtomicAddrSpace::NONE &&
+             !IsCrossAddressSpaceOrdering &&
+             FailureOrdering == AtomicOrdering::NotAtomic);
+      return;
+    }
+
+    assert(Scope != SIAtomicScope::NONE &&
+           (OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
+               SIAtomicAddrSpace::NONE &&
+           (InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
+               SIAtomicAddrSpace::NONE &&
+           !isStrongerThan(FailureOrdering, Ordering));
+
     // There is also no cross address space ordering if the ordering
     // address space is the same as the instruction address space and
     // only contains a single address space.
     if ((OrderingAddrSpace == InstrAddrSpace) &&
         isPowerOf2_32(uint32_t(InstrAddrSpace)))
       this->IsCrossAddressSpaceOrdering = false;
+
+    // Limit the scope to the maximum supported by the instruction's address
+    // spaces.
+    if ((InstrAddrSpace & ~SIAtomicAddrSpace::SCRATCH) ==
+        SIAtomicAddrSpace::NONE) {
+      this->Scope = std::min(Scope, SIAtomicScope::SINGLETHREAD);
+    } else if ((InstrAddrSpace &
+                ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS)) ==
+               SIAtomicAddrSpace::NONE) {
+      this->Scope = std::min(Scope, SIAtomicScope::WORKGROUP);
+    } else if ((InstrAddrSpace &
+                ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS |
+                  SIAtomicAddrSpace::GDS)) == SIAtomicAddrSpace::NONE) {
+      this->Scope = std::min(Scope, SIAtomicScope::AGENT);
+    }
   }
 
 public:
@@ -202,12 +233,12 @@ private:
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
                          const char *Msg) const;
 
-  /// Inspects the target synchonization scope \p SSID and determines
+  /// Inspects the target synchronization scope \p SSID and determines
   /// the SI atomic scope it corresponds to, the address spaces it
   /// covers, and whether the memory ordering applies between address
   /// spaces.
   Optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
-  toSIAtomicScope(SyncScope::ID SSID, SIAtomicAddrSpace InstrScope) const;
+  toSIAtomicScope(SyncScope::ID SSID, SIAtomicAddrSpace InstrAddrSpace) const;
 
   /// \return Return a bit set of the address spaces accessed by \p AS.
   SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS) const;
@@ -476,7 +507,7 @@ void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
 
 Optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
 SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
-                               SIAtomicAddrSpace InstrScope) const {
+                               SIAtomicAddrSpace InstrAddrSpace) const {
   if (SSID == SyncScope::System)
     return std::make_tuple(SIAtomicScope::SYSTEM,
                            SIAtomicAddrSpace::ATOMIC,
@@ -499,23 +530,23 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
                            true);
   if (SSID == MMI->getSystemOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::SYSTEM,
-                           SIAtomicAddrSpace::ATOMIC & InstrScope,
+                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
                            false);
   if (SSID == MMI->getAgentOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::AGENT,
-                           SIAtomicAddrSpace::ATOMIC & InstrScope,
+                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
                            false);
   if (SSID == MMI->getWorkgroupOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::WORKGROUP,
-                           SIAtomicAddrSpace::ATOMIC & InstrScope,
+                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
                            false);
   if (SSID == MMI->getWavefrontOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::WAVEFRONT,
-                           SIAtomicAddrSpace::ATOMIC & InstrScope,
+                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
                            false);
   if (SSID == MMI->getSingleThreadOneAddressSpaceSSID())
     return std::make_tuple(SIAtomicScope::SINGLETHREAD,
-                           SIAtomicAddrSpace::ATOMIC & InstrScope,
+                           SIAtomicAddrSpace::ATOMIC & InstrAddrSpace,
                            false);
   return None;
 }
@@ -591,7 +622,8 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
       ScopeOrNone.getValue();
     if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
-        ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {
+        ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
+        ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
       reportUnsupported(MI, "Unsupported atomic address space");
       return None;
     }
@@ -659,7 +691,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicFenceInfo(
   }
 
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, SIAtomicAddrSpace::ATOMIC,
-                     IsCrossAddressSpaceOrdering);
+                     IsCrossAddressSpaceOrdering, AtomicOrdering::NotAtomic);
 }
 
 Optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
