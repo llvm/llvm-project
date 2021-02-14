@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ANALYSIS_OBJCARCUTIL_H
-#define LLVM_LIB_ANALYSIS_OBJCARCUTIL_H
+#ifndef LLVM_ANALYSIS_OBJCARCUTIL_H
+#define LLVM_ANALYSIS_OBJCARCUTIL_H
 
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
