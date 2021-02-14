@@ -828,9 +828,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
                                    AAQueryInfo &AAQI) {
   // Get the base object these pointers point to.
   const Value *UV1 =
-      getUnderlyingObject(LocA.Ptr->stripPointerCastsAndInvariantGroups());
+      getUnderlyingObject(LocA.Ptr->stripPointerCastsForAliasAnalysis());
   const Value *UV2 =
-      getUnderlyingObject(LocB.Ptr->stripPointerCastsAndInvariantGroups());
+      getUnderlyingObject(LocB.Ptr->stripPointerCastsForAliasAnalysis());
 
   // If either of the underlying values is a global, they may be non-addr-taken
   // globals, which we can answer queries about.
