@@ -110,6 +110,7 @@ static_library("Support") {
     "RandomNumberGenerator.cpp",
     "Regex.cpp",
     "SHA1.cpp",
+    "SHA256.cpp",
     "ScaledNumber.cpp",
     "ScopedPrinter.cpp",
     "Signposts.cpp",
