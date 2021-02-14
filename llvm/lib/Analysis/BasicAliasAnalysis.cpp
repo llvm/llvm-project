@@ -1110,6 +1110,12 @@ AliasResult BasicAAResult::aliasGEP(
     // direction.
     if (isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
       return NoAlias;
+
+    // Subtract the GEP2 pointer from the GEP1 pointer to find out their
+    // symbolic difference.
+    DecompGEP1.Offset -= DecompGEP2.Offset;
+    GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
+
     // Do the base pointers alias?
     AliasResult BaseAlias = getBestAAResults().alias(
         MemoryLocation::getBeforeOrAfter(UnderlyingV1),
@@ -1117,8 +1123,8 @@ AliasResult BasicAAResult::aliasGEP(
 
     // For GEPs with identical offsets, we can preserve the size and AAInfo
     // when performing the alias check on the underlying objects.
-    if (BaseAlias == MayAlias && DecompGEP1.Offset == DecompGEP2.Offset &&
-        DecompGEP1.VarIndices == DecompGEP2.VarIndices) {
+    if (BaseAlias == MayAlias && DecompGEP1.Offset == 0 &&
+        DecompGEP1.VarIndices.empty()) {
       AliasResult PreciseBaseAlias = getBestAAResults().alias(
           MemoryLocation(UnderlyingV1, V1Size, V1AAInfo),
           MemoryLocation(UnderlyingV2, V2Size, V2AAInfo), AAQI);
@@ -1132,12 +1138,6 @@ AliasResult BasicAAResult::aliasGEP(
       assert(BaseAlias == NoAlias || BaseAlias == MayAlias);
       return BaseAlias;
     }
-
-    // Subtract the GEP2 pointer from the GEP1 pointer to find out their
-    // symbolic difference.
-    DecompGEP1.Offset -= DecompGEP2.Offset;
-    GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
-
   } else {
     // Check to see if these two pointers are related by the getelementptr
     // instruction.  If one pointer is a GEP with a non-zero index of the other
