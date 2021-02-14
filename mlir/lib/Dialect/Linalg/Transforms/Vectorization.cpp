@@ -429,8 +429,9 @@ LogicalResult PadTensorOpVectorizationPattern::matchAndRewrite(
     if (Attribute attr = ofr.dyn_cast<Attribute>())
       return attr.cast<IntegerAttr>().getInt() != 0;
     Value v = ofr.get<Value>();
-    if (auto constOp = v.getDefiningOp<ConstantIntOp>())
-      return constOp.getValue() != 0;
+    if (auto constOp = v.getDefiningOp<ConstantOp>())
+      if (auto intAttr = constOp.getValue().dyn_cast<IntegerAttr>())
+        return intAttr.getValue().getSExtValue() != 0;
     return true;
   };
 
