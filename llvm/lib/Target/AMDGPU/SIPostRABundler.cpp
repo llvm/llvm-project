@@ -48,9 +48,14 @@ private:
 
   SmallSet<Register, 16> Defs;
 
+  bool isBundleCandidate(const MachineInstr &MI) const;
   bool isDependentLoad(const MachineInstr &MI) const;
-
+  bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
 };
+
+constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
+                              SIInstrFlags::SMRD | SIInstrFlags::DS |
+                              SIInstrFlags::FLAT | SIInstrFlags::MIMG;
 
 } // End anonymous namespace.
 
@@ -80,55 +85,73 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   return false;
 }
 
+bool SIPostRABundler::isBundleCandidate(const MachineInstr &MI) const {
+  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
+  return IMemFlags != 0 && MI.mayLoadOrStore() && !MI.isBundled();
+}
+
+bool SIPostRABundler::canBundle(const MachineInstr &MI,
+                                const MachineInstr &NextMI) const {
+  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
+
+  return (IMemFlags != 0 && MI.mayLoadOrStore() && !NextMI.isBundled() &&
+          NextMI.mayLoad() == MI.mayLoad() && NextMI.mayStore() == MI.mayStore() &&
+          ((NextMI.getDesc().TSFlags & MemFlags) == IMemFlags) &&
+          !isDependentLoad(NextMI));
+}
+
 bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   bool Changed = false;
-  const uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
-                            SIInstrFlags::SMRD | SIInstrFlags::DS |
-                            SIInstrFlags::FLAT | SIInstrFlags::MIMG;
-
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator Next;
     MachineBasicBlock::instr_iterator B = MBB.instr_begin();
     MachineBasicBlock::instr_iterator E = MBB.instr_end();
+
     for (auto I = B; I != E; I = Next) {
       Next = std::next(I);
-
-      const uint64_t IMemFlags = I->getDesc().TSFlags & MemFlags;
-
-      if (IMemFlags == 0 || I->isBundled() || !I->mayLoadOrStore() ||
-          B->mayLoad() != I->mayLoad() || B->mayStore() != I->mayStore() ||
-          ((B->getDesc().TSFlags & MemFlags) != IMemFlags) ||
-          isDependentLoad(*I)) {
-
-        if (B != I) {
-          if (std::next(B) != I) {
-            finalizeBundle(MBB, B, I);
-            Changed = true;
-          }
-          Next = I;
-        }
-
-        B = Next;
-        Defs.clear();
+      if (!isBundleCandidate(*I))
         continue;
+
+      assert(Defs.empty());
+
+      if (I->getNumExplicitDefs() != 0)
+        Defs.insert(I->defs().begin()->getReg());
+
+      MachineBasicBlock::instr_iterator BundleStart = I;
+      MachineBasicBlock::instr_iterator BundleEnd = I;
+      unsigned ClauseLength = 1;
+      for (I = Next; I != E; I = Next) {
+        Next = std::next(I);
+
+        assert(BundleEnd != I);
+        if (canBundle(*BundleEnd, *I)) {
+          BundleEnd = I;
+          if (I->getNumExplicitDefs() != 0)
+            Defs.insert(I->defs().begin()->getReg());
+          ++ClauseLength;
+        } else if (!I->isMetaInstruction()) {
+          // Allow meta instructions in between bundle candidates, but do not
+          // start or end a bundle on one.
+          //
+          // TODO: It may be better to move meta instructions like dbg_value
+          // after the bundle. We're relying on the memory legalizer to unbundle
+          // these.
+          break;
+        }
       }
 
-      if (I->getNumExplicitDefs() == 0)
-        continue;
+      Next = std::next(BundleEnd);
+      if (ClauseLength > 1) {
+        Changed = true;
+        finalizeBundle(MBB, BundleStart, Next);
+      }
 
-      Defs.insert(I->defs().begin()->getReg());
+      Defs.clear();
     }
-
-    if (B != E && std::next(B) != E) {
-      finalizeBundle(MBB, B, E);
-      Changed = true;
-    }
-
-    Defs.clear();
   }
 
   return Changed;
