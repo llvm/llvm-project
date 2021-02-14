@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -57,7 +58,8 @@ void registerArmSVEToLLVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<LLVM::LLVMArmSVEDialect, LLVM::LLVMDialect>();
+        registry.insert<LLVM::LLVMArmSVEDialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir

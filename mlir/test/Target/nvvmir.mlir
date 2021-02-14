@@ -75,7 +75,7 @@ llvm.func @nvvm_mma(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // This function has the "kernel" attribute attached and should appear in the
 // NVVM annotations after conversion.
-llvm.func @kernel_func() attributes {gpu.kernel} {
+llvm.func @kernel_func() attributes {nvvm.kernel} {
   llvm.return
 }
 

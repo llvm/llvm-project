@@ -1089,31 +1089,6 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                                           TTI::ReductionFlags Flags) const {
-  auto *VTy = cast<VectorType>(Ty);
-  unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::FAdd:
-  case Instruction::FMul:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Mul:
-    return false;
-  case Instruction::Add:
-    return ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128;
-  case Instruction::ICmp:
-    return (ScalarBits < 64) &&
-           (ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128);
-  case Instruction::FCmp:
-    return Flags.NoNaN;
-  default:
-    llvm_unreachable("Unhandled reduction opcode");
-  }
-  return false;
-}
-
 int AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
                                            bool IsPairwise, bool IsUnsigned,
                                            TTI::TargetCostKind CostKind) {

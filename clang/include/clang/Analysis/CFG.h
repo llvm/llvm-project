@@ -1307,6 +1307,12 @@ public:
 
   iterator nodes_begin() { return iterator(Blocks.begin()); }
   iterator nodes_end() { return iterator(Blocks.end()); }
+
+  llvm::iterator_range<iterator> nodes() { return {begin(), end()}; }
+  llvm::iterator_range<const_iterator> const_nodes() const {
+    return {begin(), end()};
+  }
+
   const_iterator nodes_begin() const { return const_iterator(Blocks.begin()); }
   const_iterator nodes_end() const { return const_iterator(Blocks.end()); }
 
@@ -1314,6 +1320,13 @@ public:
   reverse_iterator          rend()                 { return Blocks.rend(); }
   const_reverse_iterator    rbegin()      const    { return Blocks.rbegin(); }
   const_reverse_iterator    rend()        const    { return Blocks.rend(); }
+
+  llvm::iterator_range<reverse_iterator> reverse_nodes() {
+    return {rbegin(), rend()};
+  }
+  llvm::iterator_range<const_reverse_iterator> const_reverse_nodes() const {
+    return {rbegin(), rend()};
+  }
 
   CFGBlock &                getEntry()             { return *Entry; }
   const CFGBlock &          getEntry()    const    { return *Entry; }

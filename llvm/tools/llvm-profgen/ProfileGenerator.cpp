@@ -11,6 +11,8 @@
 static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::Required,
                                            cl::desc("Output profile file"));
+static cl::alias OutputA("o", cl::desc("Alias for --output"),
+                         cl::aliasopt(OutputFilename));
 
 static cl::opt<SampleProfileFormat> OutputFormat(
     "format", cl::desc("Format of output profile"), cl::init(SPF_Text),
@@ -210,7 +212,6 @@ void CSProfileGenerator::updateBodySamplesforFunctionProfile(
     FunctionProfile.addBodySamples(LeafLoc.second.LineOffset,
                                    LeafLoc.second.Discriminator,
                                    Count - PreviousCount);
-    FunctionProfile.addTotalSamples(Count - PreviousCount);
   }
 }
 
@@ -240,9 +241,13 @@ void CSProfileGenerator::populateFunctionBodySamples(
 
     while (IP.Address <= RangeEnd) {
       uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
-      const FrameLocation &LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
-      // Recording body sample for this specific context
-      updateBodySamplesforFunctionProfile(FunctionProfile, LeafLoc, Count);
+      auto LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
+      if (LeafLoc.hasValue()) {
+        // Recording body sample for this specific context
+        updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
+      }
+      // Accumulate total sample count even it's a line with invalid debug info
+      FunctionProfile.addTotalSamples(Count);
       // Move to next IP within the range
       IP.advance();
     }
@@ -264,9 +269,11 @@ void CSProfileGenerator::populateFunctionBoundarySamples(
       continue;
 
     // Record called target sample and its count
-    const FrameLocation &LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
-    FunctionProfile.addCalledTargetSamples(LeafLoc.second.LineOffset,
-                                           LeafLoc.second.Discriminator,
+    auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
+    if (!LeafLoc.hasValue())
+      continue;
+    FunctionProfile.addCalledTargetSamples(LeafLoc->second.LineOffset,
+                                           LeafLoc->second.Discriminator,
                                            CalleeName, Count);
 
     // Record head sample for called target(callee)
@@ -275,7 +282,7 @@ void CSProfileGenerator::populateFunctionBoundarySamples(
       OCalleeCtxStr << ContextId.rsplit(" @ ").first.str();
       OCalleeCtxStr << " @ ";
     }
-    OCalleeCtxStr << getCallSite(LeafLoc) << " @ " << CalleeName.str();
+    OCalleeCtxStr << getCallSite(*LeafLoc) << " @ " << CalleeName.str();
 
     FunctionSamples &CalleeProfile =
         getFunctionProfileForContext(OCalleeCtxStr.str());

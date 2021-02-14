@@ -659,7 +659,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   // We are passing four arguments, the basename, the list of places to look,
   // a buffer big enough for all the path + name combos, and
   // a pointer to the storage we've made for the result:
-  value.SetValueType(Value::eValueTypeScalar);
+  value.SetValueType(Value::ValueType::Scalar);
   value.SetCompilerType(clang_void_pointer_type);
   arguments.PushValue(value);
   value.SetCompilerType(clang_char_pointer_type);

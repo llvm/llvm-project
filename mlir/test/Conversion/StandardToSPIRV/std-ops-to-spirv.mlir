@@ -675,6 +675,20 @@ spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
   spv.ReturnValue %2 : vector<4xf64>
 }
 
+// CHECK-LABEL: @sexti1
+func @sexti1(%arg0: i16) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i16 to i64
+  %0 = std.sexti %arg0 : i16 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @sexti2
+func @sexti2(%arg0 : i32) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i32 to i64
+  %0 = std.sexti %arg0 : i32 to i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: @zexti1
 func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i16 to i64

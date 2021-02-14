@@ -31,9 +31,11 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/NVVMIR.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -154,6 +156,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::LLVM::LLVMDialect, mlir::NVVM::NVVMDialect,
                   mlir::async::AsyncDialect, mlir::gpu::GPUDialect,
                   mlir::StandardOpsDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);
 }

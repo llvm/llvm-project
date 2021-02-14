@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 
@@ -68,6 +69,11 @@ protected:
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToNVVMIR(Operation *m, llvm::LLVMContext &llvmContext,
                               StringRef name) {
+  // Register the translation to LLVM IR if nobody else did before. This may
+  // happen if this translation is called inside a pass pipeline that converts
+  // GPU dialects to binary blobs without translating the rest of the code.
+  registerLLVMDialectTranslation(*m->getContext());
+
   auto llvmModule = LLVM::ModuleTranslation::translateModule<ModuleTranslation>(
       m, llvmContext, name);
   if (!llvmModule)
@@ -77,7 +83,8 @@ mlir::translateModuleToNVVMIR(Operation *m, llvm::LLVMContext &llvmContext,
   // function as a kernel.
   for (auto func :
        ModuleTranslation::getModuleBody(m).getOps<LLVM::LLVMFuncOp>()) {
-    if (!gpu::GPUDialect::isKernel(func))
+    if (!func->getAttrOfType<UnitAttr>(
+            NVVM::NVVMDialect::getKernelFuncAttrName()))
       continue;
 
     auto *llvmFunc = llvmModule->getFunction(func.getName());
@@ -110,7 +117,8 @@ void registerToNVVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<LLVM::LLVMDialect, NVVM::NVVMDialect>();
+        registry.insert<NVVM::NVVMDialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir

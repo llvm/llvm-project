@@ -199,7 +199,7 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
     if (auto val = enumerant.getValue())
       os << formatv("  if ({0}u & val) {{ strs.push_back(\"{1}\"); "
                     "val &= ~{0}u; }\n",
-                    val, enumerant.getSymbol());
+                    val, enumerant.getStr());
   }
   // If we have unknown bit set, return an empty string to signal errors.
   os << "\n  if (val) return \"\";\n";
@@ -261,8 +261,7 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   for (const auto &enumerant : enumerants) {
     // Skip the special enumerant for None.
     if (auto val = enumerant.getValue())
-      os.indent(6) << formatv(".Case(\"{0}\", {1})\n", enumerant.getSymbol(),
-                              val);
+      os.indent(6) << formatv(".Case(\"{0}\", {1})\n", enumerant.getStr(), val);
   }
   os.indent(6) << ".Default(::llvm::None);\n";
 

@@ -16,9 +16,12 @@
 #include <string.h>
 #include <unwind.h>
 #include <tuple>
+#include <__cxxabi_config.h>
 
 #if defined(_LIBCXXABI_ARM_EHABI)
-int main() {}
+int main(int, char**) {
+  return 0;
+}
 #else
 template <typename T>
 struct Stop;
@@ -50,7 +53,7 @@ static void test() noexcept { forced_unwind(); }
 
 static void terminate() { exit(0); }
 
-int main() {
+int main(int, char**) {
   std::set_terminate(terminate);
   try {
     test();

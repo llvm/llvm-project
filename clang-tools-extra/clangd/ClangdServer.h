@@ -14,6 +14,7 @@
 #include "ConfigProvider.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
+#include "Module.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -141,6 +142,8 @@ public:
 
     /// Enable preview of FoldingRanges feature.
     bool FoldingRanges = false;
+
+    ModuleSet *Modules = nullptr;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -336,6 +339,7 @@ private:
 
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
+  ModuleSet *Modules = nullptr;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:

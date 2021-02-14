@@ -304,6 +304,7 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
     stack.Print();                      \
   }
 
+/*
 static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   // StackDepot is not async signal safe. Do not create new chains in a signal
   // handler.
@@ -326,6 +327,7 @@ static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   Origin chained = Origin::CreateChainedOrigin(o, stack);
   return chained.raw_id();
 }
+*/
 
 static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
                                    uptr size) {
@@ -551,7 +553,7 @@ static void dfsan_fini() {
 }
 
 extern "C" void dfsan_flush() {
-  if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+  if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
     Die();
 }
 
@@ -560,8 +562,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
   ::InitializePlatformEarly();
 
-  if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
-    Die();
+  dfsan_flush();
   if (common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(ShadowAddr(), UnusedAddr() - ShadowAddr());
 

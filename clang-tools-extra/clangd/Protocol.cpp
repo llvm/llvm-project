@@ -655,27 +655,27 @@ bool fromJSON(const llvm::json::Value &Params, WorkspaceEdit &R,
   return O && O.map("changes", R.changes);
 }
 
-const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
-    "clangd.applyFix";
-const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_TWEAK =
-    "clangd.applyTweak";
-
 bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   if (!O || !O.map("command", R.command))
     return false;
 
-  const auto *Args = Params.getAsObject()->getArray("arguments");
-  if (R.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND) {
-    return Args && Args->size() == 1 &&
-           fromJSON(Args->front(), R.workspaceEdit,
-                    P.field("arguments").index(0));
+  const auto *Args = Params.getAsObject()->get("arguments");
+  if (!Args)
+    return true; // Missing args is ok, argument is null.
+  const auto *ArgsArray = Args->getAsArray();
+  if (!ArgsArray) {
+    P.field("arguments").report("expected array");
+    return false;
   }
-  if (R.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK)
-    return Args && Args->size() == 1 &&
-           fromJSON(Args->front(), R.tweakArgs, P.field("arguments").index(0));
-  return false; // Unrecognized command.
+  if (ArgsArray->size() > 1) {
+    P.field("arguments").report("Command should have 0 or 1 argument");
+    return false;
+  } else if (ArgsArray->size() == 1) {
+    R.argument = ArgsArray->front();
+  }
+  return true;
 }
 
 llvm::json::Value toJSON(const SymbolInformation &P) {
@@ -743,10 +743,8 @@ bool fromJSON(const llvm::json::Value &Params, WorkspaceSymbolParams &R,
 
 llvm::json::Value toJSON(const Command &C) {
   auto Cmd = llvm::json::Object{{"title", C.title}, {"command", C.command}};
-  if (C.workspaceEdit)
-    Cmd["arguments"] = {*C.workspaceEdit};
-  if (C.tweakArgs)
-    Cmd["arguments"] = {*C.tweakArgs};
+  if (!C.argument.getAsNull())
+    Cmd["arguments"] = llvm::json::Array{C.argument};
   return std::move(Cmd);
 }
 

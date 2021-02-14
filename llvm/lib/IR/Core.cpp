@@ -2042,9 +2042,14 @@ unsigned LLVMGetAlignment(LLVMValueRef V) {
     return LI->getAlignment();
   if (StoreInst *SI = dyn_cast<StoreInst>(P))
     return SI->getAlignment();
+  if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(P))
+    return RMWI->getAlign().value();
+  if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(P))
+    return CXI->getAlign().value();
 
   llvm_unreachable(
-      "only GlobalObject, AllocaInst, LoadInst and StoreInst have alignment");
+      "only GlobalValue, AllocaInst, LoadInst, StoreInst, AtomicRMWInst, "
+      "and AtomicCmpXchgInst have alignment");
 }
 
 void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
@@ -2057,9 +2062,14 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
     LI->setAlignment(Align(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
     SI->setAlignment(Align(Bytes));
+  else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(P))
+    RMWI->setAlignment(Align(Bytes));
+  else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(P))
+    CXI->setAlignment(Align(Bytes));
   else
     llvm_unreachable(
-        "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");
+        "only GlobalValue, AllocaInst, LoadInst, StoreInst, AtomicRMWInst, and "
+        "and AtomicCmpXchgInst have alignment");
 }
 
 LLVMValueMetadataEntry *LLVMGlobalCopyAllMetadata(LLVMValueRef Value,

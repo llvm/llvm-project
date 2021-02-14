@@ -577,7 +577,7 @@ private:
   ValueSP NewScalarValue(CompilerType &type) {
     ValueSP value_sp(new Value);
     value_sp->SetCompilerType(type);
-    value_sp->SetValueType(Value::eValueTypeScalar);
+    value_sp->SetValueType(Value::ValueType::Scalar);
     return value_sp;
   }
 

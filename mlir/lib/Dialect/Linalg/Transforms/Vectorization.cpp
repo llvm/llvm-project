@@ -267,7 +267,7 @@ static Optional<VectorizedLinalgOp> vectorizeAsLinalgGeneric(
         llvm::map_range(linalgOp.getShapedOperandTypes(),
                         [](ShapedType t) { return t.getElementType(); }));
     block->addArguments(elementTypes);
-    linalgOp.getRegionBuilder()(*block);
+    linalgOp.getRegionBuilder()(*block, /*captures=*/{});
   }
   Block *block = &region->front();
 
@@ -333,24 +333,26 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
 
 // Return true if the op is an element-wise linalg op.
 static bool isElementwise(Operation *op) {
-  auto genericOp = dyn_cast<linalg::GenericOp>(op);
-  if (!genericOp)
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
     return false;
-  if (genericOp.getNumLoops() != genericOp.getNumParallelLoops())
+  if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
     return false;
   // TODO: relax the restrictions on indexing map.
-  for (unsigned i = 0, e = genericOp.getNumOutputs(); i < e; i++) {
-    if (!genericOp.getOutputIndexingMap(i).isIdentity())
+  for (unsigned i = 0, e = linalgOp.getNumOutputs(); i < e; i++) {
+    if (!linalgOp.getOutputIndexingMap(i).isIdentity())
       return false;
   }
   // Currently bound the input indexing map to minor identity as other
   // permutations might require adding transpose ops to convert the vector read
   // to the right shape.
-  for (unsigned i = 0, e = genericOp.getNumInputs(); i < e; i++) {
-    if (!genericOp.getInputIndexingMap(i).isMinorIdentity())
+  for (unsigned i = 0, e = linalgOp.getNumInputs(); i < e; i++) {
+    if (!linalgOp.getInputIndexingMap(i).isMinorIdentity())
       return false;
   }
-  return hasOnlyScalarElementwiseOp(genericOp.getRegion());
+  if (linalgOp->getNumRegions() != 1)
+    return false;
+  return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
 }
 
 static Optional<VectorizedLinalgOp> vectorizeContraction(OpBuilder &builder,
@@ -393,9 +395,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   for (Type outputTensorType : linalgOp.getOutputTensorTypes())
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
-
-  if (isa<linalg::FillOp, linalg::CopyOp>(op))
-    return success();
   if (isElementwise(op))
     return success();
   return success(isaContractionOpInterface(linalgOp));
@@ -407,42 +406,11 @@ Optional<VectorizedLinalgOp> mlir::linalg::vectorizeLinalgOp(OpBuilder &builder,
     return llvm::None;
 
   edsc::ScopedContext scope(builder, op->getLoc());
-  // In the case of 0-D memrefs, return null and special case to scalar load or
-  // store later.
-  if (auto fillOp = dyn_cast<linalg::FillOp>(op)) {
-    // Vectorize fill as a vector.broadcast.
-    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                      << "Rewrite linalg.fill as vector.broadcast: " << *op);
-    VectorizedLinalgOp res;
-    if (Value v = buildVectorWrite(builder, fillOp.value(), fillOp.output()))
-      res.tensorResults.push_back(v);
-    return res;
-  }
-  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
-    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
-    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                      << "Rewrite linalg.copy as vector.transfer_read + "
-                         "vector.transfer_write: "
-                      << *op);
-    Value vector = buildVectorRead(builder, copyOp.input());
-    VectorizedLinalgOp res;
-    if (Value v = buildVectorWrite(builder, vector, copyOp.output()))
-      res.tensorResults.push_back(v);
-    return res;
-  }
   if (isElementwise(op)) {
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
                       << "Vectorize linalg op as a generic: " << *op);
     return vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
   }
-
-  // TODO: as soon as Copy and FillOp. get a region builder, replace all the
-  // above by:
-  // if (isa<FillOp, CopyOp>(op) || isElementwise(op)) {
-  //   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-  //                     << "Vectorize linalg op as a generic: " << *op);
-  //   return vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op));
-  // }
 
   return vectorizeContraction(builder, cast<LinalgOp>(op));
 }

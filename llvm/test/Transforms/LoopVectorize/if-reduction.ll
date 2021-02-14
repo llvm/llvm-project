@@ -387,10 +387,10 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Double pattern:
-; Check that is not vectorized if fp-instruction has no fast-math property. 
+; Check that is not vectorized if fp-instruction has no fast-math property.
 ;
 ; double fcmp_0_fsub_select2_notvectorize(double * restrict x, const int N) {
-;   double sum = 0.                                              
+;   double sum = 0.
 ;   for (int i = 0; i < N; ++i)
 ;     if (x[i] > 0.)
 ;       sum -= x[i];
@@ -468,7 +468,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Float pattern:
-;   Check that is not vectorized if fp-instruction has no fast-math property. 
+;   Check that is not vectorized if fp-instruction has no fast-math property.
 ;
 ; float fcmp_0_fmult_select1_notvectorize(float * restrict x, const int N) {
 ;   float sum = 0.
@@ -793,9 +793,10 @@ for.end:                                          ; preds = %for.inc, %entry
 ;     return sum;
 ; }
 
-; CHECK-LABEL: @fcmp_store_back(
-; CHECK-NOT: <4 x float>
 define float @fcmp_store_back(float* nocapture %a, i32 %LEN) nounwind readonly {
+; CHECK-LABEL: @fcmp_store_back(
+; CHECK-NOT:     <4 x float>
+;
 entry:
   %cmp7 = icmp sgt i32 %LEN, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
@@ -819,3 +820,6 @@ for.end:                                          ; preds = %for.body, %entry
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
   ret float %sum.0.lcssa
 }
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare

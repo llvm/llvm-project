@@ -366,6 +366,8 @@ uint32_t TableSymbol::getTableNumber() const {
 }
 
 void TableSymbol::setTableNumber(uint32_t number) {
+  if (const auto *t = dyn_cast<DefinedTable>(this))
+    return t->table->assignIndex(number);
   LLVM_DEBUG(dbgs() << "setTableNumber " << name << " -> " << number << "\n");
   assert(tableNumber == INVALID_INDEX);
   tableNumber = number;

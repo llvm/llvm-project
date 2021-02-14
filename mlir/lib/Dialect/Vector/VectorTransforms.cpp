@@ -1354,11 +1354,17 @@ public:
     Type eltType = resType.getElementType();
     bool isInt = eltType.isa<IntegerType>();
     Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
+    vector::CombiningKind kind = op.kind();
 
     if (!rhsType) {
       // Special case: AXPY operation.
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.rhs());
-      rewriter.replaceOp(op, genMult(loc, op.lhs(), b, acc, isInt, rewriter));
+      Optional<Value> mult =
+          isInt ? genMultI(loc, op.lhs(), b, acc, kind, rewriter)
+                : genMultF(loc, op.lhs(), b, acc, kind, rewriter);
+      if (!mult.hasValue())
+        return failure();
+      rewriter.replaceOp(op, mult.getValue());
       return success();
     }
 
@@ -1371,25 +1377,95 @@ public:
       Value r = nullptr;
       if (acc)
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-      Value m = genMult(loc, a, op.rhs(), r, isInt, rewriter);
-      result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
+      Optional<Value> m = isInt ? genMultI(loc, a, op.rhs(), r, kind, rewriter)
+                                : genMultF(loc, a, op.rhs(), r, kind, rewriter);
+      if (!m.hasValue())
+        return failure();
+      result = rewriter.create<vector::InsertOp>(loc, resType, m.getValue(),
+                                                 result, pos);
     }
     rewriter.replaceOp(op, result);
     return success();
   }
 
 private:
-  static Value genMult(Location loc, Value x, Value y, Value acc, bool isInt,
-                       PatternRewriter &rewriter) {
-    if (acc) {
-      if (isInt)
-        return rewriter.create<AddIOp>(loc, rewriter.create<MulIOp>(loc, x, y),
-                                       acc);
-      return rewriter.create<vector::FMAOp>(loc, x, y, acc);
+  static Optional<Value> genMultI(Location loc, Value x, Value y, Value acc,
+                                  vector::CombiningKind kind,
+                                  PatternRewriter &rewriter) {
+    using vector::CombiningKind;
+
+    MulIOp mul = rewriter.create<MulIOp>(loc, x, y);
+    if (!acc)
+      return Optional<Value>(mul);
+
+    Value combinedResult;
+    switch (kind) {
+    case CombiningKind::ADD:
+      combinedResult = rewriter.create<AddIOp>(loc, mul, acc);
+      break;
+    case CombiningKind::MUL:
+      combinedResult = rewriter.create<MulIOp>(loc, mul, acc);
+      break;
+    case CombiningKind::MIN:
+      combinedResult = rewriter.create<SelectOp>(
+          loc, rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, mul, acc), mul,
+          acc);
+      break;
+    case CombiningKind::MAX:
+      combinedResult = rewriter.create<SelectOp>(
+          loc, rewriter.create<CmpIOp>(loc, CmpIPredicate::sge, mul, acc), mul,
+          acc);
+      break;
+    case CombiningKind::AND:
+      combinedResult = rewriter.create<AndOp>(loc, mul, acc);
+      break;
+    case CombiningKind::OR:
+      combinedResult = rewriter.create<OrOp>(loc, mul, acc);
+      break;
+    case CombiningKind::XOR:
+      combinedResult = rewriter.create<XOrOp>(loc, mul, acc);
+      break;
     }
-    if (isInt)
-      return rewriter.create<MulIOp>(loc, x, y);
-    return rewriter.create<MulFOp>(loc, x, y);
+    return Optional<Value>(combinedResult);
+  }
+
+  static Optional<Value> genMultF(Location loc, Value x, Value y, Value acc,
+                                  vector::CombiningKind kind,
+                                  PatternRewriter &rewriter) {
+    using vector::CombiningKind;
+
+    // Special case for fused multiply-add.
+    if (acc && kind == CombiningKind::ADD) {
+      return Optional<Value>(rewriter.create<vector::FMAOp>(loc, x, y, acc));
+    }
+
+    MulFOp mul = rewriter.create<MulFOp>(loc, x, y);
+
+    if (!acc)
+      return Optional<Value>(mul);
+
+    Value combinedResult;
+    switch (kind) {
+    case CombiningKind::MUL:
+      combinedResult = rewriter.create<MulFOp>(loc, mul, acc);
+      break;
+    case CombiningKind::MIN:
+      combinedResult = rewriter.create<SelectOp>(
+          loc, rewriter.create<CmpFOp>(loc, CmpFPredicate::OLE, mul, acc), mul,
+          acc);
+      break;
+    case CombiningKind::MAX:
+      combinedResult = rewriter.create<SelectOp>(
+          loc, rewriter.create<CmpFOp>(loc, CmpFPredicate::OGT, mul, acc), mul,
+          acc);
+      break;
+    case CombiningKind::ADD: // Already handled this special case above.
+    case CombiningKind::AND: // Only valid for integer types.
+    case CombiningKind::OR:  // Only valid for integer types.
+    case CombiningKind::XOR: // Only valid for integer types.
+      return Optional<Value>();
+    }
+    return Optional<Value>(combinedResult);
   }
 };
 
@@ -1804,7 +1880,8 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
   for (int64_t k = 0; k < reductionSize; ++k) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, k);
     Value b = rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, k);
-    res = rewriter.create<vector::OuterProductOp>(op.getLoc(), a, b, res);
+    res = rewriter.create<vector::OuterProductOp>(op.getLoc(), res.getType(), a,
+                                                  b, res, op.kind());
   }
   rewriter.replaceOp(op, res);
   return success();

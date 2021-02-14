@@ -174,6 +174,11 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     if (Type != ELF::STT_NOTYPE && Type != ELF::STT_FUNC &&
         Type != ELF::STT_OBJECT && Type != ELF::STT_GNU_IFUNC)
       return Error::success();
+    // Some STT_NOTYPE symbols are not desired. This excludes STT_SECTION and
+    // ARM mapping symbols.
+    uint32_t Flags = cantFail(Symbol.getFlags());
+    if (Flags & SymbolRef::SF_FormatSpecific)
+      return Error::success();
   } else if (SymbolType != SymbolRef::ST_Function &&
              SymbolType != SymbolRef::ST_Data) {
     return Error::success();

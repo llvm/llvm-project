@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRVector
 
   DEPENDS
   MLIRVectorOpsIncGen
+  MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineEDSC

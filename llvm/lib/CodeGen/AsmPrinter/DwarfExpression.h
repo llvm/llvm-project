@@ -148,6 +148,7 @@ protected:
   enum { EntryValue = 1 << 0, Indirect = 1 << 1, CallSiteParamValue = 1 << 2 };
 
   unsigned LocationKind : 3;
+  unsigned SavedLocationKind : 3;
   unsigned LocationFlags : 3;
   unsigned DwarfVersion : 4;
 
@@ -284,8 +285,8 @@ protected:
 public:
   DwarfExpression(unsigned DwarfVersion, DwarfCompileUnit &CU)
       : CU(CU), SubRegisterSizeInBits(0), SubRegisterOffsetInBits(0),
-        LocationKind(Unknown), LocationFlags(Unknown),
-        DwarfVersion(DwarfVersion) {}
+        LocationKind(Unknown), SavedLocationKind(Unknown),
+        LocationFlags(Unknown), DwarfVersion(DwarfVersion) {}
 
   /// This needs to be called last to commit any pending changes.
   void finalize();

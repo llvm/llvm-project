@@ -360,6 +360,9 @@ public:
   using IsCapturedCacheT = SmallDenseMap<const Value *, bool, 8>;
   IsCapturedCacheT IsCapturedCache;
 
+  /// Query depth used to distinguish recursive queries.
+  unsigned Depth = 0;
+
   /// How many active NoAlias assumption uses there are.
   int NumAssumptionUses = 0;
 
@@ -369,6 +372,15 @@ public:
   SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
 
   AAQueryInfo() : AliasCache(), IsCapturedCache() {}
+
+  /// Create a new AAQueryInfo based on this one, but with the cache cleared.
+  /// This is used for recursive queries across phis, where cache results may
+  /// not be valid.
+  AAQueryInfo withEmptyCache() {
+    AAQueryInfo NewAAQI;
+    NewAAQI.Depth = Depth;
+    return NewAAQI;
+  }
 };
 
 class BatchAAResults;
@@ -796,9 +808,6 @@ private:
   std::vector<std::unique_ptr<Concept>> AAs;
 
   std::vector<AnalysisKey *> AADeps;
-
-  /// Query depth used to distinguish recursive queries.
-  unsigned Depth = 0;
 
   friend class BatchAAResults;
 };

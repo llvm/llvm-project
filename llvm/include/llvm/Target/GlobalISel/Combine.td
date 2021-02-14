@@ -267,7 +267,8 @@ def select_constant_cmp: GICombineRule<
 // Fold x op 0 -> x
 def right_identity_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR):$root,
+  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
+                           G_PTR_ADD):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
@@ -553,6 +554,13 @@ def load_or_combine : GICombineRule<
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
   (apply [{ return Helper.applyLoadOrCombine(*${root}, ${info}); }])>;
 
+def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
+def extend_through_phis : GICombineRule<
+  (defs root:$root, extend_through_phis_matchdata:$matchinfo),
+  (match (wip_match_opcode G_PHI):$root,
+    [{ return Helper.matchExtendThroughPhis(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyExtendThroughPhis(*${root}, ${matchinfo}); }])>;
+
 // Currently only the one combine above.
 def insert_vec_elt_combines : GICombineGroup<
                             [combine_insert_vec_elts_build_vector]>;
@@ -579,6 +587,8 @@ def known_bits_simplifications : GICombineGroup<[
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
+def phi_combines : GICombineGroup<[extend_through_phis]>;
+
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
@@ -586,7 +596,7 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     ptr_add_immed_chain, combines_for_extload, combine_indexed_load_store,
-    undef_combines, identity_combines, simplify_add_to_sub,
+    undef_combines, identity_combines, phi_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,

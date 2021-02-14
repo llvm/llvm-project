@@ -19,8 +19,10 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -134,6 +136,54 @@ public:
     return branchMapping.lookup(op);
   }
 
+  /// Converts the type from MLIR LLVM dialect to LLVM.
+  llvm::Type *convertType(Type type);
+
+  /// Looks up remapped a list of remapped values.
+  SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
+
+  /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
+  /// This currently supports integer, floating point, splat and dense element
+  /// attributes and combinations thereof.  In case of error, report it to `loc`
+  /// and return nullptr.
+  llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
+                                  Location loc);
+
+  /// Returns the MLIR context of the module being translated.
+  MLIRContext &getContext() { return *mlirModule->getContext(); }
+
+  /// Returns the LLVM context in which the IR is being constructed.
+  llvm::LLVMContext &getLLVMContext() { return llvmModule->getContext(); }
+
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining a global value.
+  llvm::GlobalValue *lookupGlobal(Operation *op) {
+    return globalsMapping.lookup(op);
+  }
+
+  /// Returns the OpenMP IR builder associated with the LLVM IR module being
+  /// constructed.
+  llvm::OpenMPIRBuilder *getOpenMPBuilder() {
+    if (!ompBuilder) {
+      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+      ompBuilder->initialize();
+    }
+    return ompBuilder.get();
+  }
+
+  /// Translates the given location.
+  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+
+  /// Translates the contents of the given block to LLVM IR using this
+  /// translator. The LLVM IR basic block corresponding to the given block is
+  /// expected to exist in the mapping of this translator. Uses `builder` to
+  /// translate the IR, leaving it at the end of the block. If `ignoreArguments`
+  /// is set, does not produce PHI nodes for the block arguments. Otherwise, the
+  /// PHI nodes are constructed for block arguments but are _not_ connected to
+  /// the predecessors that may not exist yet.
+  LogicalResult convertBlock(Block &bb, bool ignoreArguments,
+                             llvm::IRBuilder<> &builder);
+
 protected:
   /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
   /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
@@ -144,29 +194,10 @@ protected:
 
   virtual LogicalResult convertOperation(Operation &op,
                                          llvm::IRBuilder<> &builder);
-  virtual LogicalResult convertOmpOperation(Operation &op,
-                                            llvm::IRBuilder<> &builder);
-  virtual LogicalResult convertOmpParallel(Operation &op,
-                                           llvm::IRBuilder<> &builder);
-  virtual LogicalResult convertOmpMaster(Operation &op,
-                                         llvm::IRBuilder<> &builder);
-  void convertOmpOpRegions(Region &region, StringRef blockName,
-                           llvm::BasicBlock &sourceBlock,
-                           llvm::BasicBlock &continuationBlock,
-                           llvm::IRBuilder<> &builder,
-                           LogicalResult &bodyGenStatus);
-  virtual LogicalResult convertOmpWsLoop(Operation &opInst,
-                                         llvm::IRBuilder<> &builder);
-
-  /// Converts the type from MLIR LLVM dialect to LLVM.
-  llvm::Type *convertType(Type type);
 
   static std::unique_ptr<llvm::Module>
   prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                     StringRef name);
-
-  /// A helper to look up remapped operands in the value remapping table.
-  SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
 
 private:
   /// Check whether the module contains only supported ops directly in its body.
@@ -176,11 +207,6 @@ private:
   LogicalResult convertFunctions();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
-  LogicalResult convertBlock(Block &bb, bool ignoreArguments,
-                             llvm::IRBuilder<> &builder);
-
-  llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
-                                  Location loc);
 
   /// Original and translated module.
   Operation *mlirModule;
@@ -202,7 +228,8 @@ private:
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
 
-private:
+  LLVMTranslationInterface iface;
+
   /// Mappings between original and translated values, used for lookups.
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
@@ -213,6 +240,16 @@ private:
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 };
+
+namespace detail {
+/// For all blocks in the region that were converted to LLVM IR using the given
+/// ModuleTranslation, connect the PHI nodes of the corresponding LLVM IR blocks
+/// to the results of preceding blocks.
+void connectPHINodes(Region &region, const ModuleTranslation &state);
+
+/// Get a topologically sorted list of blocks of the given region.
+llvm::SetVector<Block *> getTopologicallySortedBlocks(Region &region);
+} // namespace detail
 
 } // namespace LLVM
 } // namespace mlir

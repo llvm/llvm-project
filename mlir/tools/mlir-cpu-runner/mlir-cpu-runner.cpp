@@ -17,6 +17,9 @@
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -29,5 +32,9 @@ int main(int argc, char **argv) {
 
   mlir::DialectRegistry registry;
   registry.insert<mlir::LLVM::LLVMDialect, mlir::omp::OpenMPDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+  registry.addDialectInterface<mlir::omp::OpenMPDialect,
+                               mlir::OpenMPDialectLLVMIRTranslationInterface>();
+
   return mlir::JitRunnerMain(argc, argv, registry);
 }

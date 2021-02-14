@@ -125,28 +125,30 @@ bool ValueObjectChild::UpdateValue() {
         case eAddressTypeFile: {
           lldb::ProcessSP process_sp(GetProcessSP());
           if (process_sp && process_sp->IsAlive())
-            m_value.SetValueType(Value::eValueTypeLoadAddress);
+            m_value.SetValueType(Value::ValueType::LoadAddress);
           else
-            m_value.SetValueType(Value::eValueTypeFileAddress);
+            m_value.SetValueType(Value::ValueType::FileAddress);
         } break;
         case eAddressTypeLoad:
           m_value.SetValueType(is_instance_ptr_base
-                                   ? Value::eValueTypeScalar
-                                   : Value::eValueTypeLoadAddress);
+                                   ? Value::ValueType::Scalar
+                                   : Value::ValueType::LoadAddress);
           break;
         case eAddressTypeHost:
-          m_value.SetValueType(Value::eValueTypeHostAddress);
+          m_value.SetValueType(Value::ValueType::HostAddress);
           break;
         case eAddressTypeInvalid:
           // TODO: does this make sense?
-          m_value.SetValueType(Value::eValueTypeScalar);
+          m_value.SetValueType(Value::ValueType::Scalar);
           break;
         }
       }
       switch (m_value.GetValueType()) {
-      case Value::eValueTypeLoadAddress:
-      case Value::eValueTypeFileAddress:
-      case Value::eValueTypeHostAddress: {
+      case Value::ValueType::Invalid:
+        break;
+      case Value::ValueType::LoadAddress:
+      case Value::ValueType::FileAddress:
+      case Value::ValueType::HostAddress: {
         lldb::addr_t addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         if (addr == LLDB_INVALID_ADDRESS) {
           m_error.SetErrorString("parent address is invalid.");
@@ -182,7 +184,7 @@ bool ValueObjectChild::UpdateValue() {
         }
       } break;
 
-      case Value::eValueTypeScalar:
+      case Value::ValueType::Scalar:
         // try to extract the child value from the parent's scalar value
         {
           Scalar scalar(m_value.GetScalar());

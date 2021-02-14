@@ -650,9 +650,8 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 
-struct VPDoubleValueDef : public VPRecipeBase, public VPUser {
-  VPDoubleValueDef(ArrayRef<VPValue *> Operands)
-      : VPRecipeBase(99), VPUser(Operands) {
+struct VPDoubleValueDef : public VPRecipeBase {
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
     new VPValue(nullptr, this);
     new VPValue(nullptr, this);
   }

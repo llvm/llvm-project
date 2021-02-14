@@ -7,6 +7,7 @@
   target triple = "aarch64--"
   @var = external dso_local global i8
   define i8* @test_global() { ret i8* undef }
+  define i8* @test_global_with_offset() { ret i8* undef }
 ...
 ---
 name:            test_global
@@ -17,21 +18,36 @@ body: |
 
     ; We don't want to lower to G_ADD_LOW when we need a GOT access, or when the code
     ; model isn't 'Small'.
-
     ; CHECK-LABEL: name: test_global
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @var
     ; CHECK: [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @var
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[ADD_LOW]](p0)
     ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
-    ; PIC-LABEL: name: test_global
-    ; PIC: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
-    ; PIC: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[GV]](p0)
-    ; PIC: $x0 = COPY [[PTRTOINT]](s64)
     ; CMLARGE-LABEL: name: test_global
     ; CMLARGE: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
     ; CMLARGE: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[GV]](p0)
     ; CMLARGE: $x0 = COPY [[PTRTOINT]](s64)
     %0(p0) = G_GLOBAL_VALUE @var
+    %1:_(s64) = G_PTRTOINT %0
+    $x0 = COPY %1
+...
+---
+name:            test_global_with_offset
+body: |
+  bb.0:
+    ; When we legalize into ADRP + G_ADD_LOW, both should inherit the offset
+    ; from the original G_GLOBAL_VALUE.
+    ;
+    ; CHECK-LABEL: name: test_global_with_offset
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @var + 1
+    ; CHECK: [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @var + 1
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[ADD_LOW]](p0)
+    ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
+    ; CMLARGE-LABEL: name: test_global_with_offset
+    ; CMLARGE: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var + 1
+    ; CMLARGE: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[GV]](p0)
+    ; CMLARGE: $x0 = COPY [[PTRTOINT]](s64)
+    %0:_(p0) = G_GLOBAL_VALUE @var + 1
     %1:_(s64) = G_PTRTOINT %0
     $x0 = COPY %1
 ...

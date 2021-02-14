@@ -191,7 +191,7 @@ void ThreadPlanAssemblyTracer::Log() {
 
     for (int arg_index = 0; arg_index < num_args; ++arg_index) {
       Value value;
-      value.SetValueType(Value::eValueTypeScalar);
+      value.SetValueType(Value::ValueType::Scalar);
       value.SetCompilerType(intptr_type);
       value_list.PushValue(value);
     }

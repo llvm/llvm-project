@@ -2091,11 +2091,6 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
-  return ST->hasMVEIntegerOps();
-}
-
 bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const {
   if (!ST->hasMVEIntegerOps())

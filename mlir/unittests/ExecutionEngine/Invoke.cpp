@@ -19,6 +19,7 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -51,8 +52,10 @@ TEST(MLIRExecutionEngine, AddInteger) {
     return %res : i32
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   OwningModuleRef module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
@@ -74,8 +77,10 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
     return %res : f32
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   OwningModuleRef module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
@@ -102,8 +107,10 @@ TEST(NativeMemRefJit, ZeroRankMemref) {
     return
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   auto module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
@@ -135,8 +142,10 @@ TEST(NativeMemRefJit, RankOneMemref) {
     return
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   auto module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
@@ -187,8 +196,10 @@ TEST(NativeMemRefJit, BasicMemref) {
     return
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   OwningModuleRef module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
@@ -227,8 +238,10 @@ TEST(NativeMemRefJit, JITCallback) {
     return
   }
   )mlir";
-  MLIRContext context;
-  registerAllDialects(context);
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
   auto module = parseSourceString(moduleStr, &context);
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));

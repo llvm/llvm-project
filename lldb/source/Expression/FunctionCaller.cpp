@@ -193,8 +193,8 @@ bool FunctionCaller::WriteFunctionArguments(
     // Special case: if it's a pointer, don't do anything (the ABI supports
     // passing cstrings)
 
-    if (arg_value->GetValueType() == Value::eValueTypeHostAddress &&
-        arg_value->GetContextType() == Value::eContextTypeInvalid &&
+    if (arg_value->GetValueType() == Value::ValueType::HostAddress &&
+        arg_value->GetContextType() == Value::ContextType::Invalid &&
         arg_value->GetCompilerType().IsPointerType())
       continue;
 
@@ -295,7 +295,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
     return false;
 
   ret_value.SetCompilerType(m_function_return_type);
-  ret_value.SetValueType(Value::eValueTypeScalar);
+  ret_value.SetValueType(Value::ValueType::Scalar);
   return true;
 }
 
