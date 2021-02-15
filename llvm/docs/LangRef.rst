@@ -16234,7 +16234,7 @@ vector index constant type (for most targets this will be an integer pointer
 type).
 
 '``llvm.experimental.vector.reverse``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
