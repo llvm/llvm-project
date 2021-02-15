@@ -14,8 +14,11 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
+
+#define DEBUG_TYPE "dialect"
 
 using namespace mlir;
 using namespace detail;
@@ -27,12 +30,28 @@ DialectAsmParser::~DialectAsmParser() {}
 //===----------------------------------------------------------------------===//
 
 void DialectRegistry::addDialectInterface(
-    StringRef dialectName, InterfaceAllocatorFunction allocator) {
+    StringRef dialectName, TypeID interfaceTypeID,
+    InterfaceAllocatorFunction allocator) {
   assert(allocator && "unexpected null interface allocation function");
   auto it = registry.find(dialectName.str());
   assert(it != registry.end() &&
          "adding an interface for an unregistered dialect");
-  interfaces[it->second.first].push_back(allocator);
+
+  // Bail out if the interface with the given ID is already in the registry for
+  // the given dialect. We expect a small number (dozens) of interfaces so a
+  // linear search is fine here.
+  auto &dialectInterfaces = interfaces[it->second.first];
+  for (const auto &kvp : dialectInterfaces) {
+    if (kvp.first == interfaceTypeID) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[" DEBUG_TYPE
+                    "] repeated interface registration for dialect "
+                 << dialectName);
+      return;
+    }
+  }
+
+  dialectInterfaces.emplace_back(interfaceTypeID, allocator);
 }
 
 DialectAllocatorFunctionRef
@@ -59,8 +78,12 @@ void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
   if (it == interfaces.end())
     return;
 
-  for (const InterfaceAllocatorFunction &createInterface : it->second)
-    dialect->addInterface(createInterface(dialect));
+  // Add an interface if it is not already present.
+  for (const auto &kvp : it->second) {
+    if (dialect->getRegisteredInterface(kvp.first))
+      continue;
+    dialect->addInterface(kvp.second(dialect));
+  }
 }
 
 //===----------------------------------------------------------------------===//
