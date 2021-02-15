@@ -99,6 +99,25 @@ TEST_F(ConfigCompileTests, Condition) {
   Frag.If.PathMatch.emplace_back("ba*r");
   EXPECT_FALSE(compileAndApply());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
+  // Only matches case-insensitively.
+  Frag = {};
+  Frag.If.PathMatch.emplace_back("B.*R");
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_TRUE(compileAndApply());
+#else
+  EXPECT_FALSE(compileAndApply());
+#endif
+
+  Frag = {};
+  Frag.If.PathExclude.emplace_back("B.*R");
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_FALSE(compileAndApply());
+#else
+  EXPECT_TRUE(compileAndApply());
+#endif
 }
 
 TEST_F(ConfigCompileTests, CompileCommands) {
@@ -406,6 +425,23 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_TRUE(Conf.Index.External);
   EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+
+  // Only matches case-insensitively.
+  BazPath = testPath("fOo/baz.h", llvm::sys::path::Style::posix);
+  BazPath = llvm::sys::path::convert_to_slash(BazPath);
+  Parm.Path = BazPath;
+
+  FooPath = testPath("FOO/", llvm::sys::path::Style::posix);
+  FooPath = llvm::sys::path::convert_to_slash(FooPath);
+  Frag = GetFrag("", FooPath.c_str());
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  ASSERT_TRUE(Conf.Index.External);
+  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+#else
+  ASSERT_FALSE(Conf.Index.External);
+#endif
 }
 } // namespace
 } // namespace config

@@ -10,7 +10,13 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_PATH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Path.h"
 #include <string>
+
+/// Whether current platform treats paths case insensitively.
+#if defined(_WIN32) || defined(__APPLE__)
+#define CLANGD_PATH_CASE_INSENSITIVE
+#endif
 
 namespace clang {
 namespace clangd {
@@ -28,6 +34,12 @@ using PathRef = llvm::StringRef;
 std::string maybeCaseFoldPath(PathRef Path);
 bool pathEqual(PathRef, PathRef);
 
+/// Checks if \p Ancestor is a proper ancestor of \p Path. This is just a
+/// smarter lexical prefix match, e.g: foo/bar/baz doesn't start with foo/./bar.
+/// Both \p Ancestor and \p Path must be absolute.
+bool pathStartsWith(
+    PathRef Ancestor, PathRef Path,
+    llvm::sys::path::Style Style = llvm::sys::path::Style::native);
 } // namespace clangd
 } // namespace clang
 
