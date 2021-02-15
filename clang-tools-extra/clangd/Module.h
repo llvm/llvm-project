@@ -3,8 +3,10 @@
 
 #include "LSPBinder.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace clang {
@@ -41,12 +43,28 @@ public:
                              llvm::json::Object &ServerCaps) {}
 };
 
+/// A ModuleSet is a collection of modules installed in clangd.
+///
+/// Modules can be looked up by type, or used through the Module interface.
+/// This allows individual modules to expose a public API.
+/// For this reason, there can be only one module of each type.
+///
+/// ModuleSet owns the modules. It is itself owned by main, not ClangdServer.
 class ModuleSet {
   std::vector<std::unique_ptr<Module>> Modules;
+  llvm::DenseMap<void *, Module *> Map;
+
+  template <typename Mod> struct ID {
+    static_assert(std::is_base_of<Module, Mod>::value &&
+                      std::is_final<Mod>::value,
+                  "Modules must be final classes derived from clangd::Module");
+    static int Key;
+  };
+
+  bool addImpl(void *Key, std::unique_ptr<Module>, const char *Source);
 
 public:
-  explicit ModuleSet(std::vector<std::unique_ptr<Module>> Modules)
-      : Modules(std::move(Modules)) {}
+  ModuleSet() = default;
 
   using iterator = llvm::pointee_iterator<decltype(Modules)::iterator>;
   using const_iterator =
@@ -55,7 +73,20 @@ public:
   iterator end() { return iterator(Modules.end()); }
   const_iterator begin() const { return const_iterator(Modules.begin()); }
   const_iterator end() const { return const_iterator(Modules.end()); }
+
+  template <typename Mod> bool add(std::unique_ptr<Mod> M) {
+    return addImpl(&ID<Mod>::Key, std::move(M), LLVM_PRETTY_FUNCTION);
+  }
+  template <typename Mod> Mod *get() {
+    return static_cast<Mod *>(Map.lookup(&ID<Mod>::Key));
+  }
+  template <typename Mod> const Mod *get() const {
+    return const_cast<ModuleSet *>(this)->get<Mod>();
+  }
 };
+
+template <typename Mod> int ModuleSet::ID<Mod>::Key;
+
 } // namespace clangd
 } // namespace clang
 #endif
