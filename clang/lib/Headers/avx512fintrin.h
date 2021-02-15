@@ -9300,8 +9300,11 @@ _mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
  * computations. In vector-reduction arithmetic, the evaluation order is
  * independent of the order of the input elements of V.
 
- * For floating point types, we always assume the elements are reassociable even
- * if -fast-math is off.
+ * For floating-point intrinsics:
+ * 1. When using fadd/fmul intrinsics, the order of operations within the
+ * vector is unspecified (associative math).
+ * 2. When using fmin/fmax intrinsics, NaN or -0.0 elements within the vector
+ * produce unspecified results.
 
  * Used bisection method. At each step, we partition the vector with previous
  * step in half, and the operation is performed on its two halves.
@@ -9524,75 +9527,49 @@ _mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __V) {
   return __builtin_ia32_reduce_umin_d512((__v16si)__V);
 }
 
-#define _mm512_mask_reduce_operator(op) \
-  __m256d __t1 = _mm512_extractf64x4_pd(__V, 0); \
-  __m256d __t2 = _mm512_extractf64x4_pd(__V, 1); \
-  __m256d __t3 = _mm256_##op(__t1, __t2); \
-  __m128d __t4 = _mm256_extractf128_pd(__t3, 0); \
-  __m128d __t5 = _mm256_extractf128_pd(__t3, 1); \
-  __m128d __t6 = _mm_##op(__t4, __t5); \
-  __m128d __t7 = __builtin_shufflevector(__t6, __t6, 1, 0); \
-  __m128d __t8 = _mm_##op(__t6, __t7); \
-  return __t8[0]
-
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_pd(__m512d __V) {
-  _mm512_mask_reduce_operator(max_pd);
+  return __builtin_ia32_reduce_fmax_pd512(__V);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_pd(__m512d __V) {
-  _mm512_mask_reduce_operator(min_pd);
+  return __builtin_ia32_reduce_fmin_pd512(__V);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __V) {
   __V = _mm512_mask_mov_pd(_mm512_set1_pd(-__builtin_inf()), __M, __V);
-  _mm512_mask_reduce_operator(max_pd);
+  return __builtin_ia32_reduce_fmax_pd512(__V);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __V) {
   __V = _mm512_mask_mov_pd(_mm512_set1_pd(__builtin_inf()), __M, __V);
-  _mm512_mask_reduce_operator(min_pd);
+  return __builtin_ia32_reduce_fmin_pd512(__V);
 }
-#undef _mm512_mask_reduce_operator
-
-#define _mm512_mask_reduce_operator(op) \
-  __m256 __t1 = (__m256)_mm512_extractf64x4_pd((__m512d)__V, 0); \
-  __m256 __t2 = (__m256)_mm512_extractf64x4_pd((__m512d)__V, 1); \
-  __m256 __t3 = _mm256_##op(__t1, __t2); \
-  __m128 __t4 = _mm256_extractf128_ps(__t3, 0); \
-  __m128 __t5 = _mm256_extractf128_ps(__t3, 1); \
-  __m128 __t6 = _mm_##op(__t4, __t5); \
-  __m128 __t7 = __builtin_shufflevector(__t6, __t6, 2, 3, 0, 1); \
-  __m128 __t8 = _mm_##op(__t6, __t7); \
-  __m128 __t9 = __builtin_shufflevector(__t8, __t8, 1, 0, 3, 2); \
-  __m128 __t10 = _mm_##op(__t8, __t9); \
-  return __t10[0]
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_ps(__m512 __V) {
-  _mm512_mask_reduce_operator(max_ps);
+  return __builtin_ia32_reduce_fmax_ps512(__V);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_ps(__m512 __V) {
-  _mm512_mask_reduce_operator(min_ps);
+  return __builtin_ia32_reduce_fmin_ps512(__V);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __V) {
   __V = _mm512_mask_mov_ps(_mm512_set1_ps(-__builtin_inff()), __M, __V);
-  _mm512_mask_reduce_operator(max_ps);
+  return __builtin_ia32_reduce_fmax_ps512(__V);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __V) {
   __V = _mm512_mask_mov_ps(_mm512_set1_ps(__builtin_inff()), __M, __V);
-  _mm512_mask_reduce_operator(min_ps);
+  return __builtin_ia32_reduce_fmin_ps512(__V);
 }
-#undef _mm512_mask_reduce_operator
 
 /// Moves the least significant 32 bits of a vector of [16 x i32] to a
 ///    32-bit signed integer value.
