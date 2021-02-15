@@ -396,7 +396,7 @@ def get_idx_from_ir_value_match(match):
         if match.group(i) is not None:
             return i - first_nameless_group_in_ir_value_match
     error("Unable to identify the kind of IR value from the match!")
-    return 0;
+    return 0
 
 # See get_idx_from_ir_value_match
 def get_name_from_ir_value_match(match):
