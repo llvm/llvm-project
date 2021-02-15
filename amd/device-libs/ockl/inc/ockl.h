@@ -450,6 +450,8 @@ extern __attribute__((const)) __global void * OCKL_MANGLE_T(to,global)(void *);
 extern __attribute__((const)) __local void * OCKL_MANGLE_T(to,local)(void *);
 extern __attribute__((const)) __private void * OCKL_MANGLE_T(to,private)(void *);
 
+extern void OCKL_MANGLE_T(rtcwait,u32)(uint);
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCKL_H
