@@ -5,14 +5,12 @@ import platform
 import re
 import subprocess
 import sys
-import tempfile
 
 import lit.formats
 import lit.util
 
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
-from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
@@ -149,7 +147,6 @@ lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 # available_features: REQUIRES/UNSUPPORTED lit commands look at this list.
 if platform.system() == 'Darwin':
-    import subprocess
     xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version']).decode("utf-8")
     match = re.search('lldb-(\d+)', xcode_lldb_vers)
     if match:
