@@ -124,6 +124,9 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
+* The options ``--build-id-link-{dir,input,output}`` have been deleted.
+  (`D96310 <https://reviews.llvm.org/D96310>`_)
+
 Changes to LLDB
 ---------------------------------
 
