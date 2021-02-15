@@ -1693,6 +1693,12 @@ def int_ptrauth_sign_generic : Intrinsic<[llvm_anyint_ty],
                                          [LLVMMatchType<0>, LLVMMatchType<0>],
                                          [IntrNoMem]>;
 
+//===------------ Intrinsics to perform common vector shuffles ------------===//
+
+def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                   [LLVMMatchType<0>],
+                                   [IntrNoMem]>;
+
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
