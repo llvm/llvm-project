@@ -383,6 +383,14 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   return builder.getIndexTensorAttr(resultShape);
 }
 
+static LogicalResult verify(BroadcastOp op) {
+  // Ensure that AssumingAllOp contains at least one operand
+  if (op.getNumOperands() < 2)
+    return op.emitOpError("required at least 2 input shapes");
+
+  return verifyShapeOrExtentTensorOp(op);
+}
+
 //===----------------------------------------------------------------------===//
 // ConcatOp
 //===----------------------------------------------------------------------===//
