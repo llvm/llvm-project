@@ -524,98 +524,106 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
   BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
 
+  llvm::json::Object ServerCaps{
+      {"textDocumentSync",
+       llvm::json::Object{
+           {"openClose", true},
+           {"change", (int)TextDocumentSyncKind::Incremental},
+           {"save", true},
+       }},
+      {"documentFormattingProvider", true},
+      {"documentRangeFormattingProvider", true},
+      {"documentOnTypeFormattingProvider",
+       llvm::json::Object{
+           {"firstTriggerCharacter", "\n"},
+           {"moreTriggerCharacter", {}},
+       }},
+      {"completionProvider",
+       llvm::json::Object{
+           {"allCommitCharacters",
+            {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
+             ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
+             "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
+           {"resolveProvider", false},
+           // We do extra checks, e.g. that > is part of ->.
+           {"triggerCharacters", {".", "<", ">", ":", "\"", "/"}},
+       }},
+      {"semanticTokensProvider",
+       llvm::json::Object{
+           {"full", llvm::json::Object{{"delta", true}}},
+           {"range", false},
+           {"legend",
+            llvm::json::Object{{"tokenTypes", semanticTokenTypes()},
+                               {"tokenModifiers", semanticTokenModifiers()}}},
+       }},
+      {"signatureHelpProvider",
+       llvm::json::Object{
+           {"triggerCharacters", {"(", ","}},
+       }},
+      {"declarationProvider", true},
+      {"definitionProvider", true},
+      {"implementationProvider", true},
+      {"documentHighlightProvider", true},
+      {"documentLinkProvider",
+       llvm::json::Object{
+           {"resolveProvider", false},
+       }},
+      {"hoverProvider", true},
+      {"selectionRangeProvider", true},
+      {"documentSymbolProvider", true},
+      {"workspaceSymbolProvider", true},
+      {"referencesProvider", true},
+      {"astProvider", true}, // clangd extension
+      {"typeHierarchyProvider", true},
+      {"memoryUsageProvider", true}, // clangd extension
+      {"compilationDatabase",        // clangd extension
+       llvm::json::Object{{"automaticReload", true}}},
+      {"callHierarchyProvider", true},
+  };
+
+  {
+    LSPBinder Binder(Handlers);
+    if (Opts.Modules)
+      for (auto &Mod : *Opts.Modules)
+        Mod.initializeLSP(Binder, Params.capabilities, ServerCaps);
+  }
+
   // Per LSP, renameProvider can be either boolean or RenameOptions.
   // RenameOptions will be specified if the client states it supports prepare.
-  llvm::json::Value RenameProvider =
-      llvm::json::Object{{"prepareProvider", true}};
-  if (!Params.capabilities.RenamePrepareSupport) // Only boolean allowed per LSP
-    RenameProvider = true;
+  ServerCaps["renameProvider"] =
+      Params.capabilities.RenamePrepareSupport
+          ? llvm::json::Object{{"prepareProvider", true}}
+          : llvm::json::Value(true);
 
-  // Per LSP, codeActionProvide can be either boolean or CodeActionOptions.
+  // Per LSP, codeActionProvider can be either boolean or CodeActionOptions.
   // CodeActionOptions is only valid if the client supports action literal
   // via textDocument.codeAction.codeActionLiteralSupport.
   llvm::json::Value CodeActionProvider = true;
-  if (Params.capabilities.CodeActionStructure)
-    CodeActionProvider = llvm::json::Object{
-        {"codeActionKinds",
-         {CodeAction::QUICKFIX_KIND, CodeAction::REFACTOR_KIND,
-          CodeAction::INFO_KIND}}};
+  ServerCaps["codeActionProvider"] =
+      Params.capabilities.CodeActionStructure
+          ? llvm::json::Object{{"codeActionKinds",
+                                {CodeAction::QUICKFIX_KIND,
+                                 CodeAction::REFACTOR_KIND,
+                                 CodeAction::INFO_KIND}}}
+          : llvm::json::Value(true);
+
+  if (Opts.FoldingRanges)
+    ServerCaps["foldingRangeProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
     Commands.push_back(Command);
   llvm::sort(Commands);
+  ServerCaps["executeCommandProvider"] =
+      llvm::json::Object{{"commands", Commands}};
 
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{{"name", "clangd"},
                            {"version", getClangToolFullVersion("clangd")}}},
-       {"capabilities",
-        llvm::json::Object{
-            {"textDocumentSync",
-             llvm::json::Object{
-                 {"openClose", true},
-                 {"change", (int)TextDocumentSyncKind::Incremental},
-                 {"save", true},
-             }},
-            {"documentFormattingProvider", true},
-            {"documentRangeFormattingProvider", true},
-            {"documentOnTypeFormattingProvider",
-             llvm::json::Object{
-                 {"firstTriggerCharacter", "\n"},
-                 {"moreTriggerCharacter", {}},
-             }},
-            {"codeActionProvider", std::move(CodeActionProvider)},
-            {"completionProvider",
-             llvm::json::Object{
-                 {"allCommitCharacters",
-                  {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
-                   ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
-                   "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
-                 {"resolveProvider", false},
-                 // We do extra checks, e.g. that > is part of ->.
-                 {"triggerCharacters", {".", "<", ">", ":", "\"", "/"}},
-             }},
-            {"semanticTokensProvider",
-             llvm::json::Object{
-                 {"full", llvm::json::Object{{"delta", true}}},
-                 {"range", false},
-                 {"legend",
-                  llvm::json::Object{
-                      {"tokenTypes", semanticTokenTypes()},
-                      {"tokenModifiers", semanticTokenModifiers()}}},
-             }},
-            {"signatureHelpProvider",
-             llvm::json::Object{
-                 {"triggerCharacters", {"(", ","}},
-             }},
-            {"declarationProvider", true},
-            {"definitionProvider", true},
-            {"implementationProvider", true},
-            {"documentHighlightProvider", true},
-            {"documentLinkProvider",
-             llvm::json::Object{
-                 {"resolveProvider", false},
-             }},
-            {"hoverProvider", true},
-            {"renameProvider", std::move(RenameProvider)},
-            {"selectionRangeProvider", true},
-            {"documentSymbolProvider", true},
-            {"workspaceSymbolProvider", true},
-            {"referencesProvider", true},
-            {"astProvider", true}, // clangd extension
-            {"executeCommandProvider",
-             llvm::json::Object{{"commands", Commands}}},
-            {"typeHierarchyProvider", true},
-            {"memoryUsageProvider", true}, // clangd extension
-            {"compilationDatabase",        // clangd extension
-             llvm::json::Object{{"automaticReload", true}}},
-            {"callHierarchyProvider", true},
-        }}}};
+       {"capabilities", std::move(ServerCaps)}}};
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
-  if (Opts.FoldingRanges)
-    Result.getObject("capabilities")->insert({"foldingRangeProvider", true});
   Reply(std::move(Result));
 }
 
