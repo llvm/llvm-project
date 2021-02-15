@@ -663,8 +663,39 @@ raw_fd_ostream::~raw_fd_ostream() {
   if (FD >= 0) {
     flush();
     if (ShouldClose) {
-      if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-        error_detected(EC);
+      if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD)) {
+        // This is a workaround for a Swift compiler issue wherein the compiler
+        // occassionally crashes in this destructor with no meaningful error
+        // diagnostic.
+        // Re-try closing the file descriptor, in case it helps.
+        // Emit additional diagnostics to ease with root-causing this issue.
+        // Reversal tracked in: rdar://74359658
+        const unsigned MAX_RETRY_COUNT = 10;
+        bool AllAttemptsFailed = true;
+        unsigned I;
+        for (I = 0; I != MAX_RETRY_COUNT; ++I) {
+          if (bool(sys::Process::SafelyCloseFileDescriptor(FD)) == false) {
+            AllAttemptsFailed = false;
+            break;
+          }
+        }
+        {
+          // Blast the error out to stderr.  We don't try hard to make sure
+          // this succeeds and we can't use errs() here because it may be
+          // part of the problem.
+          SmallVector<char, 64> Buffer;
+          raw_svector_ostream OS(Buffer);
+          OS << "File Descriptor close failed on FD: " << FD << "\n";
+          OS << "Error: " << EC.message() << "\n";
+          OS << "Attempted to retry: " << I << " times.\n";
+          OS << "A re-try attempt succeeded: "
+             << (AllAttemptsFailed ? "false" : "true") << "\n";
+          StringRef MessageStr = OS.str();
+          ::write(2, MessageStr.data(), MessageStr.size());
+        }
+        if (AllAttemptsFailed)
+          error_detected(EC);
+      }
     }
   }
 
