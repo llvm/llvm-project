@@ -12,6 +12,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
@@ -207,38 +208,28 @@ public:
 
   template <typename T> void printList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
-    bool Comma = false;
-    for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
-      OS << Item;
-      Comma = true;
-    }
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << Item;
     OS << "]\n";
   }
 
   template <typename T, typename U>
   void printList(StringRef Label, const T &List, const U &Printer) {
     startLine() << Label << ": [";
-    bool Comma = false;
+    ListSeparator LS;
     for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
+      OS << LS;
       Printer(OS, Item);
-      Comma = true;
     }
     OS << "]\n";
   }
 
   template <typename T> void printHexList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
-    bool Comma = false;
-    for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
-      OS << hex(Item);
-      Comma = true;
-    }
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << hex(Item);
     OS << "]\n";
   }
 
