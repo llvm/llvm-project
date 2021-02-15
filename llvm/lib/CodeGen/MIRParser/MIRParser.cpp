@@ -646,10 +646,9 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   };
 
-  for (auto I = PFS.VRegInfosNamed.begin(), E = PFS.VRegInfosNamed.end();
-       I != E; I++) {
-    const VRegInfo &Info = *I->second;
-    populateVRegInfo(Info, Twine(I->first()));
+  for (const auto &P : PFS.VRegInfosNamed) {
+    const VRegInfo &Info = *P.second;
+    populateVRegInfo(Info, Twine(P.first()));
   }
 
   for (auto P : PFS.VRegInfos) {
