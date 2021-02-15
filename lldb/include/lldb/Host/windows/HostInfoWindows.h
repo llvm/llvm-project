@@ -25,7 +25,7 @@ private:
   ~HostInfoWindows();
 
 public:
-  static void Initialize();
+  static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
   static void Terminate();
 
   static size_t GetPageSize();
