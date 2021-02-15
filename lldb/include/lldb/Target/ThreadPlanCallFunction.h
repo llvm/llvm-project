@@ -90,7 +90,7 @@ public:
 
   lldb::addr_t GetStopAddress() { return m_stop_address; }
 
-  bool RestoreThreadState() override;
+  void RestoreThreadState() override;
 
   void ThreadDestroyed() override { m_takedown_done = true; }
 

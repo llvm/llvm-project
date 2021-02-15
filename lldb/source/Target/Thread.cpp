@@ -530,7 +530,7 @@ bool Thread::RestoreRegisterStateFromCheckpoint(
   return false;
 }
 
-bool Thread::RestoreThreadStateFromCheckpoint(
+void Thread::RestoreThreadStateFromCheckpoint(
     ThreadStateCheckpoint &saved_state) {
   if (saved_state.stop_info_sp)
     saved_state.stop_info_sp->MakeStopInfoValid();
@@ -539,7 +539,6 @@ bool Thread::RestoreThreadStateFromCheckpoint(
       saved_state.current_inlined_depth);
   GetPlans().RestoreCompletedPlanCheckpoint(
       saved_state.m_completed_plan_checkpoint);
-  return true;
 }
 
 StateType Thread::GetState() const {
