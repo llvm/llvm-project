@@ -95,8 +95,7 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
 def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL>;
 
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
-                            SDTypeProfile<1, 5, [SDTCisVec<0>,
-                                                 SDTCVecEltisVT<0, i1>,
+                            SDTypeProfile<1, 5, [SDTCVecEltisVT<0, i1>,
                                                  SDTCisVec<1>,
                                                  SDTCisSameNumEltsAs<0, 1>,
                                                  SDTCisSameAs<1, 2>,
@@ -112,8 +111,15 @@ def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                                        SDTCisSameNumEltsAs<0, 3>,
                                                        SDTCisVT<4, XLenVT>]>>;
 
-def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCisVec<0>,
-                                                SDTCVecEltisVT<0, i1>,
+def SDT_RISCVMaskBinOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>,
+                                                 SDTCVecEltisVT<0, i1>,
+                                                 SDTCisVT<3, XLenVT>]>;
+def riscv_vmand_vl : SDNode<"RISCVISD::VMAND_VL", SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
+def riscv_vmor_vl  : SDNode<"RISCVISD::VMOR_VL",  SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
+def riscv_vmxor_vl : SDNode<"RISCVISD::VMXOR_VL", SDT_RISCVMaskBinOp_VL, [SDNPCommutative]>;
+
+def SDT_RISCVVMSETCLR_VL : SDTypeProfile<1, 1, [SDTCVecEltisVT<0, i1>,
                                                 SDTCisVT<1, XLenVT>]>;
 def riscv_vmclr_vl : SDNode<"RISCVISD::VMCLR_VL", SDT_RISCVVMSETCLR_VL>;
 def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
@@ -302,6 +308,36 @@ multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_nam
             (instruction vti.RegClass:$rs1, simm5:$rs2, GPR:$vl, vti.SEW)>;
 }
 
+multiclass VPatFPSetCCVL_VV_VF_FV<CondCode cc,
+                                  string inst_name,
+                                  string swapped_op_inst_name> {
+  foreach fvti = AllFloatVectors in {
+    def : Pat<(fvti.Mask (riscv_setcc_vl (fvti.Vector fvti.RegClass:$rs1),
+                                         fvti.RegClass:$rs2,
+                                         cc,
+                                         (fvti.Mask true_mask),
+                                         (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, GPR:$vl, fvti.SEW)>;
+    def : Pat<(fvti.Mask (riscv_setcc_vl (fvti.Vector fvti.RegClass:$rs1),
+                                         (SplatFPOp fvti.ScalarRegClass:$rs2),
+                                         cc,
+                                         (fvti.Mask true_mask),
+                                         (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  GPR:$vl, fvti.SEW)>;
+    def : Pat<(fvti.Mask (riscv_setcc_vl (SplatFPOp fvti.ScalarRegClass:$rs2),
+                                         (fvti.Vector fvti.RegClass:$rs1),
+                                         cc,
+                                         (fvti.Mask true_mask),
+                                         (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  GPR:$vl, fvti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -451,6 +487,21 @@ foreach vti = AllFloatVectors in {
                  GPR:$vl, vti.SEW)>;
 }
 
+// 14.11. Vector Floating-Point Compare Instructions
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
+
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETNE,  "PseudoVMFNE", "PseudoVMFNE">;
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETUNE, "PseudoVMFNE", "PseudoVMFNE">;
+
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETLT,  "PseudoVMFLT", "PseudoVMFGT">;
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
+
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
+defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
+
+// 14.12. Vector Floating-Point Sign-Injection Instructions
+// Handle fneg with VFSGNJN using the same input for both operands.
 foreach vti = AllFloatVectors in {
   // 14.8. Vector Floating-Point Square-Root Instruction
   def : Pat<(riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask true_mask),
@@ -496,6 +547,28 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMSET_M_" # mti.BX) GPR:$vl, mti.SEW)>;
   def : Pat<(mti.Mask (riscv_vmclr_vl (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMCLR_M_" # mti.BX) GPR:$vl, mti.SEW)>;
+
+  def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1, VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMAND_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1, VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMOR_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  def : Pat<(mti.Mask (riscv_vmxor_vl VR:$rs1, VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMXOR_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+
+  // FIXME: Add remaining mask instructions.
+  def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmor_vl VR:$rs1, VR:$rs2,
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      true_mask, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMNOR_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+
+  // Match the not idiom to the vnot.mm pseudo.
+  def : Pat<(mti.Mask (riscv_vmxor_vl VR:$rs, true_mask, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
+                 VR:$rs, VR:$rs, GPR:$vl, mti.SEW)>;
 }
 
 } // Predicates = [HasStdExtV]
@@ -540,7 +613,7 @@ foreach vti = AllFloatVectors in {
 //===----------------------------------------------------------------------===//
 
 def riscv_vid_vl : SDNode<"RISCVISD::VID_VL", SDTypeProfile<1, 2,
-                          [SDTCisVec<0>, SDTCisVec<1>, SDTCVecEltisVT<1, i1>,
+                          [SDTCisVec<0>, SDTCVecEltisVT<1, i1>,
                            SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, XLenVT>]>, []>;
 
 def SDTRVVSlide : SDTypeProfile<1, 5, [
