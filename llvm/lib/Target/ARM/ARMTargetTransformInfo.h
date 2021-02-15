@@ -103,8 +103,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
-  TTI::AddressingModeKind
-    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
+  bool shouldFavorBackedgeIndex(const Loop *L) const;
+  bool shouldFavorPostInc() const;
 
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
