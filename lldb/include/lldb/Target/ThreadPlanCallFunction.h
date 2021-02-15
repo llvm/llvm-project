@@ -81,7 +81,7 @@ public:
   // stop reason. But if something bad goes wrong, it is nice to be able to
   // tell the user what really happened.
 
-  lldb::StopInfoSP GetRealStopInfo() override {
+  virtual lldb::StopInfoSP GetRealStopInfo() {
     if (m_real_stop_info_sp)
       return m_real_stop_info_sp;
     else
