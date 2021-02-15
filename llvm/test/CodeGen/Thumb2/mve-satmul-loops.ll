@@ -38,12 +38,10 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vmvn.i32 q1, #0x80000000
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrd r5, r4, [r0]
+; CHECK-NEXT:    ldrd r5, r4, [r0], #8
 ; CHECK-NEXT:    mov.w r3, #-1
-; CHECK-NEXT:    ldrd r8, r7, [r1]
-; CHECK-NEXT:    adds r0, #8
+; CHECK-NEXT:    ldrd r8, r7, [r1], #8
 ; CHECK-NEXT:    smull r4, r7, r7, r4
-; CHECK-NEXT:    adds r1, #8
 ; CHECK-NEXT:    asrl r4, r7, #31
 ; CHECK-NEXT:    smull r6, r5, r8, r5
 ; CHECK-NEXT:    rsbs.w r9, r4, #-2147483648
@@ -95,8 +93,7 @@ define arm_aapcs_vfpcc void @ssatmul_s_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vorr q2, q2, q4
 ; CHECK-NEXT:    vmov r3, s10
 ; CHECK-NEXT:    vmov r4, s8
-; CHECK-NEXT:    strd r4, r3, [r2]
-; CHECK-NEXT:    adds r2, #8
+; CHECK-NEXT:    strd r4, r3, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB0_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    ldrd r7, r3, [sp] @ 8-byte Folded Reload
@@ -744,10 +741,8 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    add.w r12, r0, r5, lsl #2
 ; CHECK-NEXT:  .LBB3_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrd r4, r7, [r0]
-; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    ldrd r5, r10, [r1]
-; CHECK-NEXT:    adds r1, #8
+; CHECK-NEXT:    ldrd r4, r7, [r0], #8
+; CHECK-NEXT:    ldrd r5, r10, [r1], #8
 ; CHECK-NEXT:    umull r4, r5, r5, r4
 ; CHECK-NEXT:    lsrl r4, r5, #31
 ; CHECK-NEXT:    subs.w r6, r4, #-1
@@ -773,8 +768,7 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(i32* nocapture readonly %pSrcA, i32* 
 ; CHECK-NEXT:    vorn q0, q1, q0
 ; CHECK-NEXT:    vmov r4, s2
 ; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    strd r5, r4, [r2]
-; CHECK-NEXT:    adds r2, #8
+; CHECK-NEXT:    strd r5, r4, [r2], #8
 ; CHECK-NEXT:    le lr, .LBB3_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    ldr r7, [sp] @ 4-byte Reload
