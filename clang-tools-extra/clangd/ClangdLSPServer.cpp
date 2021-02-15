@@ -13,6 +13,7 @@
 #include "DraftStore.h"
 #include "DumpAST.h"
 #include "GlobalCompilationDatabase.h"
+#include "LSPBinder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -158,6 +159,8 @@ public:
   MessageHandler(ClangdLSPServer &Server) : Server(Server) {}
 
   bool onNotify(llvm::StringRef Method, llvm::json::Value Params) override {
+    trace::Span Tracer(Method, LSPLatency);
+    SPAN_ATTACH(Tracer, "Params", Params);
     WithContext HandlerContext(handlerContext());
     log("<-- {0}", Method);
     if (Method == "exit")
@@ -166,12 +169,15 @@ public:
       elog("Notification {0} before initialization", Method);
     } else if (Method == "$/cancelRequest") {
       onCancel(std::move(Params));
-    } else if (auto Handler = Notifications.lookup(Method)) {
-      Handler(std::move(Params));
-      Server.maybeExportMemoryProfile();
-      Server.maybeCleanupMemory();
     } else {
-      log("unhandled notification {0}", Method);
+      auto Handler = Server.Handlers.NotificationHandlers.find(Method);
+      if (Handler != Server.Handlers.NotificationHandlers.end()) {
+        Handler->second(std::move(Params));
+        Server.maybeExportMemoryProfile();
+        Server.maybeCleanupMemory();
+      } else {
+        log("unhandled notification {0}", Method);
+      }
     }
     return true;
   }
@@ -189,11 +195,15 @@ public:
       elog("Call {0} before initialization.", Method);
       Reply(llvm::make_error<LSPError>("server not initialized",
                                        ErrorCode::ServerNotInitialized));
-    } else if (auto Handler = Calls.lookup(Method))
-      Handler(std::move(Params), std::move(Reply));
-    else
-      Reply(llvm::make_error<LSPError>("method not found",
-                                       ErrorCode::MethodNotFound));
+    } else {
+      auto Handler = Server.Handlers.MethodHandlers.find(Method);
+      if (Handler != Server.Handlers.MethodHandlers.end()) {
+        Handler->second(std::move(Params), std::move(Reply));
+      } else {
+        Reply(llvm::make_error<LSPError>("method not found",
+                                         ErrorCode::MethodNotFound));
+      }
+    }
     return true;
   }
 
@@ -236,28 +246,6 @@ public:
     return true;
   }
 
-  // Bind an LSP method name to a call.
-  template <typename Param, typename Result>
-  void bind(const char *Method,
-            void (ClangdLSPServer::*Handler)(const Param &, Callback<Result>)) {
-    Calls[Method] = [Method, Handler, this](llvm::json::Value RawParams,
-                                            ReplyOnce Reply) {
-      auto P = parse<Param>(RawParams, Method, "request");
-      if (!P)
-        return Reply(P.takeError());
-      (Server.*Handler)(*P, std::move(Reply));
-    };
-  }
-
-  template <typename Result>
-  void bind(const char *Method,
-            void (ClangdLSPServer::*Handler)(Callback<Result>)) {
-    Calls[Method] = [Handler, this](llvm::json::Value RawParams,
-                                    ReplyOnce Reply) {
-      (Server.*Handler)(std::move(Reply));
-    };
-  }
-
   // Bind a reply callback to a request. The callback will be invoked when
   // clangd receives the reply from the LSP client.
   // Return a call id of the request.
@@ -284,27 +272,6 @@ public:
           error("failed to receive a client reply for request ({0})",
                 OldestCB->first));
     return ID;
-  }
-
-  // Bind an LSP method name to a notification.
-  template <typename Param>
-  void bind(const char *Method,
-            void (ClangdLSPServer::*Handler)(const Param &)) {
-    Notifications[Method] = [Method, Handler,
-                             this](llvm::json::Value RawParams) {
-      llvm::Expected<Param> P = parse<Param>(RawParams, Method, "request");
-      if (!P)
-        return llvm::consumeError(P.takeError());
-      trace::Span Tracer(Method, LSPLatency);
-      SPAN_ATTACH(Tracer, "Params", RawParams);
-      (Server.*Handler)(*P);
-    };
-  }
-
-  void bind(const char *Method, void (ClangdLSPServer::*Handler)()) {
-    Notifications[Method] = [Handler, this](llvm::json::Value RawParams) {
-      (Server.*Handler)();
-    };
   }
 
 private:
@@ -378,9 +345,6 @@ private:
     }
   };
 
-  llvm::StringMap<std::function<void(llvm::json::Value)>> Notifications;
-  llvm::StringMap<std::function<void(llvm::json::Value, ReplyOnce)>> Calls;
-
   // Method calls may be cancelled by ID, so keep track of their state.
   // This needs a mutex: handlers may finish on a different thread, and that's
   // when we clean up entries in the map.
@@ -448,14 +412,6 @@ private:
   ClangdLSPServer &Server;
 };
 constexpr int ClangdLSPServer::MessageHandler::MaxReplayCallbacks;
-
-template <>
-void ClangdLSPServer::MessageHandler::bind<NoParams>(
-    const char *Method, void (ClangdLSPServer::*Handler)(const NoParams &)) {
-  Notifications[Method] = [Handler, this](llvm::json::Value RawParams) {
-    (Server.*Handler)(NoParams{});
-  };
-}
 
 // call(), notify(), and reply() wrap the Transport, adding logging and locking.
 void ClangdLSPServer::callRaw(StringRef Method, llvm::json::Value Params,
@@ -586,7 +542,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           CodeAction::INFO_KIND}}};
 
   std::vector<llvm::StringRef> Commands;
-  for (llvm::StringRef Command : CommandHandlers.keys())
+  for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
     Commands.push_back(Command);
   llvm::sort(Commands);
 
@@ -665,7 +621,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
 void ClangdLSPServer::onInitialized(const InitializedParams &Params) {}
 
-void ClangdLSPServer::onShutdown(Callback<std::nullptr_t> Reply) {
+void ClangdLSPServer::onShutdown(const NoParams &,
+                                 Callback<std::nullptr_t> Reply) {
   // Do essentially nothing, just say we're ready to exit.
   ShutdownRequestReceived = true;
   Reply(nullptr);
@@ -673,7 +630,7 @@ void ClangdLSPServer::onShutdown(Callback<std::nullptr_t> Reply) {
 
 // sync is a clangd extension: it blocks until all background work completes.
 // It blocks the calling thread, so no messages are processed until it returns!
-void ClangdLSPServer::onSync(Callback<std::nullptr_t> Reply) {
+void ClangdLSPServer::onSync(const NoParams &, Callback<std::nullptr_t> Reply) {
   if (Server->blockUntilIdleForTest(/*TimeoutSeconds=*/60))
     Reply(nullptr);
   else
@@ -734,8 +691,8 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
                                 Callback<llvm::json::Value> Reply) {
-  auto It = CommandHandlers.find(Params.command);
-  if (It == CommandHandlers.end()) {
+  auto It = Handlers.CommandHandlers.find(Params.command);
+  if (It == Handlers.CommandHandlers.end()) {
     return Reply(llvm::make_error<LSPError>(
         llvm::formatv("Unsupported command \"{0}\".", Params.command).str(),
         ErrorCode::InvalidParams));
@@ -1462,7 +1419,8 @@ void ClangdLSPServer::onSemanticTokensDelta(
       });
 }
 
-void ClangdLSPServer::onMemoryUsage(Callback<MemoryTree> Reply) {
+void ClangdLSPServer::onMemoryUsage(const NoParams &,
+                                    Callback<MemoryTree> Reply) {
   llvm::BumpPtrAllocator DetailAlloc;
   MemoryTree MT(&DetailAlloc);
   profile(MT);
@@ -1493,50 +1451,51 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   }
 
   // clang-format off
-  MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
-  MsgHandler->bind("initialized", &ClangdLSPServer::onInitialized);
-  MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
-  MsgHandler->bind("sync", &ClangdLSPServer::onSync);
-  MsgHandler->bind("textDocument/rangeFormatting", &ClangdLSPServer::onDocumentRangeFormatting);
-  MsgHandler->bind("textDocument/onTypeFormatting", &ClangdLSPServer::onDocumentOnTypeFormatting);
-  MsgHandler->bind("textDocument/formatting", &ClangdLSPServer::onDocumentFormatting);
-  MsgHandler->bind("textDocument/codeAction", &ClangdLSPServer::onCodeAction);
-  MsgHandler->bind("textDocument/completion", &ClangdLSPServer::onCompletion);
-  MsgHandler->bind("textDocument/signatureHelp", &ClangdLSPServer::onSignatureHelp);
-  MsgHandler->bind("textDocument/definition", &ClangdLSPServer::onGoToDefinition);
-  MsgHandler->bind("textDocument/declaration", &ClangdLSPServer::onGoToDeclaration);
-  MsgHandler->bind("textDocument/implementation", &ClangdLSPServer::onGoToImplementation);
-  MsgHandler->bind("textDocument/references", &ClangdLSPServer::onReference);
-  MsgHandler->bind("textDocument/switchSourceHeader", &ClangdLSPServer::onSwitchSourceHeader);
-  MsgHandler->bind("textDocument/prepareRename", &ClangdLSPServer::onPrepareRename);
-  MsgHandler->bind("textDocument/rename", &ClangdLSPServer::onRename);
-  MsgHandler->bind("textDocument/hover", &ClangdLSPServer::onHover);
-  MsgHandler->bind("textDocument/documentSymbol", &ClangdLSPServer::onDocumentSymbol);
-  MsgHandler->bind("workspace/executeCommand", &ClangdLSPServer::onCommand);
-  MsgHandler->bind("textDocument/documentHighlight", &ClangdLSPServer::onDocumentHighlight);
-  MsgHandler->bind("workspace/symbol", &ClangdLSPServer::onWorkspaceSymbol);
-  MsgHandler->bind("textDocument/ast", &ClangdLSPServer::onAST);
-  MsgHandler->bind("textDocument/didOpen", &ClangdLSPServer::onDocumentDidOpen);
-  MsgHandler->bind("textDocument/didClose", &ClangdLSPServer::onDocumentDidClose);
-  MsgHandler->bind("textDocument/didChange", &ClangdLSPServer::onDocumentDidChange);
-  MsgHandler->bind("textDocument/didSave", &ClangdLSPServer::onDocumentDidSave);
-  MsgHandler->bind("workspace/didChangeWatchedFiles", &ClangdLSPServer::onFileEvent);
-  MsgHandler->bind("workspace/didChangeConfiguration", &ClangdLSPServer::onChangeConfiguration);
-  MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
-  MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
-  MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
-  MsgHandler->bind("textDocument/prepareCallHierarchy", &ClangdLSPServer::onPrepareCallHierarchy);
-  MsgHandler->bind("callHierarchy/incomingCalls", &ClangdLSPServer::onCallHierarchyIncomingCalls);
-  MsgHandler->bind("callHierarchy/outgoingCalls", &ClangdLSPServer::onCallHierarchyOutgoingCalls);
-  MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
-  MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
-  MsgHandler->bind("textDocument/semanticTokens/full", &ClangdLSPServer::onSemanticTokens);
-  MsgHandler->bind("textDocument/semanticTokens/full/delta", &ClangdLSPServer::onSemanticTokensDelta);
-  MsgHandler->bind("$/memoryUsage", &ClangdLSPServer::onMemoryUsage);
+  LSPBinder Bind(this->Handlers);
+  Bind.method("initialize", this, &ClangdLSPServer::onInitialize);
+  Bind.notification("initialized", this, &ClangdLSPServer::onInitialized);
+  Bind.method("shutdown", this, &ClangdLSPServer::onShutdown);
+  Bind.method("sync", this, &ClangdLSPServer::onSync);
+  Bind.method("textDocument/rangeFormatting", this, &ClangdLSPServer::onDocumentRangeFormatting);
+  Bind.method("textDocument/onTypeFormatting", this, &ClangdLSPServer::onDocumentOnTypeFormatting);
+  Bind.method("textDocument/formatting", this, &ClangdLSPServer::onDocumentFormatting);
+  Bind.method("textDocument/codeAction", this, &ClangdLSPServer::onCodeAction);
+  Bind.method("textDocument/completion", this, &ClangdLSPServer::onCompletion);
+  Bind.method("textDocument/signatureHelp", this, &ClangdLSPServer::onSignatureHelp);
+  Bind.method("textDocument/definition", this, &ClangdLSPServer::onGoToDefinition);
+  Bind.method("textDocument/declaration", this, &ClangdLSPServer::onGoToDeclaration);
+  Bind.method("textDocument/implementation", this, &ClangdLSPServer::onGoToImplementation);
+  Bind.method("textDocument/references", this, &ClangdLSPServer::onReference);
+  Bind.method("textDocument/switchSourceHeader", this, &ClangdLSPServer::onSwitchSourceHeader);
+  Bind.method("textDocument/prepareRename", this, &ClangdLSPServer::onPrepareRename);
+  Bind.method("textDocument/rename", this, &ClangdLSPServer::onRename);
+  Bind.method("textDocument/hover", this, &ClangdLSPServer::onHover);
+  Bind.method("textDocument/documentSymbol", this, &ClangdLSPServer::onDocumentSymbol);
+  Bind.method("workspace/executeCommand", this, &ClangdLSPServer::onCommand);
+  Bind.method("textDocument/documentHighlight", this, &ClangdLSPServer::onDocumentHighlight);
+  Bind.method("workspace/symbol", this, &ClangdLSPServer::onWorkspaceSymbol);
+  Bind.method("textDocument/ast", this, &ClangdLSPServer::onAST);
+  Bind.notification("textDocument/didOpen", this, &ClangdLSPServer::onDocumentDidOpen);
+  Bind.notification("textDocument/didClose", this, &ClangdLSPServer::onDocumentDidClose);
+  Bind.notification("textDocument/didChange", this, &ClangdLSPServer::onDocumentDidChange);
+  Bind.notification("textDocument/didSave", this, &ClangdLSPServer::onDocumentDidSave);
+  Bind.notification("workspace/didChangeWatchedFiles", this, &ClangdLSPServer::onFileEvent);
+  Bind.notification("workspace/didChangeConfiguration", this, &ClangdLSPServer::onChangeConfiguration);
+  Bind.method("textDocument/symbolInfo", this, &ClangdLSPServer::onSymbolInfo);
+  Bind.method("textDocument/typeHierarchy", this, &ClangdLSPServer::onTypeHierarchy);
+  Bind.method("typeHierarchy/resolve", this, &ClangdLSPServer::onResolveTypeHierarchy);
+  Bind.method("textDocument/prepareCallHierarchy", this, &ClangdLSPServer::onPrepareCallHierarchy);
+  Bind.method("callHierarchy/incomingCalls", this, &ClangdLSPServer::onCallHierarchyIncomingCalls);
+  Bind.method("callHierarchy/outgoingCalls", this, &ClangdLSPServer::onCallHierarchyOutgoingCalls);
+  Bind.method("textDocument/selectionRange", this, &ClangdLSPServer::onSelectionRange);
+  Bind.method("textDocument/documentLink", this, &ClangdLSPServer::onDocumentLink);
+  Bind.method("textDocument/semanticTokens/full", this, &ClangdLSPServer::onSemanticTokens);
+  Bind.method("textDocument/semanticTokens/full/delta", this, &ClangdLSPServer::onSemanticTokensDelta);
+  Bind.method("$/memoryUsage", this, &ClangdLSPServer::onMemoryUsage);
   if (Opts.FoldingRanges)
-    MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
-  bindCommand(APPLY_FIX_COMMAND, &ClangdLSPServer::onCommandApplyEdit);
-  bindCommand(APPLY_TWEAK_COMMAND, &ClangdLSPServer::onCommandApplyTweak);
+    Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
+  Bind.command(APPLY_FIX_COMMAND, this, &ClangdLSPServer::onCommandApplyEdit);
+  Bind.command(APPLY_TWEAK_COMMAND, this, &ClangdLSPServer::onCommandApplyTweak);
   // clang-format on
 }
 
