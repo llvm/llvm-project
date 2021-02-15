@@ -491,6 +491,10 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
 }
 
 OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
+  // TODO: Add folding for the nary case
+  if (operands.size() != 2)
+    return nullptr;
+
   // Both operands are not needed if one is a scalar.
   if (operands[0] &&
       operands[0].cast<DenseIntElementsAttr>().getNumElements() == 0)
@@ -512,9 +516,9 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // Lastly, see if folding can be completed based on what constraints are known
   // on the input shapes.
   SmallVector<int64_t, 6> lhsShape, rhsShape;
-  if (failed(getShapeVec(lhs(), lhsShape)))
+  if (failed(getShapeVec(shapes()[0], lhsShape)))
     return nullptr;
-  if (failed(getShapeVec(rhs(), rhsShape)))
+  if (failed(getShapeVec(shapes()[1], rhsShape)))
     return nullptr;
 
   if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
@@ -523,6 +527,13 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // Because a failing witness result here represents an eventual assertion
   // failure, we do not replace it with a constant witness.
   return nullptr;
+}
+
+static LogicalResult verify(CstrBroadcastableOp op) {
+  // Ensure that AssumingAllOp contains at least one operand
+  if (op.getNumOperands() < 2)
+    return op.emitOpError("required at least 2 input shapes");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -721,6 +732,17 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
         builder.create<ConstantOp>(loc, builder.getIndexType(), dimAttr);
     build(builder, result, builder.getIndexType(), shape, dim);
   }
+}
+
+//===----------------------------------------------------------------------===//
+// IsBroadcastableOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(IsBroadcastableOp op) {
+  // Ensure that AssumingAllOp contains at least one operand
+  if (op.getNumOperands() < 2)
+    return op.emitOpError("required at least 2 input shapes");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

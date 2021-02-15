@@ -246,3 +246,21 @@ func @fn(%arg: !shape.value_shape) -> !shape.shape {
 
 // expected-error@+1 {{@fn not found}}
 module attributes {shape.lib = @fn} { }
+
+// -----
+
+func @fn(%arg: !shape.shape) -> i1 {
+  // expected-error@+1 {{required at least 2 input shapes}}
+  %0 = shape.is_broadcastable %arg : !shape.shape
+  return %0 : i1
+}
+
+// -----
+
+func @fn(%arg: !shape.shape) -> !shape.witness {
+  // expected-error@+1 {{required at least 2 input shapes}}
+  %0 = shape.cstr_broadcastable %arg : !shape.shape
+  return %0 : !shape.witness
+}
+
+
