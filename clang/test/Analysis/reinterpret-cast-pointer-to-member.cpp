@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
-// XFAIL: *
+// XFAIL: asserts
 
 void clang_analyzer_eval(bool);
 
