@@ -682,9 +682,12 @@ void AArch64PassConfig::addPreEmitPass() {
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
 
-  // Identify valid longjmp targets for Windows Control Flow Guard.
-  if (TM->getTargetTriple().isOSWindows())
+  if (TM->getTargetTriple().isOSWindows()) {
+    // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
+    // Identify valid eh continuation targets for Windows EHCont Guard.
+    addPass(createEHContGuardCatchretPass());
+  }
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
     addPass(createAArch64CompressJumpTablesPass());

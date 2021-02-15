@@ -3,23 +3,22 @@
 // RUN: ld.lld %t -o %t2
 // RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
-// CHECK:      Symbol {
-// CHECK:        Name: bar_sym
-// CHECK-NEXT:   Value:
-// CHECK-NEXT:   Size:
-// CHECK-NEXT:   Binding:
-// CHECK-NEXT:   Type:
-// CHECK-NEXT:   Other:
-// CHECK-NEXT:   Section: bar
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: foo_sym
+// CHECK:        Name: foo_sym
 // CHECK-NEXT:   Value:
 // CHECK-NEXT:   Size:
 // CHECK-NEXT:   Binding:
 // CHECK-NEXT:   Type:
 // CHECK-NEXT:   Other:
 // CHECK-NEXT:   Section: foo
+// CHECK-NEXT: }
+// CHECK-NEXT: Symbol {
+// CHECK-NEXT:   Name: bar_sym
+// CHECK-NEXT:   Value:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Binding:
+// CHECK-NEXT:   Type:
+// CHECK-NEXT:   Other:
+// CHECK-NEXT:   Section: bar
 // CHECK-NEXT: }
 
 .section foo

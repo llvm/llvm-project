@@ -5129,8 +5129,8 @@ bool llvm::propagatesPoison(const Operator *I) {
   }
 }
 
-void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallPtrSetImpl<const Value *> &Operands) {
+void llvm::getGuaranteedWellDefinedOps(
+    const Instruction *I, SmallPtrSetImpl<const Value *> &Operands) {
   switch (I->getOpcode()) {
     case Instruction::Store:
       Operands.insert(cast<StoreInst>(I)->getPointerOperand());
@@ -5140,6 +5140,8 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
       Operands.insert(cast<LoadInst>(I)->getPointerOperand());
       break;
 
+    // Since dereferenceable attribute imply noundef, atomic operations
+    // also implicitly have noundef pointers too
     case Instruction::AtomicCmpXchg:
       Operands.insert(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
       break;
@@ -5148,20 +5150,14 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
       Operands.insert(cast<AtomicRMWInst>(I)->getPointerOperand());
       break;
 
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-      Operands.insert(I->getOperand(1));
-      break;
-
     case Instruction::Call:
     case Instruction::Invoke: {
       const CallBase *CB = cast<CallBase>(I);
       if (CB->isIndirectCall())
         Operands.insert(CB->getCalledOperand());
       for (unsigned i = 0; i < CB->arg_size(); ++i) {
-        if (CB->paramHasAttr(i, Attribute::NoUndef))
+        if (CB->paramHasAttr(i, Attribute::NoUndef) ||
+            CB->paramHasAttr(i, Attribute::Dereferenceable))
           Operands.insert(CB->getArgOperand(i));
       }
       break;
@@ -5169,6 +5165,23 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 
     default:
       break;
+  }
+}
+
+void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
+                                     SmallPtrSetImpl<const Value *> &Operands) {
+  getGuaranteedWellDefinedOps(I, Operands);
+  switch (I->getOpcode()) {
+  // Divisors of these operations are allowed to be partially undef.
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+    Operands.insert(I->getOperand(1));
+    break;
+
+  default:
+    break;
   }
 }
 
@@ -5209,19 +5222,16 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   BasicBlock::const_iterator End = BB->end();
 
   if (!PoisonOnly) {
-    // Be conservative & just check whether a value is passed to a noundef
-    // argument.
-    // Instructions that raise UB with a poison operand are well-defined
-    // or have unclear semantics when the input is partially undef.
-    // For example, 'udiv x, (undef | 1)' isn't UB.
+    // Since undef does not propagate eagerly, be conservative & just check
+    // whether a value is directly passed to an instruction that must take
+    // well-defined operands.
 
     for (auto &I : make_range(Begin, End)) {
-      if (const auto *CB = dyn_cast<CallBase>(&I)) {
-        for (unsigned i = 0; i < CB->arg_size(); ++i) {
-          if (CB->paramHasAttr(i, Attribute::NoUndef) &&
-              CB->getArgOperand(i) == V)
-            return true;
-        }
+      SmallPtrSet<const Value *, 4> WellDefinedOps;
+      getGuaranteedWellDefinedOps(&I, WellDefinedOps);
+      for (auto *Op : WellDefinedOps) {
+        if (Op == V)
+          return true;
       }
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
         break;

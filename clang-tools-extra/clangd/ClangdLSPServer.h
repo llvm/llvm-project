@@ -14,6 +14,7 @@
 #include "Features.inc"
 #include "FindSymbols.h"
 #include "GlobalCompilationDatabase.h"
+#include "LSPBinder.h"
 #include "Protocol.h"
 #include "Transport.h"
 #include "support/Context.h"
@@ -90,8 +91,8 @@ private:
   // Calls have signature void(const Params&, Callback<Response>).
   void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
   void onInitialized(const InitializedParams &);
-  void onShutdown(Callback<std::nullptr_t>);
-  void onSync(Callback<std::nullptr_t>);
+  void onShutdown(const NoParams &, Callback<std::nullptr_t>);
+  void onSync(const NoParams &, Callback<std::nullptr_t>);
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
@@ -157,11 +158,7 @@ private:
                              Callback<SemanticTokensOrDelta>);
   /// This is a clangd extension. Provides a json tree representing memory usage
   /// hierarchy.
-  void onMemoryUsage(Callback<MemoryTree>);
-
-  llvm::StringMap<llvm::unique_function<void(const llvm::json::Value &,
-                                             Callback<llvm::json::Value>)>>
-      CommandHandlers;
+  void onMemoryUsage(const NoParams &, Callback<MemoryTree>);
   void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
 
   /// Implement commands.
@@ -229,29 +226,6 @@ private:
   std::unique_ptr<MessageHandler> MsgHandler;
   std::mutex TranspWriter;
 
-  template <typename T>
-  static Expected<T> parse(const llvm::json::Value &Raw,
-                           llvm::StringRef PayloadName,
-                           llvm::StringRef PayloadKind) {
-    T Result;
-    llvm::json::Path::Root Root;
-    if (!fromJSON(Raw, Result, Root)) {
-      elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-           Root.getError());
-      // Dump the relevant parts of the broken message.
-      std::string Context;
-      llvm::raw_string_ostream OS(Context);
-      Root.printErrorContext(Raw, OS);
-      vlog("{0}", OS.str());
-      // Report the error (e.g. to the client).
-      return llvm::make_error<LSPError>(
-          llvm::formatv("failed to decode {0} {1}: {2}", PayloadName,
-                        PayloadKind, fmt_consume(Root.getError())),
-          ErrorCode::InvalidParams);
-    }
-    return std::move(Result);
-  }
-
   template <typename Response>
   void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
     // Wrap the callback with LSP conversion and error-handling.
@@ -261,7 +235,7 @@ private:
             llvm::Expected<llvm::json::Value> RawResponse) mutable {
           if (!RawResponse)
             return CB(RawResponse.takeError());
-          CB(parse<Response>(*RawResponse, Method, "response"));
+          CB(LSPBinder::parse<Response>(*RawResponse, Method, "response"));
         };
     callRaw(Method, std::move(Params), std::move(HandleReply));
   }
@@ -274,19 +248,8 @@ private:
     Params.value = std::move(Value);
     notify("$/progress", Params);
   }
-  template <typename Param, typename Result>
-  void bindCommand(llvm::StringLiteral Method,
-                   void (ClangdLSPServer::*Handler)(const Param &,
-                                                    Callback<Result>)) {
-    CommandHandlers[Method] = [Method, Handler,
-                               this](llvm::json::Value RawParams,
-                                     Callback<Result> Reply) {
-      auto P = parse<Param>(RawParams, Method, "command");
-      if (!P)
-        return Reply(P.takeError());
-      (this->*Handler)(*P, std::move(Reply));
-    };
-  }
+
+  LSPBinder::RawHandlers Handlers;
 
   const ThreadsafeFS &TFS;
   /// Options used for diagnostics.

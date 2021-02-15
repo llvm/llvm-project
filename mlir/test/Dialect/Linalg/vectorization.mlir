@@ -402,7 +402,8 @@ func @pad_static(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32>
   //      CHECK: %[[INIT:.*]] = linalg.init_tensor [2, 3, 4] : tensor<2x3x4xf32>
   //      CHECK: %[[WRITTEN:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%[[C0]], %[[C0]], %[[C0]]]
   // CHECK-SAME:   {masked = [false, false, false]} : vector<2x3x4xf32>, tensor<2x3x4xf32>
-  %0 = linalg.pad_tensor %arg0 low[0, 0, 0] high[0, 0, 0] {
+  %c0 = constant 0 : index
+  %0 = linalg.pad_tensor %arg0 low[0, %c0, 0] high[0, 0, %c0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
       linalg.yield %pad_value : f32
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>

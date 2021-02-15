@@ -120,15 +120,6 @@ private:
     // Context instruction to use when querying information about this index.
     const Instruction *CxtI;
 
-    bool operator==(const VariableGEPIndex &Other) const {
-      return V == Other.V && ZExtBits == Other.ZExtBits &&
-             SExtBits == Other.SExtBits && Scale == Other.Scale;
-    }
-
-    bool operator!=(const VariableGEPIndex &Other) const {
-      return !operator==(Other);
-    }
-
     void dump() const {
       print(dbgs());
       dbgs() << "\n";

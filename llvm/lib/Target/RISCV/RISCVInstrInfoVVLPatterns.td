@@ -313,22 +313,22 @@ foreach vti = AllVectors in {
   defvar load_instr = !cast<Instruction>("PseudoVLE"#vti.SEW#"_V_"#vti.LMul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#vti.SEW#"_V_"#vti.LMul.MX);
   // Load
-  def : Pat<(vti.Vector (riscv_vle_vl RVVBaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
-            (load_instr RVVBaseAddr:$rs1, GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_vle_vl BaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
+            (load_instr BaseAddr:$rs1, GPR:$vl, vti.SEW)>;
   // Store
-  def : Pat<(riscv_vse_vl (vti.Vector vti.RegClass:$rs2), RVVBaseAddr:$rs1,
+  def : Pat<(riscv_vse_vl (vti.Vector vti.RegClass:$rs2), BaseAddr:$rs1,
                           (XLenVT (VLOp GPR:$vl))),
-            (store_instr vti.RegClass:$rs2, RVVBaseAddr:$rs1, GPR:$vl, vti.SEW)>;
+            (store_instr vti.RegClass:$rs2, BaseAddr:$rs1, GPR:$vl, vti.SEW)>;
 }
 
 foreach mti = AllMasks in {
   defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#mti.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#mti.BX);
-  def : Pat<(mti.Mask (riscv_vle_vl RVVBaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
-            (load_instr RVVBaseAddr:$rs1, GPR:$vl, mti.SEW)>;
-  def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), RVVBaseAddr:$rs1,
+  def : Pat<(mti.Mask (riscv_vle_vl BaseAddr:$rs1, (XLenVT (VLOp GPR:$vl)))),
+            (load_instr BaseAddr:$rs1, GPR:$vl, mti.SEW)>;
+  def : Pat<(riscv_vse_vl (mti.Mask VR:$rs2), BaseAddr:$rs1,
                           (XLenVT (VLOp GPR:$vl))),
-            (store_instr VR:$rs2, RVVBaseAddr:$rs1, GPR:$vl, mti.SEW)>;
+            (store_instr VR:$rs2, BaseAddr:$rs1, GPR:$vl, mti.SEW)>;
 }
 
 // 12.1. Vector Single-Width Integer Add and Subtract
@@ -543,11 +543,53 @@ def riscv_vid_vl : SDNode<"RISCVISD::VID_VL", SDTypeProfile<1, 2,
                           [SDTCisVec<0>, SDTCisVec<1>, SDTCVecEltisVT<1, i1>,
                            SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, XLenVT>]>, []>;
 
+def SDTRVVSlide : SDTypeProfile<1, 5, [
+  SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>,
+  SDTCVecEltisVT<4, i1>, SDTCisSameNumEltsAs<0, 4>, SDTCisVT<5, XLenVT>
+]>;
+
+def riscv_slideup_vl   : SDNode<"RISCVISD::VSLIDEUP_VL", SDTRVVSlide, []>;
+def riscv_slidedown_vl : SDNode<"RISCVISD::VSLIDEDOWN_VL", SDTRVVSlide, []>;
+
 let Predicates = [HasStdExtV] in {
 
 foreach vti = AllIntegerVectors in
   def : Pat<(vti.Vector (riscv_vid_vl (vti.Mask true_mask),
                                       (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) GPR:$vl, vti.SEW)>;
+
+foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
+  def : Pat<(vti.Vector (riscv_slideup_vl (vti.Vector vti.RegClass:$rs3),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          uimm5:$rs2, (vti.Mask true_mask),
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSLIDEUP_VI_"#vti.LMul.MX)
+                vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
+                GPR:$vl, vti.SEW)>;
+
+  def : Pat<(vti.Vector (riscv_slideup_vl (vti.Vector vti.RegClass:$rs3),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          GPR:$rs2, (vti.Mask true_mask),
+                                          (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSLIDEUP_VX_"#vti.LMul.MX)
+                vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
+                GPR:$vl, vti.SEW)>;
+
+  def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector vti.RegClass:$rs3),
+                                            (vti.Vector vti.RegClass:$rs1),
+                                            uimm5:$rs2, (vti.Mask true_mask),
+                                            (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSLIDEDOWN_VI_"#vti.LMul.MX)
+                vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
+                GPR:$vl, vti.SEW)>;
+
+  def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector vti.RegClass:$rs3),
+                                            (vti.Vector vti.RegClass:$rs1),
+                                            GPR:$rs2, (vti.Mask true_mask),
+                                            (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSLIDEDOWN_VX_"#vti.LMul.MX)
+                vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
+                GPR:$vl, vti.SEW)>;
+}
 
 } // Predicates = [HasStdExtV]

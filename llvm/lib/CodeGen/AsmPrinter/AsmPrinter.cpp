@@ -3211,6 +3211,10 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
+  if (MBB.isEHCatchretTarget()) {
+    OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
+  }
+
   // With BB sections, each basic block must handle CFI information on its own
   // if it begins a section (Entry block is handled separately by
   // AsmPrinterHandler::beginFunction).

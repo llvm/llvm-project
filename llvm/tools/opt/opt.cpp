@@ -484,9 +484,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-unify-metadata",
       "amdgpu-printf-runtime-binding",
       "amdgpu-always-inline"};
-  for (const auto &P : PassNameExactToIgnore)
-    if (Pass == P)
-      return false;
+  if (llvm::is_contained(PassNameExactToIgnore, Pass))
+    return false;
 
   std::vector<StringRef> PassNamePrefix = {
       "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",    "nvvm-",   "nvptx-",
@@ -511,10 +510,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))
       return true;
-  for (const auto &P : PassNameExact)
-    if (Pass == P)
-      return true;
-  return false;
+  return llvm::is_contained(PassNameExact, Pass);
 }
 
 // For use in NPM transition.

@@ -11,8 +11,8 @@
 // library (e.g., libmvec, SVML) according to TargetLibraryInfo.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_TRANSFORMS_UTILS_REPLACEWITHVECLIB_H
-#define LLVM_TRANSFORMS_UTILS_REPLACEWITHVECLIB_H
+#ifndef LLVM_CODEGEN_REPLACEWITHVECLIB_H
+#define LLVM_CODEGEN_REPLACEWITHVECLIB_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -33,4 +33,4 @@ struct ReplaceWithVeclibLegacy : public FunctionPass {
 };
 
 } // End namespace llvm
-#endif // LLVM_TRANSFORMS_UTILS_REPLACEWITHVECLIB_H
+#endif // LLVM_CODEGEN_REPLACEWITHVECLIB_H

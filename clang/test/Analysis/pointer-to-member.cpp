@@ -287,3 +287,26 @@ void test() {
   clang_analyzer_eval(a.*ep == 5); // expected-warning{{TRUE}}
 }
 } // namespace testAnonymousMember
+
+namespace testStaticCasting {
+// From bug #48739
+struct Grandfather {
+  int field;
+};
+
+struct Father : public Grandfather {};
+struct Son : public Father {};
+
+void test() {
+  int Son::*sf = &Son::field;
+  Grandfather grandpa;
+  grandpa.field = 10;
+  int Grandfather::*gpf1 = static_cast<int Grandfather::*>(sf);
+  int Grandfather::*gpf2 = static_cast<int Grandfather::*>(static_cast<int Father::*>(sf));
+  int Grandfather::*gpf3 = static_cast<int Grandfather::*>(static_cast<int Son::*>(static_cast<int Father::*>(sf)));
+  clang_analyzer_eval(grandpa.*gpf1 == 10); // expected-warning{{TRUE}}
+  clang_analyzer_eval(grandpa.*gpf2 == 10); // expected-warning{{TRUE}}
+  clang_analyzer_eval(grandpa.*gpf3 == 10); // expected-warning{{TRUE}}
+}
+} // namespace testStaticCasting
+

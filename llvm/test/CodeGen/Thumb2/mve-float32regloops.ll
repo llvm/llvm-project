@@ -2218,6 +2218,25 @@ do.end:                                           ; preds = %if.end
   ret void
 }
 
+define arm_aapcs_vfpcc float @vecAddAcrossF32Mve(<4 x float> %in) {
+; CHECK-LABEL: vecAddAcrossF32Mve:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vadd.f32 s4, s0, s1
+; CHECK-NEXT:    vadd.f32 s4, s4, s2
+; CHECK-NEXT:    vadd.f32 s0, s4, s3
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = extractelement <4 x float> %in, i32 0
+  %1 = extractelement <4 x float> %in, i32 1
+  %add = fadd fast float %0, %1
+  %2 = extractelement <4 x float> %in, i32 2
+  %add1 = fadd fast float %add, %2
+  %3 = extractelement <4 x float> %in, i32 3
+  %add2 = fadd fast float %add1, %3
+  ret float %add2
+}
+
+
 declare { i32, <4 x i32> } @llvm.arm.mve.vshlc.v4i32(<4 x i32>, i32, i32) #1
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)

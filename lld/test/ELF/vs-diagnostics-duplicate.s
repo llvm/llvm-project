@@ -4,18 +4,18 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/vs-diagnostics-duplicate3.s -o %t3.o
 // RUN: not ld.lld --vs-diagnostics %t1.o %t2.o %t3.o -o /dev/null 2>&1 | FileCheck %s
 
-// Case 1. Both symbols have full source location.
+// Case 1. The source locations are unknown for both symbols.
+// CHECK:      {{.*}}ld.lld{{.*}}: error: duplicate symbol: foo
+// CHECK-NEXT: >>> defined at {{.*}}1.o:(.text+0x{{.+}})
+// CHECK-NEXT: >>> defined at {{.*}}2.o:(.text+0x{{.+}})
+
+// Case 2. Both symbols have full source location.
 // CHECK:      duplicate.s(15): error: duplicate symbol: bar
 // CHECK-NEXT: >>> defined at duplicate.s:15
 // CHECK-NEXT: >>>{{.*}}1.o:(.text+0x{{.+}})
 // CHECK:      duplicate2.s(20): error: duplicate symbol: bar
 // CHECK-NEXT: >>> defined at duplicate2.s:20
 // CHECK-NEXT: >>>{{.*}}2.o:(.text+0x{{.+}})
-
-// Case 2. The source locations are unknown for both symbols.
-// CHECK:      {{.*}}ld.lld{{.*}}: error: duplicate symbol: foo
-// CHECK-NEXT: >>> defined at {{.*}}1.o:(.text+0x{{.+}})
-// CHECK-NEXT: >>> defined at {{.*}}2.o:(.text+0x{{.+}})
 
 // Case 3. For the second definition of `baz` we know only the source file found in a STT_FILE symbol.
 // CHECK:      duplicate.s(30): error: duplicate symbol: baz

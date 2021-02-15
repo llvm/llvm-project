@@ -17923,6 +17923,111 @@ TEST(FormatStyle, GetStyleOfFile) {
   auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);
   ASSERT_TRUE((bool)StyleTd);
   ASSERT_EQ(*StyleTd, getLLVMStyle(FormatStyle::LK_TableGen));
+
+  // Test 9.1: overwriting a file style, when parent no file exists with no
+  // fallback style
+  ASSERT_TRUE(FS.addFile(
+      "/e/sub/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: InheritParentConfig\n"
+                                       "ColumnLimit: 20")));
+  ASSERT_TRUE(FS.addFile("/e/sub/code.cpp", 0,
+                         llvm::MemoryBuffer::getMemBuffer("int i;")));
+  auto Style9 = getStyle("file", "/e/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [] {
+    auto Style = getNoStyle();
+    Style.ColumnLimit = 20;
+    return Style;
+  }());
+
+  // Test 9.2: with LLVM fallback style
+  Style9 = getStyle("file", "/e/sub/code.cpp", "LLVM", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [] {
+    auto Style = getLLVMStyle();
+    Style.ColumnLimit = 20;
+    return Style;
+  }());
+
+  // Test 9.3: with a parent file
+  ASSERT_TRUE(
+      FS.addFile("/e/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google\n"
+                                                  "UseTab: Always")));
+  Style9 = getStyle("file", "/e/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [] {
+    auto Style = getGoogleStyle();
+    Style.ColumnLimit = 20;
+    Style.UseTab = FormatStyle::UT_Always;
+    return Style;
+  }());
+
+  // Test 9.4: propagate more than one level
+  ASSERT_TRUE(FS.addFile("/e/sub/sub/code.cpp", 0,
+                         llvm::MemoryBuffer::getMemBuffer("int i;")));
+  ASSERT_TRUE(FS.addFile("/e/sub/sub/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig\n"
+                             "WhitespaceSensitiveMacros: ['FOO', 'BAR']")));
+  std::vector<std::string> NonDefaultWhiteSpaceMacros{"FOO", "BAR"};
+
+  const auto SubSubStyle = [&NonDefaultWhiteSpaceMacros] {
+    auto Style = getGoogleStyle();
+    Style.ColumnLimit = 20;
+    Style.UseTab = FormatStyle::UT_Always;
+    Style.WhitespaceSensitiveMacros = NonDefaultWhiteSpaceMacros;
+    return Style;
+  }();
+
+  ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
+  Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, SubSubStyle);
+
+  // Test 9.5: use InheritParentConfig as style name
+  Style9 =
+      getStyle("inheritparentconfig", "/e/sub/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, SubSubStyle);
+
+  // Test 9.6: use command line style with inheritance
+  Style9 = getStyle("{BasedOnStyle: InheritParentConfig}", "/e/sub/code.cpp",
+                    "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, SubSubStyle);
+
+  // Test 9.7: use command line style with inheritance and own config
+  Style9 = getStyle("{BasedOnStyle: InheritParentConfig, "
+                    "WhitespaceSensitiveMacros: ['FOO', 'BAR']}",
+                    "/e/sub/code.cpp", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, SubSubStyle);
+
+  // Test 9.8: use inheritance from a file without BasedOnStyle
+  ASSERT_TRUE(FS.addFile("/e/withoutbase/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer("ColumnLimit: 123")));
+  ASSERT_TRUE(
+      FS.addFile("/e/withoutbase/sub/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: InheritParentConfig\nIndentWidth: 7")));
+  // Make sure we do not use the fallback style
+  Style9 = getStyle("file", "/e/withoutbase/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [] {
+    auto Style = getLLVMStyle();
+    Style.ColumnLimit = 123;
+    return Style;
+  }());
+
+  Style9 = getStyle("file", "/e/withoutbase/sub/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style9));
+  ASSERT_EQ(*Style9, [] {
+    auto Style = getLLVMStyle();
+    Style.ColumnLimit = 123;
+    Style.IndentWidth = 7;
+    return Style;
+  }());
 }
 
 TEST_F(ReplacementTest, FormatCodeAfterReplacements) {

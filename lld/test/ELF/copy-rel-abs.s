@@ -6,8 +6,8 @@
 # RUN: ld.lld -shared %t1.o -o %t1.so
 # RUN: llvm-readelf --dyn-syms %t1.so | FileCheck --check-prefix=SYMS %s
 
-# SYMS: [[ADDR:[0-9a-f]+]] {{.*}}   5 bar
-# SYMS: [[ADDR]]           {{.*}}   5 foo
+# SYMS: [[ADDR:[0-9a-f]+]] {{.*}}   5 foo
+# SYMS: [[ADDR]]           {{.*}}   5 bar
 # SYMS: [[ADDR]]           {{.*}} ABS zed
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t2.o

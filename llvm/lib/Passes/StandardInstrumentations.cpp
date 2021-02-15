@@ -782,11 +782,7 @@ bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {
     return true;
 
   StringRef PassName = PIC->getPassNameForClassName(PassID);
-  for (const auto &P : printBeforePasses()) {
-    if (PassName == P)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(printBeforePasses(), PassName);
 }
 
 bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
@@ -794,11 +790,7 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
     return true;
 
   StringRef PassName = PIC->getPassNameForClassName(PassID);
-  for (const auto &P : printAfterPasses()) {
-    if (PassName == P)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(printAfterPasses(), PassName);
 }
 
 void PrintIRInstrumentation::registerCallbacks(

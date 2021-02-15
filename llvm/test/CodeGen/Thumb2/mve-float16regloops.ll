@@ -1618,6 +1618,28 @@ do.end:                                           ; preds = %if.end
   ret void
 }
 
+define arm_aapcs_vfpcc half @vecAddAcrossF16Mve(<8 x half> %in) {
+; CHECK-LABEL: vecAddAcrossF16Mve:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vadd.f16 q0, q1, q0
+; CHECK-NEXT:    vrev64.32 q1, q0
+; CHECK-NEXT:    vadd.f16 q0, q0, q1
+; CHECK-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = shufflevector <8 x half> %in, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %1 = fadd fast <8 x half> %0, %in
+  %2 = bitcast <8 x half> %1 to <4 x i32>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>
+  %4 = bitcast <4 x i32> %3 to <8 x half>
+  %5 = fadd fast <8 x half> %1, %4
+  %6 = extractelement <8 x half> %5, i32 0
+  %7 = extractelement <8 x half> %5, i32 4
+  %add = fadd fast half %6, %7
+  ret half %add
+}
+
 declare { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16>, i32, i32)
 declare void @llvm.assume(i1)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)

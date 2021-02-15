@@ -732,10 +732,8 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
 
 bool LDVImpl::collectDebugValues(MachineFunction &mf) {
   bool Changed = false;
-  for (MachineFunction::iterator MFI = mf.begin(), MFE = mf.end(); MFI != MFE;
-       ++MFI) {
-    MachineBasicBlock *MBB = &*MFI;
-    for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
+  for (MachineBasicBlock &MBB : mf) {
+    for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
          MBBI != MBBE;) {
       // Use the first debug instruction in the sequence to get a SlotIndex
       // for following consecutive debug instructions.
@@ -746,8 +744,8 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
       // Debug instructions has no slot index. Use the previous
       // non-debug instruction's SlotIndex as its SlotIndex.
       SlotIndex Idx =
-          MBBI == MBB->begin()
-              ? LIS->getMBBStartIdx(MBB)
+          MBBI == MBB.begin()
+              ? LIS->getMBBStartIdx(&MBB)
               : LIS->getInstructionIndex(*std::prev(MBBI)).getRegSlot();
       // Handle consecutive debug instructions with the same slot index.
       do {
@@ -756,7 +754,7 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
         if ((MBBI->isDebugValue() && handleDebugValue(*MBBI, Idx)) ||
             (MBBI->isDebugRef() && handleDebugInstrRef(*MBBI, Idx)) ||
             (MBBI->isDebugLabel() && handleDebugLabel(*MBBI, Idx))) {
-          MBBI = MBB->erase(MBBI);
+          MBBI = MBB.erase(MBBI);
           Changed = true;
         } else
           ++MBBI;

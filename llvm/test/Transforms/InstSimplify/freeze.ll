@@ -241,9 +241,8 @@ define i32* @gep_inbounds_null_noopt(i32* %p) {
 define i8* @load_ptr(i8* %ptr) {
 ; CHECK-LABEL: @load_ptr(
 ; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = freeze i8* [[PTR]]
 ; CHECK-NEXT:    call void @f4(i8 [[V]])
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[PTR]]
 ;
   %v = load i8, i8* %ptr
   %q = freeze i8* %ptr
@@ -254,8 +253,7 @@ define i8* @load_ptr(i8* %ptr) {
 define i8* @store_ptr(i8* %ptr) {
 ; CHECK-LABEL: @store_ptr(
 ; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = freeze i8* [[PTR]]
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[PTR]]
 ;
   store i8 0, i8* %ptr
   %q = freeze i8* %ptr
@@ -295,8 +293,7 @@ unwind:
 define i8* @cmpxchg_ptr(i8* %ptr) {
 ; CHECK-LABEL: @cmpxchg_ptr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[PTR:%.*]], i8 1, i8 2 acq_rel monotonic, align 1
-; CHECK-NEXT:    [[Q:%.*]] = freeze i8* [[PTR]]
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[PTR]]
 ;
   cmpxchg i8* %ptr, i8 1, i8 2 acq_rel monotonic
   %q = freeze i8* %ptr
@@ -306,8 +303,7 @@ define i8* @cmpxchg_ptr(i8* %ptr) {
 define i8* @atomicrmw_ptr(i8* %ptr) {
 ; CHECK-LABEL: @atomicrmw_ptr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i8* [[PTR:%.*]], i8 1 acquire, align 1
-; CHECK-NEXT:    [[Q:%.*]] = freeze i8* [[PTR]]
-; CHECK-NEXT:    ret i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[PTR]]
 ;
   atomicrmw add i8* %ptr, i8 1 acquire
   %q = freeze i8* %ptr

@@ -55,6 +55,7 @@
 #include "polly/ScopPass.h"
 #include "polly/Simplify.h"
 #include "polly/Support/ISLOStream.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
@@ -606,8 +607,8 @@ private:
 /// @param OutDimsNum    A number of dimensions that should belong to
 ///                      the current band node.
 static isl::union_set getIsolateOptions(isl::set IsolateDomain,
-                                        unsigned OutDimsNum) {
-  unsigned Dims = IsolateDomain.dim(isl::dim::set);
+                                        isl_size OutDimsNum) {
+  isl_size Dims = IsolateDomain.dim(isl::dim::set);
   assert(OutDimsNum <= Dims &&
          "The isl::set IsolateDomain is used to describe the range of schedule "
          "dimensions values, which should be isolated. Consequently, the "
@@ -672,7 +673,7 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
 
 isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
                                        int VectorWidth) {
-  unsigned Dims = ScheduleRange.dim(isl::dim::set);
+  isl_size Dims = ScheduleRange.dim(isl::dim::set);
   isl::set LoopPrefixes =
       ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
   auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
@@ -705,15 +706,15 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
 
   auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
-  auto ScheduleDimensions = Space.dim(isl::dim::set);
-  assert(DimToVectorize < ScheduleDimensions);
+  isl_size ScheduleDimensions = Space.dim(isl::dim::set);
+  assert((isl_size)DimToVectorize < ScheduleDimensions);
 
   if (DimToVectorize > 0) {
     Node = isl::manage(
         isl_schedule_node_band_split(Node.release(), DimToVectorize));
     Node = Node.child(0);
   }
-  if (DimToVectorize < ScheduleDimensions - 1)
+  if ((isl_size)DimToVectorize < ScheduleDimensions - 1)
     Node = isl::manage(isl_schedule_node_band_split(Node.release(), 1));
   Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
   auto Sizes = isl::multi_val::zero(Space);
@@ -743,8 +744,9 @@ isl::schedule_node ScheduleTreeOptimizer::tileNode(isl::schedule_node Node,
   auto Dims = Space.dim(isl::dim::set);
   auto Sizes = isl::multi_val::zero(Space);
   std::string IdentifierString(Identifier);
-  for (unsigned i = 0; i < Dims; i++) {
-    auto tileSize = i < TileSizes.size() ? TileSizes[i] : DefaultTileSize;
+  for (auto i : seq<isl_size>(0, Dims)) {
+    auto tileSize =
+        i < (isl_size)TileSizes.size() ? TileSizes[i] : DefaultTileSize;
     Sizes = Sizes.set_val(i, isl::val(Node.get_ctx(), tileSize));
   }
   auto TileLoopMarkerStr = IdentifierString + " - Tiles";
@@ -861,7 +863,8 @@ ScheduleTreeOptimizer::standardBandOpts(isl::schedule_node Node, void *User) {
 /// @return        The modified map.
 isl::map permuteDimensions(isl::map Map, isl::dim DimType, unsigned DstPos,
                            unsigned SrcPos) {
-  assert(DstPos < Map.dim(DimType) && SrcPos < Map.dim(DimType));
+  assert((isl_size)DstPos < Map.dim(DimType) &&
+         (isl_size)SrcPos < Map.dim(DimType));
   if (DstPos == SrcPos)
     return Map;
   isl::id DimId;
@@ -989,7 +992,7 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
                                     MatMulInfoTy &MMI) {
   auto InputDimId = PartialSchedule.get_tuple_id(isl::dim::in);
   auto *Stmt = static_cast<ScopStmt *>(InputDimId.get_user());
-  unsigned OutDimNum = PartialSchedule.dim(isl::dim::out);
+  isl_size OutDimNum = PartialSchedule.dim(isl::dim::out);
   assert(OutDimNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "
                           "functions have at least three dimensions.");
@@ -1035,7 +1038,7 @@ static bool containsOnlyMatMulDep(isl::map Schedule, const Dependences *D,
   auto DomainSpace = Schedule.get_space().domain();
   auto Space = DomainSpace.map_from_domain_and_range(DomainSpace);
   auto Deltas = Dep.extract_map(Space).deltas();
-  int DeltasDimNum = Deltas.dim(isl::dim::set);
+  isl_size DeltasDimNum = Deltas.dim(isl::dim::set);
   for (int i = 0; i < DeltasDimNum; i++) {
     auto Val = Deltas.plain_get_val_if_fixed(isl::dim::set, i);
     Pos = Pos < 0 && Val.is_one() ? i : Pos;
@@ -1503,7 +1506,7 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   isl::schedule_node Child = Node.get_child(0);
   isl::union_map UnMapOldIndVar = Child.get_prefix_schedule_relation();
   isl::set Prefix = isl::map::from_union_map(UnMapOldIndVar).range();
-  unsigned Dims = Prefix.dim(isl::dim::set);
+  isl_size Dims = Prefix.dim(isl::dim::set);
   Prefix = Prefix.project_out(isl::dim::set, Dims - 1, 1);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Nr);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Mr);
@@ -1562,7 +1565,7 @@ getBandNodeWithOriginDimOrder(isl::schedule_node Node) {
   auto Domain = Node.get_universe_domain();
   assert(isl_union_set_n_set(Domain.get()) == 1);
   if (Node.get_schedule_depth() != 0 ||
-      (static_cast<isl_size>(isl::set(Domain).dim(isl::dim::set)) !=
+      (isl::set(Domain).dim(isl::dim::set) !=
        isl_schedule_node_band_n_member(Node.get())))
     return Node;
   Node = isl::manage(isl_schedule_node_delete(Node.copy()));

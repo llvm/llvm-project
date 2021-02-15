@@ -27,48 +27,37 @@ StaticAssertCheck::StaticAssertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
 void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
-  auto NegatedString = unaryOperator(
-      hasOperatorName("!"), hasUnaryOperand(ignoringImpCasts(stringLiteral())));
+  auto NegatedString =
+      unaryOperator(hasOperatorName("!"), hasUnaryOperand(stringLiteral()));
   auto IsAlwaysFalse =
       expr(anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                  cxxNullPtrLiteralExpr(), gnuNullExpr(), NegatedString))
           .bind("isAlwaysFalse");
-  auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
-      IsAlwaysFalse, cStyleCastExpr(has(ignoringParenImpCasts(IsAlwaysFalse)))
-                         .bind("castExpr")));
-  auto AssertExprRoot = anyOf(
-      binaryOperator(
-          hasAnyOperatorName("&&", "=="),
-          hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
-          anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
-                anything()))
-          .bind("assertExprRoot"),
-      IsAlwaysFalse);
+  auto IsAlwaysFalseWithCast =
+      anyOf(IsAlwaysFalse, cStyleCastExpr(has(IsAlwaysFalse)).bind("castExpr"));
+  auto AssertExprRoot =
+      anyOf(binaryOperator(
+                hasAnyOperatorName("&&", "=="),
+                hasEitherOperand(stringLiteral().bind("assertMSG")),
+                anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
+                      anything()))
+                .bind("assertExprRoot"),
+            IsAlwaysFalse);
   auto NonConstexprFunctionCall =
       callExpr(hasDeclaration(functionDecl(unless(isConstexpr()))));
   auto AssertCondition =
-      expr(
-          anyOf(expr(ignoringParenCasts(anyOf(
-                    AssertExprRoot, unaryOperator(hasUnaryOperand(
-                                        ignoringParenCasts(AssertExprRoot)))))),
-                anything()),
-          unless(findAll(NonConstexprFunctionCall)))
+      expr(optionally(expr(anyOf(AssertExprRoot,
+                            unaryOperator(hasUnaryOperand(AssertExprRoot))))),
+           unless(findAll(NonConstexprFunctionCall)))
           .bind("condition");
   auto Condition =
-      anyOf(ignoringParenImpCasts(callExpr(
-                hasDeclaration(functionDecl(hasName("__builtin_expect"))),
-                hasArgument(0, AssertCondition))),
+      anyOf(callExpr(traverse(TK_AsIs, callExpr(hasDeclaration(functionDecl(
+                                           hasName("__builtin_expect"))))),
+                     hasArgument(0, AssertCondition)),
             AssertCondition);
 
-  Finder->addMatcher(conditionalOperator(hasCondition(Condition),
-                                         unless(isInTemplateInstantiation()))
-                         .bind("condStmt"),
-                     this);
-
   Finder->addMatcher(
-      ifStmt(hasCondition(Condition), unless(isInTemplateInstantiation()))
-          .bind("condStmt"),
-      this);
+      mapAnyOf(ifStmt, conditionalOperator).with(hasCondition(Condition)).bind("condStmt"), this);
 }
 
 void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {

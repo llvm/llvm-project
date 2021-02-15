@@ -37,8 +37,6 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector,
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
 
-def RVVBaseAddr : ComplexPattern<iPTR, 1, "SelectRVVBaseAddr">;
-
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
@@ -60,11 +58,11 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
-  def : Pat<(type (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1, avl, sew)>;
+  def : Pat<(type (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1, avl, sew)>;
   // Store
-  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
-            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1, avl, sew)>;
+  def : Pat<(store type:$rs2, BaseAddr:$rs1),
+            (store_instr reg_class:$rs2, BaseAddr:$rs1, avl, sew)>;
 }
 
 multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
@@ -84,11 +82,11 @@ multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
           !eq(vlmul.value, V_M8.value): VS8R_V);
 
   // Load
-  def : Pat<(type (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1)>;
+  def : Pat<(type (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1)>;
   // Store
-  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
-            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1)>;
+  def : Pat<(store type:$rs2, BaseAddr:$rs1),
+            (store_instr reg_class:$rs2, BaseAddr:$rs1)>;
 }
 
 multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
@@ -96,11 +94,11 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
   defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#m.BX);
   // Load
-  def : Pat<(m.Mask (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  def : Pat<(m.Mask (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1, m.AVL, m.SEW)>;
   // Store
-  def : Pat<(store m.Mask:$rs2, RVVBaseAddr:$rs1),
-            (store_instr VR:$rs2, RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  def : Pat<(store m.Mask:$rs2, BaseAddr:$rs1),
+            (store_instr VR:$rs2, BaseAddr:$rs1, m.AVL, m.SEW)>;
 }
 
 class VPatBinarySDNode_VV<SDNode vop,
@@ -822,43 +820,3 @@ foreach vti = AllFloatVectors in {
                     (vti.Scalar vti.ScalarRegClass:$rs1),
                     vti.AVL, vti.SEW)>;
 }
-
-def SDTRVVSlide : SDTypeProfile<1, 3, [
-  SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>
-]>;
-
-def riscv_slideup : SDNode<"RISCVISD::VSLIDEUP", SDTRVVSlide, []>;
-def riscv_slidedown : SDNode<"RISCVISD::VSLIDEDOWN", SDTRVVSlide, []>;
-
-let Predicates = [HasStdExtV] in {
-
-foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
-    def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),
-                                         (vti.Vector vti.RegClass:$rs1),
-                                         uimm5:$rs2)),
-              (!cast<Instruction>("PseudoVSLIDEUP_VI_"#vti.LMul.MX)
-                  vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
-                  vti.AVL, vti.SEW)>;
-
-    def : Pat<(vti.Vector (riscv_slideup (vti.Vector vti.RegClass:$rs3),
-                                         (vti.Vector vti.RegClass:$rs1),
-                                         GPR:$rs2)),
-              (!cast<Instruction>("PseudoVSLIDEUP_VX_"#vti.LMul.MX)
-                  vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
-                  vti.AVL, vti.SEW)>;
-
-    def : Pat<(vti.Vector (riscv_slidedown (vti.Vector vti.RegClass:$rs3),
-                                           (vti.Vector vti.RegClass:$rs1),
-                                           uimm5:$rs2)),
-              (!cast<Instruction>("PseudoVSLIDEDOWN_VI_"#vti.LMul.MX)
-                  vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
-                  vti.AVL, vti.SEW)>;
-
-    def : Pat<(vti.Vector (riscv_slidedown (vti.Vector vti.RegClass:$rs3),
-                                           (vti.Vector vti.RegClass:$rs1),
-                                           GPR:$rs2)),
-              (!cast<Instruction>("PseudoVSLIDEDOWN_VX_"#vti.LMul.MX)
-                  vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
-                  vti.AVL, vti.SEW)>;
-}
-} // Predicates = [HasStdExtV]

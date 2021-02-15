@@ -1336,9 +1336,8 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
       const MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
       assert(MBB && "Phi-def has no defining MBB");
       // Connect to values live out of predecessors.
-      for (MachineBasicBlock::const_pred_iterator PI = MBB->pred_begin(),
-           PE = MBB->pred_end(); PI != PE; ++PI)
-        if (const VNInfo *PVNI = LR.getVNInfoBefore(LIS.getMBBEndIdx(*PI)))
+      for (MachineBasicBlock *Pred : MBB->predecessors())
+        if (const VNInfo *PVNI = LR.getVNInfoBefore(LIS.getMBBEndIdx(Pred)))
           EqClass.join(VNI->id, PVNI->id);
     } else {
       // Normal value defined by an instruction. Check for two-addr redef.

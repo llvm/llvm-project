@@ -15,17 +15,28 @@ declare void @llvm.assume(i1)
 ; operations on another array.  Important for scientific codes.
 ;
 define i32 @different_array_test(i64 %A, i64 %B) {
-; CHECK-LABEL: @different_array_test(
-; CHECK-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
-; CHECK-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
-; CHECK-NEXT:    [[ARRAY22_SUB:%.*]] = getelementptr inbounds [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 0
-; CHECK-NEXT:    [[ARRAY11_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY11]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAY11_SUB]], i32 4) ]
-; CHECK-NEXT:    call void @external(i32* nonnull [[ARRAY11_SUB]])
-; CHECK-NEXT:    call void @external(i32* nonnull [[ARRAY22_SUB]])
-; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 [[B:%.*]]
-; CHECK-NEXT:    store i32 7, i32* [[POINTER2]], align 4
-; CHECK-NEXT:    ret i32 0
+; NO_ASSUME-LABEL: @different_array_test(
+; NO_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
+; NO_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
+; NO_ASSUME-NEXT:    [[ARRAY22_SUB:%.*]] = getelementptr inbounds [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 0
+; NO_ASSUME-NEXT:    [[ARRAY11_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY11]], i64 0, i64 0
+; NO_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[ARRAY11_SUB]], i32 4) ]
+; NO_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY11_SUB]])
+; NO_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY22_SUB]])
+; NO_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 [[B:%.*]]
+; NO_ASSUME-NEXT:    store i32 7, i32* [[POINTER2]], align 4
+; NO_ASSUME-NEXT:    ret i32 0
+;
+; USE_ASSUME-LABEL: @different_array_test(
+; USE_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
+; USE_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
+; USE_ASSUME-NEXT:    [[ARRAY22_SUB:%.*]] = getelementptr inbounds [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 0
+; USE_ASSUME-NEXT:    [[ARRAY11_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[ARRAY11]], i64 0, i64 0
+; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY11_SUB]])
+; USE_ASSUME-NEXT:    call void @external(i32* nonnull [[ARRAY22_SUB]])
+; USE_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr [200 x i32], [200 x i32]* [[ARRAY22]], i64 0, i64 [[B:%.*]]
+; USE_ASSUME-NEXT:    store i32 7, i32* [[POINTER2]], align 4
+; USE_ASSUME-NEXT:    ret i32 0
 ;
   %Array1 = alloca i32, i32 100
   %Array2 = alloca i32, i32 200
