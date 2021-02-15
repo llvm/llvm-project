@@ -44,9 +44,6 @@ public:
 
   bool CanDebugProcess() override;
 
-  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
-                                         BreakpointSite *bp_site) override;
-
   void CalculateTrapHandlerSymbolNames() override;
 
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
