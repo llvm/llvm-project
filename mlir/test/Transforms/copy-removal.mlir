@@ -1,5 +1,4 @@
-// RUN: mlir-opt -copy-removal -split-input-file %s
-//| FileCheck %s
+// RUN: mlir-opt -copy-removal -split-input-file %s | FileCheck %s
 
 // All linalg copies except the linalg.copy(%1, %9) must be removed since the
 // defining operation of %1 and its DeallocOp have been defined in another block.
@@ -174,7 +173,7 @@ func @test_with_temp_usage_after_copy() -> memref<5xf32> {
     ins(%temp : memref<5xf32>)
    outs(%res : memref<5xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
   }
   dealloc %ret : memref<5xf32>
@@ -253,10 +252,10 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>)
     ins(%arg0 : memref<2xf32>)
    outs(%temp : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
+    %tmp2 = math.exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
   }
-  "linalg.copy"(%temp, %result) : (memref<2xf32>, memref<2xf32>) -> ()
+  linalg.copy(%temp, %result) : memref<2xf32>, memref<2xf32>
   dealloc %temp : memref<2xf32>
   // CHECK: return
   return
@@ -279,7 +278,7 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
     ins(%arg0 : memref<2xf32>)
    outs(%temp : memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %tmp1 = exp %gen1_arg0 : f32
+    %tmp1 = math.exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
   }
   linalg.generic {
@@ -288,11 +287,11 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
     ins(%arg0 : memref<2xf32>)
    outs(%to : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
+    %tmp2 = math.exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
   }
   // CHECK: linalg.copy
-  "linalg.copy"(%temp, %to) : (memref<2xf32>, memref<2xf32>) -> ()
+  linalg.copy(%temp, %to) : memref<2xf32>, memref<2xf32>
   dealloc %temp : memref<2xf32>
   return
 }
@@ -355,7 +354,7 @@ func @check_with_affine_dialect(%arg0: memref<4xf32>, %arg1: memref<4xf32>, %arg
   }
   // CHECK-NOT: linalg.copy
   // CHECK-NOT: dealloc
-  "linalg.copy"(%0, %arg2) : (memref<4xf32>, memref<4xf32>) -> ()
+  linalg.copy(%0, %arg2) : memref<4xf32>, memref<4xf32>
   dealloc %0 : memref<4xf32>
   //CHECK: return
   return

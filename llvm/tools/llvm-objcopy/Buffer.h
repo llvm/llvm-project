@@ -40,6 +40,9 @@ class FileBuffer : public Buffer {
   // Indicates that allocate(0) was called, and commit() should create or
   // truncate a file instead of using a FileOutputBuffer.
   bool EmptyFile = false;
+  bool KeepOwnership = false;
+  unsigned UserID = 0;
+  unsigned GroupID = 0;
 
 public:
   Error allocate(size_t Size) override;
@@ -47,6 +50,8 @@ public:
   Error commit() override;
 
   explicit FileBuffer(StringRef FileName) : Buffer(FileName) {}
+  explicit FileBuffer(StringRef FileName, bool Keep, unsigned UID, unsigned GID)
+      : Buffer(FileName), KeepOwnership(Keep), UserID(UID), GroupID(GID) {}
 };
 
 class MemBuffer : public Buffer {

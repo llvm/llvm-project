@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -64,6 +65,15 @@ PrintingPolicy getPrintingPolicy(PrintingPolicy Base) {
 std::string getLocalScope(const Decl *D) {
   std::vector<std::string> Scopes;
   const DeclContext *DC = D->getDeclContext();
+
+  // ObjC scopes won't have multiple components for us to join, instead:
+  // - Methods: "-[Class methodParam1:methodParam2]"
+  // - Classes, categories, and protocols: "MyClass(Category)"
+  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC))
+    return printObjCMethod(*MD);
+  else if (const ObjCContainerDecl *CD = dyn_cast<ObjCContainerDecl>(DC))
+    return printObjCContainer(*CD);
+
   auto GetName = [](const TypeDecl *D) {
     if (!D->getDeclName().isEmpty()) {
       PrintingPolicy Policy = D->getASTContext().getPrintingPolicy();
@@ -89,6 +99,11 @@ std::string getLocalScope(const Decl *D) {
 /// declaration \p D. Returns empty if it is contained global namespace.
 std::string getNamespaceScope(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
+
+  // ObjC does not have the concept of namespaces, so instead we support
+  // local scopes.
+  if (isa<ObjCMethodDecl, ObjCContainerDecl>(DC))
+    return "";
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(DC))
     return getNamespaceScope(TD);

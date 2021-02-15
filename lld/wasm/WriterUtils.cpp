@@ -202,11 +202,6 @@ void writeGlobalType(raw_ostream &os, const WasmGlobalType &type) {
   writeU8(os, type.Mutable, "global mutable");
 }
 
-void writeGlobal(raw_ostream &os, const WasmGlobal &global) {
-  writeGlobalType(os, global.Type);
-  writeInitExpr(os, global.InitExpr);
-}
-
 void writeEventType(raw_ostream &os, const WasmEventType &type) {
   writeUleb128(os, type.Attribute, "event attribute");
   writeUleb128(os, type.SigIndex, "sig index");

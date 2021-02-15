@@ -108,6 +108,7 @@ public:
   uint32_t getInputSectionOffset() const override {
     return segment.SectionOffset;
   }
+  uint64_t getVA() const;
 
   const OutputSegment *outputSeg = nullptr;
   int32_t outputSegmentOffset = 0;

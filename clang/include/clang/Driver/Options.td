@@ -925,7 +925,7 @@ defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-over
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">,
-  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "256">,
+  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "1024">,
   ShouldParseIf<hip.KeyPath>;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
@@ -942,6 +942,8 @@ def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
            "file path and command line options) | 'random' (ID's generated as "
            "random numbers) | 'none' (disabled). Default is 'hash'. This option "
            "will be overriden by option '-cuid=[ID]' if it is specified." >;
+def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
+  HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_nvptx_bc_path_EQ : Joined<["--"], "libomptarget-nvptx-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx bitcode library">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
@@ -2467,6 +2469,11 @@ def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
 defm reroll_loops : BoolFOption<"reroll-loops",
   CodeGenOpts<"RerollLoops">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Turn on loop reroller">, NegFlag<SetFalse>>;
+def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
+  HelpText<"Assume all loops are finite.">, Flags<[CC1Option]>;
+def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
+  HelpText<"Do not assume that any loop is finite.">, Flags<[CC1Option]>;
+
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Flags<[CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,

@@ -2304,6 +2304,17 @@ void Clang::DumpCompilationDatabaseFragmentToDir(
   DumpCompilationDatabase(C, "", Target, Output, Input, Args);
 }
 
+static bool AddARMImplicitITArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                                 StringRef Value) {
+  if (Value == "always" || Value == "never" || Value == "arm" ||
+      Value == "thumb") {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-arm-implicit-it=" + Value));
+    return true;
+  }
+  return false;
+}
+
 static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
@@ -2327,14 +2338,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   case llvm::Triple::thumbeb:
     if (Arg *A = Args.getLastArg(options::OPT_mimplicit_it_EQ)) {
       StringRef Value = A->getValue();
-      if (Value == "always" || Value == "never" || Value == "arm" ||
-          Value == "thumb") {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back(Args.MakeArgString("-arm-implicit-it=" + Value));
-      } else {
+      if (!AddARMImplicitITArgs(Args, CmdArgs, Value))
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
-      }
     }
     break;
   default:
@@ -2376,6 +2382,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       case llvm::Triple::thumbeb:
       case llvm::Triple::arm:
       case llvm::Triple::armeb:
+        if (Value.startswith("-mimplicit-it=") &&
+            AddARMImplicitITArgs(Args, CmdArgs, Value.split("=").second))
+          continue;
         if (Value == "-mthumb")
           // -mthumb has already been processed in ComputeLLVMTriple()
           // recognize but skip over here.
@@ -5630,6 +5639,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                options::OPT_fno_reroll_loops))
     if (A->getOption().matches(options::OPT_freroll_loops))
       CmdArgs.push_back("-freroll-loops");
+
+  Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
+                  options::OPT_fno_finite_loops);
 
   Args.AddLastArg(CmdArgs, options::OPT_fwritable_strings);
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,

@@ -188,20 +188,6 @@ public:
     /// Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AAResults &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R) {}
-
-    /// Initialize a DetectionContext with the data from @p DC.
-    DetectionContext(const DetectionContext &&DC)
-        : CurRegion(DC.CurRegion), AST(DC.AST.getAliasAnalysis()),
-          Verifying(DC.Verifying), Log(std::move(DC.Log)),
-          Accesses(std::move(DC.Accesses)),
-          NonAffineAccesses(std::move(DC.NonAffineAccesses)),
-          ElementSize(std::move(DC.ElementSize)), hasLoads(DC.hasLoads),
-          hasStores(DC.hasStores), HasUnknownAccess(DC.HasUnknownAccess),
-          NonAffineSubRegionSet(std::move(DC.NonAffineSubRegionSet)),
-          BoxedLoopsSet(std::move(DC.BoxedLoopsSet)),
-          RequiredILS(std::move(DC.RequiredILS)) {
-      AST.add(DC.AST);
-    }
   };
 
   /// Helper data structure to collect statistics about loop counts.
@@ -226,7 +212,8 @@ private:
   //@}
 
   /// Map to remember detection contexts for all regions.
-  using DetectionContextMapTy = DenseMap<BBPair, DetectionContext>;
+  using DetectionContextMapTy =
+      DenseMap<BBPair, std::unique_ptr<DetectionContext>>;
   mutable DetectionContextMapTy DetectionContextMap;
 
   /// Remove cached results for @p R.
@@ -558,7 +545,8 @@ public:
   ///
   /// @param R The Region to test if it is maximum.
   /// @param Verify Rerun the scop detection to verify SCoP was not invalidated
-  ///               meanwhile.
+  ///               meanwhile. Do not use if the region's DetectionContect is
+  ///               referenced by a Scop that is still to be processed.
   ///
   /// @return Return true if R is the maximum Region in a Scop, false otherwise.
   bool isMaxRegionInScop(const Region &R, bool Verify = true) const;

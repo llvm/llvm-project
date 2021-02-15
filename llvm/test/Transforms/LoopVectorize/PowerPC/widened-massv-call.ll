@@ -22,9 +22,7 @@ define dso_local double @test(float* %Arr) {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP5]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[DOTLCSSA]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[DOTLCSSA]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[BIN_RDX]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[DOTLCSSA]])
 ; CHECK-NEXT:    ret double [[TMP7]]
 ;
 entry:

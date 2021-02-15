@@ -7171,6 +7171,26 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
 }
 
+bool AArch64InstrInfo::isExtendLikelyToBeFolded(
+    MachineInstr &ExtMI, MachineRegisterInfo &MRI) const {
+  assert(ExtMI.getOpcode() == TargetOpcode::G_SEXT ||
+         ExtMI.getOpcode() == TargetOpcode::G_ZEXT ||
+         ExtMI.getOpcode() == TargetOpcode::G_ANYEXT);
+
+  // Anyexts are nops.
+  if (ExtMI.getOpcode() == TargetOpcode::G_ANYEXT)
+    return true;
+
+  Register DefReg = ExtMI.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DefReg))
+    return false;
+
+  // It's likely that a sext/zext as a G_PTR_ADD offset will be folded into an
+  // addressing mode.
+  auto *UserMI = &*MRI.use_instr_nodbg_begin(DefReg);
+  return UserMI->getOpcode() == TargetOpcode::G_PTR_ADD;
+}
+
 uint64_t AArch64InstrInfo::getElementSizeForOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::ElementSizeMask;
 }

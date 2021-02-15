@@ -1,4 +1,41 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readelf -s - | FileCheck %s
+
+# CHECK:      Symbol table '.symtab' contains 34 entries:
+# CHECK-NEXT: Num:    Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-NEXT:   0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# CHECK-NEXT:   1: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 foo
+# CHECK-NEXT:   2: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 bar
+# CHECK-NEXT:   3: 0000000000000000     0 OBJECT  UNIQUE DEFAULT     2 zed
+# CHECK-NEXT:   4: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 obj
+# CHECK-NEXT:   5: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 func
+# CHECK-NEXT:   6: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 ifunc
+# CHECK-NEXT:   7: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 tls
+# CHECK-NEXT:   8: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 tls_quoted
+# CHECK-NEXT:   9: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 tls_upper_case
+# CHECK-NEXT:  10: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 sym1
+# CHECK-NEXT:  11: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 alias1
+# CHECK-NEXT:  12: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 sym2
+# CHECK-NEXT:  13: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 alias2
+# CHECK-NEXT:  14: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 sym3
+# CHECK-NEXT:  15: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT     2 alias3
+# CHECK-NEXT:  16: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 sym4
+# CHECK-NEXT:  17: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 alias4
+# CHECK-NEXT:  18: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 sym5
+# CHECK-NEXT:  19: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT     2 alias5
+# CHECK-NEXT:  20: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 sym6
+# CHECK-NEXT:  21: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT     2 alias6
+# CHECK-NEXT:  22: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 sym7
+# CHECK-NEXT:  23: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 alias7
+# CHECK-NEXT:  24: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 sym8
+# CHECK-NEXT:  25: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 alias8
+# CHECK-NEXT:  26: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 sym9
+# CHECK-NEXT:  27: 0000000000000000     0 OBJECT  GLOBAL DEFAULT     2 alias9
+# CHECK-NEXT:  28: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 sym10
+# CHECK-NEXT:  29: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT     2 alias10
+# CHECK-NEXT:  30: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 sym11
+# CHECK-NEXT:  31: 0000000000000000     0 IFUNC   GLOBAL DEFAULT     2 alias11
+# CHECK-NEXT:  32: 0000000000000000     0 TLS     GLOBAL DEFAULT     2 sym12
+# CHECK-NEXT:  33: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 alias12
 
 // Test that both % and @ are accepted.
         .global foo
@@ -129,194 +166,3 @@ alias12:
         .global alias12
         .type alias12, @function
         .set sym12, alias12
-
-// CHECK:        Symbol {
-// CHECK:          Name: bar
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: Object
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: foo
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: Function
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: func
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: Function
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: ifunc
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: GNU_IFunc
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: obj
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: Object
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym1
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: GNU_IFunc (0xA)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym10
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: TLS (0x6)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym11
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: TLS (0x6)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym12
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: TLS (0x6)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym2
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: GNU_IFunc (0xA)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym3
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: GNU_IFunc (0xA)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym4
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: Function (0x2)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym5
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: Function (0x2)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym6
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: Object (0x1)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym7
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: GNU_IFunc (0xA)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym8
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: Function (0x2)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym9
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Global (0x1)
-// CHECK-NEXT:    Type: TLS (0x6)
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: tls
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: TLS
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: tls_quoted
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: TLS
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: tls_upper_case
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: TLS
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: zed
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Unique (0xA)
-// CHECK-NEXT:     Type: Object (0x1)
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]

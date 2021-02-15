@@ -204,10 +204,7 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
 }
 
 static bool isDwarfSection(StringRef SectionName) {
-  for (auto &DwarfSectionName : DwarfSectionNames)
-    if (SectionName == DwarfSectionName)
-      return true;
-  return false;
+  return llvm::is_contained(DwarfSectionNames, SectionName);
 }
 
 namespace llvm {

@@ -1568,9 +1568,7 @@ public:
   void getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const;
 
   bool isTemplateArg(Init *Name) const {
-    for (Init *TA : TemplateArgs)
-      if (TA == Name) return true;
-    return false;
+    return llvm::is_contained(TemplateArgs, Name);
   }
 
   const RecordVal *getValue(const Init *Name) const {

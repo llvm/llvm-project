@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
+#include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Translation.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -57,7 +58,8 @@ void registerAVX512ToLLVMIRTranslation() {
         return success();
       },
       [](DialectRegistry &registry) {
-        registry.insert<LLVM::LLVMAVX512Dialect, LLVM::LLVMDialect>();
+        registry.insert<LLVM::LLVMAVX512Dialect>();
+        registerLLVMDialectTranslation(registry);
       });
 }
 } // namespace mlir

@@ -524,10 +524,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
+
+        // Operations below are different for between masks and other vectors.
+        if (VT.getVectorElementType() == MVT::i1) {
+          setOperationAction(ISD::SETCC, VT, Custom);
+          continue;
+        }
+
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SUB, VT, Custom);
@@ -541,6 +549,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL, VT, Custom);
         setOperationAction(ISD::SRA, VT, Custom);
         setOperationAction(ISD::SRL, VT, Custom);
+
+        setOperationAction(ISD::SMIN, VT, Custom);
+        setOperationAction(ISD::SMAX, VT, Custom);
+        setOperationAction(ISD::UMIN, VT, Custom);
+        setOperationAction(ISD::UMAX, VT, Custom);
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -564,6 +577,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FMUL, VT, Custom);
         setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FNEG, VT, Custom);
+        setOperationAction(ISD::FABS, VT, Custom);
+        setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
       }
     }
@@ -593,7 +608,8 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
                                             EVT VT) const {
   if (!VT.isVector())
     return getPointerTy(DL);
-  if (Subtarget.hasStdExtV() && VT.isScalableVector())
+  if (Subtarget.hasStdExtV() &&
+      (VT.isScalableVector() || Subtarget.useRVVForFixedLengthVectors()))
     return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
@@ -774,23 +790,26 @@ static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
   unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
   assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
 
-  switch (VT.getVectorElementType().SimpleTy) {
+  MVT EltVT = VT.getVectorElementType();
+  switch (EltVT.SimpleTy) {
   default:
     llvm_unreachable("unexpected element type for RVV container");
+  case MVT::i1: {
+    // Masks are calculated assuming 8-bit elements since that's when we need
+    // the most elements.
+    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / 8;
+    return MVT::getScalableVectorVT(MVT::i1, LMul * EltsPerBlock);
+  }
   case MVT::i8:
-    return MVT::getScalableVectorVT(MVT::i8, LMul * 8);
   case MVT::i16:
-    return MVT::getScalableVectorVT(MVT::i16, LMul * 4);
   case MVT::i32:
-    return MVT::getScalableVectorVT(MVT::i32, LMul * 2);
   case MVT::i64:
-    return MVT::getScalableVectorVT(MVT::i64, LMul);
   case MVT::f16:
-    return MVT::getScalableVectorVT(MVT::f16, LMul * 4);
   case MVT::f32:
-    return MVT::getScalableVectorVT(MVT::f32, LMul * 2);
-  case MVT::f64:
-    return MVT::getScalableVectorVT(MVT::f64, LMul);
+  case MVT::f64: {
+    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / EltVT.getSizeInBits();
+    return MVT::getScalableVectorVT(EltVT, LMul * EltsPerBlock);
+  }
   }
 }
 
@@ -828,6 +847,20 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+
+  if (VT.getVectorElementType() == MVT::i1) {
+    if (ISD::isBuildVectorAllZeros(Op.getNode())) {
+      SDValue VMClr = DAG.getNode(RISCVISD::VMCLR_VL, DL, ContainerVT, VL);
+      return convertFromScalableVector(VT, VMClr, DAG, Subtarget);
+    }
+
+    if (ISD::isBuildVectorAllOnes(Op.getNode())) {
+      SDValue VMSet = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+      return convertFromScalableVector(VT, VMSet, DAG, Subtarget);
+    }
+
+    return SDValue();
+  }
 
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
     unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
@@ -1140,6 +1173,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
     return lowerFixedLengthVectorStoreToRVV(Op, DAG);
+  case ISD::SETCC:
+    return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   case ISD::ADD:
     return lowerToScalableOp(Op, DAG, RISCVISD::ADD_VL);
   case ISD::SUB:
@@ -1176,8 +1211,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::FDIV_VL);
   case ISD::FNEG:
     return lowerToScalableOp(Op, DAG, RISCVISD::FNEG_VL);
+  case ISD::FABS:
+    return lowerToScalableOp(Op, DAG, RISCVISD::FABS_VL);
+  case ISD::FSQRT:
+    return lowerToScalableOp(Op, DAG, RISCVISD::FSQRT_VL);
   case ISD::FMA:
     return lowerToScalableOp(Op, DAG, RISCVISD::FMA_VL);
+  case ISD::SMIN:
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMIN_VL);
+  case ISD::SMAX:
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMAX_VL);
+  case ISD::UMIN:
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL);
+  case ISD::UMAX:
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL);
   }
 }
 
@@ -2032,6 +2079,10 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
 
   SDLoc DL(Op);
   MVT VT = Store->getValue().getSimpleValueType();
+
+  // FIXME: We probably need to zero any extra bits in a byte for mask stores.
+  // This is tricky to do.
+
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDValue VL =
@@ -2043,6 +2094,31 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
       RISCVISD::VSE_VL, DL, DAG.getVTList(MVT::Other),
       {Store->getChain(), NewValue, Store->getBasePtr(), VL},
       Store->getMemoryVT(), Store->getMemOperand());
+}
+
+SDValue
+RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  MVT InVT = Op.getOperand(0).getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT, Subtarget);
+
+  MVT VT = Op.getSimpleValueType();
+
+  SDValue Op1 =
+      convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
+  SDValue Op2 =
+      convertToScalableVector(ContainerVT, Op.getOperand(1), DAG, Subtarget);
+
+  SDLoc DL(Op);
+  SDValue VL =
+      DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+  SDValue Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op2,
+                            Op.getOperand(2), Mask, VL);
+
+  return convertFromScalableVector(VT, Cmp, DAG, Subtarget);
 }
 
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
@@ -4669,7 +4745,14 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMUL_VL)
   NODE_NAME_CASE(FDIV_VL)
   NODE_NAME_CASE(FNEG_VL)
+  NODE_NAME_CASE(FABS_VL)
+  NODE_NAME_CASE(FSQRT_VL)
   NODE_NAME_CASE(FMA_VL)
+  NODE_NAME_CASE(SMIN_VL)
+  NODE_NAME_CASE(SMAX_VL)
+  NODE_NAME_CASE(UMIN_VL)
+  NODE_NAME_CASE(UMAX_VL)
+  NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VMCLR_VL)
   NODE_NAME_CASE(VMSET_VL)
   NODE_NAME_CASE(VRGATHER_VX_VL)
@@ -5121,9 +5204,14 @@ bool RISCVTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
 
   // Don't use RVV for vectors we cannot scalarize if required.
   switch (VT.getVectorElementType().SimpleTy) {
+  // i1 is supported but has different rules.
   default:
     return false;
   case MVT::i1:
+    // Masks can only use a single register.
+    if (VT.getVectorNumElements() > Subtarget.getMinRVVVectorSizeInBits())
+      return false;
+    break;
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:

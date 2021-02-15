@@ -566,6 +566,10 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
 
+/// Return the layout map in strided linear layout AffineMap form.
+/// Return null if the layout is not compatible with a strided layout.
+AffineMap getStridedLinearLayoutMap(MemRefType t);
+
 } // end namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H

@@ -772,6 +772,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   EVT PromotedType = Op1Promoted.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
 
+  // USUBSAT can always be promoted as long as we have zero-extended the args.
+  if (Opcode == ISD::USUBSAT)
+    return DAG.getNode(ISD::USUBSAT, dl, PromotedType, Op1Promoted,
+                       Op2Promoted);
+
   // Shift cannot use a min/max expansion, we can't detect overflow if all of
   // the bits have been shifted out.
   if (IsShift || TLI.isOperationLegalOrCustom(Opcode, PromotedType)) {
@@ -783,7 +788,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
       ShiftOp = ISD::SRA;
       break;
     case ISD::UADDSAT:
-    case ISD::USUBSAT:
     case ISD::USHLSAT:
       ShiftOp = ISD::SRL;
       break;
@@ -804,32 +808,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     SDValue Result =
         DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
     return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
-  } else {
-    if (Opcode == ISD::USUBSAT) {
-      SDValue Max =
-          DAG.getNode(ISD::UMAX, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::SUB, dl, PromotedType, Max, Op2Promoted);
-    }
-
-    if (Opcode == ISD::UADDSAT) {
-      APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
-      SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-      SDValue Add =
-          DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
-    }
-
-    unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
-    APInt MinVal = APInt::getSignedMinValue(OldBits).sext(NewBits);
-    APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
-    SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-    SDValue Result =
-        DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
-    Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
-    Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
-    return Result;
   }
+
+  if (Opcode == ISD::UADDSAT) {
+    APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
+    SDValue Add =
+        DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
+    return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
+  }
+
+  unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
+  APInt MinVal = APInt::getSignedMinValue(OldBits).sext(NewBits);
+  APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
+  SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
+  SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
+  SDValue Result =
+      DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
+  Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
+  Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
+  return Result;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {

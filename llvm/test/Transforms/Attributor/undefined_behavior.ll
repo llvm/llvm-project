@@ -241,13 +241,13 @@ define void @atomicrmw_null_pointer_is_defined() null_pointer_is_valid {
 ; IS__TUNIT____: Function Attrs: nofree nounwind null_pointer_is_valid willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomicrmw_null_pointer_is_defined
 ; IS__TUNIT____-SAME: () [[ATTR4:#.*]] {
-; IS__TUNIT____-NEXT:    [[A:%.*]] = atomicrmw add i32* null, i32 1 acquire
+; IS__TUNIT____-NEXT:    [[A:%.*]] = atomicrmw add i32* null, i32 1 acquire, align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind null_pointer_is_valid willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomicrmw_null_pointer_is_defined
 ; IS__CGSCC____-SAME: () [[ATTR4:#.*]] {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = atomicrmw add i32* null, i32 1 acquire
+; IS__CGSCC____-NEXT:    [[A:%.*]] = atomicrmw add i32* null, i32 1 acquire, align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %a = atomicrmw add i32* null, i32 1 acquire
@@ -321,13 +321,13 @@ define void @atomiccmpxchg_null_pointer_is_defined() null_pointer_is_valid {
 ; IS__TUNIT____: Function Attrs: nofree nounwind null_pointer_is_valid willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@atomiccmpxchg_null_pointer_is_defined
 ; IS__TUNIT____-SAME: () [[ATTR4]] {
-; IS__TUNIT____-NEXT:    [[A:%.*]] = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
+; IS__TUNIT____-NEXT:    [[A:%.*]] = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic, align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nounwind null_pointer_is_valid willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@atomiccmpxchg_null_pointer_is_defined
 ; IS__CGSCC____-SAME: () [[ATTR4]] {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
+; IS__CGSCC____-NEXT:    [[A:%.*]] = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic, align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %a = cmpxchg i32* null, i32 2, i32 3 acq_rel monotonic
@@ -631,13 +631,13 @@ define i32 @foo() {
 define void @arg_nonnull_1(i32* nonnull %a) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@arg_nonnull_1
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) [[ATTR6:#.*]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) [[ATTR6:#.*]] {
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@arg_nonnull_1
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) [[ATTR6:#.*]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) [[ATTR6:#.*]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;

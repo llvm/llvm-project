@@ -1895,9 +1895,9 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
 
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   unsigned int RPONumber = 0;
-  for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-    OrderToBB[RPONumber] = *RI;
-    BBToOrder[*RI] = RPONumber;
+  for (MachineBasicBlock *MBB : RPOT) {
+    OrderToBB[RPONumber] = MBB;
+    BBToOrder[MBB] = RPONumber;
     Worklist.push(RPONumber);
     ++RPONumber;
   }

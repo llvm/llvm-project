@@ -1521,7 +1521,7 @@ RegisterContextUnwind::SavedLocationForRegister(
     DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr);
     dwarfexpr.SetRegisterKind(unwindplan_registerkind);
     Value cfa_val = Scalar(m_cfa);
-    cfa_val.SetValueType(Value::eValueTypeLoadAddress);
+    cfa_val.SetValueType(Value::ValueType::LoadAddress);
     Value result;
     Status error;
     if (dwarfexpr.Evaluate(&exe_ctx, this, 0, &cfa_val, nullptr, result,

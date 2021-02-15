@@ -266,9 +266,6 @@ public:
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }
 
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const;
-
   int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm,
                                  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);

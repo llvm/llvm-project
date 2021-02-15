@@ -3,7 +3,7 @@
 // RUN: echo "fun:*Blacklisted_Thread2*" > %t.blacklist
 // RUN: echo "fun:*CallTouchGlobal*" >> %t.blacklist
 
-// RUN: %clangxx_tsan %s -fsanitize-blacklist=%t.blacklist -o %t
+// RUN: %clangxx_tsan -O1 %s -fsanitize-blacklist=%t.blacklist -o %t
 // RUN: %deflake %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
@@ -18,13 +18,13 @@ void *Thread1(void *x) {
   return NULL;
 }
 
-void TouchGlobal() {
+void TouchGlobal() __attribute__((noinline)) {
   // CHECK: Previous write of size 4
   // CHECK: #0 TouchGlobal{{.*}}blacklist2.cpp:[[@LINE+1]]
   Global--;
 }
 
-void CallTouchGlobal() {
+void CallTouchGlobal() __attribute__((noinline)) {
   // CHECK: #1 CallTouchGlobal{{.*}}blacklist2.cpp:[[@LINE+1]]
   TouchGlobal();
 }

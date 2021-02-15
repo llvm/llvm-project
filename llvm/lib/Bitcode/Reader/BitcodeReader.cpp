@@ -5085,7 +5085,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
     case bitc::FUNC_CODE_INST_CMPXCHG: {
       // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, synchscope,
-      // failure_ordering, weak]
+      // failure_ordering, weak, align?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
       Value *Ptr = nullptr;
@@ -5100,9 +5100,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
 
       Value *Val = nullptr;
-      if (popValue(Record, OpNum, NextValueNo, Cmp->getType(), Val) ||
-          NumRecords < OpNum + 3 || NumRecords > OpNum + 5)
+      if (popValue(Record, OpNum, NextValueNo, Cmp->getType(), Val))
         return error("Invalid record");
+
+      if (NumRecords < OpNum + 3 || NumRecords > OpNum + 6)
+        return error("Invalid record");
+
+      const bool IsVol = Record[OpNum];
 
       const AtomicOrdering SuccessOrdering =
           getDecodedOrdering(Record[OpNum + 1]);
@@ -5118,42 +5122,77 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const AtomicOrdering FailureOrdering =
           getDecodedOrdering(Record[OpNum + 3]);
 
-      const Align Alignment(
-          TheModule->getDataLayout().getTypeStoreSize(Cmp->getType()));
+      const bool IsWeak = Record[OpNum + 4];
 
-      I = new AtomicCmpXchgInst(Ptr, Cmp, Val, Alignment, SuccessOrdering,
+      MaybeAlign Alignment;
+
+      if (NumRecords == (OpNum + 6)) {
+        if (Error Err = parseAlignmentValue(Record[OpNum + 5], Alignment))
+          return Err;
+      }
+      if (!Alignment)
+        Alignment =
+            Align(TheModule->getDataLayout().getTypeStoreSize(Cmp->getType()));
+
+      I = new AtomicCmpXchgInst(Ptr, Cmp, Val, *Alignment, SuccessOrdering,
                                 FailureOrdering, SSID);
       FullTy = StructType::get(Context, {FullTy, Type::getInt1Ty(Context)});
-      cast<AtomicCmpXchgInst>(I)->setVolatile(Record[OpNum]);
-      cast<AtomicCmpXchgInst>(I)->setWeak(Record[OpNum + 4]);
+      cast<AtomicCmpXchgInst>(I)->setVolatile(IsVol);
+      cast<AtomicCmpXchgInst>(I)->setWeak(IsWeak);
 
       InstructionList.push_back(I);
       break;
     }
     case bitc::FUNC_CODE_INST_ATOMICRMW: {
-      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid]
+      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid, align?]
+      const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
-      Value *Ptr, *Val;
-      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy) ||
-          !isa<PointerType>(Ptr->getType()) ||
-          popValue(Record, OpNum, NextValueNo,
-                   getPointerElementFlatType(FullTy), Val) ||
-          OpNum + 4 != Record.size())
+
+      Value *Ptr = nullptr;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
         return error("Invalid record");
-      AtomicRMWInst::BinOp Operation = getDecodedRMWOperation(Record[OpNum]);
+
+      if (!isa<PointerType>(Ptr->getType()))
+        return error("Invalid record");
+
+      Value *Val = nullptr;
+      if (popValue(Record, OpNum, NextValueNo,
+                   getPointerElementFlatType(FullTy), Val))
+        return error("Invalid record");
+
+      if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
+        return error("Invalid record");
+
+      const AtomicRMWInst::BinOp Operation =
+          getDecodedRMWOperation(Record[OpNum]);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid record");
-      AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
+
+      const bool IsVol = Record[OpNum + 1];
+
+      const AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
       if (Ordering == AtomicOrdering::NotAtomic ||
           Ordering == AtomicOrdering::Unordered)
         return error("Invalid record");
-      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
-      Align Alignment(
-          TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
-      I = new AtomicRMWInst(Operation, Ptr, Val, Alignment, Ordering, SSID);
+
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+
+      MaybeAlign Alignment;
+
+      if (NumRecords == (OpNum + 5)) {
+        if (Error Err = parseAlignmentValue(Record[OpNum + 4], Alignment))
+          return Err;
+      }
+
+      if (!Alignment)
+        Alignment =
+            Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
+
+      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
       FullTy = getPointerElementFlatType(FullTy);
-      cast<AtomicRMWInst>(I)->setVolatile(Record[OpNum+1]);
+      cast<AtomicRMWInst>(I)->setVolatile(IsVol);
+
       InstructionList.push_back(I);
       break;
     }
@@ -6806,7 +6845,7 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x3f && "Unexpected bits in flag");
+      assert(Flags <= 0x7f && "Unexpected bits in flag");
 
       return Flags & 0x8;
     }

@@ -116,7 +116,9 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
     OpBuilderDAG<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
     [{
       build($_builder, $_state, ValueRange{}, staticShape, elementType);
-    }]>
+    }]>,
+    OpBuilderDAG<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let hasCanonicalizer = 1;

@@ -52,13 +52,17 @@ GlobalValue::VisibilityTypes ValueInfo::getELFVisibility() const {
                       : GlobalValue::DefaultVisibility;
 }
 
-bool ValueInfo::isDSOLocal() const {
-  // Need to check all summaries are local in case of hash collisions.
-  return getSummaryList().size() &&
-         llvm::all_of(getSummaryList(),
-                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                        return Summary->isDSOLocal();
-                      });
+bool ValueInfo::isDSOLocal(bool WithDSOLocalPropagation) const {
+  // With DSOLocal propagation done, the flag in evey summary is the same.
+  // Check the first one is enough.
+  return WithDSOLocalPropagation
+             ? getSummaryList().size() && getSummaryList()[0]->isDSOLocal()
+             : getSummaryList().size() &&
+                   llvm::all_of(
+                       getSummaryList(),
+                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                         return Summary->isDSOLocal();
+                       });
 }
 
 bool ValueInfo::canAutoHide() const {
@@ -100,11 +104,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x10;
   if (withAttributePropagation())
     Flags |= 0x20;
+  if (withDSOLocalPropagation())
+    Flags |= 0x40;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x3f && "Unexpected bits in flag");
+  assert(Flags <= 0x7f && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -130,6 +136,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x20)
     setWithAttributePropagation();
+  // 1 bit: WithDSOLocalPropagation flag.
+  // Set on combined index only.
+  if (Flags & 0x40)
+    setWithDSOLocalPropagation();
 }
 
 // Collect for the given module the list of function it defines
@@ -205,7 +215,7 @@ propagateAttributesToRefs(GlobalValueSummary *S,
   }
 }
 
-// Do the access attribute propagation in combined index.
+// Do the access attribute and DSOLocal propagation in combined index.
 // The goal of attribute propagation is internalization of readonly (RO)
 // or writeonly (WO) variables. To determine which variables are RO or WO
 // and which are not we take following steps:
@@ -216,7 +226,7 @@ propagateAttributesToRefs(GlobalValueSummary *S,
 //   or doesn't read it (writeonly).
 //
 // - After computing dead symbols in combined index we do the attribute
-//   propagation. During this step we:
+//   and DSOLocal propagation. During this step we:
 //   a. clear RO and WO attributes from variables which are preserved or
 //      can't be imported
 //   b. clear RO and WO attributes from variables referenced by any global
@@ -225,6 +235,7 @@ propagateAttributesToRefs(GlobalValueSummary *S,
 //      reference is not readonly
 //   d. clear WO attribute from variable referenced by a function when
 //      reference is not writeonly
+//   e. clear IsDSOLocal flag in every summary if any of them is false.
 //
 //   Because of (c, d) we don't internalize variables read by function A
 //   and modified by function B.
@@ -236,7 +247,8 @@ void ModuleSummaryIndex::propagateAttributes(
   if (!PropagateAttrs)
     return;
   DenseSet<ValueInfo> MarkedNonReadWriteOnly;
-  for (auto &P : *this)
+  for (auto &P : *this) {
+    bool IsDSOLocal = true;
     for (auto &S : P.second.SummaryList) {
       if (!isGlobalValueLive(S.get())) {
         // computeDeadSymbols should have marked all copies live. Note that
@@ -273,8 +285,20 @@ void ModuleSummaryIndex::propagateAttributes(
           GVS->setWriteOnly(false);
         }
       propagateAttributesToRefs(S.get(), MarkedNonReadWriteOnly);
+
+      // If the flag from any summary is false, the GV is not DSOLocal.
+      IsDSOLocal &= S->isDSOLocal();
     }
+    if (!IsDSOLocal)
+      // Mark the flag in all summaries false so that we can do quick check
+      // without going through the whole list.
+      llvm::for_each(P.second.SummaryList,
+                     [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                       return Summary->setDSOLocal(false);
+                     });
+  }
   setWithAttributePropagation();
+  setWithDSOLocalPropagation();
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
       if (P.second.SummaryList.size())

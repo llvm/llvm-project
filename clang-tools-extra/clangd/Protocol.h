@@ -913,26 +913,13 @@ struct TweakArgs {
 bool fromJSON(const llvm::json::Value &, TweakArgs &, llvm::json::Path);
 llvm::json::Value toJSON(const TweakArgs &A);
 
-/// Exact commands are not specified in the protocol so we define the
-/// ones supported by Clangd here. The protocol specifies the command arguments
-/// to be "any[]" but to make this safer and more manageable, each command we
-/// handle maps to a certain llvm::Optional of some struct to contain its
-/// arguments. Different commands could reuse the same llvm::Optional as
-/// arguments but a command that needs different arguments would simply add a
-/// new llvm::Optional and not use any other ones. In practice this means only
-/// one argument type will be parsed and set.
 struct ExecuteCommandParams {
-  // Command to apply fix-its. Uses WorkspaceEdit as argument.
-  const static llvm::StringLiteral CLANGD_APPLY_FIX_COMMAND;
-  // Command to apply the code action. Uses TweakArgs as argument.
-  const static llvm::StringLiteral CLANGD_APPLY_TWEAK;
-
-  /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
+  /// The identifier of the actual command handler.
   std::string command;
 
-  // Arguments
-  llvm::Optional<WorkspaceEdit> workspaceEdit;
-  llvm::Optional<TweakArgs> tweakArgs;
+  // This is `arguments?: []any` in LSP.
+  // All clangd's commands accept a single argument (or none => null).
+  llvm::json::Value argument = nullptr;
 };
 bool fromJSON(const llvm::json::Value &, ExecuteCommandParams &,
               llvm::json::Path);

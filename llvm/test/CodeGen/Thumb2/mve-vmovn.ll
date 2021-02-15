@@ -41,6 +41,25 @@ entry:
   ret <8 x i16> %out
 }
 
+define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc3(<4 x i32> %src1) {
+; CHECK-LABEL: vmovn32_trunc3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i32 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32_trunc3:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vmovnt.i32 q1, q1
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> undef, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  ret <8 x i16> %out
+}
+
+
 define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
@@ -79,6 +98,25 @@ entry:
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
   ret <16 x i8> %out
 }
+
+define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc3(<8 x i16> %src1) {
+; CHECK-LABEL: vmovn16_trunc3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i16 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16_trunc3:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.16 q1, q0
+; CHECKBE-NEXT:    vmovnt.i16 q1, q1
+; CHECKBE-NEXT:    vrev64.8 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> undef, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+  %out = trunc <16 x i16> %strided.vec to <16 x i8>
+  ret <16 x i8> %out
+}
+
 
 
 define arm_aapcs_vfpcc <2 x i64> @vmovn64_t1(<2 x i64> %src1, <2 x i64> %src2) {
@@ -331,6 +369,25 @@ entry:
   ret <4 x i32> %out
 }
 
+define arm_aapcs_vfpcc <4 x i32> @vmovn32_single_t(<4 x i32> %src1) {
+; CHECK-LABEL: vmovn32_single_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f32 s1, s0
+; CHECK-NEXT:    vmov.f32 s3, s2
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32_single_t:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vmov.f32 s5, s4
+; CHECKBE-NEXT:    vmov.f32 s7, s6
+; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %out = shufflevector <4 x i32> %src1, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x i32> %out
+}
+
 
 
 
@@ -471,6 +528,23 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn16_b4(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECKBE-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x i16> %out
+}
+
+define arm_aapcs_vfpcc <8 x i16> @vmovn16_single_t(<8 x i16> %src1) {
+; CHECK-LABEL: vmovn16_single_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i32 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn16_single_t:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.16 q1, q0
+; CHECKBE-NEXT:    vmovnt.i32 q1, q1
+; CHECKBE-NEXT:    vrev64.16 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %out = shufflevector <8 x i16> %src1, <8 x i16> undef, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
   ret <8 x i16> %out
 }
 
@@ -708,5 +782,22 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECKBE-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
+  ret <16 x i8> %out
+}
+
+define arm_aapcs_vfpcc <16 x i8> @vmovn8_single_t(<16 x i8> %src1) {
+; CHECK-LABEL: vmovn8_single_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i16 q0, q0
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn8_single_t:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vmovnt.i16 q1, q1
+; CHECKBE-NEXT:    vrev64.8 q0, q1
+; CHECKBE-NEXT:    bx lr
+entry:
+  %out = shufflevector <16 x i8> %src1, <16 x i8> undef, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
   ret <16 x i8> %out
 }

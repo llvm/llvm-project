@@ -190,6 +190,12 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   CC1Args.push_back(DriverArgs.MakeArgStringRef(GpuArch));
   CC1Args.push_back("-fcuda-is-device");
   CC1Args.push_back("-emit-llvm-bc");
+
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
+    return;
+  std::string BitcodeSuffix = "amdgcn-" + GpuArch.str();
+  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+                     getTriple());
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(

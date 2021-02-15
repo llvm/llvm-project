@@ -214,11 +214,7 @@ define i32 @test_struct_load4(%struct.ST4* nocapture readonly %S) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX5:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -865,16 +861,8 @@ define void @int_float_struct(%struct.IntFloat* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP22:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX6:%.*]] = add <4 x i32> [[TMP3]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <4 x i32> [[BIN_RDX6]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[BIN_RDX6]], [[RDX_SHUF7]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[BIN_RDX8]], i32 0
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP4]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP4]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1061,11 +1049,7 @@ define i32 @PR27626_1(%pair.i32 *%p, i64 %n) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP26:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP17]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP17]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i32> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP17]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1259,11 +1243,7 @@ define i32 @PR27626_3(%pair.i32 *%p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP30:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP20]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP20]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP20]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]

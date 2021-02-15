@@ -28,8 +28,8 @@ late3:
 # CHECK-NEXT: EntrySize: 16
 # CHECK-NEXT: SectionData (
 # CHECK-NEXT:   0000: 02000000 05000000 20000000 00000000
-# CHECK-NEXT:   0010: 06000000 02000000 0B000000 00000000
-# CHECK-NEXT:   0020: 07000000 03000000 14000000 00000000
+# CHECK-NEXT:   0010: 07000000 02000000 0B000000 00000000
+# CHECK-NEXT:   0020: 06000000 03000000 14000000 00000000
 # CHECK-NEXT:   0030: 01000000 05000000 2A000000 00000000
 # CHECK-NEXT: )
 
@@ -62,13 +62,6 @@ late3:
 # CHECK-NEXT: Type:
 # CHECK-NEXT: Other:
 # CHECK-NEXT: Section: Undefined
-# CHECK:      Name: freq
-# CHECK-NEXT: Value:
-# CHECK-NEXT: Size:
-# CHECK-NEXT: Binding: Weak
-# CHECK-NEXT: Type:
-# CHECK-NEXT: Other:
-# CHECK-NEXT: Section: Undefined
 # CHECK:      Name: late
 # CHECK-NEXT: Value:
 # CHECK-NEXT: Size:
@@ -76,6 +69,13 @@ late3:
 # CHECK-NEXT: Type:
 # CHECK-NEXT: Other:
 # CHECK-NEXT: Section: .test
+# CHECK:      Name: freq
+# CHECK-NEXT: Value:
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Binding: Weak
+# CHECK-NEXT: Type:
+# CHECK-NEXT: Other:
+# CHECK-NEXT: Section: Undefined
 # CHECK:      CGProfile [
 # CHECK-NEXT:   CGProfileEntry {
 # CHECK-NEXT:     From: a

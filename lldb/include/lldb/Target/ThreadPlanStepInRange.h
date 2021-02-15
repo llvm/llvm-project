@@ -22,7 +22,7 @@ class ThreadPlanStepInRange : public ThreadPlanStepRange,
 public:
   ThreadPlanStepInRange(Thread &thread, const AddressRange &range,
                         const SymbolContext &addr_context,
-                        lldb::RunMode stop_others,
+                        const char *step_into_target, lldb::RunMode stop_others,
                         LazyBool step_in_avoids_code_without_debug_info,
                         LazyBool step_out_avoids_code_without_debug_info);
 
@@ -33,10 +33,6 @@ public:
   bool ShouldStop(Event *event_ptr) override;
 
   void SetAvoidRegexp(const char *name);
-
-  void SetStepInTarget(const char *target) {
-    m_step_into_target.SetCString(target);
-  }
 
   static void SetDefaultFlagValue(uint32_t new_value);
 

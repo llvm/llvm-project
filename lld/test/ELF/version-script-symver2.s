@@ -10,12 +10,12 @@
 # CHECK-NEXT:     Name:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Version: 3
-# CHECK-NEXT:     Name: foo@@VER2
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Version: 2
 # CHECK-NEXT:     Name: foo@VER1
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Version: 3
+# CHECK-NEXT:     Name: foo@@VER2
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

@@ -18,9 +18,9 @@ d1:
 f2:
 	nop
 
-// CHECK-LABEL: Name: d1
-// CHECK:       Other: 0
 // CHECK-LABEL: Name: f1
 // CHECK:       Other [ (0x80)
+// CHECK-LABEL: Name: d1
+// CHECK:       Other: 0
 // CHECK-LABEL: Name: f2
 // CHECK:       Other: 0

@@ -1163,21 +1163,21 @@ foreach aQual = ["RO", "WO", "RW"] in {
                    Image2dArrayDepth] in {
     foreach name = ["get_image_width", "get_image_channel_data_type",
                     "get_image_channel_order"] in {
-      def : Builtin<name, [Int, ImageType<imgTy, aQual>]>;
+      def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
     }
   }
   foreach imgTy = [Image2d, Image3d, Image2dArray, Image2dDepth,
                    Image2dArrayDepth] in {
-    def : Builtin<"get_image_height", [Int, ImageType<imgTy, aQual>]>;
+    def : Builtin<"get_image_height", [Int, ImageType<imgTy, aQual>], Attr.Const>;
   }
-  def : Builtin<"get_image_depth", [Int, ImageType<Image3d, aQual>]>;
+  def : Builtin<"get_image_depth", [Int, ImageType<Image3d, aQual>], Attr.Const>;
   foreach imgTy = [Image2d, Image2dArray, Image2dDepth,
                    Image2dArrayDepth] in {
-    def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>]>;
+    def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
   }
-  def : Builtin<"get_image_dim", [VectorType<Int, 4>, ImageType<Image3d, aQual>]>;
+  def : Builtin<"get_image_dim", [VectorType<Int, 4>, ImageType<Image3d, aQual>], Attr.Const>;
   foreach imgTy = [Image1dArray, Image2dArray, Image2dArrayDepth] in {
-    def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>]>;
+    def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
   }
 }
 

@@ -48,21 +48,21 @@ func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.GLSL.Ceil %{{.*}}: f32
   %1 = ceilf %arg0 : f32
   // CHECK: spv.GLSL.Cos %{{.*}}: f32
-  %2 = cos %arg0 : f32
+  %2 = math.cos %arg0 : f32
   // CHECK: spv.GLSL.Exp %{{.*}}: f32
-  %3 = exp %arg0 : f32
+  %3 = math.exp %arg0 : f32
   // CHECK: spv.GLSL.Log %{{.*}}: f32
-  %4 = log %arg0 : f32
+  %4 = math.log %arg0 : f32
   // CHECK: spv.FNegate %{{.*}}: f32
   %5 = negf %arg0 : f32
   // CHECK: spv.GLSL.InverseSqrt %{{.*}}: f32
-  %6 = rsqrt %arg0 : f32
+  %6 = math.rsqrt %arg0 : f32
   // CHECK: spv.GLSL.Sqrt %{{.*}}: f32
-  %7 = sqrt %arg0 : f32
+  %7 = math.sqrt %arg0 : f32
   // CHECK: spv.GLSL.Tanh %{{.*}}: f32
-  %8 = tanh %arg0 : f32
+  %8 = math.tanh %arg0 : f32
   // CHECK: spv.GLSL.Sin %{{.*}}: f32
-  %9 = sin %arg0 : f32
+  %9 = math.sin %arg0 : f32
   // CHECK: spv.GLSL.Floor %{{.*}}: f32
   %10 = floorf %arg0 : f32
   return
@@ -673,6 +673,20 @@ spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
   %1 = spv.constant dense<1.000000e+00> : vector<4xf64>
   %2 = spv.Select %arg0, %1, %0 : vector<4xi1>, vector<4xf64>
   spv.ReturnValue %2 : vector<4xf64>
+}
+
+// CHECK-LABEL: @sexti1
+func @sexti1(%arg0: i16) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i16 to i64
+  %0 = std.sexti %arg0 : i16 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @sexti2
+func @sexti2(%arg0 : i32) -> i64 {
+  // CHECK: spv.SConvert %{{.*}} : i32 to i64
+  %0 = std.sexti %arg0 : i32 to i64
+  return %0 : i64
 }
 
 // CHECK-LABEL: @zexti1

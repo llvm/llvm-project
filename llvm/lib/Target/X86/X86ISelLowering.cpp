@@ -49148,32 +49148,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
-  // Try to find umax(a,b) - b or a - umin(a,b) patterns
-  // they may be converted to subus(a,b).
-  // TODO: Need to add IR canonicalization for this code.
-  if (Op0.getOpcode() == ISD::UMAX) {
-    SubusRHS = Op1;
-    SDValue MaxLHS = Op0.getOperand(0);
-    SDValue MaxRHS = Op0.getOperand(1);
-    if (MaxLHS == Op1)
-      SubusLHS = MaxRHS;
-    else if (MaxRHS == Op1)
-      SubusLHS = MaxLHS;
-    else
-      return SDValue();
-  } else if (Op1.getOpcode() == ISD::UMIN) {
-    SubusLHS = Op0;
-    SDValue MinLHS = Op1.getOperand(0);
-    SDValue MinRHS = Op1.getOperand(1);
-    if (MinLHS == Op0)
-      SubusRHS = MinRHS;
-    else if (MinRHS == Op0)
-      SubusRHS = MinLHS;
-    else
-      return SDValue();
-  } else if (Op1.getOpcode() == ISD::TRUNCATE &&
-             Op1.getOperand(0).getOpcode() == ISD::UMIN &&
-             (EltVT == MVT::i8 || EltVT == MVT::i16)) {
+  if (Op1.getOpcode() == ISD::TRUNCATE &&
+      Op1.getOperand(0).getOpcode() == ISD::UMIN &&
+      (EltVT == MVT::i8 || EltVT == MVT::i16)) {
     // Special case where the UMIN has been truncated. Try to push the truncate
     // further up. This is similar to the i32/i64 special processing.
     SubusLHS = Op0;

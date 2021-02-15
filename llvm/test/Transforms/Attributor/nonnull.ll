@@ -549,8 +549,8 @@ bb:
 ; TEST 15
 define void @f15(i8* %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@f15
-; CHECK-SAME: (i8* nonnull dereferenceable(4) [[ARG:%.*]]) {
-; CHECK-NEXT:    tail call void @use1(i8* nonnull dereferenceable(4) [[ARG]])
+; CHECK-SAME: (i8* noundef nonnull dereferenceable(4) [[ARG:%.*]]) {
+; CHECK-NEXT:    tail call void @use1(i8* noundef nonnull dereferenceable(4) [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -884,7 +884,7 @@ f:
 
 define i8 @parent6(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* [[B:%.*]]) {
+; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, i8* [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]
@@ -1080,14 +1080,14 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
 define internal void @control(i32* dereferenceable(4) %a) {
 ; NOT_CGSCC_OPM: Function Attrs: nounwind
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@control
-; NOT_CGSCC_OPM-SAME: (i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) [[ATTR4]] {
-; NOT_CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR4]]
+; NOT_CGSCC_OPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) [[ATTR4]] {
+; NOT_CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR4]]
 ; NOT_CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@control
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) [[ATTR5]] {
-; IS__CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR5]]
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) [[ATTR5]] {
+; IS__CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR5]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
@@ -1117,17 +1117,17 @@ define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
 }
 define void @make_live(i32* nonnull dereferenceable(8) %a) {
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@make_live
-; NOT_CGSCC_OPM-SAME: (i32* nonnull align 16 dereferenceable(8) [[A:%.*]]) {
-; NOT_CGSCC_OPM-NEXT:    call void @naked(i32* nonnull align 16 dereferenceable(8) [[A]])
-; NOT_CGSCC_OPM-NEXT:    call void @control(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR4]]
-; NOT_CGSCC_OPM-NEXT:    call void @optnone(i32* nonnull align 16 dereferenceable(8) [[A]])
+; NOT_CGSCC_OPM-SAME: (i32* noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
+; NOT_CGSCC_OPM-NEXT:    call void @naked(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; NOT_CGSCC_OPM-NEXT:    call void @control(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR4]]
+; NOT_CGSCC_OPM-NEXT:    call void @optnone(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
 ; NOT_CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@make_live
-; IS__CGSCC_OPM-SAME: (i32* nonnull align 16 dereferenceable(8) [[A:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    call void @naked(i32* nonnull align 16 dereferenceable(8) [[A]])
-; IS__CGSCC_OPM-NEXT:    call void @control(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR5]]
-; IS__CGSCC_OPM-NEXT:    call void @optnone(i32* nonnull align 16 dereferenceable(8) [[A]])
+; IS__CGSCC_OPM-SAME: (i32* noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    call void @naked(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
+; IS__CGSCC_OPM-NEXT:    call void @control(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) [[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    call void @optnone(i32* noundef nonnull align 16 dereferenceable(8) [[A]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
   call void @naked(i32* nonnull dereferenceable(8) align 16 %a)

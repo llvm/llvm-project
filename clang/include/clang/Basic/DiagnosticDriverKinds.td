@@ -261,7 +261,7 @@ def err_drv_omp_host_target_not_supported : Error<
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
 def err_drv_omp_offload_target_missingbcruntime : Error<
-  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-nvptx-bc-path to specify nvptx bitcode library.">;
+  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-%1-bc-path to specify %1 bitcode library.">;
 def err_drv_omp_offload_target_bcruntime_not_found : Error<"Bitcode library '%0' does not exist.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,

@@ -1325,6 +1325,17 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     // replaced by a multiplication.
     if (match(Op1, m_FDiv(m_SpecificFP(1.0), m_Value(Y))))
       return BinaryOperator::CreateFMulFMF(Y, Op0, &I);
+
+    // Negate the exponent of pow to fold division-by-pow() into multiply:
+    // Z / pow(X, Y) --> Z * pow(X, -Y)
+    // In the general case, this creates an extra instruction, but fmul allows
+    // for better canonicalization and optimization than fdiv.
+    if (match(Op1,
+              m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))))) {
+      Value *NegY = Builder.CreateFNegFMF(Y, &I);
+      Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, NegY, &I);
+      return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+    }
   }
 
   if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {

@@ -232,11 +232,9 @@ bool HardwareLoops::runOnFunction(Function &F) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   M = F.getParent();
 
-  for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I) {
-    Loop *L = *I;
+  for (Loop *L : *LI)
     if (L->isOutermost())
       TryConvertLoop(L);
-  }
 
   return MadeChange;
 }

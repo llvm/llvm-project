@@ -138,7 +138,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos != std::string::npos) {
     framework_pos += strlen("LLDB.framework");
-#if TARGET_OS_EMBEDDED
+#if TARGET_OS_IPHONE
     // Shallow bundle
     raw_path.resize(framework_pos);
 #else

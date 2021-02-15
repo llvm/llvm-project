@@ -332,6 +332,21 @@ class VectorType;
 
   } // end namespace ARMISD
 
+  namespace ARM {
+  /// Possible values of current rounding mode, which is specified in bits
+  /// 23:22 of FPSCR.
+  enum Rounding {
+    RN = 0,    // Round to Nearest
+    RP = 1,    // Round towards Plus infinity
+    RM = 2,    // Round towards Minus infinity
+    RZ = 3,    // Round towards Zero
+    rmMask = 3 // Bit mask selecting rounding mode
+  };
+
+  // Bit position of rounding mode bits in FPSCR.
+  const unsigned RoundingBitsPos = 22;
+  } // namespace ARM
+
   /// Define some predicates that are used for node matching.
   namespace ARM {
 
@@ -767,6 +782,7 @@ class VectorType;
     SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantFP(SDValue Op, SelectionDAG &DAG,
                             const ARMSubtarget *ST) const;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,

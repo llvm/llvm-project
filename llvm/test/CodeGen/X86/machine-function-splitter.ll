@@ -150,12 +150,12 @@ define void @foo6(i1 zeroext %0) nounwind section "nosplit" !prof !14 {
 }
 
 define i32 @foo7(i1 zeroext %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !14 {
-;; Check that cold ehpads are not split out.
+;; Check that a single cold ehpad is split out.
 ; MFS-DEFAULTS-LABEL: foo7
 ; MFS-DEFAULTS:       .section        .text.split.foo7,"ax",@progbits
 ; MFS-DEFAULTS-NEXT:  foo7.cold:
-; MFS-DEFAULTS-NOT:   callq   _Unwind_Resume
 ; MFS-DEFAULTS:       callq   baz
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
 entry:
   invoke void @_Z1fv()
           to label %try.cont unwind label %lpad
@@ -180,6 +180,47 @@ try.cont:
 6:                                                ; preds = %4, %2
   %7 = tail call i32 @qux()
   ret i32 %7
+}
+
+define i32 @foo8(i1 zeroext %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !14 {
+;; Check that all ehpads are treated as hot if one of them is hot.
+; MFS-DEFAULTS-LABEL: foo8
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
+; MFS-DEFAULTS:       .section        .text.split.foo8,"ax",@progbits
+; MFS-DEFAULTS-NEXT:  foo8.cold:
+; MFS-DEFAULTS:       callq   baz
+entry:
+  invoke void @_Z1fv()
+          to label %try.cont unwind label %lpad1
+
+lpad1:
+  %1 = landingpad { i8*, i32 }
+          cleanup
+          catch i8* bitcast (i8** @_ZTIi to i8*)
+  resume { i8*, i32 } %1
+
+try.cont:
+  br i1 %0, label %hot, label %cold, !prof !17
+
+hot:
+  %2 = call i32 @bar()
+  invoke void @_Z1fv()
+          to label %exit unwind label %lpad2, !prof !21
+
+lpad2:
+  %3 = landingpad { i8*, i32 }
+          cleanup
+          catch i8* bitcast (i8** @_ZTIi to i8*)
+  resume { i8*, i32 } %3
+
+cold:
+  %4 = call i32 @baz()
+  br label %exit
+
+exit:
+  %5 = tail call i32 @qux()
+  ret i32 %5
 }
 
 declare i32 @bar()

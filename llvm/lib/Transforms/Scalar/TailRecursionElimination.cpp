@@ -247,7 +247,10 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
           isa<PseudoProbeInst>(&I))
         continue;
 
-      bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();
+      // Special-case operand bundle "clang.arc.attachedcall".
+      bool IsNoTail =
+          CI->isNoTailCall() || CI->hasOperandBundlesOtherThan(
+                                    LLVMContext::OB_clang_arc_attachedcall);
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed

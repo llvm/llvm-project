@@ -37,8 +37,6 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector,
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
 
-def RVVBaseAddr : ComplexPattern<iPTR, 1, "SelectRVVBaseAddr">;
-
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
@@ -60,11 +58,11 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
-  def : Pat<(type (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1, avl, sew)>;
+  def : Pat<(type (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1, avl, sew)>;
   // Store
-  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
-            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1, avl, sew)>;
+  def : Pat<(store type:$rs2, BaseAddr:$rs1),
+            (store_instr reg_class:$rs2, BaseAddr:$rs1, avl, sew)>;
 }
 
 multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
@@ -84,11 +82,11 @@ multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
           !eq(vlmul.value, V_M8.value): VS8R_V);
 
   // Load
-  def : Pat<(type (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1)>;
+  def : Pat<(type (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1)>;
   // Store
-  def : Pat<(store type:$rs2, RVVBaseAddr:$rs1),
-            (store_instr reg_class:$rs2, RVVBaseAddr:$rs1)>;
+  def : Pat<(store type:$rs2, BaseAddr:$rs1),
+            (store_instr reg_class:$rs2, BaseAddr:$rs1)>;
 }
 
 multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
@@ -96,11 +94,11 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
   defvar load_instr = !cast<Instruction>("PseudoVLE1_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSE1_V_"#m.BX);
   // Load
-  def : Pat<(m.Mask (load RVVBaseAddr:$rs1)),
-            (load_instr RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  def : Pat<(m.Mask (load BaseAddr:$rs1)),
+            (load_instr BaseAddr:$rs1, m.AVL, m.SEW)>;
   // Store
-  def : Pat<(store m.Mask:$rs2, RVVBaseAddr:$rs1),
-            (store_instr VR:$rs2, RVVBaseAddr:$rs1, m.AVL, m.SEW)>;
+  def : Pat<(store m.Mask:$rs2, BaseAddr:$rs1),
+            (store_instr VR:$rs2, BaseAddr:$rs1, m.AVL, m.SEW)>;
 }
 
 class VPatBinarySDNode_VV<SDNode vop,
@@ -126,7 +124,6 @@ class VPatBinarySDNode_XI<SDNode vop,
                           string suffix,
                           ValueType result_type,
                           ValueType vop_type,
-                          ValueType xop_type,
                           ValueType mask_type,
                           int sew,
                           LMULInfo vlmul,
@@ -150,7 +147,7 @@ multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name>
                               vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
     def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
-                              vti.Vector, vti.Vector, XLenVT, vti.Mask, vti.SEW,
+                              vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
                               SplatPat, GPR>;
   }
@@ -164,11 +161,11 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
                               vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
     def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
-                              vti.Vector, vti.Vector, XLenVT, vti.Mask, vti.SEW,
+                              vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
                               SplatPat, GPR>;
     def : VPatBinarySDNode_XI<vop, instruction_name, "VI",
-                              vti.Vector, vti.Vector, XLenVT, vti.Mask, vti.SEW,
+                              vti.Vector, vti.Vector, vti.Mask, vti.SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
                               !cast<ComplexPattern>(SplatPat#_#ImmType),
                               ImmType>;
@@ -423,11 +420,11 @@ defm "" : VPatBinarySDNode_VV_VX<sub, "PseudoVSUB">;
 // Handle VRSUB specially since it's the only integer binary op with reversed
 // pattern operands
 foreach vti = AllIntegerVectors in {
-  def : Pat<(sub (vti.Vector (SplatPat XLenVT:$rs2)),
+  def : Pat<(sub (vti.Vector (SplatPat GPR:$rs2)),
                  (vti.Vector vti.RegClass:$rs1)),
             (!cast<Instruction>("PseudoVRSUB_VX_"# vti.LMul.MX)
                  vti.RegClass:$rs1, GPR:$rs2, vti.AVL, vti.SEW)>;
-  def : Pat<(sub (vti.Vector (SplatPat_simm5 XLenVT:$rs2)),
+  def : Pat<(sub (vti.Vector (SplatPat_simm5 simm5:$rs2)),
                  (vti.Vector vti.RegClass:$rs1)),
             (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs1, simm5:$rs2, vti.AVL, vti.SEW)>;
@@ -566,6 +563,11 @@ foreach mti = AllMasks in {
   def : Pat<(mti.Mask (or VR:$rs1, (vnot VR:$rs2))),
             (!cast<Instruction>("PseudoVMORNOT_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, mti.AVL, mti.SEW)>;
+
+  // Handle vnot the same as the vnot.mm pseudoinstruction.
+  def : Pat<(mti.Mask (vnot VR:$rs)),
+            (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
+                 VR:$rs, VR:$rs, mti.AVL, mti.SEW)>;
 }
 
 } // Predicates = [HasStdExtV]

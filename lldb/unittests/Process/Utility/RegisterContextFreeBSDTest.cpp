@@ -463,12 +463,11 @@ TEST(RegisterContextFreeBSDTest, mips64) {
 
 #if defined(__powerpc__)
 
-#define EXPECT_GPR_PPC(lldb_reg, fbsd_reg)                                \
-  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_powerpc),                  \
-              ::testing::Pair(offsetof(reg, fbsd_reg),               \
-                              sizeof(reg::fbsd_reg)))
-#define EXPECT_FPU_PPC(lldb_reg, fbsd_reg)                                   \
-  EXPECT_THAT(GetRegParams(reg_ctx, fpr_##lldb_reg##_powerpc),                   \
+#define EXPECT_GPR_PPC(lldb_reg, fbsd_reg)                                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_powerpc),                 \
+              ::testing::Pair(offsetof(reg, fbsd_reg), sizeof(reg::fbsd_reg)))
+#define EXPECT_FPU_PPC(lldb_reg, fbsd_reg)                                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, fpr_##lldb_reg##_powerpc),                 \
               ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
                               sizeof(fpreg::fbsd_reg)))
 

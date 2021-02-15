@@ -130,8 +130,8 @@ else:
 # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
 dexter_regression_test_command = ' '.join(
   # "python3", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
-  ["{}".format(config.python3_executable),
-  "{}".format(dexter_path),
+  ['"{}"'.format(config.python3_executable),
+  '"{}"'.format(dexter_path),
   'test',
   '--fail-lt 1.0 -w',
   dexter_regression_test_builder,

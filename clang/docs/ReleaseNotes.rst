@@ -189,6 +189,9 @@ clang-format
     #include "B/A.h"
     #include "B/a.h"
 
+- ``BasedOnStyle: InheritParentConfig`` allows to use the ``.clang-format`` of
+  the parent directories to overwrite only parts of it.
+
 libclang
 --------
 

@@ -26,10 +26,11 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_powerpc : public NativeRegisterContextFreeBSD {
+class NativeRegisterContextFreeBSD_powerpc
+    : public NativeRegisterContextFreeBSD {
 public:
   NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
-                                   NativeThreadProtocol &native_thread);
+                                       NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

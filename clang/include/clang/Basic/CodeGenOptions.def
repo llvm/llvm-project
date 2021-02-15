@@ -266,6 +266,9 @@ CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
 CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
 
+/// Treat loops as finite: language, always, never.
+ENUM_CODEGENOPT(FiniteLoops, FiniteLoopsKind, 2, FiniteLoopsKind::Language)
+
   /// Attempt to use register sized accesses to bit-fields in structures, when
   /// possible.
 CODEGENOPT(UseRegisterSizedBitfieldAccess , 1, 0)

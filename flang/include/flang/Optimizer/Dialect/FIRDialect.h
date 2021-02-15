@@ -10,12 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_DIALECT_FIRDIALECT_H
-#define OPTIMIZER_DIALECT_FIRDIALECT_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
+#define FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
 
 #include "mlir/IR/Dialect.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/InitAllPasses.h"
 
 namespace fir {
 
@@ -36,47 +34,6 @@ public:
                       mlir::DialectAsmPrinter &p) const override;
 };
 
-/// Register the dialect with the provided registry.
-inline void registerFIRDialects(mlir::DialectRegistry &registry) {
-  // clang-format off
-  registry.insert<mlir::AffineDialect,
-                  mlir::LLVM::LLVMDialect,
-                  mlir::acc::OpenACCDialect,
-                  mlir::omp::OpenMPDialect,
-                  mlir::scf::SCFDialect,
-                  mlir::StandardOpsDialect,
-                  mlir::vector::VectorDialect,
-                  FIROpsDialect>();
-  // clang-format on
-}
-
-/// Register the standard passes we use. This comes from registerAllPasses(),
-/// but is a smaller set since we aren't using many of the passes found there.
-inline void registerGeneralPasses() {
-  mlir::createCanonicalizerPass();
-  mlir::createCSEPass();
-  mlir::createSuperVectorizePass({});
-  mlir::createLoopUnrollPass();
-  mlir::createLoopUnrollAndJamPass();
-  mlir::createSimplifyAffineStructuresPass();
-  mlir::createLoopFusionPass();
-  mlir::createLoopInvariantCodeMotionPass();
-  mlir::createAffineLoopInvariantCodeMotionPass();
-  mlir::createPipelineDataTransferPass();
-  mlir::createLowerAffinePass();
-  mlir::createLoopTilingPass(0);
-  mlir::createLoopCoalescingPass();
-  mlir::createAffineDataCopyGenerationPass(0, 0);
-  mlir::createMemRefDataFlowOptPass();
-  mlir::createStripDebugInfoPass();
-  mlir::createPrintOpStatsPass();
-  mlir::createInlinerPass();
-  mlir::createSymbolDCEPass();
-  mlir::createLocationSnapshotPass({});
-}
-
-inline void registerFIRPasses() { registerGeneralPasses(); }
-
 } // namespace fir
 
-#endif // OPTIMIZER_DIALECT_FIRDIALECT_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H

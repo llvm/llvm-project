@@ -285,13 +285,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.16b, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    uqadd v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i1> @llvm.uadd.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z

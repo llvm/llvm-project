@@ -37,9 +37,7 @@ set(FLANG_TEST_DEPENDS
   f18 FileCheck count not module_files
 )
 
-if (LINK_WITH_FIR)
-  list(APPEND FLANG_TEST_DEPENDS tco)
-endif()
+list(APPEND FLANG_TEST_DEPENDS tco)
 
 if (FLANG_BUILD_NEW_DRIVER)
   list(APPEND FLANG_TEST_DEPENDS flang-new)

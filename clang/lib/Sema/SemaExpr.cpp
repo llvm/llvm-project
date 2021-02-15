@@ -16138,7 +16138,8 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     if (Result)
       *Result = E->EvaluateKnownConstIntCheckOverflow(Context);
     if (!isa<ConstantExpr>(E))
-      E = ConstantExpr::Create(Context, E);
+      E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
+                 : ConstantExpr::Create(Context, E);
     return E;
   }
 

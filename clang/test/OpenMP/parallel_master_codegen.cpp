@@ -492,7 +492,7 @@ void parallel_master_reduction() {
 
 // case 2:
 // CK6:       [[ELEVEN:%.+]] = load i32, i32* [[G_1]]
-// CK6:       [[TWELVE:%.+]] = atomicrmw add i32* [[ZERO]], i32 [[ELEVEN]] monotonic
+// CK6:       [[TWELVE:%.+]] = atomicrmw add i32* [[ZERO]], i32 [[ELEVEN]] monotonic, align 4
 
 // CK6:       define internal void [[RED_FUNC]](i8* [[ZERO]], i8* [[ONE]])
 // CK6:       ret void
