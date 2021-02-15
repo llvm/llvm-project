@@ -67,7 +67,8 @@ public:
                              TTI::PeelingPreferences &PP);
 
   /// Bias LSR towards creating post-increment opportunities.
-  bool shouldFavorPostInc() const;
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
   // L1 cache prefetch.
   unsigned getPrefetchDistance() const override;
