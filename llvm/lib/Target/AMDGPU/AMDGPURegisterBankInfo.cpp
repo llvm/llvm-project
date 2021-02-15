@@ -4194,11 +4194,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, WaveSize);
       break;
     }
-    case Intrinsic::amdgcn_live_mask: {
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
-      break;
-    }
-    case Intrinsic::amdgcn_wqm_demote:
     case Intrinsic::amdgcn_kill: {
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
       break;

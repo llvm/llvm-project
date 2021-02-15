@@ -72,7 +72,6 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
-  SmallSet<MachineBasicBlock *, 4> KillBlocks;
 
   const TargetRegisterClass *BoolRC = nullptr;
   unsigned AndOpc;
@@ -84,8 +83,6 @@ private:
   unsigned OrTermrOpc;
   unsigned OrSaveExecOpc;
   unsigned Exec;
-
-  bool hasKill(const MachineBasicBlock *Begin, const MachineBasicBlock *End);
 
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
@@ -164,8 +161,8 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
-bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
-                                 const MachineBasicBlock *End) {
+static bool hasKill(const MachineBasicBlock *Begin,
+                    const MachineBasicBlock *End, const SIInstrInfo *TII) {
   DenseSet<const MachineBasicBlock*> Visited;
   SmallVector<MachineBasicBlock *, 4> Worklist(Begin->successors());
 
@@ -174,8 +171,9 @@ bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
 
     if (MBB == End || !Visited.insert(MBB).second)
       continue;
-    if (KillBlocks.contains(MBB))
-      return true;
+    for (auto &Term : MBB->terminators())
+      if (TII->isKillTerminator(Term.getOpcode()))
+        return true;
 
     Worklist.append(MBB->succ_begin(), MBB->succ_end());
   }
@@ -215,7 +213,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     // Check for SI_KILL_*_TERMINATOR on path from if to endif.
     // if there is any such terminator simplifications are not safe.
     auto UseMI = MRI->use_instr_nodbg_begin(SaveExecReg);
-    SimpleIf = !hasKill(MI.getParent(), UseMI->getParent());
+    SimpleIf = !hasKill(MI.getParent(), UseMI->getParent(), TII);
   }
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
@@ -801,28 +799,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     Exec = AMDGPU::EXEC;
   }
 
-  // Compute set of blocks with kills
-  const bool CanDemote =
-      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS;
-  for (auto &MBB : MF) {
-    bool IsKillBlock = false;
-    for (auto &Term : MBB.terminators()) {
-      if (TII->isKillTerminator(Term.getOpcode())) {
-        KillBlocks.insert(&MBB);
-        IsKillBlock = true;
-        break;
-      }
-    }
-    if (CanDemote && !IsKillBlock) {
-      for (auto &MI : MBB) {
-        if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
-          KillBlocks.insert(&MBB);
-          break;
-        }
-      }
-    }
-  }
-
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -872,7 +848,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
   LoweredEndCf.clear();
   LoweredIf.clear();
-  KillBlocks.clear();
 
   return true;
 }

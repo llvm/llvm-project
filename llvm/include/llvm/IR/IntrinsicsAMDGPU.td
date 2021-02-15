@@ -1349,17 +1349,12 @@ def int_amdgcn_interp_p2_f16 :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
-// Deprecated: use llvm.amdgcn.live.mask instead.
+// Pixel shaders only: whether the current pixel is live (i.e. not a helper
+// invocation for derivative computation).
 def int_amdgcn_ps_live : Intrinsic <
   [llvm_i1_ty],
   [],
   [IntrNoMem, IntrWillReturn]>;
-
-// Query currently live lanes.
-// Returns true if lane is live (and not a helper lane).
-def int_amdgcn_live_mask : Intrinsic <[llvm_i1_ty],
-  [], [IntrReadMem, IntrInaccessibleMemOnly]
->;
 
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
@@ -1588,11 +1583,6 @@ def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
 
 def int_amdgcn_endpgm : GCCBuiltin<"__builtin_amdgcn_endpgm">,
   Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrNoMem, IntrHasSideEffects]
->;
-
-// If false, mark all active lanes as helper lanes until the end of program.
-def int_amdgcn_wqm_demote : Intrinsic<[],
-  [llvm_i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly]
 >;
 
 // Copies the active channels of the source value to the destination value,
