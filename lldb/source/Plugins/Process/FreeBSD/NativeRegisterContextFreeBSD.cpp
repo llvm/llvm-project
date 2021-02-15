@@ -8,7 +8,7 @@
 
 #include "NativeRegisterContextFreeBSD.h"
 
-#include "Plugins/Process/FreeBSDRemote/NativeProcessFreeBSD.h"
+#include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 

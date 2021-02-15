@@ -20,7 +20,7 @@
 
 #include <array>
 
-#include "Plugins/Process/FreeBSDRemote/NativeRegisterContextFreeBSD.h"
+#include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
