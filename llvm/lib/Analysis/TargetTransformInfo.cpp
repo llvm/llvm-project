@@ -409,10 +409,12 @@ bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
   return TTIImpl->canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
 }
 
-TTI::AddressingModeKind
-TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
-                                                ScalarEvolution *SE) const {
-  return TTIImpl->getPreferredAddressingMode(L, SE);
+bool TargetTransformInfo::shouldFavorPostInc() const {
+  return TTIImpl->shouldFavorPostInc();
+}
+
+bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
+  return TTIImpl->shouldFavorBackedgeIndex(L);
 }
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType,
