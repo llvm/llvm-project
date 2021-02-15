@@ -167,6 +167,16 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   }
   if (DynamicIdx)
     AddIndex(DynamicIdx.get());
+
+  if (Opts.Modules) {
+    Module::Facilities F{
+        this->WorkScheduler,
+        this->Index,
+        this->TFS,
+    };
+    for (auto &Mod : *Opts.Modules)
+      Mod.initialize(F);
+  }
 }
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
