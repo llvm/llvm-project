@@ -441,7 +441,7 @@ static bool getMachInfo(unsigned Mach, std::string &Processor,
 static std::string convertOldTargetNameToNew(const std::string &OldName,
                                              bool IsFinalizer,
                                              uint32_t EFlags) {
-  assert(!old_name.empty() && "Expecting non-empty old name");
+  assert(!OldName.empty() && "Expecting non-empty old name");
 
   unsigned Mach = 0;
   if (OldName == "AMD:AMDGPU:6:0:0") {
