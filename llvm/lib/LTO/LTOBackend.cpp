@@ -355,7 +355,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
-  if (Conf.UseNewPM) {
+  if (Conf.UseNewPM || !Conf.OptPipeline.empty()) {
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
                    ImportSummary);
   } else {
