@@ -33,7 +33,7 @@ jobs:
       uses: llvm/actions/install-ninja@main
     - uses: actions/checkout@v1
       with:
-        fetch-depth: 1
+        fetch-depth: 250
     - name: Test llvm
       uses: llvm/actions/build-test-llvm-project@main
       with:
@@ -52,7 +52,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v1
         with:
-          fetch-depth: 1
+          fetch-depth: 250
 
       - name: Get LLVM version
         id: version

@@ -38,7 +38,7 @@ jobs:
       uses: llvm/actions/install-ninja@main
     - uses: actions/checkout@v1
       with:
-        fetch-depth: 1
+        fetch-depth: 250
     - name: Build clang
       uses: llvm/actions/build-test-llvm-project@main
       with:

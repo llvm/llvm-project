@@ -28,7 +28,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v1
         with:
-          fetch-depth: 1
+          fetch-depth: 250
 
       - name: Get LLVM version
         id: version
