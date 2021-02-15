@@ -223,7 +223,7 @@ CompileFlags:
 
 TEST_F(LSPTest, ModulesTest) {
   class MathModule : public Module {
-    void initializeLSP(LSPBinder &Bind, const ClientCapabilities &ClientCaps,
+    void initializeLSP(LSPBinder &Bind, const llvm::json::Object &ClientCaps,
                        llvm::json::Object &ServerCaps) override {
       Bind.notification("add", this, &MathModule::add);
       Bind.method("get", this, &MathModule::get);

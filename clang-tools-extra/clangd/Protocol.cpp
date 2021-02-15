@@ -430,6 +430,8 @@ bool fromJSON(const llvm::json::Value &Params, InitializeParams &R,
   O.map("rootUri", R.rootUri);
   O.map("rootPath", R.rootPath);
   O.map("capabilities", R.capabilities);
+  if (auto *RawCaps = Params.getAsObject()->getObject("capabilities"))
+    R.rawCapabilities = *RawCaps;
   O.map("trace", R.trace);
   O.map("initializationOptions", R.initializationOptions);
   return true;
