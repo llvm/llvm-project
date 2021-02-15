@@ -78,6 +78,7 @@ unittest("ClangdTests") {
     "IndexActionTests.cpp",
     "IndexTests.cpp",
     "JSONTransportTests.cpp",
+    "LSPBinderTests.cpp",
     "LSPClient.cpp",
     "LoggerTests.cpp",
     "ModulesTests.cpp",
