@@ -32,7 +32,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR.h"
-#include "mlir/Target/NVVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -121,7 +121,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   kernelPm.addPass(createStripDebugInfoPass());
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
-      translateModuleToNVVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
+      translateModuleToLLVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
       "sm_35", "+ptx60", gpuBinaryAnnotation));
   auto &funcPm = pm.nest<FuncOp>();
   funcPm.addPass(createGpuAsyncRegionPass());
@@ -156,6 +156,8 @@ int main(int argc, char **argv) {
   registry.insert<mlir::LLVM::LLVMDialect, mlir::NVVM::NVVMDialect,
                   mlir::async::AsyncDialect, mlir::gpu::GPUDialect,
                   mlir::StandardOpsDialect>();
+  registry.addDialectInterface<NVVM::NVVMDialect,
+                               NVVMDialectLLVMIRTranslationInterface>();
   mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);

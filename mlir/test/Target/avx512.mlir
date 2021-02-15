@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-diagnostics %s | mlir-opt | mlir-translate --avx512-mlir-to-llvmir | FileCheck %s
+// RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: define <16 x float> @LLVM_x86_avx512_mask_ps_512
 llvm.func @LLVM_x86_avx512_mask_ps_512(%a: vector<16 x f32>,

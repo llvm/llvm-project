@@ -1,4 +1,4 @@
-//===- OpenMPToLLVMIRTranslation.h - OpenMP Dialect to LLVM IR --*- C++ -*-===//
+//===- LLVMArmSVEToLLVMIRTranslation.h - LLVMArmSVE to LLVM IR --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the dialect interface for translating the OpenMP dialect
-// to LLVM IR.
+// This file implements the dialect interface for translating the LLVMArmSVE
+// dialect to LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
-#define MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
+#ifndef MLIR_TARGET_LLVMIR_DIALECT_LLVMARMSVE_LLVMARMSVETOLLVMIRTRANSLATION_H
+#define MLIR_TARGET_LLVMIR_DIALECT_LLVMARMSVE_LLVMARMSVETOLLVMIRTRANSLATION_H
 
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 
 namespace mlir {
 
 /// Implementation of the dialect interface that converts operations belonging
-/// to the OpenMP dialect to LLVM IR.
-class OpenMPDialectLLVMIRTranslationInterface
+/// to the LLVMArmSVE dialect to LLVM IR.
+class LLVMArmSVEDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
@@ -34,4 +34,4 @@ public:
 
 } // namespace mlir
 
-#endif // MLIR_TARGET_LLVMIR_DIALECT_OPENMP_OPENMPTOLLVMIRTRANSLATION_H
+#endif // MLIR_TARGET_LLVMIR_DIALECT_LLVMARMSVE_LLVMARMSVETOLLVMIRTRANSLATION_H

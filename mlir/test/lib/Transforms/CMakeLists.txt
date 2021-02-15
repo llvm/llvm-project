@@ -46,23 +46,24 @@ add_mlir_library(MLIRTestTransforms
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
+  MLIRGPU
   MLIRGPUToGPURuntimeTransforms
   MLIRLinalg
   MLIRLinalgTransforms
   MLIRMathTransforms
   MLIRNVVMIR
-  MLIRSCF
-  MLIRSCFTransforms
-  MLIRGPU
+  MLIRNVVMToLLVMIRTranslation
   MLIRPass
   MLIRROCDLIR
+  MLIRROCDLToLLVMIRTranslation
+  MLIRSCF
+  MLIRSCFTransforms
   MLIRStandardOpsTransforms
-  MLIRTargetNVVMIR
-  MLIRTargetROCDLIR
+  MLIRTargetLLVMIR
   MLIRTestDialect
   MLIRTransformUtils
-  MLIRVectorToSCF
   MLIRVector
+  MLIRVectorToSCF
   )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test)

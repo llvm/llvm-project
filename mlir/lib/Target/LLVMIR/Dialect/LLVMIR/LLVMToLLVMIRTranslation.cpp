@@ -23,6 +23,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using mlir::LLVM::detail::getLLVMConstant;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
@@ -166,27 +167,6 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
   return ret;
 }
 
-namespace {
-/// Dispatcher functional object targeting different overloads of
-/// ModuleTranslation::mapValue.
-// TODO: this is only necessary for compatibility with the code emitted from
-// ODS, remove when ODS is updated (after all dialects have migrated to the new
-// translation mechanism).
-struct MapValueDispatcher {
-  explicit MapValueDispatcher(ModuleTranslation &mt) : moduleTranslation(mt) {}
-
-  llvm::Value *&operator()(mlir::Value v) {
-    return moduleTranslation.mapValue(v);
-  }
-
-  void operator()(mlir::Value m, llvm::Value *l) {
-    moduleTranslation.mapValue(m, l);
-  }
-
-  LLVM::ModuleTranslation &moduleTranslation;
-};
-} // end namespace
-
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -201,21 +181,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::IRBuilder<>::FastMathFlagGuard fmfGuard(builder);
   if (auto fmf = dyn_cast<FastmathFlagsInterface>(opInst))
     builder.setFastMathFlags(getFastmathFlags(fmf));
-
-  // TODO: these are necessary for compatibility with the code emitted from ODS,
-  // remove them when ODS is updated (after all dialects have migrated to the
-  // new translation mechanism).
-  MapValueDispatcher mapValue(moduleTranslation);
-  auto lookupValue = [&](mlir::Value v) {
-    return moduleTranslation.lookupValue(v);
-  };
-  auto convertType = [&](Type ty) { return moduleTranslation.convertType(ty); };
-  auto lookupValues = [&](ValueRange vs) {
-    return moduleTranslation.lookupValues(vs);
-  };
-  auto getLLVMConstant = [&](llvm::Type *ty, Attribute attr, Location loc) {
-    return moduleTranslation.getLLVMConstant(ty, attr, loc);
-  };
 
 #include "mlir/Dialect/LLVMIR/LLVMConversions.inc"
 
@@ -243,7 +208,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   if (isa<LLVM::CallOp>(opInst)) {
     llvm::Value *result = convertCall(opInst);
     if (opInst.getNumResults() != 0) {
-      mapValue(opInst.getResult(0), result);
+      moduleTranslation.mapValue(opInst.getResult(0), result);
       return success();
     }
     // Check that LLVM call returns void for 0-result functions.
@@ -269,23 +234,25 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::InlineAsm *inlineAsmInst =
         inlineAsmOp.asm_dialect().hasValue()
             ? llvm::InlineAsm::get(
-                  static_cast<llvm::FunctionType *>(convertType(ft)),
+                  static_cast<llvm::FunctionType *>(
+                      moduleTranslation.convertType(ft)),
                   inlineAsmOp.asm_string(), inlineAsmOp.constraints(),
                   inlineAsmOp.has_side_effects(), inlineAsmOp.is_align_stack(),
                   convertAsmDialectToLLVM(*inlineAsmOp.asm_dialect()))
             : llvm::InlineAsm::get(
-                  static_cast<llvm::FunctionType *>(convertType(ft)),
+                  static_cast<llvm::FunctionType *>(
+                      moduleTranslation.convertType(ft)),
                   inlineAsmOp.asm_string(), inlineAsmOp.constraints(),
                   inlineAsmOp.has_side_effects(), inlineAsmOp.is_align_stack());
-    llvm::Value *result =
-        builder.CreateCall(inlineAsmInst, lookupValues(inlineAsmOp.operands()));
+    llvm::Value *result = builder.CreateCall(
+        inlineAsmInst, moduleTranslation.lookupValues(inlineAsmOp.operands()));
     if (opInst.getNumResults() != 0)
-      mapValue(opInst.getResult(0), result);
+      moduleTranslation.mapValue(opInst.getResult(0), result);
     return success();
   }
 
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
-    auto operands = lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
     if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
       builder.CreateInvoke(moduleTranslation.lookupFunction(attr.getValue()),
@@ -306,17 +273,18 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
-    llvm::Type *ty = convertType(lpOp.getType());
+    llvm::Type *ty = moduleTranslation.convertType(lpOp.getType());
     llvm::LandingPadInst *lpi =
         builder.CreateLandingPad(ty, lpOp.getNumOperands());
 
     // Add clauses
-    for (llvm::Value *operand : lookupValues(lpOp.getOperands())) {
+    for (llvm::Value *operand :
+         moduleTranslation.lookupValues(lpOp.getOperands())) {
       // All operands should be constant - checked by verifier
       if (auto *constOperand = dyn_cast<llvm::Constant>(operand))
         lpi->addClause(constOperand);
     }
-    mapValue(lpOp.getResult(), lpi);
+    moduleTranslation.mapValue(lpOp.getResult(), lpi);
     return success();
   }
 
@@ -365,8 +333,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupBlock(switchOp.defaultDestination()),
         switchOp.caseDestinations().size(), branchWeights);
 
-    auto *ty =
-        llvm::cast<llvm::IntegerType>(convertType(switchOp.value().getType()));
+    auto *ty = llvm::cast<llvm::IntegerType>(
+        moduleTranslation.convertType(switchOp.value().getType()));
     for (auto i :
          llvm::zip(switchOp.case_values()->cast<DenseIntElementsAttr>(),
                    switchOp.caseDestinations()))
@@ -389,9 +357,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     assert((global || function) &&
            "referencing an undefined global or function");
 
-    mapValue(addressOfOp.getResult(),
-             global ? moduleTranslation.lookupGlobal(global)
-                    : moduleTranslation.lookupFunction(function.getName()));
+    moduleTranslation.mapValue(
+        addressOfOp.getResult(),
+        global ? moduleTranslation.lookupGlobal(global)
+               : moduleTranslation.lookupFunction(function.getName()));
     return success();
   }
 

@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/ROCDLIR.h"
+#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -19,6 +21,22 @@ static OwnedBlob compileIsaToHsacoForTesting(const std::string &, Location,
                                              StringRef) {
   const char data[] = "HSACO";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
+}
+
+static void registerROCDLDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registry.insert<ROCDL::ROCDLDialect>();
+  registry.addDialectInterface<ROCDL::ROCDLDialect,
+                               ROCDLDialectLLVMIRTranslationInterface>();
+  context.appendDialectRegistry(registry);
+}
+
+static std::unique_ptr<llvm::Module>
+translateModuleToROCDL(Operation *m, llvm::LLVMContext &llvmContext,
+                       StringRef moduleName) {
+  registerLLVMDialectTranslation(*m->getContext());
+  registerROCDLDialectTranslation(*m->getContext());
+  return translateModuleToLLVMIR(m, llvmContext, moduleName);
 }
 
 namespace mlir {
@@ -35,7 +53,7 @@ void registerTestConvertGPUKernelToHsacoPass() {
         LLVMInitializeAMDGPUAsmPrinter();
 
         pm.addPass(createConvertGPUKernelToBlobPass(
-            translateModuleToROCDLIR, compileIsaToHsacoForTesting,
+            translateModuleToROCDL, compileIsaToHsacoForTesting,
             "amdgcn-amd-amdhsa", "gfx900", "-code-object-v3", "rocdl.hsaco"));
       });
 }
