@@ -30,6 +30,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -484,10 +485,10 @@ void MemoryAccess::updateDimensionality() {
   isl::map Map = isl::map::from_domain_and_range(
       isl::set::universe(AccessSpace), isl::set::universe(ArraySpace));
 
-  for (unsigned i = 0; i < DimsMissing; i++)
+  for (auto i : seq<isl_size>(0, DimsMissing))
     Map = Map.fix_si(isl::dim::out, i, 0);
 
-  for (unsigned i = DimsMissing; i < DimsArray; i++)
+  for (auto i : seq<isl_size>(DimsMissing, DimsArray))
     Map = Map.equate(isl::dim::in, i - DimsMissing, isl::dim::out, i);
 
   AccessRelation = AccessRelation.apply_range(Map);
@@ -528,7 +529,7 @@ void MemoryAccess::updateDimensionality() {
            "Loaded element size should be multiple of canonical element size");
     isl::map Map = isl::map::from_domain_and_range(
         isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
-    for (unsigned i = 0; i < DimsArray - 1; i++)
+    for (auto i : seq<isl_size>(0, DimsArray - 1))
       Map = Map.equate(isl::dim::in, i, isl::dim::out, i);
 
     isl::constraint C;
@@ -1045,7 +1046,7 @@ bool MemoryAccess::isStrideX(isl::map Schedule, int StrideWidth) const {
 
   Stride = getStride(Schedule);
   StrideX = isl::set::universe(Stride.get_space());
-  for (unsigned i = 0; i < StrideX.dim(isl::dim::set) - 1; i++)
+  for (auto i : seq<isl_size>(0, StrideX.dim(isl::dim::set) - 1))
     StrideX = StrideX.fix_si(isl::dim::set, i, 0);
   StrideX = StrideX.fix_si(isl::dim::set, StrideX.dim(isl::dim::set) - 1,
                            StrideWidth);
@@ -1107,7 +1108,7 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
 
   // Check whether access dimensions correspond to number of dimensions of the
   // accesses array.
-  auto Dims = SAI->getNumberOfDimensions();
+  isl_size Dims = SAI->getNumberOfDimensions();
   assert(NewAccessSpace.dim(isl::dim::set) == Dims &&
          "Access dims must match array dims");
 #endif
