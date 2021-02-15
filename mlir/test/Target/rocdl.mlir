@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-rocdlir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 llvm.func @rocdl_special_regs() -> i32 {
   // CHECK-LABEL: rocdl_special_regs

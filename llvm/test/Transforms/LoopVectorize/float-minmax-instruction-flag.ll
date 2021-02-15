@@ -148,6 +148,46 @@ out:                                              ; preds = %loop
   ret float %t6
 }
 
+; This test is checking that we don't vectorize when only one of the required attributes is set.
+; Note that this test should not vectorize even after switching to IR-level FMF.
+define float @minloopmissingnsz(float* nocapture readonly %arg) #1 {
+; CHECK-LABEL: @minloopmissingnsz(
+; CHECK-NEXT:  top:
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
+; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[TOP]] ]
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
+; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
+; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
+; CHECK-NEXT:    [[T8:%.*]] = icmp eq i64 [[T7]], 65537
+; CHECK-NEXT:    br i1 [[T8]], label [[OUT:%.*]], label [[LOOP]]
+; CHECK:       out:
+; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ]
+; CHECK-NEXT:    ret float [[T6_LCSSA]]
+;
+top:
+  %t = load float, float* %arg
+  br label %loop
+
+loop:                                             ; preds = %loop, %top
+  %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
+  %t2 = phi float [ %t6, %loop ], [ %t, %top ]
+  %t3 = getelementptr float, float* %arg, i64 %t1
+  %t4 = load float, float* %t3, align 4
+  %t5 = fcmp olt float %t2, %t4
+  %t6 = select i1 %t5, float %t2, float %t4
+  %t7 = add i64 %t1, 1
+  %t8 = icmp eq i64 %t7, 65537
+  br i1 %t8, label %out, label %loop
+
+out:                                              ; preds = %loop
+  ret float %t6
+}
+
 ; This would assert on FMF propagation.
 
 define void @not_a_min_max() {
@@ -177,4 +217,5 @@ end:
   ret void
 }
 
-attributes #0 = { "no-nans-fp-math"="true" }
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" }

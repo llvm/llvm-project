@@ -84,6 +84,49 @@ private:
   parser::CharBlock source_;
 };
 
+class OmpCycleChecker {
+public:
+  OmpCycleChecker(SemanticsContext &context, std::int64_t cycleLevel)
+      : context_{context}, cycleLevel_{cycleLevel} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::DoConstruct &dc) {
+    cycleLevel_--;
+    const auto &labelName{std::get<0>(std::get<0>(dc.t).statement.t)};
+    if (labelName) {
+      labelNamesandLevels_.emplace(labelName.value().ToString(), cycleLevel_);
+    }
+    return true;
+  }
+
+  bool Pre(const parser::CycleStmt &cyclestmt) {
+    std::map<std::string, std::int64_t>::iterator it;
+    bool err{false};
+    if (cyclestmt.v) {
+      it = labelNamesandLevels_.find(cyclestmt.v->source.ToString());
+      err = (it != labelNamesandLevels_.end() && it->second > 0);
+    }
+    if (cycleLevel_ > 0 || err) {
+      context_.Say(*cycleSource_,
+          "CYCLE statement to non-innermost associated loop of an OpenMP DO construct"_err_en_US);
+    }
+    return true;
+  }
+
+  bool Pre(const parser::Statement<parser::ActionStmt> &actionstmt) {
+    cycleSource_ = &actionstmt.source;
+    return true;
+  }
+
+private:
+  SemanticsContext &context_;
+  const parser::CharBlock *cycleSource_;
+  std::int64_t cycleLevel_;
+  std::map<std::string, std::int64_t> labelNamesandLevels_;
+};
+
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
     const parser::CharBlock &source, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
@@ -147,6 +190,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     const auto &doBlock{std::get<parser::Block>(doConstruct->t)};
     CheckNoBranching(doBlock, beginDir.v, beginDir.source);
   }
+  CheckDoWhile(x);
+  CheckLoopItrVariableIsInt(x);
+  CheckCycleConstraints(x);
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
@@ -162,6 +208,85 @@ void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
       SetLoopIv(itrVal.symbol);
     }
   }
+}
+void OmpStructureChecker::CheckDoWhile(const parser::OpenMPLoopConstruct &x) {
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
+    if (const auto &doConstruct{
+            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+      if (doConstruct.value().IsDoWhile()) {
+        const auto &doStmt{std::get<parser::Statement<parser::NonLabelDoStmt>>(
+            doConstruct.value().t)};
+        context_.Say(doStmt.source,
+            "The DO loop cannot be a DO WHILE with DO directive."_err_en_US);
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckLoopItrVariableIsInt(
+    const parser::OpenMPLoopConstruct &x) {
+  if (const auto &loopConstruct{
+          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+
+    for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
+      if (loop->IsDoNormal()) {
+        const parser::Name &itrVal{GetLoopIndex(loop)};
+        if (itrVal.symbol) {
+          const auto *type{itrVal.symbol->GetType()};
+          if (!type->IsNumeric(TypeCategory::Integer)) {
+            context_.Say(itrVal.source,
+                "The DO loop iteration"
+                " variable must be of the type integer."_err_en_US,
+                itrVal.ToString());
+          }
+        }
+      }
+      // Get the next DoConstruct if block is not empty.
+      const auto &block{std::get<parser::Block>(loop->t)};
+      const auto it{block.begin()};
+      loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                               : nullptr;
+    }
+  }
+}
+
+std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
+    const parser::OpenMPLoopConstruct &x) {
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+  std::int64_t orderedCollapseLevel{1};
+  std::int64_t orderedLevel{0};
+  std::int64_t collapseLevel{0};
+
+  for (const auto &clause : clauseList.v) {
+    if (const auto *collapseClause{
+            std::get_if<parser::OmpClause::Collapse>(&clause.u)}) {
+      if (const auto v{GetIntValue(collapseClause->v)}) {
+        collapseLevel = *v;
+      }
+    }
+    if (const auto *orderedClause{
+            std::get_if<parser::OmpClause::Ordered>(&clause.u)}) {
+      if (const auto v{GetIntValue(orderedClause->v)}) {
+        orderedLevel = *v;
+      }
+    }
+  }
+  if (orderedLevel >= collapseLevel) {
+    orderedCollapseLevel = orderedLevel;
+  } else {
+    orderedCollapseLevel = collapseLevel;
+  }
+  return orderedCollapseLevel;
+}
+
+void OmpStructureChecker::CheckCycleConstraints(
+    const parser::OpenMPLoopConstruct &x) {
+  std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
+  OmpCycleChecker ompCycleChecker{context_, ordCollapseLevel};
+  parser::Walk(x, ompCycleChecker);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &) {
@@ -199,6 +324,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     HasInvalidWorksharingNesting(
         beginDir.source, {llvm::omp::Directive::OMPD_do});
   }
+  CheckIfDoOrderedClause(beginDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   CheckNoBranching(block, beginDir.v, beginDir.source);
@@ -210,6 +336,18 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     break;
   default:
     break;
+  }
+}
+
+void OmpStructureChecker::CheckIfDoOrderedClause(
+    const parser::OmpBlockDirective &blkDirective) {
+  if (blkDirective.v == llvm::omp::OMPD_ordered) {
+    if (!FindClause(llvm::omp::Clause::OMPC_ordered)) {
+      context_.Say(blkDirective.source,
+          "The ORDERED clause must be present on the loop"
+          " construct if any ORDERED region ever binds"
+          " to a loop region arising from the loop construct."_err_en_US);
+    }
   }
 }
 
@@ -583,7 +721,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::OmpObjectList &objList) {
-
   for (const auto &ompObject : objList.v) {
     std::visit(
         common::visitors{

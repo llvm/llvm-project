@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -201,8 +202,8 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
 static isl::map createNextIterationMap(isl::space SetSpace, unsigned Dim) {
   isl::space MapSpace = SetSpace.map_from_set();
   isl::map NextIterationMap = isl::map::universe(MapSpace);
-  for (unsigned u = 0; u < NextIterationMap.dim(isl::dim::in); u++)
-    if (u != Dim)
+  for (auto u : seq<isl_size>(0, NextIterationMap.dim(isl::dim::in)))
+    if (u != (isl_size)Dim)
       NextIterationMap =
           NextIterationMap.equate(isl::dim::in, u, isl::dim::out, u);
   isl::constraint C =
@@ -2843,7 +2844,7 @@ void ScopBuilder::addUserContext() {
     return;
   }
 
-  for (unsigned i = 0; i < Space.dim(isl::dim::param); i++) {
+  for (auto i : seq<isl_size>(0, Space.dim(isl::dim::param))) {
     std::string NameContext =
         scop->getContext().get_dim_name(isl::dim::param, i);
     std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);

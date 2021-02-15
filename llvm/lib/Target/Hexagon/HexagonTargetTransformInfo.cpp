@@ -80,8 +80,10 @@ void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
-bool HexagonTTIImpl::shouldFavorPostInc() const {
-  return true;
+TTI::AddressingModeKind
+HexagonTTIImpl::getPreferredAddressingMode(const Loop *L,
+                                           ScalarEvolution *SE) const {
+  return TTI::AMK_PostIndexed;
 }
 
 /// --- Vector TTI begin ---

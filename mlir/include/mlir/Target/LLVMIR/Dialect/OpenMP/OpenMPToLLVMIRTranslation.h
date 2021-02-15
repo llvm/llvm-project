@@ -18,8 +18,8 @@
 
 namespace mlir {
 
-/// Implementation of the dialect interface that converts operations beloning to
-/// the OpenMP dialect to LLVM IR.
+/// Implementation of the dialect interface that converts operations belonging
+/// to the OpenMP dialect to LLVM IR.
 class OpenMPDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:

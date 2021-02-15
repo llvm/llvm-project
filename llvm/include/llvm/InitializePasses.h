@@ -148,6 +148,7 @@ void initializeEarlyIfPredicatorPass(PassRegistry &);
 void initializeEarlyMachineLICMPass(PassRegistry&);
 void initializeEarlyTailDuplicatePass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
+void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeEliminateAvailableExternallyLegacyPassPass(PassRegistry&);
 void initializeEntryExitInstrumenterPass(PassRegistry&);
 void initializeExpandMemCmpPassPass(PassRegistry&);

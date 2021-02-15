@@ -100,18 +100,20 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   return MatchExact && MatchSubset;
 }
 
-bool ARMTTIImpl::shouldFavorBackedgeIndex(const Loop *L) const {
-  if (L->getHeader()->getParent()->hasOptSize())
-    return false;
+TTI::AddressingModeKind
+ARMTTIImpl::getPreferredAddressingMode(const Loop *L,
+                                       ScalarEvolution *SE) const {
   if (ST->hasMVEIntegerOps())
-    return false;
-  return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
-}
+    return TTI::AMK_PostIndexed;
 
-bool ARMTTIImpl::shouldFavorPostInc() const {
-  if (ST->hasMVEIntegerOps())
-    return true;
-  return false;
+  if (L->getHeader()->getParent()->hasOptSize())
+    return TTI::AMK_None;
+
+  if (ST->isMClass() && ST->isThumb2() &&
+      L->getNumBlocks() == 1)
+    return TTI::AMK_PreIndexed;
+
+  return TTI::AMK_None;
 }
 
 Optional<Instruction *>
@@ -1570,6 +1572,30 @@ int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                             : 4;
       return LT.first * ST->getMVEVectorCostFactor(CostKind) * Instrs;
     }
+    break;
+  }
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+  case Intrinsic::umin:
+  case Intrinsic::umax: {
+    if (!ST->hasMVEIntegerOps())
+      break;
+    Type *VT = ICA.getReturnType();
+
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
+        LT.second == MVT::v16i8)
+      return LT.first * ST->getMVEVectorCostFactor(CostKind);
+    break;
+  }
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum: {
+    if (!ST->hasMVEFloatOps())
+      break;
+    Type *VT = ICA.getReturnType();
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    if (LT.second == MVT::v4f32 || LT.second == MVT::v8f16)
+      return LT.first * ST->getMVEVectorCostFactor(CostKind);
     break;
   }
   }

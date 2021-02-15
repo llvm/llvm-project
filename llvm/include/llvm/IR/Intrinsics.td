@@ -1635,6 +1635,12 @@ def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                   ImmArg<ArgIndex<1>>,
                                                   ImmArg<ArgIndex<2>>]>;
 
+//===------------ Intrinsics to perform common vector shuffles ------------===//
+
+def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                   [LLVMMatchType<0>],
+                                   [IntrNoMem]>;
+
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 

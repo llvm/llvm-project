@@ -13,12 +13,14 @@
 #ifndef MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 #define MLIR_TARGET_LLVMIR_LLVMTRANSLATIONINTERFACE_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/Identifier.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace llvm {
 class IRBuilderBase;
-}
+} // namespace llvm
 
 namespace mlir {
 namespace LLVM {
@@ -43,6 +45,18 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const {
     return failure();
   }
+
+  /// Hook for derived dialect interface to act on an operation that has dialect
+  /// attributes from the derived dialect (the operation itself may be from a
+  /// different dialect). This gets called after the operation has been
+  /// translated. The hook is expected to use moduleTranslation to look up the
+  /// translation results and amend the corresponding IR constructs. Does
+  /// nothing and succeeds by default.
+  virtual LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const {
+    return success();
+  }
 };
 
 /// Interface collection for translation to LLVM IR, dispatches to a concrete
@@ -60,6 +74,18 @@ public:
     if (const LLVMTranslationDialectInterface *iface = getInterfaceFor(op))
       return iface->convertOperation(op, builder, moduleTranslation);
     return failure();
+  }
+
+  /// Acts on the given operation using the interface implemented by the dialect
+  /// of one of the operation's dialect attributes.
+  virtual LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const {
+    if (const LLVMTranslationDialectInterface *iface =
+            getInterfaceFor(attribute.first.getDialect())) {
+      return iface->amendOperation(op, attribute, moduleTranslation);
+    }
+    return success();
   }
 };
 

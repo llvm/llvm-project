@@ -852,7 +852,31 @@ for.end:
   ret float %max.red.0
 }
 
+; As above, with the no-signed-zeros-fp-math attribute missing
+; CHECK-LABEL: @max_red_float_nsz(
+; CHECK-NOT: <2 x float>
+
+define float @max_red_float_nsz(float %max) #1 {
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %max.red.08 = phi float [ %max, %entry ], [ %max.red.0, %for.body ]
+  %arrayidx = getelementptr inbounds [1024 x float], [1024 x float]* @fA, i64 0, i64 %indvars.iv
+  %0 = load float, float* %arrayidx, align 4
+  %cmp3 = fcmp fast ogt float %0, %max.red.08
+  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret float %max.red.0
+}
+
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare
 
-attributes #0 = { "no-nans-fp-math"="true" }
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" }

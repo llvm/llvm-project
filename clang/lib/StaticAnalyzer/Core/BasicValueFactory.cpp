@@ -21,6 +21,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -176,28 +177,73 @@ const PointerToMemberData *BasicValueFactory::getPointerToMemberData(
   return D;
 }
 
+LLVM_ATTRIBUTE_UNUSED bool hasNoRepeatedElements(
+    llvm::ImmutableList<const CXXBaseSpecifier *> BaseSpecList) {
+  llvm::SmallPtrSet<QualType, 16> BaseSpecSeen;
+  for (const CXXBaseSpecifier *BaseSpec : BaseSpecList) {
+    QualType BaseType = BaseSpec->getType();
+    // Check whether inserted
+    if (!BaseSpecSeen.insert(BaseType).second)
+      return false;
+  }
+  return true;
+}
+
 const PointerToMemberData *BasicValueFactory::accumCXXBase(
     llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
-    const nonloc::PointerToMember &PTM) {
+    const nonloc::PointerToMember &PTM, const CastKind &kind) {
+  assert((kind == CK_DerivedToBaseMemberPointer ||
+          kind == CK_BaseToDerivedMemberPointer ||
+          kind == CK_ReinterpretMemberPointer) &&
+         "accumCXXBase called with wrong CastKind");
   nonloc::PointerToMember::PTMDataType PTMDT = PTM.getPTMData();
   const NamedDecl *ND = nullptr;
-  llvm::ImmutableList<const CXXBaseSpecifier *> PathList;
+  llvm::ImmutableList<const CXXBaseSpecifier *> BaseSpecList;
 
   if (PTMDT.isNull() || PTMDT.is<const NamedDecl *>()) {
     if (PTMDT.is<const NamedDecl *>())
       ND = PTMDT.get<const NamedDecl *>();
 
-    PathList = CXXBaseListFactory.getEmptyList();
-  } else { // const PointerToMemberData *
+    BaseSpecList = CXXBaseListFactory.getEmptyList();
+  } else {
     const PointerToMemberData *PTMD = PTMDT.get<const PointerToMemberData *>();
     ND = PTMD->getDeclaratorDecl();
 
-    PathList = PTMD->getCXXBaseList();
+    BaseSpecList = PTMD->getCXXBaseList();
   }
 
-  for (const auto &I : llvm::reverse(PathRange))
-    PathList = prependCXXBase(I, PathList);
-  return getPointerToMemberData(ND, PathList);
+  assert(hasNoRepeatedElements(BaseSpecList) &&
+         "CXXBaseSpecifier list of PointerToMemberData must not have repeated "
+         "elements");
+
+  if (kind == CK_DerivedToBaseMemberPointer) {
+    // Here we pop off matching CXXBaseSpecifiers from BaseSpecList.
+    // Because, CK_DerivedToBaseMemberPointer comes from a static_cast and
+    // serves to remove a matching implicit cast. Note that static_cast's that
+    // are no-ops do not count since they produce an empty PathRange, a nice
+    // thing about Clang AST.
+
+    // Now we know that there are no repetitions in BaseSpecList.
+    // So, popping the first element from it corresponding to each element in
+    // PathRange is equivalent to only including elements that are in
+    // BaseSpecList but not it PathRange
+    auto ReducedBaseSpecList = CXXBaseListFactory.getEmptyList();
+    for (const CXXBaseSpecifier *BaseSpec : BaseSpecList) {
+      auto IsSameAsBaseSpec = [&BaseSpec](const CXXBaseSpecifier *I) -> bool {
+        return BaseSpec->getType() == I->getType();
+      };
+      if (llvm::none_of(PathRange, IsSameAsBaseSpec))
+        ReducedBaseSpecList =
+            CXXBaseListFactory.add(BaseSpec, ReducedBaseSpecList);
+    }
+
+    return getPointerToMemberData(ND, ReducedBaseSpecList);
+  }
+  // FIXME: Reinterpret casts on member-pointers are not handled properly by
+  // this code
+  for (const CXXBaseSpecifier *I : llvm::reverse(PathRange))
+    BaseSpecList = prependCXXBase(I, BaseSpecList);
+  return getPointerToMemberData(ND, BaseSpecList);
 }
 
 const llvm::APSInt*

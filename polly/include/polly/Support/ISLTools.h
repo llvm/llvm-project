@@ -161,7 +161,7 @@ isl::set singleton(isl::union_set USet, isl::space ExpectedSpace);
 /// The implementation currently returns the maximum number of dimensions it
 /// encounters, if different, and 0 if none is encountered. However, most other
 /// code will most likely fail if one of these happen.
-unsigned getNumScatterDims(const isl::union_map &Schedule);
+isl_size getNumScatterDims(const isl::union_map &Schedule);
 
 /// Return the scatter space of a @p Schedule.
 ///

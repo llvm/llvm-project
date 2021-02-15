@@ -19,9 +19,9 @@ def BroadcastableStringAttr : NativeCodeCall<[{
   $_builder.getStringAttr("required broadcastable shapes")
 }]>;
 
-def : Pat<(Shape_CstrBroadcastableOp $LHS, $RHS),
+def CstrBroadcastableToRequire : Pat<(Shape_CstrBroadcastableOp $shapes),
             (Shape_CstrRequireOp
-              (Shape_IsBroadcastableOp $LHS, $RHS),
+              (Shape_IsBroadcastableOp $shapes),
               (BroadcastableStringAttr))>;
 
 #endif // MLIR_CONVERSION_SHAPETOSTANDARD_TD

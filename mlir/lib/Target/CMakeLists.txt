@@ -24,26 +24,6 @@ add_mlir_translation_library(MLIRTargetLLVMIRModuleTranslation
   MLIRTranslation
   )
 
-add_mlir_translation_library(MLIRTargetAVX512
-  LLVMIR/LLVMAVX512Intr.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
-
-  DEPENDS
-  MLIRLLVMAVX512ConversionsIncGen
-
-  LINK_COMPONENTS
-  Core
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRLLVMAVX512
-  MLIRLLVMIR
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
-  )
-
 add_mlir_translation_library(MLIRTargetLLVMIR
   LLVMIR/ConvertFromLLVMIR.cpp
   LLVMIR/ConvertToLLVMIR.cpp
@@ -56,89 +36,12 @@ add_mlir_translation_library(MLIRTargetLLVMIR
   IRReader
 
   LINK_LIBS PUBLIC
+  MLIRLLVMArmNeonToLLVMIRTranslation
+  MLIRLLVMArmSVEToLLVMIRTranslation
+  MLIRLLVMAVX512ToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
+  MLIRNVVMToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
-  MLIRTargetLLVMIRModuleTranslation
-  )
-
-add_mlir_translation_library(MLIRTargetArmNeon
-  LLVMIR/LLVMArmNeonIntr.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
-
-  DEPENDS
-  MLIRLLVMArmNeonConversionsIncGen
-
-  LINK_COMPONENTS
-  Core
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRLLVMArmNeon
-  MLIRLLVMIR
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
-  )
-
-add_mlir_translation_library(MLIRTargetArmSVE
-  LLVMIR/LLVMArmSVEIntr.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
-
-  DEPENDS
-  MLIRLLVMArmSVEConversionsIncGen
-
-  LINK_COMPONENTS
-  Core
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRLLVMArmSVE
-  MLIRLLVMIR
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
-  )
-
-add_mlir_translation_library(MLIRTargetNVVMIR
-  LLVMIR/ConvertToNVVMIR.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
-
-  DEPENDS
-  intrinsics_gen
-
-  LINK_COMPONENTS
-  Core
-
-  LINK_LIBS PUBLIC
-  MLIRGPU
-  MLIRIR
-  MLIRLLVMIR
-  MLIRNVVMIR
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
-  )
-
-add_mlir_translation_library(MLIRTargetROCDLIR
-  LLVMIR/ConvertToROCDLIR.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
-
-  DEPENDS
-  intrinsics_gen
-
-  LINK_COMPONENTS
-  Core
-
-  LINK_LIBS PUBLIC
-  MLIRGPU
-  MLIRIR
-  MLIRLLVMIR
-  MLIRROCDLIR
-  MLIRTargetLLVMIR
+  MLIRROCDLToLLVMIRTranslation
   MLIRTargetLLVMIRModuleTranslation
   )
