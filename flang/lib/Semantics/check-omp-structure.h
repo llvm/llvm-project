@@ -165,6 +165,12 @@ private:
   void CheckIsLoopIvPartOfClause(
       llvmOmpClause clause, const parser::OmpObjectList &ompObjectList);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
+
+  void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
+  void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
+  void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
+  std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
+  void CheckIfDoOrderedClause(const parser::OmpBlockDirective &blkDirectiv);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
