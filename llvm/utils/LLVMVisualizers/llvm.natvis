@@ -289,13 +289,17 @@ For later versions of Visual Studio, no setup is required.
         </Expand>
       </Synthetic>
 
-      <Item Name="ElementType" Condition="ID == llvm::Type::TypeID::ArrayTyID || ID == llvm::Type::TypeID::VectorTyID">*ContainedTys</Item>
+      <Item Name="ElementType" Condition="ID == llvm::Type::TypeID::ArrayTyID">*ContainedTys</Item>
       <Item Name="NumElements" Condition="ID == llvm::Type::TypeID::ArrayTyID">((llvm::ArrayType*)this)->NumElements</Item>
+
+      <Item Name="ElementType" Condition="ID == llvm::Type::TypeID::FixedVectorTyID">*ContainedTys</Item>
+      <Item Name="NumElements" Condition="ID == llvm::Type::TypeID::FixedVectorTyID">((llvm::VectorType*)this)->ElementQuantity</Item>
+
+      <Item Name="ElementType" Condition="ID == llvm::Type::TypeID::ScalableVectorTyID">*ContainedTys</Item>
+      <Item Name="MinNumElements" Condition="ID == llvm::Type::TypeID::ScalableVectorTyID">((llvm::VectorType*)this)->ElementQuantity</Item>
 
       <Item Name="AddressSpace" Condition="ID == llvm::Type::TypeID::PointerTyID">SubclassData</Item>
       <Item Name="PointeeType" Condition="ID == llvm::Type::TypeID::PointerTyID">*ContainedTys</Item>
-
-      <Item Name="NumElements" Condition="ID == llvm::Type::TypeID::VectorTyID">((llvm::VectorType*)this)->NumElements</Item>
 
       <Item Name="Context">Context</Item>
     </Expand>
