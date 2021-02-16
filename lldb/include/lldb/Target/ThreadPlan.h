@@ -464,10 +464,7 @@ public:
   // to restore the state when it is done.  This will do that job. This is
   // mostly useful for artificial plans like CallFunction plans.
 
-  virtual bool RestoreThreadState() {
-    // Nothing to do in general.
-    return true;
-  }
+  virtual void RestoreThreadState() {}
 
   virtual bool IsVirtualStep() { return false; }
 
