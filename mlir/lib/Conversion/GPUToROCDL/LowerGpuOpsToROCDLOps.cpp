@@ -120,6 +120,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
       converter, "__ocml_cos_f32", "__ocml_cos_f64");
   patterns.insert<OpToFuncCallLowering<math::ExpOp>>(
       converter, "__ocml_exp_f32", "__ocml_exp_f64");
+  patterns.insert<OpToFuncCallLowering<math::ExpM1Op>>(
+      converter, "__ocml_expm1_f32", "__ocml_expm1_f64");
   patterns.insert<OpToFuncCallLowering<FloorFOp>>(converter, "__ocml_floor_f32",
                                                   "__ocml_floor_f64");
   patterns.insert<OpToFuncCallLowering<math::LogOp>>(

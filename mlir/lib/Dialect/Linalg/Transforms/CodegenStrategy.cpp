@@ -63,6 +63,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
     promoteSingleIterationLoops(cast<FuncOp>(op));
     hoistViewAllocOps(cast<FuncOp>(op));
     hoistRedundantVectorTransfers(cast<FuncOp>(op));
+    hoistRedundantVectorTransfersOnTensor(cast<FuncOp>(op));
     return success();
   };
   (void)linalg::applyStagedPatterns(

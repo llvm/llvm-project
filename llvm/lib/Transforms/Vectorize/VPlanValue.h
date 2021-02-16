@@ -90,13 +90,17 @@ public:
   /// type identification.
   enum {
     VPValueSC,
+    VPVBlendSC,
     VPVInstructionSC,
     VPVMemoryInstructionSC,
+    VPVPredInstPHI,
     VPVReductionSC,
     VPVReplicateSC,
     VPVWidenSC,
     VPVWidenCallSC,
     VPVWidenGEPSC,
+    VPVWidenIntOrFpIndcutionSC,
+    VPVWidenPHISC,
     VPVWidenSelectSC,
   };
 

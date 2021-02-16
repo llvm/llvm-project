@@ -74,6 +74,18 @@ func @exp2(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @expm1(
+// CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func @expm1(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.expm1 %[[F]] : f32
+  %0 = math.expm1 %f : f32
+  // CHECK: %{{.*}} = math.expm1 %[[V]] : vector<4xf32>
+  %1 = math.expm1 %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.expm1 %[[T]] : tensor<4x4x?xf32>
+  %2 = math.expm1 %t : tensor<4x4x?xf32>
+  return
+}
+
 // CHECK-LABEL: func @log(
 // CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func @log(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {

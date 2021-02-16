@@ -285,23 +285,6 @@ them.
  Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
  section references. Any invalid sh_link fields will be set to zero.
 
-.. option:: --build-id-link-dir <dir>
-
- Set the directory used by :option:`--build-id-link-input` and
- :option:`--build-id-link-output`.
-
-.. option:: --build-id-link-input <suffix>
-
- Hard-link the input to ``<dir>/xx/xxx<suffix>``, where ``<dir>`` is the directory
- specified by :option:`--build-id-link-dir`. The path used is derived from the
- hex build ID.
-
-.. option:: --build-id-link-output <suffix>
-
- Hard-link the output to ``<dir>/xx/xxx<suffix>``, where ``<dir>`` is the directory
- specified by :option:`--build-id-link-dir`. The path used is derived from the
- hex build ID.
-
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple

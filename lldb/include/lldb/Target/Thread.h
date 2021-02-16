@@ -1050,12 +1050,7 @@ public:
   virtual bool
   RestoreRegisterStateFromCheckpoint(ThreadStateCheckpoint &saved_state);
 
-  virtual bool
-  RestoreThreadStateFromCheckpoint(ThreadStateCheckpoint &saved_state);
-
-  void EnableTracer(bool value, bool single_step);
-
-  void SetTracer(lldb::ThreadPlanTracerSP &tracer_sp);
+  void RestoreThreadStateFromCheckpoint(ThreadStateCheckpoint &saved_state);
 
   // Get the thread index ID. The index ID that is guaranteed to not be re-used
   // by a process. They start at 1 and increase with each new thread. This

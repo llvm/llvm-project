@@ -535,34 +535,37 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   // Highlight 'decltype' and 'auto' as their underlying types.
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.
-  findExplicitReferences(C, [&](ReferenceLoc R) {
-    for (const NamedDecl *Decl : R.Targets) {
-      if (!canHighlightName(Decl->getDeclName()))
-        continue;
-      auto Kind = kindForDecl(Decl);
-      if (!Kind)
-        continue;
-      auto &Tok = Builder.addToken(R.NameLoc, *Kind);
+  findExplicitReferences(
+      C,
+      [&](ReferenceLoc R) {
+        for (const NamedDecl *Decl : R.Targets) {
+          if (!canHighlightName(Decl->getDeclName()))
+            continue;
+          auto Kind = kindForDecl(Decl);
+          if (!Kind)
+            continue;
+          auto &Tok = Builder.addToken(R.NameLoc, *Kind);
 
-      // The attribute tests don't want to look at the template.
-      if (auto *TD = dyn_cast<TemplateDecl>(Decl)) {
-        if (auto *Templated = TD->getTemplatedDecl())
-          Decl = Templated;
-      }
-      if (auto Mod = scopeModifier(Decl))
-        Tok.addModifier(*Mod);
-      if (isConst(Decl))
-        Tok.addModifier(HighlightingModifier::Readonly);
-      if (isStatic(Decl))
-        Tok.addModifier(HighlightingModifier::Static);
-      if (isAbstract(Decl))
-        Tok.addModifier(HighlightingModifier::Abstract);
-      if (Decl->isDeprecated())
-        Tok.addModifier(HighlightingModifier::Deprecated);
-      if (R.IsDecl)
-        Tok.addModifier(HighlightingModifier::Declaration);
-    }
-  });
+          // The attribute tests don't want to look at the template.
+          if (auto *TD = dyn_cast<TemplateDecl>(Decl)) {
+            if (auto *Templated = TD->getTemplatedDecl())
+              Decl = Templated;
+          }
+          if (auto Mod = scopeModifier(Decl))
+            Tok.addModifier(*Mod);
+          if (isConst(Decl))
+            Tok.addModifier(HighlightingModifier::Readonly);
+          if (isStatic(Decl))
+            Tok.addModifier(HighlightingModifier::Static);
+          if (isAbstract(Decl))
+            Tok.addModifier(HighlightingModifier::Abstract);
+          if (Decl->isDeprecated())
+            Tok.addModifier(HighlightingModifier::Deprecated);
+          if (R.IsDecl)
+            Tok.addModifier(HighlightingModifier::Declaration);
+        }
+      },
+      AST.getHeuristicResolver());
   // Add highlightings for macro references.
   auto AddMacro = [&](const MacroOccurrence &M) {
     auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);

@@ -510,6 +510,77 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
   return getRegSizeInBits(*RC);
 }
 
+bool TargetRegisterInfo::getCoveringSubRegIndexes(
+    const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
+    LaneBitmask LaneMask, SmallVectorImpl<unsigned> &NeededIndexes) const {
+  SmallVector<unsigned, 8> PossibleIndexes;
+  unsigned BestIdx = 0;
+  unsigned BestCover = 0;
+
+  for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
+    // Is this index even compatible with the given class?
+    if (getSubClassWithSubReg(RC, Idx) != RC)
+      continue;
+    LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
+    // Early exit if we found a perfect match.
+    if (SubRegMask == LaneMask) {
+      BestIdx = Idx;
+      break;
+    }
+
+    // The index must not cover any lanes outside \p LaneMask.
+    if ((SubRegMask & ~LaneMask).any())
+      continue;
+
+    unsigned PopCount = SubRegMask.getNumLanes();
+    PossibleIndexes.push_back(Idx);
+    if (PopCount > BestCover) {
+      BestCover = PopCount;
+      BestIdx = Idx;
+    }
+  }
+
+  // Abort if we cannot possibly implement the COPY with the given indexes.
+  if (BestIdx == 0)
+    return 0;
+
+  NeededIndexes.push_back(BestIdx);
+
+  // Greedy heuristic: Keep iterating keeping the best covering subreg index
+  // each time.
+  LaneBitmask LanesLeft = LaneMask & ~getSubRegIndexLaneMask(BestIdx);
+  while (LanesLeft.any()) {
+    unsigned BestIdx = 0;
+    int BestCover = std::numeric_limits<int>::min();
+    for (unsigned Idx : PossibleIndexes) {
+      LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
+      // Early exit if we found a perfect match.
+      if (SubRegMask == LanesLeft) {
+        BestIdx = Idx;
+        break;
+      }
+
+      // Try to cover as much of the remaining lanes as possible but
+      // as few of the already covered lanes as possible.
+      int Cover = (SubRegMask & LanesLeft).getNumLanes() -
+                  (SubRegMask & ~LanesLeft).getNumLanes();
+      if (Cover > BestCover) {
+        BestCover = Cover;
+        BestIdx = Idx;
+      }
+    }
+
+    if (BestIdx == 0)
+      return 0; // Impossible to handle
+
+    NeededIndexes.push_back(BestIdx);
+
+    LanesLeft &= ~getSubRegIndexLaneMask(BestIdx);
+  }
+
+  return BestIdx;
+}
+
 Register
 TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {

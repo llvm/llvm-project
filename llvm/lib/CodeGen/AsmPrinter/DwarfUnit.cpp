@@ -1531,10 +1531,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 }
 
 void DwarfUnit::constructContainingTypeDIEs() {
-  for (auto CI = ContainingTypeMap.begin(), CE = ContainingTypeMap.end();
-       CI != CE; ++CI) {
-    DIE &SPDie = *CI->first;
-    const DINode *D = CI->second;
+  for (auto &P : ContainingTypeMap) {
+    DIE &SPDie = *P.first;
+    const DINode *D = P.second;
     if (!D)
       continue;
     DIE *NDie = getDIE(D);

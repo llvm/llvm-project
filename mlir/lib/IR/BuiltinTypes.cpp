@@ -197,6 +197,75 @@ LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
 constexpr int64_t ShapedType::kDynamicSize;
 constexpr int64_t ShapedType::kDynamicStrideOrOffset;
 
+ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setShape(shape);
+    b.setElementType(elementType);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    MemRefType::Builder b(shape, elementType);
+    b.setMemorySpace(other.getMemorySpace());
+    return b;
+  }
+
+  if (isa<TensorType>())
+    return RankedTensorType::get(shape, elementType);
+
+  if (isa<VectorType>())
+    return VectorType::get(shape, elementType);
+
+  llvm_unreachable("Unhandled ShapedType clone case");
+}
+
+ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setShape(shape);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    MemRefType::Builder b(shape, other.getElementType());
+    b.setShape(shape);
+    b.setMemorySpace(other.getMemorySpace());
+    return b;
+  }
+
+  if (isa<TensorType>())
+    return RankedTensorType::get(shape, getElementType());
+
+  if (isa<VectorType>())
+    return VectorType::get(shape, getElementType());
+
+  llvm_unreachable("Unhandled ShapedType clone case");
+}
+
+ShapedType ShapedType::clone(Type elementType) {
+  if (auto other = dyn_cast<MemRefType>()) {
+    MemRefType::Builder b(other);
+    b.setElementType(elementType);
+    return b;
+  }
+
+  if (auto other = dyn_cast<UnrankedMemRefType>()) {
+    return UnrankedMemRefType::get(elementType, other.getMemorySpace());
+  }
+
+  if (isa<TensorType>()) {
+    if (hasRank())
+      return RankedTensorType::get(getShape(), elementType);
+    return UnrankedTensorType::get(elementType);
+  }
+
+  if (isa<VectorType>())
+    return VectorType::get(getShape(), elementType);
+
+  llvm_unreachable("Unhandled ShapedType clone hit");
+}
+
 Type ShapedType::getElementType() const {
   return static_cast<ImplType *>(impl)->elementType;
 }

@@ -4245,6 +4245,18 @@ def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
 }
 
 //===----------------------------------------------------------------------===//
+// FC1 Options
+//===----------------------------------------------------------------------===//
+let Flags = [FC1Option, FlangOnlyOption] in {
+
+def fdebug_unparse : Flag<["-"], "fdebug-unparse">, Group<Action_Group>,
+  HelpText<"Unparse and stop.">;
+def fdebug_unparse_with_symbols : Flag<["-"], "fdebug-unparse-with-symbols">, Group<Action_Group>,
+  HelpText<"Unparse and stop.">;
+
+}
+
+//===----------------------------------------------------------------------===//
 // CC1 Options
 //===----------------------------------------------------------------------===//
 

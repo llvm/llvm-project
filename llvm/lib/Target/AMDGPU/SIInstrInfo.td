@@ -2408,15 +2408,6 @@ def getMUBUFNoLdsInst : InstrMapping {
   let ValueCols = [["0"]];
 }
 
-// Maps an atomic opcode to its version with a return value.
-def getAtomicRetOp : InstrMapping {
-  let FilterClass = "AtomicNoRet";
-  let RowFields = ["NoRetOp"];
-  let ColFields = ["IsRet"];
-  let KeyCol = ["0"];
-  let ValueCols = [["1"]];
-}
-
 // Maps an atomic opcode to its returnless version.
 def getAtomicNoRetOp : InstrMapping {
   let FilterClass = "AtomicNoRet";

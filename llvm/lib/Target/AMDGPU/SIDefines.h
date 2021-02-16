@@ -106,7 +106,13 @@ enum : uint64_t {
   IsDOT = UINT64_C(1) << 55,
 
   // FLAT instruction accesses FLAT_SCRATCH segment.
-  IsFlatScratch = UINT64_C(1) << 56
+  IsFlatScratch = UINT64_C(1) << 56,
+
+  // Atomic without return.
+  IsAtomicNoRet = UINT64_C(1) << 57,
+
+  // Atomic with return.
+  IsAtomicRet = UINT64_C(1) << 58
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

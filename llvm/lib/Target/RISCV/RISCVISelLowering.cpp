@@ -497,6 +497,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      setOperationAction(ISD::FCOPYSIGN, VT, Legal);
     };
 
     if (Subtarget.hasStdExtZfh())
@@ -580,6 +581,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FABS, VT, Custom);
         setOperationAction(ISD::FSQRT, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
+
+        for (auto CC : VFPCCToExpand)
+          setCondCodeAction(CC, VT, Expand);
       }
     }
   }
@@ -601,6 +605,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbp()) {
     setTargetDAGCombine(ISD::OR);
   }
+  if (Subtarget.hasStdExtV())
+    setTargetDAGCombine(ISD::FCOPYSIGN);
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -895,16 +901,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Try and match an index sequence, which we can lower directly to the vid
   // instruction. An all-undef vector is matched by getSplatValue, above.
-  bool IsVID = true;
-  if (VT.isInteger())
+  if (VT.isInteger()) {
+    bool IsVID = true;
     for (unsigned i = 0, e = Op.getNumOperands(); i < e && IsVID; i++)
       IsVID &= Op.getOperand(i).isUndef() ||
                (isa<ConstantSDNode>(Op.getOperand(i)) &&
                 Op.getConstantOperandVal(i) == i);
 
-  if (IsVID) {
-    SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
-    return convertFromScalableVector(VT, VID, DAG, Subtarget);
+    if (IsVID) {
+      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
+      return convertFromScalableVector(VT, VID, DAG, Subtarget);
+    }
   }
 
   return SDValue();
@@ -2137,10 +2144,89 @@ RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
 
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+
+  bool Invert = false;
+  Optional<unsigned> LogicOpc;
+  if (ContainerVT.isFloatingPoint()) {
+    bool Swap = false;
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETULE:
+    case ISD::SETULT:
+      Swap = true;
+      LLVM_FALLTHROUGH;
+    case ISD::SETUGE:
+    case ISD::SETUGT:
+      CC = getSetCCInverse(CC, ContainerVT);
+      Invert = true;
+      break;
+    case ISD::SETOGE:
+    case ISD::SETOGT:
+    case ISD::SETGE:
+    case ISD::SETGT:
+      Swap = true;
+      break;
+    case ISD::SETUEQ:
+      // Use !((OLT Op1, Op2) || (OLT Op2, Op1))
+      Invert = true;
+      LogicOpc = RISCVISD::VMOR_VL;
+      CC = ISD::SETOLT;
+      break;
+    case ISD::SETONE:
+      // Use ((OLT Op1, Op2) || (OLT Op2, Op1))
+      LogicOpc = RISCVISD::VMOR_VL;
+      CC = ISD::SETOLT;
+      break;
+    case ISD::SETO:
+      // Use (OEQ Op1, Op1) && (OEQ Op2, Op2)
+      LogicOpc = RISCVISD::VMAND_VL;
+      CC = ISD::SETOEQ;
+      break;
+    case ISD::SETUO:
+      // Use (UNE Op1, Op1) || (UNE Op2, Op2)
+      LogicOpc = RISCVISD::VMOR_VL;
+      CC = ISD::SETUNE;
+      break;
+    }
+
+    if (Swap) {
+      CC = getSetCCSwappedOperands(CC);
+      std::swap(Op1, Op2);
+    }
+  }
+
   MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
   SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
-  SDValue Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op2,
-                            Op.getOperand(2), Mask, VL);
+
+  // There are 3 cases we need to emit.
+  // 1. For (OEQ Op1, Op1) && (OEQ Op2, Op2) or (UNE Op1, Op1) || (UNE Op2, Op2)
+  //    we need to compare each operand with itself.
+  // 2. For (OLT Op1, Op2) || (OLT Op2, Op1) we need to compare Op1 and Op2 in
+  //    both orders.
+  // 3. For any other case we just need one compare with Op1 and Op2.
+  SDValue Cmp;
+  if (LogicOpc && (CC == ISD::SETOEQ || CC == ISD::SETUNE)) {
+    Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op1,
+                      DAG.getCondCode(CC), Mask, VL);
+    SDValue Cmp2 = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op2, Op2,
+                               DAG.getCondCode(CC), Mask, VL);
+    Cmp = DAG.getNode(*LogicOpc, DL, MaskVT, Cmp, Cmp2, VL);
+  } else {
+    Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op2,
+                      DAG.getCondCode(CC), Mask, VL);
+    if (LogicOpc) {
+      SDValue Cmp2 = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op2, Op1,
+                                 DAG.getCondCode(CC), Mask, VL);
+      Cmp = DAG.getNode(*LogicOpc, DL, MaskVT, Cmp, Cmp2, VL);
+    }
+  }
+
+  if (Invert) {
+    SDValue AllOnes = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+    Cmp = DAG.getNode(RISCVISD::VMXOR_VL, DL, MaskVT, Cmp, AllOnes, VL);
+  }
 
   return convertFromScalableVector(VT, Cmp, DAG, Subtarget);
 }
@@ -2883,6 +2969,30 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getSetCC(DL, N->getValueType(0), LHS, Zero, CC);
     }
     break;
+  }
+  case ISD::FCOPYSIGN: {
+    EVT VT = N->getValueType(0);
+    if (!VT.isVector())
+      break;
+    // There is a form of VFSGNJ which injects the negated sign of its second
+    // operand. Try and bubble any FNEG up after the extend/round to produce
+    // this optimized pattern. Avoid modifying cases where FP_ROUND and
+    // TRUNC=1.
+    SDValue In2 = N->getOperand(1);
+    // Avoid cases where the extend/round has multiple uses, as duplicating
+    // those is typically more expensive than removing a fneg.
+    if (!In2.hasOneUse())
+      break;
+    if (In2.getOpcode() != ISD::FP_EXTEND &&
+        (In2.getOpcode() != ISD::FP_ROUND || In2.getConstantOperandVal(1) != 0))
+      break;
+    In2 = In2.getOperand(0);
+    if (In2.getOpcode() != ISD::FNEG)
+      break;
+    SDLoc DL(N);
+    SDValue NewFPExtRound = DAG.getFPExtendOrRound(In2.getOperand(0), DL, VT);
+    return DAG.getNode(ISD::FCOPYSIGN, DL, VT, N->getOperand(0),
+                       DAG.getNode(ISD::FNEG, DL, VT, NewFPExtRound));
   }
   }
 
@@ -4778,6 +4888,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(UMIN_VL)
   NODE_NAME_CASE(UMAX_VL)
   NODE_NAME_CASE(SETCC_VL)
+  NODE_NAME_CASE(VMAND_VL)
+  NODE_NAME_CASE(VMOR_VL)
+  NODE_NAME_CASE(VMXOR_VL)
   NODE_NAME_CASE(VMCLR_VL)
   NODE_NAME_CASE(VMSET_VL)
   NODE_NAME_CASE(VRGATHER_VX_VL)

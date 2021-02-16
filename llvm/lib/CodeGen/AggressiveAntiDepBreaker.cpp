@@ -952,10 +952,9 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
                             << printReg(AntiDepReg, TRI) << ":");
 
           // Handle each group register...
-          for (std::map<unsigned, unsigned>::iterator
-                 S = RenameMap.begin(), E = RenameMap.end(); S != E; ++S) {
-            unsigned CurrReg = S->first;
-            unsigned NewReg = S->second;
+          for (const auto &P : RenameMap) {
+            unsigned CurrReg = P.first;
+            unsigned NewReg = P.second;
 
             LLVM_DEBUG(dbgs() << " " << printReg(CurrReg, TRI) << "->"
                               << printReg(NewReg, TRI) << "("

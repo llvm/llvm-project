@@ -273,43 +273,28 @@ multiclass VPatIntegerSetCCSDNode_VX_VI<CondCode cc,
                                    SplatPat_simm5, simm5, swap>;
 }
 
-multiclass VPatFPSetCCSDNode_VV<CondCode cc, string instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
-                                (fvti.Vector fvti.RegClass:$rs2),
-                                cc)),
-              (!cast<Instruction>(instruction_name#"_VV_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, fvti.AVL, fvti.SEW)>;
-}
-
-multiclass VPatFPSetCCSDNode_VF<CondCode cc, string instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
-                                (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
-                                cc)),
-              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1,
-                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                  fvti.AVL, fvti.SEW)>;
-}
-
-multiclass VPatFPSetCCSDNode_FV<CondCode cc, string swapped_op_instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1),
-                                cc)),
-              (!cast<Instruction>(swapped_op_instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1,
-                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                  fvti.AVL, fvti.SEW)>;
-}
-
 multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
                                       string inst_name,
                                       string swapped_op_inst_name> {
-  defm : VPatFPSetCCSDNode_VV<cc, inst_name>;
-  defm : VPatFPSetCCSDNode_VF<cc, inst_name>;
-  defm : VPatFPSetCCSDNode_FV<cc, swapped_op_inst_name>;
+  foreach fvti = AllFloatVectors in {
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Vector fvti.RegClass:$rs2),
+                                cc)),
+              (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, fvti.AVL, fvti.SEW)>;
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (splat_vector fvti.ScalarRegClass:$rs2),
+                                cc)),
+              (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  fvti.AVL, fvti.SEW)>;
+    def : Pat<(fvti.Mask (setcc (splat_vector fvti.ScalarRegClass:$rs2),
+                                (fvti.Vector fvti.RegClass:$rs1),
+                                cc)),
+              (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  fvti.AVL, fvti.SEW)>;
+  }
 }
 
 multiclass VPatExtendSDNode_V<list<SDNode> ops, string inst_name, string suffix,
@@ -657,11 +642,32 @@ foreach vti = AllFloatVectors in {
             (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX)
                  vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
 
-  // 14.10. Vector Floating-Point Sign-Injection Instructions
+  // 14.12. Vector Floating-Point Sign-Injection Instructions
+  def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
+            (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
   // Handle fneg with VFSGNJN using the same input for both operands.
   def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
             (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.SEW)>;
+
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector vti.RegClass:$rs2))),
+            (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (splat_vector vti.ScalarRegClass:$rs2)))),
+            (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
+
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (fneg vti.RegClass:$rs2)))),
+            (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.SEW)>;
+  def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
+                                   (vti.Vector (fneg (splat_vector vti.ScalarRegClass:$rs2))))),
+            (!cast<Instruction>("PseudoVFSGNJN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                 vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
 }
 
 // 14.11. Vector Floating-Point Compare Instructions

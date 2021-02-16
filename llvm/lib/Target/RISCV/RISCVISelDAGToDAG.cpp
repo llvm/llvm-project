@@ -849,13 +849,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     // Bail when normal isel should do the job.
-    EVT InVT = Node->getOperand(1).getValueType();
+    MVT InVT = Node->getOperand(1).getSimpleValueType();
     if (VT.isFixedLengthVector() || InVT.isScalableVector())
       break;
 
+    unsigned RegClassID;
+    if (VT.getVectorElementType() == MVT::i1)
+      RegClassID = RISCV::VRRegClassID;
+    else
+      RegClassID = getRegClassIDForLMUL(getLMUL(VT));
+
     SDValue V = Node->getOperand(1);
     SDLoc DL(V);
-    unsigned RegClassID = getRegClassIDForLMUL(getLMUL(VT));
     SDValue RC =
         CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
     SDNode *NewNode =
@@ -869,13 +874,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     // Bail when normal isel can do the job.
-    EVT InVT = Node->getOperand(0).getValueType();
+    MVT InVT = Node->getOperand(0).getSimpleValueType();
     if (VT.isScalableVector() || InVT.isFixedLengthVector())
       break;
 
+    unsigned RegClassID;
+    if (InVT.getVectorElementType() == MVT::i1)
+      RegClassID = RISCV::VRRegClassID;
+    else
+      RegClassID = getRegClassIDForLMUL(getLMUL(InVT));
+
     SDValue V = Node->getOperand(0);
     SDLoc DL(V);
-    unsigned RegClassID = getRegClassIDForLMUL(getLMUL(InVT.getSimpleVT()));
     SDValue RC =
         CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
     SDNode *NewNode =
