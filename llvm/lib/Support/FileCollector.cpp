@@ -35,7 +35,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   SmallString<256> TmpDest = Path, UpperDest, RealDest;
 
   // Remove component traversals, links, etc.
-  if (!sys::fs::real_path(Path, TmpDest))
+  if (sys::fs::real_path(Path, TmpDest))
     return true; // Current default value in vfs.yaml
   Path = TmpDest;
 
@@ -44,7 +44,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // sensitive in the absence of real_path, since this is the YAMLVFSWriter
   // default.
   UpperDest = Path.upper();
-  if (sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
     return false;
   return true;
 }
