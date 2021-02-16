@@ -280,7 +280,9 @@ public:
   bool queryDataLayout(DataLayoutQueryType type, void *inBuffer,
                        void *outBuffer) override {
     switch (type) {
-    // FIXME: add support for case DLQ_GetPtrAuthMask:
+    // FIXME: add support for case DLQ_GetPtrAuthMask rdar://70729149
+    case DLQ_GetPtrAuthMask:
+      return false;
     case DLQ_GetObjCReservedLowBits: {
       auto *result = static_cast<uint8_t *>(outBuffer);
       auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
@@ -314,8 +316,6 @@ public:
       return true;
     }
     }
-
-    return false;
   }
 
   swift::remote::RemoteAddress
