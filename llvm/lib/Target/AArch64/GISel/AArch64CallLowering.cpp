@@ -211,19 +211,17 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
-  void assignValueToAddress(const CallLowering::ArgInfo &Arg, Register Addr,
-                            uint64_t Size, MachinePointerInfo &MPO,
-                            CCValAssign &VA) override {
+  void assignValueToAddress(const CallLowering::ArgInfo &Arg, unsigned RegIndex,
+                            Register Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
     unsigned MaxSize = Size * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
     if (!Arg.IsFixed)
       MaxSize = 0;
 
-    assert(Arg.Regs.size() == 1);
-
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
-                           ? extendRegister(Arg.Regs[0], VA, MaxSize)
+                           ? extendRegister(Arg.Regs[RegIndex], VA, MaxSize)
                            : Arg.Regs[0];
 
     // If we extended we might need to adjust the MMO's Size.
