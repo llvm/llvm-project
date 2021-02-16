@@ -14,27 +14,26 @@
 #ifndef MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/MatrixBuilder.h"
-#include "llvm/IR/Value.h"
+
+namespace llvm {
+class BasicBlock;
+class IRBuilderBase;
+class Function;
+class Value;
+} // namespace llvm
 
 namespace mlir {
 class Attribute;
+class Block;
 class Location;
-class ModuleOp;
-class Operation;
 
 namespace LLVM {
 
@@ -50,35 +49,10 @@ class LLVMFuncOp;
 /// mappings in one class since the conversion of control flow operations
 /// needs to look up block and function mappings.
 class ModuleTranslation {
+  friend std::unique_ptr<llvm::Module>
+  mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef);
+
 public:
-  template <typename T = ModuleTranslation>
-  static std::unique_ptr<llvm::Module>
-  translateModule(Operation *m, llvm::LLVMContext &llvmContext,
-                  StringRef name = "LLVMDialectModule") {
-    if (!satisfiesLLVMModule(m))
-      return nullptr;
-    if (failed(checkSupportedModuleOps(m)))
-      return nullptr;
-    std::unique_ptr<llvm::Module> llvmModule =
-        prepareLLVMModule(m, llvmContext, name);
-
-    LLVM::ensureDistinctSuccessors(m);
-
-    T translator(m, std::move(llvmModule));
-    if (failed(translator.convertFunctionSignatures()))
-      return nullptr;
-    if (failed(translator.convertGlobals()))
-      return nullptr;
-    if (failed(translator.convertFunctions()))
-      return nullptr;
-
-    return std::move(translator.llvmModule);
-  }
-
-  /// A helper method to get the single Block in an operation honoring LLVM's
-  /// module requirements.
-  static Block &getModuleBody(Operation *m) { return m->getRegion(0).front(); }
-
   /// Stores the mapping between a function name and its LLVM IR representation.
   void mapFunction(StringRef name, llvm::Function *func) {
     auto result = functionMapping.try_emplace(name, func);
@@ -175,31 +149,19 @@ public:
   /// PHI nodes are constructed for block arguments but are _not_ connected to
   /// the predecessors that may not exist yet.
   LogicalResult convertBlock(Block &bb, bool ignoreArguments,
-                             llvm::IRBuilder<> &builder);
+                             llvm::IRBuilderBase &builder);
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
 
-protected:
-  /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
-  /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
-  /// LLVMContext, the LLVM IR module will be created in that context.
+private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);
-  virtual ~ModuleTranslation();
+  ~ModuleTranslation();
 
-  virtual LogicalResult convertOperation(Operation &op,
-                                         llvm::IRBuilder<> &builder);
-
-  static std::unique_ptr<llvm::Module>
-  prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
-                    StringRef name);
-
-private:
-  /// Check whether the module contains only supported ops directly in its body.
-  static LogicalResult checkSupportedModuleOps(Operation *m);
-
+  /// Converts individual components.
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertGlobals();
@@ -216,11 +178,6 @@ private:
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
-
-  /// Precomputed pointer to OpenMP dialect. Note this can be nullptr if the
-  /// OpenMP dialect hasn't been loaded (it is always loaded if there are OpenMP
-  /// operations in the module though).
-  const Dialect *ompDialect;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;

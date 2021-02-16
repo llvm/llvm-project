@@ -15,6 +15,7 @@
 
 #include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -37,6 +38,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -192,7 +194,6 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      ompDialect(module->getContext()->getLoadedDialect("omp")),
       typeTranslator(this->llvmModule->getContext()),
       iface(module->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
@@ -301,8 +302,9 @@ llvm::Value *mlir::LLVM::detail::createIntrinsicCall(
 
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
-LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
-                                                  llvm::IRBuilder<> &builder) {
+LogicalResult
+ModuleTranslation::convertOperation(Operation &opInst,
+                                    llvm::IRBuilderBase &builder) {
   if (failed(iface.convertOperation(&opInst, builder, *this)))
     return opInst.emitError("unsupported or non-LLVM operation: ")
            << opInst.getName();
@@ -318,7 +320,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
 /// instructions at the end of the block and leaves `builder` in a state
 /// suitable for further insertion into the end of the block.
 LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
-                                              llvm::IRBuilder<> &builder) {
+                                              llvm::IRBuilderBase &builder) {
   builder.SetInsertPoint(lookupBlock(&bb));
   auto *subprogram = builder.GetInsertBlock()->getParent()->getSubprogram();
 
@@ -354,6 +356,12 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
   }
 
   return success();
+}
+
+/// A helper method to get the single Block in an operation honoring LLVM's
+/// module requirements.
+static Block &getModuleBody(Operation *module) {
+  return module->getRegion(0).front();
 }
 
 /// Create named global variables that correspond to llvm.mlir.global
@@ -582,7 +590,8 @@ LogicalResult ModuleTranslation::convertDialectAttributes(Operation *op) {
   return success();
 }
 
-LogicalResult ModuleTranslation::checkSupportedModuleOps(Operation *m) {
+/// Check whether the module contains only supported ops directly in its body.
+static LogicalResult checkSupportedModuleOps(Operation *m) {
   for (Operation &o : getModuleBody(m).getOperations())
     if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>())
@@ -648,8 +657,9 @@ ModuleTranslation::getOrInsertNamedModuleMetadata(StringRef name) {
   return llvmModule->getOrInsertNamedMetadata(name);
 }
 
-std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
-    Operation *m, llvm::LLVMContext &llvmContext, StringRef name) {
+static std::unique_ptr<llvm::Module>
+prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
+                  StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
   if (auto dataLayoutAttr =
@@ -668,4 +678,29 @@ std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
                                   builder.getInt8PtrTy());
 
   return llvmModule;
+}
+
+std::unique_ptr<llvm::Module>
+mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
+                              StringRef name) {
+  if (!satisfiesLLVMModule(module))
+    return nullptr;
+  if (failed(checkSupportedModuleOps(module)))
+    return nullptr;
+  std::unique_ptr<llvm::Module> llvmModule =
+      prepareLLVMModule(module, llvmContext, name);
+
+  LLVM::ensureDistinctSuccessors(module);
+
+  ModuleTranslation translator(module, std::move(llvmModule));
+  if (failed(translator.convertFunctionSignatures()))
+    return nullptr;
+  if (failed(translator.convertGlobals()))
+    return nullptr;
+  if (failed(translator.convertFunctions()))
+    return nullptr;
+  if (llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
+    return nullptr;
+
+  return std::move(translator.llvmModule);
 }
