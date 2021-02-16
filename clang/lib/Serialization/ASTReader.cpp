@@ -11734,6 +11734,11 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_simdlen:
     C = new (Context) OMPSimdlenClause();
     break;
+  case llvm::omp::OMPC_sizes: {
+    unsigned NumSizes = Record.readInt();
+    C = OMPSizesClause::CreateEmpty(Context, NumSizes);
+    break;
+  }
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
     break;
@@ -12022,6 +12027,12 @@ void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
 
 void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
   C->setSimdlen(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
+  for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }
 

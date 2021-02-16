@@ -2153,6 +2153,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     break;
   case OMPD_parallel:
   case OMPD_simd:
+  case OMPD_tile:
   case OMPD_task:
   case OMPD_taskyield:
   case OMPD_barrier:
@@ -2387,6 +2388,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
     LLVM_FALLTHROUGH;
   case OMPD_parallel:
   case OMPD_simd:
+  case OMPD_tile:
   case OMPD_for:
   case OMPD_for_simd:
   case OMPD_sections:
@@ -2521,6 +2523,11 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
       HasAssociatedStatement = false;
     }
 
+    if (DKind == OMPD_tile && !FirstClauses[unsigned(OMPC_sizes)].getInt()) {
+      Diag(Loc, diag::err_omp_required_clause)
+          << getOpenMPDirectiveName(OMPD_tile) << "sizes";
+    }
+
     StmtResult AssociatedStmt;
     if (HasAssociatedStatement) {
       // The body is a block scope like in Lambdas and Blocks.
@@ -2631,6 +2638,37 @@ bool Parser::ParseOpenMPSimpleVarList(
   IsCorrect = !T.consumeClose() && IsCorrect;
 
   return !IsCorrect;
+}
+
+OMPClause *Parser::ParseOpenMPSizesClause() {
+  SourceLocation ClauseNameLoc = ConsumeToken();
+  SmallVector<Expr *, 4> ValExprs;
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return nullptr;
+  }
+
+  while (true) {
+    ExprResult Val = ParseConstantExpression();
+    if (!Val.isUsable()) {
+      T.skipToEnd();
+      return nullptr;
+    }
+
+    ValExprs.push_back(Val.get());
+
+    if (Tok.is(tok::r_paren) || Tok.is(tok::annot_pragma_openmp_end))
+      break;
+
+    ExpectAndConsume(tok::comma);
+  }
+
+  T.consumeClose();
+
+  return Actions.ActOnOpenMPSizesClause(
+      ValExprs, ClauseNameLoc, T.getOpenLocation(), T.getCloseLocation());
 }
 
 OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
@@ -2869,6 +2907,15 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_exclusive:
   case OMPC_affinity:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
+    break;
+  case OMPC_sizes:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+
+    Clause = ParseOpenMPSizesClause();
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);

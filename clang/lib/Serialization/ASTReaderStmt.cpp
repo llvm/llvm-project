@@ -2279,11 +2279,15 @@ void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   E->setLocEnd(readSourceLocation());
 }
 
-void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
+void ASTStmtReader::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
   VisitStmt(D);
   // Field CollapsedNum was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+}
+
+void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
+  VisitOMPLoopBasedDirective(D);
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
@@ -2294,6 +2298,10 @@ void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
 
 void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
+}
+
+void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
+  VisitOMPLoopBasedDirective(D);
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
@@ -3142,6 +3150,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPSimdDirective::CreateEmpty(Context, NumClauses,
                                         CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TILE_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTileDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 

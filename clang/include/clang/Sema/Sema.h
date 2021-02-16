@@ -10555,6 +10555,11 @@ public:
   ActOnOpenMPSimdDirective(ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
                            SourceLocation StartLoc, SourceLocation EndLoc,
                            VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '#pragma omp tile' after parsing of its clauses and
+  /// the associated statement.
+  StmtResult ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
+                                      Stmt *AStmt, SourceLocation StartLoc,
+                                      SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp for' after parsing
   /// of the associated statement.
   StmtResult
@@ -10891,6 +10896,11 @@ public:
   OMPClause *ActOnOpenMPSimdlenClause(Expr *Length, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-form 'sizes' clause.
+  OMPClause *ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
+                                    SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
   /// Called on well-formed 'collapse' clause.
   OMPClause *ActOnOpenMPCollapseClause(Expr *NumForLoops,
                                        SourceLocation StartLoc,
