@@ -32,7 +32,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
-#include "mlir/Target/ROCDLIR.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/Support/ErrorOr.h"

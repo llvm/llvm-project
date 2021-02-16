@@ -12,6 +12,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
