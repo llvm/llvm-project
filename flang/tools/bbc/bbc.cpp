@@ -45,7 +45,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/Passes.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/InitLLVM.h"
@@ -235,7 +234,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   }
 
   // translate to FIR dialect of MLIR
-  llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
   mlir::MLIRContext ctx(registry);
@@ -244,8 +242,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(), triple,
-      kindMap);
+      ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(),
+      targetTriple, kindMap);
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   std::error_code ec;

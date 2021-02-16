@@ -15,7 +15,6 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
-#include "llvm/ADT/Triple.h"
 
 #define DEBUG_TYPE "flang-codegen-target"
 
@@ -44,7 +43,7 @@ struct GenericTarget : public CodeGenSpecifics {
   }
 
   mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
-     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth );
+    auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     // { t*, index }
     mlir::TypeRange range = {ptrTy, idxTy};
@@ -104,7 +103,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
       marshal.emplace_back(fir::ReferenceType::get(structTy),
                            AT{4, {}, /*sret=*/true});
     } else {
-      llvm_unreachable("not implemented");
+      llvm::report_fatal_error("complex for this precision not implemented");
     }
     return marshal;
   }
@@ -133,7 +132,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
     } else {
-      llvm_unreachable("not implemented");
+      llvm::report_fatal_error("complex for this precision not implemented");
     }
     return marshal;
   }
@@ -151,7 +150,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
     } else {
-      llvm_unreachable("not implemented");
+      llvm::report_fatal_error("complex for this precision not implemented");
     }
     return marshal;
   }
@@ -159,7 +158,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// AArch64 (AArch64 bit) linux target specifics.
+// AArch64 linux target specifics.
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -180,7 +179,7 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
     } else {
-      llvm_unreachable("not implemented");
+      llvm::report_fatal_error("complex for this precision not implemented");
     }
     return marshal;
   }
@@ -198,19 +197,49 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
     } else {
-      llvm_unreachable("not implemented");
+      llvm::report_fatal_error("complex for this precision not implemented");
     }
     return marshal;
   }
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// PPC64le linux target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // two distinct element type arguments (re, im)
+    marshal.emplace_back(eleTy, AT{});
+    marshal.emplace_back(eleTy, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // { t, t }   struct of 2 element type
+    mlir::TypeRange range = {eleTy, eleTy};
+    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
-// Currently, the implementation only instantiates `i386-unknown-linux-gnu` and
-// `x86_64-unknown-linux-gnu` like triples. Other targets should be added to
-// this file as needed.
+// Currently, the implementation only instantiates `i386-unknown-linux-gnu`,
+// `x86_64-unknown-linux-gnu`, aarch64 and ppc64le like triples. Other targets
+// should be added to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
-fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &trp,
+fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
                            KindMapping &kindMap) {
   switch (trp.getArch()) {
   default:
@@ -240,6 +269,14 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &trp,
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
       return std::make_unique<TargetAArch64>(ctx, trp, kindMap);
+    }
+    break;
+  case llvm::Triple::ArchType::ppc64le:
+    switch (trp.getOS()) {
+    default:
+      break;
+    case llvm::Triple::OSType::Linux:
+      return std::make_unique<TargetPPC64le>(ctx, trp, kindMap);
     }
     break;
   }

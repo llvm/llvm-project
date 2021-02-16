@@ -73,7 +73,7 @@ public:
     mlir::OpBuilder rewriter(&context);
     auto mod = getModule();
     auto specifics = CodeGenSpecifics::get(getOperation().getContext(),
-                                           *getTargetTriple(getOperation()),
+                                           getTargetTriple(getOperation()),
                                            *getKindMapping(getOperation()));
     setMembers(specifics.get(), &rewriter);
 
