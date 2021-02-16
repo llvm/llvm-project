@@ -1716,6 +1716,24 @@ private:
 
 } // namespace
 
+/// Creates an AddIOp if `isInt` is true otherwise create an AddFOp using
+/// operands `x` and `y`.
+static Value createAdd(Location loc, Value x, Value y, bool isInt,
+                       PatternRewriter &rewriter) {
+  if (isInt)
+    return rewriter.create<AddIOp>(loc, x, y);
+  return rewriter.create<AddFOp>(loc, x, y);
+}
+
+/// Creates a MulIOp if `isInt` is true otherwise create an MulFOp using
+/// operands `x and `y`.
+static Value createMul(Location loc, Value x, Value y, bool isInt,
+                       PatternRewriter &rewriter) {
+  if (isInt)
+    return rewriter.create<MulIOp>(loc, x, y);
+  return rewriter.create<MulFOp>(loc, x, y);
+}
+
 namespace mlir {
 
 /// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
@@ -2003,13 +2021,14 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
   Value res =
       rewriter.create<ConstantOp>(loc, dstType, rewriter.getZeroAttr(dstType));
+  bool isInt = dstType.getElementType().isa<IntegerType>();
   for (unsigned r = 0; r < dstRows; ++r) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
       Value b = rank == 1
                     ? rhs
                     : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
-      Value m = rewriter.create<MulFOp>(op.getLoc(), a, b);
+      Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
           op.getLoc(), dstType.getElementType(), rewriter.getStringAttr("add"),
           m, ValueRange{});
@@ -2020,7 +2039,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
     }
   }
   if (auto acc = op.acc())
-    res = rewriter.create<AddFOp>(op.getLoc(), res, acc);
+    res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -2176,6 +2195,7 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
   assert(!resType.isa<VectorType>());
+  bool isInt = resType.isa<IntegerType>();
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
@@ -2190,10 +2210,13 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   // Base case.
   if (lhsType.getRank() == 1) {
     assert(rhsType.getRank() == 1 && "corrupt contraction");
-    Value m = rewriter.create<MulFOp>(loc, op.lhs(), op.rhs());
+    Value m = createMul(loc, op.lhs(), op.rhs(), isInt, rewriter);
     StringAttr kind = rewriter.getStringAttr("add");
-    return rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
-                                                op.acc());
+    Value res = rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
+                                                     ValueRange{});
+    if (auto acc = op.acc())
+      res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
+    return res;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
