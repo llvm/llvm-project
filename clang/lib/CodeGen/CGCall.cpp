@@ -1773,8 +1773,8 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     }
     FuncAttrs.addAttribute("frame-pointer", FpKind);
 
-    FuncAttrs.addAttribute("less-precise-fpmad",
-                           llvm::toStringRef(CodeGenOpts.LessPreciseFPMAD));
+    if (CodeGenOpts.LessPreciseFPMAD)
+      FuncAttrs.addAttribute("less-precise-fpmad", "true");
 
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
@@ -1788,9 +1788,8 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
           CodeGenOpts.FP32DenormalMode.str());
     }
 
-    FuncAttrs.addAttribute("no-trapping-math",
-                           llvm::toStringRef(LangOpts.getFPExceptionMode() ==
-                                             LangOptions::FPE_Ignore));
+    if (LangOpts.getFPExceptionMode() == LangOptions::FPE_Ignore)
+      FuncAttrs.addAttribute("no-trapping-math", "true");
 
     // Strict (compliant) code is the default, so only add this attribute to
     // indicate that we are trying to workaround a problem case.
@@ -1799,18 +1798,18 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    FuncAttrs.addAttribute("no-infs-fp-math",
-                           llvm::toStringRef(LangOpts.NoHonorInfs));
-    FuncAttrs.addAttribute("no-nans-fp-math",
-                           llvm::toStringRef(LangOpts.NoHonorNaNs));
-    FuncAttrs.addAttribute("unsafe-fp-math",
-                           llvm::toStringRef(LangOpts.UnsafeFPMath));
-    FuncAttrs.addAttribute("use-soft-float",
-                           llvm::toStringRef(CodeGenOpts.SoftFloat));
+    if (LangOpts.NoHonorInfs)
+      FuncAttrs.addAttribute("no-infs-fp-math", "true");
+    if (LangOpts.NoHonorNaNs)
+      FuncAttrs.addAttribute("no-nans-fp-math", "true");
+    if (LangOpts.UnsafeFPMath)
+      FuncAttrs.addAttribute("unsafe-fp-math", "true");
+    if (CodeGenOpts.SoftFloat)
+      FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
                            llvm::utostr(CodeGenOpts.SSPBufferSize));
-    FuncAttrs.addAttribute("no-signed-zeros-fp-math",
-                           llvm::toStringRef(LangOpts.NoSignedZero));
+    if (LangOpts.NoSignedZero)
+      FuncAttrs.addAttribute("no-signed-zeros-fp-math", "true");
 
     // TODO: Reciprocal estimate codegen options should apply to instructions?
     const std::vector<std::string> &Recips = CodeGenOpts.Reciprocals;
