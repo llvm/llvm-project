@@ -222,13 +222,20 @@
 #   define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
         _LIBCPP_AVAILABILITY_FILESYSTEM
 
-    // Note: Those are not ABI-stable yet, so we can't ship them.
 #   define _LIBCPP_AVAILABILITY_SYNC                                            \
-        __attribute__((unavailable))
-#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait
-#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier
-#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
-#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
+        __attribute__((availability(macosx,strict,introduced=11.0)))            \
+        __attribute__((availability(ios,strict,introduced=14.0)))               \
+        __attribute__((availability(tvos,strict,introduced=14.0)))              \
+        __attribute__((availability(watchos,strict,introduced=7.0)))
+#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 110000) ||    \
+        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 140000) || \
+        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 140000) ||         \
+        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 70000)
+#       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait
+#       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_barrier
+#       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
+#       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
+#   endif
 
     // This controls the availability of the C++20 format library.
     // The library is in development and not ABI stable yet. Currently
