@@ -4724,10 +4724,12 @@ public:
     CES_AllowParameters = 1,
     CES_AllowDifferentTypes = 2,
     CES_AllowExceptionVariables = 4,
-    CES_FormerDefault = (CES_AllowParameters),
-    CES_Default = (CES_AllowParameters | CES_AllowDifferentTypes),
-    CES_AsIfByStdMove = (CES_AllowParameters | CES_AllowDifferentTypes |
-                         CES_AllowExceptionVariables),
+    CES_AllowRValueReferenceType = 8,
+    CES_ImplicitlyMovableCXX11CXX14CXX17 =
+        (CES_AllowParameters | CES_AllowDifferentTypes),
+    CES_ImplicitlyMovableCXX20 =
+        (CES_AllowParameters | CES_AllowDifferentTypes |
+         CES_AllowExceptionVariables | CES_AllowRValueReferenceType),
   };
 
   VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,
