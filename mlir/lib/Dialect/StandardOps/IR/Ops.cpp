@@ -3058,7 +3058,23 @@ isRankReducedType(Type originalType, Type candidateReducedType,
     candidateLayout = getStridedLinearLayoutMap(candidateReduced);
   else
     candidateLayout = candidateReduced.getAffineMaps().front();
-  if (inferredType != candidateLayout) {
+  assert(inferredType.getNumResults() == 1 &&
+         candidateLayout.getNumResults() == 1);
+  if (inferredType.getNumSymbols() != candidateLayout.getNumSymbols() ||
+      inferredType.getNumDims() != candidateLayout.getNumDims()) {
+    if (errMsg) {
+      llvm::raw_string_ostream os(*errMsg);
+      os << "inferred type: " << inferredType;
+    }
+    return SubViewVerificationResult::AffineMapMismatch;
+  }
+  // Check that the difference of the affine maps simplifies to 0.
+  AffineExpr diffExpr =
+      inferredType.getResult(0) - candidateLayout.getResult(0);
+  diffExpr = simplifyAffineExpr(diffExpr, inferredType.getNumDims(),
+                                inferredType.getNumSymbols());
+  auto cst = diffExpr.dyn_cast<AffineConstantExpr>();
+  if (!(cst && cst.getValue() == 0)) {
     if (errMsg) {
       llvm::raw_string_ostream os(*errMsg);
       os << "inferred type: " << inferredType;
@@ -3344,11 +3360,29 @@ public:
     /// Deduce the resultType of the SubViewOp using `inferSubViewResultType` on
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
-    Type resultType = SubViewOp::inferResultType(
-        castOp.source().getType().cast<MemRefType>(),
-        extractFromI64ArrayAttr(subViewOp.static_offsets()),
-        extractFromI64ArrayAttr(subViewOp.static_sizes()),
-        extractFromI64ArrayAttr(subViewOp.static_strides()));
+    auto resultType = SubViewOp::inferResultType(
+                          castOp.source().getType().cast<MemRefType>(),
+                          extractFromI64ArrayAttr(subViewOp.static_offsets()),
+                          extractFromI64ArrayAttr(subViewOp.static_sizes()),
+                          extractFromI64ArrayAttr(subViewOp.static_strides()))
+                          .cast<MemRefType>();
+    uint32_t rankDiff =
+        subViewOp.getSourceType().getRank() - subViewOp.getType().getRank();
+    if (rankDiff > 0) {
+      auto shape = resultType.getShape();
+      auto projectedShape = shape.drop_front(rankDiff);
+      AffineMap map;
+      auto maps = resultType.getAffineMaps();
+      if (!maps.empty() && maps.front()) {
+        auto optionalUnusedDimsMask =
+            computeRankReductionMask(shape, projectedShape);
+        llvm::SmallDenseSet<unsigned> dimsToProject =
+            optionalUnusedDimsMask.getValue();
+        map = getProjectedMap(maps.front(), dimsToProject);
+      }
+      resultType = MemRefType::get(projectedShape, resultType.getElementType(),
+                                   map, resultType.getMemorySpace());
+    }
     Value newSubView = rewriter.create<SubViewOp>(
         subViewOp.getLoc(), resultType, castOp.source(), subViewOp.offsets(),
         subViewOp.sizes(), subViewOp.strides(), subViewOp.static_offsets(),

@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMProfileData
   InstrProfWriter.cpp
   ProfileSummaryBuilder.cpp
   SampleProf.cpp
+  SampleProfileLoaderBaseUtil.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp
 

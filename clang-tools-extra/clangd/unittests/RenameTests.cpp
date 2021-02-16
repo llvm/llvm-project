@@ -1125,7 +1125,7 @@ TEST(RenameTest, IndexMergeMainFile) {
   EXPECT_THAT(Results.GlobalChanges.keys(),
               UnorderedElementsAre(Main, testPath("other.cc")));
 
-#if defined(_WIN32) || defined(__APPLE__)
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
   // On case-insensitive systems, no duplicates if AST vs index case differs.
   // https://github.com/clangd/clangd/issues/665
   TU.Filename = "MAIN.CC";

@@ -105,6 +105,7 @@ add_unittest(ClangdUnitTests ClangdTests
   support/FunctionTests.cpp
   support/MarkupTests.cpp
   support/MemoryTreeTests.cpp
+  support/PathTests.cpp
   support/ThreadingTests.cpp
   support/TestTracer.cpp
   support/TraceTests.cpp
