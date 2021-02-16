@@ -109,7 +109,11 @@ if (NOT LIBCXXABI_USE_COMPILER_RT)
 endif ()
 
 # Setup flags.
-add_link_flags_if_supported(-nodefaultlibs)
+if (LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG)
+  add_link_flags_if_supported(-nostdlib++)
+else()
+  add_link_flags_if_supported(-nodefaultlibs)
+endif()
 
 if ( APPLE )
   if (LLVM_USE_SANITIZER)

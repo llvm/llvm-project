@@ -725,9 +725,19 @@ endif()
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-  target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-  target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-  target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+
+# In order to remove just libc++ from the link step
+# we need to use -nostdlib++ whenever it is supported.
+# Unfortunately this cannot be used universally because for example g++ supports
+# only -nodefaultlibs in which case all libraries will be removed and
+# all libraries but c++ have to be added in manually.
+  if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
+  else()
+    target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
+    target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
+    target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+  endif()
 
   if (LIBCXX_HAS_SYSTEM_LIB)
     target_link_libraries(${target} PRIVATE System)
