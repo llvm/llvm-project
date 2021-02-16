@@ -44,7 +44,7 @@ typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 struct HostDataToTargetTy {
   uintptr_t HstPtrBase; // host info.
   uintptr_t HstPtrBegin;
-  uintptr_t HstPtrEnd; // non-inclusive.
+  uintptr_t HstPtrEnd;       // non-inclusive.
   map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
   uintptr_t TgtPtrBegin; // target info.
@@ -60,9 +60,7 @@ public:
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
         TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1) {}
 
-  uint64_t getRefCount() const {
-    return RefCount;
-  }
+  uint64_t getRefCount() const { return RefCount; }
 
   uint64_t resetRefCount() const {
     if (RefCount != INFRefCount)
@@ -89,9 +87,7 @@ public:
     return RefCount;
   }
 
-  bool isRefCountInf() const {
-    return RefCount == INFRefCount;
-  }
+  bool isRefCountInf() const { return RefCount == INFRefCount; }
 };
 
 typedef uintptr_t HstPtrBeginTy;
@@ -110,14 +106,14 @@ typedef std::set<HostDataToTargetTy, std::less<>> HostDataToTargetListTy;
 
 struct LookupResult {
   struct {
-    unsigned IsContained   : 1;
+    unsigned IsContained : 1;
     unsigned ExtendsBefore : 1;
-    unsigned ExtendsAfter  : 1;
+    unsigned ExtendsAfter : 1;
   } Flags;
 
   HostDataToTargetListTy::iterator Entry;
 
-  LookupResult() : Flags({0,0,0}), Entry() {}
+  LookupResult() : Flags({0, 0, 0}), Entry() {}
 };
 
 /// Map for shadow pointers
@@ -167,7 +163,7 @@ struct DeviceTy {
   ~DeviceTy();
 
   // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy& DstDevice);
+  bool isDataExchangable(const DeviceTy &DstDevice);
 
   uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);

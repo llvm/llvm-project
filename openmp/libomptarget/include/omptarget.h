@@ -14,15 +14,18 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <SourceInfo.h>
 
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
 
-#define OFFLOAD_DEVICE_DEFAULT     -1
+#define OFFLOAD_DEVICE_DEFAULT -1
+
+// Don't format out enums and structs.
+// clang-format off
 
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
@@ -132,6 +135,8 @@ struct __tgt_target_non_contig {
   uint64_t Stride;
 };
 
+// clang-format on
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -142,13 +147,15 @@ void *omp_target_alloc(size_t size, int device_num);
 void omp_target_free(void *device_ptr, int device_num);
 int omp_target_is_present(void *ptr, int device_num);
 int omp_target_memcpy(void *dst, void *src, size_t length, size_t dst_offset,
-    size_t src_offset, int dst_device, int src_device);
+                      size_t src_offset, int dst_device, int src_device);
 int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
-    int num_dims, const size_t *volume, const size_t *dst_offsets,
-    const size_t *src_offsets, const size_t *dst_dimensions,
-    const size_t *src_dimensions, int dst_device, int src_device);
+                           int num_dims, const size_t *volume,
+                           const size_t *dst_offsets, const size_t *src_offsets,
+                           const size_t *dst_dimensions,
+                           const size_t *src_dimensions, int dst_device,
+                           int src_device);
 int omp_target_associate_ptr(void *host_ptr, void *device_ptr, size_t size,
-    size_t device_offset, int device_num);
+                             size_t device_offset, int device_num);
 int omp_target_disassociate_ptr(void *host_ptr, int device_num);
 
 /// add the clauses of the requires directives in a given file
