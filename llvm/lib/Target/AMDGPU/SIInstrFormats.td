@@ -135,6 +135,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Must be 0 for non-FLAT instructions.
   field bit IsFlatScratch = 0;
 
+  // Atomic without a return.
+  field bit IsAtomicNoRet = 0;
+
+  // Atomic with return.
+  field bit IsAtomicRet = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -204,6 +210,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{55} = IsDOT;
 
   let TSFlags{56} = IsFlatScratch;
+
+  let TSFlags{57} = IsAtomicNoRet;
+
+  let TSFlags{58} = IsAtomicRet;
 
   let SchedRW = [Write32Bit];
 
