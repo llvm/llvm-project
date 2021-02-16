@@ -560,9 +560,9 @@ SVal SValBuilder::evalCast(SVal V, QualType CastTy, QualType OriginalTy) {
     return evalCastKind(V.castAs<Loc>(), CastTy, OriginalTy);
   case SVal::NonLocKind:
     return evalCastKind(V.castAs<NonLoc>(), CastTy, OriginalTy);
-  default:
-    llvm_unreachable("Unknown SVal kind");
   }
+
+  llvm_unreachable("Unknown SVal kind");
 }
 
 SVal SValBuilder::evalCastKind(UndefinedVal V, QualType CastTy,
