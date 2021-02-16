@@ -545,13 +545,18 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     bool Wave64 = isWave64(DriverArgs, Kind);
 
     // Add the HIP specific bitcode library.
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(RocmInstallation.getHIPPath()));
+    llvm::SmallVector<std::string, 12> BCLibs;
+    BCLibs.push_back(RocmInstallation.getHIPPath().str());
 
     // Add the generic set of libraries.
-    RocmInstallation.addCommonBitcodeLibCC1Args(
-      DriverArgs, CC1Args, LibDeviceFile, Wave64, DAZ, FiniteOnly,
-      UnsafeMathOpt, FastRelaxedMath, CorrectSqrt);
+    BCLibs.append(RocmInstallation.getCommonBitcodeLibs(
+        DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
+        FastRelaxedMath, CorrectSqrt));
+
+    llvm::for_each(BCLibs, [&](StringRef BCFile) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+    });
   }
 }
 

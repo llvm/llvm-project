@@ -688,6 +688,10 @@ public:
   virtual void AddFortranStdlibLibArgs(const llvm::opt::ArgList &Args,
                                        llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Get paths of HIP device libraries.
+  virtual llvm::SmallVector<std::string, 12>
+  getHIPDeviceLibs(const llvm::opt::ArgList &Args) const;
+
   /// Return sanitizers which are available in this toolchain.
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
