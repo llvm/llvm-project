@@ -168,6 +168,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   LanguageRuntime *runtime = nullptr;
   lldb::LanguageType known_type = m_parent->GetObjectRuntimeLanguage();
 
+#ifdef LLDB_ENABLE_SWIFT
   // An Objective-C object inside a Swift frame.
   if (known_type == eLanguageTypeObjC)
     if ((exe_ctx.GetFramePtr() &&
@@ -179,6 +180,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
             *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
             value_type);
     }
+#endif // LLDB_ENABLE_SWIFT
   if (!found_dynamic_type &&
       known_type != lldb::eLanguageTypeUnknown &&
       known_type != lldb::eLanguageTypeC) {
