@@ -92,6 +92,7 @@ static_library("clangd") {
     "GlobalCompilationDatabase.cpp",
     "HeaderSourceSwitch.cpp",
     "Headers.cpp",
+    "HeuristicResolver.cpp",
     "Hover.cpp",
     "IncludeFixer.cpp",
     "JSONTransport.cpp",
