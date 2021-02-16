@@ -151,8 +151,9 @@ struct TestVectorUnrollingPatterns
     patterns.insert<UnrollVectorPattern>(
         ctx, UnrollVectorOptions()
                  .setNativeShape(ArrayRef<int64_t>{2, 2})
-                 .setFilterConstraint(
-                     [](Operation *op) { return success(isa<AddFOp>(op)); }));
+                 .setFilterConstraint([](Operation *op) {
+                   return success(isa<AddFOp, vector::FMAOp>(op));
+                 }));
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
