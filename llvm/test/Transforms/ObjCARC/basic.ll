@@ -723,14 +723,15 @@ return:
 ; CHECK-LABEL: define void @test8c(
 ; CHECK: entry:
 ; CHECK: t:
-; CHECK:   @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.
 ; CHECK: f:
-; CHECK:   @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.
 ; CHECK: mid:
 ; CHECK: u:
+; CHECK:   @llvm.objc.retain
 ; CHECK:   @llvm.objc.release
 ; CHECK: g:
-; CHECK:   @llvm.objc.release
+; CHECK-NOT: @llvm.objc.
 ; CHECK: return:
 ; CHECK: }
 define void @test8c(i32* %x, i1 %p, i1 %q) nounwind {
@@ -1549,17 +1550,14 @@ done:
 ; Like test28. but with two releases.
 
 ; CHECK-LABEL: define void @test29(
-; CHECK-NOT: @llvm.objc.
-; CHECK: true:
 ; CHECK: call i8* @llvm.objc.retain
+; CHECK: true:
 ; CHECK: call void @callee()
 ; CHECK: store
-; CHECK: call void @llvm.objc.release
-; CHECK-NOT: @llvm.objc.release
 ; CHECK: done:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: ohno:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: }
 define void @test29(i8* %p, i1 %x, i1 %y) {
 entry:
@@ -1584,19 +1582,15 @@ ohno:
 ; with an extra release.
 
 ; CHECK-LABEL: define void @test30(
-; CHECK-NOT: @llvm.objc.
-; CHECK: true:
 ; CHECK: call i8* @llvm.objc.retain
+; CHECK: true:
 ; CHECK: call void @callee()
 ; CHECK: store
-; CHECK: call void @llvm.objc.release
-; CHECK-NOT: @llvm.objc.release
 ; CHECK: false:
-; CHECK-NOT: @llvm.objc.
 ; CHECK: done:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: ohno:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: }
 define void @test30(i8* %p, i1 %x, i1 %y, i1 %z) {
 entry:
@@ -1626,14 +1620,11 @@ ohno:
 ; CHECK: call i8* @llvm.objc.retain(i8* %p)
 ; CHECK: call void @callee()
 ; CHECK: store
-; CHECK: call void @llvm.objc.release
-; CHECK-NOT: @llvm.objc.release
 ; CHECK: true:
-; CHECK-NOT: @llvm.objc.release
+; CHECK: call void @llvm.objc.release
 ; CHECK: false:
-; CHECK-NOT: @llvm.objc.release
+; CHECK: call void @llvm.objc.release
 ; CHECK: ret void
-; CHECK-NOT: @llvm.objc.release
 ; CHECK: }
 define void @test31(i8* %p, i1 %x) {
 entry:
@@ -1652,14 +1643,12 @@ false:
 ; Don't consider bitcasts or getelementptrs direct uses.
 
 ; CHECK-LABEL: define void @test32(
-; CHECK-NOT: @llvm.objc.
-; CHECK: true:
 ; CHECK: call i8* @llvm.objc.retain
+; CHECK: true:
 ; CHECK: call void @callee()
 ; CHECK: store
-; CHECK: call void @llvm.objc.release
 ; CHECK: done:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: }
 define void @test32(i8* %p, i1 %x) {
 entry:
@@ -1681,14 +1670,12 @@ done:
 ; Do consider icmps to be direct uses.
 
 ; CHECK-LABEL: define void @test33(
-; CHECK-NOT: @llvm.objc.
-; CHECK: true:
 ; CHECK: call i8* @llvm.objc.retain
+; CHECK: true:
 ; CHECK: call void @callee()
 ; CHECK: icmp
-; CHECK: call void @llvm.objc.release
 ; CHECK: done:
-; CHECK-NOT: @llvm.objc.
+; CHECK: call void @llvm.objc.release
 ; CHECK: }
 define void @test33(i8* %p, i1 %x, i8* %y) {
 entry:
