@@ -14,13 +14,10 @@
 #define OPTMIZER_CODEGEN_TARGET_H
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/Triple.h"
 #include <memory>
 #include <tuple>
 #include <vector>
-
-namespace llvm {
-class Triple;
-} // namespace llvm
 
 namespace fir {
 class KindMapping;
@@ -62,9 +59,9 @@ public:
   using Marshalling = std::vector<std::tuple<mlir::Type, Attributes>>;
 
   static std::unique_ptr<CodeGenSpecifics>
-  get(mlir::MLIRContext *ctx, llvm::Triple &trp, KindMapping &kindMap);
+  get(mlir::MLIRContext *ctx, const llvm::Triple &trp, KindMapping &kindMap);
 
-  CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &trp,
+  CodeGenSpecifics(mlir::MLIRContext *ctx, const llvm::Triple &trp,
                    KindMapping &kindMap)
       : context{*ctx}, triple{trp}, kindMap{kindMap} {}
   CodeGenSpecifics() = delete;
@@ -99,7 +96,7 @@ public:
 
 protected:
   mlir::MLIRContext &context;
-  llvm::Triple &triple;
+  llvm::Triple triple;
   KindMapping &kindMap;
 };
 

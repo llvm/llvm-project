@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
@@ -19,7 +23,7 @@ public:
       : mlir::LLVMTypeConverter(module.getContext()),
         kindMapping(*getKindMapping(module)),
         specifics(CodeGenSpecifics::get(module.getContext(),
-                                        *getTargetTriple(module),
+                                        getTargetTriple(module),
                                         *getKindMapping(module))) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 

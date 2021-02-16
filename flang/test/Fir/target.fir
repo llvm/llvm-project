@@ -1,8 +1,10 @@
 // RUN: tco --target=i386-unknown-linux-gnu %s | FileCheck %s --check-prefix=I32
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=X64
+// RUN: tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefix=PPC
 
 // I32-LABEL: define i64 @gen4()
 // X64-LABEL: define <2 x float> @gen4()
+// PPC-LABEL: define { float, float } @gen4()
 func @gen4() -> !fir.complex<4> {
   %1 = fir.undefined !fir.complex<4>
   %2 = constant 2.0 : f32
@@ -18,11 +20,13 @@ func @gen4() -> !fir.complex<4> {
   // X64: store { float, float } { float 2.000000e+00, float -4.200000e+01 }
   // X64: %[[load:.*]] = load <2 x float>, <2 x float>*
   // X64: ret <2 x float> %[[load]]
+  // PPC: ret { float, float }
   return %6 : !fir.complex<4>
 }
 
 // I32-LABEL: define void @gen8({ double, double }* sret({ double, double }) %
 // X64-LABEL: define { double, double } @gen8()
+// PPC-LABEL: define { double, double } @gen8()
 func @gen8() -> !fir.complex<8> {
   %1 = fir.undefined !fir.complex<8>
   %2 = constant 1.0 : f64
@@ -35,15 +39,18 @@ func @gen8() -> !fir.complex<8> {
   // I64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: %[[load:.*]] = load { double, double }
   // I64: ret { double, double } %[[load]]
+  // PPC: ret { double, double }
   return %5 : !fir.complex<8>
 }
 
 // I32: declare void @sink4({ float, float }*)
 // X64: declare void @sink4(<2 x float>)
+// PPC: declare void @sink4(float, float)
 func private @sink4(!fir.complex<4>) -> ()
 
 // I32: declare void @sink8({ double, double }*)
 // X64: declare void @sink8(double, double)
+// PPC: declare void @sink8(double, double)
 func private @sink8(!fir.complex<8>) -> ()
 
 // I32-LABEL: define void @call4()
@@ -51,9 +58,11 @@ func private @sink8(!fir.complex<8>) -> ()
 func @call4() {
   // I32: = call i64 @gen4()
   // X64: = call <2 x float> @gen4()
+  // PPC: = call { float, float } @gen4()
   %1 = fir.call @gen4() : () -> !fir.complex<4>
   // I32: call void @sink4({ float, float }* %
   // X64: call void @sink4(<2 x float> %
+  // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
   fir.call @sink4(%1) : (!fir.complex<4>) -> ()
   return
 }
@@ -63,15 +72,18 @@ func @call4() {
 func @call8() {
   // I32: call void @gen8({ double, double }* %
   // X64: = call { double, double } @gen8()
+  // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> !fir.complex<8>
   // I32: call void @sink8({ double, double }* %
   // X64: call void @sink8(double %4, double %5)
+  // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
   fir.call @sink8(%1) : (!fir.complex<8>) -> ()
   return
 }
 
 // I32-LABEL: define i64 @char1lensum(i8* %0, i8* %1, i32 %2, i32 %3)
 // X64-LABEL: define i64 @char1lensum(i8* %0, i8* %1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(i8* %0, i8* %1, i64 %2, i64 %3)
 func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { i8*, i64 } undef, i8* %1, 0
   // X64-DAG: = insertvalue { i8*, i64 } %[[p0]], i64 %3, 1
@@ -89,6 +101,7 @@ func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
 
 // I32-LABEL: define void @char1copy(i8* sret(i8) %0, i32 %1, i8* %2, i32 %3)
 // I64-LABEL: define void @char1copy(i8* sret(i8) %0, i64 %1, i8* %2, i64 %3)
+// PPC-LABEL: define void @char1copy(i8* sret(i8) %0, i64 %1, i8* %2, i64 %3)
 func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar<1>) {
   // I32-DAG: %[[p0:.*]] = insertvalue { i8*, i32 } undef, i8* %2, 0
   // I32-DAG: = insertvalue { i8*, i32 } %[[p0]], i32 %3, 1
