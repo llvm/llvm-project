@@ -636,8 +636,8 @@ defm V_CVT_FLOOR_I32_F32   : VOP1_Real_FULL_with_name_gfx11<0x00d,
 defm V_MOV_B16             : VOP1_Real_FULL_gfx11<0x01c>;
 defm V_CLZ_I32_U32         : VOP1_Real_FULL_with_name_gfx11<0x039,
   "V_FFBH_U32", "v_clz_i32_u32">;
-defm V_CLZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,
-  "V_FFBL_B32", "v_clz_i32_b32">;
+defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,
+  "V_FFBL_B32", "v_ctz_i32_b32">;
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 // TODO-GFX11 new inst
