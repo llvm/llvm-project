@@ -118,13 +118,13 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ;
 ; CHECK:       N5 [label =
 ; CHECK-NEXT:    "pred.udiv.continue:\n" +
-; CHECK-NEXT:      "PHI-PREDICATED-INSTRUCTION ir<%tmp4>\l"
+; CHECK-NEXT:      "PHI-PREDICATED-INSTRUCTION vp<%3> = ir<%tmp4>\l"
 ; CHECK-NEXT:  ]
 ;
 ; CHECK:       N7 [label =
 ; CHECK-NEXT:    "for.inc:\n" +
 ; CHECK-NEXT:      "EMIT vp<%4> = not ir<%cmp>\l" +
-; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%4> ir<%tmp4>/ir<%cmp>\l" +
+; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%4> vp<%3>/ir<%cmp>\l" +
 ; CHECK-NEXT:      "CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>\l" +
 ; CHECK-NEXT:      "WIDEN store ir<%idx>, ir<%d>\l"
 ; CHECK-NEXT:  ]
