@@ -2844,12 +2844,15 @@ class OffloadingActionBuilder final {
   class HIPActionBuilder final : public CudaActionBuilderBase {
     /// The linker inputs obtained for each device arch.
     SmallVector<ActionList, 8> DeviceLinkerInputs;
+    bool GPUSanitize;
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
                      const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
       DefaultCudaArch = CudaArch::GFX803;
+      GPUSanitize = Args.hasFlag(options::OPT_fgpu_sanitize,
+                                 options::OPT_fno_gpu_sanitize, false);
     }
 
     bool canUseBundlerUnbundler() const override { return true; }
@@ -2898,17 +2901,33 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          auto BackendAction = C.getDriver().ConstructPhaseAction(
-              C, Args, phases::Backend, CudaDeviceActions[I],
-              AssociatedOffloadKind);
-          auto AssembleAction = C.getDriver().ConstructPhaseAction(
-              C, Args, phases::Assemble, BackendAction, AssociatedOffloadKind);
-          // Create a link action to link device IR with device library
-          // and generate ISA.
-          ActionList AL;
-          AL.push_back(AssembleAction);
-          CudaDeviceActions[I] =
-              C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          if (GPUSanitize) {
+            // When GPU sanitizer is enabled, since we need to link in the
+            // the sanitizer runtime library after the sanitize pass, we have
+            // to skip the backend and assemble phases and use lld to link
+            // the bitcode.
+            ActionList AL;
+            AL.push_back(CudaDeviceActions[I]);
+            // Create a link action to link device IR with device library
+            // and generate ISA.
+            CudaDeviceActions[I] =
+                C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          } else {
+            // When GPU sanitizer is not enabled, we follow the conventional
+            // compiler phases, including backend and assemble phases.
+            ActionList AL;
+            auto BackendAction = C.getDriver().ConstructPhaseAction(
+                C, Args, phases::Backend, CudaDeviceActions[I],
+                AssociatedOffloadKind);
+            auto AssembleAction = C.getDriver().ConstructPhaseAction(
+                C, Args, phases::Assemble, BackendAction,
+                AssociatedOffloadKind);
+            AL.push_back(AssembleAction);
+            // Create a link action to link device IR with device library
+            // and generate ISA.
+            CudaDeviceActions[I] =
+                C.MakeAction<LinkJobAction>(AL, types::TY_Image);
+          }
 
           // OffloadingActionBuilder propagates device arch until an offload
           // action. Since the next action for creating fatbin does

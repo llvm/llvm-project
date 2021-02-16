@@ -930,6 +930,9 @@ def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;
+defm gpu_sanitize : BoolFOption<"gpu-sanitize", EmptyKPM, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable sanitizer for AMDGPU target">,
+  NegFlag<SetFalse>>;
 def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
   HelpText<"An ID for compilation unit, which should be the same for the same "
            "compilation unit but different for different compilation units. "
