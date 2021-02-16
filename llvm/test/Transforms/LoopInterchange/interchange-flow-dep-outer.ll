@@ -21,10 +21,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;    fn2(T[k]);
 ;;  }
 
-; CHECK: Processing Inner Loop Id = 2 and OuterLoopId = 1
+; CHECK: Processing InnerLoopId = 2 and OuterLoopId = 1
 ; CHECK: Loops interchanged.
 
-; CHECK: Processing Inner Loop Id = 1 and OuterLoopId = 0
+; CHECK: Processing InnerLoopId = 1 and OuterLoopId = 0
 ; CHECK: Not interchanging loops. Cannot prove legality.
 
 @T = internal global [100 x double] zeroinitializer, align 4

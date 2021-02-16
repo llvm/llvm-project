@@ -68,6 +68,7 @@ def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";
   let flangClass = "OmpObjectList";
 }
+def OMPC_Sizes: Clause<"sizes"> { let clangClass = "OMPSizesClause"; }
 def OMPC_FirstPrivate : Clause<"firstprivate"> {
   let clangClass = "OMPFirstprivateClause";
   let flangClass = "OmpObjectList";
@@ -373,6 +374,11 @@ def OMP_Simd : Directive<"simd"> {
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_If, 50>,
+  ];
+}
+def OMP_Tile : Directive<"tile"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 51>,
   ];
 }
 def OMP_For : Directive<"for"> {

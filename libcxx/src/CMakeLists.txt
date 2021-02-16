@@ -77,8 +77,13 @@ if(WIN32)
   list(APPEND LIBCXX_SOURCES
     support/win32/locale_win32.cpp
     support/win32/support.cpp
-    support/win32/thread_win32.cpp
     )
+
+  if (NOT LIBCXX_HAS_PTHREAD_API)
+    list(APPEND LIBCXX_SOURCES
+      support/win32/thread_win32.cpp
+      )
+  endif()
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
   list(APPEND LIBCXX_SOURCES
     support/solaris/mbsnrtowcs.inc

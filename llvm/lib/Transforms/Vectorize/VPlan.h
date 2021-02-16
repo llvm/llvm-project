@@ -1041,8 +1041,6 @@ public:
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
 /// descriptor and the start value is the first operand of the recipe.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
-  PHINode *Phi;
-
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
 
@@ -1058,7 +1056,7 @@ public:
   /// Create a VPWidenPHIRecipe for \p Phi
   VPWidenPHIRecipe(PHINode *Phi)
       : VPRecipeBase(VPWidenPHISC, {}),
-        VPValue(VPValue::VPVWidenPHISC, Phi, this), Phi(Phi) {}
+        VPValue(VPValue::VPVWidenPHISC, Phi, this) {}
   ~VPWidenPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.

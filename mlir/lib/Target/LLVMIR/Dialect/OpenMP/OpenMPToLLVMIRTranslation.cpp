@@ -58,14 +58,9 @@ static void convertOmpOpRegions(Region &region, StringRef blockName,
       sourceTerminator->setSuccessor(0, llvmBB);
     }
 
-    llvm::IRBuilder<>::InsertPointGuard guard(builder);
-    if (failed(moduleTranslation.convertBlock(
-            *bb, bb->isEntryBlock(),
-            // TODO: this downcast should be removed after all of
-            // ModuleTranslation migrated to using IRBuilderBase &; the cast is
-            // safe in practice because the builder always comes from
-            // ModuleTranslation itself that only uses this subclass.
-            static_cast<llvm::IRBuilder<> &>(builder)))) {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    if (failed(
+            moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder))) {
       bodyGenStatus = failure();
       return;
     }

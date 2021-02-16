@@ -24,6 +24,7 @@ def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel

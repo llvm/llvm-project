@@ -46,10 +46,10 @@ llvm.mlir.global available_externally @available_externally(42 : i32) : i32
 llvm.mlir.global linkonce @linkonce(42 : i32) : i32
 // CHECK: @weak = weak global i32 42
 llvm.mlir.global weak @weak(42 : i32) : i32
-// CHECK: @common = common global i32 42
-llvm.mlir.global common @common(42 : i32) : i32
-// CHECK: @appending = appending global i32 42
-llvm.mlir.global appending @appending(42 : i32) : i32
+// CHECK: @common = common global i32 0
+llvm.mlir.global common @common(0 : i32) : i32
+// CHECK: @appending = appending global [3 x i32] [i32 1, i32 2, i32 3]
+llvm.mlir.global appending @appending(dense<[1,2,3]> : vector<3xi32>) : !llvm.array<3xi32>
 // CHECK: @extern_weak = extern_weak global i32
 llvm.mlir.global extern_weak @extern_weak() : i32
 // CHECK: @linkonce_odr = linkonce_odr global i32 42
@@ -984,10 +984,10 @@ llvm.func @addrspace(%arg0 : !llvm.ptr<i32>) -> !llvm.ptr<i32, 2> {
   llvm.return %1 : !llvm.ptr<i32, 2>
 }
 
-llvm.func @stringconstant() -> !llvm.ptr<i8> {
-  %1 = llvm.mlir.constant("Hello world!") : !llvm.ptr<i8>
+llvm.func @stringconstant() -> !llvm.array<12 x i8> {
+  %1 = llvm.mlir.constant("Hello world!") : !llvm.array<12 x i8>
   // CHECK: ret [12 x i8] c"Hello world!"
-  llvm.return %1 : !llvm.ptr<i8>
+  llvm.return %1 : !llvm.array<12 x i8>
 }
 
 llvm.func @noreach() {
@@ -1119,10 +1119,10 @@ llvm.func @elements_constant_3d_array() -> !llvm.array<2 x array<2 x array<2 x i
 llvm.func @atomicrmw(
     %f32_ptr : !llvm.ptr<f32>, %f32 : f32,
     %i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
-  // CHECK: atomicrmw fadd float* %{{.*}}, float %{{.*}} unordered
-  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 unordered : f32
-  // CHECK: atomicrmw fsub float* %{{.*}}, float %{{.*}} unordered
-  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 unordered : f32
+  // CHECK: atomicrmw fadd float* %{{.*}}, float %{{.*}} monotonic
+  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 monotonic : f32
+  // CHECK: atomicrmw fsub float* %{{.*}}, float %{{.*}} monotonic
+  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 monotonic : f32
   // CHECK: atomicrmw xchg float* %{{.*}}, float %{{.*}} monotonic
   %2 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : f32
   // CHECK: atomicrmw add i32* %{{.*}}, i32 %{{.*}} acquire
@@ -1133,18 +1133,18 @@ llvm.func @atomicrmw(
   %5 = llvm.atomicrmw _and %i32_ptr, %i32 acq_rel : i32
   // CHECK: atomicrmw nand i32* %{{.*}}, i32 %{{.*}} seq_cst
   %6 = llvm.atomicrmw nand %i32_ptr, %i32 seq_cst : i32
-  // CHECK: atomicrmw or i32* %{{.*}}, i32 %{{.*}} unordered
-  %7 = llvm.atomicrmw _or %i32_ptr, %i32 unordered : i32
-  // CHECK: atomicrmw xor i32* %{{.*}}, i32 %{{.*}} unordered
-  %8 = llvm.atomicrmw _xor %i32_ptr, %i32 unordered : i32
-  // CHECK: atomicrmw max i32* %{{.*}}, i32 %{{.*}} unordered
-  %9 = llvm.atomicrmw max %i32_ptr, %i32 unordered : i32
-  // CHECK: atomicrmw min i32* %{{.*}}, i32 %{{.*}} unordered
-  %10 = llvm.atomicrmw min %i32_ptr, %i32 unordered : i32
-  // CHECK: atomicrmw umax i32* %{{.*}}, i32 %{{.*}} unordered
-  %11 = llvm.atomicrmw umax %i32_ptr, %i32 unordered : i32
-  // CHECK: atomicrmw umin i32* %{{.*}}, i32 %{{.*}} unordered
-  %12 = llvm.atomicrmw umin %i32_ptr, %i32 unordered : i32
+  // CHECK: atomicrmw or i32* %{{.*}}, i32 %{{.*}} monotonic
+  %7 = llvm.atomicrmw _or %i32_ptr, %i32 monotonic : i32
+  // CHECK: atomicrmw xor i32* %{{.*}}, i32 %{{.*}} monotonic
+  %8 = llvm.atomicrmw _xor %i32_ptr, %i32 monotonic : i32
+  // CHECK: atomicrmw max i32* %{{.*}}, i32 %{{.*}} monotonic
+  %9 = llvm.atomicrmw max %i32_ptr, %i32 monotonic : i32
+  // CHECK: atomicrmw min i32* %{{.*}}, i32 %{{.*}} monotonic
+  %10 = llvm.atomicrmw min %i32_ptr, %i32 monotonic : i32
+  // CHECK: atomicrmw umax i32* %{{.*}}, i32 %{{.*}} monotonic
+  %11 = llvm.atomicrmw umax %i32_ptr, %i32 monotonic : i32
+  // CHECK: atomicrmw umin i32* %{{.*}}, i32 %{{.*}} monotonic
+  %12 = llvm.atomicrmw umin %i32_ptr, %i32 monotonic : i32
   llvm.return
 }
 
@@ -1168,7 +1168,7 @@ llvm.func @__gxx_personality_v0(...) -> i32
 llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personality_v0 } {
 // CHECK: %[[a1:[0-9]+]] = alloca i8
   %0 = llvm.mlir.constant(0 : i32) : i32
-  %1 = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
+  %1 = llvm.mlir.constant(dense<0> : vector<1xi8>) : !llvm.array<1 x i8>
   %2 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
   %3 = llvm.bitcast %2 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
   %4 = llvm.mlir.null : !llvm.ptr<ptr<i8>>
@@ -1183,7 +1183,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK: %{{[0-9]+}} = landingpad { i8*, i32 }
 // CHECK-NEXT:             catch i8** null
 // CHECK-NEXT:             catch i8* bitcast (i8** @_ZTIi to i8*)
-// CHECK-NEXT:             filter [1 x i8] c"\01"
+// CHECK-NEXT:             filter [1 x i8] zeroinitializer
   %7 = llvm.landingpad (catch %4 : !llvm.ptr<ptr<i8>>) (catch %3 : !llvm.ptr<i8>) (filter %1 : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
 // CHECK: br label %[[final:[0-9]+]]
   llvm.br ^bb3
@@ -1415,7 +1415,7 @@ llvm.func @fastmathFlags(%arg0: f32) {
 // -----
 
 // CHECK-LABEL: @switch_args
-llvm.func @switch_args(%arg0: i32) {
+llvm.func @switch_args(%arg0: i32) -> i32 {
   %0 = llvm.mlir.constant(5 : i32) : i32
   %1 = llvm.mlir.constant(7 : i32) : i32
   %2 = llvm.mlir.constant(11 : i32) : i32
@@ -1448,7 +1448,7 @@ llvm.func @switch_args(%arg0: i32) {
 }
 
 // CHECK-LABEL: @switch_weights
-llvm.func @switch_weights(%arg0: i32) {
+llvm.func @switch_weights(%arg0: i32) -> i32 {
   %0 = llvm.mlir.constant(19 : i32) : i32
   %1 = llvm.mlir.constant(23 : i32) : i32
   %2 = llvm.mlir.constant(29 : i32) : i32

@@ -705,22 +705,33 @@ mlir::vector::unrollSingleResultVectorOp(OpBuilder &builder, Operation *op,
 
 namespace {
 
-// Splits vector TransferReadOp into smaller TransferReadOps based on slicing
-// scheme of its unique ExtractSlicesOp user.
-struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+// Splits a TransferReadOp into smaller TransferReadOps based on slicing
+// scheme of its unique ExtractSlicesOp users.
+class SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
+public:
+  SplitTransferReadOp(MLIRContext *context,
+                      std::function<bool(Operation *)> ignoreFilter = nullptr,
+                      PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit), ignoreFilter(ignoreFilter) {}
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp xferReadOp,
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support splitting TransferReadOp with non-identity
-    // permutation maps. Repurpose code from MaterializeVectors transformation.
-    if (!isIdentitySuffix(xferReadOp.permutation_map()))
+    if (ignoreFilter && ignoreFilter(readOp))
       return failure();
-    // Return unless the unique 'xferReadOp' user is an ExtractSlicesOp.
-    Value xferReadResult = xferReadOp.getResult();
+
+    // TODO: Support splitting TransferReadOp with non-identity permutation
+    // maps. Repurpose code from MaterializeVectors transformation.
+    if (!isIdentitySuffix(readOp.permutation_map()))
+      return failure();
+
+    // Return unless there is only one user, and it is an ExtractSlicesOp.
+    Value readResult = readOp.getResult();
+    if (!readResult.hasOneUse())
+      return failure();
+
     auto extractSlicesOp =
-        dyn_cast<vector::ExtractSlicesOp>(*xferReadResult.getUsers().begin());
-    if (!xferReadResult.hasOneUse() || !extractSlicesOp)
+        dyn_cast<vector::ExtractSlicesOp>(readResult.use_begin()->getOwner());
+    if (!extractSlicesOp)
       return failure();
 
     // Get 'sizes' and 'strides' parameters from ExtractSlicesOp user.
@@ -730,37 +741,48 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
     extractSlicesOp.getStrides(strides);
     assert(llvm::all_of(strides, [](int64_t s) { return s == 1; }));
 
-    Value newVec = unrollTransferReadOp(xferReadOp, sizes, rewriter);
+    Value newVec = unrollTransferReadOp(readOp, sizes, rewriter);
     if (!newVec)
       return failure();
-    rewriter.replaceOp(xferReadOp, newVec);
+    rewriter.replaceOp(readOp, newVec);
     return success();
   }
+
+private:
+  std::function<bool(Operation *)> ignoreFilter;
 };
 
-// Splits vector TransferWriteOp into smaller TransferWriteOps for each source.
-struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+// Splits a TransferWriteOp into smaller TransferWriteOps for each source.
+class SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
+public:
+  SplitTransferWriteOp(MLIRContext *context,
+                       std::function<bool(Operation *)> ignoreFilter = nullptr,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit), ignoreFilter(ignoreFilter) {}
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp xferWriteOp,
+  LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support splitting TransferWriteOp with non-identity
-    // permutation maps. Repurpose code from MaterializeVectors transformation.
-    if (!isIdentitySuffix(xferWriteOp.permutation_map()))
+    if (ignoreFilter && ignoreFilter(writeOp))
       return failure();
-    // Return unless the 'xferWriteOp' 'vector' operand is an 'InsertSlicesOp'.
-    auto *vectorDefOp = xferWriteOp.vector().getDefiningOp();
-    auto insertSlicesOp = dyn_cast_or_null<vector::InsertSlicesOp>(vectorDefOp);
+
+    // TODO: Support splitting TransferWriteOp with non-identity permutation
+    // maps. Repurpose code from MaterializeVectors transformation.
+    if (!isIdentitySuffix(writeOp.permutation_map()))
+      return failure();
+
+    // Fail to match unless this is writing a vector resulting from an
+    // InsertSlicesOp.
+    auto insertSlicesOp =
+        writeOp.vector().getDefiningOp<vector::InsertSlicesOp>();
     if (!insertSlicesOp)
       return failure();
 
-    // Get TupleOp operand of 'insertSlicesOp'.
-    auto tupleOp = dyn_cast_or_null<vector::TupleOp>(
-        insertSlicesOp.vectors().getDefiningOp());
+    // Get the TupleOp operand of the InsertSlicesOp.
+    auto tupleOp = insertSlicesOp.vectors().getDefiningOp<vector::TupleOp>();
     if (!tupleOp)
       return failure();
 
-    // Get 'sizes' and 'strides' parameters from InsertSlicesOp user.
+    // Get 'sizes' and 'strides' parameters from the InsertSlicesOp user.
     auto sourceTupleType = insertSlicesOp.getSourceTupleType();
     auto resultVectorType = insertSlicesOp.getResultVectorType();
     SmallVector<int64_t, 4> sizes;
@@ -768,21 +790,20 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
     SmallVector<int64_t, 4> strides;
     insertSlicesOp.getStrides(strides);
 
-    Location loc = xferWriteOp.getLoc();
+    Location loc = writeOp.getLoc();
     auto shapedElementType =
-        xferWriteOp.source().getType().cast<ShapedType>().getElementType();
-    SmallVector<Value, 4> indices(xferWriteOp.indices().begin(),
-                                  xferWriteOp.indices().end());
+        writeOp.source().getType().cast<ShapedType>().getElementType();
+    auto indices = llvm::to_vector<4>(writeOp.indices());
     Value resultTensor;
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
       // Create split TransferWriteOp for source vector 'tupleOp.operand[i]'.
-      // `masked` attribute propagates conservatively: if the coarse op didn't
+      // 'masked' attribute propagates conservatively: if the coarse op didn't
       // need masking, the fine op doesn't either.
       Operation *write = rewriter.create<vector::TransferWriteOp>(
           loc, tupleOp.getOperand(index),
-          resultTensor ? resultTensor : xferWriteOp.source(), sliceIndices,
-          xferWriteOp.permutation_map(),
-          xferWriteOp.masked() ? *xferWriteOp.masked() : ArrayAttr());
+          resultTensor ? resultTensor : writeOp.source(), sliceIndices,
+          writeOp.permutation_map(),
+          writeOp.masked() ? *writeOp.masked() : ArrayAttr());
       if (!write->getResults().empty())
         resultTensor = write->getResult(0);
     };
@@ -790,13 +811,15 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
                              sourceTupleType, sizes, strides, indices, rewriter,
                              createSlice);
 
-    // Erase old 'xferWriteOp'.
     if (resultTensor)
-      rewriter.replaceOp(xferWriteOp, ArrayRef<Value>(resultTensor));
+      rewriter.replaceOp(writeOp, ArrayRef<Value>(resultTensor));
     else
-      rewriter.eraseOp(xferWriteOp);
+      rewriter.eraseOp(writeOp);
     return success();
   }
+
+private:
+  std::function<bool(Operation *)> ignoreFilter;
 };
 
 /// Decomposes ShapeCastOp on tuple-of-vectors to multiple ShapeCastOps, each
@@ -1693,6 +1716,24 @@ private:
 
 } // namespace
 
+/// Creates an AddIOp if `isInt` is true otherwise create an AddFOp using
+/// operands `x` and `y`.
+static Value createAdd(Location loc, Value x, Value y, bool isInt,
+                       PatternRewriter &rewriter) {
+  if (isInt)
+    return rewriter.create<AddIOp>(loc, x, y);
+  return rewriter.create<AddFOp>(loc, x, y);
+}
+
+/// Creates a MulIOp if `isInt` is true otherwise create an MulFOp using
+/// operands `x and `y`.
+static Value createMul(Location loc, Value x, Value y, bool isInt,
+                       PatternRewriter &rewriter) {
+  if (isInt)
+    return rewriter.create<MulIOp>(loc, x, y);
+  return rewriter.create<MulFOp>(loc, x, y);
+}
+
 namespace mlir {
 
 /// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
@@ -1980,13 +2021,14 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
   Value res =
       rewriter.create<ConstantOp>(loc, dstType, rewriter.getZeroAttr(dstType));
+  bool isInt = dstType.getElementType().isa<IntegerType>();
   for (unsigned r = 0; r < dstRows; ++r) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
       Value b = rank == 1
                     ? rhs
                     : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
-      Value m = rewriter.create<MulFOp>(op.getLoc(), a, b);
+      Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
           op.getLoc(), dstType.getElementType(), rewriter.getStringAttr("add"),
           m, ValueRange{});
@@ -1997,7 +2039,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
     }
   }
   if (auto acc = op.acc())
-    res = rewriter.create<AddFOp>(op.getLoc(), res, acc);
+    res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -2153,6 +2195,7 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
   assert(!resType.isa<VectorType>());
+  bool isInt = resType.isa<IntegerType>();
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap, 4> iMap = op.getIndexingMaps();
@@ -2167,10 +2210,13 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
   // Base case.
   if (lhsType.getRank() == 1) {
     assert(rhsType.getRank() == 1 && "corrupt contraction");
-    Value m = rewriter.create<MulFOp>(loc, op.lhs(), op.rhs());
+    Value m = createMul(loc, op.lhs(), op.rhs(), isInt, rewriter);
     StringAttr kind = rewriter.getStringAttr("add");
-    return rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
-                                                op.acc());
+    Value res = rewriter.create<vector::ReductionOp>(loc, resType, kind, m,
+                                                     ValueRange{});
+    if (auto acc = op.acc())
+      res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
+    return res;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -3105,15 +3151,16 @@ struct BubbleUpBitCastForStridedSliceInsert
 // TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  // clang-format off
-  patterns.insert<ShapeCastOpDecomposer,
-                  ShapeCastOpFolder,
-                  SplitTransferReadOp,
-                  SplitTransferWriteOp,
-                  TupleGetFolderOp,
-                  TransferReadExtractPattern,
-                  TransferWriteInsertPattern>(context);
-  // clang-format on
+  patterns.insert<ShapeCastOpDecomposer, ShapeCastOpFolder, TupleGetFolderOp,
+                  TransferReadExtractPattern, TransferWriteInsertPattern>(
+      context);
+}
+
+void mlir::vector::populateSplitVectorTransferPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context,
+    std::function<bool(Operation *)> ignoreFilter) {
+  patterns.insert<SplitTransferReadOp, SplitTransferWriteOp>(context,
+                                                             ignoreFilter);
 }
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(

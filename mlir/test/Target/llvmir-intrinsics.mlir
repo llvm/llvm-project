@@ -302,12 +302,13 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr<f32>, %mask: vector
 }
 
 // CHECK-LABEL: @memcpy_test
-llvm.func @memcpy_test(%arg0: i32, %arg1: i1, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 %{{.*}}, i1 %{{.*}})
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
+llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
+  %i1 = llvm.mlir.constant(false) : i1
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 %{{.*}}, i1 {{.*}})
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
   %sz = llvm.mlir.constant(10: i64) : i64
-  // CHECK: call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 10, i1 %{{.*}})
-  "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %arg1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
+  // CHECK: call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 10, i1 {{.*}})
+  "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
   llvm.return
 }
 
@@ -368,14 +369,17 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
 // CHECK-LABEL: @coro_id
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.id
-  llvm.intr.coro.id %arg0, %arg1, %arg1, %arg1 : !llvm.token
+  %null = llvm.mlir.null : !llvm.ptr<i8>
+  llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
-llvm.func @coro_begin(%arg0: !llvm.token, %arg1: !llvm.ptr<i8>) {
+llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr<i8>) {
+  %null = llvm.mlir.null : !llvm.ptr<i8>
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
   // CHECK: call i8* @llvm.coro.begin
-  llvm.intr.coro.begin %arg0, %arg1 : !llvm.ptr<i8>
+  llvm.intr.coro.begin %token, %arg1 : !llvm.ptr<i8>
   llvm.return
 }
 
@@ -396,9 +400,11 @@ llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
 }
 
 // CHECK-LABEL: @coro_suspend
-llvm.func @coro_suspend(%arg0: !llvm.token, %arg1 : i1) {
+llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr<i8>) {
+  %null = llvm.mlir.null : !llvm.ptr<i8>
+  %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
-  %0 = llvm.intr.coro.suspend %arg0, %arg1 : i8
+  %0 = llvm.intr.coro.suspend %token, %arg1 : i8
   llvm.return
 }
 
@@ -410,9 +416,11 @@ llvm.func @coro_end(%arg0: !llvm.ptr<i8>, %arg1 : i1) {
 }
 
 // CHECK-LABEL: @coro_free
-llvm.func @coro_free(%arg0: !llvm.token, %arg1 : !llvm.ptr<i8>) {
+llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr<i8>) {
+  %null = llvm.mlir.null : !llvm.ptr<i8>
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
   // CHECK: call i8* @llvm.coro.free
-  %0 = llvm.intr.coro.free %arg0, %arg1 : !llvm.ptr<i8>
+  %0 = llvm.intr.coro.free %token, %arg1 : !llvm.ptr<i8>
   llvm.return
 }
 

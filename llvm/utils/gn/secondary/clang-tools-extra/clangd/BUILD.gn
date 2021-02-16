@@ -96,6 +96,7 @@ static_library("clangd") {
     "Hover.cpp",
     "IncludeFixer.cpp",
     "JSONTransport.cpp",
+    "Module.cpp",
     "ParsedAST.cpp",
     "PathMapping.cpp",
     "Preamble.cpp",

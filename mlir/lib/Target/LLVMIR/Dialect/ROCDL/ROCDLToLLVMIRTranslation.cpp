@@ -54,9 +54,7 @@ LogicalResult mlir::ROCDLDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   if (attribute.first == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
-    auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
-    if (!func)
-      return failure();
+    auto func = cast<LLVM::LLVMFuncOp>(op);
 
     // For GPU kernels,
     // 1. Insert AMDGPU_KERNEL calling convention.

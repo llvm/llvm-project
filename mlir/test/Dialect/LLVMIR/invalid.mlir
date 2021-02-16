@@ -222,9 +222,40 @@ func @call_non_llvm_input(%callee : (tensor<*xi32>) -> (), %arg : tensor<*xi32>)
 
 // -----
 
+llvm.func @void_func_result(%arg0: i32) {
+  // expected-error@below {{expected no operands}}
+  // expected-note@above {{when returning from function}}
+  llvm.return %arg0: i32
+}
+
+// -----
+
+llvm.func @non_void_func_no_result() -> i32 {
+  // expected-error@below {{expected 1 operand}}
+  // expected-note@above {{when returning from function}}
+  llvm.return
+}
+
+// -----
+
+llvm.func @func_result_mismatch(%arg0: f32) -> i32 {
+  // expected-error@below {{mismatching result types}}
+  // expected-note@above {{when returning from function}}
+  llvm.return %arg0 : f32
+}
+
+// -----
+
 func @constant_wrong_type() {
   // expected-error@+1 {{only supports integer, float, string or elements attributes}}
   llvm.mlir.constant(@constant_wrong_type) : !llvm.ptr<func<void ()>>
+}
+
+// -----
+
+func @constant_wrong_type_string() {
+  // expected-error@below {{expected array type of 3 i8 elements for the string constant}}
+  llvm.mlir.constant("foo") : !llvm.ptr<i8>
 }
 
 // -----
@@ -561,7 +592,7 @@ func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
 llvm.func @foo(i32) -> i32
 llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @bad_landingpad(%arg0: !llvm.ptr<ptr<i8>>) attributes { personality = @__gxx_personality_v0} {
+llvm.func @bad_landingpad(%arg0: !llvm.ptr<ptr<i8>>) -> i32 attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(3 : i32) : i32
   %1 = llvm.mlir.constant(2 : i32) : i32
   %2 = llvm.invoke @foo(%1) to ^bb1 unwind ^bb2 : (i32) -> i32
@@ -667,3 +698,18 @@ func @switch_wrong_number_of_weights(%arg0 : i32) {
 ^bb2(%1: i32, %2: i32): // pred: ^bb0
   llvm.return
 }
+
+// -----
+
+// expected-error@below {{expected zero value for 'common' linkage}}
+llvm.mlir.global common @non_zero_global_common_linkage(42 : i32) : i32
+
+// -----
+
+// expected-error@below {{expected zero value for 'common' linkage}}
+llvm.mlir.global common @non_zero_compound_global_common_linkage(dense<[0, 0, 0, 1, 0]> : vector<5xi32>) : !llvm.array<5 x i32>
+
+// -----
+
+// expected-error@below {{expected array type for 'appending' linkage}}
+llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
