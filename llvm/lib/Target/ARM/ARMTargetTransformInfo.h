@@ -198,8 +198,8 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
-  int getCFInstrCost(unsigned Opcode,
-                     TTI::TargetCostKind CostKind);
+  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                     const Instruction *I = nullptr);
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,

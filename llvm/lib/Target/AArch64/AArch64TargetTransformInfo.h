@@ -139,7 +139,8 @@ public:
   int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
                                unsigned Index);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr);
 
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 

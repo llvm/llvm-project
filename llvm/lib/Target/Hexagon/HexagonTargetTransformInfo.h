@@ -153,7 +153,8 @@ public:
                             const Instruction *I = nullptr);
   unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr) {
     return 1;
   }
 

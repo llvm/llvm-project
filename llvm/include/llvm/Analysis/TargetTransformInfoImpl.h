@@ -512,7 +512,8 @@ public:
     return 1;
   }
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) const {
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr) const {
     // A phi would be free, unless we're costing the throughput because it
     // will require a register.
     if (Opcode == Instruction::PHI && CostKind != TTI::TCK_RecipThroughput)
@@ -933,7 +934,8 @@ public:
     case Instruction::Br:
     case Instruction::Ret:
     case Instruction::PHI:
-      return TargetTTI->getCFInstrCost(Opcode, CostKind);
+    case Instruction::Switch:
+      return TargetTTI->getCFInstrCost(Opcode, CostKind, I);
     case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;

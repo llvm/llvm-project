@@ -897,8 +897,9 @@ public:
                                      TTI::CastContextHint::None, TTI::TCK_RecipThroughput);
   }
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
-    return BaseT::getCFInstrCost(Opcode, CostKind);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr) {
+    return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,

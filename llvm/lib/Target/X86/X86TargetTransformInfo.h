@@ -203,7 +203,8 @@ public:
 
   int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr);
 
   int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
                         Type *Ty, TTI::TargetCostKind CostKind,
