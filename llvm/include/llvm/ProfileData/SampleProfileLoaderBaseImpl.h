@@ -69,7 +69,6 @@ extern cl::opt<bool> NoWarnSampleUnused;
 class SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoaderBaseImpl(std::string Name) : Filename(Name) {}
-  virtual ~SampleProfileLoaderBaseImpl() = default;
   void dump() { Reader->dump(); }
 
 protected:
