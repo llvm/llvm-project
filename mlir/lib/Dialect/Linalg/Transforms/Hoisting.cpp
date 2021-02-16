@@ -243,7 +243,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
                         << "\n");
 
       llvm::SetVector<Operation *> forwardSlice;
-      getForwardSlice(transferRead, &forwardSlice);
+      getForwardSlice(transferRead.getOperation(), &forwardSlice);
 
       // Look for the last TransferWriteOp in the forwardSlice of
       // `transferRead` that operates on the same memref.
@@ -381,9 +381,10 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
   // Get the backwards slice from `padTensorOp` that is dominated by the
   // outermost enclosing loop.
   DominanceInfo domInfo(outermostEnclosingForOp);
-  getBackwardSlice(padTensorOp, &backwardSlice, [&](Operation *op) {
-    return domInfo.dominates(outermostEnclosingForOp, op);
-  });
+  getBackwardSlice(padTensorOp.getOperation(), &backwardSlice,
+                   [&](Operation *op) {
+                     return domInfo.dominates(outermostEnclosingForOp, op);
+                   });
 
   // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
   if (llvm::any_of(backwardSlice, [](Operation *op) {
