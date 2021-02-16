@@ -1,7 +1,14 @@
+//===--- Module.h - Plugging features into clangd -----------------*-C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 
-#include "LSPBinder.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
@@ -11,6 +18,10 @@
 
 namespace clang {
 namespace clangd {
+class LSPBinder;
+class SymbolIndex;
+class ThreadsafeFS;
+class TUScheduler;
 
 /// A Module contributes a vertical feature to clangd.
 ///
@@ -18,10 +29,11 @@ namespace clangd {
 ///
 /// The lifetime of a module is roughly:
 ///  - modules are created before the LSP server, in ClangdMain.cpp
-///  - these modules are then passed to ClangdLSPServer and ClangdServer
-///  - module hooks can be called at this point.
-///    FIXME: We should make some server facilities like TUScheduler and index
-///    available to those modules after ClangdServer is initalized.
+///  - these modules are then passed to ClangdLSPServer in a ModuleSet
+///  - initializeLSP() is called when the editor calls initialize.
+//   - initialize() is then called by ClangdServer as it is constructed.
+///  - module hooks can be called by the server at this point.
+///    Server facilities (scheduler etc) are available.
 ///  - ClangdServer will not be destroyed until all the requests are done.
 ///    FIXME: Block server shutdown until all the modules are idle.
 ///  - modules will be destroyed after ClangdLSPServer is destroyed.
@@ -41,6 +53,28 @@ public:
   virtual void initializeLSP(LSPBinder &Bind,
                              const llvm::json::Object &ClientCaps,
                              llvm::json::Object &ServerCaps) {}
+
+  /// Shared server facilities needed by the module to get its work done.
+  struct Facilities {
+    TUScheduler &Scheduler;
+    const SymbolIndex *Index;
+    const ThreadsafeFS &FS;
+  };
+  /// Called by the server to prepare this module for use.
+  void initialize(const Facilities &F);
+
+protected:
+  /// Accessors for modules to access shared server facilities they depend on.
+  Facilities &facilities();
+  /// The scheduler is used to run tasks on worker threads and access ASTs.
+  TUScheduler &scheduler() { return facilities().Scheduler; }
+  /// The index is used to get information about the whole codebase.
+  const SymbolIndex *index() { return facilities().Index; }
+  /// The filesystem is used to read source files on disk.
+  const ThreadsafeFS &fs() { return facilities().FS; }
+
+private:
+  llvm::Optional<Facilities> Fac;
 };
 
 /// A ModuleSet is a collection of modules installed in clangd.
