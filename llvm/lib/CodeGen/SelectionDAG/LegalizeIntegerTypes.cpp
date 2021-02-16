@@ -96,6 +96,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::EXTRACT_SUBVECTOR:
                          Res = PromoteIntRes_EXTRACT_SUBVECTOR(N); break;
+  case ISD::VECTOR_REVERSE:
+                         Res = PromoteIntRes_VECTOR_REVERSE(N); break;
   case ISD::VECTOR_SHUFFLE:
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
   case ISD::INSERT_VECTOR_ELT:
@@ -475,6 +477,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = Op.getValueType();
   SDLoc dl(N);
+
+  // If the larger BITREVERSE isn't supported by the target, try to expand now.
+  // If we expand later we'll end up with more operations since we lost the
+  // original type. We only do this for scalars since we have a shuffle
+  // based lowering for vectors in LegalizeVectorOps.
+  if (!OVT.isVector() && OVT.isSimple() &&
+      !TLI.isOperationLegalOrCustom(ISD::BITREVERSE, NVT)) {
+    if (SDValue Res = TLI.expandBITREVERSE(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Res);
+  }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
   EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
@@ -4662,6 +4674,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
   return DAG.getBuildVector(NOutVT, dl, Ops);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REVERSE(SDNode *N) {
+  SDLoc dl(N);
+
+  SDValue V0 = GetPromotedInteger(N->getOperand(0));
+  EVT OutVT = V0.getValueType();
+
+  return DAG.getNode(ISD::VECTOR_REVERSE, dl, OutVT, V0);
+}
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SHUFFLE(SDNode *N) {
   ShuffleVectorSDNode *SV = cast<ShuffleVectorSDNode>(N);

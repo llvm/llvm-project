@@ -142,18 +142,11 @@ public:
   /// Looks up remapped a list of remapped values.
   SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
 
-  /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
-  /// This currently supports integer, floating point, splat and dense element
-  /// attributes and combinations thereof.  In case of error, report it to `loc`
-  /// and return nullptr.
-  llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
-                                  Location loc);
-
   /// Returns the MLIR context of the module being translated.
   MLIRContext &getContext() { return *mlirModule->getContext(); }
 
   /// Returns the LLVM context in which the IR is being constructed.
-  llvm::LLVMContext &getLLVMContext() { return llvmModule->getContext(); }
+  llvm::LLVMContext &getLLVMContext() const { return llvmModule->getContext(); }
 
   /// Finds an LLVM IR global value that corresponds to the given MLIR operation
   /// defining a global value.
@@ -184,6 +177,10 @@ public:
   LogicalResult convertBlock(Block &bb, bool ignoreArguments,
                              llvm::IRBuilder<> &builder);
 
+  /// Gets the named metadata in the LLVM IR module being constructed, creating
+  /// it if it does not exist.
+  llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
+
 protected:
   /// Translate the given MLIR module expressed in MLIR LLVM IR dialect into an
   /// LLVM IR module. The MLIR LLVM IR dialect holds a pointer to an
@@ -208,6 +205,9 @@ private:
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 
+  /// Translates dialect attributes attached to the given operation.
+  LogicalResult convertDialectAttributes(Operation *op);
+
   /// Original and translated module.
   Operation *mlirModule;
   std::unique_ptr<llvm::Module> llvmModule;
@@ -228,6 +228,8 @@ private:
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
 
+  /// A dialect interface collection used for dispatching the translation to
+  /// specific dialects.
   LLVMTranslationInterface iface;
 
   /// Mappings between original and translated values, used for lookups.
@@ -249,6 +251,20 @@ void connectPHINodes(Region &region, const ModuleTranslation &state);
 
 /// Get a topologically sorted list of blocks of the given region.
 llvm::SetVector<Block *> getTopologicallySortedBlocks(Region &region);
+
+/// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
+/// This currently supports integer, floating point, splat and dense element
+/// attributes and combinations thereof.  In case of error, report it to `loc`
+/// and return nullptr.
+llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
+                                Location loc,
+                                const ModuleTranslation &moduleTranslation);
+
+/// Creates a call to an LLVM IR intrinsic function with the given arguments.
+llvm::Value *createIntrinsicCall(llvm::IRBuilderBase &builder,
+                                 llvm::Intrinsic::ID intrinsic,
+                                 ArrayRef<llvm::Value *> args = {},
+                                 ArrayRef<llvm::Type *> tys = {});
 } // namespace detail
 
 } // namespace LLVM

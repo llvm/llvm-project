@@ -3894,7 +3894,7 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
       return false;
 
     // Vectors (of > 1 lane) in big endian need tricky handling.
-    if (RVEVT.isVector() && RVEVT.getVectorNumElements() > 1 &&
+    if (RVEVT.isVector() && RVEVT.getVectorElementCount().isVector() &&
         !Subtarget->isLittleEndian())
       return false;
 

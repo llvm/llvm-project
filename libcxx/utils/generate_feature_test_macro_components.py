@@ -204,7 +204,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_constexpr_memory",
     "values": { "c++20": 201811 },
     "headers": ["memory"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_numeric",
     "values": { "c++20": 201911 },

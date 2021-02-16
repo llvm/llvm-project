@@ -431,6 +431,7 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPreEmitPass2() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -695,8 +696,11 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+}
 
-  // SVE bundles move prefixes with destructive operations.
+void AArch64PassConfig::addPreEmitPass2() {
+  // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
+  // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundles(nullptr));
 }
 

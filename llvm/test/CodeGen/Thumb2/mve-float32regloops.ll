@@ -1442,8 +1442,7 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    adds r1, #8
 ; CHECK-NEXT:    vfma.f32 q5, q4, r5
 ; CHECK-NEXT:    vfma.f32 q3, q5, q2
-; CHECK-NEXT:    vstmia r7, {s20, s21}
-; CHECK-NEXT:    adds r7, #8
+; CHECK-NEXT:    vstmia r7!, {s20, s21}
 ; CHECK-NEXT:    vfma.f32 q3, q4, q1
 ; CHECK-NEXT:    vstrw.32 q3, [r4]
 ; CHECK-NEXT:    le lr, .LBB17_3
@@ -2069,8 +2068,7 @@ define void @arm_biquad_cascade_df2T_f32(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:  .LBB20_5: @ %while.body
 ; CHECK-NEXT:    @ Parent Loop BB20_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrd r7, r4, [r1]
-; CHECK-NEXT:    adds r1, #8
+; CHECK-NEXT:    ldrd r7, r4, [r1], #8
 ; CHECK-NEXT:    vfma.f32 q6, q3, r7
 ; CHECK-NEXT:    vmov r7, s24
 ; CHECK-NEXT:    vmov q1, q6

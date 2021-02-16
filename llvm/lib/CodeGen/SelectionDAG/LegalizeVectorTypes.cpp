@@ -930,6 +930,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
+  case ISD::VECTOR_REVERSE:
+    SplitVecRes_VECTOR_REVERSE(N, Lo, Hi);
+    break;
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
@@ -5491,4 +5494,14 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   for ( ; Idx < WidenNumElts; ++Idx)
     Ops[Idx] = FillVal;
   return DAG.getBuildVector(NVT, dl, Ops);
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  SDValue InLo, InHi;
+  GetSplitVector(N->getOperand(0), InLo, InHi);
+  SDLoc DL(N);
+
+  Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, InHi.getValueType(), InHi);
+  Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, InLo.getValueType(), InLo);
 }

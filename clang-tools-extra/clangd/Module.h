@@ -2,7 +2,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 
 #include "LSPBinder.h"
-#include "Protocol.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -37,9 +36,8 @@ public:
   ///
   /// This is only called if the module is running in ClangdLSPServer!
   /// Modules with a public interface should satisfy it without LSP bindings.
-  // FIXME: ClientCaps should be a raw json::Object here.
   virtual void initializeLSP(LSPBinder &Bind,
-                             const ClientCapabilities &ClientCaps,
+                             const llvm::json::Object &ClientCaps,
                              llvm::json::Object &ServerCaps) {}
 };
 

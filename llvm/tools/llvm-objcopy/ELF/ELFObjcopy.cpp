@@ -166,101 +166,11 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
   }
 }
 
-template <class ELFT>
-static Expected<ArrayRef<uint8_t>>
-findBuildID(const CopyConfig &Config, const object::ELFFile<ELFT> &In) {
-  auto PhdrsOrErr = In.program_headers();
-  if (auto Err = PhdrsOrErr.takeError())
-    return createFileError(Config.InputFilename, std::move(Err));
-
-  for (const auto &Phdr : *PhdrsOrErr) {
-    if (Phdr.p_type != PT_NOTE)
-      continue;
-    Error Err = Error::success();
-    for (auto Note : In.notes(Phdr, Err))
-      if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
-        return Note.getDesc();
-    if (Err)
-      return createFileError(Config.InputFilename, std::move(Err));
-  }
-
-  return createFileError(Config.InputFilename,
-                         createStringError(llvm::errc::invalid_argument,
-                                           "could not find build ID"));
-}
-
-static Expected<ArrayRef<uint8_t>>
-findBuildID(const CopyConfig &Config, const object::ELFObjectFileBase &In) {
-  if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
-    return findBuildID(Config, O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
-    return findBuildID(Config, O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
-    return findBuildID(Config, O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
-    return findBuildID(Config, O->getELFFile());
-
-  llvm_unreachable("Bad file format");
-}
-
 template <class... Ts>
 static Error makeStringError(std::error_code EC, const Twine &Msg,
                              Ts &&... Args) {
   std::string FullMsg = (EC.message() + ": " + Msg).str();
   return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
-}
-
-#define MODEL_8 "%%%%%%%%"
-#define MODEL_16 MODEL_8 MODEL_8
-#define MODEL_32 (MODEL_16 MODEL_16)
-
-static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
-                              StringRef Suffix,
-                              ArrayRef<uint8_t> BuildIdBytes) {
-  SmallString<128> Path = Config.BuildIdLinkDir;
-  sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
-  if (auto EC = sys::fs::create_directories(Path))
-    return createFileError(
-        Path.str(),
-        makeStringError(EC, "cannot create build ID link directory"));
-
-  sys::path::append(Path,
-                    llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
-  Path += Suffix;
-  SmallString<128> TmpPath;
-  // create_hard_link races so we need to link to a temporary path but
-  // we want to make sure that we choose a filename that does not exist.
-  // By using 32 model characters we get 128-bits of entropy. It is
-  // unlikely that this string has ever existed before much less exists
-  // on this disk or in the current working directory.
-  // Additionally we prepend the original Path for debugging but also
-  // because it ensures that we're linking within a directory on the same
-  // partition on the same device which is critical. It has the added
-  // win of yet further decreasing the odds of a conflict.
-  sys::fs::createUniquePath(Twine(Path) + "-" + MODEL_32 + ".tmp", TmpPath,
-                            /*MakeAbsolute*/ false);
-  if (auto EC = sys::fs::create_hard_link(ToLink, TmpPath)) {
-    Path.push_back('\0');
-    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
-                           Path.data());
-  }
-  // We then atomically rename the link into place which will just move the
-  // link. If rename fails something is more seriously wrong so just return
-  // an error.
-  if (auto EC = sys::fs::rename(TmpPath, Path)) {
-    Path.push_back('\0');
-    return makeStringError(EC, "cannot link '%s' to '%s'", ToLink.data(),
-                           Path.data());
-  }
-  // If `Path` was already a hard-link to the same underlying file then the
-  // temp file will be left so we need to remove it. Remove will not cause
-  // an error by default if the file is already gone so just blindly remove
-  // it rather than checking.
-  if (auto EC = sys::fs::remove(TmpPath)) {
-    TmpPath.push_back('\0');
-    return makeStringError(EC, "could not remove '%s'", TmpPath.data());
-  }
-  return Error::success();
 }
 
 static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
@@ -828,37 +738,12 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   const ElfType OutputElfType =
       Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
                         : getOutputElfType(In);
-  ArrayRef<uint8_t> BuildIdBytes;
-
-  if (!Config.BuildIdLinkDir.empty()) {
-    auto BuildIdBytesOrErr = findBuildID(Config, In);
-    if (auto E = BuildIdBytesOrErr.takeError())
-      return E;
-    BuildIdBytes = *BuildIdBytesOrErr;
-
-    if (BuildIdBytes.size() < 2)
-      return createFileError(
-          Config.InputFilename,
-          createStringError(object_error::parse_failed,
-                            "build ID is smaller than two bytes"));
-  }
-
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput)
-    if (Error E =
-            linkToBuildIdDir(Config, Config.InputFilename,
-                             Config.BuildIdLinkInput.getValue(), BuildIdBytes))
-      return E;
 
   if (Error E = handleArgs(Config, **Obj, Reader, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
-    if (Error E =
-            linkToBuildIdDir(Config, Config.OutputFilename,
-                             Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
-      return createFileError(Config.OutputFilename, std::move(E));
 
   return Error::success();
 }

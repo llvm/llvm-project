@@ -1070,6 +1070,15 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
+
+  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
+    if (const auto &doConstruct{
+            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+      if (doConstruct.value().IsDoWhile()) {
+        return true;
+      }
+    }
+  }
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
   return true;
 }

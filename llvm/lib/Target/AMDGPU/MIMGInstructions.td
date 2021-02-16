@@ -39,6 +39,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit Coordinates = 1;
   bit LodOrClampOrMip = 0;
   bit HasD16 = 0;
+  bit IsAtomicRet = 0;
 }
 
 def MIMGBaseOpcode : GenericEnum {
@@ -556,20 +557,22 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
 }
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0> { // 64-bit atomics
-  def "" : MIMGBaseOpcode {
-    let Atomic = 1;
-    let AtomicX2 = isCmpSwap;
-  }
+  let IsAtomicRet = 1 in {
+    def "" : MIMGBaseOpcode {
+      let Atomic = 1;
+      let AtomicX2 = isCmpSwap;
+    }
 
-  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME) in {
-    // _V* variants have different dst size, but the size is encoded implicitly,
-    // using dmask and tfe. Only 32-bit variant is registered with disassembler.
-    // Other variants are reconstructed by disassembler using dmask and tfe.
-    let VDataDwords = !if(isCmpSwap, 2, 1) in
-    defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP>;
-    let VDataDwords = !if(isCmpSwap, 4, 2) in
-    defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP>;
-  }
+    let BaseOpcode = !cast<MIMGBaseOpcode>(NAME) in {
+      // _V* variants have different dst size, but the size is encoded implicitly,
+      // using dmask and tfe. Only 32-bit variant is registered with disassembler.
+      // Other variants are reconstructed by disassembler using dmask and tfe.
+      let VDataDwords = !if(isCmpSwap, 2, 1) in
+      defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP>;
+      let VDataDwords = !if(isCmpSwap, 4, 2) in
+      defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP>;
+    }
+  } // End IsAtomicRet = 1
 }
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,

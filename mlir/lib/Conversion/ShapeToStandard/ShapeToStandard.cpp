@@ -237,63 +237,84 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
   // For now, this lowering is only defined on `tensor<?xindex>` operands, not
   // on shapes.
   IsBroadcastableOp::Adaptor transformed(operands);
-  if (transformed.lhs().getType().isa<ShapeType>() ||
-      transformed.rhs().getType().isa<ShapeType>())
+  if (!llvm::all_of(op.shapes(),
+                    [](Value v) { return !v.getType().isa<ShapeType>(); }))
     return failure();
 
   auto loc = op.getLoc();
-  Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
-  Value one = rewriter.create<ConstantIndexOp>(loc, 1);
+  ImplicitLocOpBuilder lb(loc, rewriter);
+  Value zero = lb.create<ConstantIndexOp>(0);
+  Value one = lb.create<ConstantIndexOp>(1);
+  Type indexTy = lb.getIndexType();
 
-  // Find smaller and greater rank and extent tensor.
-  Value lhsRank = rewriter.create<DimOp>(loc, transformed.lhs(), zero);
-  Value rhsRank = rewriter.create<DimOp>(loc, transformed.rhs(), zero);
-  Value lhsRankULE =
-      rewriter.create<CmpIOp>(loc, CmpIPredicate::ule, lhsRank, rhsRank);
-  Type indexTy = rewriter.getIndexType();
-  Value lesserRank =
-      rewriter.create<SelectOp>(loc, lhsRankULE, lhsRank, rhsRank);
-  Value greaterRank =
-      rewriter.create<SelectOp>(loc, lhsRankULE, rhsRank, lhsRank);
-  auto erasedRankType =
-      RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
-  Value rankErasedLhs =
-      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.lhs());
-  Value rankErasedRhs =
-      rewriter.create<tensor::CastOp>(loc, erasedRankType, transformed.rhs());
-  Value lesserRankOperand =
-      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedLhs, rankErasedRhs);
-  Value greaterRankOperand =
-      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedRhs, rankErasedLhs);
-  Value rankDiff =
-      rewriter.create<SubIOp>(loc, indexTy, greaterRank, lesserRank);
+  // Save all the ranks for bounds checking. Because this is a tensor
+  // representing the shape extents, the rank is the extent of the only
+  // dimension in the tensor.
+  SmallVector<Value> ranks, rankDiffs;
+  llvm::append_range(ranks, llvm::map_range(transformed.shapes(), [&](Value v) {
+                       return lb.create<DimOp>(v, zero);
+                     }));
+
+  // Find the maximum rank
+  Value maxRank = ranks.front();
+  for (Value v : llvm::drop_begin(ranks, 1)) {
+    Value rankIsGreater = lb.create<CmpIOp>(CmpIPredicate::ugt, v, maxRank);
+    maxRank = lb.create<SelectOp>(rankIsGreater, v, maxRank);
+  }
+
+  // Calculate the difference of ranks and the maximum rank for later offsets.
+  llvm::append_range(rankDiffs, llvm::map_range(ranks, [&](Value v) {
+                       return lb.create<SubIOp>(indexTy, maxRank, v);
+                     }));
+
   Type i1Ty = rewriter.getI1Type();
-  Value init =
+  Value trueVal =
       rewriter.create<ConstantOp>(loc, i1Ty, rewriter.getBoolAttr(true));
 
-  // Determine if all overlapping extents are broadcastable.
-  auto reduceResult = rewriter.create<ForOp>(
-      loc, rankDiff, greaterRank, one, ValueRange{init},
+  auto reduceResult = lb.create<ForOp>(
+      loc, zero, maxRank, one, ValueRange{trueVal},
       [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {
-        Value greaterRankOperandExtent = b.create<tensor::ExtractOp>(
-            loc, greaterRankOperand, ValueRange{iv});
-        Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(
-            loc, CmpIPredicate::eq, greaterRankOperandExtent, one);
-        Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
-        Value lesserRankOperandExtent = b.create<tensor::ExtractOp>(
-            loc, lesserRankOperand, ValueRange{ivShifted});
-        Value lesserRankOperandExtentIsOne = b.create<CmpIOp>(
-            loc, CmpIPredicate::eq, lesserRankOperandExtent, one);
-        Value extentsAreEqual =
-            b.create<CmpIOp>(loc, CmpIPredicate::eq, greaterRankOperandExtent,
-                             lesserRankOperandExtent);
-        Value broadcastableExtents = b.create<AndOp>(
-            loc, iterArgs[0],
-            b.create<OrOp>(loc,
-                           b.create<OrOp>(loc, greaterRankOperandExtentIsOne,
-                                          lesserRankOperandExtentIsOne),
-                           extentsAreEqual));
-        b.create<scf::YieldOp>(loc, broadcastableExtents);
+        // Find a non-1 dim, if it exists. Note that the first part of this
+        // could reuse the Broadcast lowering entirely, but we redo the work
+        // here to make optimizations easier between the two loops.
+        Value broadcastedDim = getBroadcastedDim(
+            ImplicitLocOpBuilder(loc, b), transformed.shapes(), rankDiffs, iv);
+
+        Value broadcastable = iterArgs[0];
+        for (auto tup : llvm::zip(transformed.shapes(), rankDiffs)) {
+          Value shape, rankDiff;
+          std::tie(shape, rankDiff) = tup;
+          Value outOfBounds =
+              b.create<CmpIOp>(loc, CmpIPredicate::ult, iv, rankDiff);
+          broadcastable =
+              b.create<IfOp>(
+                   loc, TypeRange{i1Ty}, outOfBounds,
+                   [&](OpBuilder &b, Location loc) {
+                     // Non existent dimensions are always broadcastable
+                     b.create<scf::YieldOp>(loc, broadcastable);
+                   },
+                   [&](OpBuilder &b, Location loc) {
+                     // Every value needs to be either 1, or the same non-1
+                     // value to be broadcastable in this dim.
+                     Value operandDimension =
+                         b.create<SubIOp>(loc, indexTy, iv, rankDiff);
+                     Value dimensionExtent = b.create<tensor::ExtractOp>(
+                         loc, shape, ValueRange{operandDimension});
+
+                     Value equalOne = b.create<CmpIOp>(loc, CmpIPredicate::eq,
+                                                       dimensionExtent, one);
+                     Value equalBroadcasted =
+                         b.create<CmpIOp>(loc, CmpIPredicate::eq,
+                                          dimensionExtent, broadcastedDim);
+                     Value result = b.create<AndOp>(
+                         loc, broadcastable,
+                         b.create<OrOp>(loc, equalOne, equalBroadcasted));
+                     b.create<scf::YieldOp>(loc, result);
+                   })
+                  .getResult(0);
+        }
+
+        b.create<scf::YieldOp>(loc, broadcastable);
       });
 
   rewriter.replaceOp(op, reduceResult.results().front());

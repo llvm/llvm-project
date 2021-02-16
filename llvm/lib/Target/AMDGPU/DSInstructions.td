@@ -102,6 +102,7 @@ class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 
   let has_data1 = 0;
   let has_vdst = 0;
+  let IsAtomicNoRet = 1;
 }
 
 multiclass DS_1A1D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
@@ -121,6 +122,7 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32>
   " $addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
+  let IsAtomicNoRet = 1;
 }
 
 multiclass DS_1A2D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
@@ -161,6 +163,7 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32>
 
   let hasPostISelHook = 1;
   let has_data1 = 0;
+  let IsAtomicRet = 1;
 }
 
 multiclass DS_1A1D_RET_mc <string opName, RegisterClass rc = VGPR_32,
@@ -184,6 +187,7 @@ class DS_1A2D_RET<string opName,
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let hasPostISelHook = 1;
+  let IsAtomicRet = 1;
 }
 
 multiclass DS_1A2D_RET_mc<string opName,

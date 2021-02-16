@@ -34,7 +34,7 @@ class TargetTransformInfo;
 /// This analysis propagates divergence in a data-parallel context from sources
 /// of divergence to all users. It requires reducible CFGs. All assignments
 /// should be in SSA form.
-class DivergenceAnalysis {
+class DivergenceAnalysisImpl {
 public:
   /// \brief This instance will analyze the whole function \p F or the loop \p
   /// RegionLoop.
@@ -43,9 +43,9 @@ public:
   /// Otherwise the whole function is analyzed.
   /// \param IsLCSSAForm whether the analysis may assume that the IR in the
   /// region in in LCSSA form.
-  DivergenceAnalysis(const Function &F, const Loop *RegionLoop,
-                     const DominatorTree &DT, const LoopInfo &LI,
-                     SyncDependenceAnalysis &SDA, bool IsLCSSAForm);
+  DivergenceAnalysisImpl(const Function &F, const Loop *RegionLoop,
+                         const DominatorTree &DT, const LoopInfo &LI,
+                         SyncDependenceAnalysis &SDA, bool IsLCSSAForm);
 
   /// \brief The loop that defines the analyzed region (if any).
   const Loop *getRegionLoop() const { return RegionLoop; }
@@ -81,8 +81,6 @@ public:
   /// \brief Whether \p U is divergent. Uses of a uniform value can be
   /// divergent.
   bool isDivergentUse(const Use &U) const;
-
-  void print(raw_ostream &OS, const Module *) const;
 
 private:
   /// \brief Mark \p Term as divergent and push all Instructions that become
@@ -152,28 +150,39 @@ private:
   std::vector<const Instruction *> Worklist;
 };
 
-/// \brief Divergence analysis frontend for GPU kernels.
-class GPUDivergenceAnalysis {
-  SyncDependenceAnalysis SDA;
-  DivergenceAnalysis DA;
+class DivergenceInfo {
+  Function &F;
+
+  // If the function contains an irreducible region the divergence
+  // analysis can run indefinitely. We set ContainsIrreducible and no
+  // analysis is actually performed on the function. All values in
+  // this function are conservatively reported as divergent instead.
+  bool ContainsIrreducible;
+  std::unique_ptr<SyncDependenceAnalysis> SDA;
+  std::unique_ptr<DivergenceAnalysisImpl> DA;
 
 public:
-  /// Runs the divergence analysis on @F, a GPU kernel
-  GPUDivergenceAnalysis(Function &F, const DominatorTree &DT,
-                        const PostDominatorTree &PDT, const LoopInfo &LI,
-                        const TargetTransformInfo &TTI);
+  DivergenceInfo(Function &F, const DominatorTree &DT,
+                 const PostDominatorTree &PDT, const LoopInfo &LI,
+                 const TargetTransformInfo &TTI, bool KnownReducible);
 
   /// Whether any divergence was detected.
-  bool hasDivergence() const { return DA.hasDetectedDivergence(); }
+  bool hasDivergence() const {
+    return ContainsIrreducible || DA->hasDetectedDivergence();
+  }
 
   /// The GPU kernel this analysis result is for
-  const Function &getFunction() const { return DA.getFunction(); }
+  const Function &getFunction() const { return F; }
 
   /// Whether \p V is divergent at its definition.
-  bool isDivergent(const Value &V) const;
+  bool isDivergent(const Value &V) const {
+    return ContainsIrreducible || DA->isDivergent(V);
+  }
 
   /// Whether \p U is divergent. Uses of a uniform value can be divergent.
-  bool isDivergentUse(const Use &U) const;
+  bool isDivergentUse(const Use &U) const {
+    return ContainsIrreducible || DA->isDivergentUse(U);
+  }
 
   /// Whether \p V is uniform/non-divergent.
   bool isUniform(const Value &V) const { return !isDivergent(V); }
@@ -181,10 +190,31 @@ public:
   /// Whether \p U is uniform/non-divergent. Uses of a uniform value can be
   /// divergent.
   bool isUniformUse(const Use &U) const { return !isDivergentUse(U); }
-
-  /// Print all divergent values in the kernel.
-  void print(raw_ostream &OS, const Module *) const;
 };
+
+/// \brief Divergence analysis frontend for GPU kernels.
+class DivergenceAnalysis : public AnalysisInfoMixin<DivergenceAnalysis> {
+  friend AnalysisInfoMixin<DivergenceAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DivergenceInfo;
+
+  /// Runs the divergence analysis on @F, a GPU kernel
+  Result run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// Printer pass to dump divergence analysis results.
+struct DivergenceAnalysisPrinterPass
+    : public PassInfoMixin<DivergenceAnalysisPrinterPass> {
+  DivergenceAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+private:
+  raw_ostream &OS;
+}; // class DivergenceAnalysisPrinterPass
 
 } // namespace llvm
 

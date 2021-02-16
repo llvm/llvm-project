@@ -196,19 +196,6 @@ defm prefix_alloc_sections
     : Eq<"prefix-alloc-sections", "Add <prefix> to the start of every allocated section name">,
       MetaVarName<"prefix">;
 
-defm build_id_link_dir
-    : Eq<"build-id-link-dir", "Set directory for --build-id-link-input and "
-                              "--build-id-link-output to <dir>">,
-      MetaVarName<"dir">;
-defm build_id_link_input
-    : Eq<"build-id-link-input", "Hard-link the input to <dir>/xx/xxx<suffix> "
-                                "name derived from hex build ID">,
-      MetaVarName<"suffix">;
-defm build_id_link_output
-    : Eq<"build-id-link-output", "Hard-link the output to <dir>/xx/xxx<suffix> "
-                                 "name derived from hex build ID">,
-      MetaVarName<"suffix">;
-
 defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
                     "any previous --change-start or --adjust-start values.">,
                  MetaVarName<"addr">;

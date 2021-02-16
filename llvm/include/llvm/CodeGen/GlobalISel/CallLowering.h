@@ -164,13 +164,14 @@ public:
                                       uint64_t Size, MachinePointerInfo &MPO,
                                       CCValAssign &VA) = 0;
 
-    /// An overload which takes an ArgInfo if additional information about
-    /// the arg is needed.
-    virtual void assignValueToAddress(const ArgInfo &Arg, Register Addr,
-                                      uint64_t Size, MachinePointerInfo &MPO,
+    /// An overload which takes an ArgInfo if additional information about the
+    /// arg is needed. \p ValRegIndex is the index in \p Arg.Regs for the value
+    /// to store.
+    virtual void assignValueToAddress(const ArgInfo &Arg, unsigned ValRegIndex,
+                                      Register Addr, uint64_t Size,
+                                      MachinePointerInfo &MPO,
                                       CCValAssign &VA) {
-      assert(Arg.Regs.size() == 1);
-      assignValueToAddress(Arg.Regs[0], Addr, Size, MPO, VA);
+      assignValueToAddress(Arg.Regs[ValRegIndex], Addr, Size, MPO, VA);
     }
 
     /// Handle custom values, which may be passed into one or more of \p VAs.

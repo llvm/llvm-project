@@ -696,6 +696,7 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
   let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let glc_value = 0;
   let dlc_value = 0;
+  let IsAtomicNoRet = 1;
   let AsmMatchConverter = "cvtMubufAtomic";
 }
 
@@ -714,6 +715,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
   let PseudoInstr = opName # "_rtn_" # getAddrName<addrKindCopy>.ret;
   let glc_value = 1;
   let dlc_value = 0;
+  let IsAtomicRet = 1;
   let Constraints = "$vdata = $vdata_in";
   let DisableEncoding = "$vdata_in";
   let AsmMatchConverter = "cvtMubufAtomicReturn";

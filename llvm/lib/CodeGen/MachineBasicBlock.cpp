@@ -1086,10 +1086,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
          I != E; ++I)
       NewTerminators.push_back(&*I);
 
-    for (SmallVectorImpl<MachineInstr*>::iterator I = Terminators.begin(),
-        E = Terminators.end(); I != E; ++I) {
-      if (!is_contained(NewTerminators, *I))
-        Indexes->removeMachineInstrFromMaps(**I);
+    for (MachineInstr *Terminator : Terminators) {
+      if (!is_contained(NewTerminators, Terminator))
+        Indexes->removeMachineInstrFromMaps(*Terminator);
     }
   }
 

@@ -1527,7 +1527,8 @@ static Function *internalizeFunction(Function &F) {
   SmallVector<ReturnInst *, 8> Returns;
 
   // Copy the body of the original function to the new one
-  CloneFunctionInto(Copied, &F, VMap, /* ModuleLevelChanges */ false, Returns);
+  CloneFunctionInto(Copied, &F, VMap, CloneFunctionChangeType::LocalChangesOnly,
+                    Returns);
 
   // Set the linakage and visibility late as CloneFunctionInto has some implicit
   // requirements.

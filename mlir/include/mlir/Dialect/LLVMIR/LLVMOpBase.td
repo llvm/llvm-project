@@ -219,12 +219,13 @@ class ListIntSubst<string pattern, list<int> values> {
 // or result in the operation.
 def LLVM_IntrPatterns {
   string operand =
-    [{convertType(opInst.getOperand($0).getType())}];
+    [{moduleTranslation.convertType(opInst.getOperand($0).getType())}];
   string result =
-    [{convertType(opInst.getResult($0).getType())}];
+    [{moduleTranslation.convertType(opInst.getResult($0).getType())}];
   string structResult =
-    [{convertType(opInst.getResult(0).getType().cast<LLVM::LLVMStructType>()
-                                                   .getBody()[$0])}];
+    [{moduleTranslation.convertType(
+        opInst.getResult(0).getType().cast<LLVM::LLVMStructType>()
+              .getBody()[$0])}];
 }
 
 
@@ -259,7 +260,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             ListIntSubst<LLVM_IntrPatterns.operand,
                          overloadedOperands>.lst), ", ") # [{
         });
-    auto operands = lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     }] # !if(!gt(numResults, 0), "$res = ", "")
        # [{builder.CreateCall(fn, operands);
   }];
@@ -325,7 +326,7 @@ class LLVM_VectorReductionAcc<string mnem>
         { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
                            ", ") # [{
         });
-    auto operands = lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     llvm::FastMathFlags origFM = builder.getFastMathFlags();
     llvm::FastMathFlags tempFM = origFM;
     tempFM.setAllowReassoc($reassoc);

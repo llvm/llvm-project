@@ -1278,6 +1278,11 @@ public:
           TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), Index,
           cast<VectorType>(Args[1]->getType()));
     }
+    case Intrinsic::experimental_vector_reverse: {
+      return thisT()->getShuffleCost(TTI::SK_Reverse,
+                                     cast<VectorType>(Args[0]->getType()), 0,
+                                     cast<VectorType>(RetTy));
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:

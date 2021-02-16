@@ -551,8 +551,12 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
     // The context comes first, but they're both in the same block.
     // Make sure there is nothing in between that might interrupt
     // the control flow, not even CxtI itself.
+    // We limit the scan distance between the assume and its context instruction
+    // to avoid a compile-time explosion. This limit is chosen arbitrarily, so
+    // it can be adjusted if needed (could be turned into a cl::opt).
+    unsigned ScanLimit = 15;
     for (BasicBlock::const_iterator I(CxtI), IE(Inv); I != IE; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
+      if (!isGuaranteedToTransferExecutionToSuccessor(&*I) || --ScanLimit == 0)
         return false;
 
     return !isEphemeralValueOf(Inv, CxtI);

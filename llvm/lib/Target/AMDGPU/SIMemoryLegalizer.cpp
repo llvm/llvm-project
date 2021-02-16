@@ -455,7 +455,7 @@ private:
   /// Return true iff instruction \p MI is a atomic instruction that
   /// returns a result.
   bool isAtomicRet(const MachineInstr &MI) const {
-    return AMDGPU::getAtomicNoRetOp(MI.getOpcode()) != -1;
+    return SIInstrInfo::isAtomicRet(MI);
   }
 
   /// Removes all processed atomic pseudo instructions from the current

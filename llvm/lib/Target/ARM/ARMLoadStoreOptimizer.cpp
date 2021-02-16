@@ -1238,19 +1238,37 @@ findIncDecBefore(MachineBasicBlock::iterator MBBI, Register Reg,
 /// Searches for a increment or decrement of \p Reg after \p MBBI.
 static MachineBasicBlock::iterator
 findIncDecAfter(MachineBasicBlock::iterator MBBI, Register Reg,
-                ARMCC::CondCodes Pred, Register PredReg, int &Offset) {
+                ARMCC::CondCodes Pred, Register PredReg, int &Offset,
+                const TargetRegisterInfo *TRI) {
   Offset = 0;
   MachineBasicBlock &MBB = *MBBI->getParent();
   MachineBasicBlock::iterator EndMBBI = MBB.end();
   MachineBasicBlock::iterator NextMBBI = std::next(MBBI);
-  // Skip debug values.
-  while (NextMBBI != EndMBBI && NextMBBI->isDebugInstr())
-    ++NextMBBI;
-  if (NextMBBI == EndMBBI)
-    return EndMBBI;
+  while (NextMBBI != EndMBBI) {
+    // Skip debug values.
+    while (NextMBBI != EndMBBI && NextMBBI->isDebugInstr())
+      ++NextMBBI;
+    if (NextMBBI == EndMBBI)
+      return EndMBBI;
 
-  Offset = isIncrementOrDecrement(*NextMBBI, Reg, Pred, PredReg);
-  return Offset == 0 ? EndMBBI : NextMBBI;
+    unsigned Off = isIncrementOrDecrement(*NextMBBI, Reg, Pred, PredReg);
+    if (Off) {
+      Offset = Off;
+      return NextMBBI;
+    }
+
+    // SP can only be combined if it is the next instruction after the original
+    // MBBI, otherwise we may be incrementing the stack pointer (invalidating
+    // anything below the new pointer) when its frame elements are still in
+    // use. Other registers can attempt to look further, until a different use
+    // or def of the register is found.
+    if (Reg == ARM::SP || NextMBBI->readsRegister(Reg, TRI) ||
+        NextMBBI->definesRegister(Reg, TRI))
+      return EndMBBI;
+
+    ++NextMBBI;
+  }
+  return EndMBBI;
 }
 
 /// Fold proceeding/trailing inc/dec of base register into the
@@ -1296,7 +1314,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   } else if (Mode == ARM_AM::ib && Offset == -Bytes) {
     Mode = ARM_AM::da;
   } else {
-    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset);
+    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
     if (((Mode != ARM_AM::ia && Mode != ARM_AM::ib) || Offset != Bytes) &&
         ((Mode != ARM_AM::da && Mode != ARM_AM::db) || Offset != -Bytes)) {
 
@@ -1483,7 +1501,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   } else if (Offset == -Bytes) {
     NewOpc = getPreIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
   } else {
-    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset);
+    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
     if (Offset == Bytes) {
       NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::add);
     } else if (!isAM5 && Offset == -Bytes) {
@@ -1614,7 +1632,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   if (Offset == 8 || Offset == -8) {
     NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_PRE : ARM::t2STRD_PRE;
   } else {
-    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset);
+    MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
     if (Offset == 8 || Offset == -8) {
       NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_POST : ARM::t2STRD_POST;
     } else

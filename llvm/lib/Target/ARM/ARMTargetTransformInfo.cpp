@@ -1574,6 +1574,30 @@ int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+  case Intrinsic::umin:
+  case Intrinsic::umax: {
+    if (!ST->hasMVEIntegerOps())
+      break;
+    Type *VT = ICA.getReturnType();
+
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
+        LT.second == MVT::v16i8)
+      return LT.first * ST->getMVEVectorCostFactor(CostKind);
+    break;
+  }
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum: {
+    if (!ST->hasMVEFloatOps())
+      break;
+    Type *VT = ICA.getReturnType();
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    if (LT.second == MVT::v4f32 || LT.second == MVT::v8f16)
+      return LT.first * ST->getMVEVectorCostFactor(CostKind);
+    break;
+  }
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
