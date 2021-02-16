@@ -273,43 +273,28 @@ multiclass VPatIntegerSetCCSDNode_VX_VI<CondCode cc,
                                    SplatPat_simm5, simm5, swap>;
 }
 
-multiclass VPatFPSetCCSDNode_VV<CondCode cc, string instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
-                                (fvti.Vector fvti.RegClass:$rs2),
-                                cc)),
-              (!cast<Instruction>(instruction_name#"_VV_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, fvti.AVL, fvti.SEW)>;
-}
-
-multiclass VPatFPSetCCSDNode_VF<CondCode cc, string instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
-                                (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
-                                cc)),
-              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1,
-                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                  fvti.AVL, fvti.SEW)>;
-}
-
-multiclass VPatFPSetCCSDNode_FV<CondCode cc, string swapped_op_instruction_name> {
-  foreach fvti = AllFloatVectors in
-    def : Pat<(fvti.Mask (setcc (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1),
-                                cc)),
-              (!cast<Instruction>(swapped_op_instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1,
-                  (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                  fvti.AVL, fvti.SEW)>;
-}
-
 multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
                                       string inst_name,
                                       string swapped_op_inst_name> {
-  defm : VPatFPSetCCSDNode_VV<cc, inst_name>;
-  defm : VPatFPSetCCSDNode_VF<cc, inst_name>;
-  defm : VPatFPSetCCSDNode_FV<cc, swapped_op_inst_name>;
+  foreach fvti = AllFloatVectors in {
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Vector fvti.RegClass:$rs2),
+                                cc)),
+              (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, fvti.AVL, fvti.SEW)>;
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (splat_vector fvti.ScalarRegClass:$rs2),
+                                cc)),
+              (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  fvti.AVL, fvti.SEW)>;
+    def : Pat<(fvti.Mask (setcc (splat_vector fvti.ScalarRegClass:$rs2),
+                                (fvti.Vector fvti.RegClass:$rs1),
+                                cc)),
+              (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                  fvti.AVL, fvti.SEW)>;
+  }
 }
 
 multiclass VPatExtendSDNode_V<list<SDNode> ops, string inst_name, string suffix,

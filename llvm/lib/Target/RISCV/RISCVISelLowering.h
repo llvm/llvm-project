@@ -175,6 +175,11 @@ enum NodeType : unsigned {
   // operand is VL.
   SETCC_VL,
 
+  // Mask binary operators.
+  VMAND_VL,
+  VMOR_VL,
+  VMXOR_VL,
+
   // Set mask vector to all zeros or ones.
   VMCLR_VL,
   VMSET_VL,
