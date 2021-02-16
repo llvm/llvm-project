@@ -1,7 +1,7 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @hidden_diverge(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'hidden_diverge'
+; CHECK-LABEL: 'Divergence Analysis' for function 'hidden_diverge'
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cond.var = icmp slt i32 %tid, 0
@@ -22,7 +22,7 @@ merge:
 }
 
 define amdgpu_kernel void @hidden_loop_ipd(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'hidden_loop_ipd'
+; CHECK-LABEL: 'Divergence Analysis' for function 'hidden_loop_ipd'
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cond.var = icmp slt i32 %tid, 0
