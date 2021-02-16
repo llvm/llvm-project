@@ -129,6 +129,39 @@ convertOptExtentExpr(Fortran::lower::AbstractConverter &converter,
   return fir::getBase(converter.genExprValue(&e, stmtCtx, loc));
 }
 
+/// Return the extended value for a component of a derived type instance given
+/// the extended value \p obj of the derived type instance and the address of
+/// the component.
+static fir::ExtendedValue
+componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
+                         mlir::Location loc, const fir::ExtendedValue &obj,
+                         mlir::Value component) {
+  auto fieldTy = fir::dyn_cast_ptrEleTy(component.getType());
+  if (Fortran::lower::CharacterExprHelper::isCharacterScalar(fieldTy)) {
+    auto cstLen =
+        Fortran::lower::CharacterExprHelper::getCharacterType(fieldTy).getLen();
+    if (cstLen == fir::CharacterType::unknownLen())
+      fir::emitFatalError(
+          loc,
+          "TODO: get character component length from length type parameters");
+    auto len = builder.createIntegerConstant(
+        loc, builder.getCharacterLengthType(), cstLen);
+    return fir::CharBoxValue{component, len};
+  }
+  // TODO: array component. Currently hitting an assert in array expression
+  // code.
+  if (fieldTy.dyn_cast<fir::SequenceType>())
+    fir::emitFatalError(loc, "TODO: lower shape of array component ref");
+  if (fieldTy.dyn_cast<fir::BoxType>())
+    fir::emitFatalError(loc, "TODO: lower pointer/allocatable component ref");
+  if (auto recordTy = fieldTy.dyn_cast<fir::RecordType>())
+    if (recordTy.getNumLenParams() != 0)
+      fir::emitFatalError(loc, "TODO: lower component ref that is a derived "
+                               "type with length parameter");
+  // Non character intrinsic scalar.
+  return component;
+}
+
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -975,9 +1008,10 @@ public:
     }
     assert(sym && "no component(s)?");
     ty = builder.getRefType(ty);
-    return fir::substBase(obj, builder.create<fir::CoordinateOp>(
-                                   loc, ty, fir::getBase(obj), coorArgs,
-                                   /*lenParams=*/mlir::ValueRange{}));
+    return componentToExtendedValue(
+        builder, loc, obj,
+        builder.create<fir::CoordinateOp>(loc, ty, fir::getBase(obj), coorArgs,
+                                          /*lenParams=*/mlir::ValueRange{}));
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::Component &cmpt) {
