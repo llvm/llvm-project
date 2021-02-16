@@ -647,7 +647,7 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -660,7 +660,7 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    flat_atomic_swap v[0:1], v2
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -673,7 +673,6 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -688,7 +687,6 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -703,7 +701,7 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
 entry:
@@ -790,7 +788,7 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -804,7 +802,7 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_swap v[0:1], v2
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -819,7 +817,6 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -836,7 +833,6 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -852,7 +848,7 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
 entry:
@@ -871,7 +867,7 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -885,7 +881,7 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_swap v[0:1], v2
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -900,7 +896,6 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -917,7 +912,6 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v0, v1, s[0:1]
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -933,7 +927,7 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
 entry:
@@ -951,7 +945,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -965,7 +959,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
@@ -979,7 +973,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-WGP-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -994,7 +988,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-CU-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1009,7 +1003,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
@@ -1030,7 +1024,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -1045,7 +1039,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
@@ -1061,7 +1055,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1078,7 +1072,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1094,7 +1088,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
@@ -1115,7 +1109,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_swap v0, off, s[0:3], 0 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -1130,7 +1124,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
@@ -1146,7 +1140,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1163,7 +1157,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_swap v1, v0, v1, s[0:1] glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1179,7 +1173,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in) {
@@ -1269,7 +1263,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1285,7 +1279,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1299,7 +1293,6 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1315,7 +1308,6 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1331,7 +1323,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1428,7 +1420,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1445,7 +1437,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1461,7 +1453,6 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1479,7 +1470,6 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1496,7 +1486,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1517,7 +1507,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1534,7 +1524,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1550,7 +1540,6 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1568,7 +1557,6 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1585,7 +1573,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1605,7 +1593,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1621,7 +1609,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1635,7 +1623,6 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1651,7 +1638,6 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1667,7 +1653,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1688,7 +1674,7 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1705,7 +1691,7 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1721,7 +1707,6 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1739,7 +1724,6 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1756,7 +1740,7 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1777,7 +1761,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1794,7 +1778,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1810,7 +1794,6 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1828,7 +1811,6 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1845,7 +1827,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1866,7 +1848,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1883,7 +1865,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1899,7 +1881,6 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -1917,7 +1898,6 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -1934,7 +1914,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -1955,7 +1935,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1972,7 +1952,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3]
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1988,7 +1968,6 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
@@ -2006,7 +1985,6 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v2, v[0:1], s[0:1] offset:16
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
@@ -2023,7 +2001,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
 entry:
@@ -2043,7 +2021,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2060,7 +2038,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2077,7 +2055,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2093,7 +2071,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2109,7 +2087,7 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2133,7 +2111,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2151,7 +2129,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2170,7 +2148,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2188,7 +2166,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2205,7 +2183,7 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2229,7 +2207,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2247,7 +2225,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2266,7 +2244,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2284,7 +2262,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2301,7 +2279,7 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2324,7 +2302,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2341,7 +2319,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2358,7 +2336,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2374,7 +2352,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2390,7 +2368,7 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2414,7 +2392,7 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2432,7 +2410,7 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2451,7 +2429,7 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2469,7 +2447,7 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2486,7 +2464,7 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2510,7 +2488,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2528,7 +2506,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2547,7 +2525,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2565,7 +2543,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2582,7 +2560,7 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2606,7 +2584,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2624,7 +2602,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2643,7 +2621,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2661,7 +2639,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2678,7 +2656,7 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
@@ -2702,7 +2680,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[0:3], 0 offset:16 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -2720,7 +2698,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
@@ -2739,7 +2717,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2757,7 +2735,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
-; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -2774,7 +2752,7 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
-; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
     i32 addrspace(1)* %out, i32 %in, i32 %old) {
