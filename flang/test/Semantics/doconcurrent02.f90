@@ -1,6 +1,6 @@
 ! when the loops are not DO CONCURRENT
 
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK-NOT: image control statement not allowed in DO CONCURRENT
 ! CHECK-NOT: RETURN not allowed in DO CONCURRENT
 ! CHECK-NOT: call to impure procedure in DO CONCURRENT not allowed

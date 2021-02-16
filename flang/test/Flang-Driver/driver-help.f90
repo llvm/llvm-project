@@ -46,6 +46,9 @@
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-obj Emit native object files
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
+! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
+! HELP-FC1-NEXT:                        Unparse and stop.
+! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
 ! HELP-FC1-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
