@@ -470,6 +470,15 @@ static void setConfigs() {
     config->importTable = true;
   }
 
+  if (config->relocatable) {
+    if (config->exportTable)
+      error("--relocatable is incompatible with --export-table");
+    if (config->growableTable)
+      error("--relocatable is incompatible with --growable-table");
+    // Ignore any --import-table, as it's redundant.
+    config->importTable = true;
+  }
+
   if (config->shared) {
     config->importMemory = true;
     config->unresolvedSymbols = UnresolvedPolicy::ImportFuncs;
@@ -1012,13 +1021,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do size optimizations: garbage collection
   markLive();
 
-  if (!config->relocatable) {
-    // Provide the indirect funciton table if needed.
-    WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
+  // Provide the indirect funciton table if needed.
+  WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
 
-    if (errorCount())
-      return;
-  }
+  if (errorCount())
+    return;
 
   // Write the result to the file.
   writeResult();
