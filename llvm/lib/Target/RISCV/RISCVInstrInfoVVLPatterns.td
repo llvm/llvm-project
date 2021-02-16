@@ -92,7 +92,7 @@ def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCVecEltisVT<4, i1>,
                                               SDTCisSameNumEltsAs<0, 4>,
                                               SDTCisVT<5, XLenVT>]>;
-def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL>;
+def riscv_fma_vl : SDNode<"RISCVISD::FMA_VL", SDT_RISCVVecFMA_VL, [SDNPCommutative]>;
 
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                             SDTypeProfile<1, 5, [SDTCVecEltisVT<0, i1>,
@@ -472,10 +472,40 @@ foreach vti = AllFloatVectors in {
   // NOTE: We choose VFMADD because it has the most commuting freedom. So it
   // works best with how TwoAddressInstructionPass tries commuting.
   defvar suffix = vti.LMul.MX # "_COMMUTABLE";
-  def : Pat<(vti.Vector (riscv_fma_vl vti.RegClass:$rd, vti.RegClass:$rs1,
+  def : Pat<(vti.Vector (riscv_fma_vl vti.RegClass:$rs1, vti.RegClass:$rd,
                                       vti.RegClass:$rs2, (vti.Mask true_mask),
                                       (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMADD_VV_"# suffix)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl vti.RegClass:$rs1, vti.RegClass:$rd,
+                                      (riscv_fneg_vl vti.RegClass:$rs2,
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMSUB_VV_"# suffix)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (riscv_fneg_vl vti.RegClass:$rs1,
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      vti.RegClass:$rd,
+                                      (riscv_fneg_vl vti.RegClass:$rs2,
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMADD_VV_"# suffix)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (riscv_fneg_vl vti.RegClass:$rs1,
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      vti.RegClass:$rd, vti.RegClass:$rs2,
+                                      (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMSUB_VV_"# suffix)
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.SEW)>;
 
@@ -486,6 +516,61 @@ foreach vti = AllFloatVectors in {
                                        (vti.Mask true_mask),
                                        (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMADD_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                       vti.RegClass:$rd,
+                                       (riscv_fneg_vl vti.RegClass:$rs2,
+                                                      (vti.Mask true_mask),
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFMSUB_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                       (riscv_fneg_vl vti.RegClass:$rd,
+                                                      (vti.Mask true_mask),
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                       (riscv_fneg_vl vti.RegClass:$rs2,
+                                                      (vti.Mask true_mask),
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMADD_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                       (riscv_fneg_vl vti.RegClass:$rd,
+                                                      (vti.Mask true_mask),
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                       vti.RegClass:$rs2,
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMSUB_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+
+  // The splat might be negated.
+  def : Pat<(vti.Vector (riscv_fma_vl (riscv_fneg_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                       vti.RegClass:$rd,
+                                       (riscv_fneg_vl vti.RegClass:$rs2,
+                                                      (vti.Mask true_mask),
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMADD_V" # vti.ScalarSuffix # "_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_fma_vl (riscv_fneg_vl (SplatFPOp vti.ScalarRegClass:$rs1),
+                                                     (vti.Mask true_mask),
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                       vti.RegClass:$rd, vti.RegClass:$rs2,
+                                       (vti.Mask true_mask),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVFNMSUB_V" # vti.ScalarSuffix # "_" # suffix)
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  GPR:$vl, vti.SEW)>;
 }
