@@ -238,6 +238,7 @@ class UnwindRow {
   /// The address will be valid when parsing the instructions in a FDE. If
   /// invalid, this object represents the initial instructions of a CIE.
   Optional<uint64_t> Address; ///< Address for row in FDE, invalid for CIE.
+  uint32_t CFAAddressSpace = 0; /// The address space for the CFA address.
   UnwindLocation CFAValue;    ///< How to unwind the Call Frame Address (CFA).
   RegisterLocations RegLocs;  ///< How to unwind all registers in this list.
 
@@ -253,11 +254,23 @@ public:
   /// address with a call to \see hasAddress().
   uint64_t getAddress() const { return *Address; }
 
+  /// Get the address space for address of this row.
+  ///
+  /// This represents the address space the address of this row is located in.
+  uint8_t getCFAAddressSpace() const { return CFAAddressSpace; }
+
   /// Set the address for this UnwindRow.
   ///
   /// The address represents the first address for which the CFAValue and
   /// RegLocs are valid within a function.
   void setAddress(uint64_t Addr) { Address = Addr; }
+
+  /// Set the address space for address of this row.
+  ///
+  /// Capture the address space of the CFA address of this row, if any.
+  void setCFAAddressSpace(uint8_t NewCFAAddrSpace) {
+    CFAAddressSpace = NewCFAAddrSpace;
+  }
 
   /// Offset the address for this UnwindRow.
   ///

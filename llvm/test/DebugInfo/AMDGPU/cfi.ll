@@ -18,10 +18,17 @@
 ; CHECK-NEXT:   DW_CFA_nop:
 ; CHECK-NEXT:   DW_CFA_nop:
 ; CHECK-EMPTY:
-; CHECK-NEXT: CFA=unspecified
 ; CHECK-EMPTY:
 ; CHECK-NEXT: 00000020 {{[0-9]+}} 00000000 FDE cie=00000000 pc=00000000...{{[0-9]+}}
+; CHECK-NEXT: Format:       DWARF32
+; CHECK-NEXT: DW_CFA_LLVM_def_aspace_cfa: SGPR32_LO16 +0 as6
+; CHECK-NEXT: DW_CFA_expression: PC_REG DW_OP_regx SGPR30_LO16, DW_OP_piece 0x4, DW_OP_regx SGPR31_LO16, DW_OP_piece 0x4
+; CHECK-NEXT: DW_CFA_nop
+; CHECK-EMPTY:
+; CHECK-NEXT: 0x0: CFA=SGPR32_LO16 +0 as6: PC_REG=[DW_OP_regx SGPR30_LO16, DW_OP_piece 0x4, DW_OP_regx SGPR31_LO16, DW_OP_piece 0x4]
+; CHECK-EMPTY:
 ; CHECK: .eh_frame contents:
+; CHECK-NOT: CIE
 
 define void @func() #0 {
   ret void

@@ -172,6 +172,12 @@ void UnwindRow::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
     OS << format("0x%" PRIx64 ": ", *Address);
   OS << "CFA=";
   CFAValue.dump(OS, MRI, IsEH);
+  if (CFAAddressSpace != 0) {
+    auto Offset = CFAValue.getOffset();
+    if (Offset == 0)
+      OS << " +" << Offset;
+    OS << " as" << CFAAddressSpace;
+  }
   if (RegLocs.hasLocations()) {
     OS << ": ";
     RegLocs.dump(OS, MRI, IsEH);
@@ -214,7 +220,10 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
   const RegisterLocations InitialLocs = Row.getRegisterLocations();
   if (Error FdeError = UT.parseRows(Fde->cfis(), Row, &InitialLocs))
     return std::move(FdeError);
-  UT.Rows.push_back(Row);
+  // Do not add empty row
+  if (Row.getRegisterLocations().hasLocations() ||
+      Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
+    UT.Rows.push_back(Row);
   return UT;
 }
 
@@ -223,7 +232,10 @@ Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
   UnwindRow Row;
   if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
     return std::move(CieError);
-  UT.Rows.push_back(Row);
+  // Do not add empty row
+  if (Row.getRegisterLocations().hasLocations() ||
+      Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
+    UT.Rows.push_back(Row);
   return UT;
 }
 
@@ -386,6 +398,7 @@ const char *CFIProgram::operandTypeString(CFIProgram::OperandType OT) {
     ENUM_TO_CSTR(OT_SignedFactDataOffset);
     ENUM_TO_CSTR(OT_UnsignedFactDataOffset);
     ENUM_TO_CSTR(OT_Register);
+    ENUM_TO_CSTR(OT_AddressSpace);
     ENUM_TO_CSTR(OT_Expression);
   }
   return "<unknown CFIProgram::OperandType>";
@@ -394,7 +407,7 @@ const char *CFIProgram::operandTypeString(CFIProgram::OperandType OT) {
 llvm::Expected<uint64_t>
 CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
                                               uint32_t OperandIdx) const {
-  if (OperandIdx >= 2)
+  if (OperandIdx >= 3)
     return createStringError(errc::invalid_argument,
                              "operand index %" PRIu32 " is not valid",
                              OperandIdx);
@@ -419,6 +432,7 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
 
   case OT_Address:
   case OT_Register:
+  case OT_AddressSpace:
     return Operand;
 
   case OT_FactoredCodeOffset: {
@@ -438,7 +452,7 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
 llvm::Expected<int64_t>
 CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
                                             uint32_t OperandIdx) const {
-  if (OperandIdx >= 2)
+  if (OperandIdx >= 3)
     return createStringError(errc::invalid_argument,
                              "operand index %" PRIu32 " is not valid",
                              OperandIdx);
@@ -454,6 +468,7 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
 
   case OT_Address:
   case OT_Register:
+  case OT_AddressSpace:
     return createStringError(
         errc::invalid_argument,
         "op[%" PRIu32 "] has OperandType %s which produces an unsigned result, "
@@ -738,6 +753,24 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
         return Offset.takeError();
       Row.getCFAValue() =
           UnwindLocation::createIsRegisterPlusOffset(*RegNum, *Offset);
+      break;
+    }
+
+    case dwarf::DW_CFA_LLVM_def_aspace_cfa:
+    case dwarf::DW_CFA_LLVM_def_aspace_cfa_sf: {
+      llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
+      if (!RegNum)
+        return RegNum.takeError();
+      llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 1);
+      if (!Offset)
+        return Offset.takeError();
+      llvm::Expected<uint64_t> CFAAddrSpace =
+          Inst.getOperandAsUnsigned(CFIP, 2);
+      if (!CFAAddrSpace)
+        return CFAAddrSpace.takeError();
+      Row.getCFAValue() =
+          UnwindLocation::createIsRegisterPlusOffset(*RegNum, *Offset);
+      Row.setCFAAddressSpace(*CFAAddrSpace);
       break;
     }
 
