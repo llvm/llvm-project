@@ -186,12 +186,14 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
-  bool isLegalScalarTypeForSVEMaskedMemOp(Type *Ty) const {
+  bool isLegalElementTypeForSVE(Type *Ty) const {
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() || Ty->isHalfTy() ||
-        Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() && ST->hasBF16())
+      return true;
+
+    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
@@ -205,7 +207,7 @@ public:
     if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
       return false;
 
-    return isLegalScalarTypeForSVEMaskedMemOp(DataType->getScalarType());
+    return isLegalElementTypeForSVE(DataType->getScalarType());
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -220,7 +222,7 @@ public:
     if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
       return false;
 
-    return isLegalScalarTypeForSVEMaskedMemOp(DataType->getScalarType());
+    return isLegalElementTypeForSVE(DataType->getScalarType());
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
@@ -265,6 +267,9 @@ public:
   }
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }
+
+  bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                   ElementCount VF) const;
 
   int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm,
