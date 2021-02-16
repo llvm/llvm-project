@@ -34,6 +34,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/SoftPointerAuth.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -876,4 +877,12 @@ INITIALIZE_PASS(SoftPointerAuthLegacyPass, "soft-ptrauth",
 
 ModulePass *llvm::createSoftPointerAuthPass() {
   return new SoftPointerAuthLegacyPass();
+}
+
+PreservedAnalyses SoftPointerAuthPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
+  SoftPointerAuth Pass;
+  if (!Pass.runOnModule(M))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
