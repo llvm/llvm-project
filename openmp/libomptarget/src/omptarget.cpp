@@ -31,6 +31,11 @@ int AsyncInfoTy::synchronize() {
   return Result;
 }
 
+void *&AsyncInfoTy::getVoidPtrLocation() {
+  BufferLocations.push_back(nullptr);
+  return BufferLocations.back();
+}
+
 /* All begin addresses for partially mapped structs must be 8-aligned in order
  * to ensure proper alignment of members. E.g.
  *
@@ -432,7 +437,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
          DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
-      void *TgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
+      void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
+      TgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
       int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
                                  sizeof(void *), AsyncInfo);
       if (rt != OFFLOAD_SUCCESS) {
@@ -1123,8 +1129,9 @@ static int processDataBefore(ident_t *loc, int64_t DeviceId, void *HostPtr,
         DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
         uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
         void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
-        void *PointerTgtPtrBegin = Device.getTgtPtrBegin(
-            HstPtrVal, ArgSizes[I], IsLast, false, IsHostPtr);
+        void *&PointerTgtPtrBegin = AsyncInfo.getVoidPtrLocation();
+        PointerTgtPtrBegin = Device.getTgtPtrBegin(HstPtrVal, ArgSizes[I],
+                                                   IsLast, false, IsHostPtr);
         if (!PointerTgtPtrBegin) {
           DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
              DPxPTR(HstPtrVal));
