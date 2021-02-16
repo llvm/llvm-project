@@ -13,6 +13,7 @@
 #ifndef _OMPTARGET_PRIVATE_H
 #define _OMPTARGET_PRIVATE_H
 
+#include "device.h"
 #include <Debug.h>
 #include <SourceInfo.h>
 #include <omptarget.h>
@@ -36,7 +37,7 @@ extern int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t arg_num,
                             void **arg_mappers,
                             __tgt_async_info *async_info_ptr = nullptr);
 
-extern int target(ident_t *loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+extern int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *arg_names,
                   void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,

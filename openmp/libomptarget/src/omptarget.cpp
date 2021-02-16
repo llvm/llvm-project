@@ -159,9 +159,8 @@ static int InitLibrary(DeviceTy &Device) {
         DP("Has pending ctors... call now\n");
         for (auto &entry : lib.second.PendingCtors) {
           void *ctor = entry;
-          int rc =
-              target(nullptr, device_id, ctor, 0, nullptr, nullptr, nullptr,
-                     nullptr, nullptr, nullptr, 1, 1, true /*team*/);
+          int rc = target(nullptr, Device, ctor, 0, nullptr, nullptr, nullptr,
+                          nullptr, nullptr, nullptr, 1, 1, true /*team*/);
           if (rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(ctor));
             Device.PendingGlobalsMtx.unlock();
@@ -1238,11 +1237,11 @@ static int processDataAfter(ident_t *loc, int64_t DeviceId, void *HostPtr,
 /// performs the same action as data_update and data_end above. This function
 /// returns 0 if it was able to transfer the execution to a target and an
 /// integer different from zero otherwise.
-int target(ident_t *loc, int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
            void **ArgBases, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
            map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
            int32_t ThreadLimit, int IsTeamConstruct) {
-  DeviceTy &Device = PM->Devices[DeviceId];
+  int32_t DeviceId = Device.DeviceID;
 
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
