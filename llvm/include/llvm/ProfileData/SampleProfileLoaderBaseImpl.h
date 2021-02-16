@@ -73,6 +73,7 @@ public:
   void dump() { Reader->dump(); }
 
 protected:
+  ~SampleProfileLoaderBaseImpl() = default;
   friend class SampleCoverageTracker;
 
   unsigned getFunctionLoc(Function &F);
