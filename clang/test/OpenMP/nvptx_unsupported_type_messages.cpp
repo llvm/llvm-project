@@ -81,18 +81,12 @@ void baz1() {
   T1 t = bar1();
 }
 
-// TODO: We should not emit an error for dead functions we do not emit.
 inline void dead_inline_declare_target() {
-// expected-note@+1 {{'b' defined here}}
   long double *a, b = 0;
-// expected-error@+1 {{'b' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   a = &b;
 }
-// TODO: We should not emit an error for dead functions we do not emit.
 static void dead_static_declare_target() {
-// expected-note@+1 {{'b' defined here}}
   long double *a, b = 0;
-// expected-error@+1 {{'b' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   a = &b;
 }
 template<bool>
@@ -108,7 +102,6 @@ long double ld_return1a() { return 0; }
 // expected-error@+1 {{'ld_arg1a' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg1a(long double ld) {}
 
-// TODO: We should diagnose the return type and argument type here.
 typedef long double ld_ty;
 // expected-note@+2 {{'ld_return1b' defined here}}
 // expected-error@+1 {{'ld_return1b' requires 128 bit size 'ld_ty' (aka 'long double') type support, but device 'nvptx64-unknown-unknown' does not support it}}
@@ -117,48 +110,28 @@ ld_ty ld_return1b() { return 0; }
 // expected-error@+1 {{'ld_arg1b' requires 128 bit size 'ld_ty' (aka 'long double') type support, but device 'nvptx64-unknown-unknown' does not support it}}
 void ld_arg1b(ld_ty ld) {}
 
-// TODO: These errors should not be emitted.
-// expected-note@+2 {{'ld_return1c' defined here}}
-// expected-error@+1 {{'ld_return1c' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 static long double ld_return1c() { return 0; }
-// expected-note@+2 {{'ld_arg1c' defined here}}
-// expected-error@+1 {{'ld_arg1c' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 static void ld_arg1c(long double ld) {}
 
-// TODO: These errors should not be emitted.
-// expected-note@+2 {{'ld_return1d' defined here}}
-// expected-error@+1 {{'ld_return1d' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 inline long double ld_return1d() { return 0; }
-// expected-note@+2 {{'ld_arg1d' defined here}}
-// expected-error@+1 {{'ld_arg1d' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 inline void ld_arg1d(long double ld) {}
 
-// expected-error@+2 {{'ld_return1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_return1e' defined here}}
 static long double ld_return1e() { return 0; }
-// expected-error@+2 {{'ld_arg1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_arg1e' defined here}}
 static void ld_arg1e(long double ld) {}
 
-// expected-error@+2 {{'ld_return1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_return1f' defined here}}
 inline long double ld_return1f() { return 0; }
-// expected-error@+2 {{'ld_arg1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 // expected-note@+1 {{'ld_arg1f' defined here}}
 inline void ld_arg1f(long double ld) {}
 
 inline void ld_use1() {
-// expected-note@+1 {{'ld' defined here}}
   long double ld = 0;
-// TODO: We should not diagnose this as the function is dead.
-// expected-error@+1 {{'ld' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   ld += 1;
 }
 static void ld_use2() {
-// expected-note@+1 {{'ld' defined here}}
   long double ld = 0;
-// TODO: We should not diagnose this as the function is dead.
-// expected-error@+1 {{'ld' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   ld += 1;
 }
 
@@ -176,11 +149,18 @@ static void ld_use4() {
 }
 
 void external() {
+// expected-error@+1 {{'ld_return1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p1 = reinterpret_cast<void*>(&ld_return1e);
+// expected-error@+1 {{'ld_arg1e' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p2 = reinterpret_cast<void*>(&ld_arg1e);
+// expected-error@+1 {{'ld_return1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p3 = reinterpret_cast<void*>(&ld_return1f);
+// expected-error@+1 {{'ld_arg1f' requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
   void *p4 = reinterpret_cast<void*>(&ld_arg1f);
+// TODO: The error message "called by" is not great.
+// expected-note@+1 {{called by 'external'}}
   void *p5 = reinterpret_cast<void*>(&ld_use3);
+// expected-note@+1 {{called by 'external'}}
   void *p6 = reinterpret_cast<void*>(&ld_use4);
 }
 
