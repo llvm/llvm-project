@@ -341,9 +341,136 @@ bool DummyProcedure::operator==(const DummyProcedure &that) const {
       procedure.value() == that.procedure.value();
 }
 
-std::optional<DummyProcedure> DummyProcedure::Characterize(
-    const semantics::Symbol &symbol, FoldingContext &context) {
-  if (auto procedure{Procedure::Characterize(symbol, context)}) {
+static std::string GetSeenProcs(const semantics::SymbolSet &seenProcs) {
+  std::string result;
+  llvm::interleave(
+      seenProcs,
+      [&](const SymbolRef p) { result += '\'' + p->name().ToString() + '\''; },
+      [&]() { result += ", "; });
+  return result;
+}
+
+// These functions with arguments of type SymbolSet are used with mutually
+// recursive calls when characterizing a Procedure, a DummyArgument, or a
+// DummyProcedure to detect circularly defined procedures as required by
+// 15.4.3.6, paragraph 2.
+static std::optional<DummyArgument> CharacterizeDummyArgument(
+    const semantics::Symbol &symbol, FoldingContext &context,
+    semantics::SymbolSet &seenProcs);
+
+static std::optional<Procedure> CharacterizeProcedure(
+    const semantics::Symbol &original, FoldingContext &context,
+    semantics::SymbolSet &seenProcs) {
+  Procedure result;
+  const auto &symbol{original.GetUltimate()};
+  if (seenProcs.find(symbol) != seenProcs.end()) {
+    std::string procsList{GetSeenProcs(seenProcs)};
+    context.messages().Say(symbol.name(),
+        "Procedure '%s' is recursively defined.  Procedures in the cycle:"
+        " '%s'"_err_en_US,
+        symbol.name(), procsList);
+    return std::nullopt;
+  }
+  seenProcs.insert(symbol);
+  CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
+      {
+          {semantics::Attr::PURE, Procedure::Attr::Pure},
+          {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
+          {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+      });
+  if (result.attrs.test(Procedure::Attr::Elemental) &&
+      !symbol.attrs().test(semantics::Attr::IMPURE)) {
+    result.attrs.set(Procedure::Attr::Pure); // explicitly flag pure procedures
+  }
+  return std::visit(
+      common::visitors{
+          [&](const semantics::SubprogramDetails &subp)
+              -> std::optional<Procedure> {
+            if (subp.isFunction()) {
+              if (auto fr{
+                      FunctionResult::Characterize(subp.result(), context)}) {
+                result.functionResult = std::move(fr);
+              } else {
+                return std::nullopt;
+              }
+            } else {
+              result.attrs.set(Procedure::Attr::Subroutine);
+            }
+            for (const semantics::Symbol *arg : subp.dummyArgs()) {
+              if (!arg) {
+                result.dummyArguments.emplace_back(AlternateReturn{});
+              } else if (auto argCharacteristics{CharacterizeDummyArgument(
+                             *arg, context, seenProcs)}) {
+                result.dummyArguments.emplace_back(
+                    std::move(argCharacteristics.value()));
+              } else {
+                return std::nullopt;
+              }
+            }
+            return result;
+          },
+          [&](const semantics::ProcEntityDetails &proc)
+              -> std::optional<Procedure> {
+            if (symbol.attrs().test(semantics::Attr::INTRINSIC)) {
+              return context.intrinsics().IsSpecificIntrinsicFunction(
+                  symbol.name().ToString());
+            }
+            const semantics::ProcInterface &interface{proc.interface()};
+            if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
+              return CharacterizeProcedure(
+                  *interfaceSymbol, context, seenProcs);
+            } else {
+              result.attrs.set(Procedure::Attr::ImplicitInterface);
+              const semantics::DeclTypeSpec *type{interface.type()};
+              if (symbol.test(semantics::Symbol::Flag::Subroutine)) {
+                // ignore any implicit typing
+                result.attrs.set(Procedure::Attr::Subroutine);
+              } else if (type) {
+                if (auto resultType{DynamicType::From(*type)}) {
+                  result.functionResult = FunctionResult{*resultType};
+                } else {
+                  return std::nullopt;
+                }
+              } else if (symbol.test(semantics::Symbol::Flag::Function)) {
+                return std::nullopt;
+              }
+              // The PASS name, if any, is not a characteristic.
+              return result;
+            }
+          },
+          [&](const semantics::ProcBindingDetails &binding) {
+            if (auto result{CharacterizeProcedure(
+                    binding.symbol(), context, seenProcs)}) {
+              if (!symbol.attrs().test(semantics::Attr::NOPASS)) {
+                auto passName{binding.passName()};
+                for (auto &dummy : result->dummyArguments) {
+                  if (!passName || dummy.name.c_str() == *passName) {
+                    dummy.pass = true;
+                    return result;
+                  }
+                }
+                DIE("PASS argument missing");
+              }
+              return result;
+            } else {
+              return std::optional<Procedure>{};
+            }
+          },
+          [&](const semantics::UseDetails &use) {
+            return CharacterizeProcedure(use.symbol(), context, seenProcs);
+          },
+          [&](const semantics::HostAssocDetails &assoc) {
+            return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
+          },
+          [](const auto &) { return std::optional<Procedure>{}; },
+      },
+      symbol.details());
+}
+
+static std::optional<DummyProcedure> CharacterizeDummyProcedure(
+    const semantics::Symbol &symbol, FoldingContext &context,
+    semantics::SymbolSet &seenProcs) {
+  if (auto procedure{CharacterizeProcedure(symbol, context, seenProcs)}) {
     // Dummy procedures may not be elemental.  Elemental dummy procedure
     // interfaces are errors when the interface is not intrinsic, and that
     // error is caught elsewhere.  Elemental intrinsic interfaces are
@@ -381,14 +508,16 @@ bool DummyArgument::operator==(const DummyArgument &that) const {
   return u == that.u; // name and passed-object usage are not characteristics
 }
 
-std::optional<DummyArgument> DummyArgument::Characterize(
-    const semantics::Symbol &symbol, FoldingContext &context) {
+static std::optional<DummyArgument> CharacterizeDummyArgument(
+    const semantics::Symbol &symbol, FoldingContext &context,
+    semantics::SymbolSet &seenProcs) {
   auto name{symbol.name().ToString()};
   if (symbol.has<semantics::ObjectEntityDetails>()) {
     if (auto obj{DummyDataObject::Characterize(symbol, context)}) {
       return DummyArgument{std::move(name), std::move(obj.value())};
     }
-  } else if (auto proc{DummyProcedure::Characterize(symbol, context)}) {
+  } else if (auto proc{
+                 CharacterizeDummyProcedure(symbol, context, seenProcs)}) {
     return DummyArgument{std::move(name), std::move(proc.value())};
   }
   return std::nullopt;
@@ -644,99 +773,8 @@ bool Procedure::CanOverride(
 
 std::optional<Procedure> Procedure::Characterize(
     const semantics::Symbol &original, FoldingContext &context) {
-  Procedure result;
-  const auto &symbol{original.GetUltimate()};
-  CopyAttrs<Procedure, Procedure::Attr>(symbol, result,
-      {
-          {semantics::Attr::PURE, Procedure::Attr::Pure},
-          {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
-          {semantics::Attr::BIND_C, Procedure::Attr::BindC},
-      });
-  if (result.attrs.test(Attr::Elemental) &&
-      !symbol.attrs().test(semantics::Attr::IMPURE)) {
-    result.attrs.set(Attr::Pure); // explicitly flag pure procedures
-  }
-  return std::visit(
-      common::visitors{
-          [&](const semantics::SubprogramDetails &subp)
-              -> std::optional<Procedure> {
-            if (subp.isFunction()) {
-              if (auto fr{
-                      FunctionResult::Characterize(subp.result(), context)}) {
-                result.functionResult = std::move(fr);
-              } else {
-                return std::nullopt;
-              }
-            } else {
-              result.attrs.set(Attr::Subroutine);
-            }
-            for (const semantics::Symbol *arg : subp.dummyArgs()) {
-              if (!arg) {
-                result.dummyArguments.emplace_back(AlternateReturn{});
-              } else if (auto argCharacteristics{
-                             DummyArgument::Characterize(*arg, context)}) {
-                result.dummyArguments.emplace_back(
-                    std::move(argCharacteristics.value()));
-              } else {
-                return std::nullopt;
-              }
-            }
-            return result;
-          },
-          [&](const semantics::ProcEntityDetails &proc)
-              -> std::optional<Procedure> {
-            if (symbol.attrs().test(semantics::Attr::INTRINSIC)) {
-              return context.intrinsics().IsSpecificIntrinsicFunction(
-                  symbol.name().ToString());
-            }
-            const semantics::ProcInterface &interface{proc.interface()};
-            if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
-              return Characterize(*interfaceSymbol, context);
-            } else {
-              result.attrs.set(Attr::ImplicitInterface);
-              const semantics::DeclTypeSpec *type{interface.type()};
-              if (symbol.test(semantics::Symbol::Flag::Subroutine)) {
-                // ignore any implicit typing
-                result.attrs.set(Attr::Subroutine);
-              } else if (type) {
-                if (auto resultType{DynamicType::From(*type)}) {
-                  result.functionResult = FunctionResult{*resultType};
-                } else {
-                  return std::nullopt;
-                }
-              } else if (symbol.test(semantics::Symbol::Flag::Function)) {
-                return std::nullopt;
-              }
-              // The PASS name, if any, is not a characteristic.
-              return result;
-            }
-          },
-          [&](const semantics::ProcBindingDetails &binding) {
-            if (auto result{Characterize(binding.symbol(), context)}) {
-              if (!symbol.attrs().test(semantics::Attr::NOPASS)) {
-                auto passName{binding.passName()};
-                for (auto &dummy : result->dummyArguments) {
-                  if (!passName || dummy.name.c_str() == *passName) {
-                    dummy.pass = true;
-                    return result;
-                  }
-                }
-                DIE("PASS argument missing");
-              }
-              return result;
-            } else {
-              return std::optional<Procedure>{};
-            }
-          },
-          [&](const semantics::UseDetails &use) {
-            return Characterize(use.symbol(), context);
-          },
-          [&](const semantics::HostAssocDetails &assoc) {
-            return Characterize(assoc.symbol(), context);
-          },
-          [](const auto &) { return std::optional<Procedure>{}; },
-      },
-      symbol.details());
+  semantics::SymbolSet seenProcs;
+  return CharacterizeProcedure(original, context, seenProcs);
 }
 
 std::optional<Procedure> Procedure::Characterize(

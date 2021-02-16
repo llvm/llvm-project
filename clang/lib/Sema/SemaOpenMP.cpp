@@ -3564,9 +3564,11 @@ public:
           !Stack->isLoopControlVariable(VD).first) {
         if (!Stack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
-                [](OMPClauseMappableExprCommon::MappableExprComponentListRef
-                       StackComponents,
-                   OpenMPClauseKind) {
+                [this](OMPClauseMappableExprCommon::MappableExprComponentListRef
+                           StackComponents,
+                       OpenMPClauseKind) {
+                  if (SemaRef.LangOpts.OpenMP >= 50)
+                    return !StackComponents.empty();
                   // Variable is used if it has been marked as an array, array
                   // section, array shaping or the variable iself.
                   return StackComponents.size() == 1 ||
@@ -17579,7 +17581,9 @@ static bool checkMapConflicts(
        ERange, CKind, &EnclosingExpr,
        CurComponents](OMPClauseMappableExprCommon::MappableExprComponentListRef
                           StackComponents,
-                      OpenMPClauseKind) {
+                      OpenMPClauseKind Kind) {
+        if (CKind == Kind && SemaRef.LangOpts.OpenMP >= 50)
+          return false;
         assert(!StackComponents.empty() &&
                "Map clause expression with no components!");
         assert(StackComponents.back().getAssociatedDeclaration() == VD &&
@@ -18132,8 +18136,6 @@ static void checkMappableExpressionList(
     if (!checkTypeMappable(VE->getExprLoc(), VE->getSourceRange(), SemaRef,
                            DSAS, Type))
       continue;
-
-    Type = I->getAssociatedDeclaration()->getType().getNonReferenceType();
 
     if (CKind == OMPC_map) {
       // target enter data

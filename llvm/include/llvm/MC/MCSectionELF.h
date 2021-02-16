@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCSECTIONELF_H
 #define LLVM_MC_MCSECTIONELF_H
 
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -38,7 +39,9 @@ class MCSectionELF final : public MCSection {
   /// fixed-sized entries 'EntrySize' will be 0.
   unsigned EntrySize;
 
-  const MCSymbolELF *Group;
+  /// The section group signature symbol (if not null) and a bool indicating
+  /// whether this is a GRP_COMDAT group.
+  const PointerIntPair<const MCSymbolELF *, 1, bool> Group;
 
   /// Used by SHF_LINK_ORDER. If non-null, the sh_link field will be set to the
   /// section header index of the section where LinkedToSym is defined.
@@ -49,13 +52,14 @@ private:
 
   // The storage of Name is owned by MCContext's ELFUniquingMap.
   MCSectionELF(StringRef Name, unsigned type, unsigned flags, SectionKind K,
-               unsigned entrySize, const MCSymbolELF *group, unsigned UniqueID,
-               MCSymbol *Begin, const MCSymbolELF *LinkedToSym)
+               unsigned entrySize, const MCSymbolELF *group, bool IsComdat,
+               unsigned UniqueID, MCSymbol *Begin,
+               const MCSymbolELF *LinkedToSym)
       : MCSection(SV_ELF, Name, K, Begin), Type(type), Flags(flags),
-        UniqueID(UniqueID), EntrySize(entrySize), Group(group),
+        UniqueID(UniqueID), EntrySize(entrySize), Group(group, IsComdat),
         LinkedToSym(LinkedToSym) {
-    if (Group)
-      Group->setIsSignature();
+    if (Group.getPointer())
+      Group.getPointer()->setIsSignature();
   }
 
   // TODO Delete after we stop supporting generation of GNU-style .zdebug_*
@@ -71,7 +75,8 @@ public:
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }
   void setFlags(unsigned F) { Flags = F; }
-  const MCSymbolELF *getGroup() const { return Group; }
+  const MCSymbolELF *getGroup() const { return Group.getPointer(); }
+  bool isComdat() const { return Group.getInt(); }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,

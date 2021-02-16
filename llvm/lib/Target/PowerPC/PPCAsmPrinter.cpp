@@ -78,11 +78,42 @@ using namespace llvm::XCOFF;
 
 #define DEBUG_TYPE "asmprinter"
 
+// Specialize DenseMapInfo to allow
+// std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind> in DenseMap.
+// This specialization is needed here because that type is used as keys in the
+// map representing TOC entries.
+template <>
+struct DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
+  using TOCKey = std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>;
+
+  static inline TOCKey getEmptyKey() {
+    return {nullptr, MCSymbolRefExpr::VariantKind::VK_None};
+  }
+  static inline TOCKey getTombstoneKey() {
+    return {nullptr, MCSymbolRefExpr::VariantKind::VK_Invalid};
+  }
+  static unsigned getHashValue(const TOCKey &PairVal) {
+    return detail::combineHashValue(
+        DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),
+        DenseMapInfo<int>::getHashValue(PairVal.second));
+  }
+  static bool isEqual(const TOCKey &A, const TOCKey &B) { return A == B; }
+};
+
 namespace {
 
 class PPCAsmPrinter : public AsmPrinter {
 protected:
-  MapVector<const MCSymbol *, MCSymbol *> TOC;
+  // For TLS on AIX, we need to be able to identify TOC entries of specific
+  // VariantKind so we can add the right relocations when we generate the
+  // entries. So each entry is represented by a pair of MCSymbol and
+  // VariantKind. For example, we need to be able to identify the following
+  // entry as a TLSGD entry so we can add the @m relocation:
+  //   .tc .i[TC],i[TL]@m
+  // By default, VK_None is used for the VariantKind.
+  MapVector<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>,
+            MCSymbol *>
+      TOC;
   const PPCSubtarget *Subtarget = nullptr;
   StackMaps SM;
 
@@ -93,7 +124,9 @@ public:
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
-  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym);
+  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym,
+                                   MCSymbolRefExpr::VariantKind Kind =
+                                       MCSymbolRefExpr::VariantKind::VK_None);
 
   bool doInitialization(Module &M) override {
     if (!TOC.empty())
@@ -344,8 +377,10 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 /// lookUpOrCreateTOCEntry -- Given a symbol, look up whether a TOC entry
 /// exists for it.  If not, create one.  Then return a symbol that references
 /// the TOC entry.
-MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym) {
-  MCSymbol *&TOCEntry = TOC[Sym];
+MCSymbol *
+PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym,
+                                      MCSymbolRefExpr::VariantKind Kind) {
+  MCSymbol *&TOCEntry = TOC[{Sym, Kind}];
   if (!TOCEntry)
     TOCEntry = createTempSymbol("C");
   return TOCEntry;
@@ -604,7 +639,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       [IsPPC64, getTOCRelocAdjustedExprForXCOFF,
        this](const MCSymbol *MOSymbol, const MCExpr *Expr) -> const MCExpr * {
     const unsigned EntryByteSize = IsPPC64 ? 8 : 4;
-    const auto TOCEntryIter = TOC.find(MOSymbol);
+    const auto TOCEntryIter =
+        TOC.find({MOSymbol, MCSymbolRefExpr::VariantKind::VK_None});
     assert(TOCEntryIter != TOC.end() &&
            "Could not find the TOC entry for this symbol.");
     const ptrdiff_t EntryDistanceFromTOCBase =
@@ -1505,7 +1541,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
       OutStreamer->emitValueToAlignment(4);
 
     for (const auto &TOCMapPair : TOC) {
-      const MCSymbol *const TOCEntryTarget = TOCMapPair.first;
+      const MCSymbol *const TOCEntryTarget = TOCMapPair.first.first;
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 
       OutStreamer->emitLabel(TOCEntryLabel);
@@ -2163,12 +2199,12 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.
     MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
-        getObjFileLowering().getSectionForTOCEntry(I.first, TM));
+        getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
     if (TS != nullptr)
-      TS->emitTCEntry(*I.first);
+      TS->emitTCEntry(*I.first.first);
   }
 }
 

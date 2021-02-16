@@ -375,7 +375,7 @@ void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 
 void MCELFStreamer::emitIdent(StringRef IdentString) {
   MCSection *Comment = getAssembler().getContext().getELFSection(
-      ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+      ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
   PushSection();
   SwitchSection(Comment);
   if (!SeenIdent) {

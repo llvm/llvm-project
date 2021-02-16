@@ -561,8 +561,9 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-  // CK5: private unnamed_addr constant [5 x i64] [i64 1027, i64 0, i64 562949953421328, i64 16, i64 1043]
-  #pragma omp target data map(close,tofrom: arg, ps->ps->ps->ps->s)
+// CK5: private unnamed_addr constant [5 x i64] [i64 1027, i64 0, i64 562949953421328, i64 16, i64 1043]
+#pragma omp target data map(close, tofrom \
+                            : arg, ps->ps->ps->ps->s)
   {
     ++(arg);
   }
@@ -585,8 +586,9 @@ void test_close_modifier(int arg) {
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
 void test_close_modifier(int arg) {
-  // CK6: private unnamed_addr constant [1 x i64] [i64 1027]
-  #pragma omp target data map(close,tofrom: arg)
+// CK6: private unnamed_addr constant [1 x i64] [i64 1027]
+#pragma omp target data map(close, tofrom \
+                            : arg)
   {++arg;}
 }
 #endif
@@ -642,36 +644,39 @@ void test_present_modifier(int arg) {
 
   // CK8: private unnamed_addr constant [11 x i64]
 
-  // ps1
-  //
-  // PRESENT=0x1000 = 0x1000
-  // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
-  // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
-  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
-  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
-  //
-  // CK8-SAME: {{^}} [i64 [[#0x1000]], i64 [[#0x1000000000003]],
-  // CK8-SAME: {{^}} i64 [[#0x1000000001010]], i64 [[#0x1010]], i64 [[#0x1013]],
+// ps1
+//
+// PRESENT=0x1000 = 0x1000
+// MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
+// PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
+// PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
+// MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
+//
+// CK8-SAME: {{^}} [i64 [[#0x1000]], i64 [[#0x1000000001010]],
+// CK8-SAME: {{^}} i64 [[#0x1010]], i64 [[#0x1013]], i64 [[#0x1000000000003]],
 
-  // arg
-  //
-  // PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
-  //
-  // CK8-SAME: {{^}} i64 [[#0x1003]],
+// arg
+//
+// PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
+//
+// CK8-SAME: {{^}} i64 [[#0x1003]],
 
-  // ps2
-  //
-  // PRESENT=0x1000 = 0x1000
-  // MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
-  // MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
-  // PTR_AND_OBJ=0x10 = 0x10
-  // PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
-  //
-  // CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x7000000001003]],
-  // CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
-  #pragma omp target data map(tofrom: ps1->s) \
-                          map(present,tofrom: arg, ps1->ps->ps->ps->s, ps2->s) \
-                          map(tofrom: ps2->ps->ps->ps->s)
+// ps2
+//
+// PRESENT=0x1000 = 0x1000
+// MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
+// MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
+// PTR_AND_OBJ=0x10 = 0x10
+// PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
+//
+// CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x7000000001003]],
+// CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
+#pragma omp target data map(tofrom         \
+                            : ps1->s)      \
+    map(present, tofrom                    \
+        : arg, ps1->ps->ps->ps->s, ps2->s) \
+        map(tofrom                         \
+            : ps2->ps->ps->ps->s)
   {
     ++(arg);
   }
@@ -694,9 +699,10 @@ void test_present_modifier(int arg) {
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK9
 void test_present_modifier(int arg) {
-  // PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
-  // CK9: private unnamed_addr constant [1 x i64] [i64 [[#0x1003]]]
-  #pragma omp target data map(present,tofrom: arg)
+// PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
+// CK9: private unnamed_addr constant [1 x i64] [i64 [[#0x1003]]]
+#pragma omp target data map(present, tofrom \
+                            : arg)
   {++arg;}
 }
 #endif
