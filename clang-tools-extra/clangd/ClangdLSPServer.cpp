@@ -582,7 +582,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     bindMethods(Binder);
     if (Opts.Modules)
       for (auto &Mod : *Opts.Modules)
-        Mod.initializeLSP(Binder, Params.capabilities, ServerCaps);
+        Mod.initializeLSP(Binder, Params.rawCapabilities, ServerCaps);
   }
 
   // Per LSP, renameProvider can be either boolean or RenameOptions.
