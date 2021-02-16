@@ -531,6 +531,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
+          setOperationAction(ISD::AND, VT, Custom);
+          setOperationAction(ISD::OR, VT, Custom);
+          setOperationAction(ISD::XOR, VT, Custom);
           setOperationAction(ISD::SETCC, VT, Custom);
           continue;
         }
@@ -1209,11 +1212,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::MUL:
     return lowerToScalableOp(Op, DAG, RISCVISD::MUL_VL);
   case ISD::AND:
-    return lowerToScalableOp(Op, DAG, RISCVISD::AND_VL);
+    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMAND_VL,
+                                              RISCVISD::AND_VL);
   case ISD::OR:
-    return lowerToScalableOp(Op, DAG, RISCVISD::OR_VL);
+    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMOR_VL,
+                                              RISCVISD::OR_VL);
   case ISD::XOR:
-    return lowerToScalableOp(Op, DAG, RISCVISD::XOR_VL);
+    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMXOR_VL,
+                                              RISCVISD::XOR_VL);
   case ISD::SDIV:
     return lowerToScalableOp(Op, DAG, RISCVISD::SDIV_VL);
   case ISD::SREM:
@@ -2231,8 +2237,19 @@ RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
   return convertFromScalableVector(VT, Cmp, DAG, Subtarget);
 }
 
+SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
+    SDValue Op, SelectionDAG &DAG, unsigned MaskOpc, unsigned VecOpc) const {
+  MVT VT = Op.getSimpleValueType();
+
+  if (VT.getVectorElementType() == MVT::i1)
+    return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMask*/ false);
+
+  return lowerToScalableOp(Op, DAG, VecOpc, /*HasMask*/ true);
+}
+
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
-                                               unsigned NewOpc) const {
+                                               unsigned NewOpc,
+                                               bool HasMask) const {
   MVT VT = Op.getSimpleValueType();
   assert(useRVVForFixedLengthVectorVT(VT) &&
          "Only expected to lower fixed length vector operation!");
@@ -2258,7 +2275,8 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  Ops.push_back(Mask);
+  if (HasMask)
+    Ops.push_back(Mask);
   Ops.push_back(VL);
 
   SDValue ScalableRes = DAG.getNode(NewOpc, DL, ContainerVT, Ops);

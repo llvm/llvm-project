@@ -126,6 +126,9 @@ def riscv_vmset_vl : SDNode<"RISCVISD::VMSET_VL", SDT_RISCVVMSETCLR_VL>;
 
 def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 
+def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
+                             (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
+
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
                         (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
@@ -558,15 +561,41 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMXOR_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
 
-  // FIXME: Add remaining mask instructions.
-  def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmor_vl VR:$rs1, VR:$rs2,
+  def : Pat<(mti.Mask (riscv_vmand_vl (riscv_vmnot_vl VR:$rs1,
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                      VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMANDNOT_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  def : Pat<(mti.Mask (riscv_vmor_vl (riscv_vmnot_vl VR:$rs1,
                                                      (XLenVT (VLOp GPR:$vl))),
-                                      true_mask, (XLenVT (VLOp GPR:$vl)))),
+                                     VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMORNOT_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  // XOR is associative so we need 2 patterns for VMXNOR.
+  def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmnot_vl VR:$rs1,
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                     VR:$rs2, (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMXNOR_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+
+  def : Pat<(mti.Mask (riscv_vmnot_vl (riscv_vmand_vl VR:$rs1, VR:$rs2,
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  def : Pat<(mti.Mask (riscv_vmnot_vl (riscv_vmor_vl VR:$rs1, VR:$rs2,
+                                                     (XLenVT (VLOp GPR:$vl))),
+                                      (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMNOR_MM_" # mti.LMul.MX)
+                 VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
+  def : Pat<(mti.Mask (riscv_vmnot_vl (riscv_vmxor_vl VR:$rs1, VR:$rs2,
+                                                      (XLenVT (VLOp GPR:$vl))),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMXNOR_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.SEW)>;
 
   // Match the not idiom to the vnot.mm pseudo.
-  def : Pat<(mti.Mask (riscv_vmxor_vl VR:$rs, true_mask, (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(mti.Mask (riscv_vmnot_vl VR:$rs, (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
                  VR:$rs, VR:$rs, GPR:$vl, mti.SEW)>;
 }
