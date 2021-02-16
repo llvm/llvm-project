@@ -301,7 +301,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_dynamic_alloc              201907L
 # define __cpp_lib_constexpr_functional                 201907L
 // # define __cpp_lib_constexpr_iterator                   201811L
-// # define __cpp_lib_constexpr_memory                     201811L
+# define __cpp_lib_constexpr_memory                     201811L
 # define __cpp_lib_constexpr_numeric                    201911L
 // # define __cpp_lib_constexpr_string                     201907L
 // # define __cpp_lib_constexpr_string_view                201811L
