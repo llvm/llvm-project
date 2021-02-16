@@ -371,19 +371,19 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 
   MergeableConst4Section =
       Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 4, "");
+                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
 
   MergeableConst8Section =
       Ctx->getELFSection(".rodata.cst8", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 8, "");
+                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
 
   MergeableConst16Section =
       Ctx->getELFSection(".rodata.cst16", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 16, "");
+                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
 
   MergeableConst32Section =
       Ctx->getELFSection(".rodata.cst32", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32, "");
+                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
 
   // Exception Handling Sections.
 
@@ -412,7 +412,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DwarfLineSection = Ctx->getELFSection(".debug_line", DebugSecType, 0);
   DwarfLineStrSection =
       Ctx->getELFSection(".debug_line_str", DebugSecType,
-                         ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+                         ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
   DwarfFrameSection = Ctx->getELFSection(".debug_frame", DebugSecType, 0);
   DwarfPubNamesSection =
       Ctx->getELFSection(".debug_pubnames", DebugSecType, 0);
@@ -424,7 +424,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".debug_gnu_pubtypes", DebugSecType, 0);
   DwarfStrSection =
       Ctx->getELFSection(".debug_str", DebugSecType,
-                         ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+                         ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
   DwarfLocSection = Ctx->getELFSection(".debug_loc", DebugSecType, 0);
   DwarfARangesSection =
       Ctx->getELFSection(".debug_aranges", DebugSecType, 0);
@@ -464,7 +464,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".debug_abbrev.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfStrDWOSection = Ctx->getELFSection(
       ".debug_str.dwo", DebugSecType,
-      ELF::SHF_MERGE | ELF::SHF_STRINGS | ELF::SHF_EXCLUDE, 1, "");
+      ELF::SHF_MERGE | ELF::SHF_STRINGS | ELF::SHF_EXCLUDE, 1);
   DwarfLineDWOSection =
       Ctx->getELFSection(".debug_line.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfLocDWOSection =
@@ -981,7 +981,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   switch (TT.getObjectFormat()) {
   case Triple::ELF:
     return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
-                              utostr(Hash));
+                              utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), utostr(Hash),
                                MCContext::GenericSectionID);
@@ -1011,7 +1011,7 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
   }
 
   return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, ElfSec.getUniqueID(),
+                            GroupName, true, ElfSec.getUniqueID(),
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
 
@@ -1031,7 +1031,7 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
   return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, ElfSec.getUniqueID(),
+                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
 
@@ -1044,7 +1044,8 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
       auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                                S->getEntrySize(), Group->getName());
+                                S->getEntrySize(), Group->getName(),
+                                /*IsComdat=*/true);
     }
   }
   return PseudoProbeSection;
@@ -1067,7 +1068,8 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,
                                 S->getEntrySize(),
-                                S->getName() + "_" + FuncName);
+                                S->getName() + "_" + FuncName,
+                                /*IsComdat=*/true);
     }
   }
   return PseudoProbeDescSection;
