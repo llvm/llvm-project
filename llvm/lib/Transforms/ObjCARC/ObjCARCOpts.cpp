@@ -1229,7 +1229,6 @@ static void CheckForUseCFGHazard(const Sequence SuccSSeq,
     SomeSuccHasSame = true;
     break;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
     if (!S.IsKnownSafe() && !SuccSRRIKnownSafe)
       AllSuccsHaveSame = false;
@@ -1257,7 +1256,6 @@ static void CheckForCanReleaseCFGHazard(const Sequence SuccSSeq,
     SomeSuccHasSame = true;
     break;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
   case S_Use:
     if (!S.IsKnownSafe() && !SuccSRRIKnownSafe)
@@ -1343,7 +1341,6 @@ ObjCARCOpt::CheckForCFGHazards(const BasicBlock *BB,
       case S_Retain:
       case S_None:
       case S_Stop:
-      case S_Release:
       case S_MovableRelease:
         break;
       }
