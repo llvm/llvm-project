@@ -1116,10 +1116,10 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::ReturnOp.
+// Printing, parsing and verification for LLVM::ReturnOp.
 //===----------------------------------------------------------------------===//
 
-static void printReturnOp(OpAsmPrinter &p, ReturnOp &op) {
+static void printReturnOp(OpAsmPrinter &p, ReturnOp op) {
   p << op.getOperationName();
   p.printOptionalAttrDict(op.getAttrs());
   assert(op.getNumOperands() <= 1);
@@ -1145,6 +1145,35 @@ static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
   if (parser.parseColonType(type) ||
       parser.resolveOperand(operands[0], type, result.operands))
     return failure();
+  return success();
+}
+
+static LogicalResult verify(ReturnOp op) {
+  if (op->getNumOperands() > 1)
+    return op->emitOpError("expected at most 1 operand");
+
+  if (auto parent = op->getParentOfType<LLVMFuncOp>()) {
+    Type expectedType = parent.getType().getReturnType();
+    if (expectedType.isa<LLVMVoidType>()) {
+      if (op->getNumOperands() == 0)
+        return success();
+      InFlightDiagnostic diag = op->emitOpError("expected no operands");
+      diag.attachNote(parent->getLoc()) << "when returning from function";
+      return diag;
+    }
+    if (op->getNumOperands() == 0) {
+      if (expectedType.isa<LLVMVoidType>())
+        return success();
+      InFlightDiagnostic diag = op->emitOpError("expected 1 operand");
+      diag.attachNote(parent->getLoc()) << "when returning from function";
+      return diag;
+    }
+    if (expectedType != op->getOperand(0).getType()) {
+      InFlightDiagnostic diag = op->emitOpError("mismatching result types");
+      diag.attachNote(parent->getLoc()) << "when returning from function";
+      return diag;
+    }
+  }
   return success();
 }
 
@@ -1528,6 +1557,20 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+static bool isZeroAttribute(Attribute value) {
+  if (auto intValue = value.dyn_cast<IntegerAttr>())
+    return intValue.getValue().isNullValue();
+  if (auto fpValue = value.dyn_cast<FloatAttr>())
+    return fpValue.getValue().isZero();
+  if (auto splatValue = value.dyn_cast<SplatElementsAttr>())
+    return isZeroAttribute(splatValue.getSplatValue());
+  if (auto elementsValue = value.dyn_cast<ElementsAttr>())
+    return llvm::all_of(elementsValue.getValues<Attribute>(), isZeroAttribute);
+  if (auto arrayValue = value.dyn_cast<ArrayAttr>())
+    return llvm::all_of(arrayValue.getValue(), isZeroAttribute);
+  return false;
+}
+
 static LogicalResult verify(GlobalOp op) {
   if (!LLVMPointerType::isValidElementType(op.getType()))
     return op.emitOpError(
@@ -1558,6 +1601,25 @@ static LogicalResult verify(GlobalOp op) {
     if (op.getValueOrNull())
       return op.emitOpError("cannot have both initializer value and region");
   }
+
+  if (op.linkage() == Linkage::Common) {
+    if (Attribute value = op.getValueOrNull()) {
+      if (!isZeroAttribute(value)) {
+        return op.emitOpError()
+               << "expected zero value for '"
+               << stringifyLinkage(Linkage::Common) << "' linkage";
+      }
+    }
+  }
+
+  if (op.linkage() == Linkage::Appending) {
+    if (!op.getType().isa<LLVMArrayType>()) {
+      return op.emitOpError()
+             << "expected array type for '"
+             << stringifyLinkage(Linkage::Appending) << "' linkage";
+    }
+  }
+
   return success();
 }
 
@@ -1840,8 +1902,17 @@ static LogicalResult verify(LLVMFuncOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(LLVM::ConstantOp op) {
-  if (!(op.value().isa<IntegerAttr>() || op.value().isa<FloatAttr>() ||
-        op.value().isa<ElementsAttr>() || op.value().isa<StringAttr>()))
+  if (StringAttr sAttr = op.value().dyn_cast<StringAttr>()) {
+    auto arrayType = op.getType().dyn_cast<LLVMArrayType>();
+    if (!arrayType || arrayType.getNumElements() != sAttr.getValue().size() ||
+        !arrayType.getElementType().isInteger(8)) {
+      return op->emitOpError()
+             << "expected array type of " << sAttr.getValue().size()
+             << " i8 elements for the string constant";
+    }
+    return success();
+  }
+  if (!op.value().isa<IntegerAttr, FloatAttr, ElementsAttr>())
     return op.emitOpError()
            << "only supports integer, float, string or elements attributes";
   return success();
@@ -1964,6 +2035,14 @@ static LogicalResult verify(AtomicRMWOp op) {
         intBitWidth != 64)
       return op.emitOpError("expected LLVM IR integer type");
   }
+
+  if (static_cast<unsigned>(op.ordering()) <
+      static_cast<unsigned>(AtomicOrdering::monotonic))
+    return op.emitOpError()
+           << "expected at least '"
+           << stringifyAtomicOrdering(AtomicOrdering::monotonic)
+           << "' ordering";
+
   return success();
 }
 
