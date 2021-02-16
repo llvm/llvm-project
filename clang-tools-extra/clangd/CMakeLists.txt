@@ -71,6 +71,7 @@ add_clang_library(clangDaemon
   GlobalCompilationDatabase.cpp
   Headers.cpp
   HeaderSourceSwitch.cpp
+  HeuristicResolver.cpp
   Hover.cpp
   IncludeFixer.cpp
   JSONTransport.cpp

@@ -24,6 +24,7 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Headers.h"
+#include "HeuristicResolver.h"
 #include "Preamble.h"
 #include "index/CanonicalIncludes.h"
 #include "support/Path.h"
@@ -109,6 +110,10 @@ public:
   /// AST. Might be None if no Preamble is used.
   llvm::Optional<llvm::StringRef> preambleVersion() const;
 
+  const HeuristicResolver *getHeuristicResolver() const {
+    return Resolver.get();
+  }
+
 private:
   ParsedAST(llvm::StringRef Version,
             std::shared_ptr<const PreambleData> Preamble,
@@ -144,6 +149,7 @@ private:
   std::vector<Decl *> LocalTopLevelDecls;
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
+  std::unique_ptr<HeuristicResolver> Resolver;
 };
 
 } // namespace clangd
