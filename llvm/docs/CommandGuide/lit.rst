@@ -397,6 +397,13 @@ executed, two important global variables are predefined:
  **root** The root configuration.  This is the top-most :program:`lit` configuration in
  the project.
 
+ **is_early** Whether the test suite as a whole should be given a head start
+ before other test suites run.
+
+ **early_tests** An explicit set of '/' separated test paths that should be
+ given a head start before other tests run. For example, the top five or so
+ slowest tests. See also: `--time-tests`
+
  **pipefail** Normally a test using a shell pipe fails if any of the commands
  on the pipe fail. If this is not desired, setting this variable to false
  makes the test fail only if the last command in the pipe fails.

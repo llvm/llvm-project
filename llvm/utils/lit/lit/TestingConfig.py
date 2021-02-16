@@ -127,6 +127,8 @@ class TestingConfig(object):
         self.limit_to_features = set(limit_to_features)
         # Whether the suite should be tested early in a given run.
         self.is_early = bool(is_early)
+        # List of tests to run early.
+        self.early_tests = {}
         self.parallelism_group = parallelism_group
         self._recursiveExpansionLimit = None
 
