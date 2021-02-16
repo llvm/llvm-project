@@ -400,16 +400,20 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
         DeviceTy &Device = PM->Devices[FoundRTL->Idx + i];
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
+          AsyncInfoTy AsyncInfo(Device);
           for (auto &dtor : Device.PendingCtorsDtors[desc].PendingDtors) {
-            int rc =
-                target(nullptr, Device, dtor, 0, nullptr, nullptr, nullptr,
-                       nullptr, nullptr, nullptr, 1, 1, true /*team*/, nullptr);
+            int rc = target(nullptr, Device, dtor, 0, nullptr, nullptr, nullptr,
+                            nullptr, nullptr, nullptr, 1, 1, true /*team*/,
+                            AsyncInfo);
             if (rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(dtor));
             }
           }
           // Remove this library's entry from PendingCtorsDtors
           Device.PendingCtorsDtors.erase(desc);
+          // All constructors have been issued, wait for them now.
+          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+            DP("Failed synchronizing destructors kernels.\n");
         }
         Device.PendingGlobalsMtx.unlock();
       }
