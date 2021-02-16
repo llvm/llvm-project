@@ -19,6 +19,7 @@
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/SourceMgr.h"
 #include <system_error>
 
 namespace llvm {
@@ -3320,9 +3321,11 @@ struct FormatStyle {
 private:
   FormatStyleSet StyleSet;
 
-  friend std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
-                                            FormatStyle *Style,
-                                            bool AllowUnknownOptions);
+  friend std::error_code
+  parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                     bool AllowUnknownOptions,
+                     llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                     void *DiagHandlerCtxt);
 };
 
 /// Returns a format style complying with the LLVM coding standards:
@@ -3380,9 +3383,13 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 ///
 /// If AllowUnknownOptions is true, no errors are emitted if unknown
 /// format options are occured.
-std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
-                                   FormatStyle *Style,
-                                   bool AllowUnknownOptions = false);
+///
+/// If set all diagnostics are emitted through the DiagHandler.
+std::error_code
+parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                   bool AllowUnknownOptions = false,
+                   llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
+                   void *DiagHandlerCtx = nullptr);
 
 /// Like above but accepts an unnamed buffer.
 inline std::error_code parseConfiguration(StringRef Config, FormatStyle *Style,
