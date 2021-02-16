@@ -552,6 +552,13 @@ public:
         FName, Num, Weight);
   }
 
+  sampleprof_error addBodySamplesForProbe(uint32_t Index, uint64_t Num,
+                                          uint64_t Weight = 1) {
+    SampleRecord S;
+    S.addSamples(Num, Weight);
+    return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
