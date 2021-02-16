@@ -5628,10 +5628,8 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
     return None;
 
   // TODO: add heuristics like isWorthFoldingADDlow() from SelectionDAG.
-  auto Offset = Adrp.getOperand(1).getOffset();
-  if (Offset % Size != 0)
-    return None;
-
+  // TODO: Need to check GV's offset % size if doing offset folding into globals.
+  assert(Adrp.getOperand(1).getOffset() == 0 && "Unexpected offset in global");
   auto GV = Adrp.getOperand(1).getGlobal();
   if (GV->isThreadLocal())
     return None;
@@ -5645,7 +5643,7 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
   Register AdrpReg = Adrp.getOperand(0).getReg();
   return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(AdrpReg); },
            [=](MachineInstrBuilder &MIB) {
-             MIB.addGlobalAddress(GV, Offset,
+             MIB.addGlobalAddress(GV, /* Offset */ 0,
                                   OpFlags | AArch64II::MO_PAGEOFF |
                                       AArch64II::MO_NC);
            }}};
