@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/Host.h"
 
 #include "gmock/gmock.h"
@@ -739,5 +741,86 @@ TEST_F(CommandLineTest, DigraphsEnabled) {
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdigraphs")));
+}
+
+TEST_F(CommandLineTest, RoundTrip) {
+  // Testing one marshalled and one manually generated option from each
+  // CompilerInvocation member.
+  const char *Args[] = {
+      "-round-trip-args",
+      // LanguageOptions
+      "-std=c17",
+      "-fmax-tokens=10",
+      // TargetOptions
+      "-target-sdk-version=1.2.3",
+      "-meabi",
+      "4",
+      // DiagnosticOptions
+      "-Wundef-prefix=XY",
+      "-fdiagnostics-format",
+      "clang",
+      // HeaderSearchOptions
+      "-stdlib=libc++",
+      "-fimplicit-module-maps",
+      // PreprocessorOptions
+      "-DXY=AB",
+      "-include-pch",
+      "a.pch",
+      // AnalyzerOptions
+      "-analyzer-config",
+      "ctu-import-threshold=42",
+      "-unoptimized-cfg",
+      // MigratorOptions (no manually handled arguments)
+      "-no-ns-alloc-error",
+      // CodeGenOptions
+      "-debug-info-kind=limited",
+      "-debug-info-macro",
+      // DependencyOutputOptions
+      "--show-includes",
+      "-H",
+      // FileSystemOptions (no manually handled arguments)
+      "-working-directory",
+      "folder",
+      // FrontendOptions
+      "-load",
+      "plugin",
+      "-ast-merge",
+      // PreprocessorOutputOptions
+      "-dD",
+      "-CC",
+  };
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  ASSERT_TRUE(Invocation.getLangOpts()->C17);
+  ASSERT_EQ(Invocation.getLangOpts()->MaxTokens, 10u);
+
+  ASSERT_EQ(Invocation.getTargetOpts().SDKVersion, llvm::VersionTuple(1, 2, 3));
+  ASSERT_EQ(Invocation.getTargetOpts().EABIVersion, EABI::EABI4);
+
+  ASSERT_THAT(Invocation.getDiagnosticOpts().UndefPrefixes,
+              Contains(StrEq("XY")));
+  ASSERT_EQ(Invocation.getDiagnosticOpts().getFormat(),
+            TextDiagnosticFormat::Clang);
+
+  ASSERT_TRUE(Invocation.getHeaderSearchOpts().UseLibcxx);
+  ASSERT_TRUE(Invocation.getHeaderSearchOpts().ImplicitModuleMaps);
+
+  ASSERT_THAT(Invocation.getPreprocessorOpts().Macros,
+              Contains(std::make_pair(std::string("XY=AB"), false)));
+  ASSERT_EQ(Invocation.getPreprocessorOpts().ImplicitPCHInclude, "a.pch");
+
+  ASSERT_EQ(Invocation.getAnalyzerOpts()->Config["ctu-import-threshold"], "42");
+  ASSERT_TRUE(Invocation.getAnalyzerOpts()->UnoptimizedCFG);
+
+  ASSERT_TRUE(Invocation.getMigratorOpts().NoNSAllocReallocError);
+
+  ASSERT_EQ(Invocation.getCodeGenOpts().getDebugInfo(),
+            codegenoptions::DebugInfoKind::LimitedDebugInfo);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().MacroDebugInfo);
+
+  ASSERT_EQ(Invocation.getDependencyOutputOpts().ShowIncludesDest,
+            ShowIncludesDestination::Stdout);
+  ASSERT_TRUE(Invocation.getDependencyOutputOpts().ShowHeaderIncludes);
 }
 } // anonymous namespace
