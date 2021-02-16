@@ -9,6 +9,7 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -173,6 +174,9 @@ public:
 
   // Language features
   common::LanguageFeatureControl features_;
+
+  // Source file encoding
+  Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
 
 public:
   FrontendOptions() : showHelp_(false), showVersion_(false) {}
