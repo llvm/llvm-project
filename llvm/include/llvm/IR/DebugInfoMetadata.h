@@ -1643,8 +1643,8 @@ public:
   /// written explicitly by the user (e.g. cleanup stuff in C++ put on a closing
   /// bracket). It's useful for code coverage to not show a counter on "empty"
   /// lines.
-  bool isImplicitCode() const { return ImplicitCode; }
-  void setImplicitCode(bool ImplicitCode) { this->ImplicitCode = ImplicitCode; }
+  bool isImplicitCode() const { return SubclassData1; }
+  void setImplicitCode(bool ImplicitCode) { SubclassData1 = ImplicitCode; }
 
   DIFile *getFile() const { return getScope()->getFile(); }
   StringRef getFilename() const { return getScope()->getFilename(); }
