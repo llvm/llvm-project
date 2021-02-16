@@ -168,6 +168,7 @@ private:
   void applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
                  Callback<llvm::json::Value> Reply);
 
+  void bindMethods(LSPBinder &);
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
