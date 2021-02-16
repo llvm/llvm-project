@@ -401,8 +401,9 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
           for (auto &dtor : Device.PendingCtorsDtors[desc].PendingDtors) {
-            int rc = target(nullptr, Device, dtor, 0, nullptr, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, 1, 1, true /*team*/);
+            int rc =
+                target(nullptr, Device, dtor, 0, nullptr, nullptr, nullptr,
+                       nullptr, nullptr, nullptr, 1, 1, true /*team*/, nullptr);
             if (rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(dtor));
             }

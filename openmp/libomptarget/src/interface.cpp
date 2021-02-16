@@ -336,7 +336,7 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
 
   DeviceTy &Device = PM->Devices[device_id];
   int rc = targetDataUpdate(loc, Device, arg_num, args_base, args, arg_sizes,
-                            arg_types, arg_names, arg_mappers);
+                            arg_types, arg_names, arg_mappers, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
 }
 
@@ -408,8 +408,9 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
 #endif
 
   DeviceTy &Device = PM->Devices[device_id];
-  int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
-                  arg_types, arg_names, arg_mappers, 0, 0, false /*team*/);
+  int rc =
+      target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
+             arg_types, arg_names, arg_mappers, 0, 0, false /*team*/, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
   return rc;
 }
@@ -491,7 +492,7 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
   DeviceTy &Device = PM->Devices[device_id];
   int rc = target(loc, Device, host_ptr, arg_num, args_base, args, arg_sizes,
                   arg_types, arg_names, arg_mappers, team_num, thread_limit,
-                  true /*team*/);
+                  true /*team*/, nullptr);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
   return rc;
 }
