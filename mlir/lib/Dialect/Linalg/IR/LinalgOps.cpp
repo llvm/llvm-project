@@ -605,85 +605,6 @@ Type InitTensorOp::inferResultType(ArrayRef<int64_t> staticSizes,
   return RankedTensorType::get(staticSizes, elementType);
 }
 
-namespace {
-/// Change the type of the result of a `linalg.init_tensor` by making the result
-/// type statically sized along dimension that in the original operation where
-/// defined as dynamic, but the size was defined using a `constant` op. For
-/// example
-///
-///  %c5 = constant 5: index
-///  %0 = linalg.init_tensor [%arg0, %c5] : tensor<?x?xf32>
-///
-///  to
-///
-///  %0 = linalg.init_tensor [%arg0, 5] : tensor<?x5xf32>
-struct ReplaceStaticShapeDims : OpRewritePattern<InitTensorOp> {
-  using OpRewritePattern<InitTensorOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(InitTensorOp op,
-                                PatternRewriter &rewriter) const override {
-    SmallVector<Value, 4> dynamicSizes;
-    SmallVector<int64_t, 4> staticSizes;
-    for (unsigned i = 0, e = op.getType().getRank(); i != e; ++i) {
-      // If the size is already static, nothing to do.
-      if (!op.isDynamicSize(i)) {
-        staticSizes.push_back(op.getStaticSize(i));
-        continue;
-      }
-
-      // If the size is dynamic but defined using a `constant` op, get the
-      // constant value to find the static size to use.
-      unsigned operandNum = op.getIndexOfDynamicSize(i);
-      Value sizeOperand = op.getOperand(operandNum);
-      if (auto constantIndexOp = sizeOperand.getDefiningOp<ConstantIndexOp>()) {
-        staticSizes.push_back(constantIndexOp.getValue());
-        continue;
-      }
-
-      // Fallback case. Keep the size dynamic.
-      dynamicSizes.push_back(sizeOperand);
-      staticSizes.push_back(ShapedType::kDynamicSize);
-    }
-    RankedTensorType newType =
-        RankedTensorType::get(staticSizes, op.getType().getElementType());
-    if (newType == op.getType())
-      return failure();
-    auto newOp =
-        rewriter.create<InitTensorOp>(op.getLoc(), newType, dynamicSizes,
-                                      rewriter.getI64ArrayAttr(staticSizes));
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
-    return success();
-  }
-};
-
-/// Canonicalize a `linalg.init_tensor` -> `dim` pattern by replacing the `dim`
-/// with
-/// - A constant value if the size is static along the dimension.
-/// - The dynamic value that defines the size of the result of
-///   `linalg.init_tensor` op.
-struct ReplaceDimOfInitTensorOp : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    auto initTensorOp = dimOp.memrefOrTensor().getDefiningOp<InitTensorOp>();
-    if (!initTensorOp)
-      return failure();
-    auto dimIndex = dimOp.index().getDefiningOp<ConstantIndexOp>();
-    if (!dimIndex)
-      return failure();
-    int64_t index = dimIndex.getValue();
-    if (!initTensorOp.isDynamicSize(index)) {
-      rewriter.replaceOpWithNewOp<ConstantIndexOp>(
-          dimOp, initTensorOp.getStaticSize(index));
-    } else {
-      rewriter.replaceOp(dimOp, initTensorOp.getDynamicSize(index));
-    }
-    return success();
-  }
-};
-} // namespace
-
 static Value getCollapsedInitTensor(OpBuilder &builder,
                                     TensorReshapeOp reshapeOp) {
   Location loc = reshapeOp.getLoc();
@@ -774,6 +695,85 @@ static Value getExpandedInitTensor(OpBuilder &builder,
 }
 
 namespace {
+/// Change the type of the result of a `linalg.init_tensor` by making the result
+/// type statically sized along dimension that in the original operation where
+/// defined as dynamic, but the size was defined using a `constant` op. For
+/// example
+///
+///  %c5 = constant 5: index
+///  %0 = linalg.init_tensor [%arg0, %c5] : tensor<?x?xf32>
+///
+///  to
+///
+///  %0 = linalg.init_tensor [%arg0, 5] : tensor<?x5xf32>
+struct ReplaceStaticShapeDims : OpRewritePattern<InitTensorOp> {
+  using OpRewritePattern<InitTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InitTensorOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value, 4> dynamicSizes;
+    SmallVector<int64_t, 4> staticSizes;
+    for (unsigned i = 0, e = op.getType().getRank(); i != e; ++i) {
+      // If the size is already static, nothing to do.
+      if (!op.isDynamicSize(i)) {
+        staticSizes.push_back(op.getStaticSize(i));
+        continue;
+      }
+
+      // If the size is dynamic but defined using a `constant` op, get the
+      // constant value to find the static size to use.
+      unsigned operandNum = op.getIndexOfDynamicSize(i);
+      Value sizeOperand = op.getOperand(operandNum);
+      if (auto constantIndexOp = sizeOperand.getDefiningOp<ConstantIndexOp>()) {
+        staticSizes.push_back(constantIndexOp.getValue());
+        continue;
+      }
+
+      // Fallback case. Keep the size dynamic.
+      dynamicSizes.push_back(sizeOperand);
+      staticSizes.push_back(ShapedType::kDynamicSize);
+    }
+    RankedTensorType newType =
+        RankedTensorType::get(staticSizes, op.getType().getElementType());
+    if (newType == op.getType())
+      return failure();
+    auto newOp =
+        rewriter.create<InitTensorOp>(op.getLoc(), newType, dynamicSizes,
+                                      rewriter.getI64ArrayAttr(staticSizes));
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
+
+/// Canonicalize a `linalg.init_tensor` -> `dim` pattern by replacing the `dim`
+/// with
+/// - A constant value if the size is static along the dimension.
+/// - The dynamic value that defines the size of the result of
+///   `linalg.init_tensor` op.
+struct ReplaceDimOfInitTensorOp : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto initTensorOp = dimOp.memrefOrTensor().getDefiningOp<InitTensorOp>();
+    if (!initTensorOp)
+      return failure();
+    auto dimIndex = dimOp.index().getDefiningOp<ConstantIndexOp>();
+    if (!dimIndex)
+      return failure();
+    int64_t index = dimIndex.getValue();
+    if (!initTensorOp.isDynamicSize(index)) {
+      rewriter.replaceOpWithNewOp<ConstantIndexOp>(
+          dimOp, initTensorOp.getStaticSize(index));
+    } else {
+      rewriter.replaceOp(dimOp, initTensorOp.getDynamicSize(index));
+    }
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 /// Since `init_tensor` operation creates a tensor needed only for its shape, a
 /// subtensor of this is also needed only for its shape. The result can be
 /// replaced by a new init_tensor operation of the same size as the subtensor
@@ -803,17 +803,13 @@ struct FoldInitTensorWithTensorReshapeOp
                                 PatternRewriter &rewriter) const override {
     if (!reshapeOp.src().getDefiningOp<InitTensorOp>())
       return failure();
-    RankedTensorType collapsedType = reshapeOp.getSrcType();
-    RankedTensorType expandedType = reshapeOp.getResultType();
-    bool isCollapsed = expandedType.getRank() < collapsedType.getRank();
-    if (isCollapsed)
-      std::swap(collapsedType, expandedType);
-    Value initTensorOp = isCollapsed
-                             ? getCollapsedInitTensor(rewriter, reshapeOp)
-                             : getExpandedInitTensor(rewriter, reshapeOp);
-    if (!initTensorOp)
-      return failure();
-    rewriter.replaceOp(reshapeOp, initTensorOp);
+    Location loc = reshapeOp.getLoc();
+    SmallVector<Value, 4> resultShapeValues =
+        reshapeOp.getOutputShape(rewriter, loc);
+    Value initTensor = rewriter.create<InitTensorOp>(
+        loc, resultShapeValues, reshapeOp.getResultType().getElementType());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(
+        reshapeOp, reshapeOp.getResultType(), initTensor);
     return success();
   }
 };
@@ -1255,6 +1251,141 @@ convertReassociationIndicesToMaps(
   return reassociationMaps;
 }
 
+/// For reshape op compute the shape at dimension `dimIndex` of the output in
+/// terms of shape of the `src`, when the reshape op is a collapsing
+/// operation. It is the product of the shape of the collapsed dimensions of the
+/// `src`.
+static Value
+getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
+                                    int64_t dimIndex, Value src,
+                                    ArrayRef<AffineMap> reassociationMap) {
+  AffineMap map = reassociationMap[dimIndex];
+  unsigned startPos =
+      map.getResults().front().cast<AffineDimExpr>().getPosition();
+  unsigned endPos = map.getResults().back().cast<AffineDimExpr>().getPosition();
+  AffineExpr expr;
+  SmallVector<Value, 2> dynamicDims;
+  for (auto dim : llvm::seq(startPos, endPos + 1)) {
+    dynamicDims.push_back(builder.create<DimOp>(loc, src, dim));
+    AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
+    expr = (expr ? expr * currExpr : currExpr);
+  }
+  return applyMapToValues(builder, loc,
+                          AffineMap::get(0, endPos - startPos + 1, expr),
+                          dynamicDims)[0];
+}
+
+/// Given the `src` of a collapsing reshape op and its reassociation maps,
+/// compute the shape of the result of the reshape.
+static SmallVector<Value, 4> getCollapsedOutputShapeFromInputShape(
+    OpBuilder &builder, Location loc, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation) {
+  return llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, dstStaticShape.size()), [&](int64_t dim) {
+        return getCollapsedOutputDimFromInputShape(builder, loc, dim, src,
+                                                   reassociation);
+      }));
+}
+
+/// Compute a map that for a given dimension of the expanded type gives the
+/// dimension in the collapsed type it maps to. Essentially its the inverse of
+/// the `reassocation` maps.
+static llvm::DenseMap<int64_t, int64_t>
+getExpandedDimToCollapsedDimMap(ArrayRef<AffineMap> reassociation) {
+  llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim;
+  for (auto map : enumerate(reassociation)) {
+    unsigned startPos =
+        map.value().getResults().front().cast<AffineDimExpr>().getPosition();
+    unsigned endPos =
+        map.value().getResults().back().cast<AffineDimExpr>().getPosition();
+    for (auto dim : llvm::seq(startPos, endPos + 1)) {
+      expandedDimToCollapsedDim[dim] = map.index();
+    }
+  }
+  return expandedDimToCollapsedDim;
+}
+
+/// For an expanding reshape op, compute the value for a dimension of the output
+/// from the shape of the input.
+static Value getExpandedOutputDimFromInputShape(
+    OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation,
+    llvm::DenseMap<int64_t, int64_t> &expandedDimToCollapsedDim) {
+  if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+    return builder.create<ConstantIndexOp>(loc, dstStaticShape[dimIndex]);
+  }
+  unsigned sourceDimPos = expandedDimToCollapsedDim[dimIndex];
+  unsigned startPos = reassociation[sourceDimPos]
+                          .getResults()
+                          .front()
+                          .cast<AffineDimExpr>()
+                          .getPosition();
+  unsigned endPos = reassociation[sourceDimPos]
+                        .getResults()
+                        .back()
+                        .cast<AffineDimExpr>()
+                        .getPosition();
+  int64_t linearizedStaticDim = 1;
+  for (auto d :
+       llvm::enumerate(dstStaticShape.slice(startPos, endPos - startPos + 1))) {
+    if (d.index() + startPos == static_cast<unsigned>(dimIndex))
+      continue;
+    assert(!ShapedType::isDynamic(d.value()) &&
+           "single dimension cannot be expanded into multiple dynamic "
+           "dimensions");
+    linearizedStaticDim *= d.value();
+  }
+  Value sourceDim = builder.create<DimOp>(loc, src, sourceDimPos);
+  return applyMapToValues(
+      builder, loc,
+      AffineMap::get(
+          0, 1, builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
+      sourceDim)[0];
+}
+
+/// Given the `src` of an expanding reshape op, the reassociation maps and the
+/// result type, compute the shape of the result of the reshape.
+static SmallVector<Value, 4> getExpandedOutputShapeFromInputShape(
+    OpBuilder &builder, Location loc, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation) {
+  llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim =
+      getExpandedDimToCollapsedDimMap(reassociation);
+  return llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, dstStaticShape.size()), [&](int64_t dim) {
+        return getExpandedOutputDimFromInputShape(builder, loc, dim, src,
+                                                  dstStaticShape, reassociation,
+                                                  expandedDimToCollapsedDim);
+      }));
+}
+
+SmallVector<Value, 4> mlir::linalg::getReshapeOutputShapeFromInputShape(
+    OpBuilder &builder, Location loc, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassocation) {
+  return dstStaticShape.size() >
+                 static_cast<size_t>(src.getType().cast<ShapedType>().getRank())
+             ? getExpandedOutputShapeFromInputShape(
+                   builder, loc, src, dstStaticShape, reassocation)
+             : getCollapsedOutputShapeFromInputShape(
+                   builder, loc, src, dstStaticShape, reassocation);
+}
+
+/// For a reshape op, compute the value of a given dimension of the output
+/// (`dimIndex`) from the shape of the inputs and type of the result.
+static Value getReshapeOutputDimFromInputShape(
+    OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation) {
+  if (dstStaticShape.size() >
+      static_cast<size_t>(src.getType().cast<ShapedType>().getRank())) {
+    llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim =
+        getExpandedDimToCollapsedDimMap(reassociation);
+    return getExpandedOutputDimFromInputShape(builder, loc, dimIndex, src,
+                                              dstStaticShape, reassociation,
+                                              expandedDimToCollapsedDim);
+  }
+  return getCollapsedOutputDimFromInputShape(builder, loc, dimIndex, src,
+                                             reassociation);
+}
+
 void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
                                     Value src,
                                     ArrayRef<ReassociationExprs> reassociation,
@@ -1478,12 +1609,35 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     return success();
   }
 };
+
+/// Canonicalize dim ops that use the output shape with dim of the input.
+struct ReplaceDimOfReshapeOpResult : OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    Value dimValue = dimOp.memrefOrTensor();
+    Optional<int64_t> dimIndex = dimOp.getConstantIndex();
+    if (!dimIndex)
+      return failure();
+
+    auto reshapeOp = dimValue.getDefiningOp<TensorReshapeOp>();
+    if (!reshapeOp)
+      return failure();
+
+    rewriter.replaceOp(dimOp,
+                       getReshapeOutputDimFromInputShape(
+                           rewriter, dimOp.getLoc(), *dimIndex, reshapeOp.src(),
+                           reshapeOp.getResultType().getShape(),
+                           reshapeOp.getReassociationMaps()));
+    return success();
+  }
+};
 } // namespace
 
 void TensorReshapeOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<CollapseReshapeOps<TensorReshapeOp>, FoldReshapeWithConstant>(
-      context);
+  results.insert<CollapseReshapeOps<TensorReshapeOp>, FoldReshapeWithConstant,
+                 ReplaceDimOfReshapeOpResult>(context);
 }
 
 //===----------------------------------------------------------------------===//

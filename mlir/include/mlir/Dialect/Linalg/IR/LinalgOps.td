@@ -342,10 +342,15 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
     SmallVector<ReassociationExprs, 4> getReassociationExprs() {
       return
         llvm::to_vector<4>(llvm::map_range(reassociation(),
-	  [](Attribute a) {
-	    return llvm::to_vector<2>(
-	      a.cast<AffineMapAttr>().getValue().getResults());
-	  }));
+          [](Attribute a) {
+            return llvm::to_vector<2>(
+              a.cast<AffineMapAttr>().getValue().getResults());
+          }));
+    }
+    SmallVector<Value, 4> getOutputShape(OpBuilder &b, Location loc) {
+      return getReshapeOutputShapeFromInputShape(
+          b, loc, src(), getResultType().getShape(),
+          getReassociationMaps());
     }
   }];
   let assemblyFormat = [{
