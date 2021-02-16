@@ -297,7 +297,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       finalizeEntryValue();
 
       if (!isIndirect() && !isParameterValue() && !HasComplexExpression &&
-          +DwarfVersion >= 4)
+          DwarfVersion >= 4)
         emitOp(dwarf::DW_OP_stack_value);
     }
 
