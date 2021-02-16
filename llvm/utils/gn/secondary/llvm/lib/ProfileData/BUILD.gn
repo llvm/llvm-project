@@ -13,5 +13,6 @@ static_library("ProfileData") {
     "SampleProf.cpp",
     "SampleProfReader.cpp",
     "SampleProfWriter.cpp",
+    "SampleProfileLoaderBaseUtil.cpp",
   ]
 }
