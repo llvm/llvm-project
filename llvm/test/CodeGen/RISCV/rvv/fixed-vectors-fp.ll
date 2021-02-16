@@ -409,6 +409,67 @@ define void @fma_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
 }
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
 
+define void @fmsub_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
+; CHECK-LABEL: fmsub_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a3, zero, 8
+; CHECK-NEXT:    vsetvli a3, a3, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vle16.v v27, (a2)
+; CHECK-NEXT:    vfmsac.vv v27, v25, v26
+; CHECK-NEXT:    vse16.v v27, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = load <8 x half>, <8 x half>* %y
+  %c = load <8 x half>, <8 x half>* %z
+  %neg = fneg <8 x half> %c
+  %d = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %neg)
+  store <8 x half> %d, <8 x half>* %x
+  ret void
+}
+
+define void @fnmsub_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
+; CHECK-LABEL: fnmsub_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a3, zero, 4
+; CHECK-NEXT:    vsetvli a3, a3, e32,m1,ta,mu
+; CHECK-NEXT:    vle32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v26, (a1)
+; CHECK-NEXT:    vle32.v v27, (a2)
+; CHECK-NEXT:    vfnmsac.vv v27, v25, v26
+; CHECK-NEXT:    vse32.v v27, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = load <4 x float>, <4 x float>* %y
+  %c = load <4 x float>, <4 x float>* %z
+  %neg = fneg <4 x float> %a
+  %d = call <4 x float> @llvm.fma.v4f32(<4 x float> %neg, <4 x float> %b, <4 x float> %c)
+  store <4 x float> %d, <4 x float>* %x
+  ret void
+}
+
+define void @fnmadd_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
+; CHECK-LABEL: fnmadd_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a3, zero, 2
+; CHECK-NEXT:    vsetvli a3, a3, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vle64.v v26, (a1)
+; CHECK-NEXT:    vle64.v v27, (a2)
+; CHECK-NEXT:    vfnmacc.vv v27, v25, v26
+; CHECK-NEXT:    vse64.v v27, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = load <2 x double>, <2 x double>* %y
+  %c = load <2 x double>, <2 x double>* %z
+  %neg = fneg <2 x double> %b
+  %neg2 = fneg <2 x double> %c
+  %d = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %neg, <2 x double> %neg2)
+  store <2 x double> %d, <2 x double>* %x
+  ret void
+}
+
 define void @fadd_v16f16(<16 x half>* %x, <16 x half>* %y) {
 ; LMULMAX2-LABEL: fadd_v16f16:
 ; LMULMAX2:       # %bb.0:
@@ -1613,9 +1674,8 @@ define void @fma_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
 ; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vfmv.v.f v27, fa0
-; CHECK-NEXT:    vfmadd.vv v27, v25, v26
-; CHECK-NEXT:    vse16.v v27, (a0)
+; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
+; CHECK-NEXT:    vse16.v v26, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
   %b = load <8 x half>, <8 x half>* %y
@@ -1633,9 +1693,8 @@ define void @fma_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
 ; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vfmv.v.f v27, fa0
-; CHECK-NEXT:    vfmadd.vv v27, v25, v26
-; CHECK-NEXT:    vse32.v v27, (a0)
+; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
+; CHECK-NEXT:    vse32.v v26, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
   %b = load <4 x float>, <4 x float>* %y
@@ -1653,9 +1712,8 @@ define void @fma_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
 ; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
 ; CHECK-NEXT:    vle64.v v26, (a1)
-; CHECK-NEXT:    vfmv.v.f v27, fa0
-; CHECK-NEXT:    vfmadd.vv v27, v25, v26
-; CHECK-NEXT:    vse64.v v27, (a0)
+; CHECK-NEXT:    vfmacc.vf v26, fa0, v25
+; CHECK-NEXT:    vse64.v v26, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
   %b = load <2 x double>, <2 x double>* %y
@@ -1719,6 +1777,108 @@ define void @fma_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
   %c = insertelement <2 x double> undef, double %z, i32 0
   %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
   %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %d, <2 x double> %a, <2 x double> %b)
+  store <2 x double> %e, <2 x double>* %x
+  ret void
+}
+
+define void @fmsub_vf_v8f16(<8 x half>* %x, <8 x half>* %y, half %z) {
+; CHECK-LABEL: fmsub_vf_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 8
+; CHECK-NEXT:    vsetvli a2, a2, e16,m1,ta,mu
+; CHECK-NEXT:    vle16.v v25, (a0)
+; CHECK-NEXT:    vle16.v v26, (a1)
+; CHECK-NEXT:    vfmsac.vf v26, fa0, v25
+; CHECK-NEXT:    vse16.v v26, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = load <8 x half>, <8 x half>* %y
+  %c = insertelement <8 x half> undef, half %z, i32 0
+  %d = shufflevector <8 x half> %c, <8 x half> undef, <8 x i32> zeroinitializer
+  %neg = fneg <8 x half> %b
+  %e = call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %d, <8 x half> %neg)
+  store <8 x half> %e, <8 x half>* %x
+  ret void
+}
+
+define void @fnmsub_vf_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
+; CHECK-LABEL: fnmsub_vf_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 4
+; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vle32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v26, (a1)
+; CHECK-NEXT:    vfnmsac.vf v26, fa0, v25
+; CHECK-NEXT:    vse32.v v26, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = load <4 x float>, <4 x float>* %y
+  %c = insertelement <4 x float> undef, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %neg = fneg <4 x float> %a
+  %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %neg, <4 x float> %d, <4 x float> %b)
+  store <4 x float> %e, <4 x float>* %x
+  ret void
+}
+
+define void @fnmadd_vf_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
+; CHECK-LABEL: fnmadd_vf_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 2
+; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vle64.v v26, (a1)
+; CHECK-NEXT:    vfnmacc.vf v26, fa0, v25
+; CHECK-NEXT:    vse64.v v26, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = load <2 x double>, <2 x double>* %y
+  %c = insertelement <2 x double> undef, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %neg = fneg <2 x double> %a
+  %neg2 = fneg <2 x double> %b
+  %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %neg, <2 x double> %d, <2 x double> %neg2)
+  store <2 x double> %e, <2 x double>* %x
+  ret void
+}
+
+define void @fnmsub_fv_v4f32(<4 x float>* %x, <4 x float>* %y, float %z) {
+; CHECK-LABEL: fnmsub_fv_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 4
+; CHECK-NEXT:    vsetvli a2, a2, e32,m1,ta,mu
+; CHECK-NEXT:    vle32.v v25, (a0)
+; CHECK-NEXT:    vle32.v v26, (a1)
+; CHECK-NEXT:    vfnmsac.vf v26, fa0, v25
+; CHECK-NEXT:    vse32.v v26, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = load <4 x float>, <4 x float>* %y
+  %c = insertelement <4 x float> undef, float %z, i32 0
+  %d = shufflevector <4 x float> %c, <4 x float> undef, <4 x i32> zeroinitializer
+  %neg = fneg <4 x float> %d
+  %e = call <4 x float> @llvm.fma.v4f32(<4 x float> %neg, <4 x float> %a, <4 x float> %b)
+  store <4 x float> %e, <4 x float>* %x
+  ret void
+}
+
+define void @fnmadd_fv_v2f64(<2 x double>* %x, <2 x double>* %y, double %z) {
+; CHECK-LABEL: fnmadd_fv_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 2
+; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vle64.v v26, (a1)
+; CHECK-NEXT:    vfnmacc.vf v26, fa0, v25
+; CHECK-NEXT:    vse64.v v26, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = load <2 x double>, <2 x double>* %y
+  %c = insertelement <2 x double> undef, double %z, i32 0
+  %d = shufflevector <2 x double> %c, <2 x double> undef, <2 x i32> zeroinitializer
+  %neg = fneg <2 x double> %d
+  %neg2 = fneg <2 x double> %b
+  %e = call <2 x double> @llvm.fma.v2f64(<2 x double> %neg, <2 x double> %a, <2 x double> %neg2)
   store <2 x double> %e, <2 x double>* %x
   ret void
 }
