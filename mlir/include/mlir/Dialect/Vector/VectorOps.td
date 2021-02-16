@@ -246,6 +246,8 @@ def Vector_ContractionOp :
       return CombiningKind::ADD;
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def Vector_ReductionOp :
