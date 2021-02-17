@@ -74,10 +74,11 @@ are welcome:
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
 * Linux user-space debugging for i386, x86_64 and PPC64le
 * FreeBSD user-space debugging for i386 and x86_64
-* Windows user-space debugging for i386 (*)
+* Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 
 (*) Support for Windows is under active development. Basic functionality is
-expected to work, with functionality improving rapidly.
+expected to work, with functionality improving rapidly. ARM and AArch64 support
+is more experimental, with more known issues than the others.
 
 Get Involved
 ------------
