@@ -7,20 +7,22 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
+; RUN:     --check-prefix=CHECK-O2
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
 ; RUN:     --check-prefix=CHECK-O3
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<Os>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
+; RUN:     --check-prefix=CHECK-OS
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<Oz>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-peephole='no-op-function' 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O23SZ \
 ; RUN:     --check-prefix=CHECK-O3 --check-prefix=CHECK-EP-Peephole
 
 ; CHECK-O: Starting llvm::Module pass manager run.
@@ -30,18 +32,18 @@
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Module
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-O2-NEXT: Starting llvm::Function pass manager run.
-; CHECK-O2-NEXT: Running pass: CallSiteSplittingPass on foo
-; CHECK-O2-NEXT: Running analysis: TargetLibraryAnalysis on foo
-; CHECK-O2-NEXT: Running analysis: TargetIRAnalysis on foo
-; CHECK-O2-NEXT: Running analysis: DominatorTreeAnalysis on foo
-; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
-; CHECK-O2-NEXT: PGOIndirectCallPromotion
-; CHECK-O2-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-O2-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
-; CHECK-O2-NEXT: Running pass: IPSCCPPass
-; CHECK-O2-NEXT: Running analysis: AssumptionAnalysis on foo
-; CHECK-O2-NEXT: Running pass: CalledValuePropagationPass
+; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: CallSiteSplittingPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: TargetLibraryAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: TargetIRAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: DominatorTreeAnalysis on foo
+; CHECK-O23SZ-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: PGOIndirectCallPromotion
+; CHECK-O23SZ-NEXT: Running analysis: ProfileSummaryAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
+; CHECK-O23SZ-NEXT: Running pass: IPSCCPPass
+; CHECK-O23SZ-NEXT: Running analysis: AssumptionAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O1-NEXT: Running analysis: TargetLibraryAnalysis
@@ -60,56 +62,83 @@
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-O2-NEXT: Running pass: GlobalOptPass
-; CHECK-O2-NEXT: Running pass: PromotePass
-; CHECK-O2-NEXT: Running pass: ConstantMergePass
-; CHECK-O2-NEXT: Running pass: DeadArgumentEliminationPass
-; CHECK-O2-NEXT: Starting llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: GlobalOptPass
+; CHECK-O23SZ-NEXT: Running pass: PromotePass
+; CHECK-O23SZ-NEXT: Running pass: ConstantMergePass
+; CHECK-O23SZ-NEXT: Running pass: DeadArgumentEliminationPass
+; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
-; CHECK-O2-NEXT: Running pass: InstCombinePass
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass
-; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
-; CHECK-O2-NEXT: Running pass: ModuleInlinerWrapperPass
-; CHECK-O2-NEXT: Running analysis: InlineAdvisorAnalysis
-; CHECK-O2-NEXT: Starting llvm::Module pass manager run.
-; CHECK-O2-NEXT: Starting CGSCC pass manager run.
-; CHECK-O2-NEXT: Running pass: InlinerPass
-; CHECK-O2-NEXT: Running pass: InlinerPass
-; CHECK-O2-NEXT: Finished CGSCC pass manager run.
-; CHECK-O2-NEXT: Finished llvm::Module pass manager run.
-; CHECK-O2-NEXT: Running pass: GlobalOptPass
-; CHECK-O2-NEXT: Running pass: GlobalDCEPass
-; CHECK-O2-NEXT: Starting llvm::Function pass manager run.
-; CHECK-O2-NEXT: Running pass: InstCombinePass
+; CHECK-O23SZ-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: ModuleInlinerWrapperPass
+; CHECK-O23SZ-NEXT: Running analysis: InlineAdvisorAnalysis
+; CHECK-O23SZ-NEXT: Starting llvm::Module pass manager run.
+; CHECK-O23SZ-NEXT: Starting CGSCC pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: InlinerPass
+; CHECK-O23SZ-NEXT: Running pass: InlinerPass
+; CHECK-O23SZ-NEXT: Finished CGSCC pass manager run.
+; CHECK-O23SZ-NEXT: Finished llvm::Module pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: GlobalOptPass
+; CHECK-O23SZ-NEXT: Running pass: GlobalDCEPass
+; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass
-; CHECK-O2-NEXT: Running pass: JumpThreadingPass
-; CHECK-O2-NEXT: Running analysis: LazyValueAnalysis
-; CHECK-O2-NEXT: Running pass: SROA on foo
-; CHECK-O2-NEXT: Running pass: TailCallElimPass on foo
-; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
-; CHECK-O2-NEXT: Running pass: PostOrderFunctionAttrsPass
-; CHECK-O2-NEXT: Running pass: GVN on foo
-; CHECK-O2-NEXT: Running analysis: MemoryDependenceAnalysis
-; CHECK-O2-NEXT: Running analysis: PhiValuesAnalysis
-; CHECK-O2-NEXT: Running pass: MemCpyOptPass on foo
-; CHECK-O2-NEXT: Running pass: DSEPass on foo
-; CHECK-O2-NEXT: Running analysis: MemorySSAAnalysis on foo
-; CHECK-O2-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
-; CHECK-O2-NEXT: Running pass: InstCombinePass on foo
-; CHECK-O2-NEXT: Running pass: SimplifyCFGPass on foo
-; CHECK-O2-NEXT: Running pass: SCCPPass on foo
-; CHECK-O2-NEXT: Running pass: InstCombinePass on foo
-; CHECK-O2-NEXT: Running pass: BDCEPass on foo
-; CHECK-O2-NEXT: Running analysis: DemandedBitsAnalysis
-; CHECK-O2-NEXT: Running pass: InstCombinePass
-; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass
-; CHECK-O2-NEXT: Running pass: JumpThreadingPass
-; CHECK-O2-NEXT: Running pass: CrossDSOCFIPass
-; CHECK-O2-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
+; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
+; CHECK-O23SZ-NEXT: Running pass: SROA on foo
+; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass on foo
+; CHECK-O23SZ-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: PostOrderFunctionAttrsPass on (foo)
+; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O23SZ-NEXT: Running pass: LICMPass on Loop
+; CHECK-O23SZ-NEXT: Running pass: GVN on foo
+; CHECK-O23SZ-NEXT: Running analysis: MemoryDependenceAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: PhiValuesAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass on foo
+; CHECK-O23SZ-NEXT: Running pass: DSEPass on foo
+; CHECK-O23SZ-NEXT: Running analysis: MemorySSAAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: MergedLoadStoreMotionPass on foo
+; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23SZ-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O23SZ-NEXT: Starting Loop pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: IndVarSimplifyPass on Loop
+; CHECK-O23SZ-NEXT: Running pass: LoopDeletionPass on Loop
+; CHECK-O23SZ-NEXT: Running pass: LoopFullUnrollPass on Loop
+; CHECK-O23SZ-NEXT: Finished Loop pass manager run.
+; CHECK-O23SZ-NEXT: Running pass: LoopDistributePass on foo
+; CHECK-O23SZ-NEXT: Running pass: LoopVectorizePass on foo
+; CHECK-O23SZ-NEXT: Running analysis: BlockFrequencyAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: DemandedBitsAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: LoopUnrollPass on foo
+; CHECK-O23SZ-NEXT: WarnMissedTransformationsPass on foo
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo
+; CHECK-O23SZ-NEXT: Running pass: SimplifyCFGPass on foo
+; CHECK-O23SZ-NEXT: Running pass: SCCPPass on foo
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo
+; CHECK-O23SZ-NEXT: Running pass: BDCEPass on foo
+; CHECK-O2-NEXT: Running pass: SLPVectorizerPass on foo
+; CHECK-O3-NEXT: Running pass: SLPVectorizerPass on foo
+; CHECK-OS-NEXT: Running pass: SLPVectorizerPass on foo
+; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass on foo
+; CHECK-O23SZ-NEXT: Running pass: AlignmentFromAssumptionsPass on foo
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo
+; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass on foo
+; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass on foo
+; CHECK-O23SZ-NEXT: Running pass: CrossDSOCFIPass
+; CHECK-O23SZ-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-O2-NEXT: Running pass: SimplifyCFGPass
-; CHECK-O2-NEXT: Running pass: EliminateAvailableExternallyPass
-; CHECK-O2-NEXT: Running pass: GlobalDCEPass
+; CHECK-O23SZ-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O23SZ-NEXT: Running pass: EliminateAvailableExternallyPass
+; CHECK-O23SZ-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
