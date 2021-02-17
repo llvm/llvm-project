@@ -1574,6 +1574,7 @@ int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::abs:
   case Intrinsic::smin:
   case Intrinsic::smax:
   case Intrinsic::umin:
