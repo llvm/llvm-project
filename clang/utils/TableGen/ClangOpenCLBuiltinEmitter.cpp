@@ -48,7 +48,7 @@
 //    Find out whether a string matches an existing OpenCL builtin function
 //    name and return an index into BuiltinTable and the number of overloads.
 //
-//  * void OCL2Qual(ASTContext&, OpenCLTypeStruct, std::vector<QualType>&)
+//  * void OCL2Qual(Sema&, OpenCLTypeStruct, std::vector<QualType>&)
 //    Convert an OpenCLTypeStruct type to a list of QualType instances.
 //    One OpenCLTypeStruct can represent multiple types, primarily when using
 //    GenTypes.
@@ -628,6 +628,9 @@ static std::pair<unsigned, unsigned> isOpenCLBuiltin(llvm::StringRef Name) {
 void BuiltinNameEmitter::EmitQualTypeFinder() {
   OS << R"(
 
+static QualType getOpenCLEnumType(Sema &S, llvm::StringRef Name);
+static QualType getOpenCLTypedefType(Sema &S, llvm::StringRef Name);
+
 // Convert an OpenCLTypeStruct type to a list of QualTypes.
 // Generic types represent multiple types and vector sizes, thus a vector
 // is returned. The conversion is done in two steps:
@@ -636,8 +639,9 @@ void BuiltinNameEmitter::EmitQualTypeFinder() {
 //         or a single scalar type for non generic types.
 // Step 2: Qualifiers and other type properties such as vector size are
 //         applied.
-static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
+static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
                      llvm::SmallVectorImpl<QualType> &QT) {
+  ASTContext &Context = S.Context;
   // Number of scalar types in the GenType.
   unsigned GenTypeNumTypes;
   // Pointer to the list of vector sizes for the GenType.
