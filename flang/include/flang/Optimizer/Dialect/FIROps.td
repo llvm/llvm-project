@@ -33,8 +33,6 @@ def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
     "FIR dialect type">;
 
 // Fortran intrinsic types
-def fir_CharacterType : Type<CPred<"$_self.isa<fir::CharacterType>()">,
-    "FIR character type">;
 def fir_ComplexType : Type<CPred<"$_self.isa<fir::ComplexType>()">,
     "FIR complex type">;
 def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
@@ -83,10 +81,6 @@ def fir_PointerType : Type<CPred<"$_self.isa<fir::PointerType>()">,
 // Reference types
 def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
-
-// CHARACTER type descriptor. A pair of a data reference and a LEN value.
-def fir_BoxCharType : Type<CPred<"$_self.isa<fir::BoxCharType>()">,
-    "box character type">;
 
 // PROCEDURE POINTER descriptor. A pair that can capture a host closure.
 def fir_BoxProcType : Type<CPred<"$_self.isa<fir::BoxProcType>()">,
