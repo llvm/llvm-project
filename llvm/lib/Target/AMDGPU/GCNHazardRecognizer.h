@@ -94,6 +94,9 @@ private:
   bool fixLdsBranchVmemWARHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
+  int checkMAIHazards908(MachineInstr *MI);
+  int checkMAIHazards90A(MachineInstr *MI);
+  int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
 
 public:

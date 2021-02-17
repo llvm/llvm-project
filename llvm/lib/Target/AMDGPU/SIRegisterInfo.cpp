@@ -122,7 +122,9 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::AMDGPU_Gfx:
-    return CSR_AMDGPU_HighRegs_SaveList;
+    return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+        ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
+        : CSR_AMDGPU_HighRegs_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
     static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
@@ -143,7 +145,9 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::AMDGPU_Gfx:
-    return CSR_AMDGPU_HighRegs_RegMask;
+    return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+        ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
+        : CSR_AMDGPU_HighRegs_RegMask;
   default:
     return nullptr;
   }
@@ -179,6 +183,14 @@ Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
 
 const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
   return CSR_AMDGPU_AllVGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllAGPRRegMask() const {
+  return CSR_AMDGPU_AllAGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
+  return CSR_AMDGPU_AllVectorRegs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
@@ -263,6 +275,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
+  // TODO: In an entry function without calls and AGPRs used it is possible
+  //       to use the whole register budget for VGPRs. Even more it shall
+  //       be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (ST.hasGFX90AInsts())
+    MaxNumVGPRs /= 2;
   unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
     unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
@@ -326,6 +344,13 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCRegister Reg : MFI->WWMReservedRegs) {
     reserveRegisterTuples(Reserved, Reg);
   }
+
+  if (ST.hasGFX90AInsts())
+    for (const TargetRegisterClass *RC : this->regclasses())
+      if (getRegSizeInBits(*RC) > 32 && hasVectorRegisters(RC))
+        for (unsigned Reg : *RC)
+          if (getEncodingValue(Reg) & 1)
+            Reserved.set(Reg);
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
@@ -730,6 +755,7 @@ static bool buildMUBUFOffsetLoadStore(const GCNSubtarget &ST,
           .addImm(0) // tfe
           .addImm(0) // dlc
           .addImm(0) // swz
+          .addImm(0) // scc
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -798,7 +824,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   MCRegister SOffset = ScratchOffsetReg;
 
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
-  const bool IsAGPR = hasAGPRs(RC);
+  // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
+  const bool IsAGPR = !ST.hasGFX90AInsts() && hasAGPRs(RC);
   const unsigned RegWidth = AMDGPU::getRegBitWidth(RC->getID()) / 8;
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
@@ -996,6 +1023,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     if (!IsFlat)
       MIB.addImm(0) // dlc
          .addImm(0); // swz
+    MIB.addImm(0); // scc
     MIB.addMemOperand(NewMMO);
 
     if (!IsAGPR && NeedSuperRegDef)
@@ -2054,6 +2082,13 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
   unsigned SrcSize = getRegSizeInBits(*SrcRC);
   unsigned DstSize = getRegSizeInBits(*DstRC);
   unsigned NewSize = getRegSizeInBits(*NewRC);
+
+  // Do not allow coalescing between an odd and an even lanes as it will
+  // result in misaligned tuple access.
+  if (ST.hasGFX90AInsts() && !isSGPRClass(NewRC) &&
+      (getChannelFromSubReg(DstSubReg) & 1) !=
+      (getChannelFromSubReg(SubReg) & 1))
+    return false;
 
   // Do not increase size of registers beyond dword, we would need to allocate
   // adjacent registers and constraint regalloc more than needed.

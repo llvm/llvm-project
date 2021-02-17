@@ -41,18 +41,21 @@ multiclass V_INTERP_P1_F32_m : VINTRP_m <
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]
 >;
 
-let OtherPredicates = [has32BankLDS] in {
+let OtherPredicates = [has32BankLDS, isNotGFX90APlus] in {
 
 defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS]
+} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus]
 
-let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
+let OtherPredicates = [has16BankLDS, isNotGFX90APlus],
+    Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
 
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
+} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus],
+  //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
+let OtherPredicates = [isNotGFX90APlus] in {
 let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
@@ -73,6 +76,8 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   [(set f32:$vdst, (int_amdgcn_interp_mov (i32 timm:$vsrc),
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
+} // End OtherPredicates = [isNotGFX90APlus]
+
 } // End Uses = [MODE, M0, EXEC]
 
 //===----------------------------------------------------------------------===//
@@ -84,11 +89,6 @@ def ATOMIC_FENCE : SPseudoInstSI<
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
   let maybeAtomic = 1;
-}
-
-def VOP_I64_I64_DPP : VOPProfile <[i64, i64, untyped, untyped]> {
-  let HasExt = 1;
-  let HasExtDPP = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -107,7 +107,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 
 // 64-bit vector move with dpp. Expanded post-RA.
-def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64_DPP> {
+def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {
   let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.
 }
 
@@ -1373,6 +1373,19 @@ def : GCNPat <
 //     sub1)
 // >;
 
+// COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
+// of the real value.
+def : GCNPat <
+  (fneg (v2f32 SReg_64:$src)),
+  (v2f32 (REG_SEQUENCE SReg_64,
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub0,
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1))
+>;
+
 } // End let AddedComplexity = 1
 
 def : GCNPat <
@@ -1436,6 +1449,15 @@ def : GCNPat <
                   (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
     sub1)
 >;
+
+def : GCNPat <
+  (getDivergentFrag<fneg>.ret (v2f32 VReg_64:$src)),
+  (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
+                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, 0,
+                0, 0, 0, 0, 0)
+> {
+  let SubtargetPredicate = HasPackedFP32Ops;
+}
 
 def : GCNPat <
   (fcopysign f16:$src0, f16:$src1),
@@ -1556,8 +1578,15 @@ def : GCNPat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
+let OtherPredicates = [isNotGFX90APlus] in
 // FIXME: Should use _e64 and select source modifiers.
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
+
+let OtherPredicates = [isGFX90APlus] in
+def : GCNPat <
+  (fpow f32:$src0, f32:$src1),
+  (V_EXP_F32_e32 (V_MUL_LEGACY_F32_e64 0, f32:$src1, SRCMODS.NONE, (V_LOG_F32_e32 f32:$src0), 0, 0))
+>;
 
 def : GCNPat <
   (i32 (sext i1:$src0)),
@@ -2167,6 +2196,17 @@ def : GCNPat <
                   SRCMODS.NONE, $src2)
 >;
 
+let SubtargetPredicate = isGFX90APlus in
+def : GCNPat <
+  (fma (f64 (VOP3Mods0 f64:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+       (f64 (VOP3Mods f64:$src1, i32:$src1_modifiers)),
+       (f64 (VOP3NoMods f64:$src2))),
+  (V_FMAC_F64_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                  SRCMODS.NONE, $src2, $clamp, $omod)
+>;
+
+// COPY is workaround tablegen bug from multiple outputs
+// from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
   (v2i16 (build_vector (i16 0), (i16 SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i16 16))
@@ -2652,6 +2692,8 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 
 def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

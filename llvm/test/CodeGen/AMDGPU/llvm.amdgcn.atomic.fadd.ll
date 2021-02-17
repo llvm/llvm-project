@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx908 -verify-machineinstrs | FileCheck %s -check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -mcpu=gfx90a -verify-machineinstrs | FileCheck %s -check-prefix=GCN
 
 declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1)
 declare <2 x half> @llvm.amdgcn.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i1)

@@ -71,7 +71,7 @@ body:             |
   ; CHECK:   dead %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF4]], 0, [[DEF1]], 0, 0, implicit $mode, implicit $exec
   ; CHECK:   dead %27:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF5]], 0, [[DEF2]], 0, 0, implicit $mode, implicit $exec
   ; CHECK:   dead %28:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF6]], 0, [[DEF3]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK:   GLOBAL_STORE_DWORD [[DEF]], [[DEF10]], 0, 0, 0, 0, implicit $exec
+  ; CHECK:   GLOBAL_STORE_DWORD [[DEF]], [[DEF10]], 0, 0, 0, 0, 0, implicit $exec
   ; CHECK:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
@@ -129,7 +129,7 @@ body:             |
     %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %4, 0, %1, 0, 0, implicit $mode, implicit $exec
     %27:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %5, 0, %2, 0, 0, implicit $mode, implicit $exec
     %28:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %6, 0, %3, 0, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORD %0, %11, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %11, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

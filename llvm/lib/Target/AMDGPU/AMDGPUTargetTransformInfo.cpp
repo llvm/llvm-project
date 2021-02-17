@@ -311,7 +311,7 @@ unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
 }
 
 unsigned GCNTTIImpl::getRegisterBitWidth(bool Vector) const {
-  return 32;
+  return (Vector && ST->hasPackedFP32Ops()) ? 64 : 32;
 }
 
 unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
@@ -321,7 +321,9 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2 : 1;
+  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
+       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -628,6 +630,8 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     LLVM_FALLTHROUGH;
   case ISD::FADD:
   case ISD::FSUB:
+    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+      NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64)
       return LT.first * NElts * get64BitInstrCost(CostKind);
 
@@ -779,7 +783,8 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (SLT == MVT::f64)
     return LT.first * NElts * get64BitInstrCost(CostKind);
 
-  if (ST->has16BitInsts() && SLT == MVT::f16)
+  if ((ST->has16BitInsts() && SLT == MVT::f16) ||
+      (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
   // TODO: Get more refined intrinsic costs?
@@ -1192,8 +1197,10 @@ void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
-  return ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
-                                : getQuarterRateInstrCost(CostKind);
+  return ST->hasFullRate64Ops()
+             ? getFullRateInstrCost()
+             : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
+                                      : getQuarterRateInstrCost(CostKind);
 }
 
 R600TTIImpl::R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)

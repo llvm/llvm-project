@@ -2982,6 +2982,10 @@ Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only
 
 Specify SRAM ECC mode (AMDGPU only)
 
+.. option:: -mtgsplit, -mno-tgsplit
+
+Enable threadgroup split execution mode (AMDGPU only)
+
 .. option:: -mxnack, -mno-xnack
 
 Specify XNACK mode (AMDGPU only)

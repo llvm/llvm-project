@@ -3094,6 +3094,11 @@ def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
   HelpText<"Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)">;
 def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>;
 
+def mtgsplit : Flag<["-"], "mtgsplit">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable threadgroup split execution mode (AMDGPU only)">;
+def mno_tgsplit : Flag<["-"], "mno-tgsplit">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable threadgroup split execution mode (AMDGPU only)">;
+
 def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_Group>,
   HelpText<"Specify wavefront size 64 mode (AMDGPU only)">;
 def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_Group>,

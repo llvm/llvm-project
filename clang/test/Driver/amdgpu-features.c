@@ -22,6 +22,11 @@
 // RUN: %clang -### -target amdgcn-amdhsa -mcpu=gfx908:sramecc- %s 2>&1 | FileCheck --check-prefix=NO-SRAM-ECC %s
 // NO-SRAM-ECC: "-target-feature" "-sramecc"
 
+// RUN: %clang -### -target amdgcn -mcpu=gfx90A -mtgsplit %s 2>&1 | FileCheck --check-prefix=TGSPLIT %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx90A -mno-tgsplit %s 2>&1 | FileCheck --check-prefix=NO-TGSPLIT %s
+// TGSPLIT: "-target-feature" "+tgsplit"
+// NO-TGSPLIT: "-target-feature" "-tgsplit"
+
 // RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx1010 -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
 // RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx1010 -mno-wavefrontsize64 -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
 // WAVE64: "-target-feature" "+wavefrontsize64"
