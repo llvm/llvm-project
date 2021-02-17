@@ -83,7 +83,30 @@ def fir_FieldType : FIR_Type<"Field", "field"> {
   let parser = [{
     return get(context);
   }];
+}
 
+def fir_ComplexType : FIR_Type<"Complex", "complex"> {
+  let summary = "Complex type";
+
+  let description = [{
+    Model of a Fortran COMPLEX intrinsic type, including the KIND type
+    parameter. COMPLEX is a floating point type with a real and imaginary
+    member.
+  }];
+
+  let parameters = (ins "KindTy":$fKind);
+
+  let printer = [{
+    $_printer << "complex<" << getFKind() << '>';
+  }];
+
+  let genAccessors = 1;
+
+  let extraClassDeclaration = [{
+    using KindTy = unsigned;
+
+    mlir::Type getElementType() const;
+  }];
 }
 
 def ShapeType : FIR_Type<"Shape", "shape"> {
