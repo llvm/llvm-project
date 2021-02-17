@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
 
 #define SWIFTCALL __attribute__((swiftcall))
+#define SWIFTASYNCCALL __attribute__((swiftasynccall))
 #define OUT __attribute__((swift_indirect_result))
 #define ERROR __attribute__((swift_error_result))
 #define CONTEXT __attribute__((swift_context))
@@ -54,7 +55,7 @@ void test_context_error_1() {
 SWIFTCALL void context_error_2(short s, CONTEXT int *self, ERROR float **error) {}
 // CHECK-LABEL: define{{.*}} void @context_error_2(i16{{.*}}, i32* swiftself{{.*}}, float** swifterror %0)
 
-SWIFTCALL void async_context_1(ASYNC_CONTEXT void *self) {}
+SWIFTASYNCCALL void async_context_1(ASYNC_CONTEXT void *self) {}
 // CHECK-LABEL: define {{.*}} void @async_context_1(i8* swiftasync
 
 /*****************************************************************************/

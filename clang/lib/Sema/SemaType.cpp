@@ -117,6 +117,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_RegCall:                                                 \
   case ParsedAttr::AT_Pascal:                                                  \
   case ParsedAttr::AT_SwiftCall:                                               \
+  case ParsedAttr::AT_SwiftAsyncCall:                                          \
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_MSABI:                                                   \
@@ -2759,13 +2760,16 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
   assert(EPI.ExtParameterInfos && "shouldn't get here without param infos");
 
   bool hasCheckedSwiftCall = false;
+  auto reportWrongABI = [&](unsigned paramIndex) {
+    S.Diag(getParamLoc(paramIndex), diag::err_swift_param_attr_not_swiftcall)
+        << getParameterABISpelling(EPI.ExtParameterInfos[paramIndex].getABI());
+  };
   auto checkForSwiftCC = [&](unsigned paramIndex) {
     // Only do this once.
     if (hasCheckedSwiftCall) return;
     hasCheckedSwiftCall = true;
     if (EPI.ExtInfo.getCC() == CC_Swift) return;
-    S.Diag(getParamLoc(paramIndex), diag::err_swift_param_attr_not_swiftcall)
-      << getParameterABISpelling(EPI.ExtParameterInfos[paramIndex].getABI());
+    reportWrongABI(paramIndex);
   };
 
   for (size_t paramIndex = 0, numParams = paramTypes.size();
@@ -2791,8 +2795,8 @@ static void checkExtParameterInfos(Sema &S, ArrayRef<QualType> paramTypes,
       checkForSwiftCC(paramIndex);
       continue;
 
+    // SwiftAsyncContext is not limited to swiftasynccall functions.
     case ParameterABI::SwiftAsyncContext:
-      // FIXME: might want to require swiftasynccc when it exists
       continue;
 
     // swift_error parameters must be preceded by a swift_context parameter.
@@ -7395,6 +7399,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PascalAttr>(Ctx, Attr);
   case ParsedAttr::AT_SwiftCall:
     return createSimpleAttr<SwiftCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_SwiftAsyncCall:
+    return createSimpleAttr<SwiftAsyncCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_VectorCall:
     return createSimpleAttr<VectorCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_AArch64VectorPcs:
