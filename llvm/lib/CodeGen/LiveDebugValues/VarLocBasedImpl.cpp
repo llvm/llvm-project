@@ -1818,9 +1818,19 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 }
 
 static bool isSwiftAsyncContext(const MachineInstr &MI) {
-   const llvm::Function &F = MI.getParent()->getParent()->getFunction();
-   return F.arg_size() == 3 && F.hasParamAttribute(2, Attribute::SwiftAsync);
- }
+  const llvm::MachineFunction *MF = MI.getParent()->getParent();
+  const llvm::Function &F = MF->getFunction();
+  if (F.arg_size() != 3 || !F.hasParamAttribute(2, Attribute::SwiftAsync))
+    return false;
+  unsigned Reg = isDbgValueDescribedByReg(MI);
+  if (!Reg)
+    return false;
+  auto &EntryMBB = MF->front();
+  for (auto R : EntryMBB.liveins())
+    if (R.PhysReg == Reg)
+      return true;
+  return false;
+}
 
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
