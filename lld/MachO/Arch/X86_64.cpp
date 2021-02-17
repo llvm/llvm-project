@@ -58,9 +58,8 @@ const TargetInfo::RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
       {"TLV", B(PCREL) | B(EXTERN) | B(TLV) | B(LOAD) | B(BYTE4)},
 #undef B
   }};
-  assert(type >= 0 && type < relocAttrsArray.size() &&
-         "invalid relocation type");
-  if (type < 0 || type >= relocAttrsArray.size())
+  assert(type < relocAttrsArray.size() && "invalid relocation type");
+  if (type >= relocAttrsArray.size())
     return TargetInfo::invalidRelocAttrs;
   return relocAttrsArray[type];
 }
