@@ -35,8 +35,8 @@ define double @bar(%struct.Wishart* %wishart) {
 ; CHECK-NEXT:   %tmp.sroa.2.0.copyload = load i32, i32* %tmp.sroa.2.0.waddr.sroa_idx1, align 8, !tbaa.struct !7
 ; CHECK-NEXT:   %tmp.sroa.3.0.waddr.sroa_raw_cast = bitcast %struct.Wishart* %wishart to i8*
 ; CHECK-NEXT:   %tmp.sroa.3.0.waddr.sroa_raw_idx = getelementptr inbounds i8, i8* %tmp.sroa.3.0.waddr.sroa_raw_cast, i64 12
-; CHECK-NEXT:   %tmp.sroa.3.0.tmpaddr.sroa_idx = getelementptr inbounds [4 x i8], [4 x i8]* %tmp.sroa.3, i64 0, i64 0
-; CHECK-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %tmp.sroa.3.0.tmpaddr.sroa_idx, i8* align 4 %tmp.sroa.3.0.waddr.sroa_raw_idx, i64 4, i1 false), !tbaa.struct !8
+; CHECK-NEXT:   %[[sroa_idx:.+]] = getelementptr inbounds [4 x i8], [4 x i8]* %tmp.sroa.3, i64 0, i64 0
+; CHECK-NEXT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[sroa_idx]], i8* align 4 %tmp.sroa.3.0.waddr.sroa_raw_idx, i64 4, i1 false), !tbaa.struct !8
 ; CHECK-NEXT:   %call = call double @subcall(double %tmp.sroa.0.0.copyload, i32 %tmp.sroa.2.0.copyload)
 ; CHECK-NEXT:   ret double %call
 ; CHECK-NEXT: }
