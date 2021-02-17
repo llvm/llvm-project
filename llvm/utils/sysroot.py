@@ -35,13 +35,16 @@ def make_fake_sysroot(out_dir):
                    os.path.join(vsinstalldir, 'VC'))
         os.mkdir(os.path.join(out_dir, 'Windows Kits'))
         mkjunction(os.path.join(out_dir, 'Windows Kits', '10'), winsdk)
+    elif sys.platform == 'darwin':
+        assert False, "FIXME: Implement on darwin"
     else:
-        assert False, "FIXME: Implement on non-win"
+        os.symlink('/', out_dir)
 
     print('Done.')
+    abs_out_dir = os.path.abspath(out_dir)
     if sys.platform == 'win32':
         # CMake doesn't like backslashes in commandline args.
-        abs_out_dir = os.path.abspath(out_dir).replace(os.path.sep, '/')
+        abs_out_dir = abs_out_dir.replace(os.path.sep, '/')
         print('Pass -DLLVM_WINSYSROOT=' + abs_out_dir + ' to cmake.')
     else:
         print('Pass -DCMAKE_SYSROOT=' + abs_out_dir + ' to cmake.')
