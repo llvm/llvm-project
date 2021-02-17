@@ -2034,9 +2034,8 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   }
 
   bool scheduleFound = false;
-  unsigned II = 0;
   // Keep increasing II until a valid schedule is found.
-  for (II = MII; II <= MAX_II && !scheduleFound; ++II) {
+  for (unsigned II = MII; II <= MAX_II && !scheduleFound; ++II) {
     Schedule.reset();
     Schedule.setInitiationInterval(II);
     LLVM_DEBUG(dbgs() << "Try to schedule with " << II << "\n");
@@ -2109,7 +2108,8 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       scheduleFound = Schedule.isValidSchedule(this);
   }
 
-  LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound << " (II=" << II
+  LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound
+                    << " (II=" << Schedule.getInitiationInterval()
                     << ")\n");
 
   if (scheduleFound) {
@@ -2117,7 +2117,8 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
-             << "Schedule found with Initiation Interval: " << ore::NV("II", II)
+             << "Schedule found with Initiation Interval: "
+             << ore::NV("II", Schedule.getInitiationInterval())
              << ", MaxStageCount: "
              << ore::NV("MaxStageCount", Schedule.getMaxStageCount());
     });
