@@ -19,8 +19,8 @@
  */
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_SHA2_H
-#define LLVM_SUPPORT_SHA2_H
+#ifndef LLVM_SUPPORT_SHA256_H
+#define LLVM_SUPPORT_SHA256_H
 
 #include <array>
 #include <cstdint>
@@ -87,4 +87,4 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_SHA2_H
+#endif // LLVM_SUPPORT_SHA256_H
