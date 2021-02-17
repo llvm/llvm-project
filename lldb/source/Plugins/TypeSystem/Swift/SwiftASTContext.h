@@ -20,6 +20,7 @@
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Utility/Either.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -166,7 +167,7 @@ public:
                   Target *target = nullptr);
 
   SwiftASTContext(const SwiftASTContext &rhs) = delete;
-  
+
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
     return m_typeref_typesystem;
   }
@@ -551,6 +552,9 @@ public:
   static bool IsNonTriviallyManagedReferenceType(
       const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
       CompilerType *underlying_type = nullptr);
+
+  static void ApplyWorkingDir(llvm::SmallVectorImpl<char> &clang_argument,
+                              llvm::StringRef cur_working_dir);
 
   // AST related queries
 
@@ -981,4 +985,5 @@ private:
 };
 
 } // namespace lldb_private
+
 #endif // #ifndef liblldb_SwiftASTContext_h_

@@ -142,7 +142,7 @@
     if (HasFatalErrors()) {                                                    \
       return;                                                                  \
     }                                                                          \
-  } while (0);                                                                 
+  } while (0);
 #define VALID_OR_RETURN_CHECK_TYPE(type, value)                                \
   do {                                                                         \
     if (HasFatalErrors() || !type) {                                           \
@@ -1413,29 +1413,6 @@ bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
   return false;
 }
 
-/// Turn relative paths in clang options into absolute paths based on
-/// \c cur_working_dir.
-template <typename SmallString>
-void ApplyWorkingDir(SmallString &clang_argument, StringRef cur_working_dir) {
-  StringRef arg = clang_argument.str();
-  StringRef prefix;
-  if (ConsumeIncludeOption(arg, prefix)) {
-    // Ignore the option part of a double-arg include option.
-    if (arg.empty())
-      return;
-  } else if (arg.startswith("-")) {
-    // Assume this is a compiler arg and not a path starting with "-".
-    return;
-  }
-  // There is most probably a path in arg now.
-  if (!llvm::sys::path::is_relative(arg))
-    return;
-  SmallString rel_path = arg;
-  clang_argument = prefix;
-  llvm::sys::path::append(clang_argument, cur_working_dir, rel_path);
-  llvm::sys::path::remove_dots(clang_argument);
-}
-
 std::array<StringRef, 2> macro_flags = { "-D", "-U" };
 std::array<StringRef, 5> multi_arg_flags =
     { "-D", "-U", "-I", "-F", "-working-directory" };
@@ -1517,6 +1494,31 @@ void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
   for (const auto &arg : args.entries())
     user_clang_flags.push_back(arg.ref().str());
   AddExtraClangArgs(user_clang_flags);
+}
+
+/// Turn relative paths in clang options into absolute paths based on
+/// \c cur_working_dir.
+void SwiftASTContext::ApplyWorkingDir(
+    llvm::SmallVectorImpl<char> &clang_argument, StringRef cur_working_dir) {
+  StringRef arg = StringRef(clang_argument.data(), clang_argument.size());
+  StringRef prefix;
+  if (ConsumeIncludeOption(arg, prefix)) {
+    // Ignore the option part of a double-arg include option.
+    if (arg.empty())
+      return;
+  } else if (arg.startswith("-")) {
+    // Assume this is a compiler arg and not a path starting with "-".
+    return;
+  }
+  // There is most probably a path in arg now.
+  if (!llvm::sys::path::is_relative(arg))
+    return;
+
+  llvm::SmallString<128> joined_path;
+  llvm::sys::path::append(joined_path, cur_working_dir, arg);
+  llvm::sys::path::remove_dots(joined_path);
+  clang_argument.resize(prefix.size());
+  clang_argument.append(joined_path.begin(), joined_path.end());
 }
 
 void SwiftASTContext::RemapClangImporterOptions(
@@ -4571,7 +4573,7 @@ llvm::Optional<SwiftASTContext::TypeOrDecl>
 SwiftASTContext::FindTypeOrDecl(const char *name,
                                 swift::ModuleDecl *swift_module) {
   VALID_OR_RETURN(llvm::Optional<SwiftASTContext::TypeOrDecl>());
- 
+
   TypesOrDecls search_results;
 
   FindTypesOrDecls(name, swift_module, search_results, false);
@@ -5745,7 +5747,7 @@ SwiftASTContext::GetArrayElementType(opaque_compiler_type_t type,
       }
     }
   }
-  
+
   return element_type;
 }
 
@@ -5820,7 +5822,7 @@ size_t SwiftASTContext::GetNumMemberFunctions(opaque_compiler_type_t type) {
       }
     }
   }
-  
+
   return num_functions;
 }
 
