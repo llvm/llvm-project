@@ -335,6 +335,8 @@ public:
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
+  // FIXME: various subcomponents each get the full timeout, so it's more of
+  // an order of magnitude than a hard deadline.
   LLVM_NODISCARD bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
