@@ -41,6 +41,7 @@ class MachineOperand;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 class VirtRegMap;
+class VirtRegAuxInfo;
 
 class LiveRangeEdit : private MachineRegisterInfo::Delegate {
 public:
@@ -248,8 +249,7 @@ public:
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.
-  void calculateRegClassAndHint(MachineFunction &, const MachineLoopInfo &,
-                                const MachineBlockFrequencyInfo &);
+  void calculateRegClassAndHint(MachineFunction &, VirtRegAuxInfo &);
 };
 
 } // end namespace llvm
