@@ -798,6 +798,23 @@ static MCSectionELF *selectELFSectionForGlobal(
                            AssociatedSymbol);
 }
 
+static MCSection *selectELFSectionForGlobal(
+    MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
+    const TargetMachine &TM, bool EmitUniqueSection,  unsigned Flags,
+    unsigned *NextUniqueID) {
+  const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
+  if (LinkedToSym) {
+    EmitUniqueSection = true;
+    Flags |= ELF::SHF_LINK_ORDER;
+  }
+
+  MCSectionELF *Section = selectELFSectionForGlobal(
+      Ctx, GO, Kind, Mang, TM, EmitUniqueSection, Flags,
+      NextUniqueID, LinkedToSym);
+  assert(Section->getLinkedToSymbol() == LinkedToSym);
+  return Section;
+}
+
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   unsigned Flags = getELFSectionFlags(Kind);
@@ -812,18 +829,17 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
       EmitUniqueSection = TM.getDataSections();
   }
   EmitUniqueSection |= GO->hasComdat();
+  return selectELFSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
+                                   EmitUniqueSection, Flags, &NextUniqueID);
+}
 
-  const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
-  if (LinkedToSym) {
-    EmitUniqueSection = true;
-    Flags |= ELF::SHF_LINK_ORDER;
-  }
-
-  MCSectionELF *Section = selectELFSectionForGlobal(
-      getContext(), GO, Kind, getMangler(), TM, EmitUniqueSection, Flags,
-      &NextUniqueID, LinkedToSym);
-  assert(Section->getLinkedToSymbol() == LinkedToSym);
-  return Section;
+MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
+    const Function &F, const TargetMachine &TM) const {
+  SectionKind Kind = SectionKind::getText();
+  unsigned Flags = getELFSectionFlags(Kind);
+  return selectELFSectionForGlobal(getContext(), &F, Kind, getMangler(), TM,
+                                   /* EmitUniqueSection = */ true, Flags,
+                                   &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
