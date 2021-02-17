@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
+
 //===----------------------------------------------------------------------===//
 // Stack allocation
 //===----------------------------------------------------------------------===//
@@ -274,20 +276,23 @@ let isCall = 1, Defs = [CC] in {
 }
 
 // Regular calls.
-let isCall = 1, Defs = [R14D, CC], Uses = [FPC] in {
-  def CallBRASL : Alias<6, (outs), (ins pcrel32:$I2, variable_ops),
-                        [(z_call pcrel32:$I2)]>;
-  def CallBASR  : Alias<2, (outs), (ins ADDR64:$R2, variable_ops),
-                        [(z_call ADDR64:$R2)]>;
-}
+// z/Linux ELF
+let Predicates = [IsTargetELF] in {
+  let isCall = 1, Defs = [R14D, CC], Uses = [FPC] in {
+    def CallBRASL : Alias<6, (outs), (ins pcrel32:$I2, variable_ops),
+                          [(z_call pcrel32:$I2)]>;
+    def CallBASR  : Alias<2, (outs), (ins ADDR64:$R2, variable_ops),
+                          [(z_call ADDR64:$R2)]>;
+  }
 
-// TLS calls.  These will be lowered into a call to __tls_get_offset,
-// with an extra relocation specifying the TLS symbol.
-let isCall = 1, Defs = [R14D, CC] in {
-  def TLS_GDCALL : Alias<6, (outs), (ins tlssym:$I2, variable_ops),
-                         [(z_tls_gdcall tglobaltlsaddr:$I2)]>;
-  def TLS_LDCALL : Alias<6, (outs), (ins tlssym:$I2, variable_ops),
-                         [(z_tls_ldcall tglobaltlsaddr:$I2)]>;
+  // TLS calls.  These will be lowered into a call to __tls_get_offset,
+  // with an extra relocation specifying the TLS symbol.
+  let isCall = 1, Defs = [R14D, CC] in {
+    def TLS_GDCALL : Alias<6, (outs), (ins tlssym:$I2, variable_ops),
+                           [(z_tls_gdcall tglobaltlsaddr:$I2)]>;
+    def TLS_LDCALL : Alias<6, (outs), (ins tlssym:$I2, variable_ops),
+                           [(z_tls_ldcall tglobaltlsaddr:$I2)]>;
+  }
 }
 
 // Sibling calls.
