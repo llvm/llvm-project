@@ -437,6 +437,75 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
   EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg31Sext));
 }
 
+TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
+  StringRef MIRString = R"(
+   %ptr:_(p0) = G_IMPLICIT_DEF
+   %load4:_(s32) = G_LOAD %ptr :: (load 4)
+
+   %assert_sext1:_(s32) = G_ASSERT_SEXT %load4, 1
+   %copy_assert_sext1:_(s32) = COPY %assert_sext1
+
+   %assert_sext7:_(s32) = G_ASSERT_SEXT %load4, 7
+   %copy_assert_sext7:_(s32) = COPY %assert_sext7
+
+   %assert_sext8:_(s32) = G_ASSERT_SEXT %load4, 8
+   %copy_assert_sext8:_(s32) = COPY %assert_sext8
+
+   %assert_sext9:_(s32) = G_ASSERT_SEXT %load4, 9
+   %copy_assert_sext9:_(s32) = COPY %assert_sext9
+
+   %assert_sext31:_(s32) = G_ASSERT_SEXT %load4, 31
+   %copy_assert_sext31:_(s32) = COPY %assert_sext31
+
+   %load1:_(s8) = G_LOAD %ptr :: (load 1)
+   %sext_load1:_(s32) = G_SEXT %load1
+
+   %assert_sext6_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 6
+   %copy_assert_sext6_sext:_(s32) = COPY %assert_sext6_sext
+
+   %assert_sext7_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 7
+   %copy_assert_sext7_sext:_(s32) = COPY %assert_sext7_sext
+
+   %assert_sext8_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 8
+   %copy_assert_sext8_sext:_(s32) = COPY %assert_sext8_sext
+
+   %assert_sext9_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 9
+   %copy_assert_sext9_sext:_(s32) = COPY %assert_sext9_sext
+
+   %assert_sext31_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 31
+   %copy_assert_sext31_sext:_(s32) = COPY %assert_sext31_sext
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyInReg1 = Copies[Copies.size() - 10];
+  Register CopyInReg7 = Copies[Copies.size() - 9];
+  Register CopyInReg8 = Copies[Copies.size() - 8];
+  Register CopyInReg9 = Copies[Copies.size() - 7];
+  Register CopyInReg31 = Copies[Copies.size() - 6];
+
+  Register CopyInReg6Sext = Copies[Copies.size() - 5];
+  Register CopyInReg7Sext = Copies[Copies.size() - 4];
+  Register CopyInReg8Sext = Copies[Copies.size() - 3];
+  Register CopyInReg9Sext = Copies[Copies.size() - 2];
+  Register CopyInReg31Sext = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyInReg1));
+  EXPECT_EQ(26u, Info.computeNumSignBits(CopyInReg7));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg8));
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyInReg9));
+  EXPECT_EQ(2u, Info.computeNumSignBits(CopyInReg31));
+
+  EXPECT_EQ(27u, Info.computeNumSignBits(CopyInReg6Sext));
+  EXPECT_EQ(26u, Info.computeNumSignBits(CopyInReg7Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg8Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg9Sext));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyInReg31Sext));
+}
+
 TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
                         "  %4:_(s32) = G_LOAD %3 :: (load 4)\n"
