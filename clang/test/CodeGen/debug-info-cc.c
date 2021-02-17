@@ -19,6 +19,7 @@
 //    CC_SpirFunction, // default for OpenCL functions on SPIR target
 //    CC_OpenCLKernel, // inferred for OpenCL kernels
 //    CC_Swift,        // __attribute__((swiftcall))
+//    CC_SwiftAsync,   // __attribute__((swiftasynccall))
 //    CC_PreserveMost, // __attribute__((preserve_most))
 //    CC_PreserveAll,  // __attribute__((preserve_all))
 //  };
@@ -54,6 +55,13 @@ __attribute__((preserve_all)) int add_preserve_all(int a, int b) {
 // LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_Swift,
 __attribute__((swiftcall)) int add_swiftcall(int a, int b) {
   return a+b;
+}
+
+// [FIXME: swiftasynccc] Update debuginfo tag to SwiftAsync once LLVM support lands.
+// LINUX: !DISubprogram({{.*}}"add_swiftasynccall", {{.*}}type: ![[FTY:[0-9]+]]
+// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_Swift,
+__attribute__((swiftasynccall)) int add_swiftasynccall(int a, int b, int c) {
+  return a+b+c;
 }
 
 // LINUX: !DISubprogram({{.*}}"add_inteloclbicc", {{.*}}type: ![[FTY:[0-9]+]]
