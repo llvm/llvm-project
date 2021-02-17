@@ -74,7 +74,7 @@ public:
     auto mod = getModule();
     auto specifics = CodeGenSpecifics::get(getOperation().getContext(),
                                            getTargetTriple(getOperation()),
-                                           *getKindMapping(getOperation()));
+                                           getKindMapping(getOperation()));
     setMembers(specifics.get(), &rewriter);
 
     // Perform type conversion on signatures and call sites.

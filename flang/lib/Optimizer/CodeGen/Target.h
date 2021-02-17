@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTMIZER_CODEGEN_TARGET_H
-#define OPTMIZER_CODEGEN_TARGET_H
+#ifndef FORTRAN_OPTMIZER_CODEGEN_TARGET_H
+#define FORTRAN_OPTMIZER_CODEGEN_TARGET_H
 
+#include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/Triple.h"
 #include <memory>
@@ -20,7 +21,6 @@
 #include <vector>
 
 namespace fir {
-class KindMapping;
 
 namespace details {
 /// Extra information about how to marshal an argument or return value that
@@ -59,11 +59,11 @@ public:
   using Marshalling = std::vector<std::tuple<mlir::Type, Attributes>>;
 
   static std::unique_ptr<CodeGenSpecifics>
-  get(mlir::MLIRContext *ctx, const llvm::Triple &trp, KindMapping &kindMap);
+  get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap);
 
-  CodeGenSpecifics(mlir::MLIRContext *ctx, const llvm::Triple &trp,
-                   KindMapping &kindMap)
-      : context{*ctx}, triple{trp}, kindMap{kindMap} {}
+  CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
+                   KindMapping &&kindMap)
+      : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)} {}
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
 
@@ -97,9 +97,9 @@ public:
 protected:
   mlir::MLIRContext &context;
   llvm::Triple triple;
-  KindMapping &kindMap;
+  KindMapping kindMap;
 };
 
 } // namespace fir
 
-#endif // OPTMIZER_CODEGEN_TARGET_H
+#endif // FORTRAN_OPTMIZER_CODEGEN_TARGET_H

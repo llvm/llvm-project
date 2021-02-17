@@ -21,10 +21,10 @@ class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module)
       : mlir::LLVMTypeConverter(module.getContext()),
-        kindMapping(*getKindMapping(module)),
+        kindMapping(getKindMapping(module)),
         specifics(CodeGenSpecifics::get(module.getContext(),
                                         getTargetTriple(module),
-                                        *getKindMapping(module))) {
+                                        getKindMapping(module))) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.

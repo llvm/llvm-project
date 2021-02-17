@@ -14,11 +14,14 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
-#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Lower/PFTDefs.h"
+#include "flang/Lower/Support/BoxValue.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 
+namespace fir {
+class KindMapping;
+}
 namespace Fortran {
 namespace common {
 template <typename>
@@ -154,6 +157,8 @@ public:
   /// to hint at the origin of the identifier.
   virtual std::string uniqueCGIdent(llvm::StringRef prefix,
                                     llvm::StringRef name) = 0;
+  /// Get the KindMap.
+  virtual fir::KindMapping &getKindMap() = 0;
 
   virtual ~AbstractConverter() = default;
 };
