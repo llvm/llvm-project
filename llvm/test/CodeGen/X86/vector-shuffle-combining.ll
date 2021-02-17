@@ -3059,6 +3059,43 @@ define <8 x i16> @shuffle_scalar_to_vector_extract(<8 x i8>* %p0, i8* %p1, i8* %
   ret <8 x i16> %tmp13
 }
 
+; Bug noticed in D96345
+define i32 @shuffle_binops_with_undef() {
+; SSE-LABEL: shuffle_binops_with_undef:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movdqa (%rax), %xmm0
+; SSE-NEXT:    paddw %xmm0, %xmm0
+; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    psrlw %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rax)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_binops_with_undef:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovdqa (%rax), %xmm0
+; AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpsrlw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rax)
+; AVX-NEXT:    retq
+entry:
+  %load0 = load <8 x i16>, <8 x i16>* undef, align 16
+  %load1 = load <8 x i16>, <8 x i16>* undef, align 16
+  %shuf0 = shufflevector <16 x i8> undef, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %addi = add <8 x i16> %load0, %load1
+  %bc0 = bitcast <8 x i16> %addi to <2 x i64>
+  %bc1 = bitcast <16 x i8> %shuf0 to <8 x i16>
+  %shuf1 = shufflevector <8 x i16> %load1, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %addi24 = add <8 x i16> %shuf1, %bc1
+  %bc2 = bitcast <8 x i16> %addi24 to <2 x i64>
+  %shuf2 = shufflevector <2 x i64> %bc0, <2 x i64> %bc2, <2 x i32> <i32 0, i32 2>
+  %bc3 = bitcast <2 x i64> %shuf2 to <8 x i16>
+  %psrli = call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %bc3, i32 ptrtoint (i32 ()* @shuffle_binops_with_undef to i32))
+  store <8 x i16> %psrli, <8 x i16>* undef, align 16
+  ret i32 undef
+}
+declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
+
 define void @PR43024() {
 ; SSE-LABEL: PR43024:
 ; SSE:       # %bb.0:
