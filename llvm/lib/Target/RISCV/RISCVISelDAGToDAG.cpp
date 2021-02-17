@@ -382,6 +382,48 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned IntNo,
   ReplaceNode(Node, Store);
 }
 
+static unsigned getRegClassIDForVecVT(MVT VT) {
+  if (VT.getVectorElementType() == MVT::i1)
+    return RISCV::VRRegClassID;
+  return getRegClassIDForLMUL(getLMUL(VT));
+}
+
+// Attempt to decompose a subvector insert/extract between VecVT and
+// SubVecVT via subregister indices. Returns the subregister index that
+// can perform the subvector insert/extract with the given element index, as
+// well as the index corresponding to any leftover subvectors that must be
+// further inserted/extracted within the register class for SubVecVT.
+static std::pair<unsigned, unsigned>
+decomposeSubvectorInsertExtractToSubRegs(MVT VecVT, MVT SubVecVT,
+                                         unsigned InsertExtractIdx,
+                                         const RISCVRegisterInfo *TRI) {
+  static_assert((RISCV::VRM8RegClassID > RISCV::VRM4RegClassID &&
+                 RISCV::VRM4RegClassID > RISCV::VRM2RegClassID &&
+                 RISCV::VRM2RegClassID > RISCV::VRRegClassID),
+                "Register classes not ordered");
+  unsigned VecRegClassID = getRegClassIDForVecVT(VecVT);
+  unsigned SubRegClassID = getRegClassIDForVecVT(SubVecVT);
+  // Try to compose a subregister index that takes us from the incoming
+  // LMUL>1 register class down to the outgoing one. At each step we half
+  // the LMUL:
+  //   nxv16i32@12 -> nxv2i32: sub_vrm4_1_then_sub_vrm2_1_then_sub_vrm1_0
+  // Note that this is not guaranteed to find a subregister index, such as
+  // when we are extracting from one VR type to another.
+  unsigned SubRegIdx = RISCV::NoSubRegister;
+  for (const unsigned RCID :
+       {RISCV::VRM4RegClassID, RISCV::VRM2RegClassID, RISCV::VRRegClassID})
+    if (VecRegClassID > RCID && SubRegClassID <= RCID) {
+      VecVT = VecVT.getHalfNumVectorElementsVT();
+      bool IsHi =
+          InsertExtractIdx >= VecVT.getVectorElementCount().getKnownMinValue();
+      SubRegIdx = TRI->composeSubRegIndices(SubRegIdx,
+                                            getSubregIndexByMVT(VecVT, IsHi));
+      if (IsHi)
+        InsertExtractIdx -= VecVT.getVectorElementCount().getKnownMinValue();
+    }
+  return {SubRegIdx, InsertExtractIdx};
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -704,56 +746,127 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // Bail when not a "cast" like insert_subvector.
-    if (Node->getConstantOperandVal(2) != 0)
-      break;
-    if (!Node->getOperand(0).isUndef())
-      break;
+    SDValue V = Node->getOperand(0);
+    SDValue SubV = Node->getOperand(1);
+    SDLoc DL(SubV);
+    auto Idx = Node->getConstantOperandVal(2);
+    MVT SubVecVT = Node->getOperand(1).getSimpleValueType();
 
-    // Bail when normal isel should do the job.
-    MVT InVT = Node->getOperand(1).getSimpleValueType();
-    if (VT.isFixedLengthVector() || InVT.isScalableVector())
-      break;
+    // TODO: This method of selecting INSERT_SUBVECTOR should work
+    // with any type of insertion (fixed <-> scalable) but we don't yet
+    // correctly identify the canonical register class for fixed-length types.
+    // For now, keep the two paths separate.
+    if (VT.isScalableVector() && SubVecVT.isScalableVector()) {
+      bool IsFullVecReg = false;
+      switch (getLMUL(SubVecVT)) {
+      default:
+        break;
+      case RISCVVLMUL::LMUL_1:
+      case RISCVVLMUL::LMUL_2:
+      case RISCVVLMUL::LMUL_4:
+      case RISCVVLMUL::LMUL_8:
+        IsFullVecReg = true;
+        break;
+      }
 
-    unsigned RegClassID;
-    if (VT.getVectorElementType() == MVT::i1)
-      RegClassID = RISCV::VRRegClassID;
-    else
-      RegClassID = getRegClassIDForLMUL(getLMUL(VT));
+      // If the subvector doesn't occupy a full vector register then we can't
+      // insert it purely using subregister manipulation. We must not clobber
+      // the untouched elements (say, in the upper half of the VR register).
+      if (!IsFullVecReg)
+        break;
 
-    SDValue V = Node->getOperand(1);
-    SDLoc DL(V);
-    SDValue RC =
-        CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
-    SDNode *NewNode =
-        CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
-    ReplaceNode(Node, NewNode);
-    return;
+      const auto *TRI = Subtarget->getRegisterInfo();
+      unsigned SubRegIdx;
+      std::tie(SubRegIdx, Idx) =
+          decomposeSubvectorInsertExtractToSubRegs(VT, SubVecVT, Idx, TRI);
+
+      // If the Idx hasn't been completely eliminated then this is a subvector
+      // extract which doesn't naturally align to a vector register. These must
+      // be handled using instructions to manipulate the vector registers.
+      if (Idx != 0)
+        break;
+
+      SDNode *NewNode = CurDAG->getMachineNode(
+          TargetOpcode::INSERT_SUBREG, DL, VT, V, SubV,
+          CurDAG->getTargetConstant(SubRegIdx, DL, Subtarget->getXLenVT()));
+      return ReplaceNode(Node, NewNode);
+    }
+
+    if (VT.isScalableVector() && SubVecVT.isFixedLengthVector()) {
+      // Bail when not a "cast" like insert_subvector.
+      if (Idx != 0)
+        break;
+      if (!Node->getOperand(0).isUndef())
+        break;
+
+      unsigned RegClassID = getRegClassIDForVecVT(VT);
+
+      SDValue RC =
+          CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
+      SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                               DL, VT, SubV, RC);
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+    break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
-    // Bail when not a "cast" like extract_subvector.
-    if (Node->getConstantOperandVal(1) != 0)
-      break;
-
-    // Bail when normal isel can do the job.
-    MVT InVT = Node->getOperand(0).getSimpleValueType();
-    if (VT.isScalableVector() || InVT.isFixedLengthVector())
-      break;
-
-    unsigned RegClassID;
-    if (InVT.getVectorElementType() == MVT::i1)
-      RegClassID = RISCV::VRRegClassID;
-    else
-      RegClassID = getRegClassIDForLMUL(getLMUL(InVT));
-
     SDValue V = Node->getOperand(0);
+    auto Idx = Node->getConstantOperandVal(1);
+    MVT InVT = Node->getOperand(0).getSimpleValueType();
     SDLoc DL(V);
-    SDValue RC =
-        CurDAG->getTargetConstant(RegClassID, DL, Subtarget->getXLenVT());
-    SDNode *NewNode =
-        CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
-    ReplaceNode(Node, NewNode);
-    return;
+
+    // TODO: This method of selecting EXTRACT_SUBVECTOR should work
+    // with any type of extraction (fixed <-> scalable) but we don't yet
+    // correctly identify the canonical register class for fixed-length types.
+    // For now, keep the two paths separate.
+    if (VT.isScalableVector() && InVT.isScalableVector()) {
+      const auto *TRI = Subtarget->getRegisterInfo();
+      unsigned SubRegIdx;
+      std::tie(SubRegIdx, Idx) =
+          decomposeSubvectorInsertExtractToSubRegs(InVT, VT, Idx, TRI);
+
+      // If the Idx hasn't been completely eliminated then this is a subvector
+      // extract which doesn't naturally align to a vector register. These must
+      // be handled using instructions to manipulate the vector registers.
+      if (Idx != 0)
+        break;
+
+      // If we haven't set a SubRegIdx, then we must be going between LMUL<=1
+      // types (VR -> VR). This can be done as a copy.
+      if (SubRegIdx == RISCV::NoSubRegister) {
+        unsigned RegClassID = getRegClassIDForVecVT(VT);
+        unsigned InRegClassID = getRegClassIDForVecVT(InVT);
+        assert(RegClassID == InRegClassID &&
+               RegClassID == RISCV::VRRegClassID &&
+               "Unexpected subvector extraction");
+        SDValue RC =
+            CurDAG->getTargetConstant(InRegClassID, DL, Subtarget->getXLenVT());
+        SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                                 DL, VT, V, RC);
+        return ReplaceNode(Node, NewNode);
+      }
+      SDNode *NewNode = CurDAG->getMachineNode(
+          TargetOpcode::EXTRACT_SUBREG, DL, VT, V,
+          CurDAG->getTargetConstant(SubRegIdx, DL, Subtarget->getXLenVT()));
+      return ReplaceNode(Node, NewNode);
+    }
+
+    if (VT.isFixedLengthVector() && InVT.isScalableVector()) {
+      // Bail when not a "cast" like extract_subvector.
+      if (Idx != 0)
+        break;
+
+      unsigned InRegClassID = getRegClassIDForVecVT(InVT);
+
+      SDValue RC =
+          CurDAG->getTargetConstant(InRegClassID, DL, Subtarget->getXLenVT());
+      SDNode *NewNode =
+          CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+    break;
   }
   }
 
