@@ -75,6 +75,28 @@ protected:
   virtual SVal evalCastFromNonLoc(NonLoc val, QualType castTy) = 0;
   virtual SVal evalCastFromLoc(Loc val, QualType castTy) = 0;
 
+  SVal evalCastKind(UndefinedVal V, QualType CastTy, QualType OriginalTy);
+  SVal evalCastKind(UnknownVal V, QualType CastTy, QualType OriginalTy);
+  SVal evalCastKind(Loc V, QualType CastTy, QualType OriginalTy);
+  SVal evalCastKind(NonLoc V, QualType CastTy, QualType OriginalTy);
+  SVal evalCastSubKind(loc::ConcreteInt V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(loc::GotoLabel V, QualType CastTy, QualType OriginalTy);
+  SVal evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::CompoundVal V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::ConcreteInt V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::LazyCompoundVal V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
+                       QualType OriginalTy);
+  SVal evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
+                       QualType OriginalTy);
+
 public:
   // FIXME: Make these protected again once RegionStoreManager correctly
   // handles loads from different bound value types.
@@ -102,7 +124,7 @@ public:
              Ty2->isIntegralOrEnumerationType()));
   }
 
-  SVal evalCast(SVal val, QualType castTy, QualType originalType);
+  SVal evalCast(SVal V, QualType CastTy, QualType OriginalTy);
 
   // Handles casts of type CK_IntegralCast.
   SVal evalIntegralCast(ProgramStateRef state, SVal val, QualType castTy,

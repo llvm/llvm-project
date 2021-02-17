@@ -110,6 +110,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_emit_obj:
       opts.programAction_ = EmitObj;
       break;
+    case clang::driver::options::OPT_fdebug_unparse:
+      opts.programAction_ = DebugUnparse;
+      break;
+    case clang::driver::options::OPT_fdebug_unparse_with_symbols:
+      opts.programAction_ = DebugUnparseWithSymbols;
+      break;
 
       // TODO:
       // case calng::driver::options::OPT_emit_llvm:
@@ -206,6 +212,49 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
   }
   if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
     opts.features_.Enable(Fortran::common::LanguageFeature::OpenMP);
+  }
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_fimplicit_none,
+              clang::driver::options::OPT_fno_implicit_none)) {
+    opts.features_.Enable(
+        Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
+        arg->getOption().matches(clang::driver::options::OPT_fimplicit_none));
+  }
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_fbackslash,
+              clang::driver::options::OPT_fno_backslash)) {
+    opts.features_.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
+        arg->getOption().matches(clang::driver::options::OPT_fbackslash));
+  }
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_flogical_abbreviations,
+              clang::driver::options::OPT_fno_logical_abbreviations)) {
+    opts.features_.Enable(
+        Fortran::common::LanguageFeature::LogicalAbbreviations,
+        arg->getOption().matches(
+            clang::driver::options::OPT_flogical_abbreviations));
+  }
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_fxor_operator,
+              clang::driver::options::OPT_fno_xor_operator)) {
+    opts.features_.Enable(Fortran::common::LanguageFeature::XOROperator,
+        arg->getOption().matches(clang::driver::options::OPT_fxor_operator));
+  }
+  if (args.hasArg(
+          clang::driver::options::OPT_falternative_parameter_statement)) {
+    opts.features_.Enable(Fortran::common::LanguageFeature::OldStyleParameter);
+  }
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_finput_charset_EQ)) {
+    llvm::StringRef argValue = arg->getValue();
+    if (argValue == "utf-8") {
+      opts.encoding_ = Fortran::parser::Encoding::UTF_8;
+    } else if (argValue == "latin-1") {
+      opts.encoding_ = Fortran::parser::Encoding::LATIN_1;
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << argValue;
+    }
   }
   return dashX;
 }
@@ -370,6 +419,7 @@ void CompilerInvocation::setFortranOpts() {
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns_;
 
   fortranOptions.features = frontendOptions.features_;
+  fortranOptions.encoding = frontendOptions.encoding_;
 
   collectMacroDefinitions(preprocessorOptions, fortranOptions);
 

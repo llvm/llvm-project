@@ -248,7 +248,7 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Treat backslashes as regular characters
-  for (auto Arg : Args.filtered(options::OPT_fnobackslash, options::OPT_Mbackslash)) {
+  for (auto Arg : Args.filtered(options::OPT_fno_backslash, options::OPT_Mbackslash)) {
     Arg->claim();
     CommonCmdArgs.push_back("-x");
     CommonCmdArgs.push_back("124");

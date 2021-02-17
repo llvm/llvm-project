@@ -583,8 +583,10 @@ def Vector_ExtractMapOp :
 }
 
 def Vector_FMAOp :
-  Op<Vector_Dialect, "fma", [NoSideEffect,
-                             AllTypesMatch<["lhs", "rhs", "acc", "result"]>]>,
+  Op<Vector_Dialect, "fma", [
+       NoSideEffect, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
+       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+     ]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyVector:$acc)>,
     Results<(outs AnyVector:$result)> {
   let summary = "vector fused multiply-add";

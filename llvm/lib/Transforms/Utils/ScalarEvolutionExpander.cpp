@@ -2179,13 +2179,13 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
   return None;
 }
 
-template<typename T> static int costAndCollectOperands(
+template<typename T> static InstructionCost costAndCollectOperands(
   const SCEVOperand &WorkItem, const TargetTransformInfo &TTI,
   TargetTransformInfo::TargetCostKind CostKind,
   SmallVectorImpl<SCEVOperand> &Worklist) {
 
   const T *S = cast<T>(WorkItem.S);
-  int Cost = 0;
+  InstructionCost Cost = 0;
   // Object to help map SCEV operands to expanded IR instructions.
   struct OperationIndices {
     OperationIndices(unsigned Opc, size_t min, size_t max) :
@@ -2200,7 +2200,7 @@ template<typename T> static int costAndCollectOperands(
   // we know what the generated user(s) will be.
   SmallVector<OperationIndices, 2> Operations;
 
-  auto CastCost = [&](unsigned Opcode) {
+  auto CastCost = [&](unsigned Opcode) -> InstructionCost {
     Operations.emplace_back(Opcode, 0, 0);
     return TTI.getCastInstrCost(Opcode, S->getType(),
                                 S->getOperand(0)->getType(),
@@ -2208,14 +2208,15 @@ template<typename T> static int costAndCollectOperands(
   };
 
   auto ArithCost = [&](unsigned Opcode, unsigned NumRequired,
-                       unsigned MinIdx = 0, unsigned MaxIdx = 1) {
+                       unsigned MinIdx = 0,
+                       unsigned MaxIdx = 1) -> InstructionCost {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     return NumRequired *
       TTI.getArithmeticInstrCost(Opcode, S->getType(), CostKind);
   };
 
-  auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired,
-                        unsigned MinIdx, unsigned MaxIdx) {
+  auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired, unsigned MinIdx,
+                        unsigned MaxIdx) -> InstructionCost {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
     Type *OpType = S->getOperand(0)->getType();
     return NumRequired * TTI.getCmpSelInstrCost(
@@ -2286,10 +2287,11 @@ template<typename T> static int costAndCollectOperands(
 
     // Much like with normal add expr, the polynominal will require
     // one less addition than the number of it's terms.
-    int AddCost = ArithCost(Instruction::Add, NumTerms - 1,
-                            /*MinIdx*/1, /*MaxIdx*/1);
+    InstructionCost AddCost = ArithCost(Instruction::Add, NumTerms - 1,
+                                        /*MinIdx*/ 1, /*MaxIdx*/ 1);
     // Here, *each* one of those will require a multiplication.
-    int MulCost = ArithCost(Instruction::Mul, NumNonZeroDegreeNonOneTerms);
+    InstructionCost MulCost =
+        ArithCost(Instruction::Mul, NumNonZeroDegreeNonOneTerms);
     Cost = AddCost + MulCost;
 
     // What is the degree of this polynominal?
@@ -2320,10 +2322,10 @@ template<typename T> static int costAndCollectOperands(
 
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEVOperand &WorkItem, Loop *L, const Instruction &At,
-    int &BudgetRemaining, const TargetTransformInfo &TTI,
+    InstructionCost &Cost, unsigned Budget, const TargetTransformInfo &TTI,
     SmallPtrSetImpl<const SCEV *> &Processed,
     SmallVectorImpl<SCEVOperand> &Worklist) {
-  if (BudgetRemaining < 0)
+  if (Cost > Budget)
     return true; // Already run out of budget, give up.
 
   const SCEV *S = WorkItem.S;
@@ -2353,17 +2355,16 @@ bool SCEVExpander::isHighCostExpansionHelper(
       return 0;
     const APInt &Imm = cast<SCEVConstant>(S)->getAPInt();
     Type *Ty = S->getType();
-    BudgetRemaining -= TTI.getIntImmCostInst(
+    Cost += TTI.getIntImmCostInst(
         WorkItem.ParentOpcode, WorkItem.OperandIdx, Imm, Ty, CostKind);
-    return BudgetRemaining < 0;
+    return Cost > Budget;
   }
   case scTruncate:
   case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
-    int Cost =
+    Cost +=
         costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
-    BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
   }
   case scUDivExpr: {
@@ -2379,10 +2380,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
             SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), &At, L))
       return false; // Consider it to be free.
 
-    int Cost =
+    Cost +=
         costAndCollectOperands<SCEVUDivExpr>(WorkItem, TTI, CostKind, Worklist);
-    // Need to count the cost of this UDiv.
-    BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
   }
   case scAddExpr:
@@ -2395,17 +2394,16 @@ bool SCEVExpander::isHighCostExpansionHelper(
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.
-    int Cost =
+    Cost +=
         costAndCollectOperands<SCEVNAryExpr>(WorkItem, TTI, CostKind, Worklist);
-    BudgetRemaining -= Cost;
-    return BudgetRemaining < 0;
+    return Cost > Budget;
   }
   case scAddRecExpr: {
     assert(cast<SCEVAddRecExpr>(S)->getNumOperands() >= 2 &&
            "Polynomial should be at least linear");
-    BudgetRemaining -= costAndCollectOperands<SCEVAddRecExpr>(
+    Cost += costAndCollectOperands<SCEVAddRecExpr>(
         WorkItem, TTI, CostKind, Worklist);
-    return BudgetRemaining < 0;
+    return Cost > Budget;
   }
   }
   llvm_unreachable("Unknown SCEV kind!");

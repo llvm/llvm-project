@@ -1509,6 +1509,17 @@ void CompilerInvocation::GenerateCodeGenArgs(
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Args, OPT_Qn, SA);
+
+  switch (Opts.FiniteLoops) {
+  case CodeGenOptions::FiniteLoopsKind::Language:
+    break;
+  case CodeGenOptions::FiniteLoopsKind::Always:
+    GenerateArg(Args, OPT_ffinite_loops, SA);
+    break;
+  case CodeGenOptions::FiniteLoopsKind::Never:
+    GenerateArg(Args, OPT_fno_finite_loops, SA);
+    break;
+  }
 }
 
 bool CompilerInvocation::ParseCodeGenArgsImpl(CodeGenOptions &Opts,

@@ -69,9 +69,8 @@ const TargetInfo::RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
       {"ADDEND", B(ADDEND)},
 #undef B
   }};
-  assert(type >= 0 && type < relocAttrsArray.size() &&
-         "invalid relocation type");
-  if (type < 0 || type >= relocAttrsArray.size())
+  assert(type < relocAttrsArray.size() && "invalid relocation type");
+  if (type >= relocAttrsArray.size())
     return TargetInfo::invalidRelocAttrs;
   return relocAttrsArray[type];
 }

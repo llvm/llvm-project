@@ -31,6 +31,7 @@
 #include "Features.inc"
 #include "TidyProvider.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "support/Trace.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -101,9 +102,11 @@ struct FragmentCompiler {
   // Normalized Fragment::SourceInfo::Directory.
   std::string FragmentDirectory;
 
-  llvm::Optional<llvm::Regex> compileRegex(const Located<std::string> &Text) {
+  llvm::Optional<llvm::Regex>
+  compileRegex(const Located<std::string> &Text,
+               llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags) {
     std::string Anchored = "^(" + *Text + ")$";
-    llvm::Regex Result(Anchored);
+    llvm::Regex Result(Anchored, Flags);
     std::string RegexError;
     if (!Result.isValid(RegexError)) {
       diag(Error, "Invalid regex " + Anchored + ": " + RegexError, Text.Range);
@@ -195,9 +198,15 @@ struct FragmentCompiler {
     if (F.HasUnrecognizedCondition)
       Out.Conditions.push_back([&](const Params &) { return false; });
 
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+    llvm::Regex::RegexFlags Flags = llvm::Regex::IgnoreCase;
+#else
+    llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
+#endif
+
     auto PathMatch = std::make_unique<std::vector<llvm::Regex>>();
     for (auto &Entry : F.PathMatch) {
-      if (auto RE = compileRegex(Entry))
+      if (auto RE = compileRegex(Entry, Flags))
         PathMatch->push_back(std::move(*RE));
     }
     if (!PathMatch->empty()) {
@@ -218,7 +227,7 @@ struct FragmentCompiler {
 
     auto PathExclude = std::make_unique<std::vector<llvm::Regex>>();
     for (auto &Entry : F.PathExclude) {
-      if (auto RE = compileRegex(Entry))
+      if (auto RE = compileRegex(Entry, Flags))
         PathExclude->push_back(std::move(*RE));
     }
     if (!PathExclude->empty()) {
@@ -349,7 +358,8 @@ struct FragmentCompiler {
       return;
     Spec.MountPoint = std::move(*AbsPath);
     Out.Apply.push_back([Spec(std::move(Spec))](const Params &P, Config &C) {
-      if (!P.Path.startswith(Spec.MountPoint))
+      if (P.Path.empty() || !pathStartsWith(Spec.MountPoint, P.Path,
+                                            llvm::sys::path::Style::posix))
         return;
       C.Index.External = Spec;
       // Disable background indexing for the files under the mountpoint.

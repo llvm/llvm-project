@@ -419,7 +419,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               unsigned Flags, SectionKind K,
                                               unsigned EntrySize,
                                               const MCSymbolELF *Group,
-                                              unsigned UniqueID,
+                                              bool Comdat, unsigned UniqueID,
                                               const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *R;
   MCSymbol *&Sym = Symbols[Section];
@@ -439,8 +439,9 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   R->setBinding(ELF::STB_LOCAL);
   R->setType(ELF::STT_SECTION);
 
-  auto *Ret = new (ELFAllocator.Allocate()) MCSectionELF(
-      Section, Type, Flags, K, EntrySize, Group, UniqueID, R, LinkedToSym);
+  auto *Ret = new (ELFAllocator.Allocate())
+      MCSectionELF(Section, Type, Flags, K, EntrySize, Group, Comdat, UniqueID,
+                   R, LinkedToSym);
 
   auto *F = new MCDataFragment();
   Ret->getFragmentList().insert(Ret->begin(), F);
@@ -461,32 +462,34 @@ MCSectionELF *MCContext::createELFRelSection(const Twine &Name, unsigned Type,
 
   return createELFSectionImpl(
       I->getKey(), Type, Flags, SectionKind::getReadOnly(), EntrySize, Group,
-      true, cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
+      true, true, cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
                                             const Twine &Suffix, unsigned Type,
                                             unsigned Flags,
                                             unsigned EntrySize) {
-  return getELFSection(Prefix + "." + Suffix, Type, Flags, EntrySize, Suffix);
+  return getELFSection(Prefix + "." + Suffix, Type, Flags, EntrySize, Suffix,
+                       /*IsComdat=*/true);
 }
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, unsigned UniqueID,
+                                       const Twine &Group, bool IsComdat,
+                                       unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
 
-  return getELFSection(Section, Type, Flags, EntrySize, GroupSym, UniqueID,
-                       LinkedToSym);
+  return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
+                       UniqueID, LinkedToSym);
 }
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const MCSymbolELF *GroupSym,
-                                       unsigned UniqueID,
+                                       bool IsComdat, unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym) {
   StringRef Group = "";
   if (GroupSym)
@@ -513,7 +516,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
 
   MCSectionELF *Result =
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
-                           UniqueID, LinkedToSym);
+                           IsComdat, UniqueID, LinkedToSym);
   Entry.second = Result;
 
   recordELFMergeableSectionInfo(Result->getName(), Result->getFlags(),
@@ -522,9 +525,10 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   return Result;
 }
 
-MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group) {
+MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group,
+                                               bool IsComdat) {
   return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
-                              SectionKind::getReadOnly(), 4, Group,
+                              SectionKind::getReadOnly(), 4, Group, IsComdat,
                               MCSection::NonUniqueID, nullptr);
 }
 

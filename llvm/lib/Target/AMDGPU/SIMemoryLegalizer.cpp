@@ -1407,7 +1407,7 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
         MOI.getFailureOrdering() == AtomicOrdering::Acquire ||
         MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent) {
       Changed |= CC->insertWait(MI, MOI.getScope(),
-                                MOI.getOrderingAddrSpace(),
+                                MOI.getInstrAddrSpace(),
                                 isAtomicRet(*MI) ? SIMemOp::LOAD :
                                                    SIMemOp::STORE,
                                 MOI.getIsCrossAddressSpaceOrdering(),

@@ -2568,7 +2568,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPScanDirective = 287,
 
-  CXCursor_LastStmt = CXCursor_OMPScanDirective,
+  /** OpenMP tile directive.
+   */
+  CXCursor_OMPTileDirective = 288,
+
+  CXCursor_LastStmt = CXCursor_OMPTileDirective,
 
   /**
    * Cursor that represents the translation unit itself.

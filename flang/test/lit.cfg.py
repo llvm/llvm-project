@@ -74,8 +74,13 @@ tools = [
 if config.include_flang_new_driver_test:
    tools.append(ToolSubst('%flang-new', command=FindTool('flang-new'), unresolved='fatal'))
    tools.append(ToolSubst('%flang', command=FindTool('flang-new'), unresolved='fatal'))
+   tools.append(ToolSubst('%flang_fc1', command=FindTool('flang-new'),
+    extra_args=['-fc1'], unresolved='fatal'))
 else:
    tools.append(ToolSubst('%flang', command=FindTool('f18'),
+    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
+    unresolved='fatal'))
+   tools.append(ToolSubst('%flang_fc1', command=FindTool('f18'),
     extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal'))
 

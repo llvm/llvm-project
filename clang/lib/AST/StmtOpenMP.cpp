@@ -74,8 +74,9 @@ Stmt *OMPExecutableDirective::getStructuredBlock() {
   return getRawStmt();
 }
 
-Stmt *OMPLoopDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
-                                               bool TryImperfectlyNestedLoops) {
+Stmt *
+OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
+                                              bool TryImperfectlyNestedLoops) {
   Stmt *OrigStmt = CurStmt;
   CurStmt = CurStmt->IgnoreContainers();
   // Additional work for imperfectly nested loops, introduced in OpenMP 5.0.
@@ -91,7 +92,8 @@ Stmt *OMPLoopDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
         for (Stmt *S : CS->body()) {
           if (!S)
             continue;
-          if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S)) {
+          if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S) ||
+              (isa<OMPLoopBasedDirective>(S) && !isa<OMPLoopDirective>(S))) {
             // Only single loop construct is allowed.
             if (CurStmt) {
               CurStmt = OrigStmt;
@@ -118,75 +120,110 @@ Stmt *OMPLoopDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
   return CurStmt;
 }
 
+bool OMPLoopBasedDirective::doForAllLoops(
+    Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
+    llvm::function_ref<bool(unsigned, Stmt *)> Callback) {
+  CurStmt = CurStmt->IgnoreContainers();
+  for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
+    if (auto *Dir = dyn_cast<OMPTileDirective>(CurStmt))
+      CurStmt = Dir->getTransformedStmt();
+    if (Callback(Cnt, CurStmt))
+      return false;
+    // Move on to the next nested for loop, or to the loop body.
+    // OpenMP [2.8.1, simd construct, Restrictions]
+    // All loops associated with the construct must be perfectly nested; that
+    // is, there must be no intervening code nor any OpenMP directive between
+    // any two loops.
+    if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
+      CurStmt = For->getBody();
+    } else {
+      assert(isa<CXXForRangeStmt>(CurStmt) &&
+             "Expected canonical for or range-based for loops.");
+      CurStmt = cast<CXXForRangeStmt>(CurStmt)->getBody();
+    }
+    CurStmt = OMPLoopBasedDirective::tryToFindNextInnerLoop(
+        CurStmt, TryImperfectlyNestedLoops);
+  }
+  return true;
+}
+
+void OMPLoopBasedDirective::doForAllLoopsBodies(
+    Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
+    llvm::function_ref<void(unsigned, Stmt *, Stmt *)> Callback) {
+  bool Res = OMPLoopBasedDirective::doForAllLoops(
+      CurStmt, TryImperfectlyNestedLoops, NumLoops,
+      [Callback](unsigned Cnt, Stmt *Loop) {
+        Stmt *Body = nullptr;
+        if (auto *For = dyn_cast<ForStmt>(Loop)) {
+          Body = For->getBody();
+        } else {
+          assert(isa<CXXForRangeStmt>(Loop) &&
+                 "Expected canonical for or range-based for loops.");
+          Body = cast<CXXForRangeStmt>(Loop)->getBody();
+        }
+        Callback(Cnt, Loop, Body);
+        return false;
+      });
+  assert(Res && "Expected only loops");
+  (void)Res;
+}
+
 Stmt *OMPLoopDirective::getBody() {
   // This relies on the loop form is already checked by Sema.
-  Stmt *Body = Data->getRawStmt()->IgnoreContainers();
-  if (auto *For = dyn_cast<ForStmt>(Body)) {
-    Body = For->getBody();
-  } else {
-    assert(isa<CXXForRangeStmt>(Body) &&
-           "Expected canonical for loop or range-based for loop.");
-    Body = cast<CXXForRangeStmt>(Body)->getBody();
-  }
-  for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
-    Body = tryToFindNextInnerLoop(Body, /*TryImperfectlyNestedLoops=*/true);
-    if (auto *For = dyn_cast<ForStmt>(Body)) {
-      Body = For->getBody();
-    } else {
-      assert(isa<CXXForRangeStmt>(Body) &&
-             "Expected canonical for loop or range-based for loop.");
-      Body = cast<CXXForRangeStmt>(Body)->getBody();
-    }
-  }
+  Stmt *Body = nullptr;
+  OMPLoopBasedDirective::doForAllLoopsBodies(
+      Data->getRawStmt(), /*TryImperfectlyNestedLoops=*/true,
+      NumAssociatedLoops,
+      [&Body](unsigned, Stmt *, Stmt *BodyStmt) { Body = BodyStmt; });
   return Body;
 }
 
 void OMPLoopDirective::setCounters(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of loop counters is not the same as the collapsed number");
   llvm::copy(A, getCounters().begin());
 }
 
 void OMPLoopDirective::setPrivateCounters(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() && "Number of loop private counters "
-                                             "is not the same as the collapsed "
-                                             "number");
+  assert(A.size() == getLoopsNumber() && "Number of loop private counters "
+                                         "is not the same as the collapsed "
+                                         "number");
   llvm::copy(A, getPrivateCounters().begin());
 }
 
 void OMPLoopDirective::setInits(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of counter inits is not the same as the collapsed number");
   llvm::copy(A, getInits().begin());
 }
 
 void OMPLoopDirective::setUpdates(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of counter updates is not the same as the collapsed number");
   llvm::copy(A, getUpdates().begin());
 }
 
 void OMPLoopDirective::setFinals(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of counter finals is not the same as the collapsed number");
   llvm::copy(A, getFinals().begin());
 }
 
 void OMPLoopDirective::setDependentCounters(ArrayRef<Expr *> A) {
   assert(
-      A.size() == getCollapsedNumber() &&
+      A.size() == getLoopsNumber() &&
       "Number of dependent counters is not the same as the collapsed number");
   llvm::copy(A, getDependentCounters().begin());
 }
 
 void OMPLoopDirective::setDependentInits(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of dependent inits is not the same as the collapsed number");
   llvm::copy(A, getDependentInits().begin());
 }
 
 void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
-  assert(A.size() == getCollapsedNumber() &&
+  assert(A.size() == getLoopsNumber() &&
          "Number of finals conditions is not the same as the collapsed number");
   llvm::copy(A, getFinalsConditions().begin());
 }
@@ -289,6 +326,27 @@ OMPForDirective *OMPForDirective::CreateEmpty(const ASTContext &C,
   return createEmptyDirective<OMPForDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true,
       numLoopChildren(CollapsedNum, OMPD_for) + 1, CollapsedNum);
+}
+
+OMPTileDirective *
+OMPTileDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                         SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                         unsigned NumLoops, Stmt *AssociatedStmt,
+                         Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPTileDirective *Dir = createDirective<OMPTileDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
+                                                unsigned NumClauses,
+                                                unsigned NumLoops) {
+  return createEmptyDirective<OMPTileDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPForSimdDirective *

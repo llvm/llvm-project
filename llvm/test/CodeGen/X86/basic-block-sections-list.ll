@@ -1,7 +1,7 @@
 ; Check the basic block sections list option.
 ; RUN: echo '!_Z3foob' > %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names -split-machine-functions | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-FUNCTION-SECTION
+;  llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS --check-prefix=LINUX-SECTIONS-NO-FUNCTION-SECTION
 
 define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
@@ -67,7 +67,8 @@ define i32 @_Z3zipb(i1 zeroext %0) nounwind {
 ; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.__part.3,"ax",@progbits
 ; LINUX-SECTIONS: _Z3foob.__part.3:
 
-; LINUX-SECTIONS: .section        .text._Z3zipb,"ax",@progbits
+; LINUX-SECTIONS-FUNCTION-SECTION: .section        .text._Z3zipb,"ax",@progbits
+; LINUX-SECIONS-NO-FUNCTION-SECTION-NOT: .section        .text._Z3zipb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3zipb:
 ; LINUX-SECTIONS-NOT: .section        .text._Z3zipb._Z3zipb.__part.{{[0-9]+}},"ax",@progbits
 ; LINUX-SECTIONS-NOT: _Z3zipb.__part.{{[0-9]+}}:

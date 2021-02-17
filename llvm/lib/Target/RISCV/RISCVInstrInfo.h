@@ -140,6 +140,10 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
+  Register getVLENFactoredAmount(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator II,
+                                 int64_t Amount) const;
+
 protected:
   const RISCVSubtarget &STI;
 };

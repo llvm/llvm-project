@@ -1,4 +1,4 @@
-! RUN: %f18 -fsyntax-only -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
+! RUN: %f18 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
 ! Ensure that READ(CVAR) [, item-list] is corrected when CVAR is a
 ! character variable so as to be a formatted read from the default
 ! unit, not an unformatted read from an internal unit (which is not

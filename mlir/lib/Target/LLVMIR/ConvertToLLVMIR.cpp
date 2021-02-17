@@ -35,18 +35,6 @@
 
 using namespace mlir;
 
-std::unique_ptr<llvm::Module>
-mlir::translateModuleToLLVMIR(Operation *op, llvm::LLVMContext &llvmContext,
-                              StringRef name) {
-  auto llvmModule =
-      LLVM::ModuleTranslation::translateModule<>(op, llvmContext, name);
-  if (!llvmModule)
-    emitError(op->getLoc(), "Fail to convert MLIR to LLVM IR");
-  else if (verifyModule(*llvmModule))
-    emitError(op->getLoc(), "LLVM IR fails to verify");
-  return llvmModule;
-}
-
 void mlir::registerLLVMDialectTranslation(DialectRegistry &registry) {
   registry.insert<LLVM::LLVMDialect>();
   registry.addDialectInterface<LLVM::LLVMDialect,
@@ -71,8 +59,7 @@ void registerToLLVMIRTranslation() {
       "mlir-to-llvmir",
       [](ModuleOp module, raw_ostream &output) {
         llvm::LLVMContext llvmContext;
-        auto llvmModule = LLVM::ModuleTranslation::translateModule<>(
-            module, llvmContext, "LLVMDialectModule");
+        auto llvmModule = translateModuleToLLVMIR(module, llvmContext);
         if (!llvmModule)
           return failure();
 

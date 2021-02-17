@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols -fsyntax-only %s | FileCheck %s
+!RUN: %f18 -fdebug-dump-symbols %s | FileCheck %s
 
 program p
   ! CHECK: a size=4 offset=0: ObjectEntity type: LOGICAL(4)

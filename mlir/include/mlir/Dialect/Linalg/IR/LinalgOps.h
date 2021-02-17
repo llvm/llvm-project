@@ -107,6 +107,13 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 void getDimsOfType(Operation *op, StringRef iteratorTypeName,
                    SmallVectorImpl<AffineExpr> &res);
 
+/// For reshape operation, compute the shape of the output based on the result
+/// type and shape of the input.
+SmallVector<Value, 4>
+getReshapeOutputShapeFromInputShape(OpBuilder &b, Location loc, Value src,
+                                    ArrayRef<int64_t> dstStaticShape,
+                                    ArrayRef<AffineMap> reassociation);
+
 namespace detail {
 LogicalResult verifyStructuredOpInterface(Operation *op);
 } // namespace detail

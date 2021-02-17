@@ -75,6 +75,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
       Ingredient->eraseFromParent();
+      Plan->removeVPValueFor(Inst);
+      for (auto *Def : NewRecipe->definedValues()) {
+        Plan->addVPValue(Inst, Def);
+      }
     }
   }
 }

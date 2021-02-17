@@ -1259,6 +1259,14 @@ AffineMap calculateImplicitMap(MapOp op) {
 AffineMap ExtractMapOp::map() { return calculateImplicitMap(*this); }
 
 //===----------------------------------------------------------------------===//
+// FmaOp
+//===----------------------------------------------------------------------===//
+
+Optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
@@ -2456,8 +2464,7 @@ OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
 }
 
 Optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
-  auto s = getVectorType().getShape();
-  return SmallVector<int64_t, 4>{s.begin(), s.end()};
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 void TransferReadOp::getEffects(

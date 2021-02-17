@@ -372,5 +372,32 @@ define <vscale x 4 x float> @splat_nxv4f32_fold(<vscale x 4 x float> %x) {
   ret <vscale x 4 x float> %r
 }
 
+define <vscale x 2 x float> @splat_nxv2f32_fmov_fold() {
+; CHECK-LABEL: splat_nxv2f32_fmov_fold
+; CHECK: mov w8, #1109917696
+; CHECK-NEXT: mov z0.s, w8
+  %1 = insertelement <vscale x 2 x float> undef, float 4.200000e+01, i32 0
+  %2 = shufflevector <vscale x 2 x float> %1, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x float> %2
+}
+
+define <vscale x 4 x float> @splat_nxv4f32_fmov_fold() {
+; CHECK-LABEL: splat_nxv4f32_fmov_fold
+; CHECK: mov w8, #1109917696
+; CHECK-NEXT: mov z0.s, w8
+  %1 = insertelement <vscale x 4 x float> undef, float 4.200000e+01, i32 0
+  %2 = shufflevector <vscale x 4 x float> %1, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x float> %2
+}
+
+define <vscale x 2 x double> @splat_nxv2f64_fmov_fold() {
+; CHECK-LABEL: splat_nxv2f64_fmov_fold
+; CHECK: mov x8, #4631107791820423168
+; CHECK-NEXT: mov z0.d, x8
+  %1 = insertelement <vscale x 2 x double> undef, double 4.200000e+01, i32 0
+  %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x double> %2
+}
+
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+sve,+bf16" }

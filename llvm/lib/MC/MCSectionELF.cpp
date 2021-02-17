@@ -171,8 +171,9 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
   if (Flags & ELF::SHF_GROUP) {
     OS << ",";
-    printName(OS, Group->getName());
-    OS << ",comdat";
+    printName(OS, Group.getPointer()->getName());
+    if (isComdat())
+      OS << ",comdat";
   }
 
   if (Flags & ELF::SHF_LINK_ORDER) {

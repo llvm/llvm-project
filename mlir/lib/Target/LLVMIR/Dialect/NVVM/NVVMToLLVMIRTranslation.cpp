@@ -47,10 +47,7 @@ LogicalResult mlir::NVVMDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   if (attribute.first == NVVM::NVVMDialect::getKernelFuncAttrName()) {
-    auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
-    if (!func)
-      return failure();
-
+    auto func = cast<LLVM::LLVMFuncOp>(op);
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
     llvm::Metadata *llvmMetadata[] = {

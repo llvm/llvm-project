@@ -516,8 +516,8 @@ struct LoopInterchange {
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
     // Move the selected loop outwards to the best possible position.
     for (unsigned i = SelecLoopId; i > 0; i--) {
-      bool Interchanged =
-          processLoop(LoopList, i, i - 1, LoopNestExit, DependencyMatrix);
+      bool Interchanged = processLoop(LoopList[i], LoopList[i - 1], i, i - 1,
+                                      LoopNestExit, DependencyMatrix);
       if (!Interchanged)
         return Changed;
       // Loops interchanged reflect the same in LoopList
@@ -534,13 +534,11 @@ struct LoopInterchange {
     return Changed;
   }
 
-  bool processLoop(LoopVector LoopList, unsigned InnerLoopId,
+  bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
                    unsigned OuterLoopId, BasicBlock *LoopNestExit,
                    std::vector<std::vector<char>> &DependencyMatrix) {
-    LLVM_DEBUG(dbgs() << "Processing Inner Loop Id = " << InnerLoopId
+    LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    Loop *InnerLoop = LoopList[InnerLoopId];
-    Loop *OuterLoop = LoopList[OuterLoopId];
 
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {

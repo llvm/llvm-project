@@ -127,7 +127,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : CDB(CDB), TFS(TFS),
+    : Modules(Opts.Modules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       WorkspaceRoot(Opts.WorkspaceRoot),
@@ -167,6 +167,16 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   }
   if (DynamicIdx)
     AddIndex(DynamicIdx.get());
+
+  if (Opts.Modules) {
+    Module::Facilities F{
+        this->WorkScheduler,
+        this->Index,
+        this->TFS,
+    };
+    for (auto &Mod : *Opts.Modules)
+      Mod.initialize(F);
+  }
 }
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
