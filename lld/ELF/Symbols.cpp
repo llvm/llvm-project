@@ -698,7 +698,7 @@ static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
 
 template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
   // For common objects, we want to look for global or weak definitions that
-  // should be fetched as the cannonical definition instead.
+  // should be fetched as the canonical definition instead.
   if (isCommon() && elf::config->fortranCommon) {
     if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
       ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
