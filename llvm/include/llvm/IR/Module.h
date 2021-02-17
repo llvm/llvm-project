@@ -805,6 +805,9 @@ public:
   /// Returns the Dwarf Version by checking module flags.
   unsigned getDwarfVersion() const;
 
+  /// Returns the DWARF format by checking module flags.
+  bool isDwarf64() const;
+
   /// Returns the CodeView Version by checking module flags.
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
