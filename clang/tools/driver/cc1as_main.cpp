@@ -91,6 +91,7 @@ struct AssemblerInvocation {
   unsigned SaveTemporaryLabels : 1;
   unsigned GenDwarfForAssembly : 1;
   unsigned RelaxELFRelocations : 1;
+  unsigned Dwarf64 : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
   std::string DwarfDebugProducer;
@@ -160,6 +161,7 @@ public:
     FatalWarnings = 0;
     NoWarn = 0;
     IncrementalLinkerCompatible = 0;
+    Dwarf64 = 0;
     DwarfVersion = 0;
     EmbedBitcode = 0;
   }
@@ -231,6 +233,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   }
 
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
+  if (auto *DwarfFormatArg = Args.getLastArg(OPT_gdwarf64, OPT_gdwarf32))
+    Opts.Dwarf64 = DwarfFormatArg->getOption().matches(OPT_gdwarf64);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags =
       std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
@@ -417,6 +421,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
       Ctx.addDebugPrefixMapEntry(KV.first, KV.second);
   if (!Opts.MainFileName.empty())
     Ctx.setMainFileName(StringRef(Opts.MainFileName));
+  Ctx.setDwarfFormat(Opts.Dwarf64 ? dwarf::DWARF64 : dwarf::DWARF32);
   Ctx.setDwarfVersion(Opts.DwarfVersion);
   if (Opts.GenDwarfForAssembly)
     Ctx.setGenDwarfRootFile(Opts.InputFile,

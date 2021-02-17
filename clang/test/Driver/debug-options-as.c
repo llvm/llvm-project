@@ -32,3 +32,31 @@
 //
 // P: "-cc1as"
 // P: "-dwarf-debug-producer"
+
+// Check that -gdwarf64 is passed to cc1as.
+// RUN: %clang -### -c -gdwarf64 -gdwarf-5 -target x86_64 -integrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf64 -gdwarf-4 -target x86_64 -integrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf64 -gdwarf-3 -target x86_64 -integrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_ON %s
+// GDWARF64_ON: "-cc1as"
+// GDWARF64_ON: "-gdwarf64"
+
+// Check that -gdwarf64 can be reverted with -gdwarf32.
+// RUN: %clang -### -c -gdwarf64 -gdwarf32 -gdwarf-4 -target x86_64 -integrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_OFF %s
+// GDWARF64_OFF: "-cc1as"
+// GDWARF64_OFF-NOT: "-gdwarf64"
+
+// Check that an error is reported if -gdwarf64 cannot be used.
+// RUN: %clang -### -c -gdwarf64 -gdwarf-2 -target x86_64 -integrated-as -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_VER %s
+// RUN: %clang -### -c -gdwarf64 -gdwarf-4 -target i386-linux-gnu %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_32ARCH %s
+// RUN: %clang -### -c -gdwarf64 -gdwarf-4 -target x86_64-apple-darwin %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=GDWARF64_ELF %s
+//
+// GDWARF64_VER:  error: invalid argument '-gdwarf64' only allowed with 'DWARFv3 or greater'
+// GDWARF64_32ARCH: error: invalid argument '-gdwarf64' only allowed with '64 bit architecture'
+// GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF platforms'

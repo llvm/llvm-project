@@ -15,12 +15,15 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using testing::ElementsAre;
 using testing::HasSubstr;
+using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
 // JSON-serializable type for testing.
 struct Foo {
   int X;
+  friend bool operator==(Foo A, Foo B) { return A.X == B.X; }
 };
 bool fromJSON(const llvm::json::Value &V, Foo &F, llvm::json::Path P) {
   return fromJSON(V, F.X, P.field("X"));
@@ -35,9 +38,31 @@ capture(llvm::Optional<llvm::Expected<T>> &Out) {
   return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }
 
+struct OutgoingRecorder : public LSPBinder::RawOutgoing {
+  llvm::StringMap<std::vector<llvm::json::Value>> Received;
+
+  void callMethod(llvm::StringRef Method, llvm::json::Value Params,
+                  Callback<llvm::json::Value> Reply) override {
+    Received[Method].push_back(Params);
+    if (Method == "fail")
+      return Reply(error("Params={0}", Params));
+    Reply(Params); // echo back the request
+  }
+  void notify(llvm::StringRef Method, llvm::json::Value Params) override {
+    Received[Method].push_back(std::move(Params));
+  }
+
+  std::vector<llvm::json::Value> take(llvm::StringRef Method) {
+    std::vector<llvm::json::Value> Result = Received.lookup(Method);
+    Received.erase(Method);
+    return Result;
+  }
+};
+
 TEST(LSPBinderTest, IncomingCalls) {
   LSPBinder::RawHandlers RawHandlers;
-  LSPBinder Binder{RawHandlers};
+  OutgoingRecorder RawOutgoing;
+  LSPBinder Binder{RawHandlers, RawOutgoing};
   struct Handler {
     void plusOne(const Foo &Params, Callback<Foo> Reply) {
       Reply(Foo{Params.X + 1});
@@ -94,7 +119,45 @@ TEST(LSPBinderTest, IncomingCalls) {
   RawCmdPlusOne(1, capture(Reply));
   ASSERT_TRUE(Reply.hasValue());
   EXPECT_THAT_EXPECTED(Reply.getValue(), llvm::HasValue(2));
+
+  // None of this generated any outgoing traffic.
+  EXPECT_THAT(RawOutgoing.Received, IsEmpty());
 }
+
+TEST(LSPBinderTest, OutgoingCalls) {
+  LSPBinder::RawHandlers RawHandlers;
+  OutgoingRecorder RawOutgoing;
+  LSPBinder Binder{RawHandlers, RawOutgoing};
+
+  LSPBinder::OutgoingMethod<Foo, Foo> Echo;
+  Echo = Binder.outgoingMethod("echo");
+  LSPBinder::OutgoingMethod<Foo, std::string> WrongSignature;
+  WrongSignature = Binder.outgoingMethod("wrongSignature");
+  LSPBinder::OutgoingMethod<Foo, Foo> Fail;
+  Fail = Binder.outgoingMethod("fail");
+
+  llvm::Optional<llvm::Expected<Foo>> Reply;
+  Echo(Foo{2}, capture(Reply));
+  EXPECT_THAT(RawOutgoing.take("echo"), ElementsAre(llvm::json::Value(2)));
+  ASSERT_TRUE(Reply.hasValue());
+  EXPECT_THAT_EXPECTED(Reply.getValue(), llvm::HasValue(Foo{2}));
+
+  // JSON response is integer, can't be parsed as string.
+  llvm::Optional<llvm::Expected<std::string>> WrongTypeReply;
+  WrongSignature(Foo{2}, capture(WrongTypeReply));
+  EXPECT_THAT(RawOutgoing.take("wrongSignature"),
+              ElementsAre(llvm::json::Value(2)));
+  ASSERT_TRUE(Reply.hasValue());
+  EXPECT_THAT_EXPECTED(WrongTypeReply.getValue(),
+                       llvm::FailedWithMessage(
+                           HasSubstr("failed to decode wrongSignature reply")));
+
+  Fail(Foo{2}, capture(Reply));
+  EXPECT_THAT(RawOutgoing.take("fail"), ElementsAre(llvm::json::Value(2)));
+  ASSERT_TRUE(Reply.hasValue());
+  EXPECT_THAT_EXPECTED(Reply.getValue(), llvm::FailedWithMessage("Params=2"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

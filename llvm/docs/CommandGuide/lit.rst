@@ -154,6 +154,11 @@ EXECUTION OPTIONS
  suite take the most time to execute.  Note that this option is most useful
  with ``-j 1``.
 
+.. option:: --no-indirectly-run-check
+
+ Do not error if a test would not be run if the user had specified the
+ containing directory instead of naming the test directly.
+
 .. _selection-options:
 
 SELECTION OPTIONS
@@ -371,6 +376,11 @@ executed, two important global variables are predefined:
 
  **environment** A dictionary representing the environment to use when executing
  tests in the suite.
+
+ **standalone_tests** When true, mark a directory with tests expected to be run
+ standalone. Test discovery is disabled for that directory and
+ *--no-indirectly-run-check* is in effect. *lit.suffixes* and *lit.excludes*
+ must be empty when this variable is true.
 
  **suffixes** For **lit** test formats which scan directories for tests, this
  variable is a list of suffixes to identify test files.  Used by: *ShTest*.

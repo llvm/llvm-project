@@ -43,8 +43,15 @@ public:
     HandlerMap<void(JSON, Callback<JSON>)> MethodHandlers;
     HandlerMap<void(JSON, Callback<JSON>)> CommandHandlers;
   };
+  class RawOutgoing {
+  public:
+    virtual ~RawOutgoing() = default;
+    virtual void callMethod(llvm::StringRef Method, JSON Params,
+                            Callback<JSON> Reply) = 0;
+    virtual void notify(llvm::StringRef Method, JSON Params) = 0;
+  };
 
-  LSPBinder(RawHandlers &Raw) : Raw(Raw) {}
+  LSPBinder(RawHandlers &Raw, RawOutgoing &Out) : Raw(Raw), Out(Out) {}
 
   /// Bind a handler for an LSP method.
   /// e.g. Bind.method("peek", this, &ThisModule::peek);
@@ -70,14 +77,33 @@ public:
   void command(llvm::StringLiteral Command, ThisT *This,
                void (ThisT::*Handler)(const Param &, Callback<Result>));
 
+  template <typename P, typename R>
+  using OutgoingMethod = llvm::unique_function<void(const P &, Callback<R>)>;
+  /// UntypedOutgoingMethod is convertible to OutgoingMethod<P, R>.
+  class UntypedOutgoingMethod;
+  /// Bind a function object to be used for outgoing method calls.
+  /// e.g. OutgoingMethod<EParams, EResult> Edit = Bind.outgoingMethod("edit");
+  /// EParams must be JSON-serializable, EResult must be parseable.
+  UntypedOutgoingMethod outgoingMethod(llvm::StringLiteral Method);
+
+  template <typename P>
+  using OutgoingNotification = llvm::unique_function<void(const P &)>;
+  /// UntypedOutgoingNotification is convertible to OutgoingNotification<T>.
+  class UntypedOutgoingNotification;
+  /// Bind a function object to be used for outgoing notifications.
+  /// e.g. OutgoingNotification<LogParams> Log = Bind.outgoingMethod("log");
+  /// LogParams must be JSON-serializable.
+  UntypedOutgoingNotification outgoingNotification(llvm::StringLiteral Method);
+
+private:
   // FIXME: remove usage from ClangdLSPServer and make this private.
   template <typename T>
   static llvm::Expected<T> parse(const llvm::json::Value &Raw,
                                  llvm::StringRef PayloadName,
                                  llvm::StringRef PayloadKind);
 
-private:
   RawHandlers &Raw;
+  RawOutgoing &Out;
 };
 
 template <typename T>
@@ -139,6 +165,56 @@ void LSPBinder::command(llvm::StringLiteral Method, ThisT *This,
       return Reply(P.takeError());
     (This->*Handler)(*P, std::move(Reply));
   };
+}
+
+class LSPBinder::UntypedOutgoingNotification {
+  llvm::StringLiteral Method;
+  RawOutgoing *Out;
+  UntypedOutgoingNotification(llvm::StringLiteral Method, RawOutgoing *Out)
+      : Method(Method), Out(Out) {}
+  friend UntypedOutgoingNotification
+      LSPBinder::outgoingNotification(llvm::StringLiteral);
+
+public:
+  template <typename Request> operator OutgoingNotification<Request>() && {
+    return
+        [Method(Method), Out(Out)](Request R) { Out->notify(Method, JSON(R)); };
+  }
+};
+
+inline LSPBinder::UntypedOutgoingNotification
+LSPBinder::outgoingNotification(llvm::StringLiteral Method) {
+  return UntypedOutgoingNotification(Method, &Out);
+}
+
+class LSPBinder::UntypedOutgoingMethod {
+  llvm::StringLiteral Method;
+  RawOutgoing *Out;
+  UntypedOutgoingMethod(llvm::StringLiteral Method, RawOutgoing *Out)
+      : Method(Method), Out(Out) {}
+  friend UntypedOutgoingMethod LSPBinder::outgoingMethod(llvm::StringLiteral);
+
+public:
+  template <typename Request, typename Response>
+  operator OutgoingMethod<Request, Response>() && {
+    return [Method(Method), Out(Out)](Request R, Callback<Response> Reply) {
+      Out->callMethod(
+          Method, JSON(R),
+          // FIXME: why keep ctx alive but not restore it for the callback?
+          [Reply(std::move(Reply)), Ctx(Context::current().clone()),
+           Method](llvm::Expected<JSON> RawRsp) mutable {
+            if (!RawRsp)
+              return Reply(RawRsp.takeError());
+            Reply(LSPBinder::parse<Response>(std::move(*RawRsp), Method,
+                                             "reply"));
+          });
+    };
+  }
+};
+
+inline LSPBinder::UntypedOutgoingMethod
+LSPBinder::outgoingMethod(llvm::StringLiteral Method) {
+  return UntypedOutgoingMethod(Method, &Out);
 }
 
 } // namespace clangd
