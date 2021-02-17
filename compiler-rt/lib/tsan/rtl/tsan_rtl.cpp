@@ -77,12 +77,19 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
   new((void*)hdr) Trace();
   // We are going to use only a small part of the trace with the default
   // value of history_size. However, the constructor writes to the whole trace.
-  // Unmap the unused part.
+  // Release the unused part.
   uptr hdr_end = hdr + sizeof(Trace);
   hdr_end -= sizeof(TraceHeader) * (kTraceParts - TraceParts());
   hdr_end = RoundUp(hdr_end, GetPageSizeCached());
-  if (hdr_end < hdr + sizeof(Trace))
-    UnmapOrDie((void*)hdr_end, hdr + sizeof(Trace) - hdr_end);
+  if (hdr_end < hdr + sizeof(Trace)) {
+    ReleaseMemoryPagesToOS(hdr_end, hdr + sizeof(Trace));
+    uptr unused = hdr + sizeof(Trace) - hdr_end;
+    if (hdr_end != (uptr)MmapFixedNoAccess(hdr_end, unused)) {
+      Report("ThreadSanitizer: failed to mprotect(%p, %p)\n",
+          hdr_end, unused);
+      CHECK("unable to mprotect" && 0);
+    }
+  }
   void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadContext));
   return new(mem) ThreadContext(tid);
 }
