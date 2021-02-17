@@ -744,6 +744,30 @@ func @trunci2(%arg0: i32) -> i16 {
   return %0 : i16
 }
 
+// CHECK-LABEL: @trunc_to_i1
+func @trunc_to_i1(%arg0: i32) -> i1 {
+  // CHECK: %[[MASK:.*]] = spv.constant 1 : i32
+  // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
+  // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : i32
+  // CHECK-DAG: %[[TRUE:.*]] = spv.constant true
+  // CHECK-DAG: %[[FALSE:.*]] = spv.constant false
+  // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : i1, i1
+  %0 = std.trunci %arg0 : i32 to i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @trunc_to_veci1
+func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
+  // CHECK: %[[MASK:.*]] = spv.constant dense<1> : vector<4xi32>
+  // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
+  // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : vector<4xi32>
+  // CHECK-DAG: %[[TRUE:.*]] = spv.constant dense<true> : vector<4xi1>
+  // CHECK-DAG: %[[FALSE:.*]] = spv.constant dense<false> : vector<4xi1>
+  // CHECK: spv.Select %[[IS_ONE]], %[[TRUE]], %[[FALSE]] : vector<4xi1>, vector<4xi1>
+  %0 = std.trunci %arg0 : vector<4xi32> to vector<4xi1>
+  return %0 : vector<4xi1>
+}
+
 // CHECK-LABEL: @fptosi1
 func @fptosi1(%arg0 : f32) -> i32 {
   // CHECK: spv.ConvertFToS %{{.*}} : f32 to i32
