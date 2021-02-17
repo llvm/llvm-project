@@ -2415,6 +2415,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   MachineInstr *CondBr =
     BuildMI(&MBB, DL, get(Opcode))
     .addMBB(TBB);
+  fixImplicitOperands(*CondBr);
   BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
     .addMBB(FBB);
 
