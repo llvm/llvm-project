@@ -139,7 +139,7 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp parallel do  reduction(+:sum)
   !DEF: /dotprod/Block1/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   !REF: /dotprod/Block1/Block1/Block1/i0
-  !DEF: /dotprod/min INTRINSIC (Function) ProcEntity
+  !DEF: /dotprod/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
   !REF: /dotprod/block_size
   !REF: /dotprod/n
   do i=i0,min(i0+block_size, n)
