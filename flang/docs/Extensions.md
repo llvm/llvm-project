@@ -205,3 +205,12 @@ accepted if enabled by command-line options.
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+
+## Standard features not silently accepted
+
+* Fortran explicitly ignores type declaration statements when they
+  attempt to type the name of a generic intrinsic function (8.2 p3).
+  One can declare `CHARACTER::COS` and still get a real result
+  from `COS(3.14159)`, for example.  f18 will complain when a
+  generic intrinsic function's inferred result type does not
+  match an explicit declaration.  This message is a warning.

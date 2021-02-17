@@ -155,11 +155,9 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     bool isElemental, bool thisIsDeferredShape,
     bool thatIsDeferredShape) const {
   if (!type_.IsTkCompatibleWith(that.type_)) {
-    const auto &len{that.LEN()};
     messages.Say(
         "%1$s type '%2$s' is not compatible with %3$s type '%4$s'"_err_en_US,
-        thatIs, that.type_.AsFortran(len ? len->AsFortran() : ""), thisIs,
-        type_.AsFortran(LEN_ ? LEN_->AsFortran() : ""));
+        thatIs, that.AsFortran(), thisIs, AsFortran());
     return false;
   }
   return isElemental ||
@@ -233,6 +231,10 @@ void TypeAndShape::AcquireLEN(const semantics::Symbol &symbol) {
       LEN_ = std::move(*len);
     }
   }
+}
+
+std::string TypeAndShape::AsFortran() const {
+  return type_.AsFortran(LEN_ ? LEN_->AsFortran() : "");
 }
 
 llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
