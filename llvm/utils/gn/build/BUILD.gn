@@ -285,9 +285,14 @@ config("compiler_defaults") {
     }
   }
   if (sysroot != "") {
-    assert(current_os == "win", "FIXME: Make sysroot work on non-win")
-    assert(is_clang, "sysroot only works with clang-cl as host compiler")
-    cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+    assert(current_os != "mac" && current_os != "ios",
+           "FIXME: Make sysroot work on darwin")
+    if (current_os == "win") {
+      assert(is_clang, "sysroot only works with clang-cl as host compiler")
+      cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+    } else {
+      cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+    }
   }
 
   if (use_ubsan) {
