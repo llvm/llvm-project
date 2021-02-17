@@ -1072,12 +1072,18 @@ void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
   SDValue RHS = N->getOperand(1);
   SDValue CI = N->getOperand(2);
 
-  unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::V_ADDC_U32_e64
-                                                 : AMDGPU::V_SUBB_U32_e64;
-  CurDAG->SelectNodeTo(
-      N, Opc, N->getVTList(),
-      {LHS, RHS, CI,
-       CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  if (N->isDivergent()) {
+    unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::V_ADDC_U32_e64
+                                                   : AMDGPU::V_SUBB_U32_e64;
+    CurDAG->SelectNodeTo(
+        N, Opc, N->getVTList(),
+        {LHS, RHS, CI,
+         CurDAG->getTargetConstant(0, {}, MVT::i1) /*clamp bit*/});
+  } else {
+    unsigned Opc = N->getOpcode() == ISD::ADDCARRY ? AMDGPU::S_ADD_CO_PSEUDO
+                                                   : AMDGPU::S_SUB_CO_PSEUDO;
+    CurDAG->SelectNodeTo(N, Opc, N->getVTList(), {LHS, RHS, CI});
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
