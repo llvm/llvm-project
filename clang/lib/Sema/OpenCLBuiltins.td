@@ -178,6 +178,16 @@ class ImageType<Type _Ty, string _AccessQualifier> :
   let AddrSpace = _Ty.AddrSpace;
 }
 
+// OpenCL enum type (e.g. memory_scope).
+class EnumType<string _Name> :
+    Type<_Name, QualType<"getOpenCLEnumType(S, \"" # _Name # "\")", 0>> {
+}
+
+// OpenCL typedef type (e.g. cl_mem_fence_flags).
+class TypedefType<string _Name> :
+    Type<_Name, QualType<"getOpenCLTypedefType(S, \"" # _Name # "\")", 0>> {
+}
+
 // List of Types.
 class TypeList<list<Type> _Type> {
   list<Type> List = _Type;
@@ -299,6 +309,7 @@ def ClkEvent              : Type<"clk_event_t", QualType<"Context.OCLClkEventTy"
 def Event                 : Type<"event_t", QualType<"Context.OCLEventTy">>;
 def Queue                 : Type<"queue_t", QualType<"Context.OCLQueueTy">>;
 def ReserveId             : Type<"reserve_id_t", QualType<"Context.OCLReserveIDTy">>;
+def MemFenceFlags         : TypedefType<"cl_mem_fence_flags">;
 
 // OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
 def AtomicInt             : Type<"atomic_int", QualType<"Context.getAtomicType(Context.IntTy)">>;
@@ -311,6 +322,9 @@ def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"Context.getAtomicT
 def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"Context.getAtomicType(Context.getUIntPtrType())">>;
 def AtomicSize            : Type<"atomic_size_t", QualType<"Context.getAtomicType(Context.getSizeType())">>;
 def AtomicPtrDiff         : Type<"atomic_ptrdiff_t", QualType<"Context.getAtomicType(Context.getPointerDiffType())">>;
+
+def MemoryOrder           : EnumType<"memory_order">;
+def MemoryScope           : EnumType<"memory_scope">;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL gentype variants
@@ -897,6 +911,9 @@ foreach AS = [ConstantAS] in {
   }
 }
 
+// OpenCL v3.0 s6.15.8 - Synchronization Functions.
+def : Builtin<"barrier", [Void, MemFenceFlags], Attr.Convergent>;
+
 //--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.10, v1.2 s6.12.10, v2.0 s6.13.10: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
 // OpenCL Extension v2.0 s5.1.7 and s6.1.7: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
@@ -1028,6 +1045,12 @@ let MinVersion = CL20 in {
       def : Builtin<"atomic_compare_exchange_" # Variant,
           [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
            PointerType<TypePair[1], GenericAS>, TypePair[1]]>;
+      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
+           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder]>;
+      def : Builtin<"atomic_compare_exchange_" # Variant # "_explicit",
+          [Bool, PointerType<VolatileType<TypePair[0]>, GenericAS>,
+           PointerType<TypePair[1], GenericAS>, TypePair[1], MemoryOrder, MemoryOrder, MemoryScope]>;
     }
   }
 
