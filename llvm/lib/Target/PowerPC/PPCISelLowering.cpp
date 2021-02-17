@@ -15154,17 +15154,38 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, &PPC::LRRCRegClass);
   }
 
-  // If we name a VSX register, we can't defer to the base class because it
-  // will not recognize the correct register (their names will be VSL{0-31}
-  // and V{0-31} so they won't match). So we match them here.
-  if (Constraint.size() > 3 && Constraint[1] == 'v' && Constraint[2] == 's') {
-    int VSNum = atoi(Constraint.data() + 3);
-    assert(VSNum >= 0 && VSNum <= 63 &&
-           "Attempted to access a vsr out of range");
-    if (VSNum < 32)
-      return std::make_pair(PPC::VSL0 + VSNum, &PPC::VSRCRegClass);
-    return std::make_pair(PPC::V0 + VSNum - 32, &PPC::VSRCRegClass);
+  // Handle special cases of physical registers that are not properly handled
+  // by the base class.
+  if (Constraint[0] == '{' && Constraint[Constraint.size() - 1] == '}') {
+    // If we name a VSX register, we can't defer to the base class because it
+    // will not recognize the correct register (their names will be VSL{0-31}
+    // and V{0-31} so they won't match). So we match them here.
+    if (Constraint.size() > 3 && Constraint[1] == 'v' && Constraint[2] == 's') {
+      int VSNum = atoi(Constraint.data() + 3);
+      assert(VSNum >= 0 && VSNum <= 63 &&
+             "Attempted to access a vsr out of range");
+      if (VSNum < 32)
+        return std::make_pair(PPC::VSL0 + VSNum, &PPC::VSRCRegClass);
+      return std::make_pair(PPC::V0 + VSNum - 32, &PPC::VSRCRegClass);
+    }
+
+    // For float registers, we can't defer to the base class as it will match
+    // the SPILLTOVSRRC class.
+    if (Constraint.size() > 3 && Constraint[1] == 'f') {
+      int RegNum = atoi(Constraint.data() + 2);
+      if (RegNum > 31 || RegNum < 0)
+        report_fatal_error("Invalid floating point register number");
+      if (VT == MVT::f32 || VT == MVT::i32)
+        return Subtarget.hasSPE()
+                   ? std::make_pair(PPC::R0 + RegNum, &PPC::GPRCRegClass)
+                   : std::make_pair(PPC::F0 + RegNum, &PPC::F4RCRegClass);
+      if (VT == MVT::f64 || VT == MVT::i64)
+        return Subtarget.hasSPE()
+                   ? std::make_pair(PPC::S0 + RegNum, &PPC::SPERCRegClass)
+                   : std::make_pair(PPC::F0 + RegNum, &PPC::F8RCRegClass);
+    }
   }
+
   std::pair<unsigned, const TargetRegisterClass *> R =
       TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 
