@@ -1051,7 +1051,7 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 
   StatT attr_stat;
   error_code mec;
-  auto st = detail::posix_stat(attributes, attr_stat, &mec);
+  file_status st = detail::posix_stat(attributes, attr_stat, &mec);
   if (!status_known(st))
     return err.report(mec);
   if (!is_directory(st))
@@ -1061,16 +1061,14 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
   if (detail::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
 
-  if (errno == EEXIST) {
-    error_code mec = capture_errno();
-    error_code ignored_ec;
-    const file_status st = status(p, ignored_ec);
-    if (!is_directory(st)) {
-      err.report(mec);
-    }
-  } else {
-    err.report(capture_errno());
-  }
+  if (errno != EEXIST)
+    return err.report(capture_errno());
+
+  mec = capture_errno();
+  error_code ignored_ec;
+  st = status(p, ignored_ec);
+  if (!is_directory(st))
+    return err.report(mec);
   return false;
 }
 
