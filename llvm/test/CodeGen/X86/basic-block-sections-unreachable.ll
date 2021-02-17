@@ -13,6 +13,6 @@ target:
 default:
   unreachable
 ; CHECK-NOSECTIONS:     # %bb.2:     # %default
-; CHECK-SECTIONS:       .section .text,"ax",@progbits,unique,2
+; CHECK-SECTIONS:       .section .text.foo,"ax",@progbits,unique,2
 ; CHECK-SECTIONS-NEXT:  foo.__part.2:       # %default
 }

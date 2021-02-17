@@ -380,6 +380,11 @@ MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(
   return nullptr;
 }
 
+MCSection *TargetLoweringObjectFile::getUniqueSectionForFunction(
+    const Function &F, const TargetMachine &TM) const {
+  return nullptr;
+}
+
 /// getTTypeGlobalReference - Return an MCExpr to use for a
 /// reference to the specified global variable from exception
 /// handling information.
