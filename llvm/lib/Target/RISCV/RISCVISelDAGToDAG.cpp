@@ -608,56 +608,45 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     default:
       break;
 
-    case Intrinsic::riscv_vsetvli: {
-      if (!Subtarget->hasStdExtV())
-        break;
-
-      assert(Node->getNumOperands() == 5);
-
-      RISCVVSEW VSEW =
-          static_cast<RISCVVSEW>(Node->getConstantOperandVal(3) & 0x7);
-      RISCVVLMUL VLMul =
-          static_cast<RISCVVLMUL>(Node->getConstantOperandVal(4) & 0x7);
-
-      unsigned VTypeI = RISCVVType::encodeVTYPE(
-          VLMul, VSEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
-      SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
-
-      SDValue VLOperand = Node->getOperand(2);
-      if (auto *C = dyn_cast<ConstantSDNode>(VLOperand)) {
-        uint64_t AVL = C->getZExtValue();
-        if (isUInt<5>(AVL)) {
-          SDValue VLImm = CurDAG->getTargetConstant(AVL, DL, XLenVT);
-          ReplaceNode(Node,
-                      CurDAG->getMachineNode(RISCV::PseudoVSETIVLI, DL, XLenVT,
-                                             MVT::Other, VLImm, VTypeIOp,
-                                             /* Chain */ Node->getOperand(0)));
-          return;
-        }
-      }
-
-      ReplaceNode(Node,
-                  CurDAG->getMachineNode(RISCV::PseudoVSETVLI, DL, XLenVT,
-                                         MVT::Other, VLOperand, VTypeIOp,
-                                         /* Chain */ Node->getOperand(0)));
-      return;
-    }
+    case Intrinsic::riscv_vsetvli:
     case Intrinsic::riscv_vsetvlimax: {
       if (!Subtarget->hasStdExtV())
         break;
 
-      assert(Node->getNumOperands() == 4);
+      bool VLMax = IntNo == Intrinsic::riscv_vsetvlimax;
+      unsigned Offset = VLMax ? 2 : 3;
+
+      assert(Node->getNumOperands() == Offset + 2 &&
+             "Unexpected number of operands");
 
       RISCVVSEW VSEW =
-          static_cast<RISCVVSEW>(Node->getConstantOperandVal(2) & 0x7);
-      RISCVVLMUL VLMul =
-          static_cast<RISCVVLMUL>(Node->getConstantOperandVal(3) & 0x7);
+          static_cast<RISCVVSEW>(Node->getConstantOperandVal(Offset) & 0x7);
+      RISCVVLMUL VLMul = static_cast<RISCVVLMUL>(
+          Node->getConstantOperandVal(Offset + 1) & 0x7);
 
       unsigned VTypeI = RISCVVType::encodeVTYPE(
           VLMul, VSEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
       SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
-      SDValue VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
+      SDValue VLOperand;
+      if (VLMax) {
+        VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
+      } else {
+        VLOperand = Node->getOperand(2);
+
+        if (auto *C = dyn_cast<ConstantSDNode>(VLOperand)) {
+          uint64_t AVL = C->getZExtValue();
+          if (isUInt<5>(AVL)) {
+            SDValue VLImm = CurDAG->getTargetConstant(AVL, DL, XLenVT);
+            ReplaceNode(
+                Node, CurDAG->getMachineNode(RISCV::PseudoVSETIVLI, DL, XLenVT,
+                                             MVT::Other, VLImm, VTypeIOp,
+                                             /* Chain */ Node->getOperand(0)));
+            return;
+          }
+        }
+      }
+
       ReplaceNode(Node,
                   CurDAG->getMachineNode(RISCV::PseudoVSETVLI, DL, XLenVT,
                                          MVT::Other, VLOperand, VTypeIOp,
