@@ -412,9 +412,9 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
-class RISCVZvlsseg<string IntrName, bits<11> S, bits<3> L, bits<3> IL = V_M1.value> {
+class RISCVZvlsseg<string IntrName, bits<7> S, bits<3> L, bits<3> IL = V_M1.value> {
   Intrinsic IntrinsicID = !cast<Intrinsic>(IntrName);
-  bits<11> SEW = S;
+  bits<7> SEW = S;
   bits<3> LMUL = L;
   bits<3> IndexLMUL = IL;
   Pseudo Pseudo = !cast<Pseudo>(NAME);
@@ -1003,7 +1003,7 @@ multiclass VPseudoAMO {
     defm "EI" # eew : VPseudoAMOEI<eew>;
 }
 
-class VPseudoUSSegLoadNoMask<VReg RetClass, bits<11> EEW>:
+class VPseudoUSSegLoadNoMask<VReg RetClass, bits<7> EEW>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -1019,7 +1019,7 @@ class VPseudoUSSegLoadNoMask<VReg RetClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoUSSegLoadMask<VReg RetClass, bits<11> EEW>:
+class VPseudoUSSegLoadMask<VReg RetClass, bits<7> EEW>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, GPR:$rs1,
                   VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
@@ -1037,7 +1037,7 @@ class VPseudoUSSegLoadMask<VReg RetClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoSSegLoadNoMask<VReg RetClass, bits<11> EEW>:
+class VPseudoSSegLoadNoMask<VReg RetClass, bits<7> EEW>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, GPR:$offset, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -1053,7 +1053,7 @@ class VPseudoSSegLoadNoMask<VReg RetClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoSSegLoadMask<VReg RetClass, bits<11> EEW>:
+class VPseudoSSegLoadMask<VReg RetClass, bits<7> EEW>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, GPR:$rs1,
                   GPR:$offset, VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
@@ -1071,7 +1071,7 @@ class VPseudoSSegLoadMask<VReg RetClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoISegLoadNoMask<VReg RetClass, VReg IdxClass, bits<11> EEW, bits<3> LMUL>:
+class VPseudoISegLoadNoMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, IdxClass:$offset, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -1090,7 +1090,7 @@ class VPseudoISegLoadNoMask<VReg RetClass, VReg IdxClass, bits<11> EEW, bits<3> 
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, bits<11> EEW, bits<3> LMUL>:
+class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, GPR:$rs1,
                   IdxClass:$offset, VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
@@ -1110,7 +1110,7 @@ class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, bits<11> EEW, bits<3> LM
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoUSSegStoreNoMask<VReg ValClass, bits<11> EEW>:
+class VPseudoUSSegStoreNoMask<VReg ValClass, bits<7> EEW>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -1126,7 +1126,7 @@ class VPseudoUSSegStoreNoMask<VReg ValClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoUSSegStoreMask<VReg ValClass, bits<11> EEW>:
+class VPseudoUSSegStoreMask<VReg ValClass, bits<7> EEW>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1,
                   VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
@@ -1142,7 +1142,7 @@ class VPseudoUSSegStoreMask<VReg ValClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoSSegStoreNoMask<VReg ValClass, bits<11> EEW>:
+class VPseudoSSegStoreNoMask<VReg ValClass, bits<7> EEW>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1, GPR: $offset, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -1158,7 +1158,7 @@ class VPseudoSSegStoreNoMask<VReg ValClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoSSegStoreMask<VReg ValClass, bits<11> EEW>:
+class VPseudoSSegStoreMask<VReg ValClass, bits<7> EEW>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1, GPR: $offset,
                   VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
@@ -1174,7 +1174,7 @@ class VPseudoSSegStoreMask<VReg ValClass, bits<11> EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoISegStoreNoMask<VReg ValClass, VReg IdxClass, bits<11> EEW, bits<3> LMUL>:
+class VPseudoISegStoreNoMask<VReg ValClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1, IdxClass: $index,
                   GPR:$vl, ixlenimm:$sew),[]>,
@@ -1191,7 +1191,7 @@ class VPseudoISegStoreNoMask<VReg ValClass, VReg IdxClass, bits<11> EEW, bits<3>
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoISegStoreMask<VReg ValClass, VReg IdxClass, bits<11> EEW, bits<3> LMUL>:
+class VPseudoISegStoreMask<VReg ValClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL>:
       Pseudo<(outs),
              (ins ValClass:$rd, GPR:$rs1, IdxClass: $index,
                   VMaskOp:$vm, GPR:$vl, ixlenimm:$sew),[]>,
