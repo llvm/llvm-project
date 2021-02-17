@@ -2193,6 +2193,11 @@ void coro::salvageDebugInfo(
   // code. Extending the lifetime this way is correct because the
   // variable has been declared by a dbg.declare intrinsic.
   if (auto Arg = dyn_cast_or_null<llvm::Argument>(Storage)) {
+    if (Arg->getParent()->hasParamAttribute(Arg->getArgNo(),
+                                            Attribute::SwiftAsync)) {
+      // Swift async arguments will be lowered to entry values by the
+      // backend. Don't stash them in an alloca.
+    } else {
     auto &Cached = DbgPtrAllocaCache[Storage];
     if (!Cached) {
       Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
@@ -2209,6 +2214,7 @@ void coro::salvageDebugInfo(
     // adjusting it with the expression.
     if (Expr && Expr->isComplex())
       Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+    }
   }
   auto &VMContext = DDI->getFunction()->getContext();
   DDI->setOperand(
