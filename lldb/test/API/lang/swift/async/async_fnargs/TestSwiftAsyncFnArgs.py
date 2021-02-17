@@ -11,6 +11,7 @@ class TestSwiftAsyncFnArgs(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=['windows', 'linux'])
+    @skipIf(bugnumber="rdar://73882785")
     def test(self):
         """Test function arguments in async functions"""
         self.build()
