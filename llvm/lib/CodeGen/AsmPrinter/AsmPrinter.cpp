@@ -3202,7 +3202,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
-  if (MBB.isEHCatchretTarget()) {
+  if (MBB.isEHCatchretTarget() &&
+      MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
     OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
   }
 
