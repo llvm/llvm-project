@@ -82,10 +82,6 @@ def fir_PointerType : Type<CPred<"$_self.isa<fir::PointerType>()">,
 def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate]>, "any reference">;
 
-// PROCEDURE POINTER descriptor. A pair that can capture a host closure.
-def fir_BoxProcType : Type<CPred<"$_self.isa<fir::BoxProcType>()">,
-    "box procedure type">;
-
 def AnyBoxLike : TypeConstraint<Or<[BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate]>, "any box">;
 
