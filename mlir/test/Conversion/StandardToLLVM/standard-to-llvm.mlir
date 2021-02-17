@@ -223,3 +223,16 @@ func @powf(%arg0 : f64) {
   %0 = math.powf %arg0, %arg0 : f64
   std.return
 }
+
+// -----
+
+// CHECK-LABEL: func @fmaf(
+// CHECK-SAME: %[[ARG0:.*]]: f32
+// CHECK-SAME: %[[ARG1:.*]]: vector<4xf32>
+func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
+  // CHECK: %[[S:.*]] = "llvm.intr.fma"(%[[ARG0]], %[[ARG0]], %[[ARG0]]) : (f32, f32, f32) -> f32
+  %0 = fmaf %arg0, %arg0, %arg0 : f32
+  // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %1 = fmaf %arg1, %arg1, %arg1 : vector<4xf32>
+  std.return
+}
