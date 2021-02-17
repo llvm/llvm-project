@@ -18,10 +18,6 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
-namespace llvm {
-class Triple;
-}
-
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
