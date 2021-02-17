@@ -42,7 +42,6 @@ class FIROpsDialect;
 using KindTy = unsigned;
 
 namespace detail {
-struct BoxProcTypeStorage;
 struct ComplexTypeStorage;
 struct HeapTypeStorage;
 struct IntegerTypeStorage;
@@ -142,20 +141,6 @@ public:
 };
 
 // FIR support types
-
-/// The type of a pair that describes a PROCEDURE reference. Pointers to
-/// internal procedures must carry an additional reference to the host's
-/// variables that are referenced.
-class BoxProcType : public mlir::Type::TypeBase<BoxProcType, mlir::Type,
-                                                detail::BoxProcTypeStorage> {
-public:
-  using Base::Base;
-  static BoxProcType get(mlir::Type eleTy);
-  mlir::Type getEleTy() const;
-
-  static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
-                                                          mlir::Type eleTy);
-};
 
 /// Type of a vector that represents an array slice operation on an array.
 /// Fortran slices are triples of lower bound, upper bound, and stride. The rank

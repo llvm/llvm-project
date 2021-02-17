@@ -21,6 +21,28 @@ class FIR_Type<string name, string typeMnemonic> : TypeDef<fir_Dialect, name> {
   let mnemonic = typeMnemonic;
 }
 
+def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
+  let summary = "";
+
+  let description = [{
+    The type of a pair that describes a PROCEDURE reference. Pointers to
+    internal procedures must carry an additional reference to the host's
+    variables that are referenced.
+  }];
+
+  let parameters = (ins "mlir::Type":$eleTy);
+
+  let printer = [{
+    $_printer << "boxproc<";
+    $_printer.printType(getEleTy());
+    $_printer << '>';
+  }];
+
+  let genAccessors = 1;
+
+  let genVerifyInvariantsDecl = 1;
+}
+
 def BoxType : FIR_Type<"Box", "box"> {
   let summary = "The type of a Fortran descriptor";
 
@@ -41,6 +63,7 @@ def BoxType : FIR_Type<"Box", "box"> {
   }];
 
   let genAccessors = 1;
+
   let genVerifyInvariantsDecl = 1;
 }
 
