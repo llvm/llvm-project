@@ -115,8 +115,8 @@ struct MCSchedClassDesc {
   const char* Name;
 #endif
   uint16_t NumMicroOps : 14;
-  bool     BeginGroup : 1;
-  bool     EndGroup : 1;
+  uint16_t BeginGroup : 1;
+  uint16_t EndGroup : 1;
   uint16_t WriteProcResIdx; // First index into WriteProcResTable.
   uint16_t NumWriteProcResEntries;
   uint16_t WriteLatencyIdx; // First index into WriteLatencyTable.
