@@ -3488,6 +3488,15 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
       Say(symbol.name(),
           "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
           symbol.name());
+    } else if (symbol.GetType()) {
+      // These warnings are worded so that they should make sense in either
+      // order.
+      Say(symbol.name(),
+          "Explicit type declaration ignored for intrinsic function '%s'"_en_US,
+          symbol.name())
+          .Attach(name.source,
+              "INTRINSIC statement for explicitly-typed '%s'"_en_US,
+              name.source);
     }
   }
   return false;
@@ -5994,8 +6003,6 @@ void ResolveNamesVisitor::HandleProcedureName(
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
         IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
-      // 8.2(3): ignore type from intrinsic in type-declaration-stmt
-      symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});
       AcquireIntrinsicProcedureFlags(*symbol);
     }
     if (!SetProcFlag(name, *symbol, flag)) {

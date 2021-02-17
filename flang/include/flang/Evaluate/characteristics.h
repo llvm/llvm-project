@@ -154,6 +154,7 @@ public:
   // called by Fold() to rewrite in place
   TypeAndShape &Rewrite(FoldingContext &);
 
+  std::string AsFortran() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
