@@ -22,6 +22,9 @@ declare_args() {
 
   # The version of host gcc. Ignored if is_clang is true.
   gcc_version = 9
+
+  # Path of sysroot to use.
+  sysroot = ""
 }
 
 assert(!llvm_build_instrumented_coverage || is_clang,
@@ -280,6 +283,11 @@ config("compiler_defaults") {
         ".",
       ]
     }
+  }
+  if (sysroot != "") {
+    assert(current_os == "win", "FIXME: Make sysroot work on non-win")
+    assert(is_clang, "sysroot only works with clang-cl as host compiler")
+    cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
   }
 
   if (use_ubsan) {
