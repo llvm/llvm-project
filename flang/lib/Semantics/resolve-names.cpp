@@ -584,6 +584,7 @@ public:
 protected:
   // Apply the implicit type rules to this symbol.
   void ApplyImplicitRules(Symbol &);
+  void AcquireIntrinsicProcedureFlags(Symbol &);
   const DeclTypeSpec *GetImplicitType(Symbol &, const Scope &);
   bool ConvertToObjectEntity(Symbol &);
   bool ConvertToProcEntity(Symbol &);
@@ -2146,7 +2147,7 @@ void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
       }
       if (IsIntrinsic(symbol.name(), functionOrSubroutineFlag)) {
         // type will be determined in expression semantics
-        symbol.attrs().set(Attr::INTRINSIC);
+        AcquireIntrinsicProcedureFlags(symbol);
         return;
       }
     }
@@ -2154,6 +2155,24 @@ void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
     }
+  }
+}
+
+// Ensure that the symbol for an intrinsic procedure is marked with
+// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// appropriate.
+void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
+  symbol.attrs().set(Attr::INTRINSIC);
+  switch (context().intrinsics().GetIntrinsicClass(symbol.name().ToString())) {
+  case evaluate::IntrinsicClass::elementalFunction:
+  case evaluate::IntrinsicClass::elementalSubroutine:
+    symbol.attrs().set(Attr::ELEMENTAL);
+    symbol.attrs().set(Attr::PURE);
+    break;
+  case evaluate::IntrinsicClass::impureSubroutine:
+    break;
+  default:
+    symbol.attrs().set(Attr::PURE);
   }
 }
 
@@ -3461,14 +3480,14 @@ bool DeclarationVisitor::Pre(const parser::IntentStmt &x) {
 bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
   HandleAttributeStmt(Attr::INTRINSIC, x.v);
   for (const auto &name : x.v) {
-    auto *symbol{FindSymbol(name)};
-    if (!ConvertToProcEntity(*symbol)) {
+    auto &symbol{DEREF(FindSymbol(name))};
+    if (!ConvertToProcEntity(symbol)) {
       SayWithDecl(
-          name, *symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
-    } else if (symbol->attrs().test(Attr::EXTERNAL)) { // C840
-      Say(symbol->name(),
+          name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
+    } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
+      Say(symbol.name(),
           "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
-          symbol->name());
+          symbol.name());
     }
   }
   return false;
@@ -4692,10 +4711,14 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // are acceptable as procedure interfaces.
     Symbol &symbol{
         MakeSymbol(InclusiveScope(), name.source, Attrs{Attr::INTRINSIC})};
+    symbol.set_details(ProcEntityDetails{});
+    symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {
       symbol.attrs().set(Attr::ELEMENTAL);
     }
-    symbol.set_details(ProcEntityDetails{});
+    if (interface->IsPure()) {
+      symbol.attrs().set(Attr::PURE);
+    }
     Resolve(name, symbol);
     return true;
   } else {
@@ -5971,9 +5994,9 @@ void ResolveNamesVisitor::HandleProcedureName(
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
         IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
-      symbol->attrs().set(Attr::INTRINSIC);
       // 8.2(3): ignore type from intrinsic in type-declaration-stmt
       symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});
+      AcquireIntrinsicProcedureFlags(*symbol);
     }
     if (!SetProcFlag(name, *symbol, flag)) {
       return; // reported error
@@ -6058,9 +6081,14 @@ bool ResolveNamesVisitor::SetProcFlag(
     if (flag == Symbol::Flag::Function) {
       ApplyImplicitRules(symbol);
     }
+    if (symbol.attrs().test(Attr::INTRINSIC)) {
+      AcquireIntrinsicProcedureFlags(symbol);
+    }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
+  } else if (symbol.attrs().test(Attr::INTRINSIC)) {
+    AcquireIntrinsicProcedureFlags(symbol);
   }
   return true;
 }

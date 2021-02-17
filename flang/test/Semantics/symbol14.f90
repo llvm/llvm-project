@@ -17,7 +17,7 @@
   !REF: /MainProgram1/t1/k
   real :: b(k)
   !DEF: /MainProgram1/t2/c ObjectEntity REAL(4)
-  !DEF: /MainProgram1/size INTRINSIC (Function) ProcEntity
+  !DEF: /MainProgram1/size INTRINSIC, PURE (Function) ProcEntity
   !REF: /MainProgram1/t1/a
   real :: c(size(a))
   !REF: /MainProgram1/t1

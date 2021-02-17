@@ -57,7 +57,6 @@ add_llvm_component_library(LLVMTransformUtils
   StripGCRelocates.cpp
   SSAUpdater.cpp
   SSAUpdaterBulk.cpp
-  SampleProfileLoaderBaseUtil.cpp
   SanitizerStats.cpp
   SimplifyCFG.cpp
   SimplifyIndVar.cpp

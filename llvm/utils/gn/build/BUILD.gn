@@ -1,5 +1,6 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
@@ -279,6 +280,19 @@ config("compiler_defaults") {
         "-fdebug-compilation-dir",
         ".",
       ]
+    }
+  }
+  if (sysroot != "") {
+    assert(current_os != "mac" && current_os != "ios",
+           "FIXME: Make sysroot work on darwin")
+    if (current_os == "win") {
+      assert(is_clang, "sysroot only works with clang-cl as host compiler")
+      cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+    } else {
+      cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+      if (is_clang) {
+        cflags += [ "-Wpoison-system-directories"]
+      }
     }
   }
 

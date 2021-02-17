@@ -161,9 +161,18 @@ static cl::opt<bool> FilterSameScaledReg(
     cl::desc("Narrow LSR search space by filtering non-optimal formulae"
              " with the same ScaledReg and Scale"));
 
-static cl::opt<bool> EnableBackedgeIndexing(
-    "lsr-backedge-indexing", cl::Hidden, cl::init(true),
-      cl::desc("Enable the generation of cross iteration indexed memops"));
+static cl::opt<TTI::AddressingModeKind> PreferredAddresingMode(
+  "lsr-preferred-addressing-mode", cl::Hidden, cl::init(TTI::AMK_None),
+   cl::desc("A flag that overrides the target's preferred addressing mode."),
+   cl::values(clEnumValN(TTI::AMK_None,
+                         "none",
+                         "Don't prefer any addressing mode"),
+              clEnumValN(TTI::AMK_PreIndexed,
+                         "preindexed",
+                         "Prefer pre-indexed addressing mode"),
+              clEnumValN(TTI::AMK_PostIndexed,
+                         "postindexed",
+                         "Prefer post-indexed addressing mode")));
 
 static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
@@ -3810,9 +3819,7 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   // means that a single pre-indexed access can be generated to become the new
   // base pointer for each iteration of the loop, resulting in no extra add/sub
   // instructions for pointer updating.
-  bool FavorPreIndexed = EnableBackedgeIndexing &&
-          AMK == TTI::AMK_PreIndexed;
-  if (FavorPreIndexed && LU.Kind == LSRUse::Address) {
+  if (AMK == TTI::AMK_PreIndexed && LU.Kind == LSRUse::Address) {
     if (auto *GAR = dyn_cast<SCEVAddRecExpr>(G)) {
       if (auto *StepRec =
           dyn_cast<SCEVConstant>(GAR->getStepRecurrence(SE))) {
@@ -5561,7 +5568,8 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
                          TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
     : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI), L(L),
-      MSSAU(MSSAU), AMK(TTI.getPreferredAddressingMode(L, &SE)) {
+      MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0 ?
+        PreferredAddresingMode : TTI.getPreferredAddressingMode(L, &SE)) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
