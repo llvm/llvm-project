@@ -1,9 +1,11 @@
 // RUN: tco --target=i386-unknown-linux-gnu %s | FileCheck %s --check-prefix=I32
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=X64
+// RUN: tco --target=aarch64-unknown-linux-gnu %s | FileCheck %s --check-prefix=AARCH64
 // RUN: tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefix=PPC
 
 // I32-LABEL: define i64 @gen4()
 // X64-LABEL: define <2 x float> @gen4()
+// AARCH64-LABEL: define { float, float } @gen4()
 // PPC-LABEL: define { float, float } @gen4()
 func @gen4() -> !fir.complex<4> {
   %1 = fir.undefined !fir.complex<4>
@@ -20,12 +22,14 @@ func @gen4() -> !fir.complex<4> {
   // X64: store { float, float } { float 2.000000e+00, float -4.200000e+01 }
   // X64: %[[load:.*]] = load <2 x float>, <2 x float>*
   // X64: ret <2 x float> %[[load]]
+  // AARCH64: ret { float, float }
   // PPC: ret { float, float }
   return %6 : !fir.complex<4>
 }
 
 // I32-LABEL: define void @gen8({ double, double }* sret({ double, double }) %
 // X64-LABEL: define { double, double } @gen8()
+// AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
 func @gen8() -> !fir.complex<8> {
   %1 = fir.undefined !fir.complex<8>
@@ -39,29 +43,35 @@ func @gen8() -> !fir.complex<8> {
   // I64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: %[[load:.*]] = load { double, double }
   // I64: ret { double, double } %[[load]]
+  // AARCH64: ret { double, double }
   // PPC: ret { double, double }
   return %5 : !fir.complex<8>
 }
 
 // I32: declare void @sink4({ float, float }*)
 // X64: declare void @sink4(<2 x float>)
+// AARCH64: declare void @sink4([2 x float])
 // PPC: declare void @sink4(float, float)
 func private @sink4(!fir.complex<4>) -> ()
 
 // I32: declare void @sink8({ double, double }*)
 // X64: declare void @sink8(double, double)
+// AARCH64: declare void @sink8([2 x double])
 // PPC: declare void @sink8(double, double)
 func private @sink8(!fir.complex<8>) -> ()
 
 // I32-LABEL: define void @call4()
 // X64-LABEL: define void @call4()
+// AARCH64-LABEL: define void @call4()
 func @call4() {
   // I32: = call i64 @gen4()
   // X64: = call <2 x float> @gen4()
+  // AARCH64: = call { float, float } @gen4()
   // PPC: = call { float, float } @gen4()
   %1 = fir.call @gen4() : () -> !fir.complex<4>
   // I32: call void @sink4({ float, float }* %
   // X64: call void @sink4(<2 x float> %
+  // AARCH64: call void @sink4([2 x float] %
   // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
   fir.call @sink4(%1) : (!fir.complex<4>) -> ()
   return
@@ -69,13 +79,16 @@ func @call4() {
 
 // I32-LABEL: define void @call8()
 // X64-LABEL: define void @call8()
+// AARCH64-LABEL: define void @call8()
 func @call8() {
   // I32: call void @gen8({ double, double }* %
   // X64: = call { double, double } @gen8()
+  // AARCH64: = call { double, double } @gen8()
   // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> !fir.complex<8>
   // I32: call void @sink8({ double, double }* %
   // X64: call void @sink8(double %4, double %5)
+  // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
   fir.call @sink8(%1) : (!fir.complex<8>) -> ()
   return

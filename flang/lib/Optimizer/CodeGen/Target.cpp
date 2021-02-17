@@ -171,13 +171,10 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   complexArgumentType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
-    if (sem == &llvm::APFloat::IEEEsingle()) {
-      // <2 x t>   vector of 2 eleTy
-      marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
-    } else if (sem == &llvm::APFloat::IEEEdouble()) {
-      // two distinct double arguments
-      marshal.emplace_back(eleTy, AT{});
-      marshal.emplace_back(eleTy, AT{});
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // [2 x t]   array of 2 eleTy
+      marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
     } else {
       llvm::report_fatal_error("complex for this precision not implemented");
     }
@@ -188,11 +185,9 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   complexReturnType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
-    if (sem == &llvm::APFloat::IEEEsingle()) {
-      // <2 x t>   vector of 2 eleTy
-      marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
-    } else if (sem == &llvm::APFloat::IEEEdouble()) {
-      // { double, double }   struct of 2 double
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // { t, t }   struct of 2 eleTy
       mlir::TypeRange range = {eleTy, eleTy};
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
