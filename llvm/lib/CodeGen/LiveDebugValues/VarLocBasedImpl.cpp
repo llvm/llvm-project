@@ -340,7 +340,11 @@ private:
           Expr(MI.getDebugExpression()), MI(MI) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
-      if (int RegNo = isDbgValueDescribedByReg(MI)) {
+      if (Expr && Expr->isEntryValue()) {
+        Kind = EntryValueKind;
+        if (int RegNo = isDbgValueDescribedByReg(MI))
+          Loc.RegNo = RegNo;
+      } else if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegNo = RegNo;
       } else if (MI.getDebugOperand(0).isImm()) {
@@ -354,9 +358,9 @@ private:
         Loc.CImm = MI.getDebugOperand(0).getCImm();
       }
 
-      // We create the debug entry values from the factory functions rather than
-      // from this ctor.
-      assert(Kind != EntryValueKind && !isEntryBackupLoc());
+      // We create the backup debug entry values from the factory
+      // functions rather than from this ctor.
+      assert(!isEntryBackupLoc());
     }
 
     /// Take the variable and machine-location in DBG_VALUE MI, and build an
