@@ -1011,7 +1011,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   } else {
     // Use the compilation dir.
     SmallString<128> T(
-        Args.getLastArgValue(options::OPT_fdebug_compilation_dir));
+        Args.getLastArgValue(options::OPT_fdebug_compilation_dir_EQ));
     SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
     AddPostfix(F);
     T += F;
