@@ -133,9 +133,9 @@ namespace {
     std::vector<std::string> SubGroups;
     unsigned IDNo;
 
-    const Record *ExplicitDef;
+    llvm::SmallVector<const Record *, 1> Defs;
 
-    GroupInfo() : IDNo(0), ExplicitDef(nullptr) {}
+    GroupInfo() : IDNo(0) {}
   };
 } // end anonymous namespace.
 
@@ -148,12 +148,6 @@ static bool beforeThanCompare(const Record *LHS, const Record *RHS) {
 static bool diagGroupBeforeByName(const Record *LHS, const Record *RHS) {
   return LHS->getValueAsString("GroupName") <
          RHS->getValueAsString("GroupName");
-}
-
-static bool beforeThanCompareGroups(const GroupInfo *LHS, const GroupInfo *RHS){
-  assert(!LHS->DiagsInGroup.empty() && !RHS->DiagsInGroup.empty());
-  return beforeThanCompare(LHS->DiagsInGroup.front(),
-                           RHS->DiagsInGroup.front());
 }
 
 /// Invert the 1-[0/1] mapping of diags to group into a one to many
@@ -174,24 +168,13 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
     DiagsInGroup[GroupName].DiagsInGroup.push_back(R);
   }
 
-  typedef SmallPtrSet<GroupInfo *, 16> GroupSetTy;
-  GroupSetTy ImplicitGroups;
-
   // Add all DiagGroup's to the DiagsInGroup list to make sure we pick up empty
   // groups (these are warnings that GCC supports that clang never produces).
   for (unsigned i = 0, e = DiagGroups.size(); i != e; ++i) {
     Record *Group = DiagGroups[i];
     GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
-    if (Group->isAnonymous()) {
-      if (GI.DiagsInGroup.size() > 1)
-        ImplicitGroups.insert(&GI);
-    } else {
-      if (GI.ExplicitDef)
-        assert(GI.ExplicitDef == Group);
-      else
-        GI.ExplicitDef = Group;
-    }
+    GI.Defs.push_back(Group);
 
     std::vector<Record*> SubGroups = Group->getValueAsListOfDefs("SubGroups");
     for (unsigned j = 0, e = SubGroups.size(); j != e; ++j)
@@ -205,61 +188,51 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
        I = DiagsInGroup.begin(), E = DiagsInGroup.end(); I != E; ++I, ++IDNo)
     I->second.IDNo = IDNo;
 
-  // Sort the implicit groups, so we can warn about them deterministically.
-  SmallVector<GroupInfo *, 16> SortedGroups(ImplicitGroups.begin(),
-                                            ImplicitGroups.end());
-  for (SmallVectorImpl<GroupInfo *>::iterator I = SortedGroups.begin(),
-                                              E = SortedGroups.end();
-       I != E; ++I) {
-    MutableArrayRef<const Record *> GroupDiags = (*I)->DiagsInGroup;
-    llvm::sort(GroupDiags, beforeThanCompare);
-  }
-  llvm::sort(SortedGroups, beforeThanCompareGroups);
+  // Warn if the same group is defined more than once (including implicitly).
+  for (auto &Group : DiagsInGroup) {
+    if (Group.second.Defs.size() == 1 &&
+        (!Group.second.Defs.front()->isAnonymous() ||
+         Group.second.DiagsInGroup.size() <= 1))
+      continue;
 
-  // Warn about the same group being used anonymously in multiple places.
-  for (SmallVectorImpl<GroupInfo *>::const_iterator I = SortedGroups.begin(),
-                                                    E = SortedGroups.end();
-       I != E; ++I) {
-    ArrayRef<const Record *> GroupDiags = (*I)->DiagsInGroup;
-
-    if ((*I)->ExplicitDef) {
-      std::string Name =
-          std::string((*I)->ExplicitDef->getValueAsString("GroupName"));
-      for (ArrayRef<const Record *>::const_iterator DI = GroupDiags.begin(),
-                                                    DE = GroupDiags.end();
-           DI != DE; ++DI) {
-        const DefInit *GroupInit = cast<DefInit>((*DI)->getValueInit("Group"));
-        const Record *NextDiagGroup = GroupInit->getDef();
-        if (NextDiagGroup == (*I)->ExplicitDef)
-          continue;
-
-        SrcMgr.PrintMessage((*DI)->getLoc().front(),
-                            SourceMgr::DK_Error,
-                            Twine("group '") + Name +
-                              "' is referred to anonymously");
-        SrcMgr.PrintMessage((*I)->ExplicitDef->getLoc().front(),
-                            SourceMgr::DK_Note, "group defined here");
+    bool First = true;
+    for (const Record *Def : Group.second.Defs) {
+      // Skip implicit definitions from diagnostics; we'll report those
+      // separately below.
+      bool IsImplicit = false;
+      for (const Record *Diag : Group.second.DiagsInGroup) {
+        if (cast<DefInit>(Diag->getValueInit("Group"))->getDef() == Def) {
+          IsImplicit = true;
+          break;
+        }
       }
-    } else {
-      // If there's no existing named group, we should just warn once and use
-      // notes to list all the other cases.
-      ArrayRef<const Record *>::const_iterator DI = GroupDiags.begin(),
-                                               DE = GroupDiags.end();
-      assert(DI != DE && "We only care about groups with multiple uses!");
+      if (IsImplicit)
+        continue;
 
-      const DefInit *GroupInit = cast<DefInit>((*DI)->getValueInit("Group"));
-      const Record *NextDiagGroup = GroupInit->getDef();
-      std::string Name =
-          std::string(NextDiagGroup->getValueAsString("GroupName"));
+      llvm::SMLoc Loc = Def->getLoc().front();
+      if (First) {
+        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
+                            Twine("group '") + Group.first +
+                                "' is defined more than once");
+        First = false;
+      } else {
+        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, "also defined here");
+      }
+    }
 
-      SrcMgr.PrintMessage((*DI)->getLoc().front(),
-                          SourceMgr::DK_Error,
-                          Twine("group '") + Name +
-                            "' is referred to anonymously");
+    for (const Record *Diag : Group.second.DiagsInGroup) {
+      if (!cast<DefInit>(Diag->getValueInit("Group"))->getDef()->isAnonymous())
+        continue;
 
-      for (++DI; DI != DE; ++DI) {
-        SrcMgr.PrintMessage((*DI)->getLoc().front(),
-                            SourceMgr::DK_Note, "also referenced here");
+      llvm::SMLoc Loc = Diag->getLoc().front();
+      if (First) {
+        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
+                            Twine("group '") + Group.first +
+                                "' is implicitly defined more than once");
+        First = false;
+      } else {
+        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note,
+                            "also implicitly defined here");
       }
     }
   }
