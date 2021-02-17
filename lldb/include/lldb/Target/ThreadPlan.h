@@ -494,7 +494,7 @@ protected:
   // another thread plan is never either of the above.
   void PushPlan(lldb::ThreadPlanSP &thread_plan_sp) {
     GetThread().PushPlan(thread_plan_sp);
-    thread_plan_sp->SetPrivate(false);
+    thread_plan_sp->SetPrivate(true);
     thread_plan_sp->SetIsMasterPlan(false);
   }
 
