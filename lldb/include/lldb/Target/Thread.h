@@ -781,10 +781,10 @@ public:
   /// \param[in] stop_other_threads
   ///    \b true if we will stop other threads while we single step this one.
   ///
-  /// \param[in] stop_vote
+  /// \param[in] report_stop_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
-  /// \param[in] run_vote
+  /// \param[in] report_run_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
   /// \param[out] status
@@ -800,7 +800,7 @@ public:
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOut(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-      bool stop_other_threads, Vote stop_vote, Vote run_vote,
+      bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
       uint32_t frame_idx, Status &status,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
@@ -830,10 +830,10 @@ public:
   /// \param[in] stop_other_threads
   ///    \b true if we will stop other threads while we single step this one.
   ///
-  /// \param[in] stop_vote
+  /// \param[in] report_stop_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
-  /// \param[in] run_vote
+  /// \param[in] report_run_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
   /// \param[in] frame_idx
@@ -864,7 +864,7 @@ public:
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOutNoShouldStop(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-      bool stop_other_threads, Vote stop_vote, Vote run_vote,
+      bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
       uint32_t frame_idx, Status &status, bool continue_to_next_branch = false);
 
   /// Gets the plan used to step through the code that steps from a function

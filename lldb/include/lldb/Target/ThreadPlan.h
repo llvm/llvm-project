@@ -260,8 +260,8 @@ namespace lldb_private {
 //  One other little detail here, sometimes a plan will push another plan onto
 //  the plan stack to do some part of the first plan's job, and it would be
 //  convenient to tell that plan how it should respond to ShouldReportStop.
-//  You can do that by setting the stop_vote in the child plan when you create
-//  it.
+//  You can do that by setting the report_stop_vote in the child plan when you
+//  create it.
 //
 //  Suppressing the initial eStateRunning event:
 //
@@ -275,8 +275,9 @@ namespace lldb_private {
 //  eVoteNo from ShouldReportStop, to force a running event to be reported
 //  return eVoteYes, in general though you should return eVoteNoOpinion which
 //  will allow the ThreadList to figure out the right thing to do.  The
-//  run_vote argument to the constructor works like stop_vote, and is a way for
-//  a plan to instruct a sub-plan on how to respond to ShouldReportStop.
+//  report_run_vote argument to the constructor works like report_stop_vote, and
+//  is a way for a plan to instruct a sub-plan on how to respond to
+//  ShouldReportStop.
 
 class ThreadPlan : public std::enable_shared_from_this<ThreadPlan>,
                    public UserID {
@@ -472,7 +473,7 @@ public:
 protected:
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
-             Vote stop_vote, Vote run_vote);
+             Vote report_stop_vote, Vote report_run_vote);
 
   // Classes that inherit from ThreadPlan can see and modify these
 
@@ -515,8 +516,8 @@ protected:
   Status m_status;
   Process &m_process;
   lldb::tid_t m_tid;
-  Vote m_stop_vote;
-  Vote m_run_vote;
+  Vote m_report_stop_vote;
+  Vote m_report_run_vote;
   bool m_takes_iteration_count;
   bool m_could_not_resolve_hw_bp;
   int32_t m_iteration_count = 1;
