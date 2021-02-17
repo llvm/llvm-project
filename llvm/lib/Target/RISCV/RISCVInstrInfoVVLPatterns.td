@@ -140,6 +140,14 @@ def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
+def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                               SDTCisSameNumEltsAs<0, 1>,
+                                               SDTCisSameNumEltsAs<1, 2>,
+                                               SDTCVecEltisVT<2, i1>,
+                                               SDTCisVT<3, XLenVT>]>;
+def riscv_sext_vl : SDNode<"RISCVISD::VSEXT_VL", SDT_RISCVVEXTEND_VL>;
+def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
+
 // Ignore the vl operand.
 def SplatFPOp : PatFrag<(ops node:$op),
                         (riscv_vfmv_v_f_vl node:$op, srcvalue)>;
@@ -352,6 +360,18 @@ multiclass VPatFPSetCCVL_VV_VF_FV<CondCode cc,
   }
 }
 
+multiclass VPatExtendSDNode_V_VL<SDNode vop, string inst_name, string suffix,
+                                 list <VTypeInfoToFraction> fraction_list> {
+  foreach vtiTofti = fraction_list in {
+    defvar vti = vtiTofti.Vti;
+    defvar fti = vtiTofti.Fti;
+    def : Pat<(vti.Vector (vop (fti.Vector fti.RegClass:$rs2),
+                               true_mask, (XLenVT (VLOp GPR:$vl)))),
+              (!cast<Instruction>(inst_name#"_"#suffix#"_"#vti.LMul.MX)
+                  fti.RegClass:$rs2, GPR:$vl, vti.SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -398,6 +418,20 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs1, simm5:$rs2, GPR:$vl, vti.SEW)>;
 }
+
+// 12.3. Vector Integer Extension
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",
+                                AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF2",
+                                AllFractionableVF2IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF4",
+                                AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF4",
+                                AllFractionableVF4IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF8",
+                                AllFractionableVF8IntVectors>;
+defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF8",
+                                AllFractionableVF8IntVectors>;
 
 // 12.5. Vector Bitwise Logical Instructions
 defm "" : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
