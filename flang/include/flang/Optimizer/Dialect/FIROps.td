@@ -33,8 +33,6 @@ def fir_Type : Type<CPred<"fir::isa_fir_or_std_type($_self)">,
     "FIR dialect type">;
 
 // Fortran intrinsic types
-def fir_ComplexType : Type<CPred<"$_self.isa<fir::ComplexType>()">,
-    "FIR complex type">;
 def fir_IntegerType : Type<CPred<"$_self.isa<fir::IntegerType>()">,
     "FIR integer type">;
 def fir_LogicalType : Type<CPred<"$_self.isa<fir::LogicalType>()">,
