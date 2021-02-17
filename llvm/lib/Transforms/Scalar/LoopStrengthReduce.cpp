@@ -161,6 +161,10 @@ static cl::opt<bool> FilterSameScaledReg(
     cl::desc("Narrow LSR search space by filtering non-optimal formulae"
              " with the same ScaledReg and Scale"));
 
+static cl::opt<bool> EnableBackedgeIndexing(
+    "lsr-backedge-indexing", cl::Hidden, cl::init(true),
+      cl::desc("Enable the generation of cross iteration indexed memops"));
+
 static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
   cl::init(std::numeric_limits<uint16_t>::max()),
@@ -3806,7 +3810,9 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   // means that a single pre-indexed access can be generated to become the new
   // base pointer for each iteration of the loop, resulting in no extra add/sub
   // instructions for pointer updating.
-  if (AMK == TTI::AMK_PreIndexed && LU.Kind == LSRUse::Address) {
+  bool FavorPreIndexed = EnableBackedgeIndexing &&
+          AMK == TTI::AMK_PreIndexed;
+  if (FavorPreIndexed && LU.Kind == LSRUse::Address) {
     if (auto *GAR = dyn_cast<SCEVAddRecExpr>(G)) {
       if (auto *StepRec =
           dyn_cast<SCEVConstant>(GAR->getStepRecurrence(SE))) {
