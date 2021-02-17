@@ -386,6 +386,8 @@ public:
         nm.append(".").append(llvm::toHex(name)));
   }
 
+  fir::KindMapping &getKindMap() override final { return bridge.getKindMap(); }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;

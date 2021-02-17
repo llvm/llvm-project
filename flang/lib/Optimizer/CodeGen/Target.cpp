@@ -21,7 +21,7 @@
 using namespace fir;
 
 // Reduce a REAL/float type to the floating point semantics.
-static const llvm::fltSemantics &floatToSemantics(KindMapping &kindMap,
+static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
   if (auto ty = type.dyn_cast<fir::RealType>())
@@ -239,8 +239,8 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
 // `x86_64-unknown-linux-gnu`, aarch64 and ppc64le like triples. Other targets
 // should be added to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
-fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
-                           KindMapping &kindMap) {
+fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
+                           KindMapping &&kindMap) {
   switch (trp.getArch()) {
   default:
     break;
@@ -250,7 +250,8 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
-      return std::make_unique<TargetI386>(ctx, trp, kindMap);
+      return std::make_unique<TargetI386>(ctx, std::move(trp),
+                                          std::move(kindMap));
     }
     break;
   case llvm::Triple::ArchType::x86_64:
@@ -259,7 +260,8 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
-      return std::make_unique<TargetX86_64>(ctx, trp, kindMap);
+      return std::make_unique<TargetX86_64>(ctx, std::move(trp),
+                                            std::move(kindMap));
     }
     break;
   case llvm::Triple::ArchType::aarch64:
@@ -268,7 +270,8 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
-      return std::make_unique<TargetAArch64>(ctx, trp, kindMap);
+      return std::make_unique<TargetAArch64>(ctx, std::move(trp),
+                                             std::move(kindMap));
     }
     break;
   case llvm::Triple::ArchType::ppc64le:
@@ -276,7 +279,8 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, const llvm::Triple &trp,
     default:
       break;
     case llvm::Triple::OSType::Linux:
-      return std::make_unique<TargetPPC64le>(ctx, trp, kindMap);
+      return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
+                                             std::move(kindMap));
     }
     break;
   }
