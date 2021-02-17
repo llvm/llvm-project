@@ -1446,7 +1446,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   ObjCSuperType = QualType();
 
   // void * type
-  if (LangOpts.OpenCLVersion >= 200) {
+  if (LangOpts.OpenCLGenericAddressSpace) {
     auto Q = VoidTy.getQualifiers();
     Q.setAddressSpace(LangAS::opencl_generic);
     VoidPtrTy = getPointerType(getCanonicalType(
