@@ -1055,6 +1055,9 @@ public:
     auto component = gen(aref.base().GetComponent());
     auto base = fir::getBase(component);
     llvm::SmallVector<mlir::Value, 8> args;
+    // FIXME: the lower bounds should be apply, and in general,
+    // this coordinate op will only work if the extents are compile
+    // time constants. Otherwise, the coordinateOp need to be collapsed.
     for (auto &subsc : aref.subscript())
       args.push_back(genunbox(subsc));
     auto ty = genSubType(base.getType(), args.size());
