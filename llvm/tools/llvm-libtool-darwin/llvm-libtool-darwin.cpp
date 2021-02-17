@@ -89,6 +89,11 @@ static cl::opt<bool>
     VersionOption("V", cl::desc("Print the version number and exit"),
                   cl::cat(LibtoolCategory));
 
+static cl::opt<bool> NoWarningForNoSymbols(
+    "no_warning_for_no_symbols",
+    cl::desc("Do not warn about files that have no symbols"),
+    cl::cat(LibtoolCategory), cl::init(false));
+
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
     "/usr/lib",
@@ -250,6 +255,9 @@ static Error verifyAndAddMachOObject(MembersPerArchitectureMap &Members,
   if (!ArchType.empty() && !acceptFileArch(FileCPUType, FileCPUSubtype, C)) {
     return Error::success();
   }
+
+  if (!NoWarningForNoSymbols && O->symbols().empty())
+    WithColor::warning() << Member.MemberName + " has no symbols\n";
 
   uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
   Members[FileCPUID].push_back(std::move(Member));
