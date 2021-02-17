@@ -141,7 +141,6 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
-    case CC_SwiftAsync:
     case CC_OpenCLKernel:
       return CCCR_OK;
     default:
