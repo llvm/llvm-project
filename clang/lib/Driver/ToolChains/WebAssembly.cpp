@@ -282,12 +282,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-fwasm-exceptions"
           << "-mno-exception-handling";
-    // '-fwasm-exceptions' is not compatible with '-mno-reference-types'
-    if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
-                           options::OPT_mexception_handing, false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-fwasm-exceptions"
-          << "-mno-reference-types";
     // '-fwasm-exceptions' is not compatible with
     // '-mllvm -enable-emscripten-cxx-exceptions'
     for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
@@ -296,11 +290,9 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
             << "-fwasm-exceptions"
             << "-mllvm -enable-emscripten-cxx-exceptions";
     }
-    // '-fwasm-exceptions' implies exception-handling and reference-types
+    // '-fwasm-exceptions' implies exception-handling feature
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+reference-types");
   }
 }
 
