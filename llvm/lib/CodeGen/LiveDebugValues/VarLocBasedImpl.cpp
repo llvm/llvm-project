@@ -1813,6 +1813,11 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
   OpenRanges.insert(EntryValLocID, EntryValLocAsBackup);
 }
 
+static bool isSwiftAsyncContext(const MachineInstr &MI) {
+   const llvm::Function &F = MI.getParent()->getParent()->getFunction();
+   return F.arg_size() == 3 && F.hasParamAttribute(2, Attribute::SwiftAsync);
+ }
+
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
@@ -1871,8 +1876,15 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) {
   MachineBasicBlock &First_MBB = *(MF.begin());
   for (auto &MI : First_MBB) {
     collectRegDefs(MI, DefinedRegs, TRI);
-    if (MI.isDebugValue())
-      recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
+    if (MI.isDebugValue()) {
+      // In Swift async functions entry values are preferred, since they
+      // can be evaluated in both live frames and virtual backtraces.
+      if (isSwiftAsyncContext(MI))
+        MI.getOperand(3).setMetadata(DIExpression::prepend(
+            MI.getDebugExpression(), DIExpression::EntryValue));
+      else
+        recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
+    }
   }
 
   // Initialize per-block structures and scan for fragment overlaps.
