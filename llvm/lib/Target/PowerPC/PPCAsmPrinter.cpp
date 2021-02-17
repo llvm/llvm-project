@@ -83,7 +83,7 @@ using namespace llvm::XCOFF;
 // This specialization is needed here because that type is used as keys in the
 // map representing TOC entries.
 template <>
-struct DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
+struct llvm::DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
   using TOCKey = std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>;
 
   static inline TOCKey getEmptyKey() {
