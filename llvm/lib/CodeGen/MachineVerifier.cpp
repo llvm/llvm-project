@@ -223,6 +223,7 @@ namespace {
     void report(const char *msg, const MachineInstr *MI);
     void report(const char *msg, const MachineOperand *MO, unsigned MONum,
                 LLT MOVRegType = LLT{});
+    void report(const Twine &Msg, const MachineInstr *MI);
 
     void report_context(const LiveInterval &LI) const;
     void report_context(const LiveRange &LR, Register VRegUnit,
@@ -498,6 +499,10 @@ void MachineVerifier::report(const char *msg, const MachineOperand *MO,
   errs() << "- operand " << MONum << ":   ";
   MO->print(errs(), MOVRegType, TRI);
   errs() << "\n";
+}
+
+void MachineVerifier::report(const Twine &Msg, const MachineInstr *MI) {
+  report(Msg.str().c_str(), MI);
 }
 
 void MachineVerifier::report_context(SlotIndex Pos) const {
@@ -940,10 +945,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     report(ErrorInfo.data(), MI);
 
   // Verify properties of various specific instruction types
-  switch (MI->getOpcode()) {
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_ASSERT_SEXT:
   case TargetOpcode::G_ASSERT_ZEXT: {
+    std::string OpcName =
+        Opc == TargetOpcode::G_ASSERT_ZEXT ? "G_ASSERT_ZEXT" : "G_ASSERT_SEXT";
     if (!MI->getOperand(2).isImm()) {
-      report("G_ASSERT_ZEXT expects an immediate operand #2", MI);
+      report(Twine(OpcName, " expects an immediate operand #2"), MI);
       break;
     }
 
@@ -952,24 +961,26 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(Src);
     int64_t Imm = MI->getOperand(2).getImm();
     if (Imm <= 0) {
-      report("G_ASSERT_ZEXT size must be >= 1", MI);
+      report(Twine(OpcName, " size must be >= 1"), MI);
       break;
     }
 
     if (Imm >= SrcTy.getScalarSizeInBits()) {
-      report("G_ASSERT_ZEXT size must be less than source bit width", MI);
+      report(Twine(OpcName, " size must be less than source bit width"), MI);
       break;
     }
 
     if (MRI->getRegBankOrNull(Src) != MRI->getRegBankOrNull(Dst)) {
-      report("G_ASSERT_ZEXT source and destination register banks must match",
-             MI);
+      report(
+          Twine(OpcName, " source and destination register banks must match"),
+          MI);
       break;
     }
 
     if (MRI->getRegClassOrNull(Src) != MRI->getRegClassOrNull(Dst))
-      report("G_ASSERT_ZEXT source and destination register classes must match",
-             MI);
+      report(
+          Twine(OpcName, " source and destination register classes must match"),
+          MI);
 
     break;
   }
