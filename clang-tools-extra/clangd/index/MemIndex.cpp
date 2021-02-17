@@ -112,9 +112,11 @@ void MemIndex::relations(
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 MemIndex::indexedFiles() const {
   return [this](llvm::StringRef FileURI) {
-    auto Path = URI::resolve(FileURI);
+    if (Files.empty())
+      return IndexContents::None;
+    auto Path = URI::resolve(FileURI, Files.begin()->first());
     if (!Path) {
-      llvm::consumeError(Path.takeError());
+      vlog("Failed to resolve the URI {0} : {1}", FileURI, Path.takeError());
       return IndexContents::None;
     }
     return Files.contains(*Path) ? IdxContents : IndexContents::None;
