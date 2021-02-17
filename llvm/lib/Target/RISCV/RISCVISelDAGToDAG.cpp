@@ -25,6 +25,22 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
 
+namespace RISCVZvlssegTable {
+struct RISCVZvlsseg {
+  unsigned IntrinsicID;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint8_t IndexLMUL;
+  uint16_t Pseudo;
+};
+
+using namespace RISCV;
+
+#define GET_RISCVZvlssegTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVZvlssegTable
+
 void RISCVDAGToDAGISel::PostprocessISelDAG() {
   doPeepholeLoadStoreADDI();
 }
