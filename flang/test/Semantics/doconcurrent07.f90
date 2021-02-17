@@ -1,4 +1,4 @@
-! RUN: %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK-NOT: exit from DO CONCURRENT construct
 
 subroutine do_concurrent_test1(n)

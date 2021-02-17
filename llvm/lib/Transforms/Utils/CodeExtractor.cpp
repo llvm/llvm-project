@@ -1780,8 +1780,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
 bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
-  for (auto &AssumeVH : AC->assumptions()) {
-    auto *I = AssumeVH.getAssumeCI();
+  for (auto AssumeVH : AC->assumptions()) {
+    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
+    if (!I)
+      continue;
 
     // There shouldn't be any llvm.assume intrinsics in the new function.
     if (I->getFunction() != &OldFunc)

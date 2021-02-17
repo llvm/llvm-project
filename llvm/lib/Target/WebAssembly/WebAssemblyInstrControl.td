@@ -133,8 +133,8 @@ defm THROW : I<(outs), (ins event_op:$tag, variable_ops),
                "throw   \t$tag", "throw   \t$tag", 0x08>;
 defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
-// For C++ support, we only rethrow the latest exception, thus always setting
-// the depth to 0.
+// The depth argument will be computed in CFGStackify. We set it to 0 here for
+// now.
 def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
 
 // Region within which an exception is caught: try / end_try

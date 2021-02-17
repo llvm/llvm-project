@@ -87,6 +87,17 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
+MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
+  if (!CachedEHCatchretMCSymbol) {
+    const MachineFunction *MF = getParent();
+    SmallString<128> SymbolName;
+    raw_svector_ostream(SymbolName)
+        << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
+    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+  }
+  return CachedEHCatchretMCSymbol;
+}
+
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
   if (!CachedEndMCSymbol) {
     const MachineFunction *MF = getParent();
@@ -1075,10 +1086,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
          I != E; ++I)
       NewTerminators.push_back(&*I);
 
-    for (SmallVectorImpl<MachineInstr*>::iterator I = Terminators.begin(),
-        E = Terminators.end(); I != E; ++I) {
-      if (!is_contained(NewTerminators, *I))
-        Indexes->removeMachineInstrFromMaps(**I);
+    for (MachineInstr *Terminator : Terminators) {
+      if (!is_contained(NewTerminators, Terminator))
+        Indexes->removeMachineInstrFromMaps(*Terminator);
     }
   }
 

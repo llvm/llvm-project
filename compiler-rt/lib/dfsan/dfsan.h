@@ -15,13 +15,17 @@
 #define DFSAN_H
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
+
+#include "dfsan_flags.h"
 #include "dfsan_platform.h"
 
-using __sanitizer::uptr;
 using __sanitizer::u16;
+using __sanitizer::u32;
+using __sanitizer::uptr;
 
 // Copy declarations from public sanitizer/dfsan_interface.h header here.
 typedef u16 dfsan_label;
+typedef u32 dfsan_origin;
 
 struct dfsan_label_info {
   dfsan_label l1;
@@ -58,17 +62,27 @@ inline const dfsan_label *shadow_for(const void *ptr) {
   return shadow_for(const_cast<void *>(ptr));
 }
 
-struct Flags {
-#define DFSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
-#include "dfsan_flags.inc"
-#undef DFSAN_FLAG
+inline uptr unaligned_origin_for(uptr ptr) {
+  return OriginAddr() + (ptr & ShadowMask());
+}
 
-  void SetDefaults();
-};
+inline dfsan_origin *origin_for(void *ptr) {
+  auto aligned_addr = unaligned_origin_for(reinterpret_cast<uptr>(ptr)) &
+                      ~(sizeof(dfsan_origin) - 1);
+  return reinterpret_cast<dfsan_origin *>(aligned_addr);
+}
 
-extern Flags flags_data;
-inline Flags &flags() {
-  return flags_data;
+inline const dfsan_origin *origin_for(const void *ptr) {
+  return origin_for(const_cast<void *>(ptr));
+}
+
+inline bool is_shadow_addr_valid(uptr shadow_addr) {
+  return (uptr)shadow_addr >= ShadowAddr() && (uptr)shadow_addr < OriginAddr();
+}
+
+inline bool has_valid_shadow_addr(const void *ptr) {
+  const dfsan_label *ptr_s = shadow_for(ptr);
+  return is_shadow_addr_valid((uptr)ptr_s);
 }
 
 }  // namespace __dfsan

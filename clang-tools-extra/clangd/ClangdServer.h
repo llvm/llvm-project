@@ -14,6 +14,7 @@
 #include "ConfigProvider.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
+#include "Module.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -142,6 +143,8 @@ public:
     /// Enable preview of FoldingRanges feature.
     bool FoldingRanges = false;
 
+    ModuleSet *Modules = nullptr;
+
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
@@ -157,6 +160,15 @@ public:
   /// if compilation arguments changed on calls to forceReparse().
   ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
                const Options &Opts, Callbacks *Callbacks = nullptr);
+
+  /// Gets the installed module of a given type, if any.
+  /// This exposes access the public interface of modules that have one.
+  template <typename Mod> Mod *getModule() {
+    return Modules ? Modules->get<Mod>() : nullptr;
+  }
+  template <typename Mod> const Mod *getModule() const {
+    return Modules ? Modules->get<Mod>() : nullptr;
+  }
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -334,6 +346,7 @@ private:
                   ArrayRef<tooling::Range> Ranges,
                   Callback<tooling::Replacements> CB);
 
+  ModuleSet *Modules;
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;
 

@@ -15261,11 +15261,13 @@ CheckOperatorNewDeleteDeclarationScope(Sema &SemaRef,
   return false;
 }
 
-static QualType
-RemoveAddressSpaceFromPtr(Sema &SemaRef, const PointerType *PtrTy) {
-  QualType QTy = PtrTy->getPointeeType();
-  QTy = SemaRef.Context.removeAddrSpaceQualType(QTy);
-  return SemaRef.Context.getPointerType(QTy);
+static CanQualType RemoveAddressSpaceFromPtr(Sema &SemaRef,
+                                             const PointerType *PtrTy) {
+  auto &Ctx = SemaRef.Context;
+  Qualifiers PtrQuals = PtrTy->getPointeeType().getQualifiers();
+  PtrQuals.removeAddressSpace();
+  return Ctx.getPointerType(Ctx.getCanonicalType(Ctx.getQualifiedType(
+      PtrTy->getPointeeType().getUnqualifiedType(), PtrQuals)));
 }
 
 static inline bool
@@ -15277,11 +15279,14 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   QualType ResultType =
       FnDecl->getType()->castAs<FunctionType>()->getReturnType();
 
-  // The operator is valid on any address space for OpenCL.
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
-    if (auto *PtrTy = ResultType->getAs<PointerType>()) {
+    // The operator is valid on any address space for OpenCL.
+    // Drop address space from actual and expected result types.
+    if (const auto *PtrTy = ResultType->getAs<PointerType>())
       ResultType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-    }
+
+    if (auto ExpectedPtrTy = ExpectedResultType->getAs<PointerType>())
+      ExpectedResultType = RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
   }
 
   // Check that the result type is what we expect.
@@ -15311,10 +15316,14 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   QualType FirstParamType = FnDecl->getParamDecl(0)->getType();
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
     // The operator is valid on any address space for OpenCL.
-    if (auto *PtrTy =
-            FnDecl->getParamDecl(0)->getType()->getAs<PointerType>()) {
+    // Drop address space from actual and expected first parameter types.
+    if (const auto *PtrTy =
+            FnDecl->getParamDecl(0)->getType()->getAs<PointerType>())
       FirstParamType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-    }
+
+    if (auto ExpectedPtrTy = ExpectedFirstParamType->getAs<PointerType>())
+      ExpectedFirstParamType =
+          RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
   }
 
   // Check that the first parameter type is what we expect.

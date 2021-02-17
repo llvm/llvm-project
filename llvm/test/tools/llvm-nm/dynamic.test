@@ -190,4 +190,4 @@ DynamicSymbols:
 # RUN:   FileCheck %s -DFILE=%t4-broken-dynsym.o --check-prefix=VERSION-ERR4
 
 # VERSION-ERR4: warning: unable to read symbol versions: unable to read flags for symbol with index 1: section [index 4] has invalid sh_entsize: expected 24, but got 255
-# VERSION-ERR4: error: [[FILE]] section [index 4] has invalid sh_entsize: expected 24, but got 255
+# VERSION-ERR4: error: [[FILE]]: section [index 4] has invalid sh_entsize: expected 24, but got 255

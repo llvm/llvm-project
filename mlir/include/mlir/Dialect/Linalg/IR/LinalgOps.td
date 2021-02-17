@@ -116,7 +116,9 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
     OpBuilderDAG<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
     [{
       build($_builder, $_state, ValueRange{}, staticShape, elementType);
-    }]>
+    }]>,
+    OpBuilderDAG<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let hasCanonicalizer = 1;
@@ -340,10 +342,15 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
     SmallVector<ReassociationExprs, 4> getReassociationExprs() {
       return
         llvm::to_vector<4>(llvm::map_range(reassociation(),
-	  [](Attribute a) {
-	    return llvm::to_vector<2>(
-	      a.cast<AffineMapAttr>().getValue().getResults());
-	  }));
+          [](Attribute a) {
+            return llvm::to_vector<2>(
+              a.cast<AffineMapAttr>().getValue().getResults());
+          }));
+    }
+    SmallVector<Value, 4> getOutputShape(OpBuilder &b, Location loc) {
+      return getReshapeOutputShapeFromInputShape(
+          b, loc, src(), getResultType().getShape(),
+          getReassociationMaps());
     }
   }];
   let assemblyFormat = [{

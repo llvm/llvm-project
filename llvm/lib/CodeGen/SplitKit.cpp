@@ -557,71 +557,19 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
 
   // First pass: Try to find a perfectly matching subregister index. If none
   // exists find the one covering the most lanemask bits.
-  SmallVector<unsigned, 8> PossibleIndexes;
-  unsigned BestIdx = 0;
-  unsigned BestCover = 0;
   const TargetRegisterClass *RC = MRI.getRegClass(FromReg);
   assert(RC == MRI.getRegClass(ToReg) && "Should have same reg class");
-  for (unsigned Idx = 1, E = TRI.getNumSubRegIndices(); Idx < E; ++Idx) {
-    // Is this index even compatible with the given class?
-    if (TRI.getSubClassWithSubReg(RC, Idx) != RC)
-      continue;
-    LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(Idx);
-    // Early exit if we found a perfect match.
-    if (SubRegMask == LaneMask) {
-      BestIdx = Idx;
-      break;
-    }
 
-    // The index must not cover any lanes outside \p LaneMask.
-    if ((SubRegMask & ~LaneMask).any())
-      continue;
-
-    unsigned PopCount = SubRegMask.getNumLanes();
-    PossibleIndexes.push_back(Idx);
-    if (PopCount > BestCover) {
-      BestCover = PopCount;
-      BestIdx = Idx;
-    }
-  }
+  SmallVector<unsigned, 8> Indexes;
 
   // Abort if we cannot possibly implement the COPY with the given indexes.
-  if (BestIdx == 0)
+  if (!TRI.getCoveringSubRegIndexes(MRI, RC, LaneMask, Indexes))
     report_fatal_error("Impossible to implement partial COPY");
 
-  SlotIndex Def = buildSingleSubRegCopy(FromReg, ToReg, MBB, InsertBefore,
-                                        BestIdx, DestLI, Late, SlotIndex());
-
-  // Greedy heuristic: Keep iterating keeping the best covering subreg index
-  // each time.
-  LaneBitmask LanesLeft = LaneMask & ~(TRI.getSubRegIndexLaneMask(BestIdx));
-  while (LanesLeft.any()) {
-    unsigned BestIdx = 0;
-    int BestCover = std::numeric_limits<int>::min();
-    for (unsigned Idx : PossibleIndexes) {
-      LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(Idx);
-      // Early exit if we found a perfect match.
-      if (SubRegMask == LanesLeft) {
-        BestIdx = Idx;
-        break;
-      }
-
-      // Try to cover as much of the remaining lanes as possible but
-      // as few of the already covered lanes as possible.
-      int Cover = (SubRegMask & LanesLeft).getNumLanes()
-                - (SubRegMask & ~LanesLeft).getNumLanes();
-      if (Cover > BestCover) {
-        BestCover = Cover;
-        BestIdx = Idx;
-      }
-    }
-
-    if (BestIdx == 0)
-      report_fatal_error("Impossible to implement partial COPY");
-
-    buildSingleSubRegCopy(FromReg, ToReg, MBB, InsertBefore, BestIdx,
-                          DestLI, Late, Def);
-    LanesLeft &= ~TRI.getSubRegIndexLaneMask(BestIdx);
+  SlotIndex Def;
+  for (unsigned BestIdx : Indexes) {
+    Def = buildSingleSubRegCopy(FromReg, ToReg, MBB, InsertBefore, BestIdx,
+                                DestLI, Late, Def);
   }
 
   return Def;

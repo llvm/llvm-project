@@ -234,6 +234,7 @@ def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
 def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
 def S_OR_B64_term : WrapTerminatorInst<S_OR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
+def S_AND_B64_term : WrapTerminatorInst<S_AND_B64>;
 }
 
 let WaveSizePredicate = isWave32 in {
@@ -241,6 +242,7 @@ def S_MOV_B32_term : WrapTerminatorInst<S_MOV_B32>;
 def S_XOR_B32_term : WrapTerminatorInst<S_XOR_B32>;
 def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
 def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
+def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 }
 
 
@@ -341,23 +343,21 @@ multiclass PseudoInstKill <dag ins> {
   // required in degenerate cases (when V_CMPX cannot be used due to constant
   // bus limitations) and because it allows us to avoid having to track SCC
   // liveness across basic blocks.
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _PSEUDO : PseudoInstSI <(outs), ins> {
     let isConvergent = 1;
     let usesCustomInserter = 1;
   }
 
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _TERMINATOR : SPseudoInstSI <(outs), ins> {
     let isTerminator = 1;
   }
 }
 
 defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
+let Defs = [VCC] in
 defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
-
-let Defs = [EXEC] in
-def SI_KILL_CLEANUP : SPseudoInstSI <(outs), (ins)>;
 
 let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
@@ -379,6 +379,18 @@ def SI_PS_LIVE : PseudoInstSI <
   [(set i1:$dst, (int_amdgcn_ps_live))]> {
   let SALU = 1;
 }
+
+let Uses = [EXEC] in {
+def SI_LIVE_MASK : PseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_live_mask))]> {
+  let SALU = 1;
+}
+let Defs = [EXEC,SCC] in {
+// Demote: Turn a pixel shader thread into a helper lane.
+def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>;
+} // End Defs = [EXEC,SCC]
+} // End Uses = [EXEC]
 
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
@@ -751,6 +763,16 @@ def : Pat <
 def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote i1:$src),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote (i1 (not i1:$src))),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals

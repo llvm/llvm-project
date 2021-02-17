@@ -67,6 +67,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include <algorithm>
@@ -88,6 +89,10 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::init(3),
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
+
+/// enable preservation of attributes in assume like:
+/// call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
+extern cl::opt<bool> EnableKnowledgeRetention;
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -1511,15 +1516,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *IIOperand = II->getArgOperand(0);
     SmallVector<OperandBundleDef, 4> OpBundles;
     II->getOperandBundlesAsDefs(OpBundles);
-    bool HasOpBundles = !OpBundles.empty();
+
+    /// This will remove the boolean Condition from the assume given as
+    /// argument and remove the assume if it becomes useless.
+    /// always returns nullptr for use as a return values.
+    auto RemoveConditionFromAssume = [&](Instruction *Assume) -> Instruction * {
+      assert(isa<IntrinsicInst>(Assume));
+      if (isAssumeWithEmptyBundle(*cast<IntrinsicInst>(II)))
+        return eraseInstFromFunction(CI);
+      replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
+      return nullptr;
+    };
     // Remove an assume if it is followed by an identical assume.
     // TODO: Do we need this? Unless there are conflicting assumptions, the
     // computeKnownBits(IIOperand) below here eliminates redundant assumes.
     Instruction *Next = II->getNextNonDebugInstruction();
-    if (HasOpBundles &&
-        match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))) &&
-        !cast<IntrinsicInst>(Next)->hasOperandBundles())
-      return eraseInstFromFunction(CI);
+    if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
+      return RemoveConditionFromAssume(Next);
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
@@ -1552,11 +1565,93 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         isValidAssumeForContext(II, LHS, &DT)) {
       MDNode *MD = MDNode::get(II->getContext(), None);
       LHS->setMetadata(LLVMContext::MD_nonnull, MD);
-      if (!HasOpBundles)
-        return eraseInstFromFunction(*II);
+      return RemoveConditionFromAssume(II);
 
       // TODO: apply nonnull return attributes to calls and invokes
       // TODO: apply range metadata for range check patterns?
+    }
+
+    // Convert nonnull assume like:
+    // %A = icmp ne i32* %PTR, null
+    // call void @llvm.assume(i1 %A)
+    // into
+    // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
+    if (EnableKnowledgeRetention &&
+        match(IIOperand, m_Cmp(Pred, m_Value(A), m_Zero())) &&
+        Pred == CmpInst::ICMP_NE && A->getType()->isPointerTy()) {
+      if (IntrinsicInst *Replacement = buildAssumeFromKnowledge(
+              {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
+
+        Replacement->insertBefore(Next);
+        AC.registerAssumption(Replacement);
+        return RemoveConditionFromAssume(II);
+      }
+    }
+
+    // Convert alignment assume like:
+    // %B = ptrtoint i32* %A to i64
+    // %C = and i64 %B, Constant
+    // %D = icmp eq i64 %C, 0
+    // call void @llvm.assume(i1 %D)
+    // into
+    // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
+    uint64_t AlignMask;
+    if (EnableKnowledgeRetention &&
+        match(IIOperand,
+              m_Cmp(Pred, m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                    m_Zero())) &&
+        Pred == CmpInst::ICMP_EQ) {
+      if (isPowerOf2_64(AlignMask + 1)) {
+        uint64_t Offset = 0;
+        match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
+        if (match(A, m_PtrToInt(m_Value(A)))) {
+          /// Note: this doesn't preserve the offset information but merges
+          /// offset and alignment.
+          /// TODO: we can generate a GEP instead of merging the alignment with
+          /// the offset.
+          RetainedKnowledge RK{Attribute::Alignment,
+                               (unsigned)MinAlign(Offset, AlignMask + 1), A};
+          if (IntrinsicInst *Replacement =
+                  buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
+
+            Replacement->insertAfter(II);
+            AC.registerAssumption(Replacement);
+          }
+          return RemoveConditionFromAssume(II);
+        }
+      }
+    }
+
+    /// Canonicalize Knowledge in operand bundles.
+    if (EnableKnowledgeRetention && II->hasOperandBundles()) {
+      for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
+        auto &BOI = II->bundle_op_info_begin()[Idx];
+        RetainedKnowledge RK = llvm::getKnowledgeFromBundle(*II, BOI);
+        if (BOI.End - BOI.Begin > 2)
+          continue; // Prevent reducing knowledge in an align with offset since
+                    // extracting a RetainedKnowledge form them looses offset
+                    // information
+        RetainedKnowledge CanonRK = llvm::simplifyRetainedKnowledge(
+            II, RK, &getAssumptionCache(), &getDominatorTree());
+        if (CanonRK == RK)
+          continue;
+        if (!CanonRK) {
+          if (BOI.End - BOI.Begin > 0) {
+            Worklist.pushValue(II->op_begin()[BOI.Begin]);
+            Value::dropDroppableUse(II->op_begin()[BOI.Begin]);
+          }
+          continue;
+        }
+        assert(RK.AttrKind == CanonRK.AttrKind);
+        if (BOI.End - BOI.Begin > 0)
+          II->op_begin()[BOI.Begin].set(CanonRK.WasOn);
+        if (BOI.End - BOI.Begin > 1)
+          II->op_begin()[BOI.Begin + 1].set(ConstantInt::get(
+              Type::getInt64Ty(II->getContext()), CanonRK.ArgValue));
+        if (RK.WasOn)
+          Worklist.pushValue(RK.WasOn);
+        return II;
+      }
     }
 
     // If there is a dominating assume with the same condition as this one,

@@ -310,7 +310,7 @@ namespace llvm {
     MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
                                        unsigned Flags, SectionKind K,
                                        unsigned EntrySize,
-                                       const MCSymbolELF *Group,
+                                       const MCSymbolELF *Group, bool IsComdat,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym);
 
@@ -482,24 +482,32 @@ namespace llvm {
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags) {
-      return getELFSection(Section, Type, Flags, 0, "");
+      return getELFSection(Section, Type, Flags, 0, "", false);
     }
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
-                                unsigned Flags, unsigned EntrySize,
-                                const Twine &Group) {
-      return getELFSection(Section, Type, Flags, EntrySize, Group,
+                                unsigned Flags, unsigned EntrySize) {
+      return getELFSection(Section, Type, Flags, EntrySize, "", false,
                            MCSection::NonUniqueID, nullptr);
     }
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                const Twine &Group, unsigned UniqueID,
+                                const Twine &Group, bool IsComdat) {
+      return getELFSection(Section, Type, Flags, EntrySize, Group, IsComdat,
+                           MCSection::NonUniqueID, nullptr);
+    }
+
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
+                                unsigned Flags, unsigned EntrySize,
+                                const Twine &Group, bool IsComdat,
+                                unsigned UniqueID,
                                 const MCSymbolELF *LinkedToSym);
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                const MCSymbolELF *Group, unsigned UniqueID,
+                                const MCSymbolELF *Group, bool IsComdat,
+                                unsigned UniqueID,
                                 const MCSymbolELF *LinkedToSym);
 
     /// Get a section with the provided group identifier. This section is
@@ -517,7 +525,8 @@ namespace llvm {
 
     void renameELFSection(MCSectionELF *Section, StringRef Name);
 
-    MCSectionELF *createELFGroupSection(const MCSymbolELF *Group);
+    MCSectionELF *createELFGroupSection(const MCSymbolELF *Group,
+                                        bool IsComdat);
 
     void recordELFMergeableSectionInfo(StringRef SectionName, unsigned Flags,
                                        unsigned UniqueID, unsigned EntrySize);

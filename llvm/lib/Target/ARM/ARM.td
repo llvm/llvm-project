@@ -852,7 +852,7 @@ def ARMv86a   : Architecture<"armv8.6-a", "ARMv86a",  [HasV8_6aOps,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
-def ARMv87a   : Architecture<"armv8.7-a", "ARMv86a",  [HasV8_7aOps,
+def ARMv87a   : Architecture<"armv8.7-a", "ARMv87a",  [HasV8_7aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,

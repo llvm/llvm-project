@@ -82,13 +82,10 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:    add.w r0, r0, r3, lsl #2
 ; CHECK-NEXT:  .LBB0_10: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s0, [r1]
-; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vldr s2, [r2]
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    vldmia r1!, {s0}
+; CHECK-NEXT:    vldmia r2!, {s2}
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-NEXT:    vstr s0, [r0]
-; CHECK-NEXT:    adds r0, #4
+; CHECK-NEXT:    vstmia r0!, {s0}
 ; CHECK-NEXT:    le lr, .LBB0_10
 ; CHECK-NEXT:  .LBB0_11: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}

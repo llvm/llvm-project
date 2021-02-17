@@ -481,26 +481,20 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; SSE-LABEL: v16i4:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psllw $4, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    psllw $4, %xmm0
 ; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    paddusb %xmm1, %xmm0
-; SSE-NEXT:    psrlw $4, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddb %xmm1, %xmm0
+; SSE-NEXT:    pminub %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v16i4:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllw $4, %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpminub %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %z = call <16 x i4> @llvm.uadd.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
   ret <16 x i4> %z
@@ -509,62 +503,13 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; SSE-LABEL: v16i1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psllw $7, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    psllw $7, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    paddusb %xmm1, %xmm0
-; SSE-NEXT:    psrlw $7, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: v16i1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: v16i1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: v16i1:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512F-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: v16i1:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpmovb2m %xmm1, %k0
-; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %xmm0, %k1
-; AVX512BW-NEXT:    korw %k0, %k1, %k0
-; AVX512BW-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512BW-NEXT:    retq
+; AVX-LABEL: v16i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %z = call <16 x i1> @llvm.uadd.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
 }

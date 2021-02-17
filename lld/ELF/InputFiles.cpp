@@ -609,27 +609,20 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       StringRef signature = getShtGroupSignature(objSections, sec);
       this->sections[i] = &InputSection::discarded;
 
-
       ArrayRef<Elf_Word> entries =
           CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
       if (entries.empty())
         fatal(toString(this) + ": empty SHT_GROUP");
 
-      // The first word of a SHT_GROUP section contains flags. Currently,
-      // the standard defines only "GRP_COMDAT" flag for the COMDAT group.
-      // An group with the empty flag doesn't define anything; such sections
-      // are just skipped.
-      if (entries[0] == 0)
-        continue;
-
-      if (entries[0] != GRP_COMDAT)
+      Elf_Word flag = entries[0];
+      if (flag && flag != GRP_COMDAT)
         fatal(toString(this) + ": unsupported SHT_GROUP format");
 
-      bool isNew =
-          ignoreComdats ||
+      bool keepGroup =
+          (flag & GRP_COMDAT) == 0 || ignoreComdats ||
           symtab->comdatGroups.try_emplace(CachedHashStringRef(signature), this)
               .second;
-      if (isNew) {
+      if (keepGroup) {
         if (config->relocatable)
           this->sections[i] = createInputSection(sec);
         selectedGroups.push_back(entries);
@@ -1138,6 +1131,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   }
 
   // Symbol resolution of non-local symbols.
+  SmallVector<unsigned, 32> unds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint8_t binding = eSym.getBinding();
@@ -1154,8 +1148,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
     // Handle global undefined symbols.
     if (eSym.st_shndx == SHN_UNDEF) {
-      this->symbols[i]->resolve(Undefined{this, name, binding, stOther, type});
-      this->symbols[i]->referenced = true;
+      unds.push_back(i);
       continue;
     }
 
@@ -1201,6 +1194,20 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     }
 
     fatal(toString(this) + ": unexpected binding: " + Twine((int)binding));
+  }
+
+  // Undefined symbols (excluding those defined relative to non-prevailing
+  // sections) can trigger recursive fetch. Process defined symbols first so
+  // that the relative order between a defined symbol and an undefined symbol
+  // does not change the symbol resolution behavior. In addition, a set of
+  // interconnected symbols will all be resolved to the same file, instead of
+  // being resolved to different files.
+  for (unsigned i : unds) {
+    const Elf_Sym &eSym = eSyms[i];
+    StringRefZ name = this->stringTable.data() + eSym.st_name;
+    this->symbols[i]->resolve(Undefined{this, name, eSym.getBinding(),
+                                        eSym.st_other, eSym.getType()});
+    this->symbols[i]->referenced = true;
   }
 }
 

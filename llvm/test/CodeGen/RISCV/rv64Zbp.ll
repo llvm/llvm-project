@@ -2670,6 +2670,34 @@ define i64 @grev32_fshr(i64 %a) nounwind {
   ret i64 %or
 }
 
+declare i16 @llvm.bswap.i16(i16)
+
+define zeroext i16 @bswap_i16(i16 zeroext %a) nounwind {
+; RV64I-LABEL: bswap_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 8
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bswap_i16:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev8 a0, a0
+; RV64IB-NEXT:    srli a0, a0, 48
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bswap_i16:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev8 a0, a0
+; RV64IBP-NEXT:    srli a0, a0, 48
+; RV64IBP-NEXT:    ret
+  %1 = tail call i16 @llvm.bswap.i16(i16 %a)
+  ret i16 %1
+}
+
 declare i32 @llvm.bswap.i32(i32)
 
 define signext i32 @bswap_i32(i32 signext %a) nounwind {
@@ -2787,94 +2815,141 @@ define i64 @bswap_i64(i64 %a) {
   ret i64 %1
 }
 
+declare i8 @llvm.bitreverse.i8(i8)
+
+define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
+; RV64I-LABEL: bitreverse_i8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 4
+; RV64I-NEXT:    andi a0, a0, 15
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    andi a1, a0, 51
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    andi a0, a0, 204
+; RV64I-NEXT:    srli a0, a0, 2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    andi a1, a0, 85
+; RV64I-NEXT:    slli a1, a1, 1
+; RV64I-NEXT:    andi a0, a0, 170
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bitreverse_i8:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev a0, a0
+; RV64IB-NEXT:    srli a0, a0, 56
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bitreverse_i8:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev a0, a0
+; RV64IBP-NEXT:    srli a0, a0, 56
+; RV64IBP-NEXT:    ret
+  %1 = tail call i8 @llvm.bitreverse.i8(i8 %a)
+  ret i8 %1
+}
+
+declare i16 @llvm.bitreverse.i16(i16)
+
+define zeroext i16 @bitreverse_i16(i16 zeroext %a) nounwind {
+; RV64I-LABEL: bitreverse_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 8
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, -241
+; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    slli a1, a1, 4
+; RV64I-NEXT:    lui a2, 15
+; RV64I-NEXT:    addiw a2, a2, 240
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    srli a0, a0, 4
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    lui a1, 3
+; RV64I-NEXT:    addiw a1, a1, 819
+; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    lui a2, 13
+; RV64I-NEXT:    addiw a2, a2, -820
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    srli a0, a0, 2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    lui a1, 5
+; RV64I-NEXT:    addiw a1, a1, 1365
+; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    slli a1, a1, 1
+; RV64I-NEXT:    lui a2, 11
+; RV64I-NEXT:    addiw a2, a2, -1366
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: bitreverse_i16:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    rev a0, a0
+; RV64IB-NEXT:    srli a0, a0, 48
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: bitreverse_i16:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    rev a0, a0
+; RV64IBP-NEXT:    srli a0, a0, 48
+; RV64IBP-NEXT:    ret
+  %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
+  ret i16 %1
+}
+
 declare i32 @llvm.bitreverse.i32(i32)
 
 define signext i32 @bitreverse_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: bitreverse_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a1, a0, 24
-; RV64I-NEXT:    lui a2, 4080
+; RV64I-NEXT:    srliw a1, a0, 8
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -256
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 8
-; RV64I-NEXT:    addi a3, zero, 255
-; RV64I-NEXT:    slli a4, a3, 24
-; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    or a1, a2, a1
-; RV64I-NEXT:    srli a2, a0, 40
-; RV64I-NEXT:    lui a4, 16
-; RV64I-NEXT:    addiw a4, a4, -256
-; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    srli a4, a0, 56
-; RV64I-NEXT:    or a2, a2, a4
+; RV64I-NEXT:    srliw a2, a0, 24
 ; RV64I-NEXT:    or a1, a1, a2
 ; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    slli a4, a3, 32
-; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    slli a4, a0, 24
-; RV64I-NEXT:    slli a5, a3, 40
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    or a2, a4, a2
-; RV64I-NEXT:    slli a4, a0, 40
-; RV64I-NEXT:    slli a3, a3, 48
-; RV64I-NEXT:    and a3, a4, a3
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    lui a3, 4080
+; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 3855
-; RV64I-NEXT:    addiw a1, a1, 241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -241
+; RV64I-NEXT:    lui a1, 61681
+; RV64I-NEXT:    addiw a1, a1, -241
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 4
-; RV64I-NEXT:    lui a2, 1044721
+; RV64I-NEXT:    lui a2, 241
 ; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
 ; RV64I-NEXT:    slli a2, a2, 12
 ; RV64I-NEXT:    addi a2, a2, 240
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    srli a0, a0, 4
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 13107
+; RV64I-NEXT:    lui a1, 209715
 ; RV64I-NEXT:    addiw a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
+; RV64I-NEXT:    lui a2, 838861
+; RV64I-NEXT:    addiw a2, a2, -820
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 1
-; RV64I-NEXT:    lui a2, 873813
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 33
+; RV64I-NEXT:    lui a2, 699051
+; RV64I-NEXT:    addiw a2, a2, -1366
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srai a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: bitreverse_i32:
@@ -2894,89 +2969,47 @@ define signext i32 @bitreverse_i32(i32 signext %a) nounwind {
 define void @bitreverse_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-LABEL: bitreverse_i32_nosext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a2, a0, 24
-; RV64I-NEXT:    lui a3, 4080
+; RV64I-NEXT:    srliw a2, a0, 8
+; RV64I-NEXT:    lui a3, 16
+; RV64I-NEXT:    addiw a3, a3, -256
 ; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    srli a3, a0, 8
-; RV64I-NEXT:    addi a4, zero, 255
-; RV64I-NEXT:    slli a5, a4, 24
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    srli a3, a0, 40
-; RV64I-NEXT:    lui a5, 16
-; RV64I-NEXT:    addiw a5, a5, -256
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    srli a5, a0, 56
-; RV64I-NEXT:    or a3, a3, a5
-; RV64I-NEXT:    or a6, a2, a3
-; RV64I-NEXT:    slli a3, a0, 8
-; RV64I-NEXT:    slli a5, a4, 32
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    slli a5, a0, 24
-; RV64I-NEXT:    slli a2, a4, 40
-; RV64I-NEXT:    and a2, a5, a2
+; RV64I-NEXT:    srliw a3, a0, 24
 ; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    slli a3, a0, 40
-; RV64I-NEXT:    slli a4, a4, 48
+; RV64I-NEXT:    slli a3, a0, 8
+; RV64I-NEXT:    lui a4, 4080
 ; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a6
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
+; RV64I-NEXT:    lui a2, 61681
+; RV64I-NEXT:    addiw a2, a2, -241
 ; RV64I-NEXT:    and a2, a0, a2
 ; RV64I-NEXT:    slli a2, a2, 4
-; RV64I-NEXT:    lui a3, 1044721
+; RV64I-NEXT:    lui a3, 241
 ; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
 ; RV64I-NEXT:    slli a3, a3, 12
 ; RV64I-NEXT:    addi a3, a3, 240
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 4
 ; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    lui a2, 13107
+; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a2, a0, a2
 ; RV64I-NEXT:    slli a2, a2, 2
-; RV64I-NEXT:    lui a3, 1035469
-; RV64I-NEXT:    addiw a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -820
+; RV64I-NEXT:    lui a3, 838861
+; RV64I-NEXT:    addiw a3, a3, -820
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    lui a2, 349525
 ; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 32
 ; RV64I-NEXT:    and a2, a0, a2
 ; RV64I-NEXT:    slli a2, a2, 1
-; RV64I-NEXT:    lui a3, 873813
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 33
+; RV64I-NEXT:    lui a3, 699051
+; RV64I-NEXT:    addiw a3, a3, -1366
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret
 ;
@@ -3179,109 +3212,56 @@ define i32 @bswap_rotl_i32(i32 %a) {
 define i32 @bitreverse_bswap_i32(i32 %a) {
 ; RV64I-LABEL: bitreverse_bswap_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a2, a0, 24
-; RV64I-NEXT:    lui a6, 4080
-; RV64I-NEXT:    and a2, a2, a6
-; RV64I-NEXT:    srli a3, a0, 8
-; RV64I-NEXT:    addi a4, zero, 255
-; RV64I-NEXT:    slli a5, a4, 24
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    or a3, a3, a2
-; RV64I-NEXT:    srli a5, a0, 40
+; RV64I-NEXT:    srliw a1, a0, 8
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a7, a2, -256
-; RV64I-NEXT:    and a5, a5, a7
-; RV64I-NEXT:    srli a1, a0, 56
-; RV64I-NEXT:    or a1, a5, a1
-; RV64I-NEXT:    or a1, a3, a1
+; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srliw a3, a0, 24
+; RV64I-NEXT:    or a1, a1, a3
 ; RV64I-NEXT:    slli a3, a0, 8
-; RV64I-NEXT:    slli a5, a4, 32
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    slli a5, a0, 24
-; RV64I-NEXT:    slli a2, a4, 40
-; RV64I-NEXT:    and a2, a5, a2
-; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    slli a3, a0, 40
-; RV64I-NEXT:    slli a4, a4, 48
+; RV64I-NEXT:    lui a4, 4080
 ; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 3855
-; RV64I-NEXT:    addiw a1, a1, 241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -241
+; RV64I-NEXT:    lui a1, 61681
+; RV64I-NEXT:    addiw a1, a1, -241
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a3, 241
+; RV64I-NEXT:    addiw a3, a3, -241
+; RV64I-NEXT:    slli a3, a3, 12
+; RV64I-NEXT:    addi a3, a3, 240
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 4
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 13107
+; RV64I-NEXT:    lui a1, 209715
 ; RV64I-NEXT:    addiw a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 819
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a3, 838861
+; RV64I-NEXT:    addiw a3, a3, -820
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 21845
+; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 1365
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 1365
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 1365
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a1, a1, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a3, 699051
+; RV64I-NEXT:    addiw a3, a3, -1366
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 8
-; RV64I-NEXT:    lui a2, 1044480
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 40
-; RV64I-NEXT:    and a2, a2, a7
-; RV64I-NEXT:    srli a3, a0, 56
-; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    srli a0, a0, 24
-; RV64I-NEXT:    and a0, a0, a6
-; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    srli a2, a0, 24
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: bitreverse_bswap_i32:

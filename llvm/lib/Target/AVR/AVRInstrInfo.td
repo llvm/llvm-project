@@ -1681,7 +1681,7 @@ Defs = [SREG] in
                        "lslb7\t$rd",
                        [(set i8:$rd, (AVRlsl7 i8:$src)), (implicit SREG)]>;
 
-  def LSLW4Rd : Pseudo<(outs DREGS:$rd),
+  def LSLW4Rd : Pseudo<(outs DLDREGS:$rd),
                        (ins DREGS:$src),
                        "lslw4\t$rd",
                        [(set i16:$rd, (AVRlsl4 i16:$src)), (implicit SREG)]>;
@@ -1691,7 +1691,7 @@ Defs = [SREG] in
                        "lslw8\t$rd",
                        [(set i16:$rd, (AVRlsl8 i16:$src)), (implicit SREG)]>;
 
-  def LSLW12Rd : Pseudo<(outs DREGS:$rd),
+  def LSLW12Rd : Pseudo<(outs DLDREGS:$rd),
                        (ins DREGS:$src),
                        "lslw12\t$rd",
                        [(set i16:$rd, (AVRlsl12 i16:$src)), (implicit SREG)]>;
@@ -1713,7 +1713,7 @@ Defs = [SREG] in
                       "lsrw\t$rd",
                       [(set i16:$rd, (AVRlsr i16:$src)), (implicit SREG)]>;
 
-  def LSRW4Rd : Pseudo<(outs DREGS:$rd),
+  def LSRW4Rd : Pseudo<(outs DLDREGS:$rd),
                        (ins DREGS:$src),
                        "lsrw4\t$rd",
                        [(set i16:$rd, (AVRlsr4 i16:$src)), (implicit SREG)]>;
@@ -1723,7 +1723,7 @@ Defs = [SREG] in
                        "lsrw8\t$rd",
                        [(set i16:$rd, (AVRlsr8 i16:$src)), (implicit SREG)]>;
 
-  def LSRW12Rd : Pseudo<(outs DREGS:$rd),
+  def LSRW12Rd : Pseudo<(outs DLDREGS:$rd),
                        (ins DREGS:$src),
                        "lsrw12\t$rd",
                        [(set i16:$rd, (AVRlsr12 i16:$src)), (implicit SREG)]>;

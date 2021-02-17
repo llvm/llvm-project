@@ -151,6 +151,7 @@ public:
   TableSection() : SyntheticSection(llvm::wasm::WASM_SEC_TABLE) {}
 
   bool isNeeded() const override { return inputTables.size() > 0; };
+  void assignIndexes() override;
   void writeBody() override;
   void addTable(InputTable *table);
 

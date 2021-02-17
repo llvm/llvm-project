@@ -336,6 +336,8 @@ def warn_ignored_hip_only_option : Warning<
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
+def err_omp_required_clause : Error<
+  "directive '#pragma omp %0' requires the '%1' clause">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

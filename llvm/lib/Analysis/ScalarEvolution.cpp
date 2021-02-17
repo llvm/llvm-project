@@ -321,12 +321,9 @@ void SCEV::print(raw_ostream &OS) const {
       llvm_unreachable("There are no other nary expression types.");
     }
     OS << "(";
-    for (SCEVNAryExpr::op_iterator I = NAry->op_begin(), E = NAry->op_end();
-         I != E; ++I) {
-      OS << **I;
-      if (std::next(I) != E)
-        OS << OpStr;
-    }
+    ListSeparator LS(OpStr);
+    for (const SCEV *Op : NAry->operands())
+      OS << LS << *Op;
     OS << ")";
     switch (NAry->getSCEVType()) {
     case scAddExpr:
@@ -1704,9 +1701,9 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
                 getZeroExtendExpr(Step, Ty, Depth + 1), L,
                 AR->getNoWrapFlags());
         }
-
+        
         // For a negative step, we can extend the operands iff doing so only
-        // traverses values in the range zext([0,UINT_MAX]).
+        // traverses values in the range zext([0,UINT_MAX]). 
         if (isKnownNegative(Step)) {
           const SCEV *N = getConstant(APInt::getMaxValue(BitWidth) -
                                       getSignedRangeMin(Step));
@@ -9927,7 +9924,9 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
 
   // Check conditions due to any @llvm.assume intrinsics.
   for (auto &AssumeVH : AC.assumptions()) {
-    auto *CI = AssumeVH.getAssumeCI();
+    if (!AssumeVH)
+      continue;
+    auto *CI = cast<CallInst>(AssumeVH);
     if (!DT.dominates(CI, Latch->getTerminator()))
       continue;
 
@@ -10074,7 +10073,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
 
   // Check conditions due to any @llvm.assume intrinsics.
   for (auto &AssumeVH : AC.assumptions()) {
-    auto *CI = AssumeVH.getAssumeCI();
+    if (!AssumeVH)
+      continue;
+    auto *CI = cast<CallInst>(AssumeVH);
     if (!DT.dominates(CI, BB))
       continue;
 
@@ -13354,7 +13355,9 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
 
   // Also collect information from assumptions dominating the loop.
   for (auto &AssumeVH : AC.assumptions()) {
-    auto *AssumeI = AssumeVH.getAssumeCI();
+    if (!AssumeVH)
+      continue;
+    auto *AssumeI = cast<CallInst>(AssumeVH);
     auto *Cmp = dyn_cast<ICmpInst>(AssumeI->getOperand(0));
     if (!Cmp || !DT.dominates(AssumeI, L->getHeader()))
       continue;

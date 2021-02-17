@@ -114,7 +114,7 @@ public:
   /// compare instruction to the select instruction and stores this pointer in
   /// 'PatternLastInst' member of the returned struct.
   static InstDesc isRecurrenceInstr(Instruction *I, RecurKind Kind,
-                                    InstDesc &Prev, bool HasFunNoNaNAttr);
+                                    InstDesc &Prev, FastMathFlags FMF);
 
   /// Returns true if instruction I has multiple uses in Insts
   static bool hasMultipleUsesOf(Instruction *I,
@@ -146,7 +146,7 @@ public:
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed.
   static bool AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                              bool HasFunNoNaNAttr,
+                              FastMathFlags FMF,
                               RecurrenceDescriptor &RedDes,
                               DemandedBits *DB = nullptr,
                               AssumptionCache *AC = nullptr,

@@ -209,9 +209,10 @@ public:
     return false;
   }
 
-  bool shouldFavorPostInc() const { return false; }
-
-  bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const {
+    return TTI::AMK_None;
+  }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
     return false;
@@ -688,6 +689,11 @@ public:
     return true;
   }
 
+  bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                   ElementCount VF) const {
+    return true;
+  }
+
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const {
@@ -698,11 +704,6 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const {
     return VF;
-  }
-
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
   }
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,

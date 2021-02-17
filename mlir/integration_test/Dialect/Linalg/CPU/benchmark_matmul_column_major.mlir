@@ -1,6 +1,6 @@
 // RUN: export M=24 && export K=64 && export N=192 && export ITERS=10 && \
 // RUN: cat %s | sed 's@${M}@'"$M"'@g'| sed 's@${K}@'"$K"'@g' | sed 's@${N}@'"$N"'@g'| sed 's@${ITERS}@'"$ITERS"'@g'| \
-// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.matmul_column_major register-tile-sizes=16,0,32 vectorize" | \
+// RUN: mlir-opt -test-linalg-codegen-strategy="anchor-func=matmul_column_major anchor-op=linalg.matmul_column_major register-tile-sizes=16,0,32 vectorize" | \
 // RUN: mlir-opt -test-linalg-codegen-strategy="anchor-op=linalg.fill register-tile-sizes=4,16 vectorize" | \
 
 // TODO: linalg.copy vectorization in the presence of permutation map fails. Enable when addressed.
@@ -11,6 +11,7 @@
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
 // Activate to dump assembly
 // R_UN:   -dump-object-file -object-filename=/tmp/a.o \
+// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // Use tee to both print to stderr and FileCheck
 // RUN: tee -a /dev/stderr | FileCheck %s
@@ -84,9 +85,16 @@ func @main() {
   %tmatmul_column_major = subf %t_end_matmul_column_major, %t_start_matmul_column_major: f64
   call @print_perf(%iters, %tmatmul_column_major) : (index, f64) -> ()
 
-  %res = load %cC[%c0, %c0]: !column_major_C
-  // CHECK: 64
-  vector.print %res: !elem_type_c
+  // CHECK: {{^0$}}
+  %cC_ref = alloc() : !column_major_C
+  linalg.fill(%cC_ref, %f0) : !column_major_C, !elem_type_c
+  linalg.matmul_column_major ins(%cA, %cB : !column_major_A, !column_major_B)
+    outs(%cC_ref: !column_major_C)
+  %act = memref_cast %cC : !column_major_C to memref<*xf32>
+  %exp = memref_cast %cC_ref : !column_major_C to memref<*xf32>
+  %errors = call @verifyMemRefF32(%act, %exp) : (memref<*xf32>, memref<*xf32>) -> i64
+  vector.print %errors : i64
+  dealloc %cC_ref : !column_major_C
 
   dealloc %cA : !column_major_A
   dealloc %cB : !column_major_B
@@ -96,6 +104,7 @@ func @main() {
 }
 
 func private @rtclock() -> f64
+func private @verifyMemRefF32(memref<*xf32>, memref<*xf32>) -> i64 attributes { llvm.emit_c_interface }
 
 // TODO: init with random, run and check output.
 // func private @fill_random_f32(memref<*xf32>)

@@ -24,8 +24,8 @@
 # RELOC-NEXT: }
 # RELOC:      Relocations [
 # RELOC-NEXT:  Section ({{.*}}) .rela.dyn {
-# RELOC-NEXT:    0x220340 R_AARCH64_TLS_TPREL64 bar 0x0
-# RELOC-NEXT:    0x220338 R_AARCH64_TLS_TPREL64 foo 0x0
+# RELOC-NEXT:    0x220338 R_AARCH64_TLS_TPREL64 bar 0x0
+# RELOC-NEXT:    0x220340 R_AARCH64_TLS_TPREL64 foo 0x0
 # RELOC-NEXT:  }
 # RELOC-NEXT:]
 
@@ -41,8 +41,8 @@
 
 .globl _start
 _start:
- adrp x0, :gottprel:foo
- ldr x0, [x0, #:gottprel_lo12:foo]
-
  adrp x0, :gottprel:bar
  ldr x0, [x0, #:gottprel_lo12:bar]
+
+ adrp x0, :gottprel:foo
+ ldr x0, [x0, #:gottprel_lo12:foo]

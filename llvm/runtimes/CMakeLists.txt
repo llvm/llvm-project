@@ -187,14 +187,6 @@ foreach(entry ${runtimes})
   list(APPEND runtime_names ${projName})
 endforeach()
 
-if(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/llvm-strip-link.in
-    ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link
-    @ONLY
-  )
-endif()
-
 function(runtime_default_target)
   cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
 
@@ -327,10 +319,6 @@ function(runtime_register_target name target)
   if(NOT RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES AND NOT RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES)
     string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
     list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
-  endif()
-
-  if(target IN_LIST LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
-    list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
   endif()
 
   llvm_ExternalProject_Add(runtimes-${name}

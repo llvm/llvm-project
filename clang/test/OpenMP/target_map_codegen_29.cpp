@@ -73,9 +73,8 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[S_BEGIN_BC]] = ptrtoint i8* [[S_BEGIN:%.+]] to i64
 // CK30-DAG: [[S_END_BC]] = ptrtoint i8* [[S_END:%.+]] to i64
 // CK30-DAG: [[S_BEGIN]] = bitcast [[STRUCT]]* [[S]] to i8*
-// CK30-DAG: [[S_END]] = getelementptr i8, i8* [[S_LAST:%.+]], i32 1
-// CK30-DAG: [[S_LAST]] = getelementptr i8, i8* [[S_BC:%.+]], i{{64|32}} {{55|27}}
-// CK30-DAG: [[S_BC]] = bitcast [[STRUCT]]* [[S]] to i8*
+// CK30-DAG: [[S_END]] = bitcast [[STRUCT]]* [[REAL_S_END:%.+]] to i8*
+// CK30-DAG: [[REAL_S_END]] = getelementptr [[STRUCT]], [[STRUCT]]* [[S]], i32 1
 
 // CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BASES]], i32 0, i32 1
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[BASE_PTR]] to [[STRUCT]]**
@@ -125,7 +124,9 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[S_PTR1_BC]] = ptrtoint i8* [[S_PTR1:%.+]] to i64
 // CK30-DAG: [[S_END_BC]] = ptrtoint i8* [[S_END:%.+]] to i64
 // CK30-DAG: [[S_PTR1]] = bitcast i32** [[PTR2]] to i8*
-// CK30-DAG: [[S_END]] = getelementptr i8, i8* [[S_LAST]], i{{64|32}} 1
+// CK30-DAG: [[S_END]] = getelementptr i8, i8* [[S_LAST:%.+]], i{{64|32}} 1
+// CK30-DAG: [[S_LAST]] = getelementptr i8, i8* [[S_BC:%.+]], i{{64|32}} {{55|27}}
+// CK30-DAG: [[S_BC]] = bitcast [[STRUCT]]* [[S]] to i8*
 
 // CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [6 x i8*], [6 x i8*]* [[BASES]], i32 0, i32 4
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[BASE_PTR]] to i32***

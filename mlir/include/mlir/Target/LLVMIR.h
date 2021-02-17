@@ -19,23 +19,14 @@
 
 // Forward-declare LLVM classes.
 namespace llvm {
-class LLVMContext;
 class Module;
 } // namespace llvm
 
 namespace mlir {
 
+class DialectRegistry;
 class OwningModuleRef;
 class MLIRContext;
-class ModuleOp;
-
-/// Convert the given MLIR module into LLVM IR.  The LLVM context is extracted
-/// from the registered LLVM IR dialect.  In case of error, report it
-/// to the error handler registered with the MLIR context, if any (obtained from
-/// the MLIR module), and return `nullptr`.
-std::unique_ptr<llvm::Module>
-translateModuleToLLVMIR(ModuleOp m, llvm::LLVMContext &llvmContext,
-                        StringRef name = "LLVMDialectModule");
 
 /// Convert the given LLVM module into MLIR's LLVM dialect.  The LLVM context is
 /// extracted from the registered LLVM IR dialect. In case of error, report it
@@ -44,6 +35,15 @@ translateModuleToLLVMIR(ModuleOp m, llvm::LLVMContext &llvmContext,
 OwningModuleRef
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context);
+
+/// Register the LLVM dialect and the translation from it to the LLVM IR in the
+/// given registry;
+void registerLLVMDialectTranslation(DialectRegistry &registry);
+
+/// Register the LLVM dialect and the translation from it in the registry
+/// associated with the given context. This checks if the interface is already
+/// registered and avoids double registation.
+void registerLLVMDialectTranslation(MLIRContext &context);
 
 } // namespace mlir
 

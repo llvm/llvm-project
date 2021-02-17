@@ -116,22 +116,21 @@ define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    ldrb w9, [x1]
 ; CHECK-NEXT:    ldrb w10, [x0, #1]
 ; CHECK-NEXT:    ldrb w11, [x1, #1]
+; CHECK-NEXT:    ldrb w12, [x0, #2]
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldrb w8, [x1, #2]
 ; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x1, #2]
 ; CHECK-NEXT:    mov v0.h[1], w10
+; CHECK-NEXT:    ldrb w9, [x0, #3]
+; CHECK-NEXT:    ldrb w10, [x1, #3]
 ; CHECK-NEXT:    mov v1.h[1], w11
-; CHECK-NEXT:    ldrb w10, [x0, #3]
-; CHECK-NEXT:    ldrb w11, [x1, #3]
-; CHECK-NEXT:    mov v0.h[2], w8
-; CHECK-NEXT:    mov v1.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w10
-; CHECK-NEXT:    mov v1.h[3], w11
-; CHECK-NEXT:    shl v1.4h, v1.4h, #8
-; CHECK-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-NEXT:    uqadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v0.4h, v0.4h, #8
+; CHECK-NEXT:    mov v0.h[2], w12
+; CHECK-NEXT:    mov v1.h[2], w8
+; CHECK-NEXT:    mov v0.h[3], w9
+; CHECK-NEXT:    mov v1.h[3], w10
+; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    umin v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret
@@ -150,13 +149,12 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    ldrb w10, [x0, #1]
 ; CHECK-NEXT:    ldrb w11, [x1, #1]
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    mov v1.s[1], w11
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    uqadd v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #24
+; CHECK-NEXT:    mov v2.s[1], w11
+; CHECK-NEXT:    movi d1, #0x0000ff000000ff
+; CHECK-NEXT:    add v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    umin v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strb w9, [x2]
@@ -192,13 +190,12 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    ldrh w10, [x0, #2]
 ; CHECK-NEXT:    ldrh w11, [x1, #2]
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    mov v1.s[1], w11
-; CHECK-NEXT:    shl v1.2s, v1.2s, #16
-; CHECK-NEXT:    shl v0.2s, v0.2s, #16
-; CHECK-NEXT:    uqadd v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
+; CHECK-NEXT:    mov v2.s[1], w11
+; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    add v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    umin v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strh w9, [x2]
@@ -271,12 +268,10 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; CHECK-LABEL: v16i4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.16b, #15
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    shl v1.16b, v1.16b, #4
-; CHECK-NEXT:    shl v0.16b, v0.16b, #4
-; CHECK-NEXT:    uqadd v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #4
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umin v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i4> @llvm.uadd.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
   ret <16 x i4> %z
@@ -285,13 +280,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.16b, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    uqadd v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i1> @llvm.uadd.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z

@@ -11,7 +11,7 @@ S global;
 // FIXME: Do we really need thread-safe initialization here? We don't run
 // global ctors on multiple threads. (If we were to do so, we'd need thread-safe
 // init for B<int>::member and B<int>::inline_member too.)
-// CHECK: load atomic i8, i8* bitcast (i64* @_ZGV13inline_global to i8*) acquire,
+// CHECK: load atomic i8, i8* bitcast (i64* @_ZGV13inline_global to i8*) acquire, align 8
 // CHECK: icmp eq i8 {{.*}}, 0
 // CHECK: br i1
 // CHECK-NOT: !prof
@@ -36,7 +36,7 @@ struct A {
   static thread_local S thread_local_member;
 
   // CHECK-LABEL: define {{.*}}global_var_init
-  // CHECK: load atomic i8, i8* bitcast (i64* @_ZGVN1A13inline_memberE to i8*) acquire,
+  // CHECK: load atomic i8, i8* bitcast (i64* @_ZGVN1A13inline_memberE to i8*) acquire, align 8
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
   // CHECK-NOT: !prof
@@ -54,7 +54,7 @@ struct A {
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv()
 void f() {
-  // CHECK: load atomic i8, i8* bitcast (i64* @_ZGVZ1fvE12static_local to i8*) acquire,
+  // CHECK: load atomic i8, i8* bitcast (i64* @_ZGVZ1fvE12static_local to i8*) acquire, align 8
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1 {{.*}}, !prof ![[WEIGHTS_LOCAL:[0-9]*]]
   static S static_local;

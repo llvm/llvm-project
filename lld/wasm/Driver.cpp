@@ -9,8 +9,7 @@
 #include "lld/Common/Driver.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
+#include "InputElement.h"
 #include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"
@@ -816,14 +815,14 @@ static TableSymbol *createUndefinedIndirectFunctionTable(StringRef name) {
 }
 
 static TableSymbol *resolveIndirectFunctionTable() {
-  Symbol *existingTable = symtab->find(functionTableName);
-  if (existingTable) {
-    if (!isa<TableSymbol>(existingTable)) {
+  Symbol *existing = symtab->find(functionTableName);
+  if (existing) {
+    if (!isa<TableSymbol>(existing)) {
       error(Twine("reserved symbol must be of type table: `") +
             functionTableName + "`");
       return nullptr;
     }
-    if (existingTable->isDefined()) {
+    if (existing->isDefined()) {
       error(Twine("reserved symbol must not be defined in input files: `") +
             functionTableName + "`");
       return nullptr;
@@ -831,12 +830,11 @@ static TableSymbol *resolveIndirectFunctionTable() {
   }
 
   if (config->importTable) {
-    if (existingTable)
-      return cast<TableSymbol>(existingTable);
+    if (existing)
+      return cast<TableSymbol>(existing);
     else
       return createUndefinedIndirectFunctionTable(functionTableName);
-  } else if ((existingTable && existingTable->isLive()) ||
-             config->exportTable) {
+  } else if ((existing && existing->isLive()) || config->exportTable) {
     // A defined table is required.  Either because the user request an exported
     // table or because the table symbol is already live.  The existing table is
     // guaranteed to be undefined due to the check above.

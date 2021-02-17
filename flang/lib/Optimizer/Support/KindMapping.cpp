@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -32,12 +36,14 @@ static Bitsize defaultScalingKind(KindTy kind) {
 }
 
 /// Floating-point types default to the kind value being the size of the value
-/// in bytes. The default is to translate kinds of 2, 4, 8, 10, and 16 to a
+/// in bytes. The default is to translate kinds of 2, 3, 4, 8, 10, and 16 to a
 /// valid llvm::Type::TypeID value. Otherwise, the default is FloatTyID.
 static LLVMTypeID defaultRealKind(KindTy kind) {
   switch (kind) {
   case 2:
     return LLVMTypeID::HalfTyID;
+  case 3:
+    return LLVMTypeID::BFloatTyID;
   case 4:
     return LLVMTypeID::FloatTyID;
   case 8:
@@ -81,6 +87,8 @@ static const llvm::fltSemantics &getFloatSemanticsOfKind(KindTy kind,
   switch (doLookup<LLVMTypeID, KEY>(defaultRealKind, map, kind)) {
   case LLVMTypeID::HalfTyID:
     return llvm::APFloat::IEEEhalf();
+  case LLVMTypeID::BFloatTyID:
+    return llvm::APFloat::BFloat();
   case LLVMTypeID::FloatTyID:
     return llvm::APFloat::IEEEsingle();
   case LLVMTypeID::DoubleTyID:
@@ -148,6 +156,10 @@ static MatchResult parseTypeID(LLVMTypeID &result, const char *&ptr) {
     result = LLVMTypeID::HalfTyID;
     return mlir::success();
   }
+  if (mlir::succeeded(matchString(ptr, "BFloat"))) {
+    result = LLVMTypeID::BFloatTyID;
+    return mlir::success();
+  }
   if (mlir::succeeded(matchString(ptr, "Float"))) {
     result = LLVMTypeID::FloatTyID;
     return mlir::success();
@@ -171,16 +183,18 @@ static MatchResult parseTypeID(LLVMTypeID &result, const char *&ptr) {
   return mlir::failure();
 }
 
-fir::KindMapping::KindMapping(mlir::MLIRContext *context, llvm::StringRef map)
+fir::KindMapping::KindMapping(mlir::MLIRContext *context, llvm::StringRef map,
+                              llvm::ArrayRef<KindTy> defs)
     : context{context} {
-  if (mlir::failed(parse(map))) {
-    intMap.clear();
-    floatMap.clear();
-  }
+  if (mlir::failed(setDefaultKinds(defs)))
+    llvm::report_fatal_error("bad default kinds");
+  if (mlir::failed(parse(map)))
+    llvm::report_fatal_error("could not parse kind map");
 }
 
-fir::KindMapping::KindMapping(mlir::MLIRContext *context)
-    : KindMapping{context, clKindMapping} {}
+fir::KindMapping::KindMapping(mlir::MLIRContext *context,
+                              llvm::ArrayRef<KindTy> defs)
+    : KindMapping{context, clKindMapping, defs} {}
 
 MatchResult fir::KindMapping::badMapString(const llvm::Twine &ptr) {
   auto unknown = mlir::UnknownLoc::get(context);
@@ -247,4 +261,66 @@ Bitsize fir::KindMapping::getRealBitsize(KindTy kind) const {
 const llvm::fltSemantics &
 fir::KindMapping::getFloatSemantics(KindTy kind) const {
   return getFloatSemanticsOfKind<'r'>(kind, floatMap);
+}
+
+mlir::LogicalResult
+fir::KindMapping::setDefaultKinds(llvm::ArrayRef<KindTy> defs) {
+  if (defs.empty()) {
+    // generic front-end defaults
+    const KindTy genericKind = 4;
+    defaultMap.insert({'a', 1});
+    defaultMap.insert({'c', genericKind});
+    defaultMap.insert({'d', 2 * genericKind});
+    defaultMap.insert({'i', genericKind});
+    defaultMap.insert({'l', genericKind});
+    defaultMap.insert({'r', genericKind});
+    return mlir::success();
+  }
+  if (defs.size() != 6)
+    return mlir::failure();
+
+  // defaults determined after command-line processing
+  defaultMap.insert({'a', defs[0]});
+  defaultMap.insert({'c', defs[1]});
+  defaultMap.insert({'d', defs[2]});
+  defaultMap.insert({'i', defs[3]});
+  defaultMap.insert({'l', defs[4]});
+  defaultMap.insert({'r', defs[5]});
+  return mlir::success();
+}
+
+KindTy fir::KindMapping::defaultCharacterKind() const {
+  auto iter = defaultMap.find('a');
+  assert(iter != defaultMap.end());
+  return iter->second;
+}
+
+KindTy fir::KindMapping::defaultComplexKind() const {
+  auto iter = defaultMap.find('c');
+  assert(iter != defaultMap.end());
+  return iter->second;
+}
+
+KindTy fir::KindMapping::defaultDoubleKind() const {
+  auto iter = defaultMap.find('d');
+  assert(iter != defaultMap.end());
+  return iter->second;
+}
+
+KindTy fir::KindMapping::defaultIntegerKind() const {
+  auto iter = defaultMap.find('i');
+  assert(iter != defaultMap.end());
+  return iter->second;
+}
+
+KindTy fir::KindMapping::defaultLogicalKind() const {
+  auto iter = defaultMap.find('l');
+  assert(iter != defaultMap.end());
+  return iter->second;
+}
+
+KindTy fir::KindMapping::defaultRealKind() const {
+  auto iter = defaultMap.find('r');
+  assert(iter != defaultMap.end());
+  return iter->second;
 }

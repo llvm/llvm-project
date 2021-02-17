@@ -82,7 +82,6 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  ElementCount Factor)
     : RetTy(CI.getType()), IID(Id), VF(Factor) {
 
-  assert(!Factor.isScalable() && "Scalable vectors are not yet supported");
   if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
@@ -410,12 +409,10 @@ bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
   return TTIImpl->canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
 }
 
-bool TargetTransformInfo::shouldFavorPostInc() const {
-  return TTIImpl->shouldFavorPostInc();
-}
-
-bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
-  return TTIImpl->shouldFavorBackedgeIndex(L);
+TTI::AddressingModeKind
+TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
+                                                ScalarEvolution *SE) const {
+  return TTIImpl->getPreferredAddressingMode(L, SE);
 }
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType,
@@ -1036,6 +1033,11 @@ bool TargetTransformInfo::isLegalToVectorizeStoreChain(
                                                AddrSpace);
 }
 
+bool TargetTransformInfo::isLegalToVectorizeReduction(
+    RecurrenceDescriptor RdxDesc, ElementCount VF) const {
+  return TTIImpl->isLegalToVectorizeReduction(RdxDesc, VF);
+}
+
 unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
                                                   unsigned LoadSize,
                                                   unsigned ChainSizeInBytes,
@@ -1048,11 +1050,6 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
                                                    unsigned ChainSizeInBytes,
                                                    VectorType *VecTy) const {
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
-}
-
-bool TargetTransformInfo::useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                                                ReductionFlags Flags) const {
-  return TTIImpl->useReductionIntrinsic(Opcode, Ty, Flags);
 }
 
 bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,

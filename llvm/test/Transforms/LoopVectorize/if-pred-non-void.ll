@@ -161,7 +161,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: %[[CMP1:.+]] = icmp slt <2 x i32> %[[VAL:.+]], <i32 100, i32 100>
 ; CHECK: %[[CMP2:.+]] = icmp sge <2 x i32> %[[VAL]], <i32 200, i32 200>
 ; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[AND:.+]] = and <2 x i1> %[[CMP2]], %[[NOT]]
+; CHECK: %[[AND:.+]] = select <2 x i1> %[[NOT]], <2 x i1> %[[CMP2]], <2 x i1> zeroinitializer
 ; CHECK: %[[OR:.+]] = or <2 x i1> %[[AND]], %[[CMP1]]
 ; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR]], i32 0
 ; CHECK: br i1 %[[EXTRACT]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]

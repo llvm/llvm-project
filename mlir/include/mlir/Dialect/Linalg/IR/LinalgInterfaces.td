@@ -1056,20 +1056,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     //===------------------------------------------------------------------===//
     // Other static interface methods.
     //===------------------------------------------------------------------===//
-    StaticInterfaceMethod<
-      /*desc=*/[{
-        Create an operation of the current type with the given location,
-        operands, and attributes.
-      }],
-      /*retTy=*/"Operation *",
-      /*methodName=*/"create",
-      (ins "OpBuilder &":$builder, "Location":$loc, "TypeRange":$resultTypes,
-           "ValueRange":$operands,
-           "ArrayRef<NamedAttribute>":$attributes), [{
-        return builder.create<ConcreteOp>(
-          loc, resultTypes, operands, attributes);
-      }]
-    >,
     InterfaceMethod<
       /*desc=*/[{
         Clone the current operation with the given location and operands. This
@@ -1082,14 +1068,13 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       (ins "OpBuilder &":$b, "Location":$loc, "TypeRange":$resultTypes,
            "ValueRange":$operands),
       [{
-        BlockAndValueMapping map;
-        unsigned numRegions = $_op->getNumRegions();
-        Operation *res = create(b, loc, resultTypes, operands, $_op->getAttrs());
-        assert(res->getNumRegions() == numRegions && "inconsistent # regions");
-        for (unsigned ridx = 0; ridx < numRegions; ++ridx)
-          $_op->getRegion(ridx).cloneInto(
-            &res->getRegion(ridx), map);
-        return res;
+        BlockAndValueMapping bvm;
+        OperationState state(
+          loc, ConcreteOp::getOperationName(), operands, resultTypes,
+          $_op->getAttrs());
+        for (Region &r : $_op->getRegions())
+          r.cloneInto(state.addRegion(), bvm);
+        return b.createOperation(state);
       }]
     >,
     StaticInterfaceMethod<
@@ -1098,7 +1083,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Returns a null function if this named op does not define a region
         builder.
       }],
-      /*retTy=*/"std::function<void(Block &)>",
+      /*retTy=*/"std::function<void(Block &, ValueRange)>",
       /*methodName=*/"getRegionBuilder",
       (ins),
       [{ return ConcreteOp::getRegionBuilder(); }]

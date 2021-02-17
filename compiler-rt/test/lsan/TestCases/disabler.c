@@ -3,7 +3,7 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 
-// Investigate why it does not fail with use_stack=0
+// Investigate why it does not fail with use_tls=0
 // UNSUPPORTED: arm-linux || armhf-linux
 
 #include <stdio.h>

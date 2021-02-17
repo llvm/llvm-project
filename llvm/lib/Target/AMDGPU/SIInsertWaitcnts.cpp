@@ -540,7 +540,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                                  AMDGPU::OpName::data1),
                       CurrScore);
         }
-      } else if (AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1 &&
+      } else if (SIInstrInfo::isAtomicRet(Inst) &&
                  Inst.getOpcode() != AMDGPU::DS_GWS_INIT &&
                  Inst.getOpcode() != AMDGPU::DS_GWS_SEMA_V &&
                  Inst.getOpcode() != AMDGPU::DS_GWS_SEMA_BR &&
@@ -562,7 +562,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             &Inst, TII, TRI, MRI,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
             CurrScore);
-      } else if (AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1) {
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(
             &Inst, TII, TRI, MRI,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
@@ -571,7 +571,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     } else if (TII->isMIMG(Inst)) {
       if (Inst.mayStore()) {
         setExpScore(&Inst, TII, TRI, MRI, 0, CurrScore);
-      } else if (AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1) {
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(
             &Inst, TII, TRI, MRI,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
@@ -584,7 +584,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     } else if (TII->isMUBUF(Inst)) {
       if (Inst.mayStore()) {
         setExpScore(&Inst, TII, TRI, MRI, 0, CurrScore);
-      } else if (AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1) {
+      } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setExpScore(
             &Inst, TII, TRI, MRI,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
@@ -1254,8 +1254,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ++FlatASCount;
       if (!ST->hasVscnt())
         ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-      else if (Inst.mayLoad() &&
-               AMDGPU::getAtomicRetOp(Inst.getOpcode()) == -1)
+      else if (Inst.mayLoad() && !SIInstrInfo::isAtomicNoRet(Inst))
         ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_READ_ACCESS, Inst);
       else
         ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
@@ -1283,8 +1282,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
              Inst.getOpcode() != AMDGPU::BUFFER_GL1_INV) {
     if (!ST->hasVscnt())
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-    else if ((Inst.mayLoad() &&
-              AMDGPU::getAtomicRetOp(Inst.getOpcode()) == -1) ||
+    else if ((Inst.mayLoad() && !SIInstrInfo::isAtomicNoRet(Inst)) ||
              /* IMAGE_GET_RESINFO / IMAGE_GET_LOD */
              (TII->isMIMG(Inst) && !Inst.mayLoad() && !Inst.mayStore()))
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_READ_ACCESS, Inst);
@@ -1292,7 +1290,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
 
     if (ST->vmemWriteNeedsExpWaitcnt() &&
-        (Inst.mayStore() || AMDGPU::getAtomicNoRetOp(Inst.getOpcode()) != -1)) {
+        (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMW_GPR_LOCK, Inst);
     }
   } else if (TII->isSMRD(Inst)) {

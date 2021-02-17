@@ -249,9 +249,6 @@ def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithIn
 def AArch64clastb_n   : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;
 def AArch64fadda_p    : SDNode<"AArch64ISD::FADDA_PRED", SDT_AArch64ReduceWithInit>;
 
-def SDT_AArch64Rev   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
-def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
-
 def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 
@@ -556,6 +553,14 @@ let Predicates = [HasSVE] in {
   def : Pat<(nxv2i64 (AArch64dup (i64 (SVE8BitLslImm i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
 
+  // Duplicate immediate FP into all vector elements.
+ def : Pat<(nxv2f32 (AArch64dup (f32 fpimm:$val))),
+            (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
+ def : Pat<(nxv4f32 (AArch64dup (f32 fpimm:$val))),
+            (DUP_ZR_S (MOVi32imm (bitcast_fpimm_to_i32 f32:$val)))>;
+ def : Pat<(nxv2f64 (AArch64dup (f64 fpimm:$val))),
+            (DUP_ZR_D (MOVi64imm (bitcast_fpimm_to_i64 f64:$val)))>;
+
   // Duplicate FP immediate into all vector elements
   let AddedComplexity = 2 in {
     def : Pat<(nxv8f16 (AArch64dup fpimm16:$imm8)),
@@ -587,8 +592,8 @@ let Predicates = [HasSVE] in {
   defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", int_aarch64_sve_revh>;
   defm REVW_ZPmZ : sve_int_perm_rev_revw<"revw", int_aarch64_sve_revw>;
 
-  defm REV_PP : sve_int_perm_reverse_p<"rev", AArch64rev>;
-  defm REV_ZZ : sve_int_perm_reverse_z<"rev", AArch64rev>;
+  defm REV_PP : sve_int_perm_reverse_p<"rev", vector_reverse>;
+  defm REV_ZZ : sve_int_perm_reverse_z<"rev", vector_reverse>;
 
   defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo", AArch64sunpklo>;
   defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi", AArch64sunpkhi>;

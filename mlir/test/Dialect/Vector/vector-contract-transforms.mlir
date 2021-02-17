@@ -18,13 +18,29 @@
 // CHECK-SAME: %[[B:.*1]]: vector<4xf32>,
 // CHECK-SAME: %[[C:.*2]]: f32
 // CHECK:      %[[F:.*]] = mulf %[[A]], %[[B]] : vector<4xf32>
-// CHECK:      %[[R:.*]] = vector.reduction "add", %[[F]], %[[C]] : vector<4xf32> into f32
-// CHECK:      return %[[R]] : f32
+// CHECK:      %[[R:.*]] = vector.reduction "add", %[[F]] : vector<4xf32> into f32
+// CHECK:      %[[ACC:.*]] = addf %[[R]], %[[C]] : f32
+// CHECK:      return %[[ACC]] : f32
 
 func @extract_contract1(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: f32) -> f32 {
   %0 = vector.contract #dotp_trait %arg0, %arg1, %arg2
     : vector<4xf32>, vector<4xf32> into f32
   return %0 : f32
+}
+
+// CHECK-LABEL: func @extract_contract1_int
+// CHECK-SAME: %[[A:.*0]]: vector<4xi32>,
+// CHECK-SAME: %[[B:.*1]]: vector<4xi32>,
+// CHECK-SAME: %[[C:.*2]]: i32
+// CHECK:      %[[F:.*]] = muli %[[A]], %[[B]] : vector<4xi32>
+// CHECK:      %[[R:.*]] = vector.reduction "add", %[[F]] : vector<4xi32> into i32
+// CHECK:      %[[ACC:.*]] = addi %[[R]], %[[C]] : i32
+// CHECK:      return %[[ACC]] : i32
+
+func @extract_contract1_int(%arg0: vector<4xi32>, %arg1: vector<4xi32>, %arg2: i32) -> i32 {
+  %0 = vector.contract #dotp_trait %arg0, %arg1, %arg2
+    : vector<4xi32>, vector<4xi32> into i32
+  return %0 : i32
 }
 
 #matvec_accesses = [
@@ -59,6 +75,29 @@ func @extract_contract2(%arg0: vector<2x3xf32>,
   %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
     : vector<2x3xf32>, vector<3xf32> into vector<2xf32>
   return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: func @extract_contract2_int
+// CHECK-SAME: %[[A:.*0]]: vector<2x3xi32>,
+// CHECK-SAME: %[[B:.*1]]: vector<3xi32>,
+// CHECK-SAME: %[[C:.*2]]: vector<2xi32>
+// CHECK:      %[[R:.*]] = constant dense<0> : vector<2xi32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2x3xi32>
+// CHECK:      %[[T2:.*]] = muli %[[T0]], %[[B]] : vector<3xi32>
+// CHECK:      %[[T3:.*]] = vector.reduction "add", %[[T2]] : vector<3xi32> into i32
+// CHECK:      %[[T4:.*]] = vector.insert %[[T3]], %[[R]] [0] : i32 into vector<2xi32>
+// CHECK:      %[[T5:.*]] = vector.extract %[[A]][1] : vector<2x3xi32>
+// CHECK:      %[[T7:.*]] = muli %[[T5]], %[[B]] : vector<3xi32>
+// CHECK:      %[[T8:.*]] = vector.reduction "add", %[[T7]] : vector<3xi32> into i32
+// CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T4]] [1] : i32 into vector<2xi32>
+// CHECK:      %[[T10:.*]] = addi %[[T9]], %[[C]] : vector<2xi32>
+// CHECK:      return %[[T10]] : vector<2xi32>
+func @extract_contract2_int(%arg0: vector<2x3xi32>,
+                        %arg1: vector<3xi32>,
+			%arg2: vector<2xi32>) -> vector<2xi32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<2x3xi32>, vector<3xi32> into vector<2xi32>
+  return %0 : vector<2xi32>
 }
 
 #vecmat_accesses = [
@@ -162,12 +201,14 @@ func @extract_contract4(%arg0: vector<2x2xf32>,
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2x3xf32>
 // CHECK:      %[[T1:.*]] = vector.extract %[[B]][0] : vector<2x3xf32>
 // CHECK:      %[[T2:.*]] = mulf %[[T0]], %[[T1]] : vector<3xf32>
-// CHECK:      %[[T3:.*]] = vector.reduction "add", %[[T2]], %[[C]] : vector<3xf32> into f32
-// CHECK:      %[[T4:.*]] = vector.extract %[[A]][1] : vector<2x3xf32>
-// CHECK:      %[[T5:.*]] = vector.extract %[[B]][1] : vector<2x3xf32>
-// CHECK:      %[[T6:.*]] = mulf %[[T4]], %[[T5]] : vector<3xf32>
-// CHECK:      %[[T7:.*]] = vector.reduction "add", %[[T6]], %[[T3]] : vector<3xf32> into f32
-// CHECK:      return %[[T7]] : f32
+// CHECK:      %[[T3:.*]] = vector.reduction "add", %[[T2]] : vector<3xf32> into f32
+// CHECK:      %[[T4:.*]] = addf %[[T3]], %[[C]] : f32
+// CHECK:      %[[T5:.*]] = vector.extract %[[A]][1] : vector<2x3xf32>
+// CHECK:      %[[T6:.*]] = vector.extract %[[B]][1] : vector<2x3xf32>
+// CHECK:      %[[T7:.*]] = mulf %[[T5]], %[[T6]] : vector<3xf32>
+// CHECK:      %[[T8:.*]] = vector.reduction "add", %[[T7]] : vector<3xf32> into f32
+// CHECK:      %[[T9:.*]] = addf %[[T8]], %[[T4]] : f32
+// CHECK:      return %[[T9]] : f32
 
 func @full_contract1(%arg0: vector<2x3xf32>,
                      %arg1: vector<2x3xf32>,
@@ -200,7 +241,8 @@ func @full_contract1(%arg0: vector<2x3xf32>,
 // CHECK:      %[[T7:.*]] = vector.extract %[[B]][2, 0] : vector<3x2xf32>
 // CHECK:      %[[T9:.*]] = vector.insert %[[T7]], %[[T6]] [2] : f32 into vector<3xf32>
 // CHECK:      %[[T10:.*]] = mulf %[[T0]], %[[T9]] : vector<3xf32>
-// CHECK:      %[[T11:.*]] = vector.reduction "add", %[[T10]], %[[C]] : vector<3xf32> into f32
+// CHECK:      %[[T11:.*]] = vector.reduction "add", %[[T10]] : vector<3xf32> into f32
+// CHECK:      %[[ACC0:.*]] = addf %[[T11]], %[[C]] : f32
 //
 // CHECK:      %[[T12:.*]] = vector.extract %[[A]][1] : vector<2x3xf32>
 // CHECK:      %[[T13:.*]] = vector.extract %[[B]][0, 1] : vector<3x2xf
@@ -210,8 +252,9 @@ func @full_contract1(%arg0: vector<2x3xf32>,
 // CHECK:      %[[T19:.*]] = vector.extract %[[B]][2, 1] : vector<3x2xf32>
 // CHECK:      %[[T21:.*]] = vector.insert %[[T19]], %[[T18]] [2] : f32 into vector<3xf32>
 // CHECK:      %[[T22:.*]] = mulf %[[T12]], %[[T21]] : vector<3xf32>
-// CHECK:      %[[T23:.*]] = vector.reduction "add", %[[T22]], %[[T11]] : vector<3xf32> into f32
-// CHECK:      return %[[T23]] : f32
+// CHECK:      %[[T23:.*]] = vector.reduction "add", %[[T22]] : vector<3xf32> into f32
+// CHECK:      %[[ACC1:.*]] = addf %[[T23]], %[[ACC0]] : f32
+// CHECK:      return %[[ACC1]] : f32
 
 func @full_contract2(%arg0: vector<2x3xf32>,
                      %arg1: vector<3x2xf32>,

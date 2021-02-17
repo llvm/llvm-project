@@ -564,7 +564,10 @@ void ARMPassConfig::addPreEmitPass2() {
   addPass(createARMConstantIslandPass());
   addPass(createARMLowOverheadLoopsPass());
 
-  // Identify valid longjmp targets for Windows Control Flow Guard.
-  if (TM->getTargetTriple().isOSWindows())
+  if (TM->getTargetTriple().isOSWindows()) {
+    // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
+    // Identify valid eh continuation targets for Windows EHCont Guard.
+    addPass(createEHContGuardCatchretPass());
+  }
 }

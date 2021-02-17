@@ -238,6 +238,78 @@ define i32* @gep_inbounds_null_noopt(i32* %p) {
   ret i32* %k
 }
 
+define i8* @load_ptr(i8* %ptr) {
+; CHECK-LABEL: @load_ptr(
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    call void @f4(i8 [[V]])
+; CHECK-NEXT:    ret i8* [[PTR]]
+;
+  %v = load i8, i8* %ptr
+  %q = freeze i8* %ptr
+  call void @f4(i8 %v) ; prevents %v from being DCEd
+  ret i8* %q
+}
+
+define i8* @store_ptr(i8* %ptr) {
+; CHECK-LABEL: @store_ptr(
+; CHECK-NEXT:    store i8 0, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    ret i8* [[PTR]]
+;
+  store i8 0, i8* %ptr
+  %q = freeze i8* %ptr
+  ret i8* %q
+}
+
+define i8* @call_noundef_ptr(i8* %ptr) {
+; CHECK-LABEL: @call_noundef_ptr(
+; CHECK-NEXT:    call void @f3(i8* noundef [[PTR:%.*]])
+; CHECK-NEXT:    ret i8* [[PTR]]
+;
+  call void @f3(i8* noundef %ptr)
+  %q = freeze i8* %ptr
+  ret i8* %q
+}
+
+define i8* @invoke_noundef_ptr(i8* %ptr) personality i8 1 {
+; CHECK-LABEL: @invoke_noundef_ptr(
+; CHECK-NEXT:    invoke void @f3(i8* noundef [[PTR:%.*]])
+; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK:       normal:
+; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK:       unwind:
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad i8*
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    resume i8* [[PTR]]
+;
+  %q = freeze i8* %ptr
+  invoke void @f3(i8* noundef %ptr) to label %normal unwind label %unwind
+normal:
+  ret i8* %q
+unwind:
+  landingpad i8* cleanup
+  resume i8* %q
+}
+
+define i8* @cmpxchg_ptr(i8* %ptr) {
+; CHECK-LABEL: @cmpxchg_ptr(
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[PTR:%.*]], i8 1, i8 2 acq_rel monotonic, align 1
+; CHECK-NEXT:    ret i8* [[PTR]]
+;
+  cmpxchg i8* %ptr, i8 1, i8 2 acq_rel monotonic
+  %q = freeze i8* %ptr
+  ret i8* %q
+}
+
+define i8* @atomicrmw_ptr(i8* %ptr) {
+; CHECK-LABEL: @atomicrmw_ptr(
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i8* [[PTR:%.*]], i8 1 acquire, align 1
+; CHECK-NEXT:    ret i8* [[PTR]]
+;
+  atomicrmw add i8* %ptr, i8 1 acquire
+  %q = freeze i8* %ptr
+  ret i8* %q
+}
+
 define i1 @icmp(i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp(
 ; CHECK-NEXT:    [[A_FR:%.*]] = freeze i32 [[A:%.*]]
@@ -431,3 +503,4 @@ B:
 declare void @f1(i1)
 declare void @f2()
 declare void @f3(i8*)
+declare void @f4(i8)

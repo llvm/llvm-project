@@ -163,6 +163,7 @@ write_cmake_config("config") {
       "HAVE_MACH_MACH_H=1",
       "HAVE_MALLOC_MALLOC_H=1",
       "HAVE_MALLOC_ZONE_STATISTICS=1",
+      "HAVE_PROC_PID_RUSAGE=1",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
     ]
   } else {
@@ -173,6 +174,7 @@ write_cmake_config("config") {
       "HAVE_MACH_MACH_H=",
       "HAVE_MALLOC_MALLOC_H=",
       "HAVE_MALLOC_ZONE_STATISTICS=",
+      "HAVE_PROC_PID_RUSAGE=",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=",
     ]
   }

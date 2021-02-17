@@ -82,6 +82,29 @@ public:
     }
   }
 
+  // Checks if the intrinsic is an annotation.
+  bool isAssumeLikeIntrinsic() const {
+    switch (getIntrinsicID()) {
+    default: break;
+    case Intrinsic::assume:
+    case Intrinsic::sideeffect:
+    case Intrinsic::pseudoprobe:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_label:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::experimental_noalias_scope_decl:
+    case Intrinsic::objectsize:
+    case Intrinsic::ptr_annotation:
+    case Intrinsic::var_annotation:
+      return true;
+    }
+    return false;
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())

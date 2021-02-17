@@ -83,6 +83,10 @@ struct Configuration {
   // True if we are creating position-independent code.
   bool isPic;
 
+  // True if we have an MVP input that uses __indirect_function_table and which
+  // requires it to be allocated to table number 0.
+  bool legacyFunctionTable = false;
+
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0
   // for shared libraries (since they always added to a dynamic offset at

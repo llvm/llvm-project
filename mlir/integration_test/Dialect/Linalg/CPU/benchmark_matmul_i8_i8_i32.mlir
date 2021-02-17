@@ -9,6 +9,7 @@
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
 // Activate to dump assembly
 // R_UN:   -dump-object-file -object-filename=/tmp/a.o \
+// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // Use tee to both print to stderr and FileCheck
 // RUN: tee -a /dev/stderr | FileCheck %s
@@ -85,9 +86,16 @@ func @main() {
   %tmatmul = subf %t_end_matmul, %t_start_matmul: f64
   call @print_perf(%iters, %tmatmul) : (index, f64) -> ()
 
-  %res = load %C[%c0, %c0]: !row_major_C
-  // CHECK: 64
-  vector.print %res: !elem_type_c
+  // CHECK: {{^0$}}
+  %C_ref = alloc() : !row_major_C
+  linalg.fill(%C_ref, %v0) : !row_major_C, !elem_type_c
+  linalg.matmul_i8_i8_i32 ins(%A, %B : !row_major_A, !row_major_B)
+    outs(%C_ref: !row_major_C)
+  %res = memref_cast %C : !row_major_C to memref<*xi32>
+  %exp = memref_cast %C_ref : !row_major_C to memref<*xi32>
+  %errors = call @verifyMemRefI32(%res, %exp) : (memref<*xi32>, memref<*xi32>) -> i64
+  vector.print %errors : i64
+  dealloc %C_ref : !row_major_C
 
   dealloc %A : !row_major_A
   dealloc %B : !row_major_B
@@ -97,6 +105,7 @@ func @main() {
 }
 
 func private @rtclock() -> f64
+func private @verifyMemRefI32(memref<*xi32>, memref<*xi32>) -> i64 attributes { llvm.emit_c_interface }
 
 // TODO: init with random, run and check output.
 // func private @fill_random_f32(memref<*xf32>)

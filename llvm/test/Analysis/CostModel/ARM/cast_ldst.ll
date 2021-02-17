@@ -45,8 +45,8 @@ define i32 @load_extends() {
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
@@ -313,8 +313,8 @@ define i32 @load_extends() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
@@ -374,8 +374,8 @@ define i32 @load_extends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2816u = zext <2 x i8> %loadv2i8 to <2 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2832s = sext <2 x i8> %loadv2i8 to <2 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2832u = zext <2 x i8> %loadv2i8 to <2 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2864s = sext <2 x i8> %loadv2i8 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2864u = zext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2864s = sext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2864u = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4816s = sext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
@@ -390,14 +390,14 @@ define i32 @load_extends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8864u = zext <8 x i8> %loadv8i8 to <8 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16816s = sext <16 x i8> %loadv16i8 to <16 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16816u = zext <16 x i8> %loadv16i8 to <16 x i16>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16864s = sext <16 x i8> %loadv16i8 to <16 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16864u = zext <16 x i8> %loadv16i8 to <16 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21632s = sext <2 x i16> %loadv2i16 to <2 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21632u = zext <2 x i16> %loadv2i16 to <2 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21664s = sext <2 x i16> %loadv2i16 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21664u = zext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v21664s = sext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v21664u = zext <2 x i16> %loadv2i16 to <2 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v41632s = sext <4 x i16> %loadv4i16 to <4 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v41632u = zext <4 x i16> %loadv4i16 to <4 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v41664s = sext <4 x i16> %loadv4i16 to <4 x i64>
@@ -406,8 +406,8 @@ define i32 @load_extends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81632u = zext <8 x i16> %loadv8i16 to <8 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81664s = sext <8 x i16> %loadv8i16 to <8 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81664u = zext <8 x i16> %loadv8i16 to <8 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v23264s = sext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v23264u = zext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v23264s = sext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v23264u = zext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v43264s = sext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v43264u = zext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
@@ -581,8 +581,8 @@ define i32 @load_extends() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
@@ -978,7 +978,7 @@ define i32 @store_trunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8832 = trunc <8 x i32> undef to <8 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8864 = trunc <8 x i64> undef to <8 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16816 = trunc <16 x i16> undef to <16 x i8>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16864 = trunc <16 x i64> undef to <16 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21632 = trunc <2 x i32> undef to <2 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21664 = trunc <2 x i64> undef to <2 x i16>
@@ -1397,7 +1397,7 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r3 = fpext float %loadf32 to double
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = fpext <2 x half> %loadv2f16 to <2 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4 = fpext <16 x half> %loadv16f16 to <16 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5 = fpext <2 x half> %loadv2f16 to <2 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v6 = fpext <4 x half> %loadv4f16 to <4 x double>
@@ -1660,7 +1660,7 @@ define i32 @load_fptrunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v21664 = fptrunc <2 x double> undef to <2 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v41664 = fptrunc <4 x double> undef to <4 x half>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v81664 = fptrunc <8 x double> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v23264 = fptrunc <2 x double> undef to <2 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v43264 = fptrunc <4 x double> undef to <4 x float>
@@ -2044,54 +2044,54 @@ define i32 @maskedload_extends() {
 ;
 ; CHECK-MVE-SIZE-LABEL: 'maskedload_extends'
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2i8 = call <2 x i8> @llvm.masked.load.v2i8.p0v2i8(<2 x i8>* undef, i32 1, <2 x i1> undef, <2 x i8> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i8 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* undef, i32 1, <4 x i1> undef, <4 x i8> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8i8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv16i8 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i8 = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* undef, i32 1, <4 x i1> undef, <4 x i8> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8i8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv16i8 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* undef, i32 1, <16 x i1> undef, <16 x i8> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2i16 = call <2 x i16> @llvm.masked.load.v2i16.p0v2i16(<2 x i16>* undef, i32 2, <2 x i1> undef, <2 x i16> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i16 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* undef, i32 2, <4 x i1> undef, <4 x i16> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8i16 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* undef, i32 2, <8 x i1> undef, <8 x i16> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i16 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* undef, i32 2, <4 x i1> undef, <4 x i16> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8i16 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* undef, i32 2, <8 x i1> undef, <8 x i16> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2i32 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* undef, i32 4, <2 x i1> undef, <2 x i32> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i32 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* undef, i32 4, <4 x i1> undef, <4 x i32> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i32 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* undef, i32 4, <4 x i1> undef, <4 x i32> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2816s = sext <2 x i8> %loadv2i8 to <2 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2816u = zext <2 x i8> %loadv2i8 to <2 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2832s = sext <2 x i8> %loadv2i8 to <2 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2832u = zext <2 x i8> %loadv2i8 to <2 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2864s = sext <2 x i8> %loadv2i8 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2864u = zext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v2864s = sext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2864u = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4816s = sext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4816u = zext <4 x i8> %loadv4i8 to <4 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4832s = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4832u = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4864s = sext <4 x i8> %loadv4i8 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4864u = zext <4 x i8> %loadv4i8 to <4 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8816s = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8816u = zext <8 x i8> %loadv8i8 to <8 x i16>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8832u = zext <8 x i8> %loadv8i8 to <8 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8864s = sext <8 x i8> %loadv8i8 to <8 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8864u = zext <8 x i8> %loadv8i8 to <8 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16816s = sext <16 x i8> %loadv16i8 to <16 x i16>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16816u = zext <16 x i8> %loadv16i8 to <16 x i16>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16864s = sext <16 x i8> %loadv16i8 to <16 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16864u = zext <16 x i8> %loadv16i8 to <16 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8832s = sext <8 x i8> %loadv8i8 to <8 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8832u = zext <8 x i8> %loadv8i8 to <8 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8864s = sext <8 x i8> %loadv8i8 to <8 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8864u = zext <8 x i8> %loadv8i8 to <8 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16816s = sext <16 x i8> %loadv16i8 to <16 x i16>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16816u = zext <16 x i8> %loadv16i8 to <16 x i16>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16864s = sext <16 x i8> %loadv16i8 to <16 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16864u = zext <16 x i8> %loadv16i8 to <16 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21632s = sext <2 x i16> %loadv2i16 to <2 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21632u = zext <2 x i16> %loadv2i16 to <2 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21664s = sext <2 x i16> %loadv2i16 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21664u = zext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v21664s = sext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v21664u = zext <2 x i16> %loadv2i16 to <2 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v41632s = sext <4 x i16> %loadv4i16 to <4 x i32>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v41632u = zext <4 x i16> %loadv4i16 to <4 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v41664s = sext <4 x i16> %loadv4i16 to <4 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v41664u = zext <4 x i16> %loadv4i16 to <4 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v81632s = sext <8 x i16> %loadv8i16 to <8 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v81632u = zext <8 x i16> %loadv8i16 to <8 x i32>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v81664s = sext <8 x i16> %loadv8i16 to <8 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v81664u = zext <8 x i16> %loadv8i16 to <8 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v23264s = sext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v23264u = zext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v43264s = sext <4 x i32> %loadv4i32 to <4 x i64>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v43264u = zext <4 x i32> %loadv4i32 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v41664s = sext <4 x i16> %loadv4i16 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v41664u = zext <4 x i16> %loadv4i16 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v81632s = sext <8 x i16> %loadv8i16 to <8 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v81632u = zext <8 x i16> %loadv8i16 to <8 x i32>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v81664s = sext <8 x i16> %loadv8i16 to <8 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v81664u = zext <8 x i16> %loadv8i16 to <8 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v23264s = sext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v23264u = zext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v43264s = sext <4 x i32> %loadv4i32 to <4 x i64>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v43264u = zext <4 x i32> %loadv4i32 to <4 x i64>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'maskedload_extends'
@@ -2533,7 +2533,7 @@ define i32 @maskedstore_trunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8832 = trunc <8 x i32> undef to <8 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8864 = trunc <8 x i64> undef to <8 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16816 = trunc <16 x i16> undef to <16 x i8>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16864 = trunc <16 x i64> undef to <16 x i8>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21632 = trunc <2 x i32> undef to <2 x i16>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21664 = trunc <2 x i64> undef to <2 x i16>
@@ -2546,23 +2546,23 @@ define i32 @maskedstore_trunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i8.p0v2i8(<2 x i8> %v2816, <2 x i8>* undef, i32 1, <2 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i8.p0v2i8(<2 x i8> %v2832, <2 x i8>* undef, i32 1, <2 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i8.p0v2i8(<2 x i8> %v2864, <2 x i8>* undef, i32 1, <2 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4816, <4 x i8>* undef, i32 1, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4832, <4 x i8>* undef, i32 1, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4864, <4 x i8>* undef, i32 1, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8816, <8 x i8>* undef, i32 1, <8 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8832, <8 x i8>* undef, i32 1, <8 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8864, <8 x i8>* undef, i32 1, <8 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16816, <16 x i8>* undef, i32 1, <16 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16832, <16 x i8>* undef, i32 1, <16 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16864, <16 x i8>* undef, i32 1, <16 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4816, <4 x i8>* undef, i32 1, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4832, <4 x i8>* undef, i32 1, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> %v4864, <4 x i8>* undef, i32 1, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8816, <8 x i8>* undef, i32 1, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8832, <8 x i8>* undef, i32 1, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> %v8864, <8 x i8>* undef, i32 1, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16816, <16 x i8>* undef, i32 1, <16 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16832, <16 x i8>* undef, i32 1, <16 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %v16864, <16 x i8>* undef, i32 1, <16 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i16.p0v2i16(<2 x i16> %v21632, <2 x i16>* undef, i32 2, <2 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i16.p0v2i16(<2 x i16> %v21664, <2 x i16>* undef, i32 2, <2 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %v41632, <4 x i16>* undef, i32 2, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %v41664, <4 x i16>* undef, i32 2, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %v81632, <8 x i16>* undef, i32 2, <8 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %v81664, <8 x i16>* undef, i32 2, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %v41632, <4 x i16>* undef, i32 2, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> %v41664, <4 x i16>* undef, i32 2, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %v81632, <8 x i16>* undef, i32 2, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %v81664, <8 x i16>* undef, i32 2, <8 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> %v23264, <2 x i32>* undef, i32 4, <2 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v43264, <4 x i32>* undef, i32 4, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v43264, <4 x i32>* undef, i32 4, <4 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'maskedstore_trunc'
@@ -2860,15 +2860,15 @@ define i32 @maskedload_fpextends() {
 ; CHECK-MVE-SIZE-LABEL: 'maskedload_fpextends'
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2f16 = call <2 x half> @llvm.masked.load.v2f16.p0v2f16(<2 x half>* undef, i32 2, <2 x i1> undef, <2 x half> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %loadv4f16 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* undef, i32 2, <4 x i1> undef, <4 x half> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8f16 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* undef, i32 2, <8 x i1> undef, <8 x half> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8f16 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* undef, i32 2, <8 x i1> undef, <8 x half> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %loadv16f16 = call <16 x half> @llvm.masked.load.v16f16.p0v16f16(<16 x half>* undef, i32 2, <16 x i1> undef, <16 x half> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2f32 = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* undef, i32 4, <2 x i1> undef, <2 x float> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4f32 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* undef, i32 4, <4 x i1> undef, <4 x float> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4f32 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* undef, i32 4, <4 x i1> undef, <4 x float> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %loadv8f32 = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* undef, i32 4, <8 x i1> undef, <8 x float> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = fpext <2 x half> %loadv2f16 to <2 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4 = fpext <16 x half> %loadv16f16 to <16 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v4 = fpext <16 x half> %loadv16f16 to <16 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5 = fpext <2 x half> %loadv2f16 to <2 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v6 = fpext <4 x half> %loadv4f16 to <4 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v7 = fpext <8 x half> %loadv8f16 to <8 x double>
@@ -3076,7 +3076,7 @@ define i32 @maskedload_fptrunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v21664 = fptrunc <2 x double> undef to <2 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v41664 = fptrunc <4 x double> undef to <4 x half>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v81664 = fptrunc <8 x double> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v23264 = fptrunc <2 x double> undef to <2 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v43264 = fptrunc <4 x double> undef to <4 x float>
@@ -3084,10 +3084,10 @@ define i32 @maskedload_fptrunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2f16.p0v2f16(<2 x half> %v21664, <2 x half>* undef, i32 2, <2 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v4f16.p0v4f16(<4 x half> %v41632, <4 x half>* undef, i32 2, <4 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v4f16.p0v4f16(<4 x half> %v41664, <4 x half>* undef, i32 2, <4 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %v81632, <8 x half>* undef, i32 2, <8 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %v81664, <8 x half>* undef, i32 2, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %v81632, <8 x half>* undef, i32 2, <8 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %v81664, <8 x half>* undef, i32 2, <8 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %v23264, <2 x float>* undef, i32 4, <2 x i1> undef)
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %v43264, <4 x float>* undef, i32 4, <4 x i1> undef)
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %v43264, <4 x float>* undef, i32 4, <4 x i1> undef)
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'maskedload_fptrunc'

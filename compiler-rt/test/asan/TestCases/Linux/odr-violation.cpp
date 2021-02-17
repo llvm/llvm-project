@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK: These globals were registered at these points:
-// CHECK: ODR-EXE
+// CHECK: {{odr-violation.cpp|ODR-EXE}}
 // CHECK: odr-violation.cpp{{$}}
 // CHECK: SUMMARY: AddressSanitizer: odr-violation: global 'foo::G' at {{.*}}odr-violation.cpp
 // DISABLED: PASS

@@ -77,6 +77,16 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Crt1 = "crt1.o";
   const char *Entry = NULL;
+
+  // If crt1-command.o exists, it supports new-style commands, so use it.
+  // Otherwise, use the old crt1.o. This is a temporary transition measure.
+  // Once WASI libc no longer needs to support LLVM versions which lack
+  // support for new-style command, it can make crt1.o the same as
+  // crt1-command.o. And once LLVM no longer needs to support WASI libc
+  // versions before that, it can switch to using crt1-command.o.
+  if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    Crt1 = "crt1-command.o";
+
   if (const Arg *A = Args.getLastArg(options::OPT_mexec_model_EQ)) {
     StringRef CM = A->getValue();
     if (CM == "command") {

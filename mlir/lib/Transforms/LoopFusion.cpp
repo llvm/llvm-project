@@ -68,12 +68,6 @@ mlir::createLoopFusionPass(unsigned fastMemorySpace,
                                       maximalFusion);
 }
 
-// TODO: Replace when this is modeled through side-effects/op traits
-static bool isMemRefDereferencingOp(Operation &op) {
-  return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
-             AffineDmaWaitOp>(op);
-}
-
 namespace {
 
 // LoopNestStateCollector walks loop nests and collects load and store
@@ -264,7 +258,7 @@ public:
         return true;
       // Return true if any use of 'memref' escapes the function.
       for (auto *user : memref.getUsers())
-        if (!isMemRefDereferencingOp(*user))
+        if (!isa<AffineMapAccessInterface>(*user))
           return true;
     }
     return false;
@@ -703,7 +697,7 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
     // Check if 'memref' escapes through a non-affine op (e.g., std load/store,
     // call op, etc.).
     for (Operation *user : memref.getUsers())
-      if (!isMemRefDereferencingOp(*user))
+      if (!isa<AffineMapAccessInterface>(*user))
         escapingMemRefs.insert(memref);
   }
 }
@@ -979,7 +973,7 @@ static bool hasNonAffineUsersOnThePath(unsigned srcId, unsigned dstId,
       // Interrupt the walk if found.
       auto walkResult = op->walk([&](Operation *user) {
         // Skip affine ops.
-        if (isMemRefDereferencingOp(*user))
+        if (isa<AffineMapAccessInterface>(*user))
           return WalkResult::advance();
         // Find a non-affine op that uses the memref.
         if (llvm::is_contained(users, user))

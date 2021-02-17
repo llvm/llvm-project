@@ -1,9 +1,9 @@
-// RUN: %clangxx_tsan %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
 #include "test.h"
 
 int X = 0;
 
-void MySleep() {
+void MySleep() __attribute__((noinline)) {
   sleep(1);  // the sleep that must appear in the report
 }
 

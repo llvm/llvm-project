@@ -11,7 +11,7 @@
 ## *before* the symbol fetching the lazy object.
 ## The test relies on the symbol table order of llvm-mc (lexical), which will
 ## need adjustment if llvm-mc changes its behavior.
-# RUN: echo '.globl f2, aa; f2: call aa; \
+# RUN: echo '.globl aa, f2; f2: call aa; \
 # RUN:   .section .text.foo,"axG",@progbits,foo,comdat; aa:' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %taa.o
 # RUN: llvm-nm -p %taa.o | FileCheck --check-prefix=AA-NM %s

@@ -1,9 +1,12 @@
 ; RUN: not opt -verify < %s 2>&1 | FileCheck %s
 
+%0 = type opaque
+declare void @g()
+declare %0* @foo0()
+declare i8 @foo1()
+
 ; Operand bundles uses are like regular uses, and need to be dominated
 ; by their defs.
-
-declare void @g()
 
 define void @f0(i32* %ptr) {
 ; CHECK: Instruction does not dominate all uses!
@@ -58,5 +61,17 @@ define void @f_gc_transition(i32* %ptr) {
   call void @g() [ "gc-transition"(i32 42, i64 100, i32 %x), "gc-transition"(float 0.0, i64 100, i32 %l) ]
   call void @g() [ "gc-transition"(i32 42, i64 120) ]  ;; The verifier should not complain about this one
   %x = add i32 42, 1
+  ret void
+}
+
+define void @f_clang_arc_attachedcall() {
+; CHECK: Multiple "clang.arc.attachedcall" operand bundles
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i64 0), "clang.arc.attachedcall"(i64 0) ]
+; CHECK-NEXT: must call a function returning a pointer
+; CHECK-NEXT: call i8 @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+
+  call %0* @foo0() [ "clang.arc.attachedcall"(i64 0) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i64 0), "clang.arc.attachedcall"(i64 0) ]
+  call i8 @foo1() [ "clang.arc.attachedcall"(i64 0) ]
   ret void
 }

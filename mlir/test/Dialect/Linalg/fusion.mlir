@@ -637,7 +637,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
         ins(%6 : memref<?x?xf32, #map2>)
        outs(%7 : memref<?x?xf32, #map2>) {
           ^bb0(%arg3: f32, %arg4: f32):     // no predecessors
-            %8 = exp %arg3 : f32
+            %8 = math.exp %arg3 : f32
             linalg.yield %8 : f32
           }
     }

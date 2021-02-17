@@ -66,8 +66,8 @@
 # SYMBOL-NEXT:     0x38 R_X86_64_PC32 __fini_array_end 0xFFFFFFFFFFFFFFFC
 # SYMBOL-NEXT:   }
 # SYMBOL-NEXT: ]
-# SYMBOL:      Symbol {
-# SYMBOL:        Name: __fini_array_end
+
+# SYMBOL:        Name: __start_foo
 # SYMBOL-NEXT:   Value: 0x0
 # SYMBOL-NEXT:   Size: 0
 # SYMBOL-NEXT:   Binding: Global
@@ -76,43 +76,7 @@
 # SYMBOL-NEXT:   Section: Undefined
 # SYMBOL-NEXT: }
 # SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __fini_array_start
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __init_array_end
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __init_array_start
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __preinit_array_end
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __preinit_array_start
+# SYMBOL-NEXT:   Name: __stop_foo
 # SYMBOL-NEXT:   Value: 0x0
 # SYMBOL-NEXT:   Size: 0
 # SYMBOL-NEXT:   Binding: Global
@@ -130,25 +94,16 @@
 # SYMBOL-NEXT:   Section: Undefined
 # SYMBOL-NEXT: }
 # SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __start_doo
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __start_foo
-# SYMBOL-NEXT:   Value: 0x0
-# SYMBOL-NEXT:   Size: 0
-# SYMBOL-NEXT:   Binding: Global
-# SYMBOL-NEXT:   Type: None
-# SYMBOL-NEXT:   Other: 0
-# SYMBOL-NEXT:   Section: Undefined
-# SYMBOL-NEXT: }
-# SYMBOL-NEXT: Symbol {
 # SYMBOL-NEXT:   Name: __stop_bar
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL-NEXT: Symbol {
+# SYMBOL-NEXT:   Name: __start_doo
 # SYMBOL-NEXT:   Value: 0x0
 # SYMBOL-NEXT:   Size: 0
 # SYMBOL-NEXT:   Binding: Global
@@ -166,7 +121,52 @@
 # SYMBOL-NEXT:   Section: Undefined
 # SYMBOL-NEXT: }
 # SYMBOL-NEXT: Symbol {
-# SYMBOL-NEXT:   Name: __stop_foo
+# SYMBOL-NEXT:   Name: __preinit_array_start
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL-NEXT: Symbol {
+# SYMBOL-NEXT:   Name: __preinit_array_end
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL-NEXT: Symbol {
+# SYMBOL-NEXT:   Name: __init_array_start
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL-NEXT: Symbol {
+# SYMBOL-NEXT:   Name: __init_array_end
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL:      Symbol {
+# SYMBOL-NEXT:   Name: __fini_array_start
+# SYMBOL-NEXT:   Value: 0x0
+# SYMBOL-NEXT:   Size: 0
+# SYMBOL-NEXT:   Binding: Global
+# SYMBOL-NEXT:   Type: None
+# SYMBOL-NEXT:   Other: 0
+# SYMBOL-NEXT:   Section: Undefined
+# SYMBOL-NEXT: }
+# SYMBOL-NEXT: Symbol {
+# SYMBOL-NEXT:   Name: __fini_array_end
 # SYMBOL-NEXT:   Value: 0x0
 # SYMBOL-NEXT:   Size: 0
 # SYMBOL-NEXT:   Binding: Global

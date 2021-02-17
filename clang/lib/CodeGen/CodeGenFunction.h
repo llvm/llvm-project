@@ -507,12 +507,23 @@ public:
 
   /// True if the C++ Standard Requires Progress.
   bool CPlusPlusWithProgress() {
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
     return getLangOpts().CPlusPlus11 || getLangOpts().CPlusPlus14 ||
            getLangOpts().CPlusPlus17 || getLangOpts().CPlusPlus20;
   }
 
   /// True if the C Standard Requires Progress.
   bool CWithProgress() {
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Always)
+      return true;
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
     return getLangOpts().C11 || getLangOpts().C17 || getLangOpts().C2x;
   }
 
@@ -3390,6 +3401,7 @@ public:
 
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
+  void EmitOMPTileDirective(const OMPTileDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
@@ -4201,6 +4213,8 @@ public:
   llvm::Value *EmitARCUnsafeUnretainedScalarExpr(const Expr *expr);
 
   void EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values);
+
+  void EmitARCNoopIntrinsicUse(ArrayRef<llvm::Value *> values);
 
   static Destroyer destroyARCStrongImprecise;
   static Destroyer destroyARCStrongPrecise;

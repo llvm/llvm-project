@@ -112,7 +112,8 @@ enum testEnumConstantDecl {
 // CHECK:      EnumConstantDecl{{.*}} TestEnumConstantDecl 'int'
 // CHECK:      EnumConstantDecl{{.*}} TestEnumConstantDeclInit 'int'
 // CHECK-NEXT:   ConstantExpr
-// CHECK-NEXT:     IntegerLiteral
+// CHECK-NEXT:     value: Int 1
+// CHECK-NEXT:       IntegerLiteral
 
 struct testIndirectFieldDecl {
   struct {
@@ -160,7 +161,8 @@ struct testFieldDecl {
 // CHECK:      FieldDecl{{.*}} TestFieldDecl 'int'
 // CHECK:      FieldDecl{{.*}} TestFieldDeclWidth 'int'
 // CHECK-NEXT:   ConstantExpr
-// CHECK-NEXT:     IntegerLiteral
+// CHECK-NEXT:     value: Int 1
+// CHECK-NEXT:       IntegerLiteral
 // CHECK-MODULE:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
 
 int TestVarDecl;

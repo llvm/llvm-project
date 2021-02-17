@@ -3,7 +3,7 @@
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_name ("a")
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT: DW_OP_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value)
+# CHECK-NEXT: DW_OP_entry_value(DW_OP_breg5 RDI+0), DW_OP_stack_value)
 
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_producer:
@@ -18,8 +18,9 @@
 	.short	.Lloc0_end-.Lloc0_start # Loc expr size
 .Lloc0_start:
 	.byte   163                     # DW_OP_entry_value
-	.byte	1                       # 1
-	.byte	85                      # super-register DW_OP_reg5
+	.byte	2                       # 2
+	.byte	117                     # DW_OP_breg5
+	.byte	0                       # +0
 	.byte	159                     # DW_OP_stack_value
 .Lloc0_end:
 	.quad	0

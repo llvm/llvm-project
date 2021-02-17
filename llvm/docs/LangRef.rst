@@ -1242,6 +1242,9 @@ Currently, only the following parameter attributes are defined:
     array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
     ``addrspace(0)`` (which is the default address space), except if the
     ``null_pointer_is_valid`` function attribute is present.
+    ``n`` should be a positive number. The pointer should be well defined,
+    otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
+    implies ``noundef``.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -1988,7 +1991,7 @@ example:
     terminating loops without side-effects can be removed. If a `mustprogress`
     function does not satisfy this contract, the behavior is undefined.  This
     attribute does not apply transitively to callees, but does apply to call
-    sites within the function. Note that `willreturn` implies `mustprogress`. 
+    sites within the function. Note that `willreturn` implies `mustprogress`.
 
 Call Site Attributes
 ----------------------
@@ -2324,6 +2327,19 @@ object which potentially needs to be updated by the garbage collector.
 When lowered, any relocated value will be recorded in the corresponding
 :ref:`stackmap entry <statepoint-stackmap-format>`.  See the intrinsic description
 for further details.
+
+ObjC ARC Attached Call Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``"clang.arc.attachedcall`` operand bundle on a call indicates the call is
+implicitly followed by a marker instruction and a call to an ObjC runtime
+function that uses the result of the call. If the argument passed to the operand
+bundle is 0, ``@objc_retainAutoreleasedReturnValue`` is called. If 1 is passed,
+``@objc_unsafeClaimAutoreleasedReturnValue`` is called. A call with this bundle
+implicitly uses its return value.
+
+The operand bundle is needed to ensure the call is immediately followed by the
+marker instruction or the ObjC runtime call in the final output.
 
 .. _moduleasm:
 
@@ -4410,7 +4426,7 @@ PowerPC:
 - ``r``: A 32 or 64-bit integer register.
 - ``b``: A 32 or 64-bit integer register, excluding ``R0`` (that is:
   ``R1-R31``).
-- ``f``: A 32 or 64-bit float register (``F0-F31``), 
+- ``f``: A 32 or 64-bit float register (``F0-F31``),
 - ``v``: For ``4 x f32`` or ``4 x f64`` types, a 128-bit altivec vector
    register (``V0-V31``).
 
@@ -9436,12 +9452,7 @@ written using a store of the same type.
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
-
-If the pointer is not a well-defined value, all of its possible representations
-should be dereferenceable. For example, loading a byte from a pointer to an
-array of type ``[16 x i8]`` with offset ``undef & 31`` is undefined behavior.
-Loading a byte at offset ``undef & 15`` nondeterministically reads one of the
-bytes.
+If ``<pointer>`` is not a well-defined value, the behavior is undefined.
 
 Examples:
 """""""""
@@ -9535,12 +9546,7 @@ of bytes, it is unspecified what happens to the extra bits that do not
 belong to the type, but they will typically be overwritten.
 If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
-
-If ``<pointer>`` is not a well-defined value, all of its possible
-representations should be dereferenceable. For example, storing a byte to a
-pointer to an array of type ``[16 x i8]`` with offset ``undef & 31`` is
-undefined behavior. Storing a byte to an offset ``undef & 15``
-nondeterministically stores to one of offsets from 0 to 15.
+If ``<pointer>`` is not a well-defined value, the behavior is undefined.
 
 Example:
 """"""""
@@ -9617,7 +9623,7 @@ Syntax:
 
 ::
 
-      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [syncscope("<target-scope>")] <success ordering> <failure ordering> ; yields  { ty, i1 }
+      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [syncscope("<target-scope>")] <success ordering> <failure ordering>[, align <alignment>] ; yields  { ty, i1 }
 
 Overview:
 """""""""
@@ -9648,6 +9654,13 @@ stronger than that on success, and the failure ordering cannot be either
 
 A ``cmpxchg`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
+
+The instruction can take an optional ``align`` attribute.
+The alignment must be a power of two greater or equal to the size of the
+`<value>` type. If unspecified, the alignment is assumed to be equal to the
+size of the '<value>' type. Note that this default alignment assumption is
+different from the alignment used for the load/store instructions when align
+isn't specified.
 
 The pointer passed into cmpxchg must have alignment greater than or
 equal to the size in memory of the operand.
@@ -9701,7 +9714,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>                   ; yields ty
+      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 
 Overview:
 """""""""
@@ -9739,6 +9752,13 @@ the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
 ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
+The instruction can take an optional ``align`` attribute.
+The alignment must be a power of two greater or equal to the size of the
+`<value>` type. If unspecified, the alignment is assumed to be equal to the
+size of the '<value>' type. Note that this default alignment assumption is
+different from the alignment used for the load/store instructions when align
+isn't specified.
+
 A ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
 
@@ -9759,10 +9779,8 @@ operation argument:
 -  xor: ``*ptr = *ptr ^ val``
 -  max: ``*ptr = *ptr > val ? *ptr : val`` (using a signed comparison)
 -  min: ``*ptr = *ptr < val ? *ptr : val`` (using a signed comparison)
--  umax: ``*ptr = *ptr > val ? *ptr : val`` (using an unsigned
-   comparison)
--  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned
-   comparison)
+-  umax: ``*ptr = *ptr > val ? *ptr : val`` (using an unsigned comparison)
+-  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
 - fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
 - fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
 
@@ -12705,11 +12723,11 @@ non-overlapping. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on the
 argument.
 
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memcpy`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 .. _int_memcpy_inline:
 
@@ -12764,11 +12782,9 @@ source location to the destination location, which are not allowed to
 overlap. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on
 the argument.
-
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-
-The generated code is guaranteed not to call any external functions.
+The behavior of '``llvm.memcpy.inline.*``' is equivalent to the behavior of
+'``llvm.memcpy.*``', but the generated code is guaranteed not to call any
+external functions.
 
 .. _int_memmove:
 
@@ -12825,11 +12841,11 @@ copies "len" bytes of memory over. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
-pointers. However, they must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memmove`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 .. _int_memset:
 
@@ -12883,11 +12899,11 @@ at the destination location. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointer may be NULL, dangling, ``undef``, or ``poison``
-pointer. However, it must still be appropriately aligned.
-If "len" isn't a well-defined value, all of its possible representations should
-make the behavior of this ``llvm.memset`` defined, otherwise the behavior is
-undefined.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
+otherwise the behavior is undefined.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16216,6 +16232,33 @@ indices. If this condition cannot be determined statically but is false at
 runtime, then the result vector is undefined. The ``idx`` parameter must be a
 vector index constant type (for most targets this will be an integer pointer
 type).
+
+'``llvm.experimental.vector.reverse``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vector.reverse.*``' intrinsics reverse a vector.
+The intrinsic takes a single vector and returns a vector of matching type but
+with the original lane order reversed. These intrinsics work for both fixed
+and scalable vectors. While this intrinsic is marked as experimental the
+recommended way to express reverse operations for fixed-width vectors is still
+to use a shufflevector, as that may allow for more optimization opportunities.
+
+Arguments:
+""""""""""
+
+The argument to this intrinsic must be a vector.
 
 Matrix Intrinsics
 -----------------
@@ -19662,7 +19705,7 @@ was only valid within a single iteration.
   entry:
     ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 1: noalias decl outside loop
     br label %loop
-  
+
   loop:
     %a = phi i8* [ %a.base, %entry ], [ %a.inc, %loop ]
     %b = phi i8* [ %b.base, %entry ], [ %b.inc, %loop ]
@@ -19673,11 +19716,11 @@ was only valid within a single iteration.
     %b.inc = getelementptr inbounds i8, i8* %b, i64 1
     %cond = call i1 @cond()
     br i1 %cond, label %loop, label %exit
-  
+
   exit:
     ret void
   }
-  
+
   !0 = !{!0} ; domain
   !1 = !{!1, !0} ; scope
   !2 = !{!1} ; scope list

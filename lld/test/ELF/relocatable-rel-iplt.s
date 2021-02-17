@@ -23,7 +23,7 @@
 // CHECK-NEXT:     Section: .text (0x1)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: __rel_iplt_end (1)
+// CHECK-NEXT:     Name: __rel_iplt_start (1)
 // CHECK-NEXT:     Value: 0x0
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Weak (0x2)
@@ -34,7 +34,7 @@
 // CHECK-NEXT:     Section: Undefined (0x0)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: __rel_iplt_start (16)
+// CHECK-NEXT:     Name: __rel_iplt_end (18)
 // CHECK-NEXT:     Value: 0x0
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Weak (0x2)

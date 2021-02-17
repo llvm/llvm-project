@@ -24,6 +24,13 @@ def NVVM_Dialect : Dialect {
   let name = "nvvm";
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let hasOperationAttrVerify = 1;
+
+  let extraClassDeclaration = [{
+    /// Get the name of the attribute used to annotate external kernel
+    /// functions.
+    static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -3083,10 +3083,18 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
   // Return false if VD is a __block variable. We don't want to implicitly move
   // out of a __block variable during a return because we cannot assume the
   // variable will no longer be used.
-  if (VD->hasAttr<BlocksAttr>()) return false;
+  if (VD->hasAttr<BlocksAttr>())
+    return false;
 
   // ...non-volatile...
   if (VD->getType().isVolatileQualified())
+    return false;
+
+  // C++20 [class.copy.elision]p3:
+  // ...rvalue reference to a non-volatile...
+  if (VD->getType()->isRValueReferenceType() &&
+      (!(CESK & CES_AllowRValueReferenceType) ||
+       VD->getType().getNonReferenceType().isVolatileQualified()))
     return false;
 
   if (CESK & CES_AllowDifferentTypes)
@@ -3104,13 +3112,13 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
 /// Try to perform the initialization of a potentially-movable value,
 /// which is the operand to a return or throw statement.
 ///
-/// This routine implements C++14 [class.copy]p32, which attempts to treat
-/// returned lvalues as rvalues in certain cases (to prefer move construction),
-/// then falls back to treating them as lvalues if that failed.
+/// This routine implements C++20 [class.copy.elision]p3, which attempts to
+/// treat returned lvalues as rvalues in certain cases (to prefer move
+/// construction), then falls back to treating them as lvalues if that failed.
 ///
-/// \param ConvertingConstructorsOnly If true, follow [class.copy]p32 and reject
-/// resolutions that find non-constructors, such as derived-to-base conversions
-/// or `operator T()&&` member functions. If false, do consider such
+/// \param ConvertingConstructorsOnly If true, follow [class.copy.elision]p3 and
+/// reject resolutions that find non-constructors, such as derived-to-base
+/// conversions or `operator T()&&` member functions. If false, do consider such
 /// conversion sequences.
 ///
 /// \param Res We will fill this in if move-initialization was possible.
@@ -3151,9 +3159,10 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
     FunctionDecl *FD = Step.Function.Function;
     if (ConvertingConstructorsOnly) {
       if (isa<CXXConstructorDecl>(FD)) {
+        // C++11 [class.copy]p32:
         // C++14 [class.copy]p32:
-        // [...] If the first overload resolution fails or was not performed,
-        // or if the type of the first parameter of the selected constructor
+        // C++17 [class.copy.elision]p3:
+        // [...] if the type of the first parameter of the selected constructor
         // is not an rvalue reference to the object's type (possibly
         // cv-qualified), overload resolution is performed again, considering
         // the object as an lvalue.
@@ -3172,7 +3181,8 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
         // Check that overload resolution selected a constructor taking an
         // rvalue reference. If it selected an lvalue reference, then we
         // didn't need to cast this thing to an rvalue in the first place.
-        if (!isa<RValueReferenceType>(FD->getParamDecl(0)->getType()))
+        if (IsDiagnosticsCheck &&
+            !isa<RValueReferenceType>(FD->getParamDecl(0)->getType()))
           break;
       } else if (isa<CXXMethodDecl>(FD)) {
         // Check that overload resolution selected a conversion operator
@@ -3202,73 +3212,38 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
 /// Perform the initialization of a potentially-movable value, which
 /// is the result of return value.
 ///
-/// This routine implements C++14 [class.copy]p32, which attempts to treat
-/// returned lvalues as rvalues in certain cases (to prefer move construction),
-/// then falls back to treating them as lvalues if that failed.
-ExprResult
-Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
-                                      const VarDecl *NRVOCandidate,
-                                      QualType ResultType,
-                                      Expr *Value,
-                                      bool AllowNRVO) {
-  // C++14 [class.copy]p32:
-  // When the criteria for elision of a copy/move operation are met, but not for
-  // an exception-declaration, and the object to be copied is designated by an
-  // lvalue, or when the expression in a return statement is a (possibly
-  // parenthesized) id-expression that names an object with automatic storage
-  // duration declared in the body or parameter-declaration-clause of the
-  // innermost enclosing function or lambda-expression, overload resolution to
-  // select the constructor for the copy is first performed as if the object
-  // were designated by an rvalue.
+/// This routine implements C++20 [class.copy.elision]p3, which attempts to
+/// treat returned lvalues as rvalues in certain cases (to prefer move
+/// construction), then falls back to treating them as lvalues if that failed.
+ExprResult Sema::PerformMoveOrCopyInitialization(
+    const InitializedEntity &Entity, const VarDecl *NRVOCandidate,
+    QualType ResultType, Expr *Value, bool AllowNRVO) {
   ExprResult Res = ExprError();
   bool NeedSecondOverloadResolution = true;
 
   if (AllowNRVO) {
-    bool AffectedByCWG1579 = false;
+    CopyElisionSemanticsKind CESK = CES_Strict;
+    if (getLangOpts().CPlusPlus20) {
+      CESK = CES_ImplicitlyMovableCXX20;
+    } else if (getLangOpts().CPlusPlus11) {
+      CESK = CES_ImplicitlyMovableCXX11CXX14CXX17;
+    }
 
     if (!NRVOCandidate) {
-      NRVOCandidate = getCopyElisionCandidate(ResultType, Value, CES_Default);
-      if (NRVOCandidate &&
-          !getDiagnostics().isIgnored(diag::warn_return_std_move_in_cxx11,
-                                      Value->getExprLoc())) {
-        const VarDecl *NRVOCandidateInCXX11 =
-            getCopyElisionCandidate(ResultType, Value, CES_FormerDefault);
-        AffectedByCWG1579 = (!NRVOCandidateInCXX11);
-      }
+      NRVOCandidate = getCopyElisionCandidate(ResultType, Value, CESK);
     }
 
     if (NRVOCandidate) {
-      NeedSecondOverloadResolution = TryMoveInitialization(
-          *this, Entity, NRVOCandidate, ResultType, Value, true, false, Res);
+      NeedSecondOverloadResolution =
+          TryMoveInitialization(*this, Entity, NRVOCandidate, ResultType, Value,
+                                !getLangOpts().CPlusPlus20, false, Res);
     }
 
-    if (!NeedSecondOverloadResolution && AffectedByCWG1579) {
-      QualType QT = NRVOCandidate->getType();
-      if (QT.getNonReferenceType().getUnqualifiedType().isTriviallyCopyableType(
-              Context)) {
-        // Adding 'std::move' around a trivially copyable variable is probably
-        // pointless. Don't suggest it.
-      } else {
-        // Common cases for this are returning unique_ptr<Derived> from a
-        // function of return type unique_ptr<Base>, or returning T from a
-        // function of return type Expected<T>. This is totally fine in a
-        // post-CWG1579 world, but was not fine before.
-        assert(!ResultType.isNull());
-        SmallString<32> Str;
-        Str += "std::move(";
-        Str += NRVOCandidate->getDeclName().getAsString();
-        Str += ")";
-        Diag(Value->getExprLoc(), diag::warn_return_std_move_in_cxx11)
-            << Value->getSourceRange() << NRVOCandidate->getDeclName()
-            << ResultType << QT;
-        Diag(Value->getExprLoc(), diag::note_add_std_move_in_cxx11)
-            << FixItHint::CreateReplacement(Value->getSourceRange(), Str);
-      }
-    } else if (NeedSecondOverloadResolution &&
-               !getDiagnostics().isIgnored(diag::warn_return_std_move,
-                                           Value->getExprLoc())) {
-      const VarDecl *FakeNRVOCandidate =
-          getCopyElisionCandidate(QualType(), Value, CES_AsIfByStdMove);
+    if (!getLangOpts().CPlusPlus20 && NeedSecondOverloadResolution &&
+        !getDiagnostics().isIgnored(diag::warn_return_std_move,
+                                    Value->getExprLoc())) {
+      const VarDecl *FakeNRVOCandidate = getCopyElisionCandidate(
+          QualType(), Value, CES_ImplicitlyMovableCXX20);
       if (FakeNRVOCandidate) {
         QualType QT = FakeNRVOCandidate->getType();
         if (QT->isLValueReferenceType()) {

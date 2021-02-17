@@ -1,3 +1,14 @@
+# Ensure the ${model} is available at ${final_path}.
+#
+function(tfgetmodel model final_path)
+  if (IS_ABSOLUTE ${model})
+    set(${final_path} ${model} PARENT_SCOPE)
+  else()
+    set(${final_path}
+      ${CMAKE_CURRENT_SOURCE_DIR}/${model} PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Run the tensorflow compiler (saved_model_cli) on the saved model in the 
 # ${model} directory, looking for the ${tag_set} tag set, and the SignatureDef
 # ${signature_def_key}.
@@ -5,13 +16,8 @@
 # ${CMAKE_CURRENT_BINARY_DIR}. The generated header will define a C++ class
 # called ${cpp_class} - which may be a namespace-qualified class name.
 function(tfcompile model tag_set signature_def_key fname cpp_class)
-  if (IS_ABSOLUTE ${model})
-    set(LLVM_ML_MODELS_ABSOLUTE ${model})
-  else()
-    set(LLVM_ML_MODELS_ABSOLUTE
-      ${CMAKE_CURRENT_SOURCE_DIR}/${model})
-  endif()
-
+  tfgetmodel(${model} LLVM_ML_MODELS_ABSOLUTE)
+  message("Using model at " ${LLVM_ML_MODELS_ABSOLUTE})
   set(prefix ${CMAKE_CURRENT_BINARY_DIR}/${fname})
   set(obj_file ${prefix}.o)
   set(hdr_file ${prefix}.h)

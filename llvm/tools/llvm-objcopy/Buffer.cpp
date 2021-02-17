@@ -36,7 +36,12 @@ Error FileBuffer::allocate(size_t Size) {
   }
 
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(getName(), Size, FileOutputBuffer::F_executable);
+      FileOutputBuffer::create(getName(), Size,
+                               KeepOwnership
+                                   ? FileOutputBuffer::F_executable |
+                                         FileOutputBuffer::F_keep_ownership
+                                   : FileOutputBuffer::F_executable,
+                               UserID, GroupID);
   // FileOutputBuffer::create() returns an Error that is just a wrapper around
   // std::error_code. Wrap it in FileError to include the actual filename.
   if (!BufferOrErr)

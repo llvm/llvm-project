@@ -191,7 +191,32 @@ private:
 } // end anonymous namespace
 
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (!TM.getTargetTriple().isOSBinFormatELF())
+  const Triple &TT = TM.getTargetTriple();
+
+  if (TT.isOSBinFormatCOFF()) {
+    // Emit an absolute @feat.00 symbol.  This appears to be some kind of
+    // compiler features bitfield read by link.exe.
+    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+    OutStreamer->BeginCOFFSymbolDef(S);
+    OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+    OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+    OutStreamer->EndCOFFSymbolDef();
+    int64_t Feat00Flags = 0;
+
+    if (M.getModuleFlag("cfguard")) {
+      Feat00Flags |= 0x800; // Object is CFG-aware.
+    }
+
+    if (M.getModuleFlag("ehcontguard")) {
+      Feat00Flags |= 0x4000; // Object also has EHCont.
+    }
+
+    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->emitAssignment(
+        S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
+  }
+
+  if (!TT.isOSBinFormatELF())
     return;
 
   // Assemble feature flags that may require creation of a note section.
@@ -352,7 +377,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     OutStreamer->SwitchSection(OutContext.getELFSection(
         ".text.hot", ELF::SHT_PROGBITS,
         ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
-        Sym->getName()));
+        Sym->getName(), /*IsComdat=*/true));
 
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);

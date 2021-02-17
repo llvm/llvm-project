@@ -614,73 +614,80 @@ TEST(Corpus, Distribution) {
   }
 }
 
-TEST(Merge, Bad) {
-  const char *kInvalidInputs[] = {
-    "",
-    "x",
-    "3\nx",
-    "2\n3",
-    "2\n2",
-    "2\n2\nA\n",
-    "2\n2\nA\nB\nC\n",
-    "0\n0\n",
-    "1\n1\nA\nFT 0",
-    "1\n1\nA\nSTARTED 1",
-  };
-  Merger M;
-  for (auto S : kInvalidInputs) {
-    // fprintf(stderr, "TESTING:\n%s\n", S);
-    EXPECT_FALSE(M.Parse(S, false));
-  }
-}
-
-void EQ(const Vector<uint32_t> &A, const Vector<uint32_t> &B) {
+template <typename T> void EQ(const Vector<T> &A, const Vector<T> &B) {
   EXPECT_EQ(A, B);
 }
 
-void EQ(const Vector<std::string> &A, const Vector<std::string> &B) {
-  Set<std::string> a(A.begin(), A.end());
+template <typename T> void EQ(const Set<T> &A, const Vector<T> &B) {
+  EXPECT_EQ(A, Set<T>(B.begin(), B.end()));
+}
+
+void EQ(const Vector<MergeFileInfo> &A, const Vector<std::string> &B) {
+  Set<std::string> a;
+  for (const auto &File : A)
+    a.insert(File.Name);
   Set<std::string> b(B.begin(), B.end());
   EXPECT_EQ(a, b);
 }
 
-static void Merge(const std::string &Input,
-                  const Vector<std::string> Result,
-                  size_t NumNewFeatures) {
-  Merger M;
-  Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures, NewCov;
-  EXPECT_TRUE(M.Parse(Input, true));
-  EXPECT_EQ(NumNewFeatures, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
-  EQ(NewFiles, Result);
-}
+#define TRACED_EQ(A, ...)                                                      \
+  {                                                                            \
+    SCOPED_TRACE(#A);                                                          \
+    EQ(A, __VA_ARGS__);                                                        \
+  }
 
-TEST(Merge, Good) {
+TEST(Merger, Parse) {
   Merger M;
 
+  const char *kInvalidInputs[] = {
+      // Bad file numbers
+      "",
+      "x",
+      "0\n0",
+      "3\nx",
+      "2\n3",
+      "2\n2",
+      // Bad file names
+      "2\n2\nA\n",
+      "2\n2\nA\nB\nC\n",
+      // Unknown markers
+      "2\n1\nA\nSTARTED 0\nBAD 0 0x0",
+      // Bad file IDs
+      "1\n1\nA\nSTARTED 1",
+      "2\n1\nA\nSTARTED 0\nFT 1 0x0",
+  };
+  for (auto S : kInvalidInputs) {
+    SCOPED_TRACE(S);
+    EXPECT_FALSE(M.Parse(S, false));
+  }
+
+  // Parse initial control file
   EXPECT_TRUE(M.Parse("1\n0\nAA\n", false));
-  EXPECT_EQ(M.Files.size(), 1U);
+  ASSERT_EQ(M.Files.size(), 1U);
   EXPECT_EQ(M.NumFilesInFirstCorpus, 0U);
   EXPECT_EQ(M.Files[0].Name, "AA");
   EXPECT_TRUE(M.LastFailure.empty());
   EXPECT_EQ(M.FirstNotProcessedFile, 0U);
 
+  // Parse control file that failed on first attempt
   EXPECT_TRUE(M.Parse("2\n1\nAA\nBB\nSTARTED 0 42\n", false));
-  EXPECT_EQ(M.Files.size(), 2U);
+  ASSERT_EQ(M.Files.size(), 2U);
   EXPECT_EQ(M.NumFilesInFirstCorpus, 1U);
   EXPECT_EQ(M.Files[0].Name, "AA");
   EXPECT_EQ(M.Files[1].Name, "BB");
   EXPECT_EQ(M.LastFailure, "AA");
   EXPECT_EQ(M.FirstNotProcessedFile, 1U);
 
+  // Parse control file that failed on later attempt
   EXPECT_TRUE(M.Parse("3\n1\nAA\nBB\nC\n"
-                        "STARTED 0 1000\n"
-                        "FT 0 1 2 3\n"
-                        "STARTED 1 1001\n"
-                        "FT 1 4 5 6 \n"
-                        "STARTED 2 1002\n"
-                        "", true));
-  EXPECT_EQ(M.Files.size(), 3U);
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "",
+                      true));
+  ASSERT_EQ(M.Files.size(), 3U);
   EXPECT_EQ(M.NumFilesInFirstCorpus, 1U);
   EXPECT_EQ(M.Files[0].Name, "AA");
   EXPECT_EQ(M.Files[0].Size, 1000U);
@@ -690,82 +697,171 @@ TEST(Merge, Good) {
   EXPECT_EQ(M.Files[2].Size, 1002U);
   EXPECT_EQ(M.LastFailure, "C");
   EXPECT_EQ(M.FirstNotProcessedFile, 3U);
-  EQ(M.Files[0].Features, {1, 2, 3});
-  EQ(M.Files[1].Features, {4, 5, 6});
+  TRACED_EQ(M.Files[0].Features, {1, 2, 3});
+  TRACED_EQ(M.Files[1].Features, {4, 5, 6});
 
+  // Parse control file without features or PCs
+  EXPECT_TRUE(M.Parse("2\n0\nAA\nBB\n"
+                      "STARTED 0 1000\n"
+                      "FT 0\n"
+                      "COV 0\n"
+                      "STARTED 1 1001\n"
+                      "FT 1\n"
+                      "COV 1\n"
+                      "",
+                      true));
+  ASSERT_EQ(M.Files.size(), 2U);
+  EXPECT_EQ(M.NumFilesInFirstCorpus, 0U);
+  EXPECT_TRUE(M.LastFailure.empty());
+  EXPECT_EQ(M.FirstNotProcessedFile, 2U);
+  EXPECT_TRUE(M.Files[0].Features.empty());
+  EXPECT_TRUE(M.Files[0].Cov.empty());
+  EXPECT_TRUE(M.Files[1].Features.empty());
+  EXPECT_TRUE(M.Files[1].Cov.empty());
 
-  Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures, NewCov;
-
+  // Parse features and PCs
   EXPECT_TRUE(M.Parse("3\n2\nAA\nBB\nC\n"
-                        "STARTED 0 1000\nFT 0 1 2 3\n"
-                        "STARTED 1 1001\nFT 1 4 5 6 \n"
-                        "STARTED 2 1002\nFT 2 6 1 3 \n"
-                        "", true));
-  EXPECT_EQ(M.Files.size(), 3U);
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "COV 0 11 12 13\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6\n"
+                      "COV 1 7 8 9\n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "COV 2 16 11 13\n"
+                      "",
+                      true));
+  ASSERT_EQ(M.Files.size(), 3U);
   EXPECT_EQ(M.NumFilesInFirstCorpus, 2U);
   EXPECT_TRUE(M.LastFailure.empty());
   EXPECT_EQ(M.FirstNotProcessedFile, 3U);
-  EQ(M.Files[0].Features, {1, 2, 3});
-  EQ(M.Files[1].Features, {4, 5, 6});
-  EQ(M.Files[2].Features, {1, 3, 6});
-  EXPECT_EQ(0U, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
-  EQ(NewFiles, {});
+  TRACED_EQ(M.Files[0].Features, {1, 2, 3});
+  TRACED_EQ(M.Files[0].Cov, {11, 12, 13});
+  TRACED_EQ(M.Files[1].Features, {4, 5, 6});
+  TRACED_EQ(M.Files[1].Cov, {7, 8, 9});
+  TRACED_EQ(M.Files[2].Features, {1, 3, 6});
+  TRACED_EQ(M.Files[2].Cov, {16});
+}
 
+TEST(Merger, Merge) {
+  Merger M;
+  Set<uint32_t> Features, NewFeatures;
+  Set<uint32_t> Cov, NewCov;
+  Vector<std::string> NewFiles;
+
+  // Adds new files and features
+  EXPECT_TRUE(M.Parse("3\n0\nA\nB\nC\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 6U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {"A", "B"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5, 6});
+
+  // Doesn't return features or files in the initial corpus.
   EXPECT_TRUE(M.Parse("3\n1\nA\nB\nC\n"
-                        "STARTED 0 1000\nFT 0 1 2 3\n"
-                        "STARTED 1 1001\nFT 1 4 5 6 \n"
-                        "STARTED 2 1002\nFT 2 6 1 3\n"
-                        "", true));
-  EQ(M.Files[0].Features, {1, 2, 3});
-  EQ(M.Files[1].Features, {4, 5, 6});
-  EQ(M.Files[2].Features, {1, 3, 6});
-  EXPECT_EQ(3U, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
-  EQ(NewFiles, {"B"});
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 3U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {"B"});
+  TRACED_EQ(NewFeatures, {4, 5, 6});
 
-  // Same as the above, but with InitialFeatures.
-  EXPECT_TRUE(M.Parse("2\n0\nB\nC\n"
-                        "STARTED 0 1001\nFT 0 4 5 6 \n"
-                        "STARTED 1 1002\nFT 1 6 1 3\n"
-                        "", true));
-  EQ(M.Files[0].Features, {4, 5, 6});
-  EQ(M.Files[1].Features, {1, 3, 6});
-  Set<uint32_t> InitialFeatures;
-  InitialFeatures.insert(1);
-  InitialFeatures.insert(2);
-  InitialFeatures.insert(3);
-  EXPECT_EQ(3U, M.Merge(InitialFeatures, &NewFeatures, {}, &NewCov, &NewFiles));
-  EQ(NewFiles, {"B"});
+  // No new features, so no new files
+  EXPECT_TRUE(M.Parse("3\n2\nA\nB\nC\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 0U);
+  TRACED_EQ(M.Files, {"A", "B", "C"});
+  TRACED_EQ(NewFiles, {});
+  TRACED_EQ(NewFeatures, {});
+
+  // Can pass initial features and coverage.
+  Features = {1, 2, 3};
+  Cov = {};
+  EXPECT_TRUE(M.Parse("2\n0\nA\nB\n"
+                      "STARTED 0 1000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6\n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 3U);
+  TRACED_EQ(M.Files, {"A", "B"});
+  TRACED_EQ(NewFiles, {"B"});
+  TRACED_EQ(NewFeatures, {4, 5, 6});
+  Features.clear();
+  Cov.clear();
+
+  // Parse smaller files first
+  EXPECT_TRUE(M.Parse("3\n0\nA\nB\nC\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1001\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1002\n"
+                      "FT 2 6 1 3 \n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 6U);
+  TRACED_EQ(M.Files, {"B", "C", "A"});
+  TRACED_EQ(NewFiles, {"B", "C", "A"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5, 6});
+
+  EXPECT_TRUE(M.Parse("4\n0\nA\nB\nC\nD\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 1 2 3\n"
+                      "STARTED 1 1101\n"
+                      "FT 1 4 5 6 \n"
+                      "STARTED 2 1102\n"
+                      "FT 2 6 1 3 100 \n"
+                      "STARTED 3 1000\n"
+                      "FT 3 1  \n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 7U);
+  TRACED_EQ(M.Files, {"A", "B", "C", "D"});
+  TRACED_EQ(NewFiles, {"D", "B", "C", "A"});
+  TRACED_EQ(NewFeatures, {1, 2, 3, 4, 5, 6, 100});
+
+  // For same sized file, parse more features first
+  EXPECT_TRUE(M.Parse("4\n1\nA\nB\nC\nD\n"
+                      "STARTED 0 2000\n"
+                      "FT 0 4 5 6 7 8\n"
+                      "STARTED 1 1100\n"
+                      "FT 1 1 2 3 \n"
+                      "STARTED 2 1100\n"
+                      "FT 2 2 3 \n"
+                      "STARTED 3 1000\n"
+                      "FT 3 1  \n"
+                      "",
+                      true));
+  EXPECT_EQ(M.Merge(Features, &NewFeatures, Cov, &NewCov, &NewFiles), 3U);
+  TRACED_EQ(M.Files, {"A", "B", "C", "D"});
+  TRACED_EQ(NewFiles, {"D", "B"});
+  TRACED_EQ(NewFeatures, {1, 2, 3});
 }
 
-TEST(Merge, Merge) {
-
-  Merge("3\n1\nA\nB\nC\n"
-        "STARTED 0 1000\nFT 0 1 2 3\n"
-        "STARTED 1 1001\nFT 1 4 5 6 \n"
-        "STARTED 2 1002\nFT 2 6 1 3 \n",
-        {"B"}, 3);
-
-  Merge("3\n0\nA\nB\nC\n"
-        "STARTED 0 2000\nFT 0 1 2 3\n"
-        "STARTED 1 1001\nFT 1 4 5 6 \n"
-        "STARTED 2 1002\nFT 2 6 1 3 \n",
-        {"A", "B", "C"}, 6);
-
-  Merge("4\n0\nA\nB\nC\nD\n"
-        "STARTED 0 2000\nFT 0 1 2 3\n"
-        "STARTED 1 1101\nFT 1 4 5 6 \n"
-        "STARTED 2 1102\nFT 2 6 1 3 100 \n"
-        "STARTED 3 1000\nFT 3 1  \n",
-        {"A", "B", "C", "D"}, 7);
-
-  Merge("4\n1\nA\nB\nC\nD\n"
-        "STARTED 0 2000\nFT 0 4 5 6 7 8\n"
-        "STARTED 1 1100\nFT 1 1 2 3 \n"
-        "STARTED 2 1100\nFT 2 2 3 \n"
-        "STARTED 3 1000\nFT 3 1  \n",
-        {"B", "D"}, 3);
-}
+#undef TRACED_EQ
 
 TEST(DFT, BlockCoverage) {
   BlockCoverage Cov;

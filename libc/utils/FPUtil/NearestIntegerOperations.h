@@ -16,7 +16,6 @@
 
 #include <math.h>
 #if math_errhandling & MATH_ERRNO
-#include "src/errno/llvmlibc_errno.h"
 #include <errno.h>
 #endif
 
@@ -247,7 +246,7 @@ static inline I roundedFloatToSignedInteger(F x) {
   FPBits<F> bits(x);
   auto setDomainErrorAndRaiseInvalid = []() {
 #if math_errhandling & MATH_ERRNO
-    llvmlibc_errno = EDOM;
+    errno = EDOM; // NOLINT
 #endif
 #if math_errhandling & MATH_ERREXCEPT
     raiseExcept(FE_INVALID);

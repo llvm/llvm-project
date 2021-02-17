@@ -21,11 +21,21 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/StringExtras.h"
+
+// Pull in all enum type definitions and utility function declarations.
+#include "mlir/Dialect/Vector/VectorOpsEnums.h.inc"
 
 namespace mlir {
 class MLIRContext;
 class OwningRewritePatternList;
+
 namespace vector {
+class VectorDialect;
+
+namespace detail {
+struct BitmaskEnumStorage;
+} // namespace detail
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
@@ -34,6 +44,18 @@ void populateVectorToVectorCanonicalizationPatterns(
 /// Collect a set of vector-to-vector transformation patterns.
 void populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
+
+/// Collect a set of patterns to split transfer read/write ops.
+///
+/// These patterns unrolls transfer read/write ops if the vector consumers/
+/// producers are extract/insert slices op. Transfer ops can map to hardware
+/// load/store functionalities, where the vector size matters for bandwith
+/// considerations. So these patterns should be collected separately, instead
+/// of being generic canonicalization patterns. Also one can let the
+/// `ignoreFilter` to return true to fail matching for fine-grained control.
+void populateSplitVectorTransferPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context,
+    std::function<bool(Operation *)> ignoreFilter = nullptr);
 
 /// Collect a set of leading one dimension removal patterns.
 ///
@@ -62,6 +84,22 @@ void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns,
 /// "leak" coming in, however, some tuple related ops will remain.
 void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
                                           MLIRContext *context);
+
+/// An attribute that specifies the combining function for `vector.contract`,
+/// and `vector.reduction`.
+class CombiningKindAttr
+    : public Attribute::AttrBase<CombiningKindAttr, Attribute,
+                                 detail::BitmaskEnumStorage> {
+public:
+  using Base::Base;
+
+  static CombiningKindAttr get(CombiningKind kind, MLIRContext *context);
+
+  CombiningKind getKind() const;
+
+  void print(DialectAsmPrinter &p) const;
+  static Attribute parse(DialectAsmParser &parser);
+};
 
 /// Enum to control the lowering of `vector.contract` operations.
 enum class VectorContractLowering {

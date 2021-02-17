@@ -76,6 +76,15 @@ foreach(tool ${SUPPORTED_TOOLS})
     set(SANITIZER_COMMON_TEST_TARGET_ARCH ${arch})
     get_test_cc_for_arch(${arch} SANITIZER_COMMON_TEST_TARGET_CC SANITIZER_COMMON_TEST_TARGET_CFLAGS)
     set(CONFIG_NAME ${tool}-${arch}-${OS_NAME})
+
+    # ARM on Linux might use the slow unwinder as default and the unwind table is
+    # required to get a complete stacktrace.
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID)
+      list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS -funwind-tables)
+      string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS
+                             "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
+    endif()
+
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)

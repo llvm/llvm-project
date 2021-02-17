@@ -2787,8 +2787,8 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
     AMDGPUTargetLowering::numBitsSigned(Op, DAG) < 24;
 }
 
-static SDValue simplifyI24(SDNode *Node24,
-                           TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue simplifyMul24(SDNode *Node24,
+                             TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool IsIntrin = Node24->getOpcode() == ISD::INTRINSIC_WO_CHAIN;
@@ -3008,7 +3008,7 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   switch (IID) {
   case Intrinsic::amdgcn_mul_i24:
   case Intrinsic::amdgcn_mul_u24:
-    return simplifyI24(N, DCI);
+    return simplifyMul24(N, DCI);
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
@@ -3983,11 +3983,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_I24:
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MULHI_I24:
-  case AMDGPUISD::MULHI_U24: {
-    if (SDValue V = simplifyI24(N, DCI))
-      return V;
-    return SDValue();
-  }
+  case AMDGPUISD::MULHI_U24:
+    return simplifyMul24(N, DCI);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::FNEG:

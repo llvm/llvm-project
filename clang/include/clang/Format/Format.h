@@ -52,6 +52,11 @@ std::error_code make_error_code(ParseError e);
 /// The ``FormatStyle`` is used to configure the formatting to follow
 /// specific guidelines.
 struct FormatStyle {
+  // If the BasedOn: was InheritParentConfig and this style needs the file from
+  // the parent directories. It is not part of the actual style for formatting.
+  // Thus the // instead of ///.
+  bool InheritsParentConfig;
+
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   int AccessModifierOffset;
 

@@ -337,7 +337,7 @@ define internal i32* @test_inalloca(i32* inalloca %a) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__CGSCC____-SAME: (i32* inalloca noalias nofree nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* inalloca noalias nofree noundef nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
@@ -351,14 +351,14 @@ define i32* @complicated_args_inalloca(i32* %arg) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
-; IS__CGSCC_OPM-SAME: (i32* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR5:#.*]]
+; IS__CGSCC_OPM-SAME: (i32* nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR5:#.*]]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
-; IS__CGSCC_NPM-SAME: (i32* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR4:#.*]]
+; IS__CGSCC_NPM-SAME: (i32* nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR4:#.*]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* %arg)
@@ -416,13 +416,13 @@ define internal void @test_sret(%struct.X* sret(%struct.X) %a, %struct.X** %b) {
 ;
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
+; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
 ; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_sret
-; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
+; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
 ; IS__CGSCC____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -446,7 +446,7 @@ define void @complicated_args_sret(%struct.X** %b) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_sret
-; IS__CGSCC____-SAME: (%struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2]] {
+; IS__CGSCC____-SAME: (%struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)

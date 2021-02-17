@@ -2770,14 +2770,14 @@ Symtab *ObjectFileELF::GetSymtab() {
         user_id_t reloc_id = reloc_section->GetID();
         const ELFSectionHeaderInfo *reloc_header =
             GetSectionHeaderByIndex(reloc_id);
-        assert(reloc_header);
+        if (reloc_header) {
+          if (m_symtab_up == nullptr)
+            m_symtab_up =
+                std::make_unique<Symtab>(reloc_section->GetObjectFile());
 
-        if (m_symtab_up == nullptr)
-          m_symtab_up =
-              std::make_unique<Symtab>(reloc_section->GetObjectFile());
-
-        ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
-                               reloc_id);
+          ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
+                                 reloc_id);
+        }
       }
     }
 

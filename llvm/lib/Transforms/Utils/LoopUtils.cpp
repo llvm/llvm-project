@@ -54,11 +54,6 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-static cl::opt<bool> ForceReductionIntrinsic(
-    "force-reduction-intrinsics", cl::Hidden,
-    cl::desc("Force creating reduction intrinsics for testing."),
-    cl::init(false));
-
 #define DEBUG_TYPE "loop-utils"
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
@@ -1025,14 +1020,10 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo *TTI,
                                          Value *Src, RecurKind RdxKind,
                                          ArrayRef<Value *> RedOps) {
-  unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   TargetTransformInfo::ReductionFlags RdxFlags;
   RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax || RdxKind == RecurKind::UMax ||
                      RdxKind == RecurKind::FMax;
   RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
-  if (!ForceReductionIntrinsic &&
-      !TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
-    return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
 
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   switch (RdxKind) {

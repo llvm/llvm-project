@@ -786,8 +786,9 @@ Copyright, License, and Patents
 This section addresses the issues of copyright, license and patents for the LLVM
 project.  The copyright for the code is held by the contributors of
 the code.  The code is licensed under permissive `open source licensing terms`_,
-namely the Apache 2 license, which includes a copyright and `patent license`_.
-When you contribute code to the LLVM project, you license it under these terms.
+namely the Apache-2.0 with LLVM-exception license, which includes a copyright
+and `patent license`_.  When you contribute code to the LLVM project, you
+license it under these terms.
 
 If you have questions or comments about these topics, please contact the
 `LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,

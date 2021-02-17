@@ -49,7 +49,7 @@ static linalg::GenericOp createGenericOpFromNamedOp(linalg::LinalgOp namedOp,
       indexingMaps, iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
         edsc::ScopedContext scope(bodyBuilder, loc);
-        regionBuilder(*bodyBuilder.getBlock());
+        regionBuilder(*bodyBuilder.getBlock(), /*captures=*/{});
       });
 }
 

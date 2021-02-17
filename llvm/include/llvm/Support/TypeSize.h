@@ -381,6 +381,7 @@ template <> struct LinearPolyBaseTypeTraits<ElementCount> {
 
 class ElementCount : public LinearPolySize<ElementCount> {
 public:
+  ElementCount() : LinearPolySize(LinearPolySize::getNull()) {}
 
   ElementCount(const LinearPolySize<ElementCount> &V) : LinearPolySize(V) {}
 

@@ -2304,6 +2304,17 @@ void Clang::DumpCompilationDatabaseFragmentToDir(
   DumpCompilationDatabase(C, "", Target, Output, Input, Args);
 }
 
+static bool AddARMImplicitITArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                                 StringRef Value) {
+  if (Value == "always" || Value == "never" || Value == "arm" ||
+      Value == "thumb") {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-arm-implicit-it=" + Value));
+    return true;
+  }
+  return false;
+}
+
 static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
@@ -2327,14 +2338,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   case llvm::Triple::thumbeb:
     if (Arg *A = Args.getLastArg(options::OPT_mimplicit_it_EQ)) {
       StringRef Value = A->getValue();
-      if (Value == "always" || Value == "never" || Value == "arm" ||
-          Value == "thumb") {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back(Args.MakeArgString("-arm-implicit-it=" + Value));
-      } else {
+      if (!AddARMImplicitITArgs(Args, CmdArgs, Value))
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
-      }
     }
     break;
   default:
@@ -2376,6 +2382,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       case llvm::Triple::thumbeb:
       case llvm::Triple::arm:
       case llvm::Triple::armeb:
+        if (Value.startswith("-mimplicit-it=") &&
+            AddARMImplicitITArgs(Args, CmdArgs, Value.split("=").second))
+          continue;
         if (Value == "-mthumb")
           // -mthumb has already been processed in ComputeLLVMTriple()
           // recognize but skip over here.
@@ -3740,6 +3749,29 @@ static DwarfFissionKind getDebugFissionKind(const Driver &D,
   return DwarfFissionKind::None;
 }
 
+static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
+                              const ArgList &Args, ArgStringList &CmdArgs,
+                              unsigned DwarfVersion) {
+  auto *DwarfFormatArg =
+      Args.getLastArg(options::OPT_gdwarf64, options::OPT_gdwarf32);
+  if (!DwarfFormatArg)
+    return;
+
+  if (DwarfFormatArg->getOption().matches(options::OPT_gdwarf64)) {
+    if (DwarfVersion < 3)
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "DWARFv3 or greater";
+    else if (!T.isArch64Bit())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "64 bit architecture";
+    else if (!T.isOSBinFormatELF())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "ELF platforms";
+  }
+
+  DwarfFormatArg->render(Args, CmdArgs);
+}
+
 static void renderDebugOptions(const ToolChain &TC, const Driver &D,
                                const llvm::Triple &T, const ArgList &Args,
                                bool EmitCodeView, bool IRInput,
@@ -4040,25 +4072,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   if (DebuggerTuning == llvm::DebuggerKind::SCE)
     CmdArgs.push_back("-dwarf-explicit-import");
 
-  auto *DwarfFormatArg =
-      Args.getLastArg(options::OPT_gdwarf64, options::OPT_gdwarf32);
-  if (DwarfFormatArg &&
-      DwarfFormatArg->getOption().matches(options::OPT_gdwarf64)) {
-    const llvm::Triple &RawTriple = TC.getTriple();
-    if (EffectiveDWARFVersion < 3)
-      D.Diag(diag::err_drv_argument_only_allowed_with)
-          << DwarfFormatArg->getAsString(Args) << "DWARFv3 or greater";
-    else if (!RawTriple.isArch64Bit())
-      D.Diag(diag::err_drv_argument_only_allowed_with)
-          << DwarfFormatArg->getAsString(Args) << "64 bit architecture";
-    else if (!RawTriple.isOSBinFormatELF())
-      D.Diag(diag::err_drv_argument_only_allowed_with)
-          << DwarfFormatArg->getAsString(Args) << "ELF platforms";
-  }
-
-  if (DwarfFormatArg)
-    DwarfFormatArg->render(Args, CmdArgs);
-
+  renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 }
 
@@ -5631,6 +5645,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_freroll_loops))
       CmdArgs.push_back("-freroll-loops");
 
+  Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
+                  options::OPT_fno_finite_loops);
+
   Args.AddLastArg(CmdArgs, options::OPT_fwritable_strings);
   Args.AddLastArg(CmdArgs, options::OPT_funroll_loops,
                   options::OPT_fno_unroll_loops);
@@ -7199,6 +7216,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   }
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
+  renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
 

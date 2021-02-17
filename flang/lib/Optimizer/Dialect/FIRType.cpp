@@ -58,71 +58,9 @@ TYPE parseTypeSingleton(mlir::DialectAsmParser &parser, mlir::Location) {
   return TYPE::get(ty);
 }
 
-// `box` `<` type (',' affine-map)? `>`
-BoxType parseBox(mlir::DialectAsmParser &parser, mlir::Location loc) {
-  mlir::Type ofTy;
-  if (parser.parseLess() || parser.parseType(ofTy)) {
-    parser.emitError(parser.getCurrentLocation(), "expected type parameter");
-    return {};
-  }
-
-  mlir::AffineMapAttr map;
-  if (!parser.parseOptionalComma())
-    if (parser.parseAttribute(map)) {
-      parser.emitError(parser.getCurrentLocation(), "expected affine map");
-      return {};
-    }
-  if (parser.parseGreater()) {
-    parser.emitError(parser.getCurrentLocation(), "expected '>'");
-    return {};
-  }
-  return BoxType::get(ofTy, map);
-}
-
-// `boxchar` `<` kind `>`
-BoxCharType parseBoxChar(mlir::DialectAsmParser &parser) {
-  return parseKindSingleton<BoxCharType>(parser);
-}
-
-// `boxproc` `<` return-type `>`
-BoxProcType parseBoxProc(mlir::DialectAsmParser &parser, mlir::Location loc) {
-  return parseTypeSingleton<BoxProcType>(parser, loc);
-}
-
-// `char` `<` kind [`,` `len`] `>`
-CharacterType parseCharacter(mlir::DialectAsmParser &parser) {
-  int kind = 0;
-  if (parser.parseLess() || parser.parseInteger(kind)) {
-    parser.emitError(parser.getCurrentLocation(), "kind value expected");
-    return {};
-  }
-  CharacterType::LenType len = 1;
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    if (mlir::succeeded(parser.parseOptionalQuestion())) {
-      len = fir::CharacterType::unknownLen();
-    } else if (!mlir::succeeded(parser.parseInteger(len))) {
-      parser.emitError(parser.getCurrentLocation(), "len value expected");
-      return {};
-    }
-  }
-  if (parser.parseGreater())
-    return {};
-  return CharacterType::get(parser.getBuilder().getContext(), kind, len);
-}
-
-// `complex` `<` kind `>`
-fir::ComplexType parseComplex(mlir::DialectAsmParser &parser) {
-  return parseKindSingleton<fir::ComplexType>(parser);
-}
-
 // `slice` `<` rank `>`
 SliceType parseSlice(mlir::DialectAsmParser &parser) {
   return parseRankSingleton<SliceType>(parser);
-}
-
-// `field`
-FieldType parseField(mlir::DialectAsmParser &parser) {
-  return FieldType::get(parser.getBuilder().getContext());
 }
 
 // `heap` `<` type `>`
@@ -351,21 +289,24 @@ mlir::Type fir::parseFirType(FIROpsDialect *dialect,
   if (mlir::failed(parser.parseKeyword(&typeNameLit)))
     return {};
 
+  // TODO all TYPE::parse can be move to generatedTypeParser when all types
+  // have been moved
+
   auto loc = parser.getEncodedSourceLoc(parser.getNameLoc());
   if (typeNameLit == "array")
     return parseSequence(parser, loc);
   if (typeNameLit == "box")
-    return parseBox(parser, loc);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "boxchar")
-    return parseBoxChar(parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "boxproc")
-    return parseBoxProc(parser, loc);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "char")
-    return parseCharacter(parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "complex")
-    return parseComplex(parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "field")
-    return parseField(parser);
+    return generatedTypeParser(dialect->getContext(), parser, typeNameLit);
   if (typeNameLit == "heap")
     return parseHeap(parser, loc);
   if (typeNameLit == "int")
@@ -404,39 +345,6 @@ namespace detail {
 
 // Type storage classes
 
-/// `CHARACTER` storage
-struct CharacterTypeStorage : public mlir::TypeStorage {
-  using KeyTy = std::tuple<KindTy, CharacterType::LenType>;
-
-  static unsigned hashKey(const KeyTy &key) {
-    auto hashVal = llvm::hash_combine(std::get<0>(key));
-    return llvm::hash_combine(hashVal, llvm::hash_combine(std::get<1>(key)));
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy{getFKind(), getLen()};
-  }
-
-  static CharacterTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                         const KeyTy &key) {
-    auto *storage = allocator.allocate<CharacterTypeStorage>();
-    return new (storage)
-        CharacterTypeStorage{std::get<0>(key), std::get<1>(key)};
-  }
-
-  KindTy getFKind() const { return kind; }
-  CharacterType::LenType getLen() const { return len; }
-
-protected:
-  KindTy kind;
-  CharacterType::LenType len;
-
-private:
-  CharacterTypeStorage() = delete;
-  explicit CharacterTypeStorage(KindTy kind, CharacterType::LenType len)
-      : kind{kind}, len{len} {}
-};
-
 struct SliceTypeStorage : public mlir::TypeStorage {
   using KeyTy = unsigned;
 
@@ -458,25 +366,6 @@ protected:
 private:
   SliceTypeStorage() = delete;
   explicit SliceTypeStorage(unsigned rank) : rank{rank} {}
-};
-
-/// The type of a derived type part reference
-struct FieldTypeStorage : public mlir::TypeStorage {
-  using KeyTy = KindTy;
-
-  static unsigned hashKey(const KeyTy &) { return llvm::hash_combine(0); }
-
-  bool operator==(const KeyTy &) const { return true; }
-
-  static FieldTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                     KindTy) {
-    auto *storage = allocator.allocate<FieldTypeStorage>();
-    return new (storage) FieldTypeStorage{0};
-  }
-
-private:
-  FieldTypeStorage() = delete;
-  explicit FieldTypeStorage(KindTy) {}
 };
 
 /// The type of a derived type LEN parameter reference
@@ -546,30 +435,6 @@ private:
   explicit IntegerTypeStorage(KindTy kind) : kind{kind} {}
 };
 
-/// `COMPLEX` storage
-struct ComplexTypeStorage : public mlir::TypeStorage {
-  using KeyTy = KindTy;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getFKind(); }
-
-  static ComplexTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                       KindTy kind) {
-    auto *storage = allocator.allocate<ComplexTypeStorage>();
-    return new (storage) ComplexTypeStorage{kind};
-  }
-
-  KindTy getFKind() const { return kind; }
-
-protected:
-  KindTy kind;
-
-private:
-  ComplexTypeStorage() = delete;
-  explicit ComplexTypeStorage(KindTy kind) : kind{kind} {}
-};
-
 /// `REAL` storage (for reals of unsupported sizes)
 struct RealTypeStorage : public mlir::TypeStorage {
   using KeyTy = KindTy;
@@ -592,95 +457,6 @@ protected:
 private:
   RealTypeStorage() = delete;
   explicit RealTypeStorage(KindTy kind) : kind{kind} {}
-};
-
-/// Boxed object (a Fortran descriptor)
-struct BoxTypeStorage : public mlir::TypeStorage {
-  using KeyTy = std::tuple<mlir::Type, mlir::AffineMapAttr>;
-
-  static unsigned hashKey(const KeyTy &key) {
-    auto hashVal{llvm::hash_combine(std::get<mlir::Type>(key))};
-    return llvm::hash_combine(
-        hashVal, llvm::hash_combine(std::get<mlir::AffineMapAttr>(key)));
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return std::get<mlir::Type>(key) == getElementType() &&
-           std::get<mlir::AffineMapAttr>(key) == getLayoutMap();
-  }
-
-  static BoxTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                   const KeyTy &key) {
-    auto *storage = allocator.allocate<BoxTypeStorage>();
-    return new (storage) BoxTypeStorage{std::get<mlir::Type>(key),
-                                        std::get<mlir::AffineMapAttr>(key)};
-  }
-
-  mlir::Type getElementType() const { return eleTy; }
-  mlir::AffineMapAttr getLayoutMap() const { return map; }
-
-protected:
-  mlir::Type eleTy;
-  mlir::AffineMapAttr map;
-
-private:
-  BoxTypeStorage() = delete;
-  explicit BoxTypeStorage(mlir::Type eleTy, mlir::AffineMapAttr map)
-      : eleTy{eleTy}, map{map} {}
-};
-
-/// Boxed CHARACTER object type
-struct BoxCharTypeStorage : public mlir::TypeStorage {
-  using KeyTy = KindTy;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getFKind(); }
-
-  static BoxCharTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                       KindTy kind) {
-    auto *storage = allocator.allocate<BoxCharTypeStorage>();
-    return new (storage) BoxCharTypeStorage{kind};
-  }
-
-  KindTy getFKind() const { return kind; }
-
-  // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
-  CharacterType getElementType(mlir::MLIRContext *ctxt) const {
-    return CharacterType::getUnknownLen(ctxt, getFKind());
-  }
-
-protected:
-  KindTy kind;
-
-private:
-  BoxCharTypeStorage() = delete;
-  explicit BoxCharTypeStorage(KindTy kind) : kind{kind} {}
-};
-
-/// Boxed PROCEDURE POINTER object type
-struct BoxProcTypeStorage : public mlir::TypeStorage {
-  using KeyTy = mlir::Type;
-
-  static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
-
-  bool operator==(const KeyTy &key) const { return key == getElementType(); }
-
-  static BoxProcTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                       mlir::Type eleTy) {
-    assert(eleTy && "element type is null");
-    auto *storage = allocator.allocate<BoxProcTypeStorage>();
-    return new (storage) BoxProcTypeStorage{eleTy};
-  }
-
-  mlir::Type getElementType() const { return eleTy; }
-
-protected:
-  mlir::Type eleTy;
-
-private:
-  BoxProcTypeStorage() = delete;
-  explicit BoxProcTypeStorage(mlir::Type eleTy) : eleTy{eleTy} {}
 };
 
 /// Pointer-like object storage
@@ -952,25 +728,6 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
 
 } // namespace fir
 
-// CHARACTER
-
-CharacterType fir::CharacterType::get(mlir::MLIRContext *ctxt, KindTy kind,
-                                      CharacterType::LenType len) {
-  return Base::get(ctxt, kind, len);
-}
-
-KindTy fir::CharacterType::getFKind() const { return getImpl()->getFKind(); }
-
-CharacterType::LenType fir::CharacterType::getLen() const {
-  return getImpl()->getLen();
-}
-
-// Field
-
-FieldType fir::FieldType::get(mlir::MLIRContext *ctxt) {
-  return Base::get(ctxt, 0);
-}
-
 // Len
 
 LenType fir::LenType::get(mlir::MLIRContext *ctxt) {
@@ -993,18 +750,6 @@ fir::IntegerType fir::IntegerType::get(mlir::MLIRContext *ctxt, KindTy kind) {
 
 KindTy fir::IntegerType::getFKind() const { return getImpl()->getFKind(); }
 
-// COMPLEX
-
-fir::ComplexType fir::ComplexType::get(mlir::MLIRContext *ctxt, KindTy kind) {
-  return Base::get(ctxt, kind);
-}
-
-mlir::Type fir::ComplexType::getElementType() const {
-  return fir::RealType::get(getContext(), getFKind());
-}
-
-KindTy fir::ComplexType::getFKind() const { return getImpl()->getFKind(); }
-
 // REAL
 
 RealType fir::RealType::get(mlir::MLIRContext *ctxt, KindTy kind) {
@@ -1013,56 +758,11 @@ RealType fir::RealType::get(mlir::MLIRContext *ctxt, KindTy kind) {
 
 KindTy fir::RealType::getFKind() const { return getImpl()->getFKind(); }
 
-// Box<T>
-
-BoxType fir::BoxType::get(mlir::Type elementType, mlir::AffineMapAttr map) {
-  return Base::get(elementType.getContext(), elementType, map);
-}
-
-mlir::Type fir::BoxType::getEleTy() const {
-  return getImpl()->getElementType();
-}
-
-mlir::AffineMapAttr fir::BoxType::getLayoutMap() const {
-  return getImpl()->getLayoutMap();
-}
-
 mlir::LogicalResult
 fir::BoxType::verifyConstructionInvariants(mlir::Location, mlir::Type eleTy,
                                            mlir::AffineMapAttr map) {
   // TODO
   return mlir::success();
-}
-
-// BoxChar<C>
-
-BoxCharType fir::BoxCharType::get(mlir::MLIRContext *ctxt, KindTy kind) {
-  return Base::get(ctxt, kind);
-}
-
-CharacterType fir::BoxCharType::getEleTy() const {
-  return getImpl()->getElementType(getContext());
-}
-
-// BoxProc<T>
-
-BoxProcType fir::BoxProcType::get(mlir::Type elementType) {
-  return Base::get(elementType.getContext(), elementType);
-}
-
-mlir::Type fir::BoxProcType::getEleTy() const {
-  return getImpl()->getElementType();
-}
-
-mlir::LogicalResult
-fir::BoxProcType::verifyConstructionInvariants(mlir::Location loc,
-                                               mlir::Type eleTy) {
-  if (eleTy.isa<mlir::FunctionType>())
-    return mlir::success();
-  if (auto refTy = eleTy.dyn_cast<ReferenceType>())
-    if (refTy.isa<mlir::FunctionType>())
-      return mlir::success();
-  return mlir::emitError(loc, "invalid type for boxproc") << eleTy << '\n';
 }
 
 // Reference<T>
@@ -1340,46 +1040,6 @@ void fir::verifyIntegralType(mlir::Type type) {
 void fir::printFirType(FIROpsDialect *, mlir::Type ty,
                        mlir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
-  if (auto type = ty.dyn_cast<BoxType>()) {
-    os << "box<";
-    p.printType(type.getEleTy());
-    if (auto map = type.getLayoutMap()) {
-      os << ", ";
-      p.printAttribute(map);
-    }
-    os << '>';
-    return;
-  }
-  if (auto type = ty.dyn_cast<BoxCharType>()) {
-    os << "boxchar<" << type.getEleTy().cast<fir::CharacterType>().getFKind()
-       << '>';
-    return;
-  }
-  if (auto type = ty.dyn_cast<BoxProcType>()) {
-    os << "boxproc<";
-    p.printType(type.getEleTy());
-    os << '>';
-    return;
-  }
-  if (auto chTy = ty.dyn_cast<CharacterType>()) {
-    // Fortran intrinsic type CHARACTER
-    os << "char<" << chTy.getFKind();
-    auto len = chTy.getLen();
-    if (len != fir::CharacterType::singleton()) {
-      os << ',';
-      if (len == fir::CharacterType::unknownLen())
-        os << '?';
-      else
-        os << len;
-    }
-    os << '>';
-    return;
-  }
-  if (auto type = ty.dyn_cast<fir::ComplexType>()) {
-    // Fortran intrinsic type COMPLEX
-    os << "complex<" << type.getFKind() << '>';
-    return;
-  }
   if (auto type = ty.dyn_cast<RecordType>()) {
     // Fortran derived type
     os << "type<" << type.getName();
@@ -1410,10 +1070,6 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
   }
   if (auto type = ty.dyn_cast<SliceType>()) {
     os << "slice<" << type.getRank() << '>';
-    return;
-  }
-  if (ty.isa<FieldType>()) {
-    os << "field";
     return;
   }
   if (auto type = ty.dyn_cast<HeapType>()) {
@@ -1499,4 +1155,143 @@ bool fir::isa_unknown_size_box(mlir::Type t) {
         return true;
   }
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// BoxProcType
+//===----------------------------------------------------------------------===//
+
+// `boxproc` `<` return-type `>`
+mlir::Type BoxProcType::parse(mlir::MLIRContext *context,
+                              mlir::DialectAsmParser &parser) {
+  mlir::Type ty;
+  if (parser.parseLess() || parser.parseType(ty) || parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(), "type expected");
+    return Type();
+  }
+  return get(context, ty);
+}
+
+mlir::LogicalResult
+BoxProcType::verifyConstructionInvariants(mlir::Location loc,
+                                          mlir::Type eleTy) {
+  if (eleTy.isa<mlir::FunctionType>())
+    return mlir::success();
+  if (auto refTy = eleTy.dyn_cast<ReferenceType>())
+    if (refTy.isa<mlir::FunctionType>())
+      return mlir::success();
+  return mlir::emitError(loc, "invalid type for boxproc") << eleTy << '\n';
+}
+
+//===----------------------------------------------------------------------===//
+// BoxType
+//===----------------------------------------------------------------------===//
+
+// `box` `<` type (',' affine-map)? `>`
+mlir::Type fir::BoxType::parse(mlir::MLIRContext *context,
+                               mlir::DialectAsmParser &parser) {
+  mlir::Type ofTy;
+  if (parser.parseLess() || parser.parseType(ofTy)) {
+    parser.emitError(parser.getCurrentLocation(), "expected type parameter");
+    return Type();
+  }
+
+  mlir::AffineMapAttr map;
+  if (!parser.parseOptionalComma()) {
+    if (parser.parseAttribute(map)) {
+      parser.emitError(parser.getCurrentLocation(), "expected affine map");
+      return Type();
+    }
+  }
+  if (parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(), "expected '>'");
+    return Type();
+  }
+  return get(ofTy, map);
+}
+
+void fir::BoxType::print(::mlir::DialectAsmPrinter &printer) const {
+  printer << "box<";
+  printer.printType(getEleTy());
+  if (auto map = getLayoutMap()) {
+    printer << ", ";
+    printer.printAttribute(map);
+  }
+  printer << '>';
+}
+
+//===----------------------------------------------------------------------===//
+// BoxCharType
+//===----------------------------------------------------------------------===//
+
+mlir::Type fir::BoxCharType::parse(mlir::MLIRContext *context,
+                                   mlir::DialectAsmParser &parser) {
+  int kind = 0;
+  if (parser.parseLess() || parser.parseInteger(kind) ||
+      parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(), "kind value expected");
+    return Type();
+  }
+  return get(context, kind);
+}
+
+CharacterType
+fir::BoxCharType::getElementType(mlir::MLIRContext *context) const {
+  return CharacterType::getUnknownLen(context, getKind());
+}
+
+CharacterType fir::BoxCharType::getEleTy() const {
+  return getElementType(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// CharacterType
+//===----------------------------------------------------------------------===//
+
+// `char` `<` kind [`,` `len`] `>`
+mlir::Type fir::CharacterType::parse(mlir::MLIRContext *context,
+                                     mlir::DialectAsmParser &parser) {
+  int kind = 0;
+  if (parser.parseLess() || parser.parseInteger(kind)) {
+    parser.emitError(parser.getCurrentLocation(), "kind value expected");
+    return Type();
+  }
+  CharacterType::LenType len = 1;
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalQuestion())) {
+      len = fir::CharacterType::unknownLen();
+    } else if (!mlir::succeeded(parser.parseInteger(len))) {
+      parser.emitError(parser.getCurrentLocation(), "len value expected");
+      return Type();
+    }
+  }
+  if (parser.parseGreater())
+    return Type();
+  return get(context, kind, len);
+}
+
+void fir::CharacterType::print(::mlir::DialectAsmPrinter &printer) const {
+  printer << "char<" << getFKind();
+  auto len = getLen();
+  if (len != fir::CharacterType::singleton()) {
+    printer << ',';
+    if (len == fir::CharacterType::unknownLen())
+      printer << '?';
+    else
+      printer << len;
+  }
+  printer << '>';
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexType
+//===----------------------------------------------------------------------===//
+
+mlir::Type fir::ComplexType::parse(mlir::MLIRContext *context,
+                                   mlir::DialectAsmParser &parser) {
+  return parseKindSingleton<fir::ComplexType>(parser);
+}
+
+mlir::Type fir::ComplexType::getElementType() const {
+  return fir::RealType::get(getContext(), getFKind());
 }

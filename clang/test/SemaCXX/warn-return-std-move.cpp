@@ -1,12 +1,17 @@
-// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -Wreturn-std-move-in-c++11 -std=c++14 -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -Wreturn-std-move-in-c++11 -std=c++14 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++20 -verify=cxx20 %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++17 -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++14 -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++11 -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++17 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++14 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -std=c++11 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
 
 // definitions for std::move
 namespace std {
 inline namespace foo {
 template <class T> struct remove_reference { typedef T type; };
-template <class T> struct remove_reference<T&> { typedef T type; };
-template <class T> struct remove_reference<T&&> { typedef T type; };
+template <class T> struct remove_reference<T &> { typedef T type; };
+template <class T> struct remove_reference<T &&> { typedef T type; };
 
 template <class T> typename remove_reference<T>::type &&move(T &&t);
 } // namespace foo
@@ -76,11 +81,8 @@ Base test2() {
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d2)"
 }
 ConstructFromDerived test3() {
-    Derived d3;
-    return d3;  // e2-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying on older compilers}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d3)"
+  Derived d3;
+  return d3; // ok
 }
 ConstructFromBase test4() {
     Derived d4;
@@ -153,10 +155,7 @@ Base testParam2(Derived d) {
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConstructFromDerived testParam3(Derived d) {
-    return d;  // e7-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying on older compilers}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
+  return d; // ok
 }
 ConstructFromBase testParam4(Derived d) {
     return d;  // e8
@@ -218,8 +217,10 @@ ConvertFromBase testRParam6(Derived&& d) {
 // But if the return type is a reference type, then moving would be wrong.
 Derived& testRetRef1(Derived&& d) { return d; }
 Base& testRetRef2(Derived&& d) { return d; }
+#if __cplusplus >= 201402L
 auto&& testRetRef3(Derived&& d) { return d; }
 decltype(auto) testRetRef4(Derived&& d) { return (d); }
+#endif
 
 // As long as we're checking parentheses, make sure parentheses don't disable the warning.
 Base testParens1() {
@@ -230,13 +231,9 @@ Base testParens1() {
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:15}:"std::move(d)"
 }
 ConstructFromDerived testParens2() {
-    Derived d;
-    return (d);  // e18-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:15}:"std::move(d)"
+  Derived d;
+  return (d); // ok
 }
-
 
 // If the target is a catch-handler parameter, do apply the diagnostic.
 void throw_derived();
@@ -339,7 +336,7 @@ void ok_throw8(OnlyCopyable d) { throw d; }
 namespace test_delete {
 struct Base {
   Base();
-  Base(Base &&) = delete;
+  Base(Base &&) = delete; // cxx20-note {{'Base' has been explicitly marked deleted here}}
   Base(Base const &);
 };
 
@@ -347,6 +344,6 @@ struct Derived : public Base {};
 
 Base test_ok() {
   Derived d;
-  return d;
+  return d; // cxx20-error {{call to deleted constructor of 'test_delete::Base'}}
 }
 } // namespace test_delete

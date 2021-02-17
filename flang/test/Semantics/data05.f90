@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols -fsyntax-only %s | FileCheck %s
+!RUN: %f18 -fdebug-dump-symbols %s | FileCheck %s
 module m
   interface
     integer function ifunc(n)

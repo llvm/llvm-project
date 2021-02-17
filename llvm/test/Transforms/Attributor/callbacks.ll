@@ -80,7 +80,7 @@ entry:
 define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
 ;
 ; IS________OPM-LABEL: define {{[^@]+}}@t0_callback_callee
-; IS________OPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________OPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -89,7 +89,7 @@ define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t0_callback_callee
-; IS________NPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________NPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -181,7 +181,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ;
 ; IS________OPM: Function Attrs: nosync
 ; IS________OPM-LABEL: define {{[^@]+}}@t1_callback_callee
-; IS________OPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) [[ATTR0:#.*]] {
+; IS________OPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) [[ATTR0:#.*]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -191,7 +191,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ;
 ; IS________NPM: Function Attrs: nosync
 ; IS________NPM-LABEL: define {{[^@]+}}@t1_callback_callee
-; IS________NPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) [[ATTR0:#.*]] {
+; IS________NPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) [[ATTR0:#.*]] {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -282,7 +282,7 @@ entry:
 define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
 ;
 ; IS________OPM-LABEL: define {{[^@]+}}@t2_callback_callee
-; IS________OPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________OPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -291,7 +291,7 @@ define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t2_callback_callee
-; IS________NPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________NPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -387,7 +387,7 @@ entry:
 define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
 ;
 ; IS________OPM-LABEL: define {{[^@]+}}@t3_callback_callee
-; IS________OPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________OPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
@@ -396,7 +396,7 @@ define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t3_callback_callee
-; IS________NPM-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; IS________NPM-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4

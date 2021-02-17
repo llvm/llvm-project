@@ -12,18 +12,19 @@ if (MLIR_SPIRV_CPU_RUNNER_ENABLED)
   llvm_update_compile_flags(mlir-spirv-cpu-runner)
 
   get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
   target_link_libraries(mlir-spirv-cpu-runner PRIVATE
     ${conversion_libs}
-    ${dialect_libs}
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
+    MLIRGPU
     MLIRIR
     MLIRJitRunner
     MLIRLLVMIR
     MLIRParser
+    MLIRSPIRV
+    MLIRStandard
     MLIRTargetLLVMIR
     MLIRTransforms
     MLIRTranslation

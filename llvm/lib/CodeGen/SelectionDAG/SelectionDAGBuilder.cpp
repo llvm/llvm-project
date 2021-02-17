@@ -1321,10 +1321,11 @@ bool SelectionDAGBuilder::handleDebugValue(const Value *V, DILocalVariable *Var,
         if (auto Fragment = Expr->getFragmentInfo())
           BitsToDescribe = Fragment->SizeInBits;
         for (auto RegAndSize : RFV.getRegsAndSizes()) {
-          unsigned RegisterSize = RegAndSize.second;
           // Bail out if all bits are described already.
           if (Offset >= BitsToDescribe)
             break;
+          // TODO: handle scalable vectors.
+          unsigned RegisterSize = RegAndSize.second;
           unsigned FragmentSize = (Offset + RegisterSize > BitsToDescribe)
               ? BitsToDescribe - Offset
               : RegisterSize;
@@ -1592,6 +1593,8 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.MBBMap[I.getSuccessor()];
   FuncInfo.MBB->addSuccessor(TargetMBB);
+  TargetMBB->setIsEHCatchretTarget(true);
+  DAG.getMachineFunction().setHasEHCatchret(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);
@@ -2782,11 +2785,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  assert(!I.hasOperandBundlesOtherThan({LLVMContext::OB_deopt,
-                                        LLVMContext::OB_gc_transition,
-                                        LLVMContext::OB_gc_live,
-                                        LLVMContext::OB_funclet,
-                                        LLVMContext::OB_cfguardtarget}) &&
+  assert(!I.hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
+              LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
+              LLVMContext::OB_cfguardtarget,
+              LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
   const Value *Callee(I.getCalledOperand());
@@ -7022,6 +7025,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, Index));
     return;
   }
+  case Intrinsic::experimental_vector_reverse:
+    visitVectorReverse(I);
+    return;
   }
 }
 
@@ -7125,7 +7131,10 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS: {
     auto *FPCmp = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI);
-    Opers.push_back(DAG.getCondCode(getFCmpCondCode(FPCmp->getPredicate())));
+    ISD::CondCode Condition = getFCmpCondCode(FPCmp->getPredicate());
+    if (TM.Options.NoNaNsFPMath)
+      Condition = getFCmpCodeWithoutNaN(Condition);
+    Opers.push_back(DAG.getCondCode(Condition));
     break;
   }
   }
@@ -7872,7 +7881,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // CFGuardTarget bundles are lowered in LowerCallTo.
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated}) &&
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+              LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
@@ -10827,6 +10837,29 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
 
     lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
   }
+}
+
+void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  SDLoc DL = getCurSDLoc();
+  SDValue V = getValue(I.getOperand(0));
+  assert(VT == V.getValueType() && "Malformed vector.reverse!");
+
+  if (VT.isScalableVector()) {
+    setValue(&I, DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V));
+    return;
+  }
+
+  // Use VECTOR_SHUFFLE for the fixed-length vector
+  // to maintain existing behavior.
+  SmallVector<int, 8> Mask;
+  unsigned NumElts = VT.getVectorMinNumElements();
+  for (unsigned i = 0; i != NumElts; ++i)
+    Mask.push_back(NumElts - 1 - i);
+
+  setValue(&I, DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), Mask));
 }
 
 void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {

@@ -925,7 +925,7 @@ defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-over
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">,
-  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "256">,
+  MarshallingInfoStringInt<LangOpts<"GPUMaxThreadsPerBlock">, "1024">,
   ShouldParseIf<hip.KeyPath>;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
@@ -942,6 +942,8 @@ def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
            "file path and command line options) | 'random' (ID's generated as "
            "random numbers) | 'none' (disabled). Default is 'hash'. This option "
            "will be overriden by option '-cuid=[ID]' if it is specified." >;
+def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
+  HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_nvptx_bc_path_EQ : Joined<["--"], "libomptarget-nvptx-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx bitcode library">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
@@ -1712,7 +1714,8 @@ def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floa
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,
   MarshallingInfoFlag<LangOpts<"ExpStrictFP">>;
-def finput_charset_EQ : Joined<["-"], "finput-charset=">, Group<f_Group>;
+def finput_charset_EQ : Joined<["-"], "finput-charset=">, Flags<[FlangOption, FC1Option]>, Group<f_Group>,
+  HelpText<"Specify the default character set for source files">;
 def fexec_charset_EQ : Joined<["-"], "fexec-charset=">, Group<f_Group>;
 def finstrument_functions : Flag<["-"], "finstrument-functions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Generate calls to instrument function entry and exit">,
@@ -2467,6 +2470,11 @@ def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
 defm reroll_loops : BoolFOption<"reroll-loops",
   CodeGenOpts<"RerollLoops">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Turn on loop reroller">, NegFlag<SetFalse>>;
+def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
+  HelpText<"Assume all loops are finite.">, Flags<[CC1Option]>;
+def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
+  HelpText<"Do not assume that any loop is finite.">, Flags<[CC1Option]>;
+
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Flags<[CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
@@ -2658,10 +2666,12 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
-def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>, Flags<[CC1Option]>,
+def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
+  Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF64 format for ELF binaries, if debug information emission is enabled.">,
   MarshallingInfoFlag<CodeGenOpts<"Dwarf64">>;
-def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>, Flags<[CC1Option]>,
+def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>,
+  Flags<[CC1Option, CC1AsOption]>,
   HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
 
 def gcodeview : Flag<["-"], "gcodeview">,
@@ -4163,7 +4173,6 @@ defm aggressive_function_elimination : BooleanFFlag<"aggressive-function-elimina
 defm align_commons : BooleanFFlag<"align-commons">, Group<gfortran_Group>;
 defm all_intrinsics : BooleanFFlag<"all-intrinsics">, Group<gfortran_Group>;
 defm automatic : BooleanFFlag<"automatic">, Group<gfortran_Group>;
-defm backslash : BooleanFFlag<"backslash">, Group<gfortran_Group>;
 defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
@@ -4180,7 +4189,6 @@ defm dump_parse_tree : BooleanFFlag<"dump-parse-tree">, Group<gfortran_Group>;
 defm external_blas : BooleanFFlag<"external-blas">, Group<gfortran_Group>;
 defm f2c : BooleanFFlag<"f2c">, Group<gfortran_Group>;
 defm frontend_optimize : BooleanFFlag<"frontend-optimize">, Group<gfortran_Group>;
-defm implicit_none : BooleanFFlag<"implicit-none">, Group<gfortran_Group>;
 defm init_local_zero : BooleanFFlag<"init-local-zero">, Group<gfortran_Group>;
 defm integer_4_integer_8 : BooleanFFlag<"integer-4-integer-8">, Group<gfortran_Group>;
 defm intrinsic_modules_path : BooleanFFlag<"intrinsic-modules-path">, Group<gfortran_Group>;
@@ -4234,6 +4242,34 @@ file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
   HelpText<"Enable OpenACC">;
+def fbackslash : Flag<["-"], "fbackslash">, Group<f_Group>,
+  HelpText<"Specify that backslash in string introduces an escape character">,
+  DocBrief<[{Change the interpretation of backslashes in string literals from
+a single backslash character to "C-style" escape characters.}]>;
+def fno_backslash : Flag<["-"], "fno-backslash">, Group<f_Group>;
+def fxor_operator : Flag<["-"], "fxor-operator">, Group<f_Group>,
+  HelpText<"Enable .XOR. as a synonym of .NEQV.">;
+def fno_xor_operator : Flag<["-"], "fno-xor-operator">, Group<f_Group>;
+def flogical_abbreviations : Flag<["-"], "flogical-abbreviations">, Group<f_Group>,
+  HelpText<"Enable logical abbreviations">;
+def fno_logical_abbreviations : Flag<["-"], "fno-logical-abbreviations">, Group<f_Group>;
+def fimplicit_none : Flag<["-"], "fimplicit-none">, Group<f_Group>,
+  HelpText<"No implicit typing allowed unless overridden by IMPLICIT statements">;
+def fno_implicit_none : Flag<["-"], "fno-implicit-none">, Group<f_Group>;
+def falternative_parameter_statement : Flag<["-"], "falternative-parameter-statement">, Group<f_Group>,
+  HelpText<"Enable the old style PARAMETER statement">;
+
+}
+
+//===----------------------------------------------------------------------===//
+// FC1 Options
+//===----------------------------------------------------------------------===//
+let Flags = [FC1Option, FlangOnlyOption] in {
+
+def fdebug_unparse : Flag<["-"], "fdebug-unparse">, Group<Action_Group>,
+  HelpText<"Unparse and stop.">;
+def fdebug_unparse_with_symbols : Flag<["-"], "fdebug-unparse-with-symbols">, Group<Action_Group>,
+  HelpText<"Unparse and stop.">;
 
 }
 

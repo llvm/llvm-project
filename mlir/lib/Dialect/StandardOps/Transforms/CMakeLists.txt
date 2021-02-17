@@ -2,7 +2,6 @@ add_mlir_dialect_library(MLIRStandardOpsTransforms
   Bufferize.cpp
   DecomposeCallGraphTypes.cpp
   ExpandOps.cpp
-  ExpandTanh.cpp
   FuncBufferize.cpp
   FuncConversions.cpp
   TensorConstantBufferize.cpp

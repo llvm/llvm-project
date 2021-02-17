@@ -23,6 +23,7 @@
 namespace clang {
 namespace clangd {
 namespace {
+using testing::ElementsAre;
 
 MATCHER_P(DiagMessage, M, "") {
   if (const auto *O = arg.getAsObject()) {
@@ -219,6 +220,40 @@ CompileFlags:
   EXPECT_THAT(Client.diagnostics("bar.cpp"),
               llvm::ValueIs(testing::ElementsAre(
                   DiagMessage("Use of undeclared identifier 'BAR'"))));
+}
+
+TEST_F(LSPTest, ModulesTest) {
+  class MathModule final : public Module {
+    OutgoingNotification<int> Changed;
+    void initializeLSP(LSPBinder &Bind, const llvm::json::Object &ClientCaps,
+                       llvm::json::Object &ServerCaps) override {
+      Bind.notification("add", this, &MathModule::add);
+      Bind.method("get", this, &MathModule::get);
+      Changed = Bind.outgoingNotification("changed");
+    }
+
+    int Value = 0;
+
+    void add(const int &X) {
+      Value += X;
+      Changed(Value);
+    }
+    void get(const std::nullptr_t &, Callback<int> Reply) {
+      scheduler().runQuick(
+          "get", "",
+          [Reply(std::move(Reply)), Value(Value)]() mutable { Reply(Value); });
+    }
+  };
+  ModuleSet Mods;
+  Mods.add(std::make_unique<MathModule>());
+  Opts.Modules = &Mods;
+
+  auto &Client = start();
+  Client.notify("add", 2);
+  Client.notify("add", 8);
+  EXPECT_EQ(10, Client.call("get", nullptr).takeValue());
+  EXPECT_THAT(Client.takeNotifications("changed"),
+              ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
 }
 
 } // namespace

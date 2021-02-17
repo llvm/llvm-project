@@ -14,15 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def riscv_vmv_v_x_vl : SDNode<"RISCVISD::VMV_V_X_VL",
-                              SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
-                                                   SDTCisVT<1, XLenVT>,
-                                                   SDTCisVT<2, XLenVT>]>>;
-def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
-                               SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
-                                                    SDTCisEltOfVec<1, 0>,
-                                                    SDTCisVT<2, XLenVT>]>>;
-
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
@@ -3164,6 +3155,20 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
     Uses = [VL] in
 def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, isCodeGenOnly = 1 in {
+  def PseudoVSPILL_M1 : VPseudo<VS1R_V, V_M1, (outs), (ins VR:$rs1, GPR:$rs2)>;
+  def PseudoVSPILL_M2 : VPseudo<VS2R_V, V_M2, (outs), (ins VRM2:$rs1, GPR:$rs2)>;
+  def PseudoVSPILL_M4 : VPseudo<VS4R_V, V_M4, (outs), (ins VRM4:$rs1, GPR:$rs2)>;
+  def PseudoVSPILL_M8 : VPseudo<VS8R_V, V_M8, (outs), (ins VRM8:$rs1, GPR:$rs2)>;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 1 in {
+  def PseudoVRELOAD_M1 : VPseudo<VL1RE8_V, V_M1, (outs VR:$rs1), (ins GPR:$rs2)>;
+  def PseudoVRELOAD_M2 : VPseudo<VL2RE8_V, V_M2, (outs VRM2:$rs1), (ins GPR:$rs2)>;
+  def PseudoVRELOAD_M4 : VPseudo<VL4RE8_V, V_M4, (outs VRM4:$rs1), (ins GPR:$rs2)>;
+  def PseudoVRELOAD_M8 : VPseudo<VL8RE8_V, V_M8, (outs VRM8:$rs1), (ins GPR:$rs2)>;
+}
+
 //===----------------------------------------------------------------------===//
 // 6. Configuration-Setting Instructions
 //===----------------------------------------------------------------------===//
@@ -3611,7 +3616,7 @@ defm PseudoVMNOR: VPseudoBinaryM_MM;
 defm PseudoVMORNOT: VPseudoBinaryM_MM;
 defm PseudoVMXNOR: VPseudoBinaryM_MM;
 
-// Pseudo insturctions
+// Pseudo instructions
 defm PseudoVMCLR : VPseudoNullaryPseudoM<"VMXOR">;
 defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 
@@ -4056,15 +4061,8 @@ foreach vti = AllVectors in {
                                            (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
              $rs1, GPR:$vl, vti.SEW)>;
-}
 
-foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (riscv_vmv_v_x_vl GPR:$rs2, (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
-             $rs2, GPR:$vl, vti.SEW)>;
-  def : Pat<(vti.Vector (riscv_vmv_v_x_vl simm5:$imm5, (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
-             simm5:$imm5, GPR:$vl, vti.SEW)>;
+  // vmv.v.x/vmv.v.i are handled in RISCInstrVInstrInfoVVLPatterns.td
 }
 
 //===----------------------------------------------------------------------===//
@@ -4210,24 +4208,6 @@ foreach fvti = AllFloatVectors in {
                                             (fvti.Scalar (fpimm0)),
                                             (fvti.Mask V0), (XLenVT (VLOp GPR:$vl)))),
             (instr fvti.RegClass:$rs2, 0, (fvti.Mask V0), GPR:$vl, fvti.SEW)>;
-}
-
-//===----------------------------------------------------------------------===//
-// 14.16. Vector Floating-Point Move Instruction
-//===----------------------------------------------------------------------===//
-foreach fvti = AllFloatVectors in {
-  // If we're splatting fpimm0, use vmv.v.x vd, x0.
-  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                         (fvti.Scalar (fpimm0)), (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
-             0, GPR:$vl, fvti.SEW)>;
-
-  def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                         (fvti.Scalar fvti.ScalarRegClass:$rs2), (XLenVT (VLOp GPR:$vl)))),
-            (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
-                                fvti.LMul.MX)
-             (fvti.Scalar fvti.ScalarRegClass:$rs2),
-             GPR:$vl, fvti.SEW)>;
 }
 
 //===----------------------------------------------------------------------===//

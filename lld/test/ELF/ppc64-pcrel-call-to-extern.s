@@ -27,9 +27,9 @@
 ## external function, a r12 setup stub is inserted.
 
 # SYMBOL: Symbol table '.dynsym' contains 4 entries:
-# SYMBOL:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x60>] UND callee_global_TOC
-# SYMBOL-NEXT: 2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT                UND callee_global_stother0
-# SYMBOL-NEXT: 3: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x20>] UND callee_global_stother1
+# SYMBOL:      1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT                UND callee_global_stother0
+# SYMBOL-NEXT: 2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x20>] UND callee_global_stother1
+# SYMBOL-NEXT: 3: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x60>] UND callee_global_TOC
 
 # SYMBOL: Symbol table '.symtab' contains 12 entries:
 # SYMBOL:      2: 0000000010010000     0 NOTYPE  LOCAL  DEFAULT [<other: 0x20>]   6 caller1
@@ -38,9 +38,9 @@
 # SYMBOL:      6: 0000000010010010    16 FUNC    LOCAL  DEFAULT                  6 __plt_pcrel_callee_global_stother0
 # SYMBOL-NEXT: 7: 0000000010020010    16 FUNC    LOCAL  DEFAULT                  7 __plt_pcrel_callee_global_stother1
 # SYMBOL-NEXT: 8: 0000000010030010    16 FUNC    LOCAL  DEFAULT                  8 __plt_pcrel_callee_global_TOC
-# SYMBOL-NEXT: 9: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x60>] UND callee_global_TOC
-# SYMBOL-NEXT: 10: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT                UND callee_global_stother0
-# SYMBOL-NEXT: 11: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x20>] UND callee_global_stother1
+# SYMBOL-NEXT: 9: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT                UND callee_global_stother0
+# SYMBOL-NEXT: 10: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x20>] UND callee_global_stother1
+# SYMBOL-NEXT: 11: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT [<other: 0x60>] UND callee_global_TOC
 
 ## DT_PLTGOT points to .plt
 # SEC: .plt              NOBITS          0000000010030148 040148 000028 00  WA  0   0  8

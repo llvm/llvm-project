@@ -145,6 +145,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
   invoc.setDefaultPredefinitions();
   // Update the fortran options based on user-based input.
   invoc.setFortranOpts();
+  // Set the encoding to read all input files in based on user input.
+  allSources_->set_encoding(invoc.fortranOpts().encoding);
   // Create the semantics context and set semantic options.
   invoc.setSemanticsOpts(*this->allCookedSources_);
 
