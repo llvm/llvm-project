@@ -388,14 +388,14 @@ struct ErrorManagementValues {
              const ::Fortran::lower::SomeExpr *errMsgExpr) {
     auto builder = converter.getFirOpBuilder();
     if (statExpr) {
-      TODO("lower stat expr in allocate and deallocate");
+      TODO(loc, "lower stat expr in allocate and deallocate");
       hasStat = builder.createBool(loc, true);
     } else {
       hasStat = builder.createBool(loc, false);
     }
 
     if (errMsgExpr)
-      TODO("errmsg in allocate and deallocate");
+      TODO(loc, "errmsg in allocate and deallocate");
     else
       errMsgBoxAddr = builder.createNullConstant(loc);
     sourceFile = converter.locationToFilename(loc);
@@ -427,11 +427,11 @@ public:
     // Create a landing block after all allocations so that
     // we can jump there in case of error.
     if (errorManagement.hasErrorRecovery())
-      TODO("error recovery");
+      TODO(loc, "error recovery");
 
     // TODO lower source and mold.
     if (sourceExpr || moldExpr)
-      TODO("lower MOLD/SOURCE expr in allocate");
+      TODO(loc, "lower MOLD/SOURCE expr in allocate");
 
     for (const auto &allocation :
          std::get<std::list<Fortran::parser::Allocation>>(stmt.t))
@@ -511,7 +511,7 @@ private:
   void handleError() {
     // Ensure allocation status was not modified and create jump to end
     // on allocate statement in case an error was met.
-    TODO("Error hanlding in allocate statement");
+    TODO(loc, "Error hanlding in allocate statement");
   }
 
   static bool lowerBoundsAreOnes(const Allocation &alloc) {
@@ -595,7 +595,7 @@ private:
     // Use runtime. sync MutableBoxValue and descriptor before and after calls.
     Fortran::lower::getMutableIRBox(builder, loc, box);
     if (alloc.hasCoarraySpec())
-      TODO("coarray allocation");
+      TODO(loc, "coarray allocation");
     if (alloc.type.IsPolymorphic())
       genSetType(alloc, box);
     genSetDeferredLengthParameters(alloc, box);
@@ -666,17 +666,17 @@ private:
       genAllocatableInitCharRtCall(builder, loc, box, lenParams[0]);
 
     if (box.isDerived())
-      TODO("derived type length parameters in allocate");
+      TODO(loc, "derived type length parameters in allocate");
   }
 
   void genSourceAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO("SOURCE allocation lowering");
+    TODO(loc, "SOURCE allocation lowering");
   }
   void genMoldAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO("MOLD allocation lowering");
+    TODO(loc, "MOLD allocation lowering");
   }
   void genSetType(const Allocation &, const fir::MutableBoxValue &) {
-    TODO("Polymorphic entity allocation lowering");
+    TODO(loc, "Polymorphic entity allocation lowering");
   }
 
   mlir::Value getSourceLine() const {
@@ -774,7 +774,7 @@ void Fortran::lower::genDeallocateStmt(
                },
                statOrErr.u);
   if (statExpr || errMsgExpr)
-    TODO("error recovery in deallocate");
+    TODO(loc, "error recovery in deallocate");
   ErrorManagementValues errorManagement;
   auto &builder = converter.getFirOpBuilder();
   errorManagement.lower(converter, loc, statExpr, errMsgExpr);
@@ -913,9 +913,9 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
                                   mlir::Location loc,
                                   const fir::MutableBoxValue &box) {
   if (box.hasAssumedRank())
-    TODO("Assumed rank allocatables or pointers");
+    TODO(loc, "Assumed rank allocatables or pointers");
   if (box.isPointer())
-    TODO("pointer"); // deal with non contiguity;
+    TODO(loc, "pointer"); // deal with non contiguity;
   llvm::SmallVector<mlir::Value, 2> lbounds;
   llvm::SmallVector<mlir::Value, 2> extents;
   llvm::SmallVector<mlir::Value, 2> lengths;
@@ -929,7 +929,7 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
     return fir::CharBoxValue{addr, len};
   }
   if (box.isDerived())
-    TODO("derived type MutableBoxValue opening");
+    TODO(loc, "derived type MutableBoxValue opening");
   if (rank)
     return fir::ArrayBoxValue{addr, extents, lbounds};
   return fir::AbstractBox{addr};

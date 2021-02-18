@@ -75,7 +75,7 @@ Fortran::lower::genCharCompare(Fortran::lower::AbstractConverter &converter,
                                const fir::ExtendedValue &rhs) {
   auto &builder = converter.getFirOpBuilder();
   if (lhs.getBoxOf<fir::BoxValue>() || rhs.getBoxOf<fir::BoxValue>())
-    TODO("character compare from descriptors");
+    TODO(loc, "character compare from descriptors");
   auto allocateIfNotInMemory = [&](mlir::Value base) -> mlir::Value {
     if (fir::isa_ref_type(base.getType()))
       return base;

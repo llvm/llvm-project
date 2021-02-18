@@ -115,7 +115,7 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
           [&](const Fortran::semantics::CommonBlockDetails &) {
             return fir::NameUniquer::doCommonBlock(symbolName);
           },
-          [](const auto &) -> std::string { TODO(""); },
+          [](const auto &) -> std::string { TODO_NOLOC("symbol mangling"); },
       },
       ultimateSymbol.details());
 }

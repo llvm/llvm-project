@@ -154,7 +154,7 @@ struct TypeBuilder {
     auto shapeExpr =
         Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
     if (!shapeExpr)
-      TODO("Assumed rank expression type lowering");
+      TODO(converter.genLocation(), "Assumed rank expression type lowering");
     fir::SequenceType::Shape shape;
     translateShape(shape, std::move(*shapeExpr));
     if (!shape.empty())
@@ -234,7 +234,7 @@ struct TypeBuilder {
       auto shapeExpr = Fortran::evaluate::GetShapeHelper{
           converter.getFoldingContext()}(ultimate);
       if (!shapeExpr)
-        TODO("assumed rank symbol type lowering");
+        TODO(loc, "assumed rank symbol type lowering");
       fir::SequenceType::Shape shape;
       translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
@@ -312,7 +312,7 @@ struct TypeBuilder {
     if (category == Fortran::common::TypeCategory::Character)
       params.push_back(getCharacterLength(exprOrSym));
     else if (category == Fortran::common::TypeCategory::Derived)
-      TODO("lowering derived type length parameters");
+      TODO(converter.genLocation(), "lowering derived type length parameters");
     return;
   }
   Fortran::lower::LenParameterTy

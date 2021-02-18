@@ -634,11 +634,13 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::AccClauseList>(beginCombinedDirective.t);
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
-    TODO("OpenACC Kernels Loop construct not lowered yet!");
+    TODO(converter.genLocation(),
+         "OpenACC Kernels Loop construct not lowered yet!");
   } else if (combinedDirective.v == llvm::acc::ACCD_parallel_loop) {
     genACCParallelLoopOps(converter, accClauseList);
   } else if (combinedDirective.v == llvm::acc::ACCD_serial_loop) {
-    TODO("OpenACC Serial Loop construct not lowered yet!");
+    TODO(converter.genLocation(),
+         "OpenACC Serial Loop construct not lowered yet!");
   } else {
     llvm::report_fatal_error(
         "Unknown combined construct encountered in lowering");

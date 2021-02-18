@@ -786,7 +786,7 @@ private:
         for (const auto &x : localInitList->v)
           info.localInitSymList.push_back(x.symbol);
       if (std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
-        TODO("do concurrent locality specs not implemented");
+        TODO(toLocation(), "do concurrent locality specs not implemented");
     }
     return incrementLoopNestInfo;
   }
@@ -908,14 +908,14 @@ private:
         return builder->createRealConstant(loc, controlType, 1u);
       return builder->createIntegerConstant(loc, controlType, 1); // step
     };
-    auto genLocalInitAssignments = [](IncrementLoopInfo &info) {
+    auto genLocalInitAssignments = [&](IncrementLoopInfo &info) {
       for (const auto *sym : info.localInitSymList) {
         const auto *hostDetails =
             sym->detailsIf<Fortran::semantics::HostAssocDetails>();
         assert(hostDetails && "missing local_init variable host variable");
         [[maybe_unused]] const Fortran::semantics::Symbol &hostSym =
             hostDetails->symbol();
-        TODO("do concurrent locality specs not implemented");
+        TODO(loc, "do concurrent locality specs not implemented");
         // assign sym = hostSym
       }
     };
@@ -1199,7 +1199,7 @@ private:
     auto exprType = expr->GetType();
     mlir::Value selectExpr;
     if (isCharacterCategory(exprType->category())) {
-      TODO("Select Case selector of type Character");
+      TODO(loc, "Select Case selector of type Character");
     } else {
       selectExpr = createFIRExpr(loc, expr, stmtCtx);
       if (isLogicalCategory(exprType->category()))
@@ -1278,7 +1278,7 @@ private:
           if (Fortran::evaluate::IsVariable(selector) && selector.Rank() &&
               !Fortran::evaluate::UnwrapWholeSymbolDataRef(selector) &&
               !Fortran::evaluate::HasVectorSubscript(selector)) {
-            TODO("array section association selector");
+            TODO(toLocation(), "array section association selector");
             continue;
           }
           genExprAddr(selector, stmtCtx)
@@ -1310,7 +1310,7 @@ private:
                           value.getExtents(), value.getLBounds());
                   },
                   [&](const fir::BoxValue &) {
-                    TODO("association selector of derived type");
+                    TODO(toLocation(), "association selector of derived type");
                   },
                   [&](const auto &) {
                     mlir::emitError(toLocation(),
@@ -1326,9 +1326,15 @@ private:
     }
   }
 
-  void genFIR(const Fortran::parser::BlockConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::BlockStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::EndBlockStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::BlockConstruct &) {
+    TODO(toLocation(), "BlockConstruct lowering");
+  }
+  void genFIR(const Fortran::parser::BlockStmt &) {
+    TODO(toLocation(), "BlockStmt lowering");
+  }
+  void genFIR(const Fortran::parser::EndBlockStmt &) {
+    TODO(toLocation(), "EndBlockStmt lowering");
+  }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
     genChangeTeamConstruct(*this, getEval(), construct);
@@ -1340,17 +1346,35 @@ private:
     genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
-  void genFIR(const Fortran::parser::CriticalConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::CriticalStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::EndCriticalStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::CriticalConstruct &) {
+    TODO(toLocation(), "CriticalConstruct lowering");
+  }
+  void genFIR(const Fortran::parser::CriticalStmt &) {
+    TODO(toLocation(), "CriticalStmt lowering");
+  }
+  void genFIR(const Fortran::parser::EndCriticalStmt &) {
+    TODO(toLocation(), "EndCriticalStmt lowering");
+  }
 
-  void genFIR(const Fortran::parser::SelectRankConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::SelectRankStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::SelectRankCaseStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::SelectRankConstruct &) {
+    TODO(toLocation(), "SelectRankConstruct lowering");
+  }
+  void genFIR(const Fortran::parser::SelectRankStmt &) {
+    TODO(toLocation(), "SelectRankStmt lowering");
+  }
+  void genFIR(const Fortran::parser::SelectRankCaseStmt &) {
+    TODO(toLocation(), "SelectRankCaseStmt lowering");
+  }
 
-  void genFIR(const Fortran::parser::SelectTypeConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::SelectTypeStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::TypeGuardStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::SelectTypeConstruct &) {
+    TODO(toLocation(), "SelectTypeConstruct lowering");
+  }
+  void genFIR(const Fortran::parser::SelectTypeStmt &) {
+    TODO(toLocation(), "SelectTypeStmt lowering");
+  }
+  void genFIR(const Fortran::parser::TypeGuardStmt &) {
+    TODO(toLocation(), "TypeGuardStmt lowering");
+  }
 
   //===--------------------------------------------------------------------===//
   // IO statements (see io.h)
@@ -1472,21 +1496,22 @@ private:
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
     auto loc = toLocation();
     for (auto &po : stmt.v) {
-      std::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::parser::Name &sym) {
-                auto ty = genType(*sym.symbol);
-                auto load = builder->create<fir::LoadOp>(
-                    loc, getSymbolAddress(*sym.symbol));
-                auto idxTy = builder->getIndexType();
-                auto zero = builder->create<mlir::ConstantOp>(
-                    loc, idxTy, builder->getIntegerAttr(idxTy, 0));
-                auto cast = builder->createConvert(loc, ty, zero);
-                builder->create<fir::StoreOp>(loc, cast, load);
-              },
-              [&](const Fortran::parser::StructureComponent &) { TODO(""); },
-          },
-          po.u);
+      std::visit(Fortran::common::visitors{
+                     [&](const Fortran::parser::Name &sym) {
+                       auto ty = genType(*sym.symbol);
+                       auto load = builder->create<fir::LoadOp>(
+                           loc, getSymbolAddress(*sym.symbol));
+                       auto idxTy = builder->getIndexType();
+                       auto zero = builder->create<mlir::ConstantOp>(
+                           loc, idxTy, builder->getIntegerAttr(idxTy, 0));
+                       auto cast = builder->createConvert(loc, ty, zero);
+                       builder->create<fir::StoreOp>(loc, cast, load);
+                     },
+                     [&](const Fortran::parser::StructureComponent &) {
+                       TODO(loc, "StructureComponent NullifyStmt lowering");
+                     },
+                 },
+                 po.u);
     }
   }
 
@@ -1553,10 +1578,10 @@ private:
   /// Shared for both assignments and pointer assignments.
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     Fortran::lower::StatementContext stmtCtx;
+    auto loc = toLocation();
     std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Assignment::Intrinsic &) {
-              auto loc = toLocation();
               const auto *sym =
                   Fortran::evaluate::UnwrapWholeSymbolDataRef(assign.lhs);
               // Assignment of allocatable are more complex, the lhs may need to
@@ -1564,7 +1589,7 @@ private:
               const bool isHeap =
                   sym && Fortran::semantics::IsAllocatable(*sym);
               if (isHeap) {
-                TODO("assignment to allocatable not implemented");
+                TODO(loc, "assignment to allocatable not implemented");
               }
               // Target of the pointer must be assigned. See Fortran
               // 2018 10.2.1.3 p2
@@ -1617,32 +1642,44 @@ private:
               }
               if (isDerivedCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p12 and p13
-                TODO("");
+                TODO(toLocation(), "derived type assignment lowering");
               }
               llvm_unreachable("unknown category");
             },
             [&](const Fortran::evaluate::ProcedureRef &) {
               // Defined assignment: call ProcRef
-              TODO("");
+              TODO(loc, "user defined assignment lowering");
             },
             [&](const Fortran::evaluate::Assignment::BoundsSpec &) {
               // Pointer assignment with possibly empty bounds-spec
-              TODO("");
+              TODO(loc, "pointer assignment lowering");
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping &) {
               // Pointer assignment with bounds-remapping
-              TODO("");
+              TODO(loc, "bounds-remapping pointer assignment lowering");
             },
         },
         assign.u);
   }
 
-  void genFIR(const Fortran::parser::WhereConstruct &) { TODO(""); }
-  void genFIR(const Fortran::parser::WhereConstructStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::ElsewhereStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::EndWhereStmt &) { TODO(""); }
-  void genFIR(const Fortran::parser::WhereStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::WhereConstruct &) {
+    TODO(toLocation(), "WhereConstruct lowering");
+  }
+  void genFIR(const Fortran::parser::WhereConstructStmt &) {
+    TODO(toLocation(), "WhereConstructStmt lowering");
+  }
+  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) {
+    TODO(toLocation(), "MaskedElsewhereStmt lowering");
+  }
+  void genFIR(const Fortran::parser::ElsewhereStmt &) {
+    TODO(toLocation(), "ElsewhereStmt lowering");
+  }
+  void genFIR(const Fortran::parser::EndWhereStmt &) {
+    TODO(toLocation(), "EndWhereStmt lowering");
+  }
+  void genFIR(const Fortran::parser::WhereStmt &) {
+    TODO(toLocation(), "WhereStmt lowering");
+  }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
     genAssignment(*stmt.typedAssignment->v);
@@ -1691,7 +1728,9 @@ private:
     genPauseStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::NamelistStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::NamelistStmt &) {
+    TODO(toLocation(), "NamelistStmt lowering");
+  }
 
   // call FAIL IMAGE in runtime
   void genFIR(const Fortran::parser::FailImageStmt &stmt) {
@@ -1868,7 +1907,7 @@ private:
                    sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
       if (details->init()) {
         if (!sym.GetType()->AsIntrinsic()) {
-          TODO(""); // Derived type / polymorphic
+          TODO(loc, "Derived type / polymorphic global with init lowering");
         }
         auto symTy = genType(var);
         if (symTy.isa<fir::CharacterType>()) {
@@ -1897,7 +1936,7 @@ private:
     } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
       mlir::emitError(loc, "COMMON symbol processed elsewhere");
     } else {
-      TODO("global"); // Procedure pointer or something else
+      TODO(loc, "global"); // Procedure pointer or something else
     }
     // Creates undefined initializer for globals without initialziers
     if (!global) {
@@ -2478,7 +2517,7 @@ private:
             lb = builder->createConvert(loc, idxTy,
                                         createFIRExpr(loc, &expr, stmtCtx));
           } else {
-            TODO("assumed rank lowering");
+            TODO(loc, "assumed rank lowering");
           }
 
           if (auto high = spec->ubound().GetExplicit()) {
@@ -2498,7 +2537,7 @@ private:
     };
 
     if (isHostAssoc)
-      TODO("host associated");
+      TODO(loc, "host associated");
 
     sba.match(
         //===--------------------------------------------------------------===//

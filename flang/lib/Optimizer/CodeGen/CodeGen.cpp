@@ -850,7 +850,7 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
     // get the table, lookup the method, fetch the func-ptr
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(dispatch, ty, operands,
                                                     None);
-    TODO("");
+    TODO(dispatch.getLoc(), "fir.dispatch codegen");
     return success();
   }
 };
@@ -863,7 +863,7 @@ struct DispatchTableOpConversion
   mlir::LogicalResult
   matchAndRewrite(fir::DispatchTableOp dispTab, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO("");
+    TODO(dispTab.getLoc(), "fir.dispatch_table codegen");
     return success();
   }
 };
@@ -875,7 +875,7 @@ struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DTEntryOp dtEnt, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO("");
+    TODO(dtEnt.getLoc(), "fir.dt_entry codegen");
     return success();
   }
 };
@@ -1033,15 +1033,14 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy(), lenParams);
     }
     if (boxEleTy.isa<fir::RecordType>()) {
-      TODO("");
+      TODO(loc, "record type fir.box codegen");
     }
     if (fir::isa_ref_type(boxEleTy)) {
       // FIXME: use the target pointer size rather than sizeof(void*)
       return {this->genConstantOffset(loc, rewriter, sizeof(void *)),
               this->genConstantOffset(loc, rewriter, CFI_type_cptr)};
     }
-    // fail: unhandled case
-    TODO("");
+    fir::emitFatalError(loc, "unhandled type in fir.box code generation");
   }
 
   /// Basic pattern to write a field in the descriptor
@@ -1125,7 +1124,7 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     dest = insertField(rewriter, embox.getLoc(), dest, {0}, operands[0],
                        /*bitCast=*/true);
     if (isDerivedType(boxTy))
-      TODO("derived type");
+      TODO(embox.getLoc(), "derived type fir.embox codegen");
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
     rewriter.replaceOp(embox, result);
     return success();
@@ -1223,12 +1222,12 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       // For each field in the path add the offset to base. In the most general
       // case, some offsets must be computed since they are not be known until
       // runtime.
-      TODO("intra-entity slice");
+      TODO(xbox.getLoc(), "intra-entity slice in fir.embox codegen");
     }
     dest = insertField(rewriter, xbox.getLoc(), dest, {0}, base,
                        /*bitCast=*/true);
     if (isDerivedType(boxTy))
-      TODO("derived type");
+      TODO(xbox.getLoc(), "derived type in fir.embox codegen");
 
     auto result = placeInMemoryIfNotGlobalInit(rewriter, xbox.getLoc(), dest);
     rewriter.replaceOp(xbox, result);
@@ -1511,7 +1510,7 @@ struct XArrayCoorOpConversion
       // Working with byte offsets. The base address is read from the fir.box.
       // and need to be casted to void* to do the pointer arithmetic.
       if (!coor.subcomponent().empty())
-        TODO("arrayCoorOp with subcomponent on non contiguous base");
+        TODO(loc, "arrayCoorOp with subcomponent on non contiguous base");
       auto baseTy = getBaseAddrTypeFromBox(operands[0].getType());
       auto base = loadBaseAddrFromBox(loc, baseTy, operands[0], rewriter);
       auto voidPtrTy = getVoidPtrType(coor.getContext());
@@ -1614,7 +1613,7 @@ struct CoordinateOpConversion
       base = loadBaseAddrFromBox(loc, baseTy, base, rewriter);
       auto arrTy = cpnTy.dyn_cast<fir::SequenceType>();
       if (!arrTy || arrTy.getDimension() + 1 != operands.size())
-        TODO("fir.coordinateOf codegen with fir.box and record types");
+        TODO(loc, "fir.coordinateOf codegen with fir.box and record types");
 
       // Applies byte strides from the box. Ignore lower bound from box since
       // fir.coordinate_of indexes are zero based. Lowering takes care of
@@ -1951,7 +1950,7 @@ struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalLenOp globalLen, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO("");
+    TODO(globalLen.getLoc(), "GlobalLenOp codegen");
     return success();
   }
 };

@@ -514,6 +514,7 @@ private:
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
     bool isOptional = false;
+    [[maybe_unused]] auto loc = interface.converter.genLocation();
     llvm::SmallVector<mlir::NamedAttribute, 2> attrs;
     if (obj.attrs.test(Attrs::Optional)) {
       attrs.emplace_back(
@@ -522,26 +523,26 @@ private:
       isOptional = true;
     }
     if (obj.attrs.test(Attrs::Asynchronous))
-      TODO("Asynchronous in procedure interface");
+      TODO(loc, "Asynchronous in procedure interface");
     if (obj.attrs.test(Attrs::Contiguous))
       attrs.emplace_back(
           mlir::Identifier::get(fir::getContiguousAttrName(), &mlirContext),
           UnitAttr::get(&mlirContext));
     if (obj.attrs.test(Attrs::Value))
-      TODO("Value in procedure interface");
+      TODO(loc, "Value in procedure interface");
     if (obj.attrs.test(Attrs::Volatile))
-      TODO("Volatile in procedure interface");
+      TODO(loc, "Volatile in procedure interface");
     if (obj.attrs.test(Attrs::Target))
-      TODO("Target in procedure interface");
+      TODO(loc, "Target in procedure interface");
 
     // TODO: intents that require special care (e.g finalization)
 
     using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
     const auto &shapeAttrs = obj.type.attrs();
     if (shapeAttrs.test(ShapeAttrs::AssumedRank))
-      TODO("Assumed Rank in procedure interface");
+      TODO(loc, "Assumed Rank in procedure interface");
     if (shapeAttrs.test(ShapeAttrs::Coarray))
-      TODO("Coarray in procedure interface");
+      TODO(loc, "Coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface
     // it must be by box. That may no be always true (e.g for simple optionals)
@@ -605,7 +606,8 @@ private:
 
   void handleExplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &) {
-    TODO("lowering interface with result requiring explicit interface");
+    TODO(interface.converter.genLocation(),
+         "lowering interface with result requiring explicit interface");
   }
 
   fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
@@ -639,7 +641,8 @@ private:
     interface.outputs.emplace_back(
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
-  void addPassedArg(PassEntityBy p, FortranEntity entity, bool isOptional = false) {
+  void addPassedArg(PassEntityBy p, FortranEntity entity,
+                    bool isOptional = false) {
     interface.passedArguments.emplace_back(
         PassedEntity{p, entity, emptyValue(), emptyValue(), isOptional});
   }
