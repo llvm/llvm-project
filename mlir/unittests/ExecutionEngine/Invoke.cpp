@@ -171,10 +171,12 @@ TEST(NativeMemRefJit, BasicMemref) {
   ASSERT_EQ(A->sizes[1], M);
   ASSERT_EQ(A->strides[0], M + 1);
   ASSERT_EQ(A->strides[1], 1);
-  for (int i = 0; i < K; ++i)
-    for (int j = 0; j < M; ++j)
+  for (int i = 0; i < K; ++i) {
+    for (int j = 0; j < M; ++j) {
       EXPECT_EQ((A[{i, j}]), i * M + j);
-
+      EXPECT_EQ(&(A[{i, j}]), &((*A)[i][j]));
+    }
+  }
   std::string moduleStr = R"mlir(
   func @rank2_memref(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>) attributes { llvm.emit_c_interface } {
     %x = constant 2 : index
@@ -196,7 +198,7 @@ TEST(NativeMemRefJit, BasicMemref) {
 
   llvm::Error error = jit->invoke("rank2_memref", &*A, &*A);
   ASSERT_TRUE(!error);
-  EXPECT_EQ((A[{1, 2}]), 42.);
+  EXPECT_EQ(((*A)[1][2]), 42.);
   EXPECT_EQ((A[{2, 1}]), 42.);
 }
 
