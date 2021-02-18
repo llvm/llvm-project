@@ -385,11 +385,11 @@ template <class InputIterator, class RandomAccessIterator, class Compare>
                       RandomAccessIterator result_first, RandomAccessIterator result_last, Compare comp);
 
 template <class RandomAccessIterator>
-    void
+    constexpr void                    // constexpr in C++20
     nth_element(RandomAccessIterator first, RandomAccessIterator nth, RandomAccessIterator last);
 
 template <class RandomAccessIterator, class Compare>
-    void
+    constexpr void                    // constexpr in C++20
     nth_element(RandomAccessIterator first, RandomAccessIterator nth, RandomAccessIterator last, Compare comp);
 
 template <class ForwardIterator, class T>
@@ -3807,7 +3807,7 @@ is_sorted(_ForwardIterator __first, _ForwardIterator __last)
 // stable, 2-3 compares, 0-2 swaps
 
 template <class _Compare, class _ForwardIterator>
-unsigned
+_LIBCPP_CONSTEXPR_AFTER_CXX11 unsigned
 __sort3(_ForwardIterator __x, _ForwardIterator __y, _ForwardIterator __z, _Compare __c)
 {
     unsigned __r = 0;
@@ -3901,7 +3901,7 @@ __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
 
 // Assumes size > 0
 template <class _Compare, class _BidirectionalIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void
 __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp)
 {
     _BidirectionalIterator __lm1 = __last;
@@ -5218,8 +5218,24 @@ partial_sort_copy(_InputIterator __first, _InputIterator __last,
 
 // nth_element
 
+template<class _Compare, class _RandomAccessIterator>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 bool
+__nth_element_find_guard(_RandomAccessIterator& __i, _RandomAccessIterator& __j,
+                         _RandomAccessIterator __m, _Compare __comp)
+{
+    // manually guard downward moving __j against __i
+    while (true) {
+        if (__i == --__j) {
+            return false;
+        }
+        if (__comp(*__j, *__m)) {
+            return true;  // found guard for downward moving __j, now use unguarded partition
+        }
+    }
+}
+
 template <class _Compare, class _RandomAccessIterator>
-void
+_LIBCPP_CONSTEXPR_AFTER_CXX11 void
 __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
     // _Compare is known to be a reference type
@@ -5227,7 +5243,6 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
     const difference_type __limit = 7;
     while (true)
     {
-    __restart:
         if (__nth == __last)
             return;
         difference_type __len = __last - __first;
@@ -5267,61 +5282,51 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
         if (!__comp(*__i, *__m))  // if *__first == *__m
         {
             // *__first == *__m, *__first doesn't go in first part
-            // manually guard downward moving __j against __i
-            while (true)
-            {
-                if (__i == --__j)
-                {
-                    // *__first == *__m, *__m <= all other elements
-                    // Partition instead into [__first, __i) == *__first and *__first < [__i, __last)
-                    ++__i;  // __first + 1
-                    __j = __last;
-                    if (!__comp(*__first, *--__j))  // we need a guard if *__first == *(__last-1)
-                    {
-                        while (true)
-                        {
-                            if (__i == __j)
-                                return;  // [__first, __last) all equivalent elements
-                            if (__comp(*__first, *__i))
-                            {
-                                swap(*__i, *__j);
-                                ++__n_swaps;
-                                ++__i;
-                                break;
-                            }
+            if (_VSTD::__nth_element_find_guard<_Compare>(__i, __j, __m, __comp)) {
+                swap(*__i, *__j);
+                ++__n_swaps;
+            } else {
+                // *__first == *__m, *__m <= all other elements
+                // Partition instead into [__first, __i) == *__first and *__first < [__i, __last)
+                ++__i;  // __first + 1
+                __j = __last;
+                if (!__comp(*__first, *--__j)) {  // we need a guard if *__first == *(__last-1)
+                    while (true) {
+                        if (__i == __j) {
+                            return;  // [__first, __last) all equivalent elements
+                        } else if (__comp(*__first, *__i)) {
+                            swap(*__i, *__j);
+                            ++__n_swaps;
                             ++__i;
-                        }
-                    }
-                    // [__first, __i) == *__first and *__first < [__j, __last) and __j == __last - 1
-                    if (__i == __j)
-                        return;
-                    while (true)
-                    {
-                        while (!__comp(*__first, *__i))
-                            ++__i;
-                        while (__comp(*__first, *--__j))
-                            ;
-                        if (__i >= __j)
                             break;
-                        swap(*__i, *__j);
-                        ++__n_swaps;
+                        }
                         ++__i;
                     }
-                    // [__first, __i) == *__first and *__first < [__i, __last)
-                    // The first part is sorted,
-                    if (__nth < __i)
-                        return;
-                    // __nth_element the second part
-                    // _VSTD::__nth_element<_Compare>(__i, __nth, __last, __comp);
-                    __first = __i;
-                    goto __restart;
                 }
-                if (__comp(*__j, *__m))
-                {
+                // [__first, __i) == *__first and *__first < [__j, __last) and __j == __last - 1
+                if (__i == __j) {
+                    return;
+                }
+                while (true) {
+                    while (!__comp(*__first, *__i))
+                        ++__i;
+                    while (__comp(*__first, *--__j))
+                        ;
+                    if (__i >= __j)
+                        break;
                     swap(*__i, *__j);
                     ++__n_swaps;
-                    break;  // found guard for downward moving __j, now use unguarded partition
+                    ++__i;
                 }
+                // [__first, __i) == *__first and *__first < [__i, __last)
+                // The first part is sorted,
+                if (__nth < __i) {
+                    return;
+                }
+                // __nth_element the second part
+                // _VSTD::__nth_element<_Compare>(__i, __nth, __last, __comp);
+                __first = __i;
+                continue;
             }
         }
         ++__i;
@@ -5365,32 +5370,35 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
             {
                 // Check for [__first, __i) already sorted
                 __j = __m = __first;
-                while (++__j != __i)
-                {
-                    if (__comp(*__j, *__m))
+                while (true) {
+                    if (++__j == __i) {
+                        // [__first, __i) sorted
+                        return;
+                    }
+                    if (__comp(*__j, *__m)) {
                         // not yet sorted, so sort
-                        goto not_sorted;
+                        break;
+                    }
                     __m = __j;
                 }
-                // [__first, __i) sorted
-                return;
             }
             else
             {
                 // Check for [__i, __last) already sorted
                 __j = __m = __i;
-                while (++__j != __last)
-                {
-                    if (__comp(*__j, *__m))
+                while (true) {
+                    if (++__j == __last) {
+                        // [__i, __last) sorted
+                        return;
+                    }
+                    if (__comp(*__j, *__m)) {
                         // not yet sorted, so sort
-                        goto not_sorted;
+                        break;
+                    }
                     __m = __j;
                 }
-                // [__i, __last) sorted
-                return;
             }
         }
-not_sorted:
         // __nth_element on range containing __nth
         if (__nth < __i)
         {
@@ -5406,7 +5414,7 @@ not_sorted:
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
@@ -5415,7 +5423,7 @@ nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomA
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last)
 {
