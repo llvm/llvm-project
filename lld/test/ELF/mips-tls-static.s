@@ -7,7 +7,7 @@
 # RUN: llvm-objdump -s -t %t.exe | FileCheck %s
 
 # CHECK: SYMBOL TABLE:
-# CHECK:           00000000 g    O .tdata          00000000 tls1
+# CHECK:           00000000 g      .tdata          00000000 tls1
 # CHECK:  [[TGA:[0-9a-f]+]] g      .text           00000000 __tls_get_addr
 #
 # CHECK:      Contents of section .data:

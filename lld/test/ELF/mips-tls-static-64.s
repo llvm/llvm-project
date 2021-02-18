@@ -8,7 +8,7 @@
 
 # CHECK: SYMBOL TABLE:
 # CHECK: [[TGA:[0-9a-f]{8}]] g      .text  0000000000000000 __tls_get_addr
-# CHECK:    0000000000000000 g    O .tdata 0000000000000000 tls1
+# CHECK:    0000000000000000 g      .tdata 0000000000000000 tls1
 #
 # CHECK:      Contents of section .data:
 # CHECK-NEXT:  {{.*}} [[TGA]] ffffffff ffff8004 ffffffff
