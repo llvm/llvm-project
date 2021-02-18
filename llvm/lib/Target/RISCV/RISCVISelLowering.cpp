@@ -547,6 +547,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL, VT, Custom);
         setOperationAction(ISD::SRA, VT, Custom);
         setOperationAction(ISD::SRL, VT, Custom);
+
+        setOperationAction(ISD::SMIN, VT, Custom);
+        setOperationAction(ISD::SMAX, VT, Custom);
+        setOperationAction(ISD::UMIN, VT, Custom);
+        setOperationAction(ISD::UMAX, VT, Custom);
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -1201,6 +1206,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::FMA:
     return lowerToScalableOp(Op, DAG, RISCVISD::FMA_VL);
+  case ISD::SMIN:
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMIN_VL);
+  case ISD::SMAX:
+    return lowerToScalableOp(Op, DAG, RISCVISD::SMAX_VL);
+  case ISD::UMIN:
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL);
+  case ISD::UMAX:
+    return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL);
   }
 }
 
@@ -4697,6 +4710,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FDIV_VL)
   NODE_NAME_CASE(FNEG_VL)
   NODE_NAME_CASE(FMA_VL)
+  NODE_NAME_CASE(SMIN_VL)
+  NODE_NAME_CASE(SMAX_VL)
+  NODE_NAME_CASE(UMIN_VL)
+  NODE_NAME_CASE(UMAX_VL)
   NODE_NAME_CASE(VMCLR_VL)
   NODE_NAME_CASE(VMSET_VL)
   NODE_NAME_CASE(VRGATHER_VX_VL)
