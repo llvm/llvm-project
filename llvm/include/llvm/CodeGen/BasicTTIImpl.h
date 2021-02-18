@@ -852,9 +852,8 @@ public:
       bool SplitDst =
           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
           TargetLowering::TypeSplitVector;
-      if ((SplitSrc || SplitDst) &&
-          cast<FixedVectorType>(SrcVTy)->getNumElements() > 1 &&
-          cast<FixedVectorType>(DstVTy)->getNumElements() > 1) {
+      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
+          DstVTy->getElementCount().isVector()) {
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         T *TTI = static_cast<T *>(this);
