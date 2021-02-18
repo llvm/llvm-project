@@ -2,6 +2,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-symbolizer --obj=%t 0 | FileCheck %s
 
+# REQUIRES: x86-registered-target
+
 # CHECK:       b
 # CHECK-NEXT:  ??:0:0
 # CHECK-EMPTY:
