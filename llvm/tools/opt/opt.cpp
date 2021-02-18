@@ -66,14 +66,15 @@ static codegen::RegisterCodeGenFlags CFG;
 
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
-//
-static cl::list<const PassInfo*, bool, PassNameParser>
-PassList(cl::desc("Optimizations available:"));
+static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+    "Optimizations available (use '-passes=' for the new pass manager)"));
 
-static cl::opt<bool>
-    EnableNewPassManager("enable-new-pm",
-                         cl::desc("Enable the new pass manager"),
-                         cl::init(LLVM_ENABLE_NEW_PASS_MANAGER));
+static cl::opt<bool> EnableNewPassManager(
+    "enable-new-pm",
+    cl::desc("Enable the new pass manager, translating "
+             "'opt -foo' to 'opt -passes=foo'. This is strictly for the new PM "
+             "migration, use '-passes=' when possible."),
+    cl::init(LLVM_ENABLE_NEW_PASS_MANAGER));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -84,8 +85,6 @@ static cl::opt<std::string> PassPipeline(
     cl::desc("A textual description of the pass pipeline for optimizing"),
     cl::Hidden);
 
-// Other command line options...
-//
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
     cl::init("-"), cl::value_desc("filename"));
@@ -142,44 +141,46 @@ static cl::opt<bool>
     StripNamedMetadata("strip-named-metadata",
                        cl::desc("Strip module-level named metadata"));
 
-static cl::opt<bool> DisableInline("disable-inlining",
-                                   cl::desc("Do not run the inliner pass"));
+static cl::opt<bool>
+    DisableInline("disable-inlining",
+                  cl::desc("Do not run the inliner pass (legacy PM only)"));
 
 static cl::opt<bool>
 DisableOptimizations("disable-opt",
                      cl::desc("Do not run any optimization passes"));
 
-static cl::opt<bool>
-StandardLinkOpts("std-link-opts",
-                 cl::desc("Include the standard link time optimizations"));
+static cl::opt<bool> StandardLinkOpts(
+    "std-link-opts",
+    cl::desc("Include the standard link time optimizations (legacy PM only)"));
 
 static cl::opt<bool>
-OptLevelO0("O0",
-  cl::desc("Optimization level 0. Similar to clang -O0"));
+    OptLevelO0("O0", cl::desc("Optimization level 0. Similar to clang -O0. "
+                              "Use -passes='default<O0>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelO1("O1",
-           cl::desc("Optimization level 1. Similar to clang -O1"));
+    OptLevelO1("O1", cl::desc("Optimization level 1. Similar to clang -O1. "
+                              "Use -passes='default<O1>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelO2("O2",
-           cl::desc("Optimization level 2. Similar to clang -O2"));
+    OptLevelO2("O2", cl::desc("Optimization level 2. Similar to clang -O2. "
+                              "Use -passes='default<O2>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelOs("Os",
-           cl::desc("Like -O2 with extra optimizations for size. Similar to clang -Os"));
+    OptLevelOs("Os", cl::desc("Like -O2 but size-conscious. Similar to clang "
+                              "-Os. Use -passes='default<Os>' for the new PM"));
+
+static cl::opt<bool> OptLevelOz(
+    "Oz",
+    cl::desc("Like -O2 but optimize for code size above all else. Similar to "
+             "clang -Oz. Use -passes='default<Oz>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelOz("Oz",
-           cl::desc("Like -Os but reduces code size further. Similar to clang -Oz"));
+    OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3. "
+                              "Use -passes='default<O3>' for the new PM"));
 
-static cl::opt<bool>
-OptLevelO3("O3",
-           cl::desc("Optimization level 3. Similar to clang -O3"));
-
-static cl::opt<unsigned>
-CodeGenOptLevel("codegen-opt-level",
-                cl::desc("Override optimization level for codegen hooks"));
+static cl::opt<unsigned> CodeGenOptLevel(
+    "codegen-opt-level",
+    cl::desc("Override optimization level for codegen hooks, legacy PM only"));
 
 static cl::opt<std::string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -205,7 +206,8 @@ DisableBuiltins("disable-builtin",
                 cl::ZeroOrMore);
 
 static cl::opt<bool>
-AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
+    AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization. "
+                                    "Legacy pass manager only."));
 
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
@@ -231,10 +233,10 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM assembly."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    RunTwice("run-twice",
-             cl::desc("Run all passes twice, re-using the same pass manager."),
-             cl::init(false), cl::Hidden);
+static cl::opt<bool> RunTwice("run-twice",
+                              cl::desc("Run all passes twice, re-using the "
+                                       "same pass manager (legacy PM only)."),
+                              cl::init(false), cl::Hidden);
 
 static cl::opt<bool> DiscardValueNames(
     "discard-value-names",
