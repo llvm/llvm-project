@@ -420,8 +420,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   bool HaveTTData = !TypeInfos.empty() || !FilterIds.empty();
 
   // Type infos.
-  MCSection *LSDASection =
-      Asm->getObjFileLowering().getSectionForLSDA(MF->getFunction(), Asm->TM);
+  MCSection *LSDASection = Asm->getObjFileLowering().getSectionForLSDA(
+      MF->getFunction(), *Asm->CurrentFnSym, Asm->TM);
   unsigned TTypeEncoding;
 
   if (!HaveTTData) {
