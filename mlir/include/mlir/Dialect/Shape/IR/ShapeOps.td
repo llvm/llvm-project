@@ -526,7 +526,7 @@ def Shape_DebugPrintOp : Shape_Op<"debug_print", []> {
   let results =  (outs Shape_ShapeOrSizeType:$output);
 }
 
-def Shape_SplitAtOp : Shape_Op<"split_at", []> {
+def Shape_SplitAtOp : Shape_Op<"split_at", [NoSideEffect]> {
   let summary = "Splits a shape at a given index";
   let description = [{
     Splits a shape at a given dimension `index`, returning two shapes.
@@ -555,7 +555,7 @@ def Shape_SplitAtOp : Shape_Op<"split_at", []> {
   let hasFolder = 1;
 }
 
-def Shape_ConcatOp : Shape_Op<"concat", []> {
+def Shape_ConcatOp : Shape_Op<"concat", [NoSideEffect]> {
   let summary = "Concatenates two shapes";
   let description = [{
     Creates a shape whose dimensions consist of first the dimensions from `lhs`
