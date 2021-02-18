@@ -9,7 +9,7 @@
 // CHECK-LABEL: func @simple_store_load() {
 func @simple_store_load() {
   %cf7 = constant 7.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     %v0 = affine.load %m[%i0] : memref<10xf32>
@@ -29,7 +29,7 @@ func @multi_store_load() {
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
   %cf9 = constant 9.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     %v0 = affine.load %m[%i0] : memref<10xf32>
@@ -58,7 +58,7 @@ func @multi_store_load() {
 // CHECK-LABEL: func @store_load_affine_apply
 func @store_load_affine_apply() -> memref<10x10xf32> {
   %cf7 = constant 7.0 : f32
-  %m = memref.alloc() : memref<10x10xf32>
+  %m = alloc() : memref<10x10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
       %t0 = affine.apply affine_map<(d0, d1) -> (d1 + 1)>(%i0, %i1)
@@ -74,7 +74,7 @@ func @store_load_affine_apply() -> memref<10x10xf32> {
   // The memref and its stores won't be erased due to this memref return.
   return %m : memref<10x10xf32>
 // CHECK:       %{{.*}} = constant 7.000000e+00 : f32
-// CHECK-NEXT:  %{{.*}} = memref.alloc() : memref<10x10xf32>
+// CHECK-NEXT:  %{{.*}} = alloc() : memref<10x10xf32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:      %{{.*}} = affine.apply [[$MAP0]](%{{.*}}, %{{.*}})
@@ -91,7 +91,7 @@ func @store_load_affine_apply() -> memref<10x10xf32> {
 // CHECK-LABEL: func @store_load_nested
 func @store_load_nested(%N : index) {
   %cf7 = constant 7.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
@@ -116,7 +116,7 @@ func @store_load_nested(%N : index) {
 func @multi_store_load_nested_no_fwd(%N : index) {
   %cf7 = constant 7.0 : f32
   %cf8 = constant 8.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
@@ -137,7 +137,7 @@ func @multi_store_load_nested_no_fwd(%N : index) {
 func @store_load_store_nested_no_fwd(%N : index) {
   %cf7 = constant 7.0 : f32
   %cf9 = constant 9.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
@@ -158,7 +158,7 @@ func @multi_store_load_nested_fwd(%N : index) {
   %cf8 = constant 8.0 : f32
   %cf9 = constant 9.0 : f32
   %cf10 = constant 10.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
@@ -181,7 +181,7 @@ func @multi_store_load_nested_fwd(%N : index) {
 // CHECK-LABEL: func @store_load_no_fwd
 func @store_load_no_fwd() {
   %cf7 = constant 7.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to 10 {
@@ -200,7 +200,7 @@ func @store_load_no_fwd() {
 func @store_load_fwd() {
   %cf7 = constant 7.0 : f32
   %c0 = constant 0 : index
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.store %cf7, %m[%c0] : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -222,7 +222,7 @@ func @store_load_store_nested_fwd(%N : index) -> f32 {
   %cf9 = constant 9.0 : f32
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %m = memref.alloc() : memref<10xf32>
+  %m = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to %N {
@@ -235,7 +235,7 @@ func @store_load_store_nested_fwd(%N : index) -> f32 {
   // Due to this load, the memref isn't optimized away.
   %v3 = affine.load %m[%c1] : memref<10xf32>
   return %v3 : f32
-// CHECK:       %{{.*}} = memref.alloc() : memref<10xf32>
+// CHECK:       %{{.*}} = alloc() : memref<10xf32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
 // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:    affine.for %{{.*}} = 0 to %{{.*}} {
@@ -285,7 +285,7 @@ func @refs_not_known_to_be_equal(%A : memref<100 x 100 x f32>, %M : index) {
 // The value loaded from %in can directly be stored to %out by eliminating
 // store and load from %tmp.
 func @vector_forwarding(%in : memref<512xf32>, %out : memref<512xf32>) {
-  %tmp = memref.alloc() : memref<512xf32>
+  %tmp = alloc() : memref<512xf32>
   affine.for %i = 0 to 16 {
     %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
     affine.vector_store %ld0, %tmp[32*%i] : memref<512xf32>, vector<32xf32>

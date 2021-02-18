@@ -40,7 +40,7 @@
 // CHECK:           %[[VAL_17:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_4]] : tensor<10x20x30x40x50x60x70x80xf32> to memref<?xindex>
 // CHECK:           %[[VAL_18:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<10x20x30x40x50x60x70x80xf32> to memref<?xf32>
 // CHECK:           %[[VAL_19:.*]] = tensor_to_memref %[[VAL_2]] : memref<10x20x30x40x50x60x70x80xf32>
-// CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<10x20x30x40x50x60x70x80xf32>
+// CHECK:           %[[VAL_20:.*]] = alloc() : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           linalg.copy(%[[VAL_19]], %[[VAL_20]]) : memref<10x20x30x40x50x60x70x80xf32>, memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           scf.for %[[VAL_21:.*]] = %[[VAL_11]] to %[[VAL_10]] step %[[VAL_12]] {
 // CHECK:             scf.for %[[VAL_22:.*]] = %[[VAL_11]] to %[[VAL_9]] step %[[VAL_12]] {
@@ -71,7 +71,7 @@
 // CHECK:                           %[[VAL_47:.*]] = load %[[VAL_13]]{{\[}}%[[VAL_44]], %[[VAL_41]], %[[VAL_38]], %[[VAL_37]], %[[VAL_32]], %[[VAL_25]], %[[VAL_22]], %[[VAL_21]]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:                           %[[VAL_48:.*]] = load %[[VAL_18]]{{\[}}%[[VAL_46]]] : memref<?xf32>
 // CHECK:                           %[[VAL_49:.*]] = mulf %[[VAL_47]], %[[VAL_48]] : f32
-// CHECK:                           memref.store %[[VAL_49]], %[[VAL_20]]{{\[}}%[[VAL_44]], %[[VAL_41]], %[[VAL_38]], %[[VAL_37]], %[[VAL_32]], %[[VAL_25]], %[[VAL_22]], %[[VAL_21]]] : memref<10x20x30x40x50x60x70x80xf32>
+// CHECK:                           store %[[VAL_49]], %[[VAL_20]]{{\[}}%[[VAL_44]], %[[VAL_41]], %[[VAL_38]], %[[VAL_37]], %[[VAL_32]], %[[VAL_25]], %[[VAL_22]], %[[VAL_21]]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:                         }
 // CHECK:                       }
 // CHECK:                     }

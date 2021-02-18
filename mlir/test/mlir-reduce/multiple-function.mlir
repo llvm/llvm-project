@@ -1,7 +1,7 @@
 // UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -test %S/failure-test.sh -pass-test function-reducer | FileCheck %s
-// This input should be reduced by the pass pipeline so that only
-// the @simple5 function remains as this is the shortest function
+// This input should be reduced by the pass pipeline so that only 
+// the @simple5 function remains as this is the shortest function 
 // containing the interesting behavior.
 
 // CHECK-NOT: func @simple1() {
@@ -26,7 +26,7 @@ func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
-  %0 = memref.alloc() : memref<2xf32>
+  %0 = alloc() : memref<2xf32>
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
   "test.crashOp"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
