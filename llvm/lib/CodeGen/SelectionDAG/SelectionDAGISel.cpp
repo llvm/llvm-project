@@ -2578,12 +2578,25 @@ CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   return VT == MVT::iPTR && cast<VTSDNode>(N)->getVT() == TLI->getPointerTy(DL);
 }
 
+// Bit 0 stores the sign of the immediate. The upper bits contain the magnitude
+// shifted left by 1.
+static uint64_t decodeSignRotatedValue(uint64_t V) {
+  if ((V & 1) == 0)
+    return V >> 1;
+  if (V != 1)
+    return -(V >> 1);
+  // There is no such thing as -0 with integers.  "-0" really means MININT.
+  return 1ULL << 63;
+}
+
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
              SDValue N) {
   int64_t Val = MatcherTable[MatcherIndex++];
   if (Val & 128)
     Val = GetVBR(Val, MatcherTable, MatcherIndex);
+
+  Val = decodeSignRotatedValue(Val);
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N);
   return C && C->getSExtValue() == Val;
