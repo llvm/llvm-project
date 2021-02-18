@@ -386,9 +386,8 @@ void SpillPlacement::BlockConstraint::print(raw_ostream &OS) const {
     case PrefSpill: return "PrefSpill";
     case PrefBoth: return "PrefBoth";
     case MustSpill: return "MustSpill";
-    default:
-      llvm_unreachable("uncovered switch");
     };
+    llvm_unreachable("uncovered switch");
   };
 
   dbgs() << "{" << Number << ", "
