@@ -63,6 +63,54 @@ const AppendOperatorTestcase Cases[] =
       , {S("/p1"), S("/p2/"), S("/p2/")}
       , {S("p1"),   S(""),      S("p1/")}
       , {S("p1/"),  S(""),      S("p1/")}
+
+      , {S("//host"),  S("foo"),      S("//host/foo")}
+      , {S("//host/"), S("foo"),      S("//host/foo")}
+      , {S("//host"),  S(""),         S("//host/")}
+
+#ifdef _WIN32
+      , {S("foo"),     S("C:/bar"),   S("C:/bar")}
+      , {S("foo"),     S("C:"),       S("C:")}
+
+      , {S("C:"),      S(""),         S("C:")}
+      , {S("C:foo"),   S("/bar"),     S("C:/bar")}
+      , {S("C:foo"),   S("bar"),      S("C:foo/bar")}
+      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar")}
+      , {S("C:/foo"),  S("/bar"),     S("C:/bar")}
+
+      , {S("C:foo"),   S("C:/bar"),   S("C:/bar")}
+      , {S("C:foo"),   S("C:bar"),    S("C:foo/bar")}
+      , {S("C:/foo"),  S("C:/bar"),   S("C:/bar")}
+      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/bar")}
+
+      , {S("C:foo"),   S("c:/bar"),   S("c:/bar")}
+      , {S("C:foo"),   S("c:bar"),    S("c:bar")}
+      , {S("C:/foo"),  S("c:/bar"),   S("c:/bar")}
+      , {S("C:/foo"),  S("c:bar"),    S("c:bar")}
+
+      , {S("C:/foo"),  S("D:bar"),    S("D:bar")}
+#else
+      , {S("foo"),     S("C:/bar"),   S("foo/C:/bar")}
+      , {S("foo"),     S("C:"),       S("foo/C:")}
+
+      , {S("C:"),      S(""),         S("C:/")}
+      , {S("C:foo"),   S("/bar"),     S("/bar")}
+      , {S("C:foo"),   S("bar"),      S("C:foo/bar")}
+      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar")}
+      , {S("C:/foo"),  S("/bar"),     S("/bar")}
+
+      , {S("C:foo"),   S("C:/bar"),   S("C:foo/C:/bar")}
+      , {S("C:foo"),   S("C:bar"),    S("C:foo/C:bar")}
+      , {S("C:/foo"),  S("C:/bar"),   S("C:/foo/C:/bar")}
+      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/C:bar")}
+
+      , {S("C:foo"),   S("c:/bar"),   S("C:foo/c:/bar")}
+      , {S("C:foo"),   S("c:bar"),    S("C:foo/c:bar")}
+      , {S("C:/foo"),  S("c:/bar"),   S("C:/foo/c:/bar")}
+      , {S("C:/foo"),  S("c:bar"),    S("C:/foo/c:bar")}
+
+      , {S("C:/foo"),  S("D:bar"),    S("C:/foo/D:bar")}
+#endif
     };
 
 
