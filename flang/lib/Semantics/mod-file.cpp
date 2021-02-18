@@ -861,13 +861,13 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
 parser::Message &ModFileReader::Say(const SourceName &name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
-  return context_
-      .Say(name,
-          ancestor.empty()
-              ? "Error reading module file for module '%s'"_err_en_US
-              : "Error reading module file for submodule '%s' of module '%s'"_err_en_US,
-          name, ancestor)
-      .Attach(name, std::move(msg), arg);
+  return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
+      parser::MessageFormattedText{ancestor.empty()
+              ? "module '%s'"_en_US
+              : "submodule '%s' of module '%s'"_en_US,
+          name, ancestor}
+          .MoveString(),
+      parser::MessageFormattedText{std::move(msg), arg}.MoveString());
 }
 
 // program was read from a .mod file for a submodule; return the name of the
