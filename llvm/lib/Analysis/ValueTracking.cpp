@@ -519,27 +519,8 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
 
 // Is this an intrinsic that cannot be speculated but also cannot trap?
 bool llvm::isAssumeLikeIntrinsic(const Instruction *I) {
-  if (const CallInst *CI = dyn_cast<CallInst>(I))
-    if (Function *F = CI->getCalledFunction())
-      switch (F->getIntrinsicID()) {
-      default: break;
-      // FIXME: This list is repeated from NoTTI::getIntrinsicCost.
-      case Intrinsic::assume:
-      case Intrinsic::sideeffect:
-      case Intrinsic::pseudoprobe:
-      case Intrinsic::dbg_declare:
-      case Intrinsic::dbg_value:
-      case Intrinsic::dbg_label:
-      case Intrinsic::invariant_start:
-      case Intrinsic::invariant_end:
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
-      case Intrinsic::experimental_noalias_scope_decl:
-      case Intrinsic::objectsize:
-      case Intrinsic::ptr_annotation:
-      case Intrinsic::var_annotation:
-        return true;
-      }
+  if (const IntrinsicInst *CI = dyn_cast<IntrinsicInst>(I))
+    return CI->isAssumeLikeIntrinsic();
 
   return false;
 }
