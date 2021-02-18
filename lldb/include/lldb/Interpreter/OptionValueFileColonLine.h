@@ -21,7 +21,7 @@ public:
   OptionValueFileColonLine();
   OptionValueFileColonLine(const llvm::StringRef input);
 
-  ~OptionValueFileColonLine() override {}
+  ~OptionValueFileColonLine() override = default;
 
   OptionValue::Type GetType() const override { return eTypeFileLineColumn; }
 

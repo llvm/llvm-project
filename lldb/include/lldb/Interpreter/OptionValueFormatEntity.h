@@ -18,7 +18,7 @@ class OptionValueFormatEntity : public OptionValue {
 public:
   OptionValueFormatEntity(const char *default_format);
 
-  ~OptionValueFormatEntity() override {}
+  ~OptionValueFormatEntity() override = default;
 
   // Virtual subclass pure virtual overrides
 

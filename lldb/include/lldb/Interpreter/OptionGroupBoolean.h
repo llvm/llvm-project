@@ -25,7 +25,7 @@ public:
                      const char *usage_text, bool default_value,
                      bool no_argument_toggle_default);
 
-  ~OptionGroupBoolean() override;
+  ~OptionGroupBoolean() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
     return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);

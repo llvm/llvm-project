@@ -23,9 +23,7 @@ public:
 
   enum Options { eOptionEncodeCharacterEscapeSequences = (1u << 0) };
 
-  OptionValueString()
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {}
+  OptionValueString() = default;
 
   OptionValueString(ValidatorCallback validator, void *baton = nullptr)
       : OptionValue(), m_current_value(), m_default_value(), m_options(),
@@ -125,8 +123,8 @@ protected:
   std::string m_current_value;
   std::string m_default_value;
   Flags m_options;
-  ValidatorCallback m_validator;
-  void *m_validator_baton;
+  ValidatorCallback m_validator = nullptr;
+  void *m_validator_baton = nullptr;
 };
 
 } // namespace lldb_private

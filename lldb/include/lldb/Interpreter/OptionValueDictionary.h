@@ -22,7 +22,7 @@ public:
       : OptionValue(), m_type_mask(type_mask), m_values(),
         m_raw_value_dump(raw_value_dump) {}
 
-  ~OptionValueDictionary() override {}
+  ~OptionValueDictionary() override = default;
 
   // Virtual subclass pure virtual overrides
 

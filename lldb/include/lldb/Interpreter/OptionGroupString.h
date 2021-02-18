@@ -22,7 +22,7 @@ public:
                     lldb::CommandArgumentType argument_type,
                     const char *usage_text, const char *default_value);
 
-  ~OptionGroupString() override;
+  ~OptionGroupString() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
     return llvm::ArrayRef<OptionDefinition>(&m_option_definition, 1);

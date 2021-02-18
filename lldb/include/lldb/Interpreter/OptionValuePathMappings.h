@@ -19,7 +19,7 @@ public:
   OptionValuePathMappings(bool notify_changes)
       : OptionValue(), m_path_mappings(), m_notify_changes(notify_changes) {}
 
-  ~OptionValuePathMappings() override {}
+  ~OptionValuePathMappings() override = default;
 
   // Virtual subclass pure virtual overrides
 
