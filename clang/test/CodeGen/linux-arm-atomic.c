@@ -9,4 +9,4 @@ _Atomic_word exchange_and_add(volatile _Atomic_word *__mem, int __val) {
 }
 
 // CHECK: define {{.*}} @exchange_and_add
-// CHECK: atomicrmw {{.*}} add
+// CHECK: atomicrmw {{.*}} add i32* {{.*}} acq_rel, align 4
