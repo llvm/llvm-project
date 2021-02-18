@@ -1,25 +1,35 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o - | llvm-readelf -s - | FileCheck %s
 
-// Test that the STT_FILE symbol precedes the other local symbols.
+# CHECK:       0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# CHECK-NEXT:  1: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS foo.c
+# CHECK-NEXT:  2: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS bar.c
+# CHECK-NEXT:  3: 0000000000000000     0 SECTION LOCAL  DEFAULT     2 .text
+# CHECK-NEXT:  4: 0000000000000000     0 SECTION LOCAL  DEFAULT     4 foo
+# CHECK-NEXT:  5: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     4 local0
+# CHECK-NEXT:  6: 0000000000000000     0 SECTION LOCAL  DEFAULT     6 bar0
+# CHECK-NEXT:  7: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     6 local1
+# CHECK-NEXT:  8: 0000000000000000     0 SECTION LOCAL  DEFAULT     8 bar1
+# CHECK-NEXT:  9: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     8 local2
+# CHECK-NEXT: 10: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT     6 bar.c
+# CHECK-NEXT: 11: 0000000000000008     0 NOTYPE  GLOBAL DEFAULT     2 foo.c
 
-.file "foo"
-foa:
+.quad .text
 
-// CHECK:        Symbol {
-// CHECK:          Name: foo
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: File
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Absolute (0xFFF1)
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: foa
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
+## A STT_FILE symbol and a symbol of the same name can coexist.
+.file "foo.c"
+.globl foo.c
+foo.c:
+.section foo,"a"
+local0:
+.quad foo
+
+.file "bar.c"
+.section bar0,"a"
+.globl bar.c
+bar.c:
+local1:
+.quad bar0
+
+.section bar1,"a"
+local2:
+.quad bar1
