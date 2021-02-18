@@ -429,8 +429,8 @@ static_library("builtins") {
   if (current_cpu == "arm64") {
     sources -= [ "fp_mode.c" ]
     sources += [
-      "cpu_model.c",
       "aarch64/fp_mode.c",
+      "cpu_model.c",
     ]
     if (current_os == "mingw") {
       sources += [ "aarch64/chkstk.S" ]
