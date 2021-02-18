@@ -48,7 +48,7 @@ merge conflicts or fixing build errors).
   (see also <http://llvm.org/docs/Contributing.html>).
 - `apple/stable/*`: These branches are periodic stabilization branches, where
   fixes are cherry-picked from LLVM.  At time of writing:
-    - [apple/stable/20200714](https://github.com/apple/llvm-project/tree/apple/stable/20200714)
+    - [apple/stable/20210107](https://github.com/apple/llvm-project/tree/apple/stable/20210107)
       is the current stabilization branch for
       [swift/main](https://github.com/apple/llvm-project/tree/swift/main)
       (see below).
@@ -73,7 +73,7 @@ These are the most important branches:
   [next](https://github.com/apple/swift/tree/next) branch.
 - [swift/main](https://github.com/apple/llvm-project/tree/swift/main) is
   downstream of a stabilization branch in `apple/stable/*`
-  ([apple/stable/20200714](https://github.com/apple/llvm-project/tree/apple/stable/20190714),
+  ([apple/stable/20210107](https://github.com/apple/llvm-project/tree/apple/stable/20210107),
   as of time of writing) and aligned with Swift's
   [main](https://github.com/apple/swift/tree/main) branch.
 
