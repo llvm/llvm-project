@@ -1816,7 +1816,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // first slid down into position, the value is inserted into the first
   // position, and the vector is slid back up. We do this to simplify patterns.
   //   (slideup vec, (insertelt (slidedown impdef, vec, idx), val, 0), idx),
-  if (Subtarget.is64Bit() || VecVT.getVectorElementType() != MVT::i64) {
+  if (Subtarget.is64Bit() || Val.getValueType() != MVT::i64) {
     if (isNullConstant(Idx))
       return Op;
     SDValue Mask, VL;
@@ -1830,6 +1830,9 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, Vec, InsertElt0, Idx,
                        Mask, VL);
   }
+
+  if (!VecVT.isScalableVector())
+    return SDValue();
 
   // Custom-legalize INSERT_VECTOR_ELT where XLEN<SEW, as the SEW element type
   // is illegal (currently only vXi64 RV32).
