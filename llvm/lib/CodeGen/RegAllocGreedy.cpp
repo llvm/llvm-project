@@ -3256,6 +3256,9 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   allocatePhysRegs();
   tryHintsRecoloring();
+
+  if (VerifyEnabled)
+    MF->verify(this, "Before post optimization");
   postOptimization();
   reportNumberOfSplillsReloads();
 
