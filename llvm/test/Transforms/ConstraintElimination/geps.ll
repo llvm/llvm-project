@@ -106,7 +106,7 @@ define i32 @test.ult_no_inbounds(i32* readonly %src, i32* readnone %min, i32* re
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, i32* [[SRC]], align 4
 ; CHECK-NEXT:    [[ADD_PTR_I36:%.*]] = getelementptr i32, i32* [[SRC]], i64 3
 ; CHECK-NEXT:    [[C_3_MIN:%.*]] = icmp ult i32* [[ADD_PTR_I36]], [[MIN]]
-; CHECK-NEXT:    br i1 false, label [[TRAP]], label [[CHECK_3_MAX:%.*]]
+; CHECK-NEXT:    br i1 [[C_3_MIN]], label [[TRAP]], label [[CHECK_3_MAX:%.*]]
 ; CHECK:       check.3.max:
 ; CHECK-NEXT:    [[C_3_MAX:%.*]] = icmp ult i32* [[ADD_PTR_I36]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[C_3_MAX]], label [[CHECK_1_MIN:%.*]], label [[TRAP]]
@@ -114,18 +114,18 @@ define i32 @test.ult_no_inbounds(i32* readonly %src, i32* readnone %min, i32* re
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[ADD_PTR_I36]], align 4
 ; CHECK-NEXT:    [[ADD_PTR_I29:%.*]] = getelementptr i32, i32* [[SRC]], i64 1
 ; CHECK-NEXT:    [[C_1_MIN:%.*]] = icmp ult i32* [[ADD_PTR_I29]], [[MIN]]
-; CHECK-NEXT:    br i1 false, label [[TRAP]], label [[CHECK_1_MAX:%.*]]
+; CHECK-NEXT:    br i1 [[C_1_MIN]], label [[TRAP]], label [[CHECK_1_MAX:%.*]]
 ; CHECK:       check.1.max:
 ; CHECK-NEXT:    [[C_1_MAX:%.*]] = icmp ult i32* [[ADD_PTR_I29]], [[MAX]]
-; CHECK-NEXT:    br i1 true, label [[CHECK_2_MIN:%.*]], label [[TRAP]]
+; CHECK-NEXT:    br i1 [[C_1_MAX]], label [[CHECK_2_MIN:%.*]], label [[TRAP]]
 ; CHECK:       check.2.min:
 ; CHECK-NEXT:    [[L2:%.*]] = load i32, i32* [[ADD_PTR_I29]], align 4
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr i32, i32* [[SRC]], i64 2
 ; CHECK-NEXT:    [[C_2_MIN:%.*]] = icmp ult i32* [[ADD_PTR_I]], [[MIN]]
-; CHECK-NEXT:    br i1 false, label [[TRAP]], label [[CHECK_2_MAX:%.*]]
+; CHECK-NEXT:    br i1 [[C_2_MIN]], label [[TRAP]], label [[CHECK_2_MAX:%.*]]
 ; CHECK:       check.2.max:
 ; CHECK-NEXT:    [[C_2_MAX:%.*]] = icmp ult i32* [[ADD_PTR_I]], [[MAX]]
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[TRAP]]
+; CHECK-NEXT:    br i1 [[C_2_MAX]], label [[EXIT:%.*]], label [[TRAP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[L3:%.*]] = load i32, i32* [[ADD_PTR_I]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[L1]], [[L0]]
@@ -245,16 +245,16 @@ define void @test.not.uge.ult_no_inbounds(i8* %start, i8* %low, i8* %high) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8* [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 [[T_0]])
 ; CHECK-NEXT:    [[START_1:%.*]] = getelementptr i8, i8* [[START]], i64 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8* [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    [[START_2:%.*]] = getelementptr i8, i8* [[START]], i64 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8* [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    [[START_3:%.*]] = getelementptr i8, i8* [[START]], i64 3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8* [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
 ; CHECK-NEXT:    [[START_4:%.*]] = getelementptr i8, i8* [[START]], i64 4
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8* [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
