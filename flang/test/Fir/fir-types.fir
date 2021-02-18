@@ -71,10 +71,16 @@ func private @box4() -> !fir.box<none>
 func private @box5() -> !fir.box<!fir.type<derived3{f:f32}>>
 
 // FIR misc. types
+// CHECK-LABEL: func private @oth1() -> !fir.shape<1>
 // CHECK-LABEL: func private @oth2() -> !fir.field
 // CHECK-LABEL: func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
+// CHECK-LABEL: func private @oth4() -> !fir.shapeshift<15>
+// CHECK-LABEL: func private @oth5() -> !fir.slice<8>
+func private @oth1() -> !fir.shape<1>
 func private @oth2() -> !fir.field
 func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
+func private @oth4() -> !fir.shapeshift<15>
+func private @oth5() -> !fir.slice<8>
 
 // FIR vector
 // CHECK-LABEL: func private @vecty(i1) -> !fir.vector<10:i32>
