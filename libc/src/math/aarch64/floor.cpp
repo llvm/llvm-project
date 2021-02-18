@@ -1,4 +1,4 @@
-//===-- Implementation of the ceilf function for aarch64 ------------------===//
+//===-- Implementation of the floor function for aarch64 ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ceilf.h"
+#include "src/math/floor.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
-  float y;
-  __asm__ __volatile__("frintp %s0, %s1\n\t" : "=w"(y) : "w"(x));
+LLVM_LIBC_FUNCTION(double, floor, (double x)) {
+  double y;
+  __asm__ __volatile__("frintm %d0, %d1\n\t" : "=w"(y) : "w"(x));
   return y;
 }
 
