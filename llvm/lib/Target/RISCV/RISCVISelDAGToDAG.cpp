@@ -835,10 +835,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // If we haven't set a SubRegIdx, then we must be going between LMUL<=1
       // types (VR -> VR). This can be done as a copy.
       if (SubRegIdx == RISCV::NoSubRegister) {
-        unsigned RegClassID = getRegClassIDForVecVT(VT);
         unsigned InRegClassID = getRegClassIDForVecVT(InVT);
-        assert(RegClassID == InRegClassID &&
-               RegClassID == RISCV::VRRegClassID &&
+        assert(getRegClassIDForVecVT(VT) == RISCV::VRRegClassID &&
+               InRegClassID == RISCV::VRRegClassID &&
                "Unexpected subvector extraction");
         SDValue RC =
             CurDAG->getTargetConstant(InRegClassID, DL, Subtarget->getXLenVT());
