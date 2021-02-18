@@ -595,11 +595,9 @@ function(llvm_add_library name)
       set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
       set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
       llvm_install_library_symlink(${api_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
+        COMPONENT ${name})
       llvm_install_library_symlink(${output_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
+        COMPONENT ${name})
     endif()
   endif()
 
@@ -1838,7 +1836,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -1863,12 +1861,6 @@ function(llvm_install_library_symlink name dest type)
           CODE "install_symlink(${full_name} ${full_dest} ${output_dir})"
           COMPONENT ${component})
 
-  if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
-    add_llvm_install_targets(install-${name}
-                             DEPENDS ${name} ${dest}
-                             COMPONENT ${name}
-                             SYMLINK ${dest})
-  endif()
 endfunction()
 
 function(llvm_install_symlink name dest)
