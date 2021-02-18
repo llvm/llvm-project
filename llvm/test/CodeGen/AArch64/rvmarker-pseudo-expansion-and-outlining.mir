@@ -19,6 +19,7 @@
 # CHECK-NEXT:    orr w12, wzr, #0x3
 # CHECK-NEXT:    orr w12, wzr, #0x3
 # CHECK-NEXT:    orr w12, wzr, #0x3
+# CHECK-NEXT:    orr w12, wzr, #0x3
 # CHECK-NEXT:    ret
 
 --- |
@@ -51,6 +52,7 @@ body:             |
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
     $lr = ORRXri $xzr, 1
 
     RET undef $lr
@@ -65,6 +67,7 @@ body:             |
     liveins: $lr, $x19, $x20, $lr
 
     BLR_RVMARKER @cb2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
     $w12 = ORRWri $wzr, 1
