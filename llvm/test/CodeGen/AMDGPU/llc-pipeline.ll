@@ -718,6 +718,7 @@
 ; GCN-O2-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Early propagate attributes from kernels to functions
+; GCN-O2-NEXT:       AMDGPU Image Intrinsic Optimizer
 ; GCN-O2-NEXT:       Expand Atomic instructions
 ; GCN-O2-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O2-NEXT:     AMDGPU Inline All Functions
@@ -1001,6 +1002,7 @@
 ; GCN-O3-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Early propagate attributes from kernels to functions
+; GCN-O3-NEXT:       AMDGPU Image Intrinsic Optimizer
 ; GCN-O3-NEXT:       Expand Atomic instructions
 ; GCN-O3-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O3-NEXT:     AMDGPU Inline All Functions

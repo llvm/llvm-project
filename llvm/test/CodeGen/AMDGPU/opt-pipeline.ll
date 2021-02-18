@@ -350,6 +350,7 @@
 ; GCN-O2-NEXT:     Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:     Function Alias Analysis Results
 ; GCN-O2-NEXT:     Simplify well-known AMD library calls
+; GCN-O2-NEXT:     AMDGPU Image Intrinsic Optimizer
 ; GCN-O2-NEXT:     Lower 'expect' Intrinsics
 ; GCN-O2-NEXT:     Simplify the CFG
 ; GCN-O2-NEXT:     Dominator Tree Construction
@@ -704,6 +705,7 @@
 ; GCN-O3-NEXT:     Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:     Function Alias Analysis Results
 ; GCN-O3-NEXT:     Simplify well-known AMD library calls
+; GCN-O3-NEXT:     AMDGPU Image Intrinsic Optimizer
 ; GCN-O3-NEXT:     Lower 'expect' Intrinsics
 ; GCN-O3-NEXT:     Simplify the CFG
 ; GCN-O3-NEXT:     Dominator Tree Construction

@@ -269,6 +269,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
+  initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeGCNNSAReassignPass(*PR);
 }
@@ -478,6 +479,8 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
         PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
+      if (getOptLevel() >= CodeGenOpt::Default)
+        PM.add(llvm::createAMDGPUImageIntrinsicOptimizerPass(this));
   });
 
   Builder.addExtension(
@@ -535,6 +538,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
           return true;
         }
+        if (PassName == "amdgpu-image-intrinsic-opt") {
+          PM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
+          return true;
+        }
         if (PassName == "amdgpu-usenative") {
           PM.addPass(AMDGPUUseNativeCallsPass());
           return true;
@@ -578,6 +585,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLibCallSimplify &&
             Level != PassBuilder::OptimizationLevel::O0)
           FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+        if (getOptLevel() >= CodeGenOpt::Default)
+          FPM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
@@ -885,6 +894,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
+
+  if (TM.getOptLevel() >= CodeGenOpt::Default)
+    addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   addPass(createAtomicExpandPass());
 
