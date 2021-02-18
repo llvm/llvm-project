@@ -65,7 +65,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (store_instr reg_class:$rs2, BaseAddr:$rs1, avl, sew)>;
 }
 
-multiclass VPatUSLoadStoreWholeVRSDNode<LLVMType type,
+multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
                                         int sew,
                                         LMULInfo vlmul,
                                         VReg reg_class>
