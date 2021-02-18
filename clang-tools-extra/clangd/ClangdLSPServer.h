@@ -126,7 +126,6 @@ private:
   void onDocumentHighlight(const TextDocumentPositionParams &,
                            Callback<std::vector<DocumentHighlight>>);
   void onFileEvent(const DidChangeWatchedFilesParams &);
-  void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
   void onPrepareRename(const TextDocumentPositionParams &,
@@ -159,6 +158,18 @@ private:
   /// This is a clangd extension. Provides a json tree representing memory usage
   /// hierarchy.
   void onMemoryUsage(Callback<MemoryTree>);
+
+  llvm::StringMap<llvm::unique_function<void(const llvm::json::Value &,
+                                             Callback<llvm::json::Value>)>>
+      CommandHandlers;
+  void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
+
+  /// Implement commands.
+  void onCommandApplyEdit(const WorkspaceEdit &, Callback<llvm::json::Value>);
+  void onCommandApplyTweak(const TweakArgs &, Callback<llvm::json::Value>);
+
+  void applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
+                 Callback<llvm::json::Value> Reply);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
@@ -262,6 +273,19 @@ private:
     Params.token = Token;
     Params.value = std::move(Value);
     notify("$/progress", Params);
+  }
+  template <typename Param, typename Result>
+  void bindCommand(llvm::StringLiteral Method,
+                   void (ClangdLSPServer::*Handler)(const Param &,
+                                                    Callback<Result>)) {
+    CommandHandlers[Method] = [Method, Handler,
+                               this](llvm::json::Value RawParams,
+                                     Callback<Result> Reply) {
+      auto P = parse<Param>(RawParams, Method, "command");
+      if (!P)
+        return Reply(P.takeError());
+      (this->*Handler)(*P, std::move(Reply));
+    };
   }
 
   const ThreadsafeFS &TFS;
