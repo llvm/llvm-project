@@ -2908,7 +2908,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
-                                    RISCVVLMUL VLMul, bool WritesElement0) {
+                                    RISCVVLMUL VLMul, bool ForceTailAgnostic) {
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -2940,7 +2940,7 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   // the input is undefined.
   bool TailAgnostic = true;
   unsigned UseOpIdx;
-  if (MI.isRegTiedToUseOperand(0, &UseOpIdx) && !WritesElement0) {
+  if (!ForceTailAgnostic && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
     TailAgnostic = false;
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
@@ -2973,11 +2973,11 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned NumOperands = MI.getNumExplicitOperands();
     int VLIndex = (TSFlags & RISCVII::HasVLOpMask) ? NumOperands - 2 : -1;
     unsigned SEWIndex = NumOperands - 1;
-    bool WritesElement0 = TSFlags & RISCVII::WritesElement0Mask;
+    bool ForceTailAgnostic = TSFlags & RISCVII::ForceTailAgnosticMask;
 
     RISCVVLMUL VLMul = static_cast<RISCVVLMUL>((TSFlags & RISCVII::VLMulMask) >>
                                                RISCVII::VLMulShift);
-    return addVSetVL(MI, BB, VLIndex, SEWIndex, VLMul, WritesElement0);
+    return addVSetVL(MI, BB, VLIndex, SEWIndex, VLMul, ForceTailAgnostic);
   }
 
   switch (MI.getOpcode()) {
