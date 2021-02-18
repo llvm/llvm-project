@@ -362,10 +362,11 @@ SBValue SBThread::GetStopReturnValue() {
   // BEGIN SWIFT
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
-  if (is_swift_error_value)
-    return SBValue();
-  else
-    return return_value;
+  if (is_swift_error_value) {
+    return LLDB_RECORD_RESULT(SBValue());
+  } else {
+    return LLDB_RECORD_RESULT(return_value);
+  }
   // END SWIFT
 }
 
