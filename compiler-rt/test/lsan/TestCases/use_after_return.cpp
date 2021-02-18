@@ -6,9 +6,6 @@
 // RUN: ASAN_OPTIONS=$ASAN_OPTIONS:detect_stack_use_after_return=1 %env_lsan_opts=$LSAN_BASE:"use_stacks=1" %run %t 2>&1
 // RUN: ASAN_OPTIONS=$ASAN_OPTIONS:detect_stack_use_after_return=1 %env_lsan_opts="" %run %t 2>&1
 
-// Investigate why it does not fail with use_stack=0
-// UNSUPPORTED: arm-linux || armhf-linux
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "sanitizer_common/print_address.h"

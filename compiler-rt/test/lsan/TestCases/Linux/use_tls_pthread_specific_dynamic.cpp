@@ -5,9 +5,6 @@
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Investigate why it does not fail with use_tls=0
-// UNSUPPORTED: arm-linux || armhf-linux
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
