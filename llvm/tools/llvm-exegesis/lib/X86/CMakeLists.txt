@@ -3,18 +3,17 @@ include_directories(
   ${LLVM_BINARY_DIR}/lib/Target/X86
   )
 
-set(LLVM_LINK_COMPONENTS
-  X86
-  Exegesis
-  Core
-  )
-
-add_llvm_library(LLVMExegesisX86
-  DISABLE_LLVM_LINK_LLVM_DYLIB
+add_library(LLVMExegesisX86
   STATIC
   Target.cpp
   X86Counter.cpp
-
-  DEPENDS
-  intrinsics_gen
   )
+
+llvm_update_compile_flags(LLVMExegesisX86)
+llvm_map_components_to_libnames(libs
+  X86
+  Exegesis
+  )
+
+target_link_libraries(LLVMExegesisX86 ${libs})
+set_target_properties(LLVMExegesisX86 PROPERTIES FOLDER "Libraries")
