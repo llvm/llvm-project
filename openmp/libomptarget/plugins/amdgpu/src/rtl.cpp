@@ -1025,6 +1025,9 @@ struct device_environment {
   //  - under review in trunk is debug_level, device_num
   //  - rocmcc matches aomp, patch to swap num_devices and device_num
 
+  // The symbol may also have been deadstripped because the device side
+  // accessors were unused.
+
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
@@ -1069,39 +1072,43 @@ struct device_environment {
   bool in_image() { return si.sh_type != SHT_NOBITS; }
 
   atmi_status_t before_loading(void *data, size_t size) {
-    assert(valid);
-    if (in_image()) {
-      DP("Setting global device environment before load (%u bytes)\n", si.size);
-      uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-      void *pos = (char *)data + offset;
-      memcpy(pos, &host_device_env, si.size);
+    if (valid) {
+      if (in_image()) {
+        DP("Setting global device environment before load (%u bytes)\n",
+           si.size);
+        uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+        void *pos = (char *)data + offset;
+        memcpy(pos, &host_device_env, si.size);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
 
   atmi_status_t after_loading() {
-    assert(valid);
-    if (!in_image()) {
-      DP("Setting global device environment after load (%u bytes)\n", si.size);
-      int device_id = host_device_env.device_num;
-
-      void *state_ptr;
-      uint32_t state_ptr_size;
-      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-          get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
-      if (err != ATMI_STATUS_SUCCESS) {
-        DP("failed to find %s in loaded image\n", sym());
-        return err;
-      }
-
-      if (state_ptr_size != si.size) {
-        DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+    if (valid) {
+      if (!in_image()) {
+        DP("Setting global device environment after load (%u bytes)\n",
            si.size);
-        return ATMI_STATUS_ERROR;
-      }
+        int device_id = host_device_env.device_num;
 
-      return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
-                                                  state_ptr_size, device_id);
+        void *state_ptr;
+        uint32_t state_ptr_size;
+        atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+            get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("failed to find %s in loaded image\n", sym());
+          return err;
+        }
+
+        if (state_ptr_size != si.size) {
+          DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+             si.size);
+          return ATMI_STATUS_ERROR;
+        }
+
+        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                    state_ptr_size, device_id);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
@@ -1165,9 +1172,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   {
     auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
                                   img_size);
-    if (!env.valid) {
-      return NULL;
-    }
 
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
