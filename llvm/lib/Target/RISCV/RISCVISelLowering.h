@@ -162,6 +162,7 @@ enum NodeType : unsigned {
   FMUL_VL,
   FDIV_VL,
   FNEG_VL,
+  FABS_VL,
   FSQRT_VL,
   FMA_VL,
   SMIN_VL,
