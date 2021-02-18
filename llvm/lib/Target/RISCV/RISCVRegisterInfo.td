@@ -394,18 +394,24 @@ class IndexSet<int index, int nf, int lmul> {
                               ), [!mul(i, lmul)], [])));
 }
 
-class VRegList<list<dag> LIn, int start, int nf, int lmul> {
+class VRegList<list<dag> LIn, int start, int nf, int lmul, bit NoV0> {
   list<dag> L =
     !if(!ge(start, nf),
         LIn,
         !listconcat(
           [!dag(add,
-                !foreach(i, IndexSet<start, nf, lmul>.R,
-                         !cast<Register>("V" # i # !cond(!eq(lmul, 2): "M2",
-                                                         !eq(lmul, 4): "M4",
-                                                         true: ""))),
-                !listsplat("", !size(IndexSet<start, nf, lmul>.R)))],
-          VRegList<LIn, !add(start, 1), nf, lmul>.L));
+                !foreach(i,
+                  !if(NoV0,
+                    !tail(IndexSet<start, nf, lmul>.R),
+                    [!head(IndexSet<start, nf, lmul>.R)]),
+                  !cast<Register>("V" # i # !cond(!eq(lmul, 2): "M2",
+                                                  !eq(lmul, 4): "M4",
+                                                  true: ""))),
+                !listsplat("",
+                  !if(NoV0,
+                    !size(!tail(IndexSet<start, nf, lmul>.R)),
+                    !size([!head(IndexSet<start, nf, lmul>.R)]))))],
+          VRegList<LIn, !add(start, 1), nf, lmul, NoV0>.L));
 }
 
 // Vector registers
@@ -453,8 +459,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
-    def "VN" # n # "M" # m: RegisterTuples<SubRegSet<[], 0, n, m>.L,
-                                           VRegList<[], 0, n, m>.L>;
+    def "VN" # n # "M" # m # "NoV0": RegisterTuples<
+                                       SubRegSet<[], 0, n, m>.L,
+                                       VRegList<[], 0, n, m, 1>.L>;
+    def "VN" # n # "M" # m # "V0" : RegisterTuples<
+                                       SubRegSet<[], 0, n, m>.L,
+                                       VRegList<[], 0, n, m, 0>.L>;
   }
 }
 
@@ -524,8 +534,11 @@ def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
 
 foreach m = LMULList.m in {
   foreach nf = NFList<m>.L in {
-    def "VRN" # nf # "M" # m : VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m)),
+    def "VRN" # nf # "M" # m: VReg<[untyped],
+                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "V0"), !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+                                    !mul(nf, m)>;
+    def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
+                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
                                     !mul(nf, m)>;
   }
 }
