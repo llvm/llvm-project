@@ -292,7 +292,7 @@ libc++ Feature Options
 
 .. option:: LIBCXX_INCLUDE_TESTS:BOOL
 
-  **Default**: ``ON`` (or value of ``LLVM_INCLUDE_DIR``)
+  **Default**: ``ON`` (or value of ``LLVM_INCLUDE_TESTS``)
 
   Build the libc++ tests.
 
