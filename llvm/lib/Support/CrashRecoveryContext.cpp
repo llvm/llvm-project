@@ -84,7 +84,8 @@ public:
 };
 } // namespace
 
-static LLVM_THREAD_LOCAL bool gCrashRecoveryEnabled = false;
+static ManagedStatic<std::mutex> gCrashRecoveryContextMutex;
+static bool gCrashRecoveryEnabled = false;
 
 static ManagedStatic<sys::ThreadLocal<const CrashRecoveryContext>>
        tlIsRecoveringFromCrash;
@@ -135,6 +136,8 @@ CrashRecoveryContext *CrashRecoveryContext::GetCurrent() {
 }
 
 void CrashRecoveryContext::Enable() {
+  std::lock_guard<std::mutex> L(*gCrashRecoveryContextMutex);
+  // FIXME: Shouldn't this be a refcount or something?
   if (gCrashRecoveryEnabled)
     return;
   gCrashRecoveryEnabled = true;
@@ -142,6 +145,7 @@ void CrashRecoveryContext::Enable() {
 }
 
 void CrashRecoveryContext::Disable() {
+  std::lock_guard<std::mutex> L(*gCrashRecoveryContextMutex);
   if (!gCrashRecoveryEnabled)
     return;
   gCrashRecoveryEnabled = false;
