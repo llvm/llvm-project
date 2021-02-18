@@ -30,4 +30,6 @@ SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(outs()))
 SCOP_PASS("polly-codegen", CodeGenerationPass())
 SCOP_PASS("polly-simplify", SimplifyPass())
 SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(outs()))
+SCOP_PASS("polly-optree", ForwardOpTreePass())
+SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(outs()))
 #undef SCOP_PASS
