@@ -89,10 +89,95 @@ private:
     return false;
   }
 
+public:
   std::vector<uint64_t> sizes; // per-rank dimension sizes
   std::vector<Element> elements;
   uint64_t pos;
 };
+
+/// A memory-resident sparse tensor using a storage scheme based on per-rank
+/// annotations on dense/sparse. This data structure provides a bufferized
+/// form of an imaginary SparseTensorType, until such a type becomes a
+/// first-class citizen of MLIR. In contrast to generating setup methods for
+/// each differently annotated sparse tensor, this method provides a convenient
+/// "one-size-fits-all" solution that simply takes an input tensor and
+/// annotations to implement all required setup in a general manner.
+template <typename P, typename I, typename V>
+class SparseTensorStorage {
+public:
+  /// Constructs sparse tensor storage scheme following the given
+  /// per-rank dimension dense/sparse annotations.
+  SparseTensorStorage(SparseTensor *tensor, bool *sparsity)
+      : sizes(tensor->sizes), positions(sizes.size()), indices(sizes.size()) {
+    // Provide hints on capacity.
+    // TODO: needs fine-tuning based on sparsity
+    values.reserve(tensor->elements.size());
+    for (uint64_t d = 0, s = 1, rank = sizes.size(); d < rank; d++) {
+      s *= tensor->sizes[d];
+      if (sparsity[d]) {
+        positions[d].reserve(s + 1);
+        indices[d].reserve(s);
+        s = 1;
+      }
+    }
+    // Then setup the tensor.
+    traverse(tensor, sparsity, 0, tensor->elements.size(), 0);
+  }
+
+private:
+  /// Initializes sparse tensor storage scheme from a memory-resident
+  /// representation of an external sparse tensor. This method prepares
+  /// the pointers and indices arrays under the given per-rank dimension
+  /// dense/sparse annotations.
+  void traverse(SparseTensor *tensor, bool *sparsity, uint64_t lo, uint64_t hi,
+                uint64_t d) {
+    const std::vector<Element> &elements = tensor->elements;
+    // Once dimensions are exhausted, insert the numerical values.
+    if (d == sizes.size()) {
+      values.push_back(lo < hi ? elements[lo].value : 0.0);
+      return;
+    }
+    // Prepare a sparse pointer structure at this dimension.
+    if (sparsity[d] && positions[d].empty())
+      positions[d].push_back(0);
+    // Visit all elements in this interval.
+    uint64_t full = 0;
+    while (lo < hi) {
+      // Find segment in interval with same index elements in this dimension.
+      unsigned idx = elements[lo].indices[d];
+      unsigned seg = lo + 1;
+      while (seg < hi && elements[seg].indices[d] == idx)
+        seg++;
+      // Handle segment in interval for sparse or dense dimension.
+      if (sparsity[d]) {
+        indices[d].push_back(idx);
+      } else {
+        for (; full < idx; full++)
+          traverse(tensor, sparsity, 0, 0, d + 1); // pass empty
+        full++;
+      }
+      traverse(tensor, sparsity, lo, seg, d + 1);
+      // And move on to next segment in interval.
+      lo = seg;
+    }
+    // Finalize the sparse pointer structure at this dimension.
+    if (sparsity[d]) {
+      positions[d].push_back(indices[d].size());
+    } else {
+      for (uint64_t sz = tensor->sizes[d]; full < sz; full++)
+        traverse(tensor, sparsity, 0, 0, d + 1); // pass empty
+    }
+  }
+
+public:
+  std::vector<uint64_t> sizes; // per-rank dimension sizes
+  std::vector<std::vector<P>> positions;
+  std::vector<std::vector<I>> indices;
+  std::vector<V> values;
+};
+
+typedef SparseTensorStorage<uint64_t, uint64_t, double>
+    SparseTensorStorageU64U64F64;
 
 /// Helper to convert string to lower case.
 static char *toLower(char *token) {
@@ -200,24 +285,37 @@ static void readExtFROSTTHeader(FILE *file, char *name, uint64_t *idata) {
 //
 //
 // Note that input parameters in the "MLIRized" version of a function mimic
-// the data layout of a MemRef<?xT>:
-//
-//   struct MemRef {
-//     T *base;
-//     T *data;
-//     int64_t off;
-//     int64_t sizes[1];
-//     int64_t strides[1];
-//   }
+// the data layout of a MemRef<?xT> (but cannot use a direct struct). The
+// output parameter uses a direct struct.
 //
 //===----------------------------------------------------------------------===//
+
+extern "C" {
+
+/// Cannot use templates with C linkage.
+
+struct MemRef1DU64 {
+  const uint64_t *base;
+  const uint64_t *data;
+  uint64_t off;
+  uint64_t sizes[1];
+  uint64_t strides[1];
+};
+
+struct MemRef1DF64 {
+  const double *base;
+  const double *data;
+  uint64_t off;
+  uint64_t sizes[1];
+  uint64_t strides[1];
+};
 
 /// Reads in a sparse tensor with the given filename. The call yields a
 /// pointer to an opaque memory-resident sparse tensor object that is only
 /// understood by other methods in the sparse runtime support library. An
 /// array parameter is used to pass the rank, the number of nonzero elements,
 /// and the dimension sizes (one per rank).
-extern "C" void *openTensorC(char *filename, uint64_t *idata) {
+void *openTensorC(char *filename, uint64_t *idata) {
   // Open the file.
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -264,14 +362,14 @@ extern "C" void *openTensorC(char *filename, uint64_t *idata) {
 }
 
 /// "MLIRized" version.
-extern "C" void *openTensor(char *filename, uint64_t *ibase, uint64_t *idata,
-                            uint64_t ioff, uint64_t isize, uint64_t istride) {
+void *openTensor(char *filename, uint64_t *ibase, uint64_t *idata,
+                 uint64_t ioff, uint64_t isize, uint64_t istride) {
   assert(istride == 1);
   return openTensorC(filename, idata + ioff);
 }
 
 /// Yields the next element from the given opaque sparse tensor object.
-extern "C" void readTensorItemC(void *tensor, uint64_t *idata, double *ddata) {
+void readTensorItemC(void *tensor, uint64_t *idata, double *ddata) {
   const Element &e = static_cast<SparseTensor *>(tensor)->next();
   for (uint64_t r = 0, rank = e.indices.size(); r < rank; r++)
     idata[r] = e.indices[r];
@@ -279,27 +377,74 @@ extern "C" void readTensorItemC(void *tensor, uint64_t *idata, double *ddata) {
 }
 
 /// "MLIRized" version.
-extern "C" void readTensorItem(void *tensor, uint64_t *ibase, uint64_t *idata,
-                               uint64_t ioff, uint64_t isize, uint64_t istride,
-                               double *dbase, double *ddata, uint64_t doff,
-                               uint64_t dsize, uint64_t dstride) {
+void readTensorItem(void *tensor, uint64_t *ibase, uint64_t *idata,
+                    uint64_t ioff, uint64_t isize, uint64_t istride,
+                    double *dbase, double *ddata, uint64_t doff, uint64_t dsize,
+                    uint64_t dstride) {
   assert(istride == 1 && dstride == 1);
   readTensorItemC(tensor, idata + ioff, ddata + doff);
 }
 
 /// Closes the given opaque sparse tensor object, releasing its memory
-/// resources. After this call, the opague object cannot be used anymore.
-extern "C" void closeTensor(void *tensor) {
-  delete static_cast<SparseTensor *>(tensor);
-}
+/// resources. After this call, the opaque object cannot be used anymore.
+void closeTensor(void *tensor) { delete static_cast<SparseTensor *>(tensor); }
 
 /// Helper method to read a sparse tensor filename from the environment,
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
-extern "C" char *getTensorFilename(uint64_t id) {
+char *getTensorFilename(uint64_t id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
   return env;
 }
+
+///
+/// Sparse primitives that support an opaque implementation of a bufferized
+/// SparseTensor in MLIR. This could be replaced by actual codegen in MLIR.
+///
+
+void *newSparseTensorC(char *filename, bool *annotations) {
+  uint64_t idata[64];
+  SparseTensor *t = static_cast<SparseTensor *>(openTensorC(filename, idata));
+  SparseTensorStorageU64U64F64 *tensor =
+      new SparseTensorStorageU64U64F64(t, annotations);
+  delete t;
+  return tensor;
+}
+
+/// "MLIRized" version.
+void *newSparseTensor(char *filename, bool *abase, bool *adata, uint64_t aoff,
+                      uint64_t asize, uint64_t astride) {
+  assert(astride == 1);
+  return newSparseTensorC(filename, abase + aoff);
+}
+
+uint64_t sparseDimSize(void *tensor, uint64_t d) {
+  return static_cast<SparseTensorStorageU64U64F64 *>(tensor)->sizes[d];
+}
+
+MemRef1DU64 sparsePtrsI64(void *tensor, uint64_t d) {
+  const std::vector<uint64_t> &v =
+      static_cast<SparseTensorStorageU64U64F64 *>(tensor)->positions[d];
+  return {v.data(), v.data(), 0, {v.size()}, {1}};
+}
+
+MemRef1DU64 sparseIndxsI64(void *tensor, uint64_t d) {
+  const std::vector<uint64_t> &v =
+      static_cast<SparseTensorStorageU64U64F64 *>(tensor)->indices[d];
+  return {v.data(), v.data(), 0, {v.size()}, {1}};
+}
+
+MemRef1DF64 sparseValsF64(void *tensor) {
+  const std::vector<double> &v =
+      static_cast<SparseTensorStorageU64U64F64 *>(tensor)->values;
+  return {v.data(), v.data(), 0, {v.size()}, {1}};
+}
+
+void delSparseTensor(void *tensor) {
+  delete static_cast<SparseTensorStorageU64U64F64 *>(tensor);
+}
+
+} // extern "C"
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
