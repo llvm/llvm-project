@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98 %s
-// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20 %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -fobjc-encode-cxx-class-template-spec -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-TEMP-SPEC %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}
@@ -260,3 +261,82 @@ namespace PR48048 {
   extern const char x[] = @encode(I);
 }
 #endif
+
+namespace test_cxx_template_specialization {
+template <class T>
+struct B0 {
+  T a;
+};
+struct D0 : B0<int> {};
+struct D1 : D0 {};
+struct D2 : virtual B0<int> {};
+struct S0 {
+  B0<int> a;
+};
+struct S1 {
+  B0<int> *a;
+};
+struct S2 {
+  S1 *a;
+};
+template <class T>
+union U0 {
+  T a;
+};
+typedef B0<int> TD0;
+typedef B0<int> *Array0[4];
+
+template <class T>
+struct Outer0 {
+  struct Inner0 {
+    int a;
+  };
+  template <class T1>
+  struct Inner1 {
+    T a;
+    T1 b;
+  };
+};
+
+// CHECK: @[[STR22:.*]] = {{.*}} [12 x i8] c"{B0<int>=i}\00"
+// CHECK: @_ZN32test_cxx_template_specialization2b0E = {{.*}} ([12 x i8], [12 x i8]* @[[STR22]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [3 x i8] c"^v\00"
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [13 x i8] c"^{B0<int>=i}\00"
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([13 x i8], [13 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b02E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d2E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @[[STR24:.*]] = {{.*}} [7 x i8] c"^^{D2}\00"
+// CHECK: @_ZN32test_cxx_template_specialization3d21E = {{.*}} ([7 x i8], [7 x i8]* @[[STR24]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @[[STR25:.*]] = {{.*}} [12 x i8] c"^{S2=^{S1}}\00"
+// CHECK: @_ZN32test_cxx_template_specialization2s2E = {{.*}} ([12 x i8], [12 x i8]* @[[STR25]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2u0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3td0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @[[STR26:.*]] = {{.*}} [6 x i8] c"[4^v]\00"
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2a0E = {{.*}} ([6 x i8], [6 x i8]* @[[STR26]], i32 0, i32 0)
+// CHECK: @[[STR27:.*]] = {{.*}} [11 x i8] c"^{Inner0=}\00"
+// CHECK: @_ZN32test_cxx_template_specialization6inner0E = {{.*}} ([11 x i8], [11 x i8]* @[[STR27]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([3 x i8], [3 x i8]* @.str.23, i32 0, i32 0)
+// CHECK-TEMP-SPEC: @[[STR34:.*]] = {{.*}} [18 x i8] c"^{Inner1<float>=}\00"
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([18 x i8], [18 x i8]* @[[STR34]], i32 0, i32 0)
+
+const char *b0 = @encode(B0<int>);
+const char *b01 = @encode(B0<int> *);
+const char *b02 = @encode(B0<int> &);
+const char *d0 = @encode(D0 *);
+const char *d1 = @encode(D1 *);
+const char *d2 = @encode(D2 *);
+const char *d21 = @encode(D2 **);
+const char *s0 = @encode(S0 *);
+const char *s1 = @encode(S1 *);
+const char *s2 = @encode(S2 *);
+const char *u0 = @encode(U0<int> *);
+const char *td0 = @encode(TD0 *);
+const char *a0 = @encode(Array0);
+const char *inner0 = @encode(Outer0<int>::Inner0 *);
+const char *inner1 = @encode(Outer0<int>::Inner1<float> *);
+}
