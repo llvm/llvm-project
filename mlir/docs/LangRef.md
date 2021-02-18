@@ -1170,7 +1170,7 @@ that:
     64 = 1066` elements;
 2.  the address calculation for accessing element `(i, j)` computes `33 + i +
     64 * j`
-3.  the distance between two consecutive elements along the outer dimension is
+3.  the distance between two consecutive elements along the inner dimension is
     `1` element and the distance between two consecutive elements along the
     outer dimension is `64` elements.
 
