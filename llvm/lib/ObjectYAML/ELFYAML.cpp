@@ -70,6 +70,95 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   IO.enumFallback<Hex32>(Value);
 }
 
+void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
+    IO &IO, ELFYAML::ELF_NT &Value) {
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  // Generic note types.
+  ECase(NT_VERSION);
+  ECase(NT_ARCH);
+  ECase(NT_GNU_BUILD_ATTRIBUTE_OPEN);
+  ECase(NT_GNU_BUILD_ATTRIBUTE_FUNC);
+  // Core note types.
+  ECase(NT_PRSTATUS);
+  ECase(NT_FPREGSET);
+  ECase(NT_PRPSINFO);
+  ECase(NT_TASKSTRUCT);
+  ECase(NT_AUXV);
+  ECase(NT_PSTATUS);
+  ECase(NT_FPREGS);
+  ECase(NT_PSINFO);
+  ECase(NT_LWPSTATUS);
+  ECase(NT_LWPSINFO);
+  ECase(NT_WIN32PSTATUS);
+  ECase(NT_PPC_VMX);
+  ECase(NT_PPC_VSX);
+  ECase(NT_PPC_TAR);
+  ECase(NT_PPC_PPR);
+  ECase(NT_PPC_DSCR);
+  ECase(NT_PPC_EBB);
+  ECase(NT_PPC_PMU);
+  ECase(NT_PPC_TM_CGPR);
+  ECase(NT_PPC_TM_CFPR);
+  ECase(NT_PPC_TM_CVMX);
+  ECase(NT_PPC_TM_CVSX);
+  ECase(NT_PPC_TM_SPR);
+  ECase(NT_PPC_TM_CTAR);
+  ECase(NT_PPC_TM_CPPR);
+  ECase(NT_PPC_TM_CDSCR);
+  ECase(NT_386_TLS);
+  ECase(NT_386_IOPERM);
+  ECase(NT_X86_XSTATE);
+  ECase(NT_S390_HIGH_GPRS);
+  ECase(NT_S390_TIMER);
+  ECase(NT_S390_TODCMP);
+  ECase(NT_S390_TODPREG);
+  ECase(NT_S390_CTRS);
+  ECase(NT_S390_PREFIX);
+  ECase(NT_S390_LAST_BREAK);
+  ECase(NT_S390_SYSTEM_CALL);
+  ECase(NT_S390_TDB);
+  ECase(NT_S390_VXRS_LOW);
+  ECase(NT_S390_VXRS_HIGH);
+  ECase(NT_S390_GS_CB);
+  ECase(NT_S390_GS_BC);
+  ECase(NT_ARM_VFP);
+  ECase(NT_ARM_TLS);
+  ECase(NT_ARM_HW_BREAK);
+  ECase(NT_ARM_HW_WATCH);
+  ECase(NT_ARM_SVE);
+  ECase(NT_ARM_PAC_MASK);
+  ECase(NT_FILE);
+  ECase(NT_PRXFPREG);
+  ECase(NT_SIGINFO);
+  // LLVM-specific notes.
+  ECase(NT_LLVM_HWASAN_GLOBALS);
+  // GNU note types
+  ECase(NT_GNU_ABI_TAG);
+  ECase(NT_GNU_HWCAP);
+  ECase(NT_GNU_BUILD_ID);
+  ECase(NT_GNU_GOLD_VERSION);
+  ECase(NT_GNU_PROPERTY_TYPE_0);
+  // FreeBSD core note types.
+  ECase(NT_FREEBSD_THRMISC);
+  ECase(NT_FREEBSD_PROCSTAT_PROC);
+  ECase(NT_FREEBSD_PROCSTAT_FILES);
+  ECase(NT_FREEBSD_PROCSTAT_VMMAP);
+  ECase(NT_FREEBSD_PROCSTAT_GROUPS);
+  ECase(NT_FREEBSD_PROCSTAT_UMASK);
+  ECase(NT_FREEBSD_PROCSTAT_RLIMIT);
+  ECase(NT_FREEBSD_PROCSTAT_OSREL);
+  ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
+  ECase(NT_FREEBSD_PROCSTAT_AUXV);
+  // AMD specific notes. (Code Object V2)
+  ECase(NT_AMD_AMDGPU_HSA_METADATA);
+  ECase(NT_AMD_AMDGPU_ISA);
+  ECase(NT_AMD_AMDGPU_PAL_METADATA);
+  // AMDGPU specific notes. (Code Object V3)
+  ECase(NT_AMDGPU_METADATA);
+#undef ECase
+  IO.enumFallback<Hex32>(Value);
+}
+
 void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
     IO &IO, ELFYAML::ELF_EM &Value) {
 #define ECase(X) IO.enumCase(Value, #X, ELF::X)

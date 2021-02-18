@@ -1191,7 +1191,7 @@ ELFDumper<ELFT>::dumpNoteSection(const Elf_Shdr *Shdr) {
 
     Elf_Note Note(*Header);
     Entries.push_back(
-        {Note.getName(), Note.getDesc(), (llvm::yaml::Hex32)Note.getType()});
+        {Note.getName(), Note.getDesc(), (ELFYAML::ELF_NT)Note.getType()});
 
     Content = Content.drop_front(Header->getSize());
   }
