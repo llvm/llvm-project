@@ -6401,12 +6401,14 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       report_fatal_error(
           "variadic arguments for vector types are unimplemented for AIX");
 
-    if (unsigned VReg = State.AllocateReg(VR))
+    if (unsigned VReg = State.AllocateReg(VR)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
-    else {
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
+      return false;
     }
+
+    const unsigned VecSize = 16;
+    const unsigned Offset = State.AllocateStack(VecSize, Align(VecSize));
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
   }
@@ -6554,10 +6556,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-    if (VA.isMemLoc() && VA.getValVT().isVector())
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
-
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
     // in register.  The caller is required to initialize both the register
@@ -6907,10 +6905,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     CCValAssign &VA = ArgLocs[I++];
     const MVT LocVT = VA.getLocVT();
     const MVT ValVT = VA.getValVT();
-
-    if (VA.isMemLoc() && VA.getValVT().isVector())
-      report_fatal_error(
-          "passing vector parameters to the stack is unimplemented for AIX");
 
     switch (VA.getLocInfo()) {
     default:
