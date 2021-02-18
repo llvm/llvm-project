@@ -1,4 +1,4 @@
-! RUN: %f18 -fsyntax-only -fdebug-dump-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 ! CHECK: init:[INTEGER(4)::1065353216_4,1073741824_4,1077936128_4,1082130432_4]
 ! Verify that the closure of EQUIVALENCE'd symbols with any DATA
 ! initialization produces a combined initializer.
