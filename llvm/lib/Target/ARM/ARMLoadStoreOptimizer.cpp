@@ -1502,12 +1502,16 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     NewOpc = getPreIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
   } else {
     MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
-    if (Offset == Bytes) {
-      NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::add);
-    } else if (!isAM5 && Offset == -Bytes) {
-      NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
-    } else
+    if (MergeInstr == MBB.end())
       return false;
+
+    NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::add);
+    if ((isAM5 && Offset != Bytes) ||
+        (!isAM5 && !isLegalAddressImm(NewOpc, Offset, TII))) {
+      NewOpc = getPostIndexedLoadStoreOpcode(Opcode, ARM_AM::sub);
+      if (isAM5 || !isLegalAddressImm(NewOpc, Offset, TII))
+        return false;
+    }
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
   MBB.erase(MergeInstr);
@@ -1546,7 +1550,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
         (void)MIB;
         LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
       } else {
-        int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
+        int Imm = ARM_AM::getAM2Opc(AddSub, abs(Offset), ARM_AM::no_shift);
         auto MIB =
             BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
                 .addReg(Base, RegState::Define)
@@ -1576,7 +1580,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     // the vestigal zero-reg offset register. When that's fixed, this clause
     // can be removed entirely.
     if (isAM2 && NewOpc == ARM::STR_POST_IMM) {
-      int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
+      int Imm = ARM_AM::getAM2Opc(AddSub, abs(Offset), ARM_AM::no_shift);
       // STR_PRE, STR_POST
       auto MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
                      .addReg(MO.getReg(), getKillRegState(MO.isKill()))
@@ -1629,13 +1633,14 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   MachineBasicBlock::iterator MergeInstr = findIncDecBefore(MBBI, Base, Pred,
                                                             PredReg, Offset);
   unsigned NewOpc;
-  if (Offset == 8 || Offset == -8) {
+  if (Offset != 0) {
     NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_PRE : ARM::t2STRD_PRE;
   } else {
     MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset, TRI);
-    if (Offset == 8 || Offset == -8) {
-      NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_POST : ARM::t2STRD_POST;
-    } else
+    if (MergeInstr == MBB.end())
+      return false;
+    NewOpc = Opcode == ARM::t2LDRDi8 ? ARM::t2LDRD_POST : ARM::t2STRD_POST;
+    if (!isLegalAddressImm(NewOpc, Offset, TII))
       return false;
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
