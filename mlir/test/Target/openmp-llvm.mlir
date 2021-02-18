@@ -325,33 +325,33 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
 }
 
 // CHECK-LABEL: @wsloop_inclusive_1
-llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<float>) {
-  %0 = llvm.mlir.constant(42 : index) : !llvm.i64
-  %1 = llvm.mlir.constant(10 : index) : !llvm.i64
-  %2 = llvm.mlir.constant(1 : index) : !llvm.i64
+llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
+  %0 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 31, i64* %{{.*}}upperbound
   "omp.wsloop"(%1, %0, %2) ( {
-  ^bb0(%arg1: !llvm.i64):
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : !llvm.float
-    %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-    llvm.store %3, %4 : !llvm.ptr<float>
+  ^bb0(%arg1: i64):
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (!llvm.i64, !llvm.i64, !llvm.i64) -> ()
+  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @wsloop_inclusive_2
-llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<float>) {
-  %0 = llvm.mlir.constant(42 : index) : !llvm.i64
-  %1 = llvm.mlir.constant(10 : index) : !llvm.i64
-  %2 = llvm.mlir.constant(1 : index) : !llvm.i64
+llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
+  %0 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 32, i64* %{{.*}}upperbound
   "omp.wsloop"(%1, %0, %2) ( {
-  ^bb0(%arg1: !llvm.i64):
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : !llvm.float
-    %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-    llvm.store %3, %4 : !llvm.ptr<float>
+  ^bb0(%arg1: i64):
+    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (!llvm.i64, !llvm.i64, !llvm.i64) -> ()
+  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
