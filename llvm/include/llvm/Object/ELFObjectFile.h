@@ -670,8 +670,8 @@ ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
     return SymbolRef::ST_Function;
   case ELF::STT_OBJECT:
   case ELF::STT_COMMON:
-  case ELF::STT_TLS:
     return SymbolRef::ST_Data;
+  case ELF::STT_TLS:
   default:
     return SymbolRef::ST_Other;
   }
