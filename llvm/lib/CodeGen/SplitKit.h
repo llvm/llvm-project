@@ -131,6 +131,9 @@ public:
     bool isOneInstr() const {
       return SlotIndex::isSameInstr(FirstInstr, LastInstr);
     }
+
+    void print(raw_ostream &OS) const;
+    void dump() const;
   };
 
 private:
