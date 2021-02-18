@@ -111,7 +111,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   SupportsDebugInformation = true;
   CodePointerSize = 8;
 
-  CommentString = ";";
+  CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 }
