@@ -48,7 +48,7 @@ public:
 
   void SetRegisterInfo(const RegisterInfo *reg_info) {
     return m_frozen_sp->GetValue().SetContext(
-        Value::eContextTypeRegisterInfo, const_cast<RegisterInfo *>(reg_info));
+        Value::ContextType::RegisterInfo, const_cast<RegisterInfo *>(reg_info));
   }
 
   CompilerType GetCompilerType() { return m_frozen_sp->GetCompilerType(); }

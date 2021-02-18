@@ -174,8 +174,8 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
       RegisterValue reg_value;
       if (reg_ctx->ReadRegister(reg_info, reg_value)) {
         if (reg_value.GetScalarValue(value.GetScalar())) {
-          value.SetValueType(Value::eValueTypeScalar);
-          value.SetContext(Value::eContextTypeRegisterInfo,
+          value.SetValueType(Value::ValueType::Scalar);
+          value.SetContext(Value::ContextType::RegisterInfo,
                            const_cast<RegisterInfo *>(reg_info));
           if (error_ptr)
             error_ptr->Clear();
@@ -975,7 +975,7 @@ bool DWARFExpression::Evaluate(
     // address and whose size is the size of an address on the target machine.
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
-      stack.back().SetValueType(Value::eValueTypeFileAddress);
+      stack.back().SetValueType(Value::ValueType::FileAddress);
       // Convert the file address to a load address, so subsequent
       // DWARF operators can operate on it.
       if (frame)
@@ -1034,14 +1034,14 @@ bool DWARFExpression::Evaluate(
       }
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
-      case Value::eValueTypeHostAddress: {
+      case Value::ValueType::HostAddress: {
         void *src = (void *)stack.back().GetScalar().ULongLong();
         intptr_t ptr;
         ::memcpy(&ptr, src, sizeof(void *));
         stack.back().GetScalar() = ptr;
         stack.back().ClearContext();
       } break;
-      case Value::eValueTypeFileAddress: {
+      case Value::ValueType::FileAddress: {
         auto file_addr = stack.back().GetScalar().ULongLong(
             LLDB_INVALID_ADDRESS);
         if (!module_sp) {
@@ -1064,10 +1064,10 @@ bool DWARFExpression::Evaluate(
           return false;
         }
         stack.back().GetScalar() = load_Addr;
-        stack.back().SetValueType(Value::eValueTypeLoadAddress);
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
         // Fall through to load address code below...
       } LLVM_FALLTHROUGH;
-      case Value::eValueTypeLoadAddress:
+      case Value::ValueType::LoadAddress:
         if (exe_ctx) {
           if (process) {
             lldb::addr_t pointer_addr =
@@ -1099,9 +1099,10 @@ bool DWARFExpression::Evaluate(
         }
         break;
 
-      default:
+      case Value::ValueType::Scalar:
+      case Value::ValueType::Invalid:
         if (error_ptr)
-          error_ptr->SetErrorString("Unhandled value type for DW_OP_deref.\n");
+          error_ptr->SetErrorString("Invalid value type for DW_OP_deref.\n");
         return false;
       }
 
@@ -1129,7 +1130,7 @@ bool DWARFExpression::Evaluate(
       uint8_t size = opcodes.GetU8(&offset);
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
-      case Value::eValueTypeHostAddress: {
+      case Value::ValueType::HostAddress: {
         void *src = (void *)stack.back().GetScalar().ULongLong();
         intptr_t ptr;
         ::memcpy(&ptr, src, sizeof(void *));
@@ -1169,7 +1170,7 @@ bool DWARFExpression::Evaluate(
         stack.back().GetScalar() = ptr;
         stack.back().ClearContext();
       } break;
-      case Value::eValueTypeLoadAddress:
+      case Value::ValueType::LoadAddress:
         if (exe_ctx) {
           if (process) {
             lldb::addr_t pointer_addr =
@@ -1209,19 +1210,23 @@ bool DWARFExpression::Evaluate(
             }
           } else {
             if (error_ptr)
-              error_ptr->SetErrorString("NULL process for DW_OP_deref.\n");
+              error_ptr->SetErrorString("NULL process for DW_OP_deref_size.\n");
             return false;
           }
         } else {
           if (error_ptr)
             error_ptr->SetErrorString(
-                "NULL execution context for DW_OP_deref.\n");
+                "NULL execution context for DW_OP_deref_size.\n");
           return false;
         }
         break;
 
-      default:
-        break;
+      case Value::ValueType::Scalar:
+      case Value::ValueType::FileAddress:
+      case Value::ValueType::Invalid:
+        if (error_ptr)
+          error_ptr->SetErrorString("Invalid value for DW_OP_deref_size.\n");
+        return false;
       }
 
     } break;
@@ -2007,7 +2012,7 @@ bool DWARFExpression::Evaluate(
         tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
         tmp.ClearContext();
         stack.push_back(tmp);
-        stack.back().SetValueType(Value::eValueTypeLoadAddress);
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
       } else
         return false;
     } break;
@@ -2026,7 +2031,7 @@ bool DWARFExpression::Evaluate(
         tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
         tmp.ClearContext();
         stack.push_back(tmp);
-        stack.back().SetValueType(Value::eValueTypeLoadAddress);
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
       } else
         return false;
     } break;
@@ -2039,7 +2044,7 @@ bool DWARFExpression::Evaluate(
             int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
             value += fbreg_offset;
             stack.push_back(value);
-            stack.back().SetValueType(Value::eValueTypeLoadAddress);
+            stack.back().SetValueType(Value::ValueType::LoadAddress);
           } else
             return false;
         } else {
@@ -2103,7 +2108,9 @@ bool DWARFExpression::Evaluate(
           const Value::ValueType curr_piece_source_value_type =
               curr_piece_source_value.GetValueType();
           switch (curr_piece_source_value_type) {
-          case Value::eValueTypeLoadAddress:
+          case Value::ValueType::Invalid:
+            return false;
+          case Value::ValueType::LoadAddress:
             if (process) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
                 lldb::addr_t load_addr =
@@ -2130,8 +2137,8 @@ bool DWARFExpression::Evaluate(
             }
             break;
 
-          case Value::eValueTypeFileAddress:
-          case Value::eValueTypeHostAddress:
+          case Value::ValueType::FileAddress:
+          case Value::ValueType::HostAddress:
             if (error_ptr) {
               lldb::addr_t addr = curr_piece_source_value.GetScalar().ULongLong(
                   LLDB_INVALID_ADDRESS);
@@ -2139,14 +2146,14 @@ bool DWARFExpression::Evaluate(
                   "failed to read memory DW_OP_piece(%" PRIu64
                   ") from %s address 0x%" PRIx64,
                   piece_byte_size, curr_piece_source_value.GetValueType() ==
-                                           Value::eValueTypeFileAddress
+                                           Value::ValueType::FileAddress
                                        ? "file"
                                        : "host",
                   addr);
             }
             return false;
 
-          case Value::eValueTypeScalar: {
+          case Value::ValueType::Scalar: {
             uint32_t bit_size = piece_byte_size * 8;
             uint32_t bit_offset = 0;
             Scalar &scalar = curr_piece_source_value.GetScalar();
@@ -2215,7 +2222,9 @@ bool DWARFExpression::Evaluate(
         const uint64_t piece_bit_size = opcodes.GetULEB128(&offset);
         const uint64_t piece_bit_offset = opcodes.GetULEB128(&offset);
         switch (stack.back().GetValueType()) {
-        case Value::eValueTypeScalar: {
+        case Value::ValueType::Invalid:
+          return false;
+        case Value::ValueType::Scalar: {
           if (!stack.back().GetScalar().ExtractBitfield(piece_bit_size,
                                                         piece_bit_offset)) {
             if (error_ptr)
@@ -2228,9 +2237,9 @@ bool DWARFExpression::Evaluate(
           }
         } break;
 
-        case Value::eValueTypeFileAddress:
-        case Value::eValueTypeLoadAddress:
-        case Value::eValueTypeHostAddress:
+        case Value::ValueType::FileAddress:
+        case Value::ValueType::LoadAddress:
+        case Value::ValueType::HostAddress:
           if (error_ptr) {
             error_ptr->SetErrorStringWithFormat(
                 "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
@@ -2342,7 +2351,7 @@ bool DWARFExpression::Evaluate(
               "Expression stack needs at least 1 item for DW_OP_stack_value.");
         return false;
       }
-      stack.back().SetValueType(Value::eValueTypeScalar);
+      stack.back().SetValueType(Value::ValueType::Scalar);
       break;
 
     // OPCODE: DW_OP_convert
@@ -2430,7 +2439,7 @@ bool DWARFExpression::Evaluate(
         addr_t cfa = id.GetCallFrameAddress();
         if (cfa != LLDB_INVALID_ADDRESS) {
           stack.push_back(Scalar(cfa));
-          stack.back().SetValueType(Value::eValueTypeLoadAddress);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else if (error_ptr)
           error_ptr->SetErrorString("Stack frame does not include a canonical "
                                     "frame address for DW_OP_call_frame_cfa "
@@ -2490,7 +2499,7 @@ bool DWARFExpression::Evaluate(
       }
 
       stack.back().GetScalar() = tls_load_addr;
-      stack.back().SetValueType(Value::eValueTypeLoadAddress);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
 
     // OPCODE: DW_OP_addrx (DW_OP_GNU_addr_index is the legacy name.)
@@ -2510,7 +2519,7 @@ bool DWARFExpression::Evaluate(
       uint64_t index = opcodes.GetULEB128(&offset);
       lldb::addr_t value = ReadAddressFromDebugAddrSection(dwarf_cu, index);
       stack.push_back(Scalar(value));
-      stack.back().SetValueType(Value::eValueTypeFileAddress);
+      stack.back().SetValueType(Value::ValueType::FileAddress);
     } break;
 
     // OPCODE: DW_OP_GNU_const_index

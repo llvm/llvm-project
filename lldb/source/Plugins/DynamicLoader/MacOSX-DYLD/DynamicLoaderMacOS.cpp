@@ -244,18 +244,18 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
         clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
             lldb::eEncodingUint, 32);
 
-    mode_value.SetValueType(Value::eValueTypeScalar);
+    mode_value.SetValueType(Value::ValueType::Scalar);
     mode_value.SetCompilerType(clang_uint32_type);
 
     if (process->GetTarget().GetArchitecture().GetAddressByteSize() == 4) {
-      count_value.SetValueType(Value::eValueTypeScalar);
+      count_value.SetValueType(Value::ValueType::Scalar);
       count_value.SetCompilerType(clang_uint32_type);
     } else {
-      count_value.SetValueType(Value::eValueTypeScalar);
+      count_value.SetValueType(Value::ValueType::Scalar);
       count_value.SetCompilerType(clang_uint64_type);
     }
 
-    headers_value.SetValueType(Value::eValueTypeScalar);
+    headers_value.SetValueType(Value::ValueType::Scalar);
     headers_value.SetCompilerType(clang_void_ptr_type);
 
     argument_values.PushValue(mode_value);

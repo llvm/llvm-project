@@ -34,9 +34,9 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
     return status.ToError();
 
   switch (result.GetValueType()) {
-  case Value::eValueTypeScalar:
+  case Value::ValueType::Scalar:
     return result.GetScalar();
-  case Value::eValueTypeHostAddress: {
+  case Value::ValueType::HostAddress: {
     // Convert small buffers to scalars to simplify the tests.
     DataBufferHeap &buf = result.GetBuffer();
     if (buf.GetByteSize() <= 8) {
