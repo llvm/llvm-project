@@ -742,8 +742,7 @@ void OpEmitter::genAttrGetters() {
 
       body << "  ::mlir::MLIRContext* ctx = getContext();\n";
       body << "  ::mlir::Builder odsBuilder(ctx); (void)odsBuilder;\n";
-      body << "  return ::mlir::DictionaryAttr::get(";
-      body << "  ctx, {\n";
+      body << "  return ::mlir::DictionaryAttr::get({\n";
       interleave(
           derivedAttrs, body,
           [&](const NamedAttribute &namedAttr) {
@@ -756,7 +755,7 @@ void OpEmitter::genAttrGetters() {
                  << "}";
           },
           ",\n");
-      body << "});";
+      body << "\n    }, ctx);";
     }
   }
 }

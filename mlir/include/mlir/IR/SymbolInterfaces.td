@@ -44,7 +44,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       /*defaultImplementation=*/[{
         this->getOperation()->setAttr(
             mlir::SymbolTable::getSymbolAttrName(),
-            StringAttr::get(this->getOperation()->getContext(), name));
+            StringAttr::get(name, this->getOperation()->getContext()));
       }]
     >,
     InterfaceMethod<"Gets the visibility of this symbol.",

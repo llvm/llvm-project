@@ -92,11 +92,11 @@ NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }
 
 BoolAttr Builder::getBoolAttr(bool value) {
-  return BoolAttr::get(context, value);
+  return BoolAttr::get(value, context);
 }
 
 DictionaryAttr Builder::getDictionaryAttr(ArrayRef<NamedAttribute> value) {
-  return DictionaryAttr::get(context, value);
+  return DictionaryAttr::get(value, context);
 }
 
 IntegerAttr Builder::getIndexAttr(int64_t value) {
@@ -200,11 +200,11 @@ FloatAttr Builder::getFloatAttr(Type type, const APFloat &value) {
 }
 
 StringAttr Builder::getStringAttr(StringRef bytes) {
-  return StringAttr::get(context, bytes);
+  return StringAttr::get(bytes, context);
 }
 
 ArrayAttr Builder::getArrayAttr(ArrayRef<Attribute> value) {
-  return ArrayAttr::get(context, value);
+  return ArrayAttr::get(value, context);
 }
 
 FlatSymbolRefAttr Builder::getSymbolRefAttr(Operation *value) {
@@ -214,12 +214,12 @@ FlatSymbolRefAttr Builder::getSymbolRefAttr(Operation *value) {
   return getSymbolRefAttr(symName.getValue());
 }
 FlatSymbolRefAttr Builder::getSymbolRefAttr(StringRef value) {
-  return SymbolRefAttr::get(getContext(), value);
+  return SymbolRefAttr::get(value, getContext());
 }
 SymbolRefAttr
 Builder::getSymbolRefAttr(StringRef value,
                           ArrayRef<FlatSymbolRefAttr> nestedReferences) {
-  return SymbolRefAttr::get(getContext(), value, nestedReferences);
+  return SymbolRefAttr::get(value, nestedReferences, getContext());
 }
 
 ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {

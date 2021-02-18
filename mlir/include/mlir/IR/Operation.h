@@ -315,7 +315,7 @@ public:
     attrs = newAttrs;
   }
   void setAttrs(ArrayRef<NamedAttribute> newAttrs) {
-    setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+    setAttrs(DictionaryAttr::get(newAttrs, getContext()));
   }
 
   /// Return the specified attribute if present, null otherwise.

@@ -98,7 +98,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   });
   for (auto &var : interfaceVarSet) {
     interfaceVars.push_back(SymbolRefAttr::get(
-        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).sym_name()));
+        cast<spirv::GlobalVariableOp>(var).sym_name(), funcOp.getContext()));
   }
   return success();
 }
