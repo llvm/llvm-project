@@ -1735,6 +1735,12 @@ public:
     getLambdaData().HasKnownInternalLinkage = HasKnownInternalLinkage;
   }
 
+  /// Set the device side mangling number.
+  void setDeviceLambdaManglingNumber(unsigned Num) const;
+
+  /// Retrieve the device side mangling number.
+  unsigned getDeviceLambdaManglingNumber() const;
+
   /// Returns the inheritance model used for this record.
   MSInheritanceModel getMSInheritanceModel() const;
 
