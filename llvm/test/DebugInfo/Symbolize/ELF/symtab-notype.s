@@ -4,8 +4,6 @@
 # RUN: llvm-symbolizer --obj=%t --inlines 0 1 2 3 4 5 6 7 | FileCheck %s
 # RUN: llvm-symbolizer --obj=%t --no-inlines 0 1 2 3 4 5 6 7 | FileCheck %s
 
-# REQUIRES: x86-registered-target
-
 # CHECK:       _start
 # CHECK-NEXT:  ??:0:0
 # CHECK-EMPTY:
