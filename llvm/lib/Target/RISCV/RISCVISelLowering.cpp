@@ -524,10 +524,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
 
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
+
+        // Operations below are not valid for masks.
+        if (VT.getVectorElementType() == MVT::i1)
+          continue;
+
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SUB, VT, Custom);
@@ -774,23 +780,26 @@ static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
   unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
   assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
 
-  switch (VT.getVectorElementType().SimpleTy) {
+  MVT EltVT = VT.getVectorElementType();
+  switch (EltVT.SimpleTy) {
   default:
     llvm_unreachable("unexpected element type for RVV container");
+  case MVT::i1: {
+    // Masks are calculated assuming 8-bit elements since that's when we need
+    // the most elements.
+    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / 8;
+    return MVT::getScalableVectorVT(MVT::i1, LMul * EltsPerBlock);
+  }
   case MVT::i8:
-    return MVT::getScalableVectorVT(MVT::i8, LMul * 8);
   case MVT::i16:
-    return MVT::getScalableVectorVT(MVT::i16, LMul * 4);
   case MVT::i32:
-    return MVT::getScalableVectorVT(MVT::i32, LMul * 2);
   case MVT::i64:
-    return MVT::getScalableVectorVT(MVT::i64, LMul);
   case MVT::f16:
-    return MVT::getScalableVectorVT(MVT::f16, LMul * 4);
   case MVT::f32:
-    return MVT::getScalableVectorVT(MVT::f32, LMul * 2);
-  case MVT::f64:
-    return MVT::getScalableVectorVT(MVT::f64, LMul);
+  case MVT::f64: {
+    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / EltVT.getSizeInBits();
+    return MVT::getScalableVectorVT(EltVT, LMul * EltsPerBlock);
+  }
   }
 }
 
@@ -828,6 +837,20 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
+
+  if (VT.getVectorElementType() == MVT::i1) {
+    if (ISD::isBuildVectorAllZeros(Op.getNode())) {
+      SDValue VMClr = DAG.getNode(RISCVISD::VMCLR_VL, DL, ContainerVT, VL);
+      return convertFromScalableVector(VT, VMClr, DAG, Subtarget);
+    }
+
+    if (ISD::isBuildVectorAllOnes(Op.getNode())) {
+      SDValue VMSet = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+      return convertFromScalableVector(VT, VMSet, DAG, Subtarget);
+    }
+
+    return SDValue();
+  }
 
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
     unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
@@ -2032,6 +2055,10 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
 
   SDLoc DL(Op);
   MVT VT = Store->getValue().getSimpleValueType();
+
+  // FIXME: We probably need to zero any extra bits in a byte for mask stores.
+  // This is tricky to do.
+
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDValue VL =
