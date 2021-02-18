@@ -366,6 +366,17 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
       }
 
       std::string BindID;
+      Tokenizer->consumeNextToken();
+      TokenInfo BindToken = Tokenizer->consumeNextToken();
+      if (BindToken.Kind == TokenInfo::TK_CodeCompletion) {
+        addCompletion(BindToken, MatcherCompletion("bind(\"", "bind", 1));
+        return false;
+      }
+      if (BindToken.Kind != TokenInfo::TK_Ident ||
+        BindToken.Text != TokenInfo::ID_Bind) {
+        Error->addError(BindToken.Range, Error->ET_ParserMalformedBindExpr);
+        return false;
+      }
       if (!parseBindID(BindID))
         return false;
 
@@ -420,26 +431,13 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
 }
 
 bool Parser::parseBindID(std::string &BindID) {
-  // Parse .bind("foo")
-  assert(Tokenizer->peekNextToken().Kind == TokenInfo::TK_Period);
-  Tokenizer->consumeNextToken(); // consume the period.
-  const TokenInfo BindToken = Tokenizer->consumeNextToken();
-  if (BindToken.Kind == TokenInfo::TK_CodeCompletion) {
-    addCompletion(BindToken, MatcherCompletion("bind(\"", "bind", 1));
-    return false;
-  }
-
+  // Parse the parenthesized argument to .bind("foo")
   const TokenInfo OpenToken = Tokenizer->consumeNextToken();
   const TokenInfo IDToken = Tokenizer->consumeNextTokenIgnoreNewlines();
   const TokenInfo CloseToken = Tokenizer->consumeNextTokenIgnoreNewlines();
 
   // TODO: We could use different error codes for each/some to be more
   //       explicit about the syntax error.
-  if (BindToken.Kind != TokenInfo::TK_Ident ||
-      BindToken.Text != TokenInfo::ID_Bind) {
-    Error->addError(BindToken.Range, Error->ET_ParserMalformedBindExpr);
-    return false;
-  }
   if (OpenToken.Kind != TokenInfo::TK_OpenParen) {
     Error->addError(OpenToken.Range, Error->ET_ParserMalformedBindExpr);
     return false;
@@ -518,6 +516,17 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
 
   std::string BindID;
   if (Tokenizer->peekNextToken().Kind == TokenInfo::TK_Period) {
+    Tokenizer->consumeNextToken();
+    TokenInfo BindToken = Tokenizer->consumeNextToken();
+    if (BindToken.Kind == TokenInfo::TK_CodeCompletion) {
+      addCompletion(BindToken, MatcherCompletion("bind(\"", "bind", 1));
+      return false;
+    }
+    if (BindToken.Kind != TokenInfo::TK_Ident ||
+      BindToken.Text != TokenInfo::ID_Bind) {
+      Error->addError(BindToken.Range, Error->ET_ParserMalformedBindExpr);
+      return false;
+    }
     if (!parseBindID(BindID))
       return false;
   }
