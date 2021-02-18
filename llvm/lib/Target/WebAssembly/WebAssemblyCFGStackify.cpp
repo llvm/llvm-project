@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -39,6 +40,7 @@ using WebAssembly::SortRegionInfo;
 #define DEBUG_TYPE "wasm-cfg-stackify"
 
 STATISTIC(NumCallUnwindMismatches, "Number of call unwind mismatches found");
+STATISTIC(NumCatchUnwindMismatches, "Number of catch unwind mismatches found");
 
 namespace {
 class WebAssemblyCFGStackify final : public MachineFunctionPass {
@@ -898,26 +900,70 @@ void WebAssemblyCFGStackify::addTryDelegate(MachineInstr *RangeBegin,
     EndBB->addSuccessor(DelegateBB);
 
   } else {
-    // If the range's end instruction is in the middle of the BB, we split the
-    // BB into two and insert the delegate BB in between.
-    // - Before:
-    // bb:
-    //   range_end
-    //   other_insts
-    //
-    // - After:
-    // pre_bb: (previous 'bb')
-    //   range_end
-    // delegate_bb: (new)
-    //   delegate
-    // post_bb: (new)
-    //   other_insts
-    MachineBasicBlock *PreBB = EndBB;
-    MachineBasicBlock *PostBB = MF.CreateMachineBasicBlock();
-    MF.insert(std::next(PreBB->getIterator()), PostBB);
-    MF.insert(std::next(PreBB->getIterator()), DelegateBB);
-    PostBB->splice(PostBB->end(), PreBB, SplitPos, PreBB->end());
-    PostBB->transferSuccessors(PreBB);
+    // When the split pos is in the middle of a BB, we split the BB into two and
+    // put the 'delegate' BB in between. We normally create a split BB and make
+    // it a successor of the original BB (PostSplit == true), but in case the BB
+    // is an EH pad and the split pos is before 'catch', we should preserve the
+    // BB's property, including that it is an EH pad, in the later part of the
+    // BB, where 'catch' is. In this case we set PostSplit to false.
+    bool PostSplit = true;
+    if (EndBB->isEHPad()) {
+      for (auto I = MachineBasicBlock::iterator(SplitPos), E = EndBB->end();
+           I != E; ++I) {
+        if (WebAssembly::isCatch(I->getOpcode())) {
+          PostSplit = false;
+          break;
+        }
+      }
+    }
+
+    MachineBasicBlock *PreBB = nullptr, *PostBB = nullptr;
+    if (PostSplit) {
+      // If the range's end instruction is in the middle of the BB, we split the
+      // BB into two and insert the delegate BB in between.
+      // - Before:
+      // bb:
+      //   range_end
+      //   other_insts
+      //
+      // - After:
+      // pre_bb: (previous 'bb')
+      //   range_end
+      // delegate_bb: (new)
+      //   delegate
+      // post_bb: (new)
+      //   other_insts
+      PreBB = EndBB;
+      PostBB = MF.CreateMachineBasicBlock();
+      MF.insert(std::next(PreBB->getIterator()), PostBB);
+      MF.insert(std::next(PreBB->getIterator()), DelegateBB);
+      PostBB->splice(PostBB->end(), PreBB, SplitPos, PreBB->end());
+      PostBB->transferSuccessors(PreBB);
+    } else {
+      // - Before:
+      // ehpad:
+      //   range_end
+      //   catch
+      //   ...
+      //
+      // - After:
+      // pre_bb: (new)
+      //   range_end
+      // delegate_bb: (new)
+      //   delegate
+      // post_bb: (previous 'ehpad')
+      //   catch
+      //   ...
+      assert(EndBB->isEHPad());
+      PreBB = MF.CreateMachineBasicBlock();
+      PostBB = EndBB;
+      MF.insert(PostBB->getIterator(), PreBB);
+      MF.insert(PostBB->getIterator(), DelegateBB);
+      PreBB->splice(PreBB->end(), PostBB, PostBB->begin(), SplitPos);
+      // We don't need to transfer predecessors of the EH pad to 'PreBB',
+      // because an EH pad's predecessors are all through unwind edges and they
+      // should still unwind to the EH pad, not PreBB.
+    }
     unstackifyVRegsUsedInSplitBB(*PreBB, *PostBB);
     PreBB->addSuccessor(DelegateBB);
     PreBB->addSuccessor(PostBB);
@@ -991,7 +1037,6 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // is supposed to end up. We solve this problem by wrapping the mismatching
   // call with an inner try-delegate that rethrows the exception to the right
   // 'catch'.
-  //
   //
   // try
   //   try
@@ -1219,8 +1264,113 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
 }
 
 bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
-  // TODO implement
-  return false;
+  // There is another kind of unwind destination mismatches besides call unwind
+  // mismatches, which we will call "catch unwind mismatches". See this example
+  // after the marker placement:
+  // try
+  //   try
+  //     call @foo
+  //   catch __cpp_exception  ;; ehpad A (next unwind dest: caller)
+  //     ...
+  //   end_try
+  // catch_all                ;; ehpad B
+  //   ...
+  // end_try
+  //
+  // 'call @foo's unwind destination is the ehpad A. But suppose 'call @foo'
+  // throws a foreign exception that is not caught by ehpad A, and its next
+  // destination should be the caller. But after control flow linearization,
+  // another EH pad can be placed in between (e.g. ehpad B here), making the
+  // next unwind destination incorrect. In this case, the  foreign exception
+  // will instead go to ehpad B and will be caught there instead. In this
+  // example the correct next unwind destination is the caller, but it can be
+  // another outer catch in other cases.
+  //
+  // There is no specific 'call' or 'throw' instruction to wrap with a
+  // try-delegate, so we wrap the whole try-catch-end with a try-delegate and
+  // make it rethrow to the right destination, as in the example below:
+  // try
+  //   try                     ;; (new)
+  //     try
+  //       call @foo
+  //     catch __cpp_exception ;; ehpad A (next unwind dest: caller)
+  //       ...
+  //     end_try
+  //   delegate 1 (caller)     ;; (new)
+  // catch_all                 ;; ehpad B
+  //   ...
+  // end_try
+
+  const auto *EHInfo = MF.getWasmEHFuncInfo();
+  SmallVector<const MachineBasicBlock *, 8> EHPadStack;
+  // For EH pads that have catch unwind mismatches, a map of <EH pad, its
+  // correct unwind destination>.
+  DenseMap<MachineBasicBlock *, MachineBasicBlock *> EHPadToUnwindDest;
+
+  for (auto &MBB : reverse(MF)) {
+    for (auto &MI : reverse(MBB)) {
+      if (MI.getOpcode() == WebAssembly::TRY)
+        EHPadStack.pop_back();
+      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+        EHPadStack.push_back(&MBB);
+      else if (WebAssembly::isCatch(MI.getOpcode())) {
+        auto *EHPad = &MBB;
+
+        // catch_all always catches an exception, so we don't need to do
+        // anything
+        if (MI.getOpcode() == WebAssembly::CATCH_ALL) {
+        }
+
+        // This can happen when the unwind dest was removed during the
+        // optimization, e.g. because it was unreachable.
+        else if (EHPadStack.empty() && EHInfo->hasEHPadUnwindDest(EHPad)) {
+          LLVM_DEBUG(dbgs() << "EHPad (" << EHPad->getName()
+                            << "'s unwind destination does not exist anymore"
+                            << "\n\n");
+        }
+
+        // The EHPad's next unwind destination is the caller, but we incorrectly
+        // unwind to another EH pad.
+        else if (!EHPadStack.empty() && !EHInfo->hasEHPadUnwindDest(EHPad)) {
+          EHPadToUnwindDest[EHPad] = getFakeCallerBlock(MF);
+          LLVM_DEBUG(dbgs()
+                     << "- Catch unwind mismatch:\nEHPad = " << EHPad->getName()
+                     << "  Original dest = caller  Current dest = "
+                     << EHPadStack.back()->getName() << "\n\n");
+        }
+
+        // The EHPad's next unwind destination is an EH pad, whereas we
+        // incorrectly unwind to another EH pad.
+        else if (!EHPadStack.empty() && EHInfo->hasEHPadUnwindDest(EHPad)) {
+          auto *UnwindDest = EHInfo->getEHPadUnwindDest(EHPad);
+          if (EHPadStack.back() != UnwindDest) {
+            EHPadToUnwindDest[EHPad] = UnwindDest;
+            LLVM_DEBUG(dbgs() << "- Catch unwind mismatch:\nEHPad = "
+                              << EHPad->getName() << "  Original dest = "
+                              << UnwindDest->getName() << "  Current dest = "
+                              << EHPadStack.back()->getName() << "\n\n");
+          }
+        }
+
+        EHPadStack.push_back(EHPad);
+      }
+    }
+  }
+
+  assert(EHPadStack.empty());
+  if (EHPadToUnwindDest.empty())
+    return false;
+  NumCatchUnwindMismatches += EHPadToUnwindDest.size();
+
+  for (auto &P : EHPadToUnwindDest) {
+    MachineBasicBlock *EHPad = P.first;
+    MachineBasicBlock *UnwindDest = P.second;
+    MachineInstr *Try = EHPadToTry[EHPad];
+    MachineInstr *EndTry = BeginToEnd[Try];
+    addTryDelegate(Try, EndTry, UnwindDest);
+  }
+
+  return true;
 }
 
 void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
