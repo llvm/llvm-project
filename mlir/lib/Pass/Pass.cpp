@@ -357,11 +357,10 @@ void OpPassManager::initialize(MLIRContext *context,
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
                                      unsigned parentInitGeneration) {
-  if (!op->getName().getAbstractOperation())
+  if (!op->isRegistered())
     return op->emitOpError()
            << "trying to schedule a pass on an unregistered operation";
-  if (!op->getName().getAbstractOperation()->hasProperty(
-          OperationProperty::IsolatedFromAbove))
+  if (!op->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return op->emitOpError() << "trying to schedule a pass on an operation not "
                                 "marked as 'IsolatedFromAbove'";
 
