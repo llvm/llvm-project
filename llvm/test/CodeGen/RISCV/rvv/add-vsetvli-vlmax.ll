@@ -20,16 +20,13 @@ define void @vadd_vint64m1(
   ret void
 }
 
-; PRE-INSERTER: %3:vr = PseudoVLE64_V_M1 %1, $x0, 64, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
-; PRE-INSERTER: %4:vr = PseudoVLE64_V_M1 %2, $x0, 64, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pb, align 8)
+; PRE-INSERTER: %3:vr = VL1RE64_V %1 :: (load unknown-size from %ir.pa, align 8)
+; PRE-INSERTER: %4:vr = VL1RE64_V %2 :: (load unknown-size from %ir.pb, align 8)
 ; PRE-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $x0, 64, implicit $vl, implicit $vtype
-; PRE-INSERTER:  PseudoVSE64_V_M1 killed %5, %0, $x0, 64, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
+; PRE-INSERTER:  VS1R_V killed %5, %0 :: (store unknown-size into %ir.pc, align 8)
 
+; POST-INSERTER: %3:vr = VL1RE64_V %1 :: (load unknown-size from %ir.pa, align 8)
+; POST-INSERTER: %4:vr = VL1RE64_V %2 :: (load unknown-size from %ir.pb, align 8)
 ; POST-INSERTER: dead %6:gpr = PseudoVSETVLI $x0, 88, implicit-def $vl, implicit-def $vtype
-; POST-INSERTER: %3:vr = PseudoVLE64_V_M1 %1, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
-; POST-INSERTER: dead %7:gpr = PseudoVSETVLI $x0, 88, implicit-def $vl, implicit-def $vtype
-; POST-INSERTER: %4:vr = PseudoVLE64_V_M1 %2, $noreg, -1, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pb, align 8)
-; POST-INSERTER: dead %8:gpr = PseudoVSETVLI $x0, 88, implicit-def $vl, implicit-def $vtype
 ; POST-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $noreg, -1, implicit $vl, implicit $vtype
-; POST-INSERTER: dead %9:gpr = PseudoVSETVLI $x0, 88, implicit-def $vl, implicit-def $vtype
-; POST-INSERTER: PseudoVSE64_V_M1 killed %5, %0, $noreg, -1, implicit $vl, implicit $vtype :: (store unknown-size into %ir.pc, align 8)
+; POST-INSERTER: VS1R_V killed %5, %0 :: (store unknown-size into %ir.pc, align 8)
