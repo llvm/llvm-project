@@ -9,7 +9,7 @@
 #include <tuple>
 #include <utility>
 
-extern int print_kernel_trace; // set by environment variable
+#include "print_tracing.h"
 
 namespace {
 namespace detail {
@@ -62,7 +62,7 @@ template <typename T> struct fmt<T *> {
   static constexpr auto value() { return fmt<void *>::value(); }
 };
 
-// Format function arguments as 'function:   time ms (x, y, z)'
+// Format function arguments as 'function:   time us (x, y, z)'
 template <size_t I> struct delimiter {
   static constexpr auto value() { return toArray(", "); }
 };
@@ -101,8 +101,8 @@ template <typename... Ts> constexpr auto fmtTuple() {
 // a ~100 byte object on the stack and calls memcpy on it.
 template <typename R, typename... Ts> class fmtStr {
   static constexpr auto get() {
-    // Call function: 123ms result (some, number, of, arguments)
-    return cat(cat(toArray("Call %35s: %8" PRId64 "ms "),
+    // Call function: 123us result (some, number, of, arguments)
+    return cat(cat(toArray("Call %35s: %8" PRId64 "us "),
                    fmt<typename std::decay<R>::type>::value(), toArray(" ")),
                cat(fmtTuple<Ts...>(), toArray("\n\0")));
   }
@@ -127,7 +127,7 @@ template <typename R, typename... Ts> struct log_t {
   R result;
   log_t(const char *func, Ts &&... args)
       : func(func), args(std::forward<Ts>(args)...) {
-    active = print_kernel_trace == 2;
+    active = print_kernel_trace & RTL_TIMING;  // is bit 1 set ?
 
     if (!active) {
       return;
@@ -142,7 +142,8 @@ template <typename R, typename... Ts> struct log_t {
   int printUnpack(int64_t t, std::tuple<Ts...> const &tup,
                   std::index_sequence<Is...>) {
 
-    return printf(fmtStr<R, Ts...>::data(), func, t, result,
+    return fprintf(print_kernel_trace & RTL_TO_STDOUT ? stdout : stderr,
+		  fmtStr<R, Ts...>::data(), func, t, result,
                   std::get<Is>(tup)...);
   }
 
@@ -153,10 +154,10 @@ template <typename R, typename... Ts> struct log_t {
     end = clock_ty::now();
 
     int64_t t =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
             .count();
 
-    printUnpack(t / 1000, args, std::make_index_sequence<sizeof...(Ts)>());
+    printUnpack(t, args, std::make_index_sequence<sizeof...(Ts)>());
   }
 };
 

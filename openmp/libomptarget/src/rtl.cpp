@@ -233,7 +233,7 @@ void RTLsTy::LoadRTLs() {
     *((void **)&R.unregister_lib) =
         dlsym(dynlib_handle, "__tgt_rtl_unregister_lib");
   }
-  delete libomptarget_dir_name;
+  delete[] libomptarget_dir_name;
   DP("RTLs loaded!\n");
 
   return;
