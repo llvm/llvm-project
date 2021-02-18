@@ -225,8 +225,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
-                           bool CreateScalarRefs) {
+void polly::addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                                  bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())

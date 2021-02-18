@@ -23,7 +23,9 @@
 
 #define DEBUG_TYPE "polly-scop-inliner"
 
+using namespace llvm;
 using namespace polly;
+
 extern bool polly::PollyAllowFullFunction;
 
 namespace {
