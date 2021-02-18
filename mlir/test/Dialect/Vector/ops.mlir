@@ -450,6 +450,56 @@ func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
   return %0 : vector<16xi32>
 }
 
+// CHECK-LABEL: @vector_load_and_store_1d_scalar_memref
+func @vector_load_and_store_1d_scalar_memref(%memref : memref<200x100xf32>,
+                                             %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<8xf32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_load_and_store_1d_vector_memref
+func @vector_load_and_store_1d_vector_memref(%memref : memref<200x100xvector<8xf32>>,
+                                             %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_load_and_store_out_of_bounds
+func @vector_load_and_store_out_of_bounds(%memref : memref<7xf32>) {
+  %c0 = constant 0 : index
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<7xf32>, vector<8xf32>
+  %0 = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<7xf32>, vector<8xf32>
+  vector.store %0, %memref[%c0] : memref<7xf32>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_load_and_store_2d_scalar_memref
+func @vector_load_and_store_2d_scalar_memref(%memref : memref<200x100xf32>,
+                                             %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<4x8xf32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xf32>, vector<4x8xf32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_load_and_store_2d_vector_memref
+func @vector_load_and_store_2d_vector_memref(%memref : memref<200x100xvector<4x8xf32>>,
+                                             %i : index, %j : index) {
+  // CHECK: %[[ld:.*]] = vector.load %{{.*}}[%{{.*}}] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  %0 = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  vector.store %0, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  return
+}
+
 // CHECK-LABEL: @masked_load_and_store
 func @masked_load_and_store(%base: memref<?xf32>, %mask: vector<16xi1>, %passthru: vector<16xf32>) {
   %c0 = constant 0 : index
