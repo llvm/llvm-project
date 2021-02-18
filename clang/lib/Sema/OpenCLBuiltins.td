@@ -77,10 +77,10 @@ def ArmIntegerDotProductAccumulateInt16        : FunctionExtension<"cl_arm_integ
 def ArmIntegerDotProductAccumulateSaturateInt8 : FunctionExtension<"cl_arm_integer_dot_product_accumulate_saturate_int8">;
 
 // Qualified Type.  These map to ASTContext::QualType.
-class QualType<string _Name, bit _IsAbstract=0> {
-  // Name of the field or function in a clang::ASTContext
-  // E.g. Name="IntTy" for the int type, and "getIntPtrType()" for an intptr_t
-  string Name = _Name;
+class QualType<string _TypeExpr, bit _IsAbstract=0> {
+  // Expression to obtain the QualType inside OCL2Qual.
+  // E.g. TypeExpr="Context.IntTy" for the int type.
+  string TypeExpr = _TypeExpr;
   // Some QualTypes in this file represent an abstract type for which there is
   // no corresponding AST QualType, e.g. a GenType or an `image2d_t` type
   // without access qualifiers.
@@ -99,11 +99,11 @@ class IntList<string _Name, list<int> _List> {
 // OpenCL C basic data types (int, float, image2d_t, ...).
 // Its child classes can represent concrete types (e.g. VectorType) or
 // abstract types (e.g. GenType).
-class Type<string _Name, QualType _QTName> {
+class Type<string _Name, QualType _QTExpr> {
   // Name of the Type.
   string Name = _Name;
   // QualType associated with this type.
-  QualType QTName = _QTName;
+  QualType QTExpr = _QTExpr;
   // Size of the vector (if applicable).
   int VecWidth = 1;
   // Is a pointer.
@@ -119,7 +119,7 @@ class Type<string _Name, QualType _QTName> {
 }
 
 // OpenCL vector types (e.g. int2, int3, int16, float8, ...).
-class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
+class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTExpr> {
   let VecWidth = _VecWidth;
   let AccessQualifier = "";
   // Inherited fields
@@ -131,7 +131,7 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL pointer types (e.g. int*, float*, ...).
 class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
-    Type<_Ty.Name, _Ty.QTName> {
+    Type<_Ty.Name, _Ty.QTExpr> {
   let AddrSpace = _AS.Name;
   // Inherited fields
   let VecWidth = _Ty.VecWidth;
@@ -142,7 +142,7 @@ class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
 }
 
 // OpenCL const types (e.g. const int).
-class ConstType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
+class ConstType<Type _Ty> : Type<_Ty.Name, _Ty.QTExpr> {
   let IsConst = 1;
   // Inherited fields
   let VecWidth = _Ty.VecWidth;
@@ -153,7 +153,7 @@ class ConstType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
 }
 
 // OpenCL volatile types (e.g. volatile int).
-class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
+class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTExpr> {
   let IsVolatile = 1;
   // Inherited fields
   let VecWidth = _Ty.VecWidth;
@@ -165,7 +165,7 @@ class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL image types (e.g. image2d).
 class ImageType<Type _Ty, string _AccessQualifier> :
-    Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
+    Type<_Ty.Name, QualType<_Ty.QTExpr.TypeExpr # _AccessQualifier # "Ty", 0>> {
   let VecWidth = 0;
   let AccessQualifier = _AccessQualifier;
   // Inherited fields
@@ -254,23 +254,23 @@ class Builtin<string _Name, list<Type> _Signature, list<bit> _Attributes = Attr.
 //===----------------------------------------------------------------------===//
 
 // OpenCL v1.0/1.2/2.0 s6.1.1: Built-in Scalar Data Types.
-def Bool      : Type<"bool",      QualType<"BoolTy">>;
-def Char      : Type<"char",      QualType<"CharTy">>;
-def UChar     : Type<"uchar",     QualType<"UnsignedCharTy">>;
-def Short     : Type<"short",     QualType<"ShortTy">>;
-def UShort    : Type<"ushort",    QualType<"UnsignedShortTy">>;
-def Int       : Type<"int",       QualType<"IntTy">>;
-def UInt      : Type<"uint",      QualType<"UnsignedIntTy">>;
-def Long      : Type<"long",      QualType<"LongTy">>;
-def ULong     : Type<"ulong",     QualType<"UnsignedLongTy">>;
-def Float     : Type<"float",     QualType<"FloatTy">>;
-def Double    : Type<"double",    QualType<"DoubleTy">>;
-def Half      : Type<"half",      QualType<"HalfTy">>;
-def Size      : Type<"size_t",    QualType<"getSizeType()">>;
-def PtrDiff   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
-def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
-def UIntPtr   : Type<"uintptr_t", QualType<"getUIntPtrType()">>;
-def Void      : Type<"void",      QualType<"VoidTy">>;
+def Bool      : Type<"bool",      QualType<"Context.BoolTy">>;
+def Char      : Type<"char",      QualType<"Context.CharTy">>;
+def UChar     : Type<"uchar",     QualType<"Context.UnsignedCharTy">>;
+def Short     : Type<"short",     QualType<"Context.ShortTy">>;
+def UShort    : Type<"ushort",    QualType<"Context.UnsignedShortTy">>;
+def Int       : Type<"int",       QualType<"Context.IntTy">>;
+def UInt      : Type<"uint",      QualType<"Context.UnsignedIntTy">>;
+def Long      : Type<"long",      QualType<"Context.LongTy">>;
+def ULong     : Type<"ulong",     QualType<"Context.UnsignedLongTy">>;
+def Float     : Type<"float",     QualType<"Context.FloatTy">>;
+def Double    : Type<"double",    QualType<"Context.DoubleTy">>;
+def Half      : Type<"half",      QualType<"Context.HalfTy">>;
+def Size      : Type<"size_t",    QualType<"Context.getSizeType()">>;
+def PtrDiff   : Type<"ptrdiff_t", QualType<"Context.getPointerDiffType()">>;
+def IntPtr    : Type<"intptr_t",  QualType<"Context.getIntPtrType()">>;
+def UIntPtr   : Type<"uintptr_t", QualType<"Context.getUIntPtrType()">>;
+def Void      : Type<"void",      QualType<"Context.VoidTy">>;
 
 // OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
 // Built-in vector data types are created by TableGen's OpenCLBuiltinEmitter.
@@ -278,36 +278,36 @@ def Void      : Type<"void",      QualType<"VoidTy">>;
 // OpenCL v1.0/1.2/2.0 s6.1.3: Other Built-in Data Types.
 // The image definitions are "abstract".  They should not be used without
 // specifying an access qualifier (RO/WO/RW).
-def Image1d               : Type<"image1d_t", QualType<"OCLImage1d", 1>>;
-def Image2d               : Type<"image2d_t", QualType<"OCLImage2d", 1>>;
-def Image3d               : Type<"image3d_t", QualType<"OCLImage3d", 1>>;
-def Image1dArray          : Type<"image1d_array_t", QualType<"OCLImage1dArray", 1>>;
-def Image1dBuffer         : Type<"image1d_buffer_t", QualType<"OCLImage1dBuffer", 1>>;
-def Image2dArray          : Type<"image2d_array_t", QualType<"OCLImage2dArray", 1>>;
-def Image2dDepth          : Type<"image2d_depth_t", QualType<"OCLImage2dDepth", 1>>;
-def Image2dArrayDepth     : Type<"image2d_array_depth_t", QualType<"OCLImage2dArrayDepth", 1>>;
-def Image2dMsaa           : Type<"image2d_msaa_t", QualType<"OCLImage2dMSAA", 1>>;
-def Image2dArrayMsaa      : Type<"image2d_array_msaa_t", QualType<"OCLImage2dArrayMSAA", 1>>;
-def Image2dMsaaDepth      : Type<"image2d_msaa_depth_t", QualType<"OCLImage2dMSAADepth", 1>>;
-def Image2dArrayMsaaDepth : Type<"image2d_array_msaa_depth_t", QualType<"OCLImage2dArrayMSAADepth", 1>>;
+def Image1d               : Type<"image1d_t", QualType<"Context.OCLImage1d", 1>>;
+def Image2d               : Type<"image2d_t", QualType<"Context.OCLImage2d", 1>>;
+def Image3d               : Type<"image3d_t", QualType<"Context.OCLImage3d", 1>>;
+def Image1dArray          : Type<"image1d_array_t", QualType<"Context.OCLImage1dArray", 1>>;
+def Image1dBuffer         : Type<"image1d_buffer_t", QualType<"Context.OCLImage1dBuffer", 1>>;
+def Image2dArray          : Type<"image2d_array_t", QualType<"Context.OCLImage2dArray", 1>>;
+def Image2dDepth          : Type<"image2d_depth_t", QualType<"Context.OCLImage2dDepth", 1>>;
+def Image2dArrayDepth     : Type<"image2d_array_depth_t", QualType<"Context.OCLImage2dArrayDepth", 1>>;
+def Image2dMsaa           : Type<"image2d_msaa_t", QualType<"Context.OCLImage2dMSAA", 1>>;
+def Image2dArrayMsaa      : Type<"image2d_array_msaa_t", QualType<"Context.OCLImage2dArrayMSAA", 1>>;
+def Image2dMsaaDepth      : Type<"image2d_msaa_depth_t", QualType<"Context.OCLImage2dMSAADepth", 1>>;
+def Image2dArrayMsaaDepth : Type<"image2d_array_msaa_depth_t", QualType<"Context.OCLImage2dArrayMSAADepth", 1>>;
 
-def Sampler               : Type<"sampler_t", QualType<"OCLSamplerTy">>;
-def ClkEvent              : Type<"clk_event_t", QualType<"OCLClkEventTy">>;
-def Event                 : Type<"event_t", QualType<"OCLEventTy">>;
-def Queue                 : Type<"queue_t", QualType<"OCLQueueTy">>;
-def ReserveId             : Type<"reserve_id_t", QualType<"OCLReserveIDTy">>;
+def Sampler               : Type<"sampler_t", QualType<"Context.OCLSamplerTy">>;
+def ClkEvent              : Type<"clk_event_t", QualType<"Context.OCLClkEventTy">>;
+def Event                 : Type<"event_t", QualType<"Context.OCLEventTy">>;
+def Queue                 : Type<"queue_t", QualType<"Context.OCLQueueTy">>;
+def ReserveId             : Type<"reserve_id_t", QualType<"Context.OCLReserveIDTy">>;
 
 // OpenCL v2.0 s6.13.11: Atomic integer and floating-point types.
-def AtomicInt             : Type<"atomic_int", QualType<"getAtomicType(Context.IntTy)">>;
-def AtomicUInt            : Type<"atomic_uint", QualType<"getAtomicType(Context.UnsignedIntTy)">>;
-def AtomicLong            : Type<"atomic_long", QualType<"getAtomicType(Context.LongTy)">>;
-def AtomicULong           : Type<"atomic_ulong", QualType<"getAtomicType(Context.UnsignedLongTy)">>;
-def AtomicFloat           : Type<"atomic_float", QualType<"getAtomicType(Context.FloatTy)">>;
-def AtomicDouble          : Type<"atomic_double", QualType<"getAtomicType(Context.DoubleTy)">>;
-def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"getAtomicType(Context.getIntPtrType())">>;
-def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"getAtomicType(Context.getUIntPtrType())">>;
-def AtomicSize            : Type<"atomic_size_t", QualType<"getAtomicType(Context.getSizeType())">>;
-def AtomicPtrDiff         : Type<"atomic_ptrdiff_t", QualType<"getAtomicType(Context.getPointerDiffType())">>;
+def AtomicInt             : Type<"atomic_int", QualType<"Context.getAtomicType(Context.IntTy)">>;
+def AtomicUInt            : Type<"atomic_uint", QualType<"Context.getAtomicType(Context.UnsignedIntTy)">>;
+def AtomicLong            : Type<"atomic_long", QualType<"Context.getAtomicType(Context.LongTy)">>;
+def AtomicULong           : Type<"atomic_ulong", QualType<"Context.getAtomicType(Context.UnsignedLongTy)">>;
+def AtomicFloat           : Type<"atomic_float", QualType<"Context.getAtomicType(Context.FloatTy)">>;
+def AtomicDouble          : Type<"atomic_double", QualType<"Context.getAtomicType(Context.DoubleTy)">>;
+def AtomicIntPtr          : Type<"atomic_intptr_t", QualType<"Context.getAtomicType(Context.getIntPtrType())">>;
+def AtomicUIntPtr         : Type<"atomic_uintptr_t", QualType<"Context.getAtomicType(Context.getUIntPtrType())">>;
+def AtomicSize            : Type<"atomic_size_t", QualType<"Context.getAtomicType(Context.getSizeType())">>;
+def AtomicPtrDiff         : Type<"atomic_ptrdiff_t", QualType<"Context.getAtomicType(Context.getPointerDiffType())">>;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL gentype variants
