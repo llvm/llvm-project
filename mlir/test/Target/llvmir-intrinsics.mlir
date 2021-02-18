@@ -144,6 +144,24 @@ llvm.func @ctpop_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @maximum_test
+llvm.func @maximum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.maximum.f32
+  "llvm.intr.maximum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.maximum.v8f32
+  "llvm.intr.maximum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @minimum_test
+llvm.func @minimum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.minimum.f32
+  "llvm.intr.minimum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.minimum.v8f32
+  "llvm.intr.minimum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @maxnum_test
 llvm.func @maxnum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.maxnum.f32
