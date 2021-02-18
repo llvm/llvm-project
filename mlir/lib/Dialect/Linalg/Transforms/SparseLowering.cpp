@@ -73,7 +73,9 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex() || eltType.isInteger(64))
-      name = "sparsePtrsI64";
+      name = "sparsePointers64";
+    else if (eltType.isInteger(32))
+      name = "sparsePointers32";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(
@@ -95,7 +97,9 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isIndex() || eltType.isInteger(64))
-      name = "sparseIndxsI64";
+      name = "sparseIndices64";
+    else if (eltType.isInteger(32))
+      name = "sparseIndices32";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(
@@ -117,7 +121,9 @@ public:
     Type eltType = resType.cast<ShapedType>().getElementType();
     StringRef name;
     if (eltType.isF64())
-      name = "sparseValsF64";
+      name = "sparseValuesF64";
+    else if (eltType.isF32())
+      name = "sparseValuesF32";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(
