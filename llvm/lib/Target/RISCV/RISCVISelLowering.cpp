@@ -2555,10 +2555,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc DL(N);
     SDValue Vec = N->getOperand(0);
     SDValue Idx = N->getOperand(1);
-    MVT VecVT = Vec.getSimpleValueType();
+    EVT VecVT = Vec.getValueType();
     assert(!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64 &&
            VecVT.getVectorElementType() == MVT::i64 &&
            "Unexpected EXTRACT_VECTOR_ELT legalization");
+
+    if (!VecVT.isScalableVector())
+      return;
 
     SDValue Slidedown = Vec;
     MVT XLenVT = Subtarget.getXLenVT();
@@ -2566,7 +2569,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // the desired element into index 0.
     if (!isNullConstant(Idx)) {
       SDValue Mask, VL;
-      std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+      std::tie(Mask, VL) =
+          getDefaultScalableVLOps(VecVT.getSimpleVT(), DL, DAG, Subtarget);
       Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT,
                               DAG.getUNDEF(VecVT), Vec, Idx, Mask, VL);
     }
