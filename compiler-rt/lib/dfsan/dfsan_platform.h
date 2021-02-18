@@ -103,10 +103,14 @@ uptr ShadowAddr() {
   return MappingArchImpl<MAPPING_SHADOW_ADDR>();
 }
 
-#if defined(__x86_64__)
 ALWAYS_INLINE
-uptr OriginAddr() { return MappingArchImpl<MAPPING_ORIGIN_ADDR>(); }
+uptr OriginAddr() {
+#if defined(__x86_64__)
+  return MappingArchImpl<MAPPING_ORIGIN_ADDR>();
+#else
+  return 0;
 #endif
+}
 
 ALWAYS_INLINE
 uptr UnionTableAddr() {
