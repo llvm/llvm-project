@@ -262,7 +262,7 @@ class PreprocessorOpts<string base>
 class FileSystemOpts<string base>
   : KeyPathAndMacro<"FileSystemOpts.", base> {}
 class AnalyzerOpts<string base>
-  : KeyPathAndMacro<"AnalyzerOpts->", base> {}
+  : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base> {}
 
