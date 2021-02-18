@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sys/cdefs.h> // IWYU pragma: keep (for __BIONIC__ macro)
+#include <features.h> // IWYU pragma: keep (for __BIONIC__ macro)
 
 #ifdef __BIONIC__
 #include "gwp_asan/definitions.h"
