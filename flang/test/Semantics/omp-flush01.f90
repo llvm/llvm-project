@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang -fopenmp
 
 ! 2.17.8 Flush construct [OpenMP 5.0]
 !        memory-order-clause ->

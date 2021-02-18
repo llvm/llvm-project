@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.14.2 Shutdown
