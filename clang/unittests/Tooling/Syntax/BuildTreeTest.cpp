@@ -512,6 +512,25 @@ TranslationUnit Detached
 )txt"));
 }
 
+TEST_P(BuildSyntaxTreeTest, ConditionalOperator) {
+  // FIXME: conditional expression is not modeled yet.
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+void test() {
+  [[1?:2]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression Expression
+|-IntegerLiteralExpression
+| `-'1' LiteralToken
+|-'?'
+|-':'
+`-IntegerLiteralExpression
+  `-'2' LiteralToken
+)txt"}));
+}
+
 TEST_P(BuildSyntaxTreeTest, UnqualifiedId_Identifier) {
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(

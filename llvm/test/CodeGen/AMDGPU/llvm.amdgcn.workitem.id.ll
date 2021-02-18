@@ -37,7 +37,7 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; PACKED-TID: enable_vgpr_workitem_id = 1
 ; PACKED-TID-NOT: v0
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
-; PACKED-TID: {{buffer|flat|global}}_store_b32 {{.*}}[[ID]]
+; PACKED-TID: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}[[ID]]
 
 ; UNPACKED-TID-NOT: v1
 ; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v1
@@ -57,7 +57,7 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; PACKED-TID: enable_vgpr_workitem_id = 2
 ; PACKED-TID-NOT: v0
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
-; PACKED-TID: {{buffer|flat|global}}_store_b32 {{.*}}[[ID]]
+; PACKED-TID: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}[[ID]]
 
 ; UNPACKED-TID-NOT: v2
 ; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v2

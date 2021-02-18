@@ -102,7 +102,7 @@ func @cmpi_equal_operands(%arg0: i64)
 //  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xindex>
 //  CHECK-NEXT:   %[[IDX:.*]] = constant 3
 //  CHECK-NEXT:   %[[DIM:.*]] = load %[[SHP]][%[[IDX]]]
-//  CHECK-NEXT:   store
+//  CHECK-NEXT:   memref.store
 //   CHECK-NOT:   dim
 //       CHECK:   return %[[DIM]] : index
 func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
@@ -111,7 +111,7 @@ func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
   %0 = memref_reshape %arg0(%arg1)
       : (memref<*xf32>, memref<?xindex>) -> memref<*xf32>
   // Update the shape to test that he load ends up in the right place.
-  store %c3, %arg1[%c3] : memref<?xindex>
+  memref.store %c3, %arg1[%c3] : memref<?xindex>
   %1 = dim %0, %c3 : memref<*xf32>
   return %1 : index
 }
@@ -135,7 +135,7 @@ func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
 // CHECK-LABEL: func @tensor_cast_to_memref
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>
 //       CHECK:   %[[M:.+]] = tensor_to_memref %[[ARG0]] : memref<4x6x16x32xi8>
-//       CHECK:   %[[M1:.+]] = memref_cast %[[M]] : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
+//       CHECK:   %[[M1:.+]] = memref.cast %[[M]] : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
 //       CHECK:   return %[[M1]] : memref<?x?x16x32xi8>
 func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
   memref<?x?x16x32xi8> {
@@ -147,11 +147,11 @@ func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
 // CHECK-LABEL: func @subview_of_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<4x6x16x32xi8>
 //       CHECK:   %[[S:.+]] = subview %arg0[0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, #{{.*}}>
-//       CHECK:   %[[M:.+]] = memref_cast %[[S]] : memref<16x32xi8, #{{.*}}> to memref<16x32xi8, #{{.*}}>
+//       CHECK:   %[[M:.+]] = memref.cast %[[S]] : memref<16x32xi8, #{{.*}}> to memref<16x32xi8, #{{.*}}>
 //       CHECK:   return %[[M]] : memref<16x32xi8, #{{.*}}>
 func @subview_of_memcast(%arg : memref<4x6x16x32xi8>) ->
   memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>{
-  %0 = memref_cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
+  %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
   %1 = subview %0[0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] :
     memref<?x?x16x32xi8> to
     memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>

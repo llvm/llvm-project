@@ -17,7 +17,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
@@ -26,7 +26,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[ALLOC:.*]] = alloc()
+//      CHECK: %[[ALLOC:.*]] = memref.alloc()
 
 // -----
 
@@ -50,7 +50,7 @@ func @condBranchDynamicType(
 ^bb1:
   br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>
+  %1 = memref.alloc(%0) : memref<?xf32>
   test.buffer_based in(%arg1: memref<?xf32>) out(%1: memref<?xf32>)
   br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
@@ -61,7 +61,7 @@ func @condBranchDynamicType(
 // CHECK-NEXT: cond_br
 //      CHECK: ^bb2
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
-// CHECK-NEXT: %[[ALLOC0:.*]] = alloc(%[[IDX]])
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
 
 // -----
@@ -81,10 +81,10 @@ func @nested_regions_and_cond_branch(
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   test.region_buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
-    %1 = alloc() : memref<2xf32>
+    %1 = memref.alloc() : memref<2xf32>
     test.buffer_based in(%arg1: memref<2xf32>) out(%1: memref<2xf32>)
     %tmp1 = math.exp %gen1_arg0 : f32
     test.region_yield %tmp1 : f32
@@ -95,9 +95,9 @@ func @nested_regions_and_cond_branch(
   return
 }
 // CHECK-NEXT:   cond_br
-//      CHECK:   %[[ALLOC0:.*]] = alloc()
+//      CHECK:   %[[ALLOC0:.*]] = memref.alloc()
 //      CHECK:   test.region_buffer_based
-//      CHECK:     %[[ALLOC1:.*]] = alloc()
+//      CHECK:     %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT:     test.buffer_based
 
 // -----
@@ -111,20 +111,20 @@ func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = cmpi eq, %arg0, %arg1 : index
-  %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     scf.yield %1 : memref<?x?xf32>
   } else {
-    %3 = alloc(%arg0, %arg1) : memref<?x?xf32>
+    %3 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
     scf.yield %1 : memref<?x?xf32>
   }
   return %2 : memref<?x?xf32>
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc(%arg0, %arg0)
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc(%arg0, %arg0)
 // CHECK-NEXT: %{{.*}} = scf.if
 //      CHECK: else
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc(%arg0, %arg1)
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%arg0, %arg1)
 
 // -----
 
@@ -138,20 +138,20 @@ func @loop_alloc(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = cmpi eq, %i, %ub : index
-    %3 = alloc() : memref<2xf32>
+    %3 = memref.alloc() : memref<2xf32>
     scf.yield %3 : memref<2xf32>
   }
   test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc()
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: {{.*}} scf.for
-//      CHECK: %[[ALLOC1:.*]] = alloc()
+//      CHECK: %[[ALLOC1:.*]] = memref.alloc()
 
 // -----
 
@@ -165,12 +165,12 @@ func @loop_nested_if_alloc(
   %ub: index,
   %step: index,
   %buf: memref<2xf32>) -> memref<2xf32> {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = cmpi eq, %i, %ub : index
     %3 = scf.if %2 -> (memref<2xf32>) {
-      %4 = alloc() : memref<2xf32>
+      %4 = memref.alloc() : memref<2xf32>
       scf.yield %4 : memref<2xf32>
     } else {
       scf.yield %0 : memref<2xf32>
@@ -180,9 +180,9 @@ func @loop_nested_if_alloc(
   return %1 : memref<2xf32>
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc()
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: {{.*}} scf.for
-//      CHECK: %[[ALLOC1:.*]] = alloc()
+//      CHECK: %[[ALLOC1:.*]] = memref.alloc()
 
 // -----
 
@@ -198,23 +198,23 @@ func @loop_nested_alloc(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = scf.for %i2 = %lb to %ub step %step
       iter_args(%iterBuf2 = %iterBuf) -> memref<2xf32> {
       %3 = scf.for %i3 = %lb to %ub step %step
         iter_args(%iterBuf3 = %iterBuf2) -> memref<2xf32> {
-        %4 = alloc() : memref<2xf32>
+        %4 = memref.alloc() : memref<2xf32>
         %5 = cmpi eq, %i, %ub : index
         %6 = scf.if %5 -> (memref<2xf32>) {
-          %7 = alloc() : memref<2xf32>
-          %8 = alloc() : memref<2xf32>
+          %7 = memref.alloc() : memref<2xf32>
+          %8 = memref.alloc() : memref<2xf32>
           scf.yield %8 : memref<2xf32>
         } else {
           scf.yield %iterBuf3 : memref<2xf32>
         }
-        %9 = alloc() : memref<2xf32>
+        %9 = memref.alloc() : memref<2xf32>
         scf.yield %6 : memref<2xf32>
       }
       scf.yield %3 : memref<2xf32>
@@ -225,15 +225,15 @@ func @loop_nested_alloc(
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc()
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc()
-// CHECK-NEXT: %[[ALLOC2:.*]] = alloc()
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc()
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc()
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc()
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
 //      CHECK: {{.*}} = scf.if
-//      CHECK: %[[ALLOC3:.*]] = alloc()
-//      CHECK: %[[ALLOC4:.*]] = alloc()
+//      CHECK: %[[ALLOC3:.*]] = memref.alloc()
+//      CHECK: %[[ALLOC4:.*]] = memref.alloc()
 
 // -----
 
@@ -245,22 +245,22 @@ func @loop_nested_alloc_dyn_dependency(
   %arg0: index,
   %buf: memref<?xf32>,
   %res: memref<?xf32>) {
-  %0 = alloc(%arg0) : memref<?xf32>
+  %0 = memref.alloc(%arg0) : memref<?xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<?xf32> {
     %2 = scf.for %i2 = %lb to %ub step %step
       iter_args(%iterBuf2 = %iterBuf) -> memref<?xf32> {
       %3 = scf.for %i3 = %lb to %ub step %step
         iter_args(%iterBuf3 = %iterBuf2) -> memref<?xf32> {
-        %4 = alloc(%i3) : memref<?xf32>
+        %4 = memref.alloc(%i3) : memref<?xf32>
         %5 = cmpi eq, %i, %ub : index
         %6 = scf.if %5 -> (memref<?xf32>) {
-          %7 = alloc(%i3) : memref<?xf32>
+          %7 = memref.alloc(%i3) : memref<?xf32>
           scf.yield %7 : memref<?xf32>
         } else {
           scf.yield %iterBuf3 : memref<?xf32>
         }
-        %8 = alloc(%i3) : memref<?xf32>
+        %8 = memref.alloc(%i3) : memref<?xf32>
         scf.yield %6 : memref<?xf32>
       }
       scf.yield %3 : memref<?xf32>
@@ -271,12 +271,12 @@ func @loop_nested_alloc_dyn_dependency(
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
-//      CHECK: %[[ALLOC1:.*]] = alloc({{.*}})
-//      CHECK: %[[ALLOC2:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC1:.*]] = memref.alloc({{.*}})
+//      CHECK: %[[ALLOC2:.*]] = memref.alloc({{.*}})
 
 // -----
 
@@ -287,18 +287,18 @@ func @hoist_one_loop(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-      %2 = alloc() : memref<2xf32>
+      %2 = memref.alloc() : memref<2xf32>
       scf.yield %0 : memref<2xf32>
   }
   test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc({{.*}})
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
 
 // -----
@@ -312,7 +312,7 @@ func @no_hoist_one_loop(
   %res: memref<2xf32>) {
   %0 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-      %1 = alloc() : memref<2xf32>
+      %1 = memref.alloc() : memref<2xf32>
       scf.yield %1 : memref<2xf32>
   }
   test.copy(%0, %res) : (memref<2xf32>, memref<2xf32>)
@@ -320,7 +320,7 @@ func @no_hoist_one_loop(
 }
 
 //      CHECK: {{.*}} = scf.for
-// CHECK-NEXT: %[[ALLOC0:.*]] = alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 
 // -----
 
@@ -331,12 +331,12 @@ func @hoist_multiple_loop(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = scf.for %i2 = %lb to %ub step %step
       iter_args(%iterBuf2 = %iterBuf) -> memref<2xf32> {
-        %3 = alloc() : memref<2xf32>
+        %3 = memref.alloc() : memref<2xf32>
         scf.yield %0 : memref<2xf32>
     }
     scf.yield %0 : memref<2xf32>
@@ -345,8 +345,8 @@ func @hoist_multiple_loop(
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc({{.*}})
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
 
 // -----
@@ -362,7 +362,7 @@ func @no_hoist_one_loop_conditional(
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
       %1 = cmpi eq, %i, %ub : index
       %2 = scf.if %1 -> (memref<2xf32>) {
-        %3 = alloc() : memref<2xf32>
+        %3 = memref.alloc() : memref<2xf32>
         scf.yield %3 : memref<2xf32>
       } else {
         scf.yield %iterBuf : memref<2xf32>
@@ -375,7 +375,7 @@ func @no_hoist_one_loop_conditional(
 
 //      CHECK: {{.*}} = scf.for
 //      CHECK: {{.*}} = scf.if
-// CHECK-NEXT: %[[ALLOC0:.*]] = alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 
 // -----
 
@@ -386,12 +386,12 @@ func @hoist_one_loop_conditional(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = cmpi eq, %lb, %ub : index
   %2 = scf.if %1 -> (memref<2xf32>) {
     %3 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-      %4 = alloc() : memref<2xf32>
+      %4 = memref.alloc() : memref<2xf32>
       scf.yield %0 : memref<2xf32>
     }
     scf.yield %0 : memref<2xf32>
@@ -405,7 +405,7 @@ func @hoist_one_loop_conditional(
 }
 
 //      CHECK: {{.*}} = scf.if
-// CHECK-NEXT: %[[ALLOC0:.*]] = alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 //      CHECK: {{.*}} = scf.for
 
 // -----
@@ -417,19 +417,19 @@ func @no_hoist_one_loop_dependency(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
-      %2 = alloc(%i) : memref<?xf32>
+      %2 = memref.alloc(%i) : memref<?xf32>
       scf.yield %0 : memref<2xf32>
   }
   test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc({{.*}})
 
 // -----
 
@@ -440,12 +440,12 @@ func @partial_hoist_multiple_loop_dependency(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = scf.for %i2 = %lb to %ub step %step
       iter_args(%iterBuf2 = %iterBuf) -> memref<2xf32> {
-        %3 = alloc(%i) : memref<?xf32>
+        %3 = memref.alloc(%i) : memref<?xf32>
         scf.yield %0 : memref<2xf32>
     }
     scf.yield %0 : memref<2xf32>
@@ -454,7 +454,7 @@ func @partial_hoist_multiple_loop_dependency(
   return
 }
 
-//      CHECK: %[[ALLOC0:.*]] = alloc({{.*}})
+//      CHECK: %[[ALLOC0:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
-// CHECK-NEXT: %[[ALLOC1:.*]] = alloc({{.*}})
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for

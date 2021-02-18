@@ -52,7 +52,7 @@ body: |
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -82,6 +82,6 @@ body: |
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...

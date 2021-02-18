@@ -1006,14 +1006,44 @@ public:
     return *this;
   }
 
-private:
-  template <class _ECharT>
-  static bool __source_is_absolute(_ECharT __first_or_null) {
-    return __is_separator(__first_or_null);
-  }
-
 public:
   // appends
+#if defined(_LIBCPP_WIN32API)
+  path& operator/=(const path& __p) {
+    auto __p_root_name = __p.__root_name();
+    auto __p_root_name_size = __p_root_name.size();
+    if (__p.is_absolute() ||
+        (!__p_root_name.empty() && __p_root_name != root_name())) {
+      __pn_ = __p.__pn_;
+      return *this;
+    }
+    if (__p.has_root_directory()) {
+      path __root_name_str = root_name();
+      __pn_ = __root_name_str.native();
+      __pn_ += __p.__pn_.substr(__p_root_name_size);
+      return *this;
+    }
+    if (has_filename() || (!has_root_directory() && is_absolute()))
+      __pn_ += preferred_separator;
+    __pn_ += __p.__pn_.substr(__p_root_name_size);
+    return *this;
+  }
+  template <class _Source>
+  _LIBCPP_INLINE_VISIBILITY _EnableIfPathable<_Source>
+  operator/=(const _Source& __src) {
+    return operator/=(path(__src));
+  }
+
+  template <class _Source>
+  _EnableIfPathable<_Source> append(const _Source& __src) {
+    return operator/=(path(__src));
+  }
+
+  template <class _InputIt>
+  path& append(_InputIt __first, _InputIt __last) {
+    return operator/=(path(__first, __last));
+  }
+#else
   path& operator/=(const path& __p) {
     if (__p.is_absolute()) {
       __pn_ = __p.__pn_;
@@ -1038,7 +1068,8 @@ public:
   _EnableIfPathable<_Source> append(const _Source& __src) {
     using _Traits = __is_pathable<_Source>;
     using _CVT = _PathCVT<_SourceChar<_Source> >;
-    if (__source_is_absolute(_Traits::__first_or_null(__src)))
+    bool __source_is_absolute = __is_separator(_Traits::__first_or_null(__src));
+    if (__source_is_absolute)
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
@@ -1051,13 +1082,14 @@ public:
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
-    if (__first != __last && __source_is_absolute(*__first))
+    if (__first != __last && __is_separator(*__first))
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
     _CVT::__append_range(__pn_, __first, __last);
     return *this;
   }
+#endif
 
   // concatenation
   _LIBCPP_INLINE_VISIBILITY
@@ -1295,7 +1327,11 @@ public:
     return string_type(__root_directory());
   }
   _LIBCPP_INLINE_VISIBILITY path root_path() const {
+#if defined(_LIBCPP_WIN32API)
+    return string_type(__root_path_raw());
+#else
     return root_name().append(string_type(__root_directory()));
+#endif
   }
   _LIBCPP_INLINE_VISIBILITY path relative_path() const {
     return string_type(__relative_path());

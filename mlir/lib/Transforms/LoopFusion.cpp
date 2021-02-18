@@ -16,6 +16,7 @@
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -925,7 +926,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   // consumer loop nests to reduce their live range. Currently they are added
   // at the beginning of the function, because loop nests can be reordered
   // during the fusion pass.
-  Value newMemRef = top.create<AllocOp>(forOp.getLoc(), newMemRefType);
+  Value newMemRef = top.create<memref::AllocOp>(forOp.getLoc(), newMemRefType);
 
   // Build an AffineMap to remap access functions based on lower bound offsets.
   SmallVector<AffineExpr, 4> remapExprs;
@@ -1895,7 +1896,7 @@ public:
         continue;
       // Use list expected to match the dep graph info.
       auto *op = memref.getDefiningOp();
-      if (isa_and_nonnull<AllocOp>(op))
+      if (isa_and_nonnull<memref::AllocOp>(op))
         op->erase();
     }
   }

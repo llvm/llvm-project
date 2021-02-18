@@ -546,7 +546,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // introduces a dense initialization component that may negatively
   // impact the running complexity of the sparse kernel.
   Value init = rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
-  Value alloc = rewriter.create<AllocOp>(loc, denseTp, args);
+  Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
   rewriter.create<linalg::CopyOp>(loc, init, alloc);
   return alloc;
 }
@@ -737,7 +737,7 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
   if (codegen.curVecLength > 1)
     genVectorStore(codegen, rewriter, rhs, ptr, args);
   else
-    rewriter.create<StoreOp>(loc, rhs, ptr, args);
+    rewriter.create<memref::StoreOp>(loc, rhs, ptr, args);
 }
 
 /// Generates a pointer/index load from the sparse storage scheme.

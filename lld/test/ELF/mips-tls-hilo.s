@@ -12,7 +12,7 @@
 # ERR: error: relocation R_MIPS_TLS_TPREL_HI16 against loc0 cannot be used with -shared
 # ERR: error: relocation R_MIPS_TLS_TPREL_LO16 against loc0 cannot be used with -shared
 
-# DIS: 00000000 l    O .tdata          00000000 loc0
+# DIS: 00000000 l      .tdata          00000000 loc0
 
 # DIS:      <__start>:
 # DIS-NEXT:    addiu   $2, $3, 0

@@ -9441,6 +9441,51 @@ static bool processLoopInVPlanNativePath(
   return true;
 }
 
+// Emit a remark if there are stores to floats that required a floating point
+// extension. If the vectorized loop was generated with floating point there
+// will be a performance penalty from the conversion overhead and the change in
+// the vector width.
+static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
+  SmallVector<Instruction *, 4> Worklist;
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &Inst : *BB) {
+      if (auto *S = dyn_cast<StoreInst>(&Inst)) {
+        if (S->getValueOperand()->getType()->isFloatTy())
+          Worklist.push_back(S);
+      }
+    }
+  }
+
+  // Traverse the floating point stores upwards searching, for floating point
+  // conversions.
+  SmallPtrSet<const Instruction *, 4> Visited;
+  SmallPtrSet<const Instruction *, 4> EmittedRemark;
+  while (!Worklist.empty()) {
+    auto *I = Worklist.pop_back_val();
+    if (!L->contains(I))
+      continue;
+    if (!Visited.insert(I).second)
+      continue;
+
+    // Emit a remark if the floating point store required a floating
+    // point conversion.
+    // TODO: More work could be done to identify the root cause such as a
+    // constant or a function return type and point the user to it.
+    if (isa<FPExtInst>(I) && EmittedRemark.insert(I).second)
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysis(LV_NAME, "VectorMixedPrecision",
+                                          I->getDebugLoc(), L->getHeader())
+               << "floating point conversion changes vector width. "
+               << "Mixed floating point precision requires an up/down "
+               << "cast that will negatively impact performance.";
+      });
+
+    for (Use &Op : I->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        Worklist.push_back(OpI);
+  }
+}
+
 LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
     : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced ||
                                !EnableLoopInterleaving),
@@ -9759,6 +9804,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << NV("VectorizationFactor", VF.Width)
              << ", interleaved count: " << NV("InterleaveCount", IC) << ")";
     });
+
+    if (ORE->allowExtraAnalysis(LV_NAME))
+      checkMixedPrecision(L, ORE);
   }
 
   Optional<MDNode *> RemainderLoopID =

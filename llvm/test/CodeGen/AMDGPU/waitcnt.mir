@@ -87,34 +87,34 @@ name: flat_zero_waitcnt
 body: |
   bb.0:
     successors: %bb.1
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.global16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
     successors: %bb.3
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
-    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     S_BRANCH %bb.3
 
   bb.3:
     successors: %bb.4
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
     $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
-    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
     $vgpr0 = V_MOV_B32_e32 $vgpr5, implicit $exec
     S_ENDPGM 0
 ...
@@ -135,11 +135,11 @@ name: single_fallthrough_successor_no_end_block_wait
 body: |
   bb.0:
     successors: %bb.1
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
     $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
 ---
@@ -162,16 +162,16 @@ name: single_branch_successor_not_next_block
 body: |
   bb.0:
     successors: %bb.2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
    S_BRANCH %bb.2
 
   bb.1:
-    FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 
   bb.2:
      $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
 
@@ -186,9 +186,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $vgpr1_vgpr2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 0
-    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
 ...
 
@@ -208,12 +208,12 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $vgpr1_vgpr2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     BUNDLE {
       S_NOP 0
       S_NOP 0
     }
-    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
 ...
 
@@ -231,12 +231,12 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $vgpr1_vgpr2
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     BUNDLE {
       S_NOP 0
       S_WAITCNT 0
     }
-    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
 ...
 
@@ -245,9 +245,9 @@ body: |
 # Def and use inside bundle
 # CHECK-LABEL: name: insert_in_bundle{{$}}
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: S_WAITCNT 112
-# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 
 name: insert_in_bundle
@@ -258,8 +258,8 @@ body: |
   bb.0:
     liveins: $vgpr1_vgpr2
     BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     }
 ...
 
@@ -269,10 +269,10 @@ body: |
 
 # CHECK-LABEL: name: exit_bundle{{$}}
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 # CHECK-NEXT: S_WAITCNT 112
-# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
 name: exit_bundle
 tracksRegLiveness: true
@@ -282,10 +282,10 @@ body: |
   bb.0:
     liveins: $vgpr1_vgpr2
     BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     }
 
-    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
 ...
 
@@ -295,11 +295,11 @@ body: |
 
 # CHECK-LABEL: name: cross_bundle{{$}}
 # CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 # CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
-# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK-NEXT: }
 
 name: cross_bundle
@@ -310,10 +310,10 @@ body: |
   bb.0:
     liveins: $vgpr1_vgpr2
     BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     }
     BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
-      FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+      FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     }
 ...
 
@@ -328,7 +328,7 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
-      $vgpr0 = FLAT_LOAD_USHORT killed $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-      $vgpr1 = FLAT_LOAD_USHORT killed $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+      $vgpr0 = FLAT_LOAD_USHORT killed $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+      $vgpr1 = FLAT_LOAD_USHORT killed $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
       V_NOP_e32 implicit $exec, implicit $vgpr0_lo16, implicit $vgpr1_lo16
 ...

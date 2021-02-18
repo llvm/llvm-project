@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -1860,13 +1861,13 @@ private:
 
 struct AllocOpLowering : public AllocLikeOpLowering {
   AllocOpLowering(LLVMTypeConverter &converter)
-      : AllocLikeOpLowering(AllocOp::getOperationName(), converter) {}
+      : AllocLikeOpLowering(memref::AllocOp::getOperationName(), converter) {}
 
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
                                           Operation *op) const override {
     // Heap allocations.
-    AllocOp allocOp = cast<AllocOp>(op);
+    memref::AllocOp allocOp = cast<memref::AllocOp>(op);
     MemRefType memRefType = allocOp.getType();
 
     Value alignment;
@@ -1913,7 +1914,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
 
 struct AlignedAllocOpLowering : public AllocLikeOpLowering {
   AlignedAllocOpLowering(LLVMTypeConverter &converter)
-      : AllocLikeOpLowering(AllocOp::getOperationName(), converter) {}
+      : AllocLikeOpLowering(memref::AllocOp::getOperationName(), converter) {}
 
   /// Returns the memref's element size in bytes.
   // TODO: there are other places where this is used. Expose publicly?
@@ -1946,7 +1947,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
   /// Returns the alignment to be used for the allocation call itself.
   /// aligned_alloc requires the allocation size to be a power of two, and the
   /// allocation size to be a multiple of alignment,
-  int64_t getAllocationAlignment(AllocOp allocOp) const {
+  int64_t getAllocationAlignment(memref::AllocOp allocOp) const {
     if (Optional<uint64_t> alignment = allocOp.alignment())
       return *alignment;
 
@@ -1962,7 +1963,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
                                           Location loc, Value sizeBytes,
                                           Operation *op) const override {
     // Heap allocations.
-    AllocOp allocOp = cast<AllocOp>(op);
+    memref::AllocOp allocOp = cast<memref::AllocOp>(op);
     MemRefType memRefType = allocOp.getType();
     int64_t alignment = getAllocationAlignment(allocOp);
     Value allocAlignment = createIndexConstant(rewriter, loc, alignment);
@@ -1993,7 +1994,7 @@ constexpr uint64_t AlignedAllocOpLowering::kMinAlignedAllocAlignment;
 
 struct AllocaOpLowering : public AllocLikeOpLowering {
   AllocaOpLowering(LLVMTypeConverter &converter)
-      : AllocLikeOpLowering(AllocaOp::getOperationName(), converter) {}
+      : AllocLikeOpLowering(memref::AllocaOp::getOperationName(), converter) {}
 
   /// Allocates the underlying buffer using the right call. `allocatedBytePtr`
   /// is set to null for stack allocations. `accessAlignment` is set if
@@ -2004,7 +2005,7 @@ struct AllocaOpLowering : public AllocLikeOpLowering {
 
     // With alloca, one gets a pointer to the element type right away.
     // For stack allocations.
-    auto allocaOp = cast<AllocaOp>(op);
+    auto allocaOp = cast<memref::AllocaOp>(op);
     auto elementPtrType = this->getElementPtrType(allocaOp.getType());
 
     auto allocatedElementPtr = rewriter.create<LLVM::AllocaOp>(
@@ -2176,17 +2177,17 @@ struct CallIndirectOpLowering : public CallOpInterfaceLowering<CallIndirectOp> {
 // A `dealloc` is converted into a call to `free` on the underlying data buffer.
 // The memref descriptor being an SSA value, there is no need to clean it up
 // in any way.
-struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
-  using ConvertOpToLLVMPattern<DeallocOp>::ConvertOpToLLVMPattern;
+struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
+  using ConvertOpToLLVMPattern<memref::DeallocOp>::ConvertOpToLLVMPattern;
 
   explicit DeallocOpLowering(LLVMTypeConverter &converter)
-      : ConvertOpToLLVMPattern<DeallocOp>(converter) {}
+      : ConvertOpToLLVMPattern<memref::DeallocOp>(converter) {}
 
   LogicalResult
-  matchAndRewrite(DeallocOp op, ArrayRef<Value> operands,
+  matchAndRewrite(memref::DeallocOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     assert(operands.size() == 1 && "dealloc takes one operand");
-    DeallocOp::Adaptor transformed(operands);
+    memref::DeallocOp::Adaptor transformed(operands);
 
     // Insert the `free` declaration if it is not already present.
     auto freeFunc = LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
@@ -2205,7 +2206,7 @@ static Type convertGlobalMemrefTypeToLLVM(MemRefType type,
                                           LLVMTypeConverter &typeConverter) {
   // LLVM type for a global memref will be a multi-dimension array. For
   // declarations or uninitialized global memrefs, we can potentially flatten
-  // this to a 1D array. However, for global_memref's with an initial value,
+  // this to a 1D array. However, for memref.global's with an initial value,
   // we do not intend to flatten the ElementsAttribute when going from std ->
   // LLVM dialect, so the LLVM type needs to me a multi-dimension array.
   Type elementType = unwrap(typeConverter.convertType(type.getElementType()));
@@ -2217,11 +2218,12 @@ static Type convertGlobalMemrefTypeToLLVM(MemRefType type,
 }
 
 /// GlobalMemrefOp is lowered to a LLVM Global Variable.
-struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
-  using ConvertOpToLLVMPattern<GlobalMemrefOp>::ConvertOpToLLVMPattern;
+struct GlobalMemrefOpLowering
+    : public ConvertOpToLLVMPattern<memref::GlobalOp> {
+  using ConvertOpToLLVMPattern<memref::GlobalOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(GlobalMemrefOp global, ArrayRef<Value> operands,
+  matchAndRewrite(memref::GlobalOp global, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType type = global.type().cast<MemRefType>();
     if (!isConvertibleAndHasIdentityMaps(type))
@@ -2255,14 +2257,15 @@ struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
 /// `AllocLikeOpLowering` to reuse the Memref descriptor construction.
 struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
   GetGlobalMemrefOpLowering(LLVMTypeConverter &converter)
-      : AllocLikeOpLowering(GetGlobalMemrefOp::getOperationName(), converter) {}
+      : AllocLikeOpLowering(memref::GetGlobalOp::getOperationName(),
+                            converter) {}
 
-  /// Buffer "allocation" for get_global_memref op is getting the address of
+  /// Buffer "allocation" for memref.get_global op is getting the address of
   /// the global variable referenced.
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
                                           Location loc, Value sizeBytes,
                                           Operation *op) const override {
-    auto getGlobalOp = cast<GetGlobalMemrefOp>(op);
+    auto getGlobalOp = cast<memref::GetGlobalOp>(op);
     MemRefType type = getGlobalOp.result().getType().cast<MemRefType>();
     unsigned memSpace = type.getMemorySpace();
 
@@ -2281,7 +2284,7 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
                     createIndexConstant(rewriter, loc, 0));
     auto gep = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, operands);
 
-    // We do not expect the memref obtained using `get_global_memref` to be
+    // We do not expect the memref obtained using `memref.get_global` to be
     // ever deallocated. Set the allocated pointer to be known bad value to
     // help debug if that ever happens.
     auto intPtrType = getIntPtrType(memSpace);
@@ -2350,17 +2353,17 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
   }
 };
 
-struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
-  using ConvertOpToLLVMPattern<MemRefCastOp>::ConvertOpToLLVMPattern;
+struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
+  using ConvertOpToLLVMPattern<memref::CastOp>::ConvertOpToLLVMPattern;
 
-  LogicalResult match(MemRefCastOp memRefCastOp) const override {
+  LogicalResult match(memref::CastOp memRefCastOp) const override {
     Type srcType = memRefCastOp.getOperand().getType();
     Type dstType = memRefCastOp.getType();
 
-    // MemRefCastOp reduce to bitcast in the ranked MemRef case and can be used
-    // for type erasure. For now they must preserve underlying element type and
-    // require source and result type to have the same rank. Therefore, perform
-    // a sanity check that the underlying structs are the same. Once op
+    // memref::CastOp reduce to bitcast in the ranked MemRef case and can be
+    // used for type erasure. For now they must preserve underlying element type
+    // and require source and result type to have the same rank. Therefore,
+    // perform a sanity check that the underlying structs are the same. Once op
     // semantics are relaxed we can revisit.
     if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>())
       return success(typeConverter->convertType(srcType) ==
@@ -2377,9 +2380,9 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
                : failure();
   }
 
-  void rewrite(MemRefCastOp memRefCastOp, ArrayRef<Value> operands,
+  void rewrite(memref::CastOp memRefCastOp, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const override {
-    MemRefCastOp::Adaptor transformed(operands);
+    memref::CastOp::Adaptor transformed(operands);
 
     auto srcType = memRefCastOp.getOperand().getType();
     auto dstType = memRefCastOp.getType();
@@ -2864,14 +2867,14 @@ struct LoadOpLowering : public LoadStoreOpLowering<LoadOp> {
 
 // Store operation is lowered to obtaining a pointer to the indexed element,
 // and storing the given value to it.
-struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
+struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
   using Base::Base;
 
   LogicalResult
-  matchAndRewrite(StoreOp op, ArrayRef<Value> operands,
+  matchAndRewrite(memref::StoreOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
-    StoreOp::Adaptor transformed(operands);
+    memref::StoreOp::Adaptor transformed(operands);
 
     Value dataPtr =
         getStridedElementPtr(op.getLoc(), type, transformed.memref(),
@@ -2884,13 +2887,13 @@ struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
 
 // The prefetch operation is lowered in a way similar to the load operation
 // except that the llvm.prefetch operation is used for replacement.
-struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
+struct PrefetchOpLowering : public LoadStoreOpLowering<memref::PrefetchOp> {
   using Base::Base;
 
   LogicalResult
-  matchAndRewrite(PrefetchOp prefetchOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::PrefetchOp prefetchOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    PrefetchOp::Adaptor transformed(operands);
+    memref::PrefetchOp::Adaptor transformed(operands);
     auto type = prefetchOp.getMemRefType();
     auto loc = prefetchOp.getLoc();
 
@@ -3372,15 +3375,15 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
 ///      and stride. Size and stride are permutations of the original values.
 ///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
 /// The transpose op is replaced by the alloca'ed pointer.
-class TransposeOpLowering : public ConvertOpToLLVMPattern<TransposeOp> {
+class TransposeOpLowering : public ConvertOpToLLVMPattern<memref::TransposeOp> {
 public:
-  using ConvertOpToLLVMPattern<TransposeOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<memref::TransposeOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(TransposeOp transposeOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::TransposeOp transposeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = transposeOp.getLoc();
-    TransposeOpAdaptor adaptor(operands);
+    memref::TransposeOpAdaptor adaptor(operands);
     MemRefDescriptor viewMemRef(adaptor.in());
 
     // No permutation, early exit.
@@ -3420,8 +3423,8 @@ public:
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
 ///      and stride.
 /// The view op is replaced by the descriptor.
-struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
-  using ConvertOpToLLVMPattern<ViewOp>::ConvertOpToLLVMPattern;
+struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
+  using ConvertOpToLLVMPattern<memref::ViewOp>::ConvertOpToLLVMPattern;
 
   // Build and return the value for the idx^th shape dimension, either by
   // returning the constant shape dimension or counting the proper dynamic size.
@@ -3457,10 +3460,10 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
   }
 
   LogicalResult
-  matchAndRewrite(ViewOp viewOp, ArrayRef<Value> operands,
+  matchAndRewrite(memref::ViewOp viewOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = viewOp.getLoc();
-    ViewOpAdaptor adaptor(operands);
+    memref::ViewOpAdaptor adaptor(operands);
 
     auto viewMemRefType = viewOp.getType();
     auto targetElementTy =

@@ -151,7 +151,7 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   // CHECK: %[[DESC_0:.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_0]][0]
   // CHECK: %[[DESC_2:.*]] = llvm.insertvalue %[[MEMORY]], %[[DESC_1]][1]
-  %0 = memref_cast %arg0: memref<4x3xf32> to memref<*xf32>
+  %0 = memref.cast %arg0: memref<4x3xf32> to memref<*xf32>
 
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : index)
   // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2 : index)
@@ -213,7 +213,7 @@ func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*x
   // CHECK: %[[DESC_0:.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: %[[DESC_1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_0]][0]
   // CHECK: %[[DESC_2:.*]] = llvm.insertvalue %[[MEMORY]], %[[DESC_1]][1]
-  %0 = memref_cast %arg0 : memref<4x3xf32> to memref<*xf32>
+  %0 = memref.cast %arg0 : memref<4x3xf32> to memref<*xf32>
 
   // Only check that we allocate the memory for each operand of the "return"
   // separately, even if both operands are the same value. The calling

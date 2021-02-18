@@ -5,11 +5,11 @@
 
 func @print_0d() {
   %f = constant 2.00000e+00 : f32
-  %A = alloc() : memref<f32>
-  store %f, %A[]: memref<f32>
-  %U = memref_cast %A :  memref<f32> to memref<*xf32>
+  %A = memref.alloc() : memref<f32>
+  memref.store %f, %A[]: memref<f32>
+  %U = memref.cast %A :  memref<f32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
-  dealloc %A : memref<f32>
+  memref.dealloc %A : memref<f32>
   return
 }
 // PRINT-0D: Unranked Memref base@ = {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
@@ -17,12 +17,12 @@ func @print_0d() {
 
 func @print_1d() {
   %f = constant 2.00000e+00 : f32
-  %A = alloc() : memref<16xf32>
-  %B = memref_cast %A: memref<16xf32> to memref<?xf32>
+  %A = memref.alloc() : memref<16xf32>
+  %B = memref.cast %A: memref<16xf32> to memref<?xf32>
   linalg.fill(%B, %f) : memref<?xf32>, f32
-  %U = memref_cast %B :  memref<?xf32> to memref<*xf32>
+  %U = memref.cast %B :  memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
-  dealloc %A : memref<16xf32>
+  memref.dealloc %A : memref<16xf32>
   return
 }
 // PRINT-1D: Unranked Memref base@ = {{.*}} rank = 1 offset = 0 sizes = [16] strides = [1] data =
@@ -31,15 +31,15 @@ func @print_1d() {
 func @print_3d() {
   %f = constant 2.00000e+00 : f32
   %f4 = constant 4.00000e+00 : f32
-  %A = alloc() : memref<3x4x5xf32>
-  %B = memref_cast %A: memref<3x4x5xf32> to memref<?x?x?xf32>
+  %A = memref.alloc() : memref<3x4x5xf32>
+  %B = memref.cast %A: memref<3x4x5xf32> to memref<?x?x?xf32>
   linalg.fill(%B, %f) : memref<?x?x?xf32>, f32
 
   %c2 = constant 2 : index
-  store %f4, %B[%c2, %c2, %c2]: memref<?x?x?xf32>
-  %U = memref_cast %B : memref<?x?x?xf32> to memref<*xf32>
+  memref.store %f4, %B[%c2, %c2, %c2]: memref<?x?x?xf32>
+  %U = memref.cast %B : memref<?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
-  dealloc %A : memref<3x4x5xf32>
+  memref.dealloc %A : memref<3x4x5xf32>
   return
 }
 // PRINT-3D: Unranked Memref base@ = {{.*}} rank = 3 offset = 0 sizes = [3, 4, 5] strides = [20, 5, 1] data =
@@ -57,13 +57,13 @@ func @vector_splat_2d() {
   %c0 = constant 0 : index
   %f10 = constant 10.0 : f32
   %vf10 = splat %f10: !vector_type_C
-  %C = alloc() : !matrix_type_CC
-  store %vf10, %C[%c0, %c0]: !matrix_type_CC
+  %C = memref.alloc() : !matrix_type_CC
+  memref.store %vf10, %C[%c0, %c0]: !matrix_type_CC
 
-  %CC = memref_cast %C: !matrix_type_CC to memref<?x?x!vector_type_C>
+  %CC = memref.cast %C: !matrix_type_CC to memref<?x?x!vector_type_C>
   call @print_memref_vector_4x4xf32(%CC): (memref<?x?x!vector_type_C>) -> ()
 
-  dealloc %C : !matrix_type_CC
+  memref.dealloc %C : !matrix_type_CC
   return
 }
 

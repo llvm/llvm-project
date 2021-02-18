@@ -407,6 +407,9 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
       char Flags = 0;
 
       if (TII->isWQM(Opcode)) {
+        // If LOD is not supported WQM is not needed.
+        if (!ST->hasExtendedImageInsts())
+          continue;
         // Sampling instructions don't need to produce results for all pixels
         // in a quad, they just require all inputs of a quad to have been
         // computed for derivatives.

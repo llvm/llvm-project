@@ -50,6 +50,18 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mtgsplit  2>&1 | FileCheck %s -check-prefix=TGSPLIT
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mno-tgsplit  2>&1 | FileCheck %s -check-prefix=NOTTGSPLIT
+
+// TGSPLIT: {{.*}}clang{{.*}}"-target-feature" "+tgsplit"
+// NOTTGSPLIT: {{.*}}clang{{.*}}"-target-feature" "-tgsplit"
+// TGSPLIT: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+tgsplit"
+// NOTTGSPLIT: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-tgsplit"
+
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
 // RUN:   -mcumode -mcumode -mno-cumode -mwavefrontsize64 -mcumode \
 // RUN:   -mwavefrontsize64 -mno-wavefrontsize64 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=DUP

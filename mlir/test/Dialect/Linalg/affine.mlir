@@ -12,9 +12,9 @@
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
-  %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
-  %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
+  %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
+  %B = memref.view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
+  %C = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
   linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
                outs(%C: memref<?x?xf32>)
   return
@@ -24,9 +24,9 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 // CHECK-SAME: [[M:arg[0-9]+]]: index
 // CHECK-SAME: [[N:arg[0-9]+]]: index
 // CHECK-SAME: [[K:arg[0-9]+]]: index
-//       CHECK: %[[A:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[B:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[C:.*]] = std.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK: affine.for %{{.*}}  = 0 to %{{.*}} {
 //       CHECK:   affine.for %{{.*}} = 0 to %{{.*}} {
 //       CHECK:     affine.for %{{.*}} = 0 to %{{.*}} {

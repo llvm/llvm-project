@@ -163,6 +163,10 @@ def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
     (sequence "VGPR%u", 248, 255))
 >;
 
+def CSR_AMDGPU_AGPRs_32_255 : CalleeSavedRegs<
+  (sequence "AGPR%u", 32, 255)
+>;
+
 def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
@@ -172,6 +176,13 @@ def CSR_AMDGPU_AllVGPRs : CalleeSavedRegs<
   (sequence "VGPR%u", 0, 255)
 >;
 
+def CSR_AMDGPU_AllAGPRs : CalleeSavedRegs<
+  (sequence "AGPR%u", 0, 255)
+>;
+def CSR_AMDGPU_AllVectorRegs : CalleeSavedRegs<
+  (add CSR_AMDGPU_AllVGPRs, CSR_AMDGPU_AllAGPRs)
+>;
+
 // Just to get the regmask, not for calling convention purposes.
 def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
   (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)
@@ -179,6 +190,10 @@ def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
   (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
+>;
+
+def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
+  (add CSR_AMDGPU_HighRegs, CSR_AMDGPU_AGPRs_32_255)
 >;
 
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;

@@ -58,6 +58,9 @@
 # RUN: yaml2obj %s -o %t -DCPU=GFX909
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX909 -DFLAGS=0x31
 
+# RUN: yaml2obj %s -o %t -DCPU=GFX90A
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX90A -DFLAGS=0x3F
+
 # RUN: yaml2obj %s -o %t -DCPU=GFX90C
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX90C -DFLAGS=0x32
 

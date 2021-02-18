@@ -535,7 +535,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     contained in the op. Operations marked with the [MemRefsNormalizable]
     (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
     expected to be normalizable. Supported operations include affine
-    operations, std.alloc, std.dealloc, and std.return.
+    operations, memref.alloc, memref.dealloc, and std.return.
 
     Given an appropriate layout map specified in the code, this transformation
     can express tiled or linearized access to multi-dimensional data

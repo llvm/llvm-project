@@ -46,6 +46,7 @@ private:
   Triple TargetTriple;
 
 protected:
+  bool GCN3Encoding;
   bool Has16BitInsts;
   bool HasMadMixInsts;
   bool HasMadMacF32Insts;
@@ -123,6 +124,10 @@ public:
 
   bool isGCN() const {
     return TargetTriple.getArch() == Triple::amdgcn;
+  }
+
+  bool isGCN3Encoding() const {
+    return GCN3Encoding;
   }
 
   bool has16BitInsts() const {

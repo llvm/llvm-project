@@ -1134,7 +1134,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
 
     const MCSymbol *SignatureSymbol = Group->getGroup();
     assert(SignatureSymbol);
-    write(uint32_t(Group->isComdat() ? ELF::GRP_COMDAT : 0));
+    write(uint32_t(Group->isComdat() ? unsigned(ELF::GRP_COMDAT) : 0));
     for (const MCSectionELF *Member : GroupMembers[SignatureSymbol]) {
       uint32_t SecIndex = SectionIndexMap.lookup(Member);
       write(SecIndex);

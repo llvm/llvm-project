@@ -103,9 +103,8 @@ static void buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
                           const X86Subtarget *ST) {
   auto *MBB = MI->getParent();
 
-  // FIXME: AMX should assume AVX512 enabled.
+  // Zero stack slot.
   if (ST->hasAVX512()) {
-    // Zero stack slot.
     Register Zmm = MRI->createVirtualRegister(&X86::VR512RegClass);
     BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VPXORDZrr), Zmm)
         .addReg(Zmm, RegState::Undef)
@@ -113,6 +112,35 @@ static void buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
     addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSZmr)),
                       FrameIdx)
         .addReg(Zmm);
+  } else if (ST->hasAVX2()) {
+    Register Ymm = MRI->createVirtualRegister(&X86::VR256RegClass);
+    BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VPXORYrr), Ymm)
+        .addReg(Ymm, RegState::Undef)
+        .addReg(Ymm, RegState::Undef);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSYmr)),
+                      FrameIdx)
+        .addReg(Ymm);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSYmr)),
+                      FrameIdx, 32)
+        .addReg(Ymm);
+  } else {
+    assert(ST->hasSSE2() && "AMX should assume SSE2 enabled");
+    Register Xmm = MRI->createVirtualRegister(&X86::VR128RegClass);
+    BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::PXORrr), Xmm)
+        .addReg(Xmm, RegState::Undef)
+        .addReg(Xmm, RegState::Undef);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
+                      FrameIdx)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
+                      FrameIdx, 16)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
+                      FrameIdx, 32)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
+                      FrameIdx, 48)
+        .addReg(Xmm);
   }
 
   // build psuedo ldtilecfg

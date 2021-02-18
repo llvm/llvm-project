@@ -312,7 +312,7 @@ name:            accvgpr_read_write_vgpr_load
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
 
@@ -336,7 +336,7 @@ name:            accvgpr_read_write_vgpr_flat_load
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
 
@@ -348,7 +348,7 @@ name:            accvgpr_read_write_vgpr_buffer_store
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 ---
 
@@ -373,7 +373,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
 
@@ -387,7 +387,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
 
@@ -401,7 +401,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
 
@@ -415,6 +415,6 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---

@@ -352,6 +352,8 @@ else()
   unset(HAVE_FFI_CALL CACHE)
 endif( LLVM_ENABLE_FFI )
 
+check_symbol_exists(proc_pid_rusage "libproc.h" HAVE_PROC_PID_RUSAGE)
+
 # Whether we can use std::is_trivially_copyable to verify llvm::is_trivially_copyable.
 CHECK_CXX_SOURCE_COMPILES("
 #include <type_traits>

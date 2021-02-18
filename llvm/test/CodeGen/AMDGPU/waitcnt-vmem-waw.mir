@@ -11,10 +11,10 @@ body: |
     ; GFX9-LABEL: name: buffer_buffer
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
     ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; GFX9: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX9: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 
 # Two tbuffer loads with overlapping outputs. No waitcnt required.
@@ -27,10 +27,10 @@ body: |
     ; GFX9-LABEL: name: tbuffer_tbuffer
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
     ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, 0, 0, implicit $exec
-    ; GFX9: $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX9: $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX9: $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 125, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 116, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 
 # Two gathers with overlapping outputs. (Note gathers can't be trimmed because
@@ -44,10 +44,10 @@ body: |
     ; GFX9-LABEL: name: gather_gather
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; GFX9: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    ; GFX9: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    ; GFX9: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
 ...
 
 # Image load vs image sample. Waitcnt required because they are not guaranteed
@@ -62,9 +62,9 @@ body: |
     ; GFX9-LABEL: name: nosampler_sampler
     ; GFX9: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX9: $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
     ; GFX9: S_WAITCNT 3952
-    ; GFX9: $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec
-    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 16)
+    ; GFX9: $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 16)
+    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
+    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 8, 0, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 16)
 ...

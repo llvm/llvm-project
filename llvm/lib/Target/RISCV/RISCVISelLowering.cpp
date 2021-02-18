@@ -1816,7 +1816,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   // first slid down into position, the value is inserted into the first
   // position, and the vector is slid back up. We do this to simplify patterns.
   //   (slideup vec, (insertelt (slidedown impdef, vec, idx), val, 0), idx),
-  if (Subtarget.is64Bit() || VecVT.getVectorElementType() != MVT::i64) {
+  if (Subtarget.is64Bit() || Val.getValueType() != MVT::i64) {
     if (isNullConstant(Idx))
       return Op;
     SDValue Mask, VL;
@@ -1830,6 +1830,9 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VecVT, Vec, InsertElt0, Idx,
                        Mask, VL);
   }
+
+  if (!VecVT.isScalableVector())
+    return SDValue();
 
   // Custom-legalize INSERT_VECTOR_ELT where XLEN<SEW, as the SEW element type
   // is illegal (currently only vXi64 RV32).
@@ -2555,10 +2558,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc DL(N);
     SDValue Vec = N->getOperand(0);
     SDValue Idx = N->getOperand(1);
-    MVT VecVT = Vec.getSimpleValueType();
+    EVT VecVT = Vec.getValueType();
     assert(!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64 &&
            VecVT.getVectorElementType() == MVT::i64 &&
            "Unexpected EXTRACT_VECTOR_ELT legalization");
+
+    if (!VecVT.isScalableVector())
+      return;
 
     SDValue Slidedown = Vec;
     MVT XLenVT = Subtarget.getXLenVT();
@@ -2566,7 +2572,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // the desired element into index 0.
     if (!isNullConstant(Idx)) {
       SDValue Mask, VL;
-      std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+      std::tie(Mask, VL) =
+          getDefaultScalableVLOps(VecVT.getSimpleVT(), DL, DAG, Subtarget);
       Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VecVT,
                               DAG.getUNDEF(VecVT), Vec, Idx, Mask, VL);
     }

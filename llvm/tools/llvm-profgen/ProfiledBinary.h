@@ -226,7 +226,7 @@ public:
     return FuncStartAddrMap[Offset];
   }
 
-  Optional<const FrameLocation> getInlineLeafFrameLoc(uint64_t Offset) {
+  Optional<FrameLocation> getInlineLeafFrameLoc(uint64_t Offset) {
     const auto &Stack = getFrameLocationStack(Offset);
     if (Stack.empty())
       return {};

@@ -12,7 +12,7 @@
 // CHECK-LABEL:   func @basic(
 // CHECK-SAME:                %[[TENSOR:.*]]: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK:           %[[MEMREF:.*]] = tensor_to_memref %[[TENSOR]] : memref<4xf32>
-// CHECK:           %[[RESULT_MEMREF:.*]] = alloc() : memref<4xf32>
+// CHECK:           %[[RESULT_MEMREF:.*]] = memref.alloc() : memref<4xf32>
 // CHECK:           linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]}
 // CHECK-SAME:      ins(%[[MEMREF]] : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT_MEMREF]] : memref<4xf32>) {
@@ -45,7 +45,7 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK: #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @init_tensor(
 // CHECK-SAME:      %[[IN:.*]]: tensor<?xf32>, %[[SIZE:.*]]: index)
-// CHECK:         %[[OUT_BUF:.*]] = alloc(%[[SIZE]]) : memref<?xf32>
+// CHECK:         %[[OUT_BUF:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
 // CHECK:         %[[MEMREF:.*]] = tensor_to_memref %[[IN]] : memref<?xf32>
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
@@ -70,8 +70,8 @@ func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL:   func @multiple_results
-// CHECK:           %[[RESULT0:.*]] = alloc() : memref<4xf32>
-// CHECK:           %[[RESULT1:.*]] = alloc() : memref<4xf32>
+// CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<4xf32>
+// CHECK:           %[[RESULT1:.*]] = memref.alloc() : memref<4xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xf32>, memref<4xf32>)
@@ -94,8 +94,8 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL:   func @multiple_results_indexed
-// CHECK:           %[[RESULT0:.*]] = alloc() : memref<4xi32>
-// CHECK:           %[[RESULT1:.*]] = alloc() : memref<4xi32>
+// CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<4xi32>
+// CHECK:           %[[RESULT1:.*]] = memref.alloc() : memref<4xi32>
 // CHECK:           linalg.indexed_generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xi32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xi32>, memref<4xi32>)
@@ -129,8 +129,8 @@ func @multiple_results_indexed(%arg0: tensor<4xi32>)
 // CHECK:           %[[MEMREF_ARG:.*]] = tensor_to_memref %[[ARG]] : memref<?x?xf32>
 // CHECK:           %[[DIM0:.*]] = dim %[[ARG]], %[[C0]] : tensor<?x?xf32>
 // CHECK:           %[[DIM1:.*]] = dim %[[ARG]], %[[C1]] : tensor<?x?xf32>
-// CHECK:           %[[RESULT0:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
-// CHECK:           %[[RESULT1:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+// CHECK:           %[[RESULT0:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+// CHECK:           %[[RESULT1:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[MEMREF_ARG]] : memref<?x?xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<?x?xf32>, memref<?x?xf32>)
@@ -167,7 +167,7 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 // CHECK-SAME:                                   %[[ARG1_TENSOR:.*]]: tensor<3x2xf32>) -> tensor<3x2xf32> {
 // CHECK:           %[[ARG0_MEMREF:.*]] = tensor_to_memref %[[ARG0_TENSOR]] : memref<2x3x4xvector<3x4xi4>>
 // CHECK:           %[[ARG1_MEMREF:.*]] = tensor_to_memref %[[ARG1_TENSOR]] : memref<3x2xf32>
-// CHECK:           %[[INIT_BUFFER:.*]] = alloc() : memref<3x2xf32>
+// CHECK:           %[[INIT_BUFFER:.*]] = memref.alloc() : memref<3x2xf32>
 // CHECK:           linalg.copy(%[[ARG1_MEMREF]], %[[INIT_BUFFER]]) : memref<3x2xf32>, memref<3x2xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[ARG0_MEMREF]] : memref<2x3x4xvector<3x4xi4>>)
@@ -199,7 +199,7 @@ func @bufferize_subtensor(%t : tensor<?x?xf32>) -> (tensor<2x3xf32>, tensor<2x?x
   %i0 = call @make_index() : () -> index
 
   //      CHECK: %[[M0:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
-  // CHECK-NEXT: %[[A0:.*]] = alloc() : memref<2x3xf32>
+  // CHECK-NEXT: %[[A0:.*]] = memref.alloc() : memref<2x3xf32>
   // CHECK-NEXT: %[[SM0:.*]] = subview %[[M0]][0, 0] [2, 3] [1, 1]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
   // CHECK-NEXT: linalg.copy(%[[SM0]], %[[A0]]) : memref<2x3xf32, #[[$MAP0]]>, memref<2x3xf32>
@@ -207,7 +207,7 @@ func @bufferize_subtensor(%t : tensor<?x?xf32>) -> (tensor<2x3xf32>, tensor<2x?x
   %st0 = subtensor %t[0, 0][2, 3][1, 1] : tensor<?x?xf32> to tensor<2x3xf32>
 
   //      CHECK: %[[M1:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
-  // CHECK-NEXT: %[[A1:.*]] = alloc(%[[IDX]]) : memref<2x?xf32>
+  // CHECK-NEXT: %[[A1:.*]] = memref.alloc(%[[IDX]]) : memref<2x?xf32>
   // CHECK-NEXT: %[[SM1:.*]] = subview %[[M1]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>
   // CHECK-NEXT: linalg.copy(%[[SM1]], %[[A1]]) : memref<2x?xf32, #[[$MAP1]]>, memref<2x?xf32>
@@ -243,7 +243,7 @@ func @bufferize_subtensor_insert(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %
   // CHECK-DAG: %[[SM0:.*]] = tensor_to_memref %[[ST0]] : memref<2x3xf32>
   // CHECK-NEXT: %[[DIM0:.*]] = dim %[[T]], %[[C0]] : tensor<?x?xf32>
   // CHECK-NEXT: %[[DIM1:.*]] = dim %[[T]], %[[C1]] : tensor<?x?xf32>
-  // CHECK-NEXT: %[[M0_COPY:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: %[[M0_COPY:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
   // CHECK-NEXT: linalg.copy(%[[M0]], %[[M0_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
   // CHECK-NEXT: %[[SUBVIEW0:.*]] = subview %[[M0_COPY]][0, 0] [2, 3] [1, 1]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
@@ -253,7 +253,7 @@ func @bufferize_subtensor_insert(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %
 
   //  CHECK-DAG: %[[M1:.*]] = tensor_to_memref %[[T]] : memref<?x?xf32>
   //  CHECK-DAG: %[[SM1:.*]] = tensor_to_memref %[[ST1]] : memref<2x?xf32>
-  // CHECK-NEXT: %[[M1_COPY:.*]] = alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: %[[M1_COPY:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
   // CHECK-NEXT: linalg.copy(%[[M1]], %[[M1_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
   // CHECK-NEXT: %[[SUBVIEW1:.*]] = subview %[[M1_COPY]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>

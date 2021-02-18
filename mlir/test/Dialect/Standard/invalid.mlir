@@ -18,21 +18,21 @@ func @test_index_cast_tensor_error(%arg0 : tensor<index>) -> i64 {
 
 func @transpose_not_permutation(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map}}
-  transpose %v (i, j) -> (i, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+  memref.transpose %v (i, j) -> (i, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
 func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map of same rank as the input}}
-  transpose %v (i) -> (i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+  memref.transpose %v (i) -> (i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
 func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{output type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' does not match transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>'}}
-  transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+  memref.transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
@@ -155,60 +155,60 @@ func @memref_reshape_result_affine_map_is_not_identity(
 // -----
 
 // expected-error @+1 {{type should be static shaped memref}}
-global_memref @foo : i32
+memref.global @foo : i32
 
 // -----
 
 // expected-error @+1 {{type should be static shaped memref}}
-global_memref @foo : i32 = 5
+memref.global @foo : i32 = 5
 
 // -----
 
 // expected-error @+1 {{type should be static shaped memref}}
-global_memref @foo : memref<*xf32>
+memref.global @foo : memref<*xf32>
 
 // -----
 
 // expected-error @+1 {{type should be static shaped memref}}
-global_memref @foo : memref<?x?xf32>
+memref.global @foo : memref<?x?xf32>
 
 // -----
 
 // expected-error @+1 {{initial value should be a unit or elements attribute}}
-global_memref @foo : memref<2x2xf32>  = "foo"
+memref.global @foo : memref<2x2xf32>  = "foo"
 
 // -----
 
 // expected-error @+1 {{inferred shape of elements literal ([2]) does not match type ([2, 2])}}
-global_memref @foo : memref<2x2xf32> = dense<[0.0, 1.0]>
+memref.global @foo : memref<2x2xf32> = dense<[0.0, 1.0]>
 
 // -----
 
 // expected-error @+1 {{expected valid '@'-identifier for symbol name}}
-global_memref "private" "public" @foo : memref<2x2xf32>  = "foo"
+memref.global "private" "public" @foo : memref<2x2xf32>  = "foo"
 
 // -----
 
 // expected-error @+1 {{expected valid '@'-identifier for symbol name}}
-global_memref constant external @foo : memref<2x2xf32>  = "foo"
+memref.global constant external @foo : memref<2x2xf32>  = "foo"
 
 // -----
 
 // constant qualifier must be after visibility.
 // expected-error @+1 {{expected valid '@'-identifier for symbol name}}
-global_memref constant "private" @foo : memref<2x2xf32>  = "foo"
+memref.global constant "private" @foo : memref<2x2xf32>  = "foo"
 
 
 // -----
 
 // expected-error @+1 {{op visibility expected to be one of ["public", "private", "nested"], but got "priate"}}
-global_memref "priate" constant @memref5 : memref<2xf32>  = uninitialized
+memref.global "priate" constant @memref5 : memref<2xf32>  = uninitialized
 
 // -----
 
 func @nonexistent_global_memref() {
   // expected-error @+1 {{'gv' does not reference a valid global memref}}
-  %0 = get_global_memref @gv : memref<3xf32>
+  %0 = memref.get_global @gv : memref<3xf32>
   return
 }
 
@@ -218,17 +218,17 @@ func @foo()
 
 func @nonexistent_global_memref() {
   // expected-error @+1 {{'foo' does not reference a valid global memref}}
-  %0 = get_global_memref @foo : memref<3xf32>
+  %0 = memref.get_global @foo : memref<3xf32>
   return
 }
 
 // -----
 
-global_memref @gv : memref<3xi32>
+memref.global @gv : memref<3xi32>
 
 func @mismatched_types() {
   // expected-error @+1 {{result type 'memref<3xf32>' does not match type 'memref<3xi32>' of the global memref @gv}}
-  %0 = get_global_memref @gv : memref<3xf32>
+  %0 = memref.get_global @gv : memref<3xf32>
   return
 }
 

@@ -287,9 +287,9 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
 
 func @vector_transfers(%arg0: index, %arg1: index) {
   %cst = constant 0.000000e+00 : f32
-  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %cst_0 = constant 1.000000e+00 : f32
   %cst_1 = constant 2.000000e+00 : f32
   affine.for %arg2 = 0 to %arg0 step 4 {
@@ -434,7 +434,7 @@ func @vector_transfers_vector_element_type() {
   %cf0 = constant 0.000000e+00 : f32
   %vf0 = splat %cf0 : vector<2x4xf32>
 
-  %0 = alloc() : memref<6x2x1xvector<2x4xf32>>
+  %0 = memref.alloc() : memref<6x2x1xvector<2x4xf32>>
 
   %1 = vector.transfer_read %0[%c0, %c0, %c0], %vf0
       {permutation_map = affine_map<(d0, d1, d2) -> (d1, d2)>}

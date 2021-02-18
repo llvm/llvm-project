@@ -1,6 +1,7 @@
 // RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX8,NONGFX10,AMDHSA
 // RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,GFX10,AMDHSA
 // RUN: not llvm-mc -triple amdgcn-amd- -mcpu=gfx803 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GCN,NONAMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=3 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=GFX90A,NONGFX10,AMDHSA,ALL
 
 .text
 
@@ -18,7 +19,6 @@
 .end_amdhsa_kernel
 
 // GCN-LABEL: warning: test_amdhsa_kernel_empty
-// AMDHSA-NOT: error: unknown directive
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_kernel_empty"
 .amdhsa_kernel test_amdhsa_kernel_empty
@@ -72,7 +72,88 @@
   .amdhsa_next_free_vgpr 0
 .end_amdhsa_kernel
 
-// GCN-LABEL: warning: test_amdhsa_wavefront_size32
+// ALL-LABEL: warning: test_amdhsa_accum_offset
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: .amdhsa_next_free_vgpr directive is required
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset"
+.amdhsa_kernel test_amdhsa_accum_offset
+  .amdhsa_accum_offset 4
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_accum_offset_missing
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: .amdhsa_accum_offset directive is required
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset_missing"
+.amdhsa_kernel test_amdhsa_accum_offset_missing
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr 0
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_accum_offset_invalid0
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: accum_offset should be in range [4..256] in increments of 4
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset_invalid0"
+.amdhsa_kernel test_amdhsa_accum_offset_invalid0
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr 0
+  .amdhsa_accum_offset 0
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_accum_offset_invalid5
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: accum_offset should be in range [4..256] in increments of 4
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset_invalid5"
+.amdhsa_kernel test_amdhsa_accum_offset_invalid5
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr 0
+  .amdhsa_accum_offset 5
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_accum_offset_invalid257
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: accum_offset should be in range [4..256] in increments of 4
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset_invalid257"
+.amdhsa_kernel test_amdhsa_accum_offset_invalid257
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr 0
+  .amdhsa_accum_offset 257
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_accum_offset_invalid8
+// NONGFX9A: error: directive requires gfx90a+
+// GFX90A: error: accum_offset exceeds total VGPR allocation
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_accum_offset_invalid8"
+.amdhsa_kernel test_amdhsa_accum_offset_invalid8
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr 0
+  .amdhsa_accum_offset 8
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_tg_split
+// NONGFX90A: error: directive requires gfx90a+
+// GFX90A: error: .amdhsa_next_free_vgpr directive is required
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_tg_split"
+.amdhsa_kernel test_amdhsa_tg_split
+  .amdhsa_tg_split 1
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_tg_split_invalid
+// NONGFX90A: error: directive requires gfx90a+
+// GFX90A: error: value out of range
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_tg_split_invalid"
+.amdhsa_kernel test_amdhsa_tg_split_invalid
+  .amdhsa_tg_split 5
+.end_amdhsa_kernel
+
+// ALL-LABEL: warning: test_amdhsa_wavefront_size32
 // NONGFX10: error: directive requires gfx10+
 // GFX10: error: .amdhsa_next_free_vgpr directive is required
 // NONAMDHSA: error: unknown directive

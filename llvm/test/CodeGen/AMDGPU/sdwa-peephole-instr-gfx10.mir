@@ -80,7 +80,7 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
 
     %5 = S_MOV_B32 65535
     %6 = S_MOV_B32 65535
@@ -130,7 +130,7 @@ body:             |
 
     %100 = V_MOV_B32_e32 %48, implicit $exec
 
-    FLAT_STORE_DWORD %0, %100, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %100, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
 
@@ -227,7 +227,7 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
 
     %5 = S_MOV_B32 65535
     %6 = S_MOV_B32 65535
@@ -286,7 +286,7 @@ body:             |
 
     %100 = V_MOV_B32_e32 %60, implicit $exec
 
-    FLAT_STORE_DWORD %0, %100, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %100, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
 

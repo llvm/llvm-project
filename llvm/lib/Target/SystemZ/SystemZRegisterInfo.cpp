@@ -202,7 +202,7 @@ SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       MF->getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_SaveList;
-  return CSR_SystemZ_SaveList;
+  return CSR_SystemZ_ELF_SaveList;
 }
 
 const uint32_t *
@@ -218,7 +218,7 @@ SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       MF.getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_RegMask;
-  return CSR_SystemZ_RegMask;
+  return CSR_SystemZ_ELF_RegMask;
 }
 
 BitVector
