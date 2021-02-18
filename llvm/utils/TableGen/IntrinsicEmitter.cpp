@@ -675,65 +675,38 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         unsigned attrIdx = intrinsic.ArgumentAttributes[ai].Index;
 
         OS << "      const Attribute::AttrKind AttrParam" << attrIdx << "[]= {";
-        bool addComma = false;
+        ListSeparator LS(",");
 
         bool AllValuesAreZero = true;
         SmallVector<uint64_t, 8> Values;
         do {
           switch (intrinsic.ArgumentAttributes[ai].Kind) {
           case CodeGenIntrinsic::NoCapture:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::NoCapture";
-            addComma = true;
+            OS << LS << "Attribute::NoCapture";
             break;
           case CodeGenIntrinsic::NoAlias:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::NoAlias";
-            addComma = true;
+            OS << LS << "Attribute::NoAlias";
             break;
           case CodeGenIntrinsic::NoUndef:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::NoUndef";
-            addComma = true;
+            OS << LS << "Attribute::NoUndef";
             break;
           case CodeGenIntrinsic::Returned:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::Returned";
-            addComma = true;
+            OS << LS << "Attribute::Returned";
             break;
           case CodeGenIntrinsic::ReadOnly:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::ReadOnly";
-            addComma = true;
+            OS << LS << "Attribute::ReadOnly";
             break;
           case CodeGenIntrinsic::WriteOnly:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::WriteOnly";
-            addComma = true;
+            OS << LS << "Attribute::WriteOnly";
             break;
           case CodeGenIntrinsic::ReadNone:
-            if (addComma)
-              OS << ",";
-            OS << "Attribute::ReadNone";
-            addComma = true;
+            OS << LS << "Attribute::ReadNone";
             break;
           case CodeGenIntrinsic::ImmArg:
-            if (addComma)
-              OS << ',';
-            OS << "Attribute::ImmArg";
-            addComma = true;
+            OS << LS << "Attribute::ImmArg";
             break;
           case CodeGenIntrinsic::Alignment:
-            if (addComma)
-              OS << ',';
-            OS << "Attribute::Alignment";
-            addComma = true;
+            OS << LS << "Attribute::Alignment";
             break;
           }
           uint64_t V = intrinsic.ArgumentAttributes[ai].Value;
@@ -747,13 +720,9 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         // Generate attribute value array if not all attribute values are zero.
         if (!AllValuesAreZero) {
           OS << "      const uint64_t AttrValParam" << attrIdx << "[]= {";
-          addComma = false;
-          for (const auto V : Values) {
-            if (addComma)
-              OS << ',';
-            OS << V;
-            addComma = true;
-          }
+          ListSeparator LSV(",");
+          for (const auto V : Values)
+            OS << LSV << V;
           OS << "};\n";
         }
 
