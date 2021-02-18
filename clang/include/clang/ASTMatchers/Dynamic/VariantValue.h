@@ -44,12 +44,14 @@ class ArgKind {
   ArgKind(Kind K) : K(K) { assert(K != AK_Matcher); }
 
   /// Constructor for matcher types.
-  ArgKind(ASTNodeKind MatcherKind) : K(AK_Matcher), MatcherKind(MatcherKind) {}
+  static ArgKind MakeMatcherArg(ASTNodeKind MatcherKind) {
+    return ArgKind{AK_Matcher, MatcherKind};
+  }
 
   Kind getArgKind() const { return K; }
   ASTNodeKind getMatcherKind() const {
     assert(K == AK_Matcher);
-    return MatcherKind;
+    return NodeKind;
   }
 
   /// Determines if this type can be converted to \p To.
@@ -62,7 +64,7 @@ class ArgKind {
 
   bool operator<(const ArgKind &Other) const {
     if (K == AK_Matcher && Other.K == AK_Matcher)
-      return MatcherKind < Other.MatcherKind;
+      return NodeKind < Other.NodeKind;
     return K < Other.K;
   }
 
@@ -70,8 +72,9 @@ class ArgKind {
   std::string asString() const;
 
 private:
+  ArgKind(Kind K, ASTNodeKind NK) : K(K), NodeKind(NK) {}
   Kind K;
-  ASTNodeKind MatcherKind;
+  ASTNodeKind NodeKind;
 };
 
 using ast_matchers::internal::DynTypedMatcher;

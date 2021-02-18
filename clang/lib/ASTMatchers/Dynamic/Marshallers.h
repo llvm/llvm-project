@@ -93,7 +93,7 @@ template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
   }
 
   static ArgKind getKind() {
-    return ArgKind(ASTNodeKind::getFromNodeKind<T>());
+    return ArgKind::MakeMatcherArg(ASTNodeKind::getFromNodeKind<T>());
   }
 
   static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
@@ -343,7 +343,8 @@ inline bool isRetKindConvertibleTo(ArrayRef<ASTNodeKind> RetKinds,
                                    ASTNodeKind Kind, unsigned *Specificity,
                                    ASTNodeKind *LeastDerivedKind) {
   for (const ASTNodeKind &NodeKind : RetKinds) {
-    if (ArgKind(NodeKind).isConvertibleTo(Kind, Specificity)) {
+    if (ArgKind::MakeMatcherArg(NodeKind).isConvertibleTo(
+            ArgKind::MakeMatcherArg(Kind), Specificity)) {
       if (LeastDerivedKind)
         *LeastDerivedKind = NodeKind;
       return true;
@@ -904,7 +905,7 @@ public:
 
   void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
                    std::vector<ArgKind> &Kinds) const override {
-    Kinds.push_back(ThisKind);
+    Kinds.push_back(ArgKind::MakeMatcherArg(ThisKind));
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
@@ -976,7 +977,7 @@ public:
 
   void getArgKinds(ASTNodeKind ThisKind, unsigned,
                    std::vector<ArgKind> &Kinds) const override {
-    Kinds.push_back(ThisKind);
+    Kinds.push_back(ArgKind::MakeMatcherArg(ThisKind));
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
