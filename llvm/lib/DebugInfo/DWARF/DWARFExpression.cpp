@@ -325,6 +325,7 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                             const MCRegisterInfo *RegInfo, DWARFUnit *U,
                             bool IsEH) const {
   uint32_t EntryValExprSize = 0;
+  uint64_t EntryValStartOffset = 0;
   for (auto &Op : *this) {
     if (!Op.print(OS, DumpOpts, this, RegInfo, U, IsEH)) {
       uint64_t FailOffset = Op.getEndOffset();
@@ -337,11 +338,12 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
         Op.getCode() == DW_OP_GNU_entry_value) {
       OS << "(";
       EntryValExprSize = Op.getRawOperand(0);
+      EntryValStartOffset = Op.getEndOffset();
       continue;
     }
 
     if (EntryValExprSize) {
-      EntryValExprSize--;
+      EntryValExprSize -= Op.getEndOffset() - EntryValStartOffset;
       if (EntryValExprSize == 0)
         OS << ")";
     }
