@@ -2437,7 +2437,9 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
             types::ID OldTy = Ty;
             Ty = types::lookupCXXTypeForCType(Ty);
 
-            if (Ty != OldTy)
+            // Do not complain about foo.h, when we are known to be processing
+            // it as a C++20 header unit.
+            if (Ty != OldTy && !(OldTy == types::TY_CHeader && hasHeaderMode()))
               Diag(clang::diag::warn_drv_treating_input_as_cxx)
                   << getTypeName(OldTy) << getTypeName(Ty);
           }
@@ -2462,8 +2464,11 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         }
 
         // Disambiguate headers that are meant to be header units from those
-        // intended to be PCH.
-        if (Ty == types::TY_CXXHeader && hasHeaderMode())
+        // intended to be PCH.  Avoid missing '.h' cases that are counted as
+        // C headers by default - we know we are in C++ mode and we do not
+        // want to issue a complaint about compiling things in the wrong mode.
+        if ((Ty == types::TY_CXXHeader || Ty == types::TY_CHeader) &&
+            hasHeaderMode())
           Ty = CXXHeaderUnitType(CXX20HeaderType);
       } else {
         assert(InputTypeArg && "InputType set w/o InputTypeArg");
