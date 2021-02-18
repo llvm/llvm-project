@@ -1098,19 +1098,23 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   bool Changed = false;
 
-  Type *ArgTLSTy = ArrayType::get(Type::getInt64Ty(*Ctx), kArgTLSSize / 8);
-  ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-  if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
-    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
-  Type *RetvalTLSTy =
-      ArrayType::get(Type::getInt64Ty(*Ctx), kRetvalTLSSize / 8);
-  RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", RetvalTLSTy);
-  if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
-    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-  }
+  auto getOrInsertGlobal = [this, &Changed](StringRef Name,
+                                            Type *Ty) -> Constant * {
+    Constant *C = Mod->getOrInsertGlobal(Name, Ty);
+    if (GlobalVariable *G = dyn_cast<GlobalVariable>(C)) {
+      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    }
+    return C;
+  };
+
+  // These globals must be kept in sync with the ones in dfsan.cpp.
+  ArgTLS = getOrInsertGlobal(
+      "__dfsan_arg_tls",
+      ArrayType::get(Type::getInt64Ty(*Ctx), kArgTLSSize / 8));
+  RetvalTLS = getOrInsertGlobal(
+      "__dfsan_retval_tls",
+      ArrayType::get(Type::getInt64Ty(*Ctx), kRetvalTLSSize / 8));
 
   ExternalShadowMask =
       Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
