@@ -50,7 +50,7 @@ Thread &ThreadPlan::GetThread() {
 bool ThreadPlan::PlanExplainsStop(Event *event_ptr) {
   if (m_cached_plan_explains_stop == eLazyBoolCalculate) {
     bool actual_value = DoPlanExplainsStop(event_ptr);
-    m_cached_plan_explains_stop = actual_value ? eLazyBoolYes : eLazyBoolNo;
+    CachePlanExplainsStop(actual_value);
     return actual_value;
   } else {
     return m_cached_plan_explains_stop == eLazyBoolYes;
