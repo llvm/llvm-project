@@ -55,7 +55,7 @@ module {
   // Runtime support library that is called directly from here.
   //
   func private @getTensorFilename(index) -> (!Filename)
-  func private @newSparseTensor(!Filename, memref<?xi1>) -> (!SparseTensor)
+  func private @newSparseTensor(!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
   func private @delSparseTensor(!SparseTensor) -> ()
   func private @print_memref_f64(%ptr : tensor<*xf64>)
 
@@ -68,12 +68,15 @@ module {
     %c1 = constant 1 : index
     %c2 = constant 2 : index
 
-    // Mark both dimensions of the matrix as sparse
-    // (this must match the annotation in the trait).
+    // Mark both dimensions of the matrix as sparse and encode the
+    // storage scheme types (this must match the metadata in the
+    // trait and compiler switches).
     %annotations = alloc(%c2) : memref<?xi1>
     %sparse = constant true
     store %sparse, %annotations[%c0] : memref<?xi1>
     store %sparse, %annotations[%c1] : memref<?xi1>
+    %i64 = constant 2 : index
+    %f64 = constant 0 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
@@ -84,8 +87,8 @@ module {
     // Read the sparse matrix from file, construct sparse storage
     // according to <sparse,sparse> in memory, and call the kernel.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = call @newSparseTensor(%fileName, %annotations)
-      : (!Filename, memref<?xi1>) -> (!SparseTensor)
+    %a = call @newSparseTensor(%fileName, %annotations, %i64, %i64, %f64)
+      : (!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
     %0 = call @kernel_sum_reduce(%a, %x)
       : (!SparseTensor, tensor<f64>) -> tensor<f64>
 
