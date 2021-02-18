@@ -856,6 +856,11 @@ public:
     return RecursiveASTVisitor::TraverseStmt(S);
   }
 
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *VE) {
+    // OpaqueValue doesn't correspond to concrete syntax, ignore it.
+    return true;
+  }
+
   // Some expressions are not yet handled by syntax trees.
   bool WalkUpFromExpr(Expr *E) {
     assert(!isImplicitExpr(E) && "should be handled by TraverseStmt");
