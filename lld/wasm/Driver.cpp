@@ -799,21 +799,6 @@ static TableSymbol *createDefinedIndirectFunctionTable(StringRef name) {
   return sym;
 }
 
-static TableSymbol *createUndefinedIndirectFunctionTable(StringRef name) {
-  WasmLimits limits{0, 0, 0}; // Set by the writer.
-  WasmTableType *type = make<WasmTableType>();
-  type->ElemType = uint8_t(ValType::FUNCREF);
-  type->Limits = limits;
-  StringRef module(defaultModule);
-  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
-  flags |= WASM_SYMBOL_UNDEFINED;
-  Symbol *sym =
-      symtab->addUndefinedTable(name, name, module, flags, nullptr, type);
-  sym->markLive();
-  sym->forceExport = config->exportTable;
-  return cast<TableSymbol>(sym);
-}
-
 static TableSymbol *resolveIndirectFunctionTable() {
   Symbol *existing = symtab->find(functionTableName);
   if (existing) {
@@ -830,10 +815,7 @@ static TableSymbol *resolveIndirectFunctionTable() {
   }
 
   if (config->importTable) {
-    if (existing)
-      return cast<TableSymbol>(existing);
-    else
-      return createUndefinedIndirectFunctionTable(functionTableName);
+    return cast_or_null<TableSymbol>(existing);
   } else if ((existing && existing->isLive()) || config->exportTable) {
     // A defined table is required.  Either because the user request an exported
     // table or because the table symbol is already live.  The existing table is
