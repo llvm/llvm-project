@@ -18,12 +18,12 @@ namespace lldb_private {
 
 class OptionValueFileSpecList : public OptionValue {
 public:
-  OptionValueFileSpecList() : OptionValue(), m_current_value() {}
+  OptionValueFileSpecList() = default;
 
   OptionValueFileSpecList(const FileSpecList &current_value)
       : OptionValue(), m_current_value(current_value) {}
 
-  ~OptionValueFileSpecList() override {}
+  ~OptionValueFileSpecList() override = default;
 
   // Virtual subclass pure virtual overrides
 

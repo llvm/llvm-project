@@ -20,7 +20,7 @@ public:
   OptionValueArray(uint32_t type_mask = UINT32_MAX, bool raw_value_dump = false)
       : m_type_mask(type_mask), m_values(), m_raw_value_dump(raw_value_dump) {}
 
-  ~OptionValueArray() override {}
+  ~OptionValueArray() override = default;
 
   // Virtual subclass pure virtual overrides
 

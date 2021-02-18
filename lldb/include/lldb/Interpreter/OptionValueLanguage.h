@@ -25,7 +25,7 @@ public:
       : OptionValue(), m_current_value(current_value),
         m_default_value(default_value) {}
 
-  ~OptionValueLanguage() override {}
+  ~OptionValueLanguage() override = default;
 
   // Virtual subclass pure virtual overrides
 

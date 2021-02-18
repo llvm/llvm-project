@@ -113,7 +113,7 @@ public:
     llvm::StringRef help = "", llvm::StringRef syntax = "",
                 uint32_t flags = 0);
 
-  virtual ~CommandObject();
+  virtual ~CommandObject() = default;
 
   static const char *
   GetArgumentTypeAsCString(const lldb::CommandArgumentType arg_type);
