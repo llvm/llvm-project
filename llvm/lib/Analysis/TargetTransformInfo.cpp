@@ -82,7 +82,6 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  ElementCount Factor)
     : RetTy(CI.getType()), IID(Id), VF(Factor) {
 
-  assert(!Factor.isScalable() && "Scalable vectors are not yet supported");
   if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
