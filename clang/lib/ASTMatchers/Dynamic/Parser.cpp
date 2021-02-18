@@ -405,8 +405,18 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
 
   Tokenizer->SkipNewlines();
 
+  assert(NameToken.Kind == TokenInfo::TK_Ident);
+  TokenInfo OpenToken = Tokenizer->consumeNextToken();
+  if (OpenToken.Kind != TokenInfo::TK_OpenParen) {
+    Error->addError(OpenToken.Range, Error->ET_ParserNoOpenParen)
+        << OpenToken.Text;
+    return false;
+  }
+
+  llvm::Optional<MatcherCtor> Ctor = S->lookupMatcherCtor(NameToken.Text);
+
   // Parse as a matcher expression.
-  return parseMatcherExpressionImpl(NameToken, Value);
+  return parseMatcherExpressionImpl(NameToken, OpenToken, Ctor, Value);
 }
 
 bool Parser::parseBindID(std::string &BindID) {
@@ -451,17 +461,9 @@ bool Parser::parseBindID(std::string &BindID) {
 ///   If the input is malformed, or some argument has an error, it
 ///   returns \c false.
 bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
+                                        const TokenInfo &OpenToken,
+                                        llvm::Optional<MatcherCtor> Ctor,
                                         VariantValue *Value) {
-  assert(NameToken.Kind == TokenInfo::TK_Ident);
-  const TokenInfo OpenToken = Tokenizer->consumeNextToken();
-  if (OpenToken.Kind != TokenInfo::TK_OpenParen) {
-    Error->addError(OpenToken.Range, Error->ET_ParserNoOpenParen)
-        << OpenToken.Text;
-    return false;
-  }
-
-  llvm::Optional<MatcherCtor> Ctor = S->lookupMatcherCtor(NameToken.Text);
-
   if (!Ctor) {
     Error->addError(NameToken.Range, Error->ET_RegistryMatcherNotFound)
         << NameToken.Text;
